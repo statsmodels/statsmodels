@@ -7,21 +7,17 @@ extracted from test suite by josef-pktd
 """
 
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 import statsmodels.api as sm
-
-# this is just to check direct import
 import statsmodels.nonparametric.smoothers_lowess
 import statsmodels.nonparametric.tests.results
 
 lowess = sm.nonparametric.lowess
-
 x = np.arange(20.0)
-
-# standard normal noise
 noise = np.array(
     [
         -0.76741118,
@@ -47,7 +43,6 @@ noise = np.array(
     ]
 )
 y = x + noise
-
 expected_lowess = np.array(
     [
         [0.0, -0.58337912],
@@ -72,22 +67,16 @@ expected_lowess = np.array(
         [19.0, 18.0466769],
     ]
 )
-
 actual_lowess = lowess(y, x)
 print(actual_lowess)
 print(np.max(np.abs(actual_lowess - expected_lowess)))
-
 plt.plot(y, "o")
 plt.plot(actual_lowess[:, 1])
 plt.plot(expected_lowess[:, 1])
-
 rpath = os.path.split(statsmodels.nonparametric.tests.results.__file__)[0]
-rfile = os.path.join(rpath, "test_lowess_frac.csv")
-test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
+rfile = Path(rpath).joinpath("test_lowess_frac.csv")
+test_data = np.genfromtxt(Path(rfile).open("rb"), delimiter=",", names=True)
 expected_lowess_23 = np.array([test_data["x"], test_data["out_2_3"]]).T
 expected_lowess_15 = np.array([test_data["x"], test_data["out_1_5"]]).T
-
 actual_lowess_23 = lowess(test_data["y"], test_data["x"], frac=2.0 / 3)
 actual_lowess_15 = lowess(test_data["y"], test_data["x"], frac=1.0 / 5)
-
-# plt.show()

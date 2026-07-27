@@ -8,6 +8,7 @@ from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
 import os
+from pathlib import Path
 import re
 import warnings
 
@@ -35,42 +36,39 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_unrestricted,
 )
 
-base, _ = os.path.split(os.path.abspath(__file__))
+base, _ = os.path.split(Path(__file__).resolve())
 housing_data = pd.read_csv(
-    os.path.join(base, "results", "housing-data.csv"),
+    Path(base).joinpath("results", "housing-data.csv"),
     index_col="DATE",
     parse_dates=True,
 )
 housing_data = housing_data.asfreq("MS")
-
 SEASONALS = ("add", "mul", None)
 TRENDS = ("add", "mul", None)
-
-# aust = pd.read_json(aust_json, typ='Series').sort_index()
 data = [
-    41.727457999999999,
+    41.727458,
     24.04185,
-    32.328102999999999,
-    37.328707999999999,
-    46.213152999999998,
-    29.346326000000001,
-    36.482909999999997,
+    32.328103,
+    37.328708,
+    46.213153,
+    29.346326,
+    36.48291,
     42.977719,
-    48.901524999999999,
+    48.901525,
     31.180221,
-    37.717880999999998,
-    40.420211000000002,
-    51.206862999999998,
+    37.717881,
+    40.420211,
+    51.206863,
     31.887228,
-    40.978262999999998,
-    43.772491000000002,
-    55.558566999999996,
-    33.850915000000001,
+    40.978263,
+    43.772491,
+    55.558567,
+    33.850915,
     42.076383,
-    45.642291999999998,
-    59.766779999999997,
-    35.191876999999998,
-    44.319737000000003,
+    45.642292,
+    59.76678,
+    35.191877,
+    44.319737,
     47.913736,
 ]
 index = [
@@ -126,41 +124,35 @@ def _simple_dbl_exp_smoother(x, alpha, beta, l0, b0, nforecast=0):
     f = np.zeros(nforecast)
     lvals[0] = l0
     b[0] = b0
-    # Special case the 0 observations since index -1 is not available
     xhat[0] = l0 + b0
     lvals[0] = alpha * x[0] + (1 - alpha) * (l0 + b0)
     b[0] = beta * (lvals[0] - l0) + (1 - beta) * b0
     for t in range(1, n):
-        # Obs in index t is the time t forecast for t + 1
         lvals[t] = alpha * x[t] + (1 - alpha) * (lvals[t - 1] + b[t - 1])
         b[t] = beta * (lvals[t] - lvals[t - 1]) + (1 - beta) * b[t - 1]
-
     xhat[1:] = lvals[0:-1] + b[0:-1]
     f[:] = lvals[-1] + np.arange(1, nforecast + 1) * b[-1]
     err = x - xhat
-    return lvals, b, f, err, xhat
+    return (lvals, b, f, err, xhat)
 
 
 class TestHoltWinters:
+
     @classmethod
     def setup_class(cls):
-        # Changed for backwards compatibility with pandas
-
-        # oildata_oil = pd.read_json(oildata_oil_json,
-        #                            typ='Series').sort_index()
         data = [
-            446.65652290000003,
-            454.47330649999998,
-            455.66297400000002,
-            423.63223879999998,
-            456.27132790000002,
-            440.58805009999998,
-            425.33252010000001,
-            485.14944789999998,
-            506.04816210000001,
-            526.79198329999997,
-            514.26888899999994,
-            494.21101929999998,
+            446.6565229,
+            454.4733065,
+            455.662974,
+            423.6322388,
+            456.2713279,
+            440.5880501,
+            425.3325201,
+            485.1494479,
+            506.0481621,
+            526.7919833,
+            514.268889,
+            494.2110193,
         ]
         index = [
             "1996-12-31 00:00:00",
@@ -181,25 +173,22 @@ class TestHoltWinters:
             oildata_oil.index, freq=infer_freq(oildata_oil.index)
         )
         cls.oildata_oil = oildata_oil
-
-        # air_ausair = pd.read_json(air_ausair_json,
-        #                           typ='Series').sort_index()
         data = [
             17.5534,
-            21.860099999999999,
-            23.886600000000001,
-            26.929300000000001,
-            26.888500000000001,
-            28.831399999999999,
-            30.075099999999999,
-            30.953499999999998,
-            30.185700000000001,
-            31.579699999999999,
-            32.577568999999997,
-            33.477398000000001,
-            39.021580999999998,
-            41.386431999999999,
-            41.596552000000003,
+            21.8601,
+            23.8866,
+            26.9293,
+            26.8885,
+            28.8314,
+            30.0751,
+            30.9535,
+            30.1857,
+            31.5797,
+            32.577569,
+            33.477398,
+            39.021581,
+            41.386432,
+            41.596552,
         ]
         index = [
             "1990-12-31 00:00:00",
@@ -223,41 +212,38 @@ class TestHoltWinters:
             air_ausair.index, freq=infer_freq(air_ausair.index)
         )
         cls.air_ausair = air_ausair
-
-        # livestock2_livestock = pd.read_json(livestock2_livestock_json,
-        #                                     typ='Series').sort_index()
         data = [
-            263.91774700000002,
-            268.30722200000002,
+            263.917747,
+            268.307222,
             260.662556,
-            266.63941899999998,
-            277.51577800000001,
+            266.639419,
+            277.515778,
             283.834045,
-            290.30902800000001,
+            290.309028,
             292.474198,
-            300.83069399999999,
-            309.28665699999999,
-            318.33108099999998,
+            300.830694,
+            309.286657,
+            318.331081,
             329.37239,
-            338.88399800000002,
-            339.24412599999999,
-            328.60063200000002,
-            314.25538499999999,
-            314.45969500000001,
-            321.41377899999998,
-            329.78929199999999,
-            346.38516499999997,
-            352.29788200000002,
-            348.37051500000001,
-            417.56292200000001,
-            417.12356999999997,
+            338.883998,
+            339.244126,
+            328.600632,
+            314.255385,
+            314.459695,
+            321.413779,
+            329.789292,
+            346.385165,
+            352.297882,
+            348.370515,
+            417.562922,
+            417.12357,
             417.749459,
             412.233904,
-            411.94681700000001,
-            394.69707499999998,
-            401.49927000000002,
-            408.27046799999999,
-            414.24279999999999,
+            411.946817,
+            394.697075,
+            401.49927,
+            408.270468,
+            414.2428,
         ]
         index = [
             "1970-12-31 00:00:00",
@@ -294,11 +280,9 @@ class TestHoltWinters:
         ]
         livestock2_livestock = pd.Series(data, index)
         livestock2_livestock.index = pd.DatetimeIndex(
-            livestock2_livestock.index,
-            freq=infer_freq(livestock2_livestock.index),
+            livestock2_livestock.index, freq=infer_freq(livestock2_livestock.index)
         )
         cls.livestock2_livestock = livestock2_livestock
-
         cls.aust = aust
         cls.start_params = [
             1.5520372162082909e-09,
@@ -327,23 +311,16 @@ class TestHoltWinters:
             seasonal="mul",
             initialization_method="estimated",
         ).fit(start_params=self.start_params)
-        # fit3 = ExponentialSmoothing(self.aust, seasonal_periods=4,
-        # trend='add', seasonal='mul').fit(remove_bias=True,
-        # use_basinhopping=True)
         assert_almost_equal(
             fit1.predict("2011-03-01 00:00:00", "2011-12-01 00:00:00"),
-            [61.3083, 37.3730, 46.9652, 51.5578],
+            [61.3083, 37.373, 46.9652, 51.5578],
             3,
         )
         assert_almost_equal(
             fit2.predict(end="2011-12-01 00:00:00"),
-            [61.3083, 37.3730, 46.9652, 51.5578],
+            [61.3083, 37.373, 46.9652, 51.5578],
             3,
         )
-
-    # assert_almost_equal(fit3.predict('2010-10-01 00:00:00',
-    #                                  '2010-10-01 00:00:00'),
-    #                                  [49.087], 3)
 
     def test_ndarray(self):
         fit1 = ExponentialSmoothing(
@@ -353,16 +330,12 @@ class TestHoltWinters:
             seasonal="mul",
             initialization_method="estimated",
         ).fit(start_params=self.start_params)
-        assert_almost_equal(fit1.forecast(4), [61.3083, 37.3730, 46.9652, 51.5578], 3)
+        assert_almost_equal(fit1.forecast(4), [61.3083, 37.373, 46.9652, 51.5578], 3)
 
-    # FIXME: this is passing 2019-05-22 on some platforms; what has changed?
     @pytest.mark.xfail(reason="Optimizer does not converge", strict=False)
     def test_forecast(self):
         fit1 = ExponentialSmoothing(
-            self.aust,
-            seasonal_periods=4,
-            trend="add",
-            seasonal="add",
+            self.aust, seasonal_periods=4, trend="add", seasonal="add"
         ).fit(method="bh", use_brute=True)
         assert_almost_equal(
             fit1.forecast(steps=4), [60.9542, 36.8505, 46.1628, 50.1272], 3
@@ -382,7 +355,7 @@ class TestHoltWinters:
         assert_almost_equal(
             fit1.level,
             [
-                446.65652290,
+                446.6565229,
                 448.21987962,
                 449.7084985,
                 444.49324656,
@@ -400,23 +373,19 @@ class TestHoltWinters:
         assert_almost_equal(fit2.forecast(1), [501.837461], 4)
         assert_almost_equal(fit3.forecast(1), [496.493543], 4)
         assert_almost_equal(fit3.params["smoothing_level"], 0.891998, 4)
-        assert_almost_equal(fit3.params["initial_level"], 447.478440, 3)
+        assert_almost_equal(fit3.params["initial_level"], 447.47844, 3)
 
     def test_holt(self):
         fit1 = Holt(self.air_ausair, initialization_method="legacy-heuristic").fit(
             smoothing_level=0.8, smoothing_trend=0.2, optimized=False
         )
         fit2 = Holt(
-            self.air_ausair,
-            exponential=True,
-            initialization_method="legacy-heuristic",
+            self.air_ausair, exponential=True, initialization_method="legacy-heuristic"
         ).fit(smoothing_level=0.8, smoothing_trend=0.2, optimized=False)
         fit3 = Holt(
-            self.air_ausair,
-            damped_trend=True,
-            initialization_method="estimated",
+            self.air_ausair, damped_trend=True, initialization_method="estimated"
         ).fit(smoothing_level=0.8, smoothing_trend=0.2)
-        assert_almost_equal(fit1.forecast(5), [43.76, 45.59, 47.43, 49.27, 51.10], 2)
+        assert_almost_equal(fit1.forecast(5), [43.76, 45.59, 47.43, 49.27, 51.1], 2)
         assert_almost_equal(
             fit1.trend,
             [
@@ -460,12 +429,11 @@ class TestHoltWinters:
             ],
             4,
         )
-        assert_almost_equal(fit2.forecast(5), [44.60, 47.24, 50.04, 53.01, 56.15], 2)
+        assert_almost_equal(fit2.forecast(5), [44.6, 47.24, 50.04, 53.01, 56.15], 2)
         assert_almost_equal(fit3.forecast(5), [42.85, 43.81, 44.66, 45.41, 46.06], 2)
 
     @pytest.mark.smoke
     def test_holt_damp_fit(self):
-        # Smoke test for parameter estimation
         fit1 = SimpleExpSmoothing(
             self.livestock2_livestock, initialization_method="estimated"
         ).fit()
@@ -482,37 +450,29 @@ class TestHoltWinters:
             initialization_method="estimated",
         )
         fit5 = mod5.fit()
-        # We accept the below values as we getting a better SSE than text book
-        assert_almost_equal(fit1.params["smoothing_level"], 1.00, 2)
+        assert_almost_equal(fit1.params["smoothing_level"], 1.0, 2)
         assert_almost_equal(fit1.params["smoothing_trend"], np.nan, 2)
         assert_almost_equal(fit1.params["damping_trend"], np.nan, 2)
         assert_almost_equal(fit1.params["initial_level"], 263.96, 1)
         assert_almost_equal(fit1.params["initial_trend"], np.nan, 2)
-        assert_almost_equal(fit1.sse, 6761.35, 2)  # 6080.26
+        assert_almost_equal(fit1.sse, 6761.35, 2)
         assert isinstance(fit1.summary().as_text(), str)
-
         assert_almost_equal(fit4.params["smoothing_level"], 0.98, 2)
-        assert_almost_equal(fit4.params["smoothing_trend"], 0.00, 2)
+        assert_almost_equal(fit4.params["smoothing_trend"], 0.0, 2)
         assert_almost_equal(fit4.params["damping_trend"], 0.98, 2)
         assert_almost_equal(fit4.params["initial_level"], 257.36, 2)
         assert_almost_equal(fit4.params["initial_trend"], 6.64, 2)
-        assert_almost_equal(fit4.sse, 6036.56, 2)  # 6080.26
+        assert_almost_equal(fit4.sse, 6036.56, 2)
         assert isinstance(fit4.summary().as_text(), str)
-
         assert_almost_equal(fit5.params["smoothing_level"], 0.97, 2)
-        assert_almost_equal(fit5.params["smoothing_trend"], 0.00, 2)
+        assert_almost_equal(fit5.params["smoothing_trend"], 0.0, 2)
         assert_almost_equal(fit5.params["damping_trend"], 0.98, 2)
         assert_almost_equal(fit5.params["initial_level"], 258.95, 1)
         assert_almost_equal(fit5.params["initial_trend"], 1.04, 2)
-        assert_almost_equal(fit5.sse, 6082.00, 0)  # 6100.11
+        assert_almost_equal(fit5.sse, 6082.0, 0)
         assert isinstance(fit5.summary().as_text(), str)
 
     def test_holt_damp_r(self):
-        # Test the damping parameters against the R forecast packages `ets`
-        # library(ets)
-        # livestock2_livestock <- c(...)
-        # res <- ets(livestock2_livestock, model='AAN', damped_trend=TRUE,
-        #            phi=0.98)
         mod = Holt(
             self.livestock2_livestock,
             damped_trend=True,
@@ -527,11 +487,8 @@ class TestHoltWinters:
         }
         with mod.fix_params(params):
             fit = mod.fit(optimized=False)
-
-        # Check that we captured the parameters correctly
         for key, param_value in params.items():
             assert_allclose(fit.params[key], param_value)
-
         with mod.fix_params(params):
             opt_fit = mod.fit(optimized=True)
         assert_allclose(fit.sse, opt_fit.sse)
@@ -540,18 +497,7 @@ class TestHoltWinters:
         with mod.fix_params(alt_params):
             alt_fit = mod.fit(optimized=True)
         assert not np.allclose(alt_fit.trend.iloc[0], opt_fit.trend.iloc[0])
-        # Summary output
-        # print(res$mse)
-        assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=1e-3)
-        # print(res$aicc)
-        # TODO: this fails - different AICC definition?
-        # assert_allclose(fit.aicc, 282.386426659408, atol=1e-3)
-        # print(res$bic)
-        # TODO: this fails - different BIC definition?
-        # assert_allclose(fit.bic, 287.1563626818338)
-
-        # print(res$states[,'l'])
-        # note: this array includes the initial level
+        assert_allclose(fit.sse / mod.nobs, 195.4397924865488, atol=0.001)
         desired = [
             252.5903996514365,
             263.7992355246843,
@@ -565,7 +511,7 @@ class TestHoltWinters:
             300.7655919939834,
             309.2118057241649,
             318.2377698496536,
-            329.2238709362550,
+            329.223870936255,
             338.7709778307978,
             339.3669793596703,
             329.0127022356033,
@@ -587,9 +533,6 @@ class TestHoltWinters:
             414.1814574903921,
         ]
         assert_allclose(np.r_[fit.params["initial_level"], fit.level], desired)
-
-        # print(res$states[,'b'])
-        # note: this array includes the initial slope
         desired = [
             6.902659175332394,
             6.765062519124909,
@@ -597,7 +540,7 @@ class TestHoltWinters:
             6.495537532917715,
             6.365550989616566,
             6.238702070454378,
-            6.113960476763530,
+            6.11396047676353,
             5.991730467006233,
             5.871526257315264,
             5.754346516684953,
@@ -608,33 +551,30 @@ class TestHoltWinters:
             5.202580636191761,
             5.096941655567694,
             4.993026494493987,
-            4.892645486210410,
+            4.89264548621041,
             4.794995106664251,
             4.699468310763351,
             4.606688340205792,
             4.514725879754355,
-            4.423600168391240,
+            4.42360016839124,
             4.341595902295941,
             4.254462303550087,
             4.169010676686062,
             4.084660399498803,
             4.002512751871354,
-            3.920332298146730,
+            3.92033229814673,
             3.842166514133902,
-            3.765630194200260,
+            3.76563019420026,
             3.690553892582855,
         ]
-        # TODO: not sure why the precision is so low here...
         assert_allclose(
-            np.r_[fit.params["initial_trend"], fit.trend], desired, atol=1e-3
+            np.r_[fit.params["initial_trend"], fit.trend], desired, atol=0.001
         )
-
-        # print(res$fitted)
         desired = [
             259.3550056432622,
             270.4289967934267,
             274.8592904290865,
-            267.3969251260200,
+            267.39692512602,
             272.8973342399166,
             283.5097477537724,
             289.8173030536191,
@@ -642,12 +582,12 @@ class TestHoltWinters:
             298.3242395451272,
             306.4048515803347,
             314.7385626924191,
-            323.6543439406810,
+            323.654343940681,
             334.5326742248959,
             343.9740317200002,
             344.4655083831382,
             334.0077050580596,
-            319.6615926665040,
+            319.661592666504,
             319.3896003340806,
             326.0602987063282,
             334.2979150278692,
@@ -663,22 +603,20 @@ class TestHoltWinters:
             405.2020670104834,
             411.8810877289437,
         ]
-        assert_allclose(fit.fittedvalues, desired, atol=1e-3)
-
-        # print(forecast(res)$mean)
+        assert_allclose(fit.fittedvalues, desired, atol=0.001)
         desired = [
             417.7982003051233,
             421.3426082635598,
             424.8161280628277,
             428.2201774661102,
-            431.5561458813270,
+            431.556145881327,
             434.8253949282395,
             438.0292589942138,
             441.1690457788685,
             444.2460368278302,
             447.2614880558126,
         ]
-        assert_allclose(fit.forecast(10), desired, atol=1e-4)
+        assert_allclose(fit.forecast(10), desired, atol=0.0001)
 
     def test_hw_seasonal(self):
         mod = ExponentialSmoothing(
@@ -691,9 +629,7 @@ class TestHoltWinters:
         )
         fit1 = mod.fit()
         assert_almost_equal(
-            fit1.forecast(8),
-            [59.96, 38.63, 47.48, 51.89, 62.81, 41.0, 50.06, 54.57],
-            2,
+            fit1.forecast(8), [59.96, 38.63, 47.48, 51.89, 62.81, 41.0, 50.06, 54.57], 2
         )
 
     def test_hw_seasonal_add_mul(self):
@@ -727,9 +663,6 @@ class TestHoltWinters:
             initialization_method="estimated",
             use_boxcox=0.0,
         ).fit()
-        # Skip since estimator is unstable
-        # assert_almost_equal(fit5.forecast(1), [60.60], 2)
-        # assert_almost_equal(fit6.forecast(1), [61.47], 2)
 
     def test_hw_seasonal_buggy(self):
         fit3 = ExponentialSmoothing(
@@ -742,11 +675,11 @@ class TestHoltWinters:
         assert_almost_equal(
             fit3.forecast(8),
             [
-                59.487190,
+                59.48719,
                 35.758854,
                 44.600641,
                 47.751384,
-                59.487190,
+                59.48719,
                 35.758854,
                 44.600641,
                 47.751384,
@@ -830,10 +763,7 @@ def test_infer_freq():
 def test_start_params(trend, seasonal):
     rs = np.random.RandomState(98789431)
     mod = ExponentialSmoothing(
-        housing_data,
-        trend=trend,
-        seasonal=seasonal,
-        initialization_method="estimated",
+        housing_data, trend=trend, seasonal=seasonal, initialization_method="estimated"
     )
     res = mod.fit()
     res2 = mod.fit(
@@ -850,9 +780,7 @@ def test_start_params(trend, seasonal):
 
 def test_no_params_to_optimize():
     mod = ExponentialSmoothing(
-        housing_data,
-        initial_level=housing_data.iloc[0],
-        initialization_method="known",
+        housing_data, initial_level=housing_data.iloc[0], initialization_method="known"
     )
     mod.fit(smoothing_level=0.5)
 
@@ -872,8 +800,7 @@ def test_basin_hopping():
     res2 = mod.fit(method="basinhopping", minimize_kwargs={BASINHOPPING_RNG: rs})
     assert isinstance(res.summary().as_text(), str)
     assert isinstance(res2.summary().as_text(), str)
-    # Basin hopping occasionally produces a slightly larger objective
-    tol = 1e-5
+    tol = 1e-05
     assert res2.sse <= res.sse + tol
     res3 = mod.fit(method="basinhopping", minimize_kwargs={BASINHOPPING_RNG: rs})
     assert_almost_equal(res2.sse, res3.sse, decimal=2)
@@ -905,21 +832,13 @@ def test_float_boxcox(trend, seasonal):
     ).fit()
     assert_allclose(res.params["use_boxcox"], 0.5)
     res = ExponentialSmoothing(
-        housing_data,
-        trend=trend,
-        seasonal=seasonal,
-        use_boxcox=0.5,
+        housing_data, trend=trend, seasonal=seasonal, use_boxcox=0.5
     ).fit()
     assert_allclose(res.params["use_boxcox"], 0.5)
 
 
 def test_use_boxcox_fit_override():
-    # Regression test: when use_boxcox is set at model init, passing
-    # use_boxcox to fit() should NOT be silently ignored (issue #9797).
-    # Before fix: fit(use_boxcox=False) on a use_boxcox=True model
-    # incorrectly skipped Box-Cox transformation because the override
-    # check was `if use_boxcox == "log"` instead of `if use_boxcox is not None`.
-    y = np.abs(housing_data) + 1  # ensure positive values for Box-Cox
+    y = np.abs(housing_data) + 1
     mod = ExponentialSmoothing(
         y,
         trend="add",
@@ -928,12 +847,9 @@ def test_use_boxcox_fit_override():
         use_boxcox=True,
     )
     res = mod.fit()
-    # With use_boxcox=True at model level, Box-Cox is applied and lambda > 0
     assert (
         res.params["use_boxcox"] != 0.0
     ), "Box-Cox lambda should not be 0 when use_boxcox=True at model init"
-    # When use_boxcox=True at model init, Box-Cox IS applied
-    # (lambda ~= 0.5 for this data, not False/0)
     assert (
         res.params["lamda"] is not None
     ), f"Expected fitted lambda, got {res.params['lamda']}"
@@ -943,16 +859,10 @@ def test_use_boxcox_fit_override():
 @pytest.mark.parametrize("seasonal", SEASONALS)
 def test_equivalence_cython_python(trend, seasonal):
     mod = ExponentialSmoothing(
-        housing_data,
-        trend=trend,
-        seasonal=seasonal,
-        initialization_method="estimated",
+        housing_data, trend=trend, seasonal=seasonal, initialization_method="estimated"
     )
-
-    # Overflow in mul-mul case fixed
     res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
-
     params = res.params
     nobs = housing_data.shape[0]
     y = np.squeeze(np.asarray(housing_data))
@@ -965,19 +875,16 @@ def test_equivalence_cython_python(trend, seasonal):
     phi = 1.0 if np.isnan(phi) else phi
     l0 = params["initial_level"]
     b0 = params["initial_trend"]
-    p[:6] = alpha, beta, gamma, l0, b0, phi
+    p[:6] = (alpha, beta, gamma, l0, b0, phi)
     if seasonal:
         p[6:] = params["initial_seasons"]
     xi = np.ones_like(p).astype(np.int64)
-
     p_copy = p.copy()
-
     bounds = np.array([[0.0, 1.0]] * 3)
-    py_func = PY_SMOOTHERS[(seasonal, trend)]
-    cy_func = SMOOTHERS[(seasonal, trend)]
+    py_func = PY_SMOOTHERS[seasonal, trend]
+    cy_func = SMOOTHERS[seasonal, trend]
     py_hw_args = PyHoltWintersArgs(xi, p_copy, bounds, y, m, nobs, False)
     cy_hw_args = HoltWintersArgs(xi, p_copy, bounds, y, m, nobs, False)
-
     sse_cy = cy_func(p, cy_hw_args)
     sse_py = py_func(p, py_hw_args)
     assert_allclose(sse_py, sse_cy)
@@ -994,11 +901,9 @@ def test_direct_holt_add():
     lvl, b, f, _, xhat = _simple_dbl_exp_smoother(
         x, alpha, beta=0.0, l0=res.params["initial_level"], b0=0.0, nforecast=5
     )
-
     assert_allclose(lvl, res.level)
     assert_allclose(f, res.level.iloc[-1] * np.ones(5))
     assert_allclose(f, res.forecast(5))
-
     mod = ExponentialSmoothing(
         housing_data, trend="add", initialization_method="estimated"
     )
@@ -1014,7 +919,6 @@ def test_direct_holt_add():
         b0=res.params["initial_trend"],
         nforecast=5,
     )
-
     assert_allclose(xhat, res.fittedvalues)
     assert_allclose(lvl + b, res.level + res.trend)
     assert_allclose(lvl, res.level)
@@ -1039,19 +943,14 @@ def test_integer_array():
 def test_damping_trend_zero():
     endog = np.arange(10)
     mod = ExponentialSmoothing(
-        endog,
-        trend="add",
-        damped_trend=True,
-        initialization_method="estimated",
+        endog, trend="add", damped_trend=True, initialization_method="estimated"
     )
     res1 = mod.fit(smoothing_level=1, smoothing_trend=0.0, damping_trend=1e-20)
     pred1 = res1.predict(start=0)
     assert_allclose(pred1, np.r_[0.0, np.arange(9)], atol=1e-10)
-
     res2 = mod.fit(smoothing_level=1, smoothing_trend=0.0, damping_trend=0)
     pred2 = res2.predict(start=0)
     assert_allclose(pred2, np.r_[0.0, np.arange(9)], atol=1e-10)
-
     assert_allclose(pred1, pred2, atol=1e-10)
 
 
@@ -1059,16 +958,13 @@ def test_different_inputs():
     array_input_add = [10, 20, 30, 40, 50]
     series_index_add = pd.date_range(start="2000-1-1", periods=len(array_input_add))
     series_input_add = pd.Series(array_input_add, series_index_add)
-
     array_input_mul = [2, 4, 8, 16, 32]
     series_index_mul = pd.date_range(start="2000-1-1", periods=len(array_input_mul))
     series_input_mul = pd.Series(array_input_mul, series_index_mul)
-
     fit1 = ExponentialSmoothing(array_input_add, trend="add").fit()
     fit2 = ExponentialSmoothing(series_input_add, trend="add").fit()
     fit3 = ExponentialSmoothing(array_input_mul, trend="mul").fit()
     fit4 = ExponentialSmoothing(series_input_mul, trend="mul").fit()
-
     assert_almost_equal(fit1.predict(), [60], 1)
     assert_almost_equal(fit1.predict(start=5, end=7), [60, 70, 80], 1)
     assert_almost_equal(fit2.predict(), [60], 1)
@@ -1083,11 +979,9 @@ def test_different_inputs():
 
 @pytest.fixture
 def austourists():
-    # austourists dataset from fpp2 package
-    # https://cran.r-project.org/web/packages/fpp2/index.html
     data = [
         30.05251,
-        19.14850,
+        19.1485,
         25.31769,
         27.59144,
         32.07646,
@@ -1106,7 +1000,7 @@ def austourists():
         19.77524,
         29.60175,
         34.53884,
-        41.27360,
+        41.2736,
         26.65586,
         28.27986,
         35.19115,
@@ -1118,14 +1012,14 @@ def austourists():
         29.35048,
         36.34421,
         41.78208,
-        49.27660,
-        31.27540,
+        49.2766,
+        31.2754,
         37.85063,
         38.83704,
-        51.23690,
+        51.2369,
         31.83855,
         41.32342,
-        42.79900,
+        42.799,
         55.70836,
         33.40714,
         42.31664,
@@ -1137,7 +1031,7 @@ def austourists():
         60.01903,
         38.37118,
         46.97586,
-        50.73380,
+        50.7338,
         61.64687,
         39.29957,
         52.67121,
@@ -1189,25 +1083,25 @@ def simulate_expected_results_r():
     """
     damped = {
         "AAA": [77.84173, 52.69818, 65.83254, 71.85204],
-        "MAA": [207.81653, 136.97700, 253.56234, 588.95800],
+        "MAA": [207.81653, 136.977, 253.56234, 588.958],
         "MAM": [215.83822, 127.17132, 269.09483, 704.32105],
         "MMM": [216.52591, 132.47637, 283.04889, 759.08043],
-        "AAN": [62.51423, 61.87381, 63.14735, 65.11360],
+        "AAN": [62.51423, 61.87381, 63.14735, 65.1136],
         "MAN": [168.25189, 90.46201, 133.54769, 232.81738],
-        "MMN": [167.97747, 90.59675, 134.20300, 235.64502],
+        "MMN": [167.97747, 90.59675, 134.203, 235.64502],
     }
     undamped = {
-        "AAA": [77.10860, 51.51669, 64.46857, 70.36349],
+        "AAA": [77.1086, 51.51669, 64.46857, 70.36349],
         "MAA": [209.23158, 149.62943, 270.65579, 637.03828],
-        "ANA": [77.09320, 51.52384, 64.36231, 69.84786],
-        "MNA": [207.86986, 169.42706, 313.97960, 793.97948],
-        "MAM": [214.45750, 106.19605, 211.61304, 492.12223],
+        "ANA": [77.0932, 51.52384, 64.36231, 69.84786],
+        "MNA": [207.86986, 169.42706, 313.9796, 793.97948],
+        "MAM": [214.4575, 106.19605, 211.61304, 492.12223],
         "MMM": [221.01861, 158.55914, 403.22625, 1389.33384],
         "MNM": [215.00997, 140.93035, 309.92465, 875.07985],
         "AAN": [63.66619, 63.09571, 64.45832, 66.51967],
-        "MAN": [172.37584, 91.51932, 134.11221, 230.98970],
+        "MAN": [172.37584, 91.51932, 134.11221, 230.9897],
         "MMN": [169.88595, 97.33527, 142.97017, 252.51834],
-        "ANN": [60.53589, 59.51851, 60.17570, 61.63011],
+        "ANN": [60.53589, 59.51851, 60.1757, 61.63011],
         "MNN": [163.01575, 112.58317, 172.21992, 338.93918],
     }
     return {True: damped, False: undamped}
@@ -1215,68 +1109,69 @@ def simulate_expected_results_r():
 
 @pytest.fixture
 def simulate_fit_state_r():
-    """
-    The final state from the R model fits to get an exact comparison
-    Obtained with this R script:
+    '''
+        The final state from the R model fits to get an exact comparison
+        Obtained with this R script:
 
-    library(magrittr)
-    library(fpp2)
-    library(forecast)
+        library(magrittr)
+        library(fpp2)
+        library(forecast)
 
-    concat <- function(...) {
-      return(paste(..., sep=""))
-    }
+        concat <- function(...) {
+          return(paste(..., sep=""))
+        }
 
-    as_dict_string <- function(named) {
-      string <- '{'
-      for (name in names(named)) {
-        string <- concat(string, "\"", name, "\": ", named[name], ", ")
-      }
-      string <- concat(string, '}')
-      return(string)
-    }
-
-    get_var <- function(named, name) {
-      if (name %in% names(named))
-        val <- c(named[name])
-      else
-        val <- c(NaN)
-      names(val) <- c(name)
-      return(val)
-    }
-
-    error <- c("A", "M")
-    trend <- c("A", "M", "N")
-    seasonal <- c("A", "M", "N")
-    models <- outer(error, trend, FUN = "concat") %>%
-      outer(seasonal, FUN = "concat") %>% as.vector
-
-    # innov from np.random.seed(0); np.random.randn(4)
-    innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932)
-    n <- length(austourists) + 1
-
-    # print fit parameters and final states
-    for (damped in c(TRUE, FALSE)) {
-      print(paste("damped =", damped))
-      for (model in models) {
-        state <- tryCatch((function(){
-          fit <- ets(austourists, model = model, damped = damped)
-          pars <- c()
-          # alpha, beta, gamma, phi
-          for (name in c("alpha", "beta", "gamma", "phi")) {
-            pars <- c(pars, get_var(fit$par, name))
+        as_dict_string <- function(named) {
+          string <- '{'
+          for (name in names(named)) {
+            string <- concat(string, """, name, "": ", named[name], ", ")
           }
-          # l, b, s1, s2, s3, s4
-          states <- c()
-          for (name in c("l", "b", "s1", "s2", "s3", "s4"))
-            states <- c(states, get_var(fit$states[n,], name))
-          c(pars, states)
-        })(),
-        error = function(e) rep(NA, 10))
-        cat(concat("\"", model, "\": ", as_dict_string(state), ",\n"))
-      }
-    }
-    """
+          string <- concat(string, '}')
+          return(string)
+        }
+
+        get_var <- function(named, name) {
+          if (name %in% names(named))
+            val <- c(named[name])
+          else
+            val <- c(NaN)
+          names(val) <- c(name)
+          return(val)
+        }
+
+        error <- c("A", "M")
+        trend <- c("A", "M", "N")
+        seasonal <- c("A", "M", "N")
+        models <- outer(error, trend, FUN = "concat") %>%
+          outer(seasonal, FUN = "concat") %>% as.vector
+
+        # innov from np.random.seed(0); np.random.randn(4)
+        innov <- c(1.76405235, 0.40015721, 0.97873798, 2.2408932)
+        n <- length(austourists) + 1
+
+        # print fit parameters and final states
+        for (damped in c(TRUE, FALSE)) {
+          print(paste("damped =", damped))
+          for (model in models) {
+            state <- tryCatch((function(){
+              fit <- ets(austourists, model = model, damped = damped)
+              pars <- c()
+              # alpha, beta, gamma, phi
+              for (name in c("alpha", "beta", "gamma", "phi")) {
+                pars <- c(pars, get_var(fit$par, name))
+              }
+              # l, b, s1, s2, s3, s4
+              states <- c()
+              for (name in c("l", "b", "s1", "s2", "s3", "s4"))
+                states <- c(states, get_var(fit$states[n,], name))
+              c(pars, states)
+            })(),
+            error = function(e) rep(NA, 10))
+            cat(concat(""", model, "": ", as_dict_string(state), ",
+    "))
+          }
+        }
+    '''
     damped = {
         "AAA": {
             "alpha": 0.35445427317618,
@@ -1531,7 +1426,6 @@ def test_simulate_expected_r(
     The tests are using the implementation in the R package ``forecast`` as
     reference, and example data is taken from ``fpp2`` (package and book).
     """
-
     short_name = {"add": "A", "mul": "M", None: "N"}
     model_name = short_name[error] + short_name[trend] + short_name[seasonal]
     if model_name in simulate_expected_results_r[damped]:
@@ -1539,8 +1433,6 @@ def test_simulate_expected_r(
         state = simulate_fit_state_r[damped][model_name]
     else:
         return
-
-    # create HoltWintersResults object with same parameters as in R
     fit = ExponentialSmoothing(
         austourists,
         seasonal_periods=4,
@@ -1554,22 +1446,16 @@ def test_simulate_expected_r(
         damping_trend=state["phi"],
         optimized=False,
     )
-
-    # set the same final state as in R
     fit._level[-1] = state["l"]
     fit._trend[-1] = state["b"]
     fit._season[-1] = state["s1"]
     fit._season[-2] = state["s2"]
     fit._season[-3] = state["s3"]
     fit._season[-4] = state["s4"]
-
-    # for MMM with damped trend the fit fails
     if np.any(np.isnan(fit.fittedvalues)):
         return
-
     innov = np.asarray([[1.76405235, 0.40015721, 0.97873798, 2.2408932]]).T
     sim = fit.simulate(4, repetitions=1, error=error, random_errors=innov)
-
     assert_almost_equal(expected, sim.values, 5)
 
 
@@ -1585,8 +1471,6 @@ def test_simulate_keywords(austourists):
         damped_trend=True,
         initialization_method="estimated",
     ).fit()
-
-    # test anchor
     rs = np.random.RandomState(1232131)
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         sim_0 = fit.simulate(4, anchor=0, rng=0).values
@@ -1597,25 +1481,19 @@ def test_simulate_keywords(austourists):
         sim_2 = fit.simulate(4, anchor=-1, rng=0).values
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         sim_3 = fit.simulate(4, anchor="2015-12-01", rng=0).values
-
     assert_almost_equal(sim_2, sim_3)
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         sim_4 = fit.simulate(4, anchor="end", rng=0).values
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         sim_5 = fit.simulate(4, anchor="2016-03-01", rng=0).values
     assert_almost_equal(sim_4, sim_5)
-
-    # test different random error options
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
-
     fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10))
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
-
-    # test seeding
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         res = fit.simulate(4, repetitions=10, rng=10).values
     res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
@@ -1639,13 +1517,11 @@ def test_simulate_boxcox(austourists):
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         res = fit.simulate(4, repetitions=10, rng=0).values
     mean = np.mean(res, axis=1)
-
     assert np.all(np.abs(mean - expected) < 5)
 
 
 @pytest.mark.parametrize("ix", [10, 100, 1000, 2000])
 def test_forecast_index(ix):
-    # GH 6549
     ts_1 = pd.Series(
         [85601, 89662, 85122, 84400, 78250, 84434, 71072, 70357, 72635, 73210],
         index=range(ix, ix + 10),
@@ -1666,10 +1542,8 @@ def test_error_boxcox():
     y = rs.standard_normal(100)
     with pytest.raises(TypeError, match="use_boxcox must be True"):
         ExponentialSmoothing(y, use_boxcox="a", initialization_method="known")
-
     mod = ExponentialSmoothing(y**2, use_boxcox=True)
     assert isinstance(mod, ExponentialSmoothing)
-
     mod = ExponentialSmoothing(
         y**2, use_boxcox=True, initialization_method="legacy-heuristic"
     )
@@ -1682,10 +1556,7 @@ def test_error_initialization(ses):
         ExponentialSmoothing(ses, initialization_method="known")
     with pytest.raises(ValueError, match="initial_trend set but model"):
         ExponentialSmoothing(
-            ses,
-            initialization_method="known",
-            initial_level=1.0,
-            initial_trend=1.0,
+            ses, initialization_method="known", initial_level=1.0, initial_trend=1.0
         )
     with pytest.raises(ValueError, match="initial_seasonal set but model"):
         ExponentialSmoothing(
@@ -1702,10 +1573,7 @@ def test_error_initialization(ses):
         ExponentialSmoothing(ses, initial_seasonal=[1.0, 0.2, 0.05, 4])
     with pytest.raises(ValueError):
         ExponentialSmoothing(
-            ses,
-            trend="add",
-            initialization_method="known",
-            initial_level=1.0,
+            ses, trend="add", initialization_method="known", initial_level=1.0
         )
     with pytest.raises(ValueError):
         ExponentialSmoothing(
@@ -1736,15 +1604,15 @@ def test_error_initialization(ses):
     ],
 )
 def test_alternative_minimizers(method, ses):
-    sv = np.array([0.77, 11.00])
+    sv = np.array([0.77, 11.0])
     minimize_kwargs = {}
     if method == "basinhopping":
         rs = np.random.RandomState(32321831)
         minimize_kwargs[BASINHOPPING_RNG] = rs
     mod = ExponentialSmoothing(ses, initialization_method="estimated")
     res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
-    assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
-    assert_allclose(res.params["initial_level"], 11.00359693, rtol=1e-3)
+    assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=0.001)
+    assert_allclose(res.params["initial_level"], 11.00359693, rtol=0.001)
     assert isinstance(res.summary().as_text(), str)
 
 
@@ -1782,8 +1650,7 @@ def test_restricted_round_tip(params):
     sel = np.array([True] * 3)
     bounds = np.array([[0.0, 1.0]] * 3)
     assert_allclose(
-        params,
-        to_unrestricted(to_restricted(params, sel, bounds), sel, bounds),
+        params, to_unrestricted(to_restricted(params, sel, bounds), sel, bounds)
     )
 
 
@@ -1814,9 +1681,7 @@ def test_valid_bounds(ses):
         method="least_squares"
     )
     assert_allclose(
-        res.params["smoothing_level"],
-        res2.params["smoothing_level"],
-        rtol=1e-4,
+        res.params["smoothing_level"], res2.params["smoothing_level"], rtol=0.0001
     )
 
 
@@ -1826,7 +1691,6 @@ def test_fixed_basic(ses):
         res = mod.fit()
     assert res.params["smoothing_level"] == 0.3
     assert isinstance(res.summary().as_text(), str)
-
     mod = ExponentialSmoothing(
         ses, trend="add", damped_trend=True, initialization_method="estimated"
     )
@@ -1834,7 +1698,6 @@ def test_fixed_basic(ses):
         res = mod.fit()
     assert res.params["damping_trend"] == 0.98
     assert isinstance(res.summary().as_text(), str)
-
     mod = ExponentialSmoothing(
         ses, trend="add", seasonal="add", initialization_method="estimated"
     )
@@ -1863,7 +1726,6 @@ def test_fixed_errors(ses):
     with pytest.raises(ValueError):
         with mod.fix_params({"smoothing_level": 0.3, "smoothing_seasonal": 0.8}):
             pass
-
     bounds = {"smoothing_level": (0.4, 0.8), "smoothing_seasonal": (0.7, 0.9)}
     mod = ExponentialSmoothing(
         ses,
@@ -1885,7 +1747,6 @@ def test_brute(ses, trend, seasonal):
     )
     res = mod.fit(use_brute=True)
     assert res.mle_retvals.success
-
     with mod.fix_params({"smoothing_level": 0.1}):
         res = mod.fit(use_brute=True)
     assert res.mle_retvals.success
@@ -1927,10 +1788,7 @@ def test_infeasible_bounds(ses):
     bounds = {"smoothing_level": (0.3, 0.5), "smoothing_seasonal": (0.7, 0.8)}
     with pytest.raises(ValueError, match="The bounds for smoothing_seasonal"):
         ExponentialSmoothing(
-            ses,
-            seasonal="add",
-            bounds=bounds,
-            initialization_method="estimated",
+            ses, seasonal="add", bounds=bounds, initialization_method="estimated"
         ).fit()
 
 
@@ -1961,7 +1819,7 @@ def test_summary_boxcox(ses):
         mod.fit(use_boxcox=True)
     res = mod.fit()
     summ = str(res.summary())
-    assert re.findall(r"Box-Cox:[\s]*True", summ)
+    assert re.findall("Box-Cox:[\\s]*True", summ)
     assert isinstance(res.summary().as_text(), str)
 
 
@@ -2003,7 +1861,6 @@ def test_forecast_index_types(ses, index_typ):
         fcast_index = index[-36:]
     ses = ses.copy()
     ses.index = index[:-36]
-
     with pytest_warns(model_warning):
         res = ExponentialSmoothing(
             ses,
@@ -2024,7 +1881,6 @@ def test_boxcox_components(ses):
     res = mod.fit()
     assert isinstance(res.summary().as_text(), str)
     with pytest.raises(AssertionError):
-        # Must be different since level is not transformed
         assert_allclose(res.level, res.fittedvalues)
     assert not hasattr(res, "_untransformed_level")
     assert not hasattr(res, "_untransformed_trend")
@@ -2034,7 +1890,6 @@ def test_boxcox_components(ses):
 @pytest.mark.parametrize("repetitions", [1, 10])
 @pytest.mark.parametrize("random_errors", [None, "bootstrap"])
 def test_forecast_1_simulation(austourists, random_errors, repetitions):
-    # GH 7053
     fit = ExponentialSmoothing(
         austourists,
         seasonal_periods=4,
@@ -2043,7 +1898,6 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
         damped_trend=True,
         initialization_method="estimated",
     ).fit()
-
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
         sim = fit.simulate(
             1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
@@ -2062,7 +1916,6 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
 @pytest.mark.parametrize("seasonal", [None, "add"])
 @pytest.mark.parametrize("nobs", [9, 10])
 def test_estimated_initialization_short_data(ses, trend, seasonal, nobs):
-    # GH 7319
     res = ExponentialSmoothing(
         ses[:nobs],
         trend=trend,
@@ -2077,9 +1930,7 @@ def test_invalid_index():
     rs = np.random.RandomState(32321830)
     y = rs.standard_normal(12 * 200)
     df_y = pd.DataFrame(data=y)
-    # Can't have a freq here
     df_y.index.freq = "d"
-
     model = ExponentialSmoothing(
         df_y,
         seasonal_periods=12,
@@ -2088,10 +1939,8 @@ def test_invalid_index():
         initialization_method="heuristic",
     )
     fitted = model.fit(optimized=True, use_brute=True)
-
     fcast = fitted.forecast(steps=157200)
     assert fcast.shape[0] == 157200
-
     index = pd.date_range("2020-01-01", periods=2 * y.shape[0])
     index = rs.choice(index, size=df_y.shape[0], replace=False)
     index = sorted(index)
@@ -2113,7 +1962,6 @@ def test_invalid_index():
 
 
 def test_initial_level():
-    # GH 8634
     series = [0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0]
     es = ExponentialSmoothing(series, initialization_method="known", initial_level=20.0)
     es_fit = es.fit()

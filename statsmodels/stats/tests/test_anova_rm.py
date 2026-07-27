@@ -1,19 +1,15 @@
 from statsmodels.compat.pandas import assert_frame_equal
 
-import os
+from pathlib import Path
 
-from numpy.testing import (
-    assert_array_almost_equal,
-    assert_equal,
-)
+from numpy.testing import assert_array_almost_equal, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels.stats.anova import AnovaRM
 
-CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
-ANOVA_RM_DATA = os.path.join(CURRENT_PATH, "results", "anova-rm-test-data.csv")
-
+CURRENT_PATH = Path(__file__).resolve().parent
+ANOVA_RM_DATA = Path(CURRENT_PATH).joinpath("results", "anova-rm-test-data.csv")
 data = pd.read_csv(ANOVA_RM_DATA)
 data["DV"] = data["DV"].astype("int")
 
@@ -35,9 +31,9 @@ def test_two_factors_repeated_measures_anova():
     """
     df = AnovaRM(data.iloc[:48, :], "DV", "id", within=["A", "B"]).fit()
     a = [
-        [1, 7, 40.14159, 3.905263e-04],
+        [1, 7, 40.14159, 0.0003905263],
         [2, 14, 29.21739, 1.007549e-05],
-        [2, 14, 17.10545, 1.741322e-04],
+        [2, 14, 17.10545, 0.0001741322],
     ]
     assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values, a, decimal=5)
 
@@ -86,7 +82,6 @@ def test_repeated_measures_aggregation():
     df2 = AnovaRM(
         double_data, "DV", "id", within=["A", "B", "D"], aggregate_func=pd.Series.mean
     ).fit()
-
     assert_frame_equal(df1.anova_table, df2.anova_table)
 
 
@@ -97,7 +92,6 @@ def test_repeated_measures_aggregation_one_subject_duplicated():
     df2 = AnovaRM(
         data2, "DV", "id", within=["A", "B", "D"], aggregate_func=pd.Series.mean
     ).fit()
-
     assert_frame_equal(df1.anova_table, df2.anova_table)
 
 
@@ -105,14 +99,12 @@ def test_repeated_measures_aggregate_func():
     double_data = pd.concat([data, data], axis=0)
     with pytest.raises(ValueError):
         AnovaRM(double_data, "DV", "id", within=["A", "B", "D"])
-
     m1 = AnovaRM(
         double_data, "DV", "id", within=["A", "B", "D"], aggregate_func=pd.Series.mean
     )
     m2 = AnovaRM(
         double_data, "DV", "id", within=["A", "B", "D"], aggregate_func=pd.Series.median
     )
-
     with pytest.raises(AssertionError):
         assert_equal(m1.aggregate_func, m2.aggregate_func)
     assert_frame_equal(m1.fit().anova_table, m2.fit().anova_table)
@@ -123,14 +115,11 @@ def test_repeated_measures_aggregate_func_mean():
     m1 = AnovaRM(
         double_data, "DV", "id", within=["A", "B", "D"], aggregate_func=pd.Series.mean
     )
-
     m2 = AnovaRM(double_data, "DV", "id", within=["A", "B", "D"], aggregate_func="mean")
-
     assert_equal(m1.aggregate_func, m2.aggregate_func)
 
 
 def test_repeated_measures_aggregate_compare_with_ezANOVA():
-    # Results should reproduces those from R's `ezANOVA` (library ez).
     ez = pd.DataFrame(
         {
             "F Value": [
@@ -157,7 +146,6 @@ def test_repeated_measures_aggregate_compare_with_ezANOVA():
         index=pd.Index(["A", "B", "D", "A:B", "A:D", "B:D", "A:B:D"]),
     )
     ez = ez[["F Value", "Num DF", "Den DF", "Pr > F"]]
-
     double_data = pd.concat([data, data], axis=0)
     df = (
         AnovaRM(
@@ -170,5 +158,4 @@ def test_repeated_measures_aggregate_compare_with_ezANOVA():
         .fit()
         .anova_table
     )
-
     assert_frame_equal(ez, df, check_dtype=False)

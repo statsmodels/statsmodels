@@ -6,7 +6,7 @@ Author: Josef Perktold
 
 from statsmodels.compat.scipy import SP_LT_116
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -21,48 +21,21 @@ class TestTheilTextile:
 
     @classmethod
     def setup_class(cls):
-
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(cur_dir, "results", "theil_textile_predict.csv")
+        cur_dir = Path(__file__).resolve().parent
+        filepath = Path(cur_dir).joinpath("results", "theil_textile_predict.csv")
         cls.res_predict = pd.read_csv(filepath, sep=",")
-
-        # Data col names:
-        # year, lconsump, lincome, lprice
         data = np.array(
-            """\
-        1923	1.99651	1.98543	2.00432
-        1924	1.99564	1.99167	2.00043
-        1925	2	2	2
-        1926	2.04766	2.02078	1.95713
-        1927	2.08707	2.02078	1.93702
-        1928	2.07041	2.03941	1.95279
-        1929	2.08314	2.04454	1.95713
-        1930	2.13354	2.05038	1.91803
-        1931	2.18808	2.03862	1.84572
-        1932	2.18639	2.02243	1.81558
-        1933	2.20003	2.00732	1.78746
-        1934	2.14799	1.97955	1.79588
-        1935	2.13418	1.98408	1.80346
-        1936	2.22531	1.98945	1.72099
-        1937	2.18837	2.0103	1.77597
-        1938	2.17319	2.00689	1.77452
-        1939	2.2188	2.0162	1.78746""".split(),
+            "        1923\t1.99651\t1.98543\t2.00432\n        1924\t1.99564\t1.99167\t2.00043\n        1925\t2\t2\t2\n        1926\t2.04766\t2.02078\t1.95713\n        1927\t2.08707\t2.02078\t1.93702\n        1928\t2.07041\t2.03941\t1.95279\n        1929\t2.08314\t2.04454\t1.95713\n        1930\t2.13354\t2.05038\t1.91803\n        1931\t2.18808\t2.03862\t1.84572\n        1932\t2.18639\t2.02243\t1.81558\n        1933\t2.20003\t2.00732\t1.78746\n        1934\t2.14799\t1.97955\t1.79588\n        1935\t2.13418\t1.98408\t1.80346\n        1936\t2.22531\t1.98945\t1.72099\n        1937\t2.18837\t2.0103\t1.77597\n        1938\t2.17319\t2.00689\t1.77452\n        1939\t2.2188\t2.0162\t1.78746".split(),
             float,
         ).reshape(-1, 4)
-
         endog = data[:, 1]
-        # constant at the end to match Stata
         exog = np.column_stack((data[:, 2:], np.ones(endog.shape[0])))
-
-        # prior(lprice -0.7 0.15 lincome 1 0.15) cov(lprice lincome -0.01)
         r_matrix = np.array([[1, 0, 0], [0, 1, 0]])
         r_mean = [1, -0.7]
-
         cov_r = np.array([[0.15**2, -0.01], [-0.01, 0.15**2]])
         mod = TheilGLS(endog, exog, r_matrix, q_matrix=r_mean, sigma_prior=cov_r)
         cls.res1 = mod.fit(cov_type="data-prior", use_t=True)
-        # cls.res1._cache['scale'] = 0.0001852252884817586 # from tg_mixed
-        cls.res1._cache["scale"] = 0.00018334123641580062  # from OLS
+        cls.res1._cache["scale"] = 0.00018334123641580062
         from .results import results_theil_textile as resmodule
 
         cls.res2 = resmodule.results_theil_textile
@@ -70,47 +43,30 @@ class TestTheilTextile:
     def test_basic(self):
         pt = self.res2.params_table[:, :6].T
         params2, bse2, tvalues2, pvalues2, ci_low, ci_upp = pt
-        assert_allclose(self.res1.params, params2, rtol=2e-6)
-
-        # TODO tgmixed seems to use scale from initial OLS, not from final res
-        # np.sqrt(res.scale / res_ols.scale)
-        # see below mse_resid which is equal to scale
+        assert_allclose(self.res1.params, params2, rtol=2e-06)
         corr_fact = 0.9836026210570028
-        corr_fact = 0.97376865041463734
+        corr_fact = 0.9737686504146373
         corr_fact = 1
-        assert_allclose(self.res1.bse / corr_fact, bse2, rtol=2e-6)
-        assert_allclose(self.res1.tvalues * corr_fact, tvalues2, rtol=2e-6)
-        # pvalues are very small
-        # assert_allclose(self.res1.pvalues, pvalues2, atol=2e-6)
-        # assert_allclose(self.res1.pvalues, pvalues2, rtol=0.7)
+        assert_allclose(self.res1.bse / corr_fact, bse2, rtol=2e-06)
+        assert_allclose(self.res1.tvalues * corr_fact, tvalues2, rtol=2e-06)
         ci = self.res1.conf_int()
-        # not scale corrected
         assert_allclose(ci[:, 0], ci_low, rtol=0.01)
         assert_allclose(ci[:, 1], ci_upp, rtol=0.01)
-        assert_allclose(self.res1.rsquared, self.res2.r2, rtol=2e-6)
-
-        # Note: tgmixed is using k_exog for df_resid
+        assert_allclose(self.res1.rsquared, self.res2.r2, rtol=2e-06)
         corr_fact = self.res1.df_resid / self.res2.df_r
         assert_allclose(
-            np.sqrt(self.res1.mse_resid * corr_fact), self.res2.rmse, rtol=2e-6
+            np.sqrt(self.res1.mse_resid * corr_fact), self.res2.rmse, rtol=2e-06
         )
-
         assert_allclose(
-            self.res1.fittedvalues, self.res_predict["fittedvalues"], atol=5e7
+            self.res1.fittedvalues, self.res_predict["fittedvalues"], atol=50000000.0
         )
 
     def test_other(self):
         tc = self.res1.test_compatibility()
-        assert_allclose(np.squeeze(tc[0]), self.res2.compat, rtol=2e-6)
-        assert_allclose(np.squeeze(tc[1]), self.res2.pvalue, rtol=2e-6)
-
+        assert_allclose(np.squeeze(tc[0]), self.res2.compat, rtol=2e-06)
+        assert_allclose(np.squeeze(tc[1]), self.res2.pvalue, rtol=2e-06)
         frac = self.res1.share_data()
-        # TODO check again, I guess tgmixed uses final scale in hatmatrix
-        # but I'm not sure, it passed in previous version, but now we override
-        # scale with OLS scale
-        # assert_allclose(frac, self.res2.frac_sample, rtol=2e-6)
-        # regression tests:
-        assert_allclose(frac, 0.6946116246864239, rtol=2e-6)
+        assert_allclose(frac, 0.6946116246864239, rtol=2e-06)
 
     def test_no_penalization(self):
         res_ols = OLS(self.res1.model.endog, self.res1.model.exog).fit()
@@ -121,28 +77,26 @@ class TestTheilTextile:
     @pytest.mark.smoke
     def test_summary(self):
         if SP_LT_116:
-            with pytest.warns(UserWarning, match=r".*kurtosistest.*"):
+            with pytest.warns(UserWarning, match=".*kurtosistest.*"):
                 self.res1.summary()
         else:
             self.res1.summary()
 
 
 class CheckEquivalenceMixin:
-
-    tol = {"default": (1e-4, 1e-20)}
+    tol = {"default": (0.0001, 1e-20)}
 
     @classmethod
     def get_sample(cls):
         rs = np.random.RandomState(987456)
-        nobs, k_vars = 200, 5
+        nobs, k_vars = (200, 5)
         beta = 0.5 * np.array([0.1, 1, 1, 0, 0])
         x = rs.randn(nobs, k_vars)
         x[:, 0] = 1
         y = np.dot(x, beta) + 2 * rs.randn(nobs)
-        return y, x
+        return (y, x)
 
     def test_attributes(self):
-
         attributes_fit = [
             "params",
             "rsquared",
@@ -151,36 +105,28 @@ class CheckEquivalenceMixin:
             "llf",
             "aic",
             "bic",
-            # 'fittedvalues', 'resid'
         ]
         attributes_inference = ["bse", "tvalues", "pvalues"]
         import copy
 
         attributes = copy.copy(attributes_fit)
-
         if not getattr(self, "skip_inference", False):
             attributes.extend(attributes_inference)
-
         for att in attributes:
             r1 = getattr(self.res1, att)
             r2 = getattr(self.res2, att)
             if not np.size(r1) == 1:
                 r1 = r1[: len(r2)]
-
-            # check if we have overwritten tolerance
             rtol, atol = self.tol.get(att, self.tol["default"])
-            message = "attribute: " + att  # + '\n%r\n\%r' % (r1, r2)
+            message = "attribute: " + att
             assert_allclose(r1, r2, rtol=rtol, atol=atol, err_msg=message)
-
-        # models are not close enough for some attributes at high precision
         assert_allclose(
-            self.res1.fittedvalues, self.res1.fittedvalues, rtol=1e-3, atol=1e-4
+            self.res1.fittedvalues, self.res1.fittedvalues, rtol=0.001, atol=0.0001
         )
-        assert_allclose(self.res1.resid, self.res1.resid, rtol=1e-3, atol=1e-4)
+        assert_allclose(self.res1.resid, self.res1.resid, rtol=0.001, atol=0.0001)
 
 
 class TestTheil1(CheckEquivalenceMixin):
-    # penalize last two parameters to zero
 
     @classmethod
     def setup_class(cls):
@@ -191,7 +137,6 @@ class TestTheil1(CheckEquivalenceMixin):
 
 
 class TestTheil2(CheckEquivalenceMixin):
-    # no penalization = same as OLS
 
     @classmethod
     def setup_class(cls):
@@ -202,77 +147,59 @@ class TestTheil2(CheckEquivalenceMixin):
 
 
 class TestTheil3(CheckEquivalenceMixin):
-    # perfect multicollinearity = same as OLS in terms of fit
-    # inference: bse, ... is different
 
     @classmethod
     def setup_class(cls):
         cls.skip_inference = True
         y, x = cls.get_sample()
         xd = np.column_stack((x, x))
-        # sp = np.zeros(5), np.ones(5)
         r_matrix = np.eye(5, 10, 5)
-        mod1 = TheilGLS(y, xd, r_matrix=r_matrix)  # sigma_prior=[0, 0, 1., 1.])
+        mod1 = TheilGLS(y, xd, r_matrix=r_matrix)
         cls.res1 = mod1.fit(0.001, cov_type="data-prior")
         cls.res2 = OLS(y, x).fit()
 
 
 class TestTheilGLS(CheckEquivalenceMixin):
-    # penalize last two parameters to zero
 
     @classmethod
     def setup_class(cls):
         y, x = cls.get_sample()
         nobs = len(y)
-        weights = (np.arange(nobs) < (nobs // 2)) + 0.5
+        weights = (np.arange(nobs) < nobs // 2) + 0.5
         mod1 = TheilGLS(y, x, sigma=weights, sigma_prior=[0, 0, 1.0, 1.0])
         cls.res1 = mod1.fit(200000)
         cls.res2 = GLS(y, x[:, :3], sigma=weights).fit()
 
 
 class TestTheilLinRestriction(CheckEquivalenceMixin):
-    # impose linear restriction with small uncertainty - close to OLS
 
     @classmethod
     def setup_class(cls):
         y, x = cls.get_sample()
-        # merge var1 and var2
         x2 = x[:, :2].copy()
         x2[:, 1] += x[:, 2]
-        # mod1 = TheilGLS(y, x, r_matrix =[[0, 1, -1, 0, 0]])
         mod1 = TheilGLS(y, x[:, :3], r_matrix=[[0, 1, -1]])
         cls.res1 = mod1.fit(200000)
         cls.res2 = OLS(y, x2).fit()
-
-        # adjust precision, careful: cls.tol is mutable
-        tol = {"pvalues": (1e-4, 2e-7), "tvalues": (5e-4, 0)}
+        tol = {"pvalues": (0.0001, 2e-07), "tvalues": (0.0005, 0)}
         tol.update(cls.tol)
         cls.tol = tol
 
 
 class TestTheilLinRestrictionApprox(CheckEquivalenceMixin):
-    # impose linear restriction with some uncertainty
 
     @classmethod
     def setup_class(cls):
         y, x = cls.get_sample()
-        # merge var1 and var2
         x2 = x[:, :2].copy()
         x2[:, 1] += x[:, 2]
-        # mod1 = TheilGLS(y, x, r_matrix =[[0, 1, -1, 0, 0]])
         mod1 = TheilGLS(y, x[:, :3], r_matrix=[[0, 1, -1]])
         cls.res1 = mod1.fit(100)
         cls.res2 = OLS(y, x2).fit()
-
-        # adjust precision, careful: cls.tol is mutable
         import copy
 
         tol = copy.copy(cls.tol)
-        tol2 = {
-            "default": (0.15, 0),
-            "params": (0.05, 0),
-            "pvalues": (0.02, 0.001),
-        }
+        tol2 = {"default": (0.15, 0), "params": (0.05, 0), "pvalues": (0.02, 0.001)}
         tol.update(tol2)
         cls.tol = tol
 
@@ -281,16 +208,13 @@ class TestTheilPanel:
 
     @classmethod
     def setup_class(cls):
-        # example 3
         nobs = 300
         nobs_i = 5
         n_groups = nobs // nobs_i
         k_vars = 3
-
         from statsmodels.sandbox.panel.random_panel import PanelSample
 
         dgp = PanelSample(nobs, k_vars, n_groups, rng=303305)
-        # add random intercept, using same RandomState
         if isinstance(dgp.random_state, np.random.RandomState):
             dgp.group_means = 2 + dgp.random_state.randn(n_groups)
         else:
@@ -308,20 +232,16 @@ class TestTheilPanel:
     def test_regression(self):
         y = self.endog
         x = self.exog
-        n_groups, k_vars = self.dgp.n_groups, self.dgp.k_vars
-
+        n_groups, k_vars = (self.dgp.n_groups, self.dgp.k_vars)
         Rg = np.eye(n_groups - 1) - 1.0 / n_groups * np.ones(
             (n_groups - 1, n_groups - 1)
         )
         R = np.c_[np.zeros((n_groups - 1, k_vars)), Rg]
         r = np.zeros(n_groups - 1)
         R[:, k_vars - 1] = -1
-
-        lambd = 1  # 1e-4
+        lambd = 1
         mod = TheilGLS(y, x, r_matrix=R, q_matrix=r, sigma_prior=lambd)
         res = mod.fit()
-
-        # regression test
         params1 = np.array(
             [
                 0.9751655,
@@ -389,35 +309,29 @@ class TestTheilPanel:
             ]
         )
         assert_allclose(res.params, params1)
-
         pen_weight_aicc = mod.select_pen_weight(method="aicc")
         pen_weight_gcv = mod.select_pen_weight(method="gcv")
         pen_weight_cv = mod.select_pen_weight(method="cv")
         pen_weight_bic = mod.select_pen_weight(method="bic")
         assert_allclose(pen_weight_gcv, pen_weight_aicc, rtol=0.1)
-        # regression tests:
-        assert_allclose(pen_weight_aicc, 4.77333984, rtol=1e-4)
-        assert_allclose(pen_weight_gcv, 4.45546875, rtol=1e-4)
-        assert_allclose(pen_weight_bic, 9.35957031, rtol=1e-4)
-        assert_allclose(pen_weight_cv, 1.99277344, rtol=1e-4)
+        assert_allclose(pen_weight_aicc, 4.77333984, rtol=0.0001)
+        assert_allclose(pen_weight_gcv, 4.45546875, rtol=0.0001)
+        assert_allclose(pen_weight_bic, 9.35957031, rtol=0.0001)
+        assert_allclose(pen_weight_cv, 1.99277344, rtol=0.0001)
 
     def test_combine_subset_regression(self):
-        # split sample into two, use first sample as prior for second
         endog = self.endog
         exog = self.exog
         nobs = len(endog)
-
         n05 = nobs // 2
         rs = np.random.RandomState(987125)
-        # shuffle to get random subsamples
         shuffle_idx = rs.permutation(np.arange(nobs))
         ys = endog[shuffle_idx]
         xs = exog[shuffle_idx]
         k = 10
         res_ols0 = OLS(ys[:n05], xs[:n05, :k]).fit()
         res_ols1 = OLS(ys[n05:], xs[n05:, :k]).fit()
-
-        w = res_ols1.scale / res_ols0.scale  # 1.01
+        w = res_ols1.scale / res_ols0.scale
         mod_1 = TheilGLS(
             ys[n05:],
             xs[n05:, :k],
@@ -428,27 +342,21 @@ class TestTheilPanel:
         res_1p = mod_1.fit(cov_type="data-prior")
         res_1s = mod_1.fit(cov_type="sandwich")
         res_olsf = OLS(ys, xs[:, :k]).fit()
-
-        assert_allclose(res_1p.params, res_olsf.params, rtol=1e-9)
+        assert_allclose(res_1p.params, res_olsf.params, rtol=1e-09)
         corr_fact = np.sqrt(res_1p.scale / res_olsf.scale)
-        # corrct for differences in scale computation
-        assert_allclose(res_1p.bse, res_olsf.bse * corr_fact, rtol=1e-3)
-
-        # regression test, does not verify numbers
-        # especially why are these smaller than OLS on full sample
-        # in larger sample, nobs=600, those were close to full OLS
+        assert_allclose(res_1p.bse, res_olsf.bse * corr_fact, rtol=0.001)
         bse1 = np.array(
             [
                 0.26589869,
                 0.15224812,
                 0.38407399,
                 0.75679949,
-                0.66084200,
-                0.54174080,
+                0.660842,
+                0.5417408,
                 0.53697607,
                 0.66006377,
                 0.38228551,
                 0.53920485,
             ]
         )
-        assert_allclose(res_1s.bse, bse1, rtol=1e-7)
+        assert_allclose(res_1s.bse, bse1, rtol=1e-07)

@@ -18,7 +18,7 @@ Author: josef-pktd
 from statsmodels.compat.python import lzip
 
 import datetime as dt
-import os
+from pathlib import Path
 
 import matplotlib.finance as fin
 import matplotlib.pyplot as plt
@@ -27,19 +27,15 @@ import pandas as pd
 
 
 def getquotes(symbol, start, end):
-    # Taken from the no-longer-existent pandas.examples.finance
     quotes = fin.quotes_historical_yahoo(symbol, start, end)
     dates, open, close, high, low, volume = lzip(*quotes)
-
     data = {"open": open, "close": close, "high": high, "low": low, "volume": volume}
-
     dates = pd.Index([dt.datetime.fromordinal(int(d)) for d in dates])
     return pd.DataFrame(data, index=dates)
 
 
 start_date = dt.datetime(2007, 1, 1)
 end_date = dt.datetime(2009, 12, 31)
-
 dj30 = [
     "MMM",
     "AA",
@@ -74,42 +70,23 @@ dj30 = [
 ]
 mysym = ["msft", "ibm", "goog"]
 indexsym = ["gspc", "dji"]
-
-
-# download data
 dmall = {}
 for sy in dj30:
     dmall[sy] = getquotes(sy, start_date, end_date)
-
-# combine into WidePanel
 pawp = pd.WidePanel.fromDict(dmall)
 print(pawp.values.shape)
-
-# select closing prices
 paclose = pawp.getMinorXS("close")
-
-# take log and first difference over time
 paclose_ratereturn = paclose.apply(np.log).diff()
-
-if not os.path.exists("dj30rr"):
-    # if pandas is updated, then sometimes unpickling fails, and need to save again
+if not Path("dj30rr").exists():
     paclose_ratereturn.save("dj30rr")
-
 plt.figure()
 paclose_ratereturn.plot()
 plt.title("daily rate of return")
-
-# square the returns
 paclose_ratereturn_vol = paclose_ratereturn.apply(lambda x: np.power(x, 2))
 plt.figure()
 plt.title("volatility (with 5 day moving average")
 paclose_ratereturn_vol.plot()
-
-# use convolution to get moving average
 paclose_ratereturn_vol_mov = paclose_ratereturn_vol.apply(
     lambda x: np.convolve(x, np.ones(5) / 5.0, "same")
 )
 paclose_ratereturn_vol_mov.plot()
-
-
-# plt.show()

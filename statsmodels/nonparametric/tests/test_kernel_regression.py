@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -8,6 +10,7 @@ nparam = sm.nonparametric
 
 
 class KernelRegressionTestBase:
+
     @classmethod
     def setup_class(cls):
         nobs = 60
@@ -20,11 +23,9 @@ class KernelRegressionTestBase:
         cls.noise = rs.normal(size=(nobs, 1))
         b0 = 0.3
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         cls.y = b0 + b1 * cls.c1 + b2 * cls.c2 + cls.noise
         cls.y2 = b0 + b1 * cls.c1 + b2 * cls.c2 + cls.o + cls.noise
-        # Italy data from R's np package (the first 50 obs) R>> data (Italy)
-
         cls.Italy_gdp = [
             8.556,
             12.262,
@@ -77,7 +78,6 @@ class KernelRegressionTestBase:
             8.717,
             6.95,
         ]
-
         cls.Italy_year = [
             1951,
             1951,
@@ -130,8 +130,6 @@ class KernelRegressionTestBase:
             1953,
             1953,
         ]
-
-        # OECD panel data from NP  R>> data(oecdpanel)
         cls.growth = [
             -0.0017584,
             0.00740688,
@@ -184,7 +182,6 @@ class KernelRegressionTestBase:
             0.03421225,
             -0.0036825,
         ]
-
         cls.oecd = [
             0,
             0,
@@ -238,11 +235,11 @@ class KernelRegressionTestBase:
             0,
         ]
 
-    def write2file(self, file_name, data):  # pragma: no cover
+    def write2file(self, file_name, data):
         """Write some data to a csv file.  Only use for debugging!"""
         import csv
 
-        data_file = csv.writer(open(file_name, "w", encoding="utf-8"))
+        data_file = csv.writer(Path(file_name).open("w", encoding="utf-8"))
         data = np.column_stack(data)
         nobs = max(np.shape(data))
         K = min(np.shape(data))
@@ -252,6 +249,7 @@ class KernelRegressionTestBase:
 
 
 class TestKernelReg(KernelRegressionTestBase):
+
     def test_ordered_lc_cvls(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelReg(
@@ -263,23 +261,15 @@ class TestKernelReg(KernelRegressionTestBase):
             )
         sm_bw = model.bw
         R_bw = 0.1390096
-
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
         R_mean = 6.190486
-
         sm_R2 = model.r_squared()
         R_R2 = 0.1435323
-
-        # CODE TO REPRODUCE IN R
-        # library(np)
-        # data(Italy)
-        # attach(Italy)
-        # bw <- npregbw(formula=gdp[1:50]~ordered(year[1:50]))
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, R_bw, atol=0.01)
+        npt.assert_allclose(sm_mean, R_mean, atol=0.01)
+        npt.assert_allclose(sm_R2, R_R2, atol=0.01)
 
     def test_continuousdata_lc_cvls(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -290,21 +280,17 @@ class TestKernelReg(KernelRegressionTestBase):
                 var_type="cc",
                 bw="cv_ls",
             )
-        # Bandwidth
         sm_bw = model.bw
         R_bw = [0.6163835, 0.1649656]
-        # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
         R_mean = [31.49157, 37.29536, 43.72332, 40.58997, 36.80711]
-        # R-Squared
         sm_R2 = model.r_squared()
         R_R2 = 0.956381720885
-
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, R_bw, atol=0.01)
+        npt.assert_allclose(sm_mean, R_mean, atol=0.01)
+        npt.assert_allclose(sm_R2, R_R2, atol=0.01)
 
     def test_continuousdata_ll_cvls(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -315,20 +301,17 @@ class TestKernelReg(KernelRegressionTestBase):
                 var_type="cc",
                 bw="cv_ls",
             )
-
         sm_bw = model.bw
         R_bw = [1.717891, 2.449415]
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
-        R_mean = [31.16003, 37.30323, 44.49870, 40.73704, 36.19083]
-
+        R_mean = [31.16003, 37.30323, 44.4987, 40.73704, 36.19083]
         sm_R2 = model.r_squared()
         R_R2 = 0.9336019
-
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, R_bw, atol=0.01)
+        npt.assert_allclose(sm_mean, R_mean, atol=0.01)
+        npt.assert_allclose(sm_R2, R_R2, atol=0.01)
 
     def test_continuous_mfx_ll_cvls(self):
         nobs = 200
@@ -339,7 +322,7 @@ class TestKernelReg(KernelRegressionTestBase):
         noise = rs.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         b3 = 2.3
         Y = b0 + b1 * C1 + b2 * C2 + b3 * C3 + noise
         bw_cv_ls = np.array([0.96075, 0.5682, 0.29835])
@@ -349,7 +332,7 @@ class TestKernelReg(KernelRegressionTestBase):
             )
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
-        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
+        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=0.2)
 
     def test_mixed_mfx_ll_cvls(self):
         nobs = 200
@@ -360,7 +343,7 @@ class TestKernelReg(KernelRegressionTestBase):
         noise = rs.normal(size=(nobs,))
         b0 = 3
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         b3 = 2.3
         Y = b0 + b1 * C1 + b2 * C2 + b3 * ovals + noise
         bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
@@ -373,9 +356,8 @@ class TestKernelReg(KernelRegressionTestBase):
                 bw=bw_cv_ls,
             )
         sm_mean, sm_mfx = model.fit()
-        # TODO: add expected result
-        sm_R2 = model.r_squared()  # noqa: F841
-        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=2e-1)
+        sm_R2 = model.r_squared()
+        npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=0.2)
 
     @pytest.mark.slow
     @pytest.mark.xfail(
@@ -396,18 +378,15 @@ class TestKernelReg(KernelRegressionTestBase):
             model = nparam.KernelReg(
                 endog=[Y], exog=[C1, C2, C3], reg_type="ll", var_type="ccc", bw="cv_ls"
             )
-        # Smoke test
         assert isinstance(model.bw, float)
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()
         assert isinstance(sm_R2, float)
-        # Theoretical marginal effects
         mfx1 = b1 * C2
         mfx2 = b1 * C1
-        npt.assert_allclose(sm_mean, Y, rtol=2e-1)
-
-        npt.assert_allclose(sm_mfx[:, 0], mfx1, rtol=2e-1)
-        npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
+        npt.assert_allclose(sm_mean, Y, rtol=0.2)
+        npt.assert_allclose(sm_mfx[:, 0], mfx1, rtol=0.2)
+        npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=0.2)
 
     @pytest.mark.joblib
     @pytest.mark.slow
@@ -418,9 +397,8 @@ class TestKernelReg(KernelRegressionTestBase):
         C2 = rs.normal(2, 1, size=(nobs,))
         b0 = 3
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         Y = b0 + b1 * C1 + b2 * C2
-
         model_efficient = nparam.KernelReg(
             endog=[Y],
             exog=[C1],
@@ -434,7 +412,7 @@ class TestKernelReg(KernelRegressionTestBase):
             model = nparam.KernelReg(
                 endog=[Y], exog=[C1], reg_type="ll", var_type="c", bw="cv_ls"
             )
-        npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
+        npt.assert_allclose(model.bw, model_efficient.bw, atol=0.05, rtol=0.1)
 
     @pytest.mark.slow
     def test_censored_ll_cvls(self):
@@ -444,7 +422,7 @@ class TestKernelReg(KernelRegressionTestBase):
         C2 = rs.normal(2, 1, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
-        Y[Y > 0] = 0  # censor the data
+        Y[Y > 0] = 0
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelCensoredReg(
                 endog=[Y],
@@ -455,7 +433,7 @@ class TestKernelReg(KernelRegressionTestBase):
                 censor_val=0,
             )
         sm_mean, sm_mfx = model.fit()
-        npt.assert_allclose(sm_mfx[0, :], [1.2, -0.9], rtol=2e-1)
+        npt.assert_allclose(sm_mfx[0, :], [1.2, -0.9], rtol=0.2)
 
     @pytest.mark.slow
     def test_continuous_lc_aic(self):
@@ -465,20 +443,12 @@ class TestKernelReg(KernelRegressionTestBase):
         C2 = rs.normal(2, 1, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
-        # self.write2file('RegData.csv', (Y, C1, C2))
-
-        # CODE TO PRODUCE BANDWIDTH ESTIMATION IN R
-        # library(np)
-        # data <- read.csv('RegData.csv', header=FALSE)
-        # bw <- npregbw(formula=data$V1 ~ data$V2 + data$V3,
-        #                bwmethod='cv.aic', regtype='lc')
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelReg(
                 endog=[Y], exog=[C1, C2], reg_type="lc", var_type="cc", bw="aic"
             )
-        # R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
         bw_expected = [0.3987821, 0.50933458]
-        npt.assert_allclose(model.bw, bw_expected, rtol=1e-3)
+        npt.assert_allclose(model.bw, bw_expected, rtol=0.001)
 
     def test_significance_continuous(self):
         nobs = 250
@@ -488,20 +458,18 @@ class TestKernelReg(KernelRegressionTestBase):
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         Y = b1 * C1 + b2 * C2 + noise
-
-        # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         model = nparam.KernelReg(
             endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng=20260111
         )
-        nboot = 45  # Number of bootstrap samples
-        sig_var12 = model.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        nboot = 45
+        sig_var12 = model.sig_test([0, 1], nboot=nboot)
         assert sig_var12 == "Not Significant"
-        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        sig_var1 = model.sig_test([0], nboot=nboot)
         assert sig_var1 != "Not Significant"
-        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        sig_var2 = model.sig_test([1], nboot=nboot)
         assert sig_var2 == "Not Significant"
 
     @pytest.mark.singleton_randomstate
@@ -509,17 +477,14 @@ class TestKernelReg(KernelRegressionTestBase):
     @pytest.mark.slow
     def test_significance_seed_legacy(self):
         nobs = 250
-
         rs = np.random.RandomState(1234561)
         C1 = rs.normal(size=(nobs,))
         C2 = rs.normal(2, 1, size=(nobs,))
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         Y = b1 * C1 + b2 * C2 + noise
-
-        # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         rng = 1234561
         np.random.seed(1234561)
@@ -535,13 +500,10 @@ class TestKernelReg(KernelRegressionTestBase):
             bw=bw,
             rng=np.random.RandomState(rng),
         )
-
-        nboot = 45  # Number of bootstrap samples
-        # Test no longer the same since singleton random state has been removed
+        nboot = 45
         with pytest.warns(FutureWarning, match="After 0.17"):
-            sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
-
-        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+            sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)
+        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)
         assert sig_var12_0 == sig_var12_1
 
     @pytest.mark.slow
@@ -553,10 +515,8 @@ class TestKernelReg(KernelRegressionTestBase):
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         Y = b1 * C1 + b2 * C2 + noise
-
-        # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         rng = 1234561
         model_1 = nparam.KernelReg(
@@ -578,16 +538,12 @@ class TestKernelReg(KernelRegressionTestBase):
             bw=bw,
             rng=np.random.default_rng(rng),
         )
-
-        nboot = 45  # Number of bootstrap samples
-        # Test no longer the same since singleton random state has been removed
-        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        nboot = 45
+        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)
         assert sig_var12_1 in ("Not Significant", "*", "**")
-
-        sig_var12_2 = model_2.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
-        sig_var12_3 = model_3.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        sig_var12_2 = model_2.sig_test([0, 1], nboot=nboot)
+        sig_var12_3 = model_3.sig_test([0, 1], nboot=nboot)
         assert sig_var12_2 == sig_var12_3
-
         with pytest.raises(TypeError, match="must either be an integer"):
             nparam.KernelReg(
                 endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng="a"
@@ -602,10 +558,8 @@ class TestKernelReg(KernelRegressionTestBase):
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         Y = b1 * C1 + b2 * C2 + noise
-
-        # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         rng = 12345
         model_0 = nparam.KernelReg(
@@ -619,10 +573,9 @@ class TestKernelReg(KernelRegressionTestBase):
             bw=bw,
             rng=np.random.default_rng(rng),
         )
-
-        nboot = 45  # Number of bootstrap samples
-        sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
-        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        nboot = 45
+        sig_var12_0 = model_0.sig_test([0, 1], nboot=nboot)
+        sig_var12_1 = model_1.sig_test([0, 1], nboot=nboot)
         assert sig_var12_0 == sig_var12_1
 
     @pytest.mark.slow
@@ -634,12 +587,9 @@ class TestKernelReg(KernelRegressionTestBase):
         C3 = rs.beta(0.5, 0.2, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
+        b2 = 3.7
         Y = b1 * ovals + b2 * C2 + noise
-
-        bw = [3.63473198e00, 1.21404803e06]
-        # This is the cv_ls bandwidth estimated earlier
-        # The cv_ls bandwidth was estimated earlier to save time
+        bw = [3.63473198, 1214048.03]
         rng = 8329321
         model = nparam.KernelReg(
             endog=[Y],
@@ -649,11 +599,10 @@ class TestKernelReg(KernelRegressionTestBase):
             bw=bw,
             rng=np.random.RandomState(rng),
         )
-        # This was also tested with local constant estimator
-        nboot = 45  # Number of bootstrap samples
-        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        nboot = 45
+        sig_var1 = model.sig_test([0], nboot=nboot)
         npt.assert_equal(sig_var1 == "Not Significant", False)
-        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        sig_var2 = model.sig_test([1], nboot=nboot)
         npt.assert_equal(sig_var2 == "Not Significant", True)
 
     def test_user_specified_kernel(self):
@@ -666,21 +615,17 @@ class TestKernelReg(KernelRegressionTestBase):
                 bw="cv_ls",
                 ckertype="tricube",
             )
-        # Bandwidth
         sm_bw = model.bw
         R_bw = [0.581663, 0.5652]
-        # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
         R_mean = [30.926714, 36.994604, 44.438358, 40.680598, 35.961593]
-        # R-Squared
         sm_R2 = model.r_squared()
         R_R2 = 0.934825
-
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, R_bw, atol=0.01)
+        npt.assert_allclose(sm_mean, R_mean, atol=0.01)
+        npt.assert_allclose(sm_R2, R_R2, atol=0.01)
 
     def test_censored_user_specified_kernel(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -693,24 +638,19 @@ class TestKernelReg(KernelRegressionTestBase):
                 censor_val=0,
                 ckertype="tricube",
             )
-        # Bandwidth
         sm_bw = model.bw
         R_bw = [0.581663, 0.5652]
-        # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
         R_mean = [29.205526, 29.538008, 31.667581, 31.978866, 30.926714]
-        # R-Squared
         sm_R2 = model.r_squared()
         R_R2 = 0.934825
-
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, R_bw, atol=0.01)
+        npt.assert_allclose(sm_mean, R_mean, atol=0.01)
+        npt.assert_allclose(sm_R2, R_R2, atol=0.01)
 
     def test_efficient_user_specificed_bw(self):
-
         bw_user = [0.23, 434697.22]
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelReg(
@@ -721,7 +661,6 @@ class TestKernelReg(KernelRegressionTestBase):
                 bw=bw_user,
                 defaults=nparam.EstimatorSettings(efficient=True),
             )
-        # Bandwidth
         npt.assert_equal(model.bw, bw_user)
 
     def test_censored_efficient_user_specificed_bw(self):
@@ -731,8 +670,7 @@ class TestKernelReg(KernelRegressionTestBase):
         C2 = rs.normal(2, 1, size=(nobs,))
         noise = rs.normal(size=(nobs,))
         Y = 0.3 + 1.2 * C1 - 0.9 * C2 + noise
-        Y[Y > 0] = 0  # censor the data
-
+        Y[Y > 0] = 0
         bw_user = [0.23, 434697.22]
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelCensoredReg(
@@ -744,12 +682,10 @@ class TestKernelReg(KernelRegressionTestBase):
                 censor_val=0,
                 defaults=nparam.EstimatorSettings(efficient=True),
             )
-        # Bandwidth
         npt.assert_equal(model.bw, bw_user)
 
 
 def test_invalid_bw():
-    # GH4873
     x = np.arange(400)
     y = x**2
     with pytest.raises(ValueError):
@@ -760,12 +696,10 @@ def test_invalid_bw():
 def test_invalid_kernel():
     x = np.arange(400)
     y = x**2
-    # silverman kernel is not currently in statsmodels kernel library
     with pytest.raises(ValueError):
         nparam.KernelReg(
             x, y, reg_type="ll", var_type="cc", bw="cv_ls", ckertype="silverman"
         )
-
     with pytest.raises(ValueError):
         nparam.KernelCensoredReg(
             x,

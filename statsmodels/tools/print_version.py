@@ -3,7 +3,7 @@
 
 from functools import reduce
 import os
-from os.path import dirname
+from pathlib import Path
 import platform
 import sys
 
@@ -170,7 +170,7 @@ def _show_versions_only():
     try:
         import pytest
 
-        print(f"pytest: {safe_version(pytest)} ({dirname(pytest.__file__)})")
+        print(f"pytest: {safe_version(pytest)} ({Path(pytest.__file__).parent})")
     except ImportError:
         print("pytest: Not installed")
 
@@ -220,7 +220,7 @@ def show_versions(show_dirs=True):
     if has_sm:
         print(
             "Installed: {} ({})".format(
-                safe_version(statsmodels), dirname(statsmodels.__file__)
+                safe_version(statsmodels), Path(statsmodels.__file__).parent
             )
         )
     else:
@@ -230,21 +230,21 @@ def show_versions(show_dirs=True):
     try:
         import Cython
 
-        print(f"cython: {safe_version(Cython)} ({dirname(Cython.__file__)})")
+        print(f"cython: {safe_version(Cython)} ({Path(Cython.__file__).parent})")
     except ImportError:
         print("cython: Not installed")
 
     try:
         import numpy as np
 
-        print(f"numpy: {safe_version(np)} ({dirname(np.__file__)})")
+        print(f"numpy: {safe_version(np)} ({Path(np.__file__).parent})")
     except ImportError:
         print("numpy: Not installed")
 
     try:
         import scipy
 
-        print(f"scipy: {safe_version(scipy)} ({dirname(scipy.__file__)})")
+        print(f"scipy: {safe_version(scipy)} ({Path(scipy.__file__).parent})")
     except ImportError:
         print("scipy: Not installed")
 
@@ -254,7 +254,7 @@ def show_versions(show_dirs=True):
         print(
             "pandas: {} ({})".format(
                 safe_version(pd, "__version__"),
-                dirname(pd.__file__),
+                Path(pd.__file__).parent,
             )
         )
     except ImportError:
@@ -265,7 +265,7 @@ def show_versions(show_dirs=True):
 
         print(
             "    dateutil: {} ({})".format(
-                safe_version(dateutil), dirname(dateutil.__file__)
+                safe_version(dateutil), Path(dateutil.__file__).parent
             )
         )
     except ImportError:
@@ -274,7 +274,7 @@ def show_versions(show_dirs=True):
     try:
         import patsy
 
-        print(f"patsy: {safe_version(patsy)} ({dirname(patsy.__file__)})")
+        print(f"patsy: {safe_version(patsy)} ({Path(patsy.__file__).parent})")
     except ImportError:
         print("patsy: Not installed")
 
@@ -283,7 +283,7 @@ def show_versions(show_dirs=True):
     try:
         import matplotlib as mpl
 
-        print(f"matplotlib: {safe_version(mpl)} ({dirname(mpl.__file__)})")
+        print(f"matplotlib: {safe_version(mpl)} ({Path(mpl.__file__).parent})")
         print("    backend: %s " % mpl.rcParams["backend"])
     except ImportError:
         print("matplotlib: Not installed")
@@ -293,7 +293,7 @@ def show_versions(show_dirs=True):
 
         print(
             "cvxopt: {} ({})".format(
-                safe_version(info, "version"), dirname(info.__file__)
+                safe_version(info, "version"), Path(info.__file__).parent
             )
         )
     except ImportError:
@@ -302,7 +302,7 @@ def show_versions(show_dirs=True):
     try:
         import joblib
 
-        print(f"joblib: {safe_version(joblib)} ({dirname(joblib.__file__)})")
+        print(f"joblib: {safe_version(joblib)} ({Path(joblib.__file__).parent})")
     except ImportError:
         print("joblib: Not installed")
 
@@ -311,20 +311,20 @@ def show_versions(show_dirs=True):
     try:
         import IPython
 
-        print(f"IPython: {safe_version(IPython)} ({dirname(IPython.__file__)})")
+        print(f"IPython: {safe_version(IPython)} ({Path(IPython.__file__).parent})")
     except ImportError:
         print("IPython: Not installed")
     try:
         import jinja2
 
-        print(f"    jinja2: {safe_version(jinja2)} ({dirname(jinja2.__file__)})")
+        print(f"    jinja2: {safe_version(jinja2)} ({Path(jinja2.__file__).parent})")
     except ImportError:
         print("    jinja2: Not installed")
 
     try:
         import sphinx
 
-        print(f"sphinx: {safe_version(sphinx)} ({dirname(sphinx.__file__)})")
+        print(f"sphinx: {safe_version(sphinx)} ({Path(sphinx.__file__).parent})")
     except ImportError:
         print("sphinx: Not installed")
 
@@ -333,7 +333,7 @@ def show_versions(show_dirs=True):
 
         print(
             "    pygments: {} ({})".format(
-                safe_version(pygments), dirname(pygments.__file__)
+                safe_version(pygments), Path(pygments.__file__).parent
             )
         )
     except ImportError:
@@ -342,7 +342,7 @@ def show_versions(show_dirs=True):
     try:
         import pytest
 
-        print(f"pytest: {safe_version(pytest)} ({dirname(pytest.__file__)})")
+        print(f"pytest: {safe_version(pytest)} ({Path(pytest.__file__).parent})")
     except ImportError:
         print("pytest: Not installed")
 
@@ -351,7 +351,7 @@ def show_versions(show_dirs=True):
 
         print(
             "virtualenv: {} ({})".format(
-                safe_version(virtualenv), dirname(virtualenv.__file__)
+                safe_version(virtualenv), Path(virtualenv.__file__).parent
             )
         )
     except ImportError:

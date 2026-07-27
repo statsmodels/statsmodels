@@ -31,7 +31,7 @@ def _open(fname, mode, encoding):
 
         return gzip.open(fname, mode, encoding=encoding)
     else:
-        return open(fname, mode, encoding=encoding)
+        return Path(fname).open(mode=mode, encoding=encoding)
 
 
 def get_file_obj(fname, mode="r", encoding=None):
@@ -65,7 +65,10 @@ def get_file_obj(fname, mode="r", encoding=None):
     elif hasattr(fname, "open"):
         return fname.open(mode=mode, encoding=encoding)
     try:
-        return open(fname, mode, encoding=encoding)
+        # Not Path(fname).open(...): this is the fallback for inputs that
+        # are neither path-like nor file-like, e.g. an int file descriptor,
+        # which plain open() accepts but Path() does not.
+        return open(fname, mode, encoding=encoding)  # noqa: PTH123
     except TypeError:
         try:
             # Make sure the object has the write methods

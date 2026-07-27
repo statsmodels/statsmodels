@@ -1,6 +1,6 @@
 from statsmodels.compat.pandas import MONTH_END
 
-import os
+from pathlib import Path
 import pickle
 
 import numpy as np
@@ -11,8 +11,8 @@ import pytest
 from statsmodels.datasets import co2
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(cur_dir, "results", "stl_test_results.csv")
+cur_dir = Path(__file__).resolve().parent
+file_path = Path(cur_dir).joinpath("results", "stl_test_results.csv")
 results = pd.read_csv(file_path)
 results.columns = [c.strip() for c in results.columns]
 results.scenario = results.scenario.apply(str.strip)
@@ -25,7 +25,7 @@ def robust(request):
 
 
 def default_kwargs_base():
-    file_path = os.path.join(cur_dir, "results", "stl_co2.csv")
+    file_path = Path(cur_dir).joinpath("results", "stl_co2.csv")
     co2 = np.asarray(pd.read_csv(file_path, header=None).iloc[:, 0])
     y = co2
     nobs = y.shape[0]
@@ -102,14 +102,13 @@ def _to_class_kwargs(kwargs, robust=False):
         trend_jump=ntjump,
         low_pass_jump=nljump,
     )
-    return class_kwargs, outer_iter, inner_iter
+    return (class_kwargs, outer_iter, inner_iter)
 
 
 def test_baseline_class(default_kwargs):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
     mod = STL(**class_kwargs)
     res = mod.fit(outer_iter=outer, inner_iter=inner)
-
     expected = results.loc["baseline"].sort_index()
     assert_allclose(res.trend, expected.trend)
     assert_allclose(res.seasonal, expected.season)
@@ -122,7 +121,6 @@ def test_short_class(default_kwargs_short):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs_short)
     mod = STL(**class_kwargs)
     res = mod.fit(outer_iter=outer, inner_iter=inner)
-
     expected = results.loc["short"].sort_index()
     assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
@@ -134,7 +132,6 @@ def test_nljump_1_class(default_kwargs):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
     mod = STL(**class_kwargs)
     res = mod.fit(outer_iter=outer, inner_iter=inner)
-
     expected = results.loc["nljump-1"].sort_index()
     assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
@@ -146,7 +143,6 @@ def test_ntjump_1_class(default_kwargs):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
     mod = STL(**class_kwargs)
     res = mod.fit(outer_iter=outer, inner_iter=inner)
-
     expected = results.loc["ntjump-1"].sort_index()
     assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
@@ -159,7 +155,6 @@ def test_nljump_1_ntjump_1_class(default_kwargs):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
     mod = STL(**class_kwargs)
     res = mod.fit(outer_iter=outer, inner_iter=inner)
-
     expected = results.loc["nljump-1-ntjump-1"].sort_index()
     assert_allclose(res.seasonal, expected.season)
     assert_allclose(res.trend, expected.trend)
@@ -214,7 +209,6 @@ def test_parameter_checks_low_pass(default_kwargs):
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
     endog = class_kwargs["endog"]
     period = class_kwargs["period"]
-
     match = "low_pass must be an odd positive integer >= 3 where low_pass > period"
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=period, low_pass=14)
@@ -268,13 +262,11 @@ def test_period_detection(default_kwargs):
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
     mod = STL(**class_kwargs)
     res = mod.fit()
-
     del class_kwargs["period"]
     endog = class_kwargs["endog"]
     index = pd.date_range("1-1-1959", periods=348, freq=MONTH_END)
     class_kwargs["endog"] = pd.Series(endog, index=index)
     mod = STL(**class_kwargs)
-
     res_implicit_period = mod.fit()
     assert_allclose(res.seasonal, res_implicit_period.seasonal)
 
@@ -293,14 +285,12 @@ def test_plot(default_kwargs, close_figures):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
     res = STL(**class_kwargs).fit(outer_iter=outer, inner_iter=inner)
     res.plot()
-
     class_kwargs["endog"] = pd.Series(class_kwargs["endog"], name="CO2")
     res = STL(**class_kwargs).fit()
     res.plot()
 
 
 def test_default_trend(default_kwargs):
-    # GH 6686
     class_kwargs, _, _ = _to_class_kwargs(default_kwargs)
     class_kwargs["seasonal"] = 17
     class_kwargs["trend"] = None
@@ -310,7 +300,6 @@ def test_default_trend(default_kwargs):
     expected = int(np.ceil(1.5 * period / (1 - 1.5 / seasonal)))
     expected += 1 if expected % 2 == 0 else 0
     assert mod.config["trend"] == expected
-
     class_kwargs["seasonal"] = 7
     mod = STL(**class_kwargs)
     period = class_kwargs["period"]

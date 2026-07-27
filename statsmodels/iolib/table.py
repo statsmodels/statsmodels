@@ -86,6 +86,7 @@ from statsmodels.compat.python import lmap, lrange
 
 import csv
 from itertools import cycle, zip_longest
+from pathlib import Path
 
 
 def csv2st(csvfile, headers=False, stubs=False, title=None):
@@ -111,7 +112,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
         The table created from the CSV file.
     """
     rows = list()
-    with open(csvfile, encoding="utf-8") as fh:
+    with Path(csvfile).open(encoding="utf-8") as fh:
         reader = csv.reader(fh)
         if headers is True:
             headers = next(reader)

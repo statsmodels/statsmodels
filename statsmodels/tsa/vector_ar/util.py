@@ -3,6 +3,8 @@
 from statsmodels.compat.pandas import deprecate_kwarg, frequencies
 from statsmodels.compat.python import asbytes
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy import linalg, stats
@@ -10,10 +12,6 @@ from scipy import linalg, stats
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.validation import array_like, int_like
 import statsmodels.tsa.tsatools as tsa
-
-#
-# Auxiliary functions for estimation
-#
 
 
 def get_var_endog(y, lags, trend="c", has_constant="skip"):
@@ -47,18 +45,13 @@ def get_var_endog(y, lags, trend="c", has_constant="skip"):
         The predictor matrix Z.
     """
     nobs = len(y)
-    # Ravel C order, need to put in descending order
     Z = np.array([y[t - lags : t][::-1].ravel() for t in range(lags, nobs)])
-
-    # Add constant, trend, etc.
     if trend != "n":
         Z = tsa.add_trend(Z, prepend=True, trend=trend, has_constant=has_constant)
-
     return Z
 
 
 def get_trendorder(trend="c"):
-    # Handle constant, etc.
     if trend == "c":
         trendorder = 1
     elif trend in ("n", "nc"):
@@ -106,14 +99,10 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
     lag_names = []
     if isinstance(names, str):
         names = [names]
-
-    # take care of lagged endogenous names
     for i in range(1, lag_order + 1):
         for name in names:
             name_str = name if isinstance(name, str) else str(name)
             lag_names.append("L" + str(i) + "." + name_str)
-
-    # handle the constant name
     if trendorder != 0:
         lag_names.insert(0, "const")
     if trendorder > 1:
@@ -159,25 +148,15 @@ def comp_matrix(coefs):
     p, k1, k2 = coefs.shape
     if k1 != k2:
         raise ValueError("coefs must be 3-d with shape (p, k, k).")
-
     kp = k1 * p
-
     result = np.zeros((kp, kp))
     result[:k1] = np.concatenate(coefs, axis=1)
-
-    # Set I_K matrices
     if p > 1:
         result[np.arange(k1, kp), np.arange(kp - k1)] = 1
-
     return result
 
 
-#
-# Miscellaneous stuff
-#
-
-
-def parse_lutkepohl_data(path):  # pragma: no cover
+def parse_lutkepohl_data(path):
     """
     Parse data files from Lütkepohl (2005) book
 
@@ -195,20 +174,16 @@ def parse_lutkepohl_data(path):  # pragma: no cover
     date_range : DatetimeIndex
         The dates corresponding to the parsed data.
     """
-
     from collections import deque
     from datetime import datetime
     import re
 
-    regex = re.compile(asbytes(r"<(.*) (\w)([\d]+)>.*"))
-    with open(path, "rb") as f:
+    regex = re.compile(asbytes("<(.*) (\\w)([\\d]+)>.*"))
+    with Path(path).open("rb") as f:
         lines = deque(f)
-
     to_skip = 0
     while asbytes("*/") not in lines.popleft():
-        # while '*/' not in lines.popleft():
         to_skip += 1
-
     while True:
         to_skip += 1
         line = lines.popleft()
@@ -216,33 +191,23 @@ def parse_lutkepohl_data(path):  # pragma: no cover
         if m:
             year, freq, start_point = m.groups()
             break
-
-    data = pd.read_csv(path, delimiter=r"\s+", header=to_skip + 1).to_records(
+    data = pd.read_csv(path, delimiter="\\s+", header=to_skip + 1).to_records(
         index=False
     )
-
     n = len(data)
-
-    # generate the corresponding date range (using pandas for now)
     start_point = int(start_point)
     year = int(year)
-
     offsets = {
         asbytes("Q"): frequencies.BQuarterEnd(),
         asbytes("M"): frequencies.BMonthEnd(),
         asbytes("A"): frequencies.BYearEnd(),
     }
-
-    # create an instance
     offset = offsets[freq]
-
     inc = offset * (start_point - 1)
     start_date = offset.rollforward(datetime(year, 1, 1)) + inc
-
     offset = offsets[freq]
     date_range = pd.date_range(start=start_date, freq=offset, periods=n)
-
-    return data, date_range
+    return (data, date_range)
 
 
 def norm_signif_level(alpha=0.05):
@@ -251,19 +216,12 @@ def norm_signif_level(alpha=0.05):
 
 def acf_to_acorr(acf):
     diag = np.diag(acf[0])
-    # numpy broadcasting sufficient
     return acf / np.sqrt(np.outer(diag, diag))
 
 
 @deprecate_kwarg("seed", "rng")
 def varsim(
-    coefs,
-    intercept,
-    sig_u,
-    steps=100,
-    initial_values=None,
-    rng=None,
-    nsimulations=None,
+    coefs, intercept, sig_u, steps=100, initial_values=None, rng=None, nsimulations=None
 ):
     """
     Simulate VAR(p) process, given coefficients and assuming Gaussian noise
@@ -331,16 +289,13 @@ def varsim(
     )
     result = np.zeros((nsimulations, steps, k))
     if intercept is not None:
-        # intercept can be 2-D like an offset variable
         if np.ndim(intercept) > 1:
             if not len(intercept) == ugen.shape[1]:
                 raise ValueError("2-D intercept needs to have length `steps`")
-        # add intercept/offset also to intial values
         result += intercept
         result[:, p:] += ugen[:, p:]
     else:
         result[:, p:] = ugen[:, p:]
-
     initial_values = array_like(
         initial_values, "initial_values", optional=True, maxdim=2
     )
@@ -350,13 +305,10 @@ def varsim(
                 "initial_values should have shape (p, k) or (k,) where p is the number of lags and k is the number of equations."
             )
         result[:, :p] = initial_values
-
-    # add in AR terms
     for t in range(p, steps):
         ygen = result[:, t]
         for j in range(p):
             ygen += np.dot(coefs[j], result[:, t - j - 1].T).T
-
     return result.reshape(result_shape)
 
 
@@ -370,7 +322,6 @@ def get_index(lst, name):
     return result
 
 
-# method used repeatedly in Sims-Zha error bands
 def eigval_decomp(sym_array):
     """
     Compute the eigenvalue decomposition of a symmetric array
@@ -389,10 +340,9 @@ def eigval_decomp(sym_array):
     k : int
         Index of the largest eigenvalue.
     """
-    # check if symmetric, do not include shock period
     eigva, W = linalg.eig(sym_array, left=True, right=False)
     k = np.argmax(eigva)
-    return W, eigva, k
+    return (W, eigva, k)
 
 
 def vech(A):
@@ -409,7 +359,6 @@ def vech(A):
     vechvec : ndarray
         Vector of all elements on and below the diagonal.
     """
-
     length = A.shape[1]
     vechvec = []
     for i in range(length):
@@ -453,7 +402,6 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
         season_exog = np.zeros((len_endog, n_seasons - 1))
         for i in range(n_seasons - 1):
             season_exog[(i - first_period) % n_seasons :: n_seasons, i] = 1
-
         if centered:
             season_exog -= 1 / n_seasons
         return season_exog

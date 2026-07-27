@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 
 import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -15,7 +16,7 @@ import pytest
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class Intercepts(mlemodel.MLEModel):
@@ -45,24 +46,20 @@ class Intercepts(mlemodel.MLEModel):
 
     def update(self, params, **kwargs):
         params = super().update(params, **kwargs)
-
         self["obs_intercept"] = params[:3]
         self["state_intercept"] = params[3:]
 
 
 class TestIntercepts:
+
     @classmethod
     def setup_class(cls, which="mixed", **kwargs):
-        # Results
         path = current_path + os.sep + "results/results_intercepts_R.csv"
         cls.desired = pd.read_csv(path)
-
-        # Data
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start="1959-01-01", end="2009-7-01", freq="QS")
         obs = dta[["realgdp", "realcons", "realinv"]].copy()
         obs = obs / obs.std()
-
         if which == "all":
             obs.iloc[:50, :] = np.nan
             obs.iloc[119:130, :] = np.nan
@@ -75,21 +72,14 @@ class TestIntercepts:
             obs.iloc[39:90, 2] = np.nan
             obs.iloc[119:130, 0] = np.nan
             obs.iloc[119:130, 2] = np.nan
-
         mod = Intercepts(obs, **kwargs)
-
         cls.params = np.arange(6) + 1
         cls.model = mod
-
         cls.results = mod.smooth(cls.params, return_ssm=True)
-
-        # Calculate the determinant of the covariance matrices (for easy
-        # comparison to other languages without having to store 2-dim arrays)
         cls.results.det_scaled_smoothed_estimator_cov = np.zeros((1, cls.model.nobs))
         cls.results.det_predicted_state_cov = np.zeros((1, cls.model.nobs))
         cls.results.det_smoothed_state_cov = np.zeros((1, cls.model.nobs))
         cls.results.det_smoothed_state_disturbance_cov = np.zeros((1, cls.model.nobs))
-
         for i in range(cls.model.nobs):
             cls.results.det_scaled_smoothed_estimator_cov[0, i] = np.linalg.det(
                 cls.results.scaled_smoothed_estimator_cov[:, :, i]
@@ -170,7 +160,7 @@ class TestIntercepts:
         assert_allclose(
             self.results.smoothed_measurement_disturbance.T,
             self.desired[["epshat1", "epshat2", "epshat3"]],
-            atol=1e-9,
+            atol=1e-09,
         )
 
     def test_smoothed_measurement_disturbance_cov(self):
@@ -207,7 +197,6 @@ class LargeStateCovAR1(mlemodel.MLEModel):
 
     def update(self, params, **kwargs):
         params = super().update(params, **kwargs)
-
         self["transition", 0, 0] = params[0]
         self["state_cov", 0, 0] = params[1]
 
@@ -218,25 +207,16 @@ def test_large_kposdef():
 
 
 class TestLargeStateCovAR1:
+
     @classmethod
     def setup_class(cls):
         pytest.skip(
-            "TODO: This test is skipped since an exception is currently "
-            "raised if k_posdef > k_states. However, this test could be "
-            "used if models of those types were allowed"
+            "TODO: This test is skipped since an exception is currently raised if k_posdef > k_states. However, this test could be used if models of those types were allowed"
         )
-
-        # Data: just some sample data
         endog = [0.2, -1.5, -0.3, -0.1, 1.5, 0.2, -0.3, 0.2, 0.5, 0.8]
-
-        # Params
         params = [0.5, 1]
-
-        # Desired model: AR(1)
         mod_desired = sarimax.SARIMAX(endog)
         cls.res_desired = mod_desired.smooth(params)
-
-        # Test class
         mod = LargeStateCovAR1(endog)
         cls.res = mod.smooth(params)
 
@@ -244,7 +224,6 @@ class TestLargeStateCovAR1:
         assert_equal(self.res.filter_results.k_states, 1)
         assert_equal(self.res.filter_results.k_posdef, 2)
         assert_equal(self.res.smoothed_state_disturbance.shape, (2, 10))
-
         assert_equal(self.res_desired.filter_results.k_states, 1)
         assert_equal(self.res_desired.filter_results.k_posdef, 1)
         assert_equal(self.res_desired.smoothed_state_disturbance.shape, (1, 10))

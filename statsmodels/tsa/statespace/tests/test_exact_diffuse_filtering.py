@@ -43,7 +43,7 @@ License: Simplified-BSD
 
 from statsmodels.compat.platform import PLATFORM_WIN
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -60,12 +60,9 @@ from statsmodels.tsa.statespace.varmax import VARMAX
 
 from . import kfas_helpers
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
-
-
-# - Model definitions --------------------------------------------------------
 
 
 def model_local_level(endog=None, params=None, direct=False):
@@ -75,17 +72,12 @@ def model_local_level(endog=None, params=None, direct=False):
     if params is None:
         params = [1.993, 8.253]
     sigma2_y, sigma2_mu = params
-
     if direct:
         mod = None
-        # Construct the basic representation
         ssm = KalmanSmoother(k_endog=1, k_states=1, k_posdef=1)
         ssm.bind(endog)
         init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
-        # ssm.filter_univariate = True  # should not be required
-
-        # Fill in the system matrices for a local level model
         ssm["design", :] = 1
         ssm["obs_cov", :] = sigma2_y
         ssm["transition", :] = 1
@@ -96,8 +88,7 @@ def model_local_level(endog=None, params=None, direct=False):
         mod.update(params)
         ssm = mod.ssm
         ssm.initialize(Initialization(ssm.k_states, "diffuse"))
-
-    return mod, ssm
+    return (mod, ssm)
 
 
 def model_local_linear_trend(endog=None, params=None, direct=False):
@@ -109,17 +100,12 @@ def model_local_linear_trend(endog=None, params=None, direct=False):
     if params is None:
         params = [1.993, 8.253, 2.334]
     sigma2_y, sigma2_mu, sigma2_beta = params
-
     if direct:
         mod = None
-        # Construct the basic representation
         ssm = KalmanSmoother(k_endog=1, k_states=2, k_posdef=2)
         ssm.bind(endog)
         init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
-        # ssm.filter_univariate = True  # should not be required
-
-        # Fill in the system matrices for a local level model
         ssm["design", 0, 0] = 1
         ssm["obs_cov", 0, 0] = sigma2_y
         ssm["transition"] = np.array([[1, 1], [0, 1]])
@@ -130,8 +116,7 @@ def model_local_linear_trend(endog=None, params=None, direct=False):
         mod.update(params)
         ssm = mod.ssm
         ssm.initialize(Initialization(ssm.k_states, "diffuse"))
-
-    return mod, ssm
+    return (mod, ssm)
 
 
 def model_common_level(endog=None, params=None, restricted=False):
@@ -142,39 +127,26 @@ def model_common_level(endog=None, params=None, restricted=False):
     if params is None:
         params = [0.1111, 3.2324]
     theta, sigma2_mu = params
-    # sigma2_1 = 1
-    # sigma_12 = 0
-    # sigma2_2 = 1
-
     if not restricted:
-        # Construct the basic representation
         ssm = KalmanSmoother(k_endog=2, k_states=2, k_posdef=1)
         ssm.bind(endog.T)
         init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
-        # ssm.filter_univariate = True  # should not be required
-
-        # Fill in the system matrices for a common trend model
         ssm["design"] = np.array([[1, 0], [theta, 1]])
         ssm["obs_cov"] = np.eye(2)
         ssm["transition"] = np.eye(2)
         ssm["selection", 0, 0] = 1
         ssm["state_cov", 0, 0] = sigma2_mu
     else:
-        # Construct the basic representation
         ssm = KalmanSmoother(k_endog=2, k_states=1, k_posdef=1)
         ssm.bind(endog.T)
         init = Initialization(ssm.k_states, initialization_type="diffuse")
         ssm.initialize(init)
-        # ssm.filter_univariate = True  # should not be required
-
-        # Fill in the system matrices for a local level model
         ssm["design"] = np.array([[1, theta]]).T
         ssm["obs_cov"] = np.eye(2)
         ssm["transition", :] = 1
         ssm["selection", :] = 1
         ssm["state_cov", :] = sigma2_mu
-
     return ssm
 
 
@@ -186,16 +158,13 @@ def model_var1(endog=None, params=None, measurement_error=False, init=None):
         params = np.r_[0.5, 0.3, 0.2, 0.4, 2**0.5, 0, 3**0.5]
         if measurement_error:
             params = np.r_[params, 4, 5]
-
-    # Model
     mod = VARMAX(endog, order=(1, 0), trend="n", measurement_error=measurement_error)
     mod.update(params)
     ssm = mod.ssm
     if init is None:
         init = Initialization(ssm.k_states, "diffuse")
     ssm.initialize(init)
-
-    return mod, ssm
+    return (mod, ssm)
 
 
 def model_dfm(endog=None, params=None, factor_order=2):
@@ -204,22 +173,17 @@ def model_dfm(endog=None, params=None, factor_order=2):
         endog = np.log(levels).iloc[:21].diff().iloc[1:] * 400
     if params is None:
         params = np.r_[0.5, 1.0, 1.5, 2.0, 0.9, 0.1]
-
-    # Model
     mod = DynamicFactor(endog, k_factors=1, factor_order=factor_order)
     mod.update(params)
     ssm = mod.ssm
     ssm.filter_univariate = True
     init = Initialization(ssm.k_states, "diffuse")
     ssm.initialize(init)
-
-    return mod, ssm
-
-
-# - Analytic tests (Koopman, 1997) -------------------------------------------
+    return (mod, ssm)
 
 
 class TestLocalLevelAnalytic:
+
     @classmethod
     def setup_class(cls, **kwargs):
         cls.mod, cls.ssm = model_local_level(**kwargs)
@@ -228,16 +192,11 @@ class TestLocalLevelAnalytic:
     def test_results(self):
         ssm = self.ssm
         res = self.res
-
         y1 = ssm.endog[0, 0]
         sigma2_y = ssm["obs_cov", 0, 0]
         sigma2_mu = ssm["state_cov", 0, 0]
-
-        # Basic initialization variables
         assert_allclose(res.predicted_state_cov[0, 0, 0], 0)
         assert_allclose(res.predicted_diffuse_state_cov[0, 0, 0], 1)
-
-        # Output of the exact diffuse initialization, see Koopman (1997)
         assert_allclose(res.forecasts_error[0, 0], y1)
         assert_allclose(res.forecasts_error_cov[0, 0, 0], sigma2_y)
         assert_allclose(res.forecasts_error_diffuse_cov[0, 0, 0], 1)
@@ -245,18 +204,18 @@ class TestLocalLevelAnalytic:
         assert_allclose(res.predicted_state[0, 1], y1)
         assert_allclose(res.predicted_state_cov[0, 0, 1], sigma2_y + sigma2_mu)
         assert_allclose(res.predicted_diffuse_state_cov[0, 0, 1], 0)
-
-        # Miscellaneous
         assert_equal(res.nobs_diffuse, 1)
 
 
 class TestLocalLevelAnalyticDirect(TestLocalLevelAnalytic):
+
     @classmethod
     def setup_class(cls):
         super().setup_class(direct=True)
 
 
 class TestLocalLinearTrendAnalytic:
+
     @classmethod
     def setup_class(cls, **kwargs):
         cls.mod, cls.ssm = model_local_linear_trend(**kwargs)
@@ -265,16 +224,11 @@ class TestLocalLinearTrendAnalytic:
     def test_results(self):
         ssm = self.ssm
         res = self.res
-
         y1, y2, y3 = ssm.endog[0, :3]
         sigma2_y = ssm["obs_cov", 0, 0]
         sigma2_mu, sigma2_beta = np.diagonal(ssm["state_cov"])
-
-        # Basic initialization variables
         assert_allclose(res.predicted_state_cov[..., 0], np.zeros((2, 2)))
         assert_allclose(res.predicted_diffuse_state_cov[..., 0], np.eye(2))
-
-        # Output of the exact diffuse initialization, see Koopman (1997)
         q_mu = sigma2_mu / sigma2_y
         q_beta = sigma2_beta / sigma2_y
         assert_allclose(res.forecasts_error[0, 0], y1)
@@ -283,8 +237,6 @@ class TestLocalLinearTrendAnalytic:
         P2 = sigma2_y * np.array([[1 + q_mu, 0], [0, q_beta]])
         assert_allclose(res.predicted_state_cov[:, :, 1], P2)
         assert_allclose(res.predicted_diffuse_state_cov[0, 0, 1], np.ones((2, 2)))
-
-        # assert_allclose(res.kalman_gain[:, 0, 1], [2, 1])
         assert_allclose(res.predicted_state[:, 2], [2 * y2 - y1, y2 - y1])
         P3 = sigma2_y * np.array(
             [
@@ -294,18 +246,18 @@ class TestLocalLinearTrendAnalytic:
         )
         assert_allclose(res.predicted_state_cov[:, :, 2], P3)
         assert_allclose(res.predicted_diffuse_state_cov[:, :, 2], np.zeros((2, 2)))
-
-        # Miscellaneous
         assert_equal(res.nobs_diffuse, 2)
 
 
 class TestLocalLinearTrendAnalyticDirect(TestLocalLinearTrendAnalytic):
+
     @classmethod
     def setup_class(cls):
         super().setup_class(direct=True)
 
 
 class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
+
     @classmethod
     def setup_class(cls):
         y1 = 10.2394
@@ -317,12 +269,9 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
     def test_results(self):
         ssm = self.ssm
         res = self.res
-
         y1, y2, y3 = ssm.endog[0, :3]
         sigma2_y = ssm["obs_cov", 0, 0]
         sigma2_mu, sigma2_beta = np.diagonal(ssm["state_cov"])
-
-        # Test output
         q_mu = sigma2_mu / sigma2_y
         q_beta = sigma2_beta / sigma2_y
         a4 = [1.5 * y3 - 0.5 * y1, 0.5 * y3 - 0.5 * y1]
@@ -334,100 +283,48 @@ class TestLocalLinearTrendAnalyticMissing(TestLocalLinearTrendAnalytic):
             ]
         )
         assert_allclose(res.predicted_state_cov[:, :, 3], P4)
-
-        # Miscellaneous
         assert_equal(res.nobs_diffuse, 3)
 
 
 def test_common_level_analytic():
-    # Analytic test using results from Koopman (1997), section 5.3
     mod = model_common_level()
     y11, y21 = mod.endog[:, 0]
     theta = mod["design", 1, 0]
     sigma2_mu = mod["state_cov", 0, 0]
-
-    # Perform filtering
     res = mod.smooth()
-
-    # Basic initialization variables
     assert_allclose(res.predicted_state_cov[..., 0], np.zeros((2, 2)))
     assert_allclose(res.predicted_diffuse_state_cov[..., 0], np.eye(2))
-
-    # Output of the exact diffuse initialization, see Koopman (1997)
-
-    # Note: since Koopman (1997) did not apply the univariate method,
-    # forecast errors and covariances, and the Kalman gain will not match
-    # assert_allclose(res.forecasts_error[:, 0], [y11, y21])
-    # assert_allclose(res.forecasts_error_cov[:, :, 0], np.eye(2))
-    # F_inf1 = np.array([[1, theta],
-    #                    [theta, 1 + theta**2]])
-    # assert_allclose(res.forecasts_error_diffuse_cov[:, :, 0], F_inf1)
-    # K0 = np.array([[1, 0],
-    #                [-theta, 1]])
-    # assert_allclose(res.kalman_gain[..., 0], K0)
     assert_allclose(res.predicted_state[:, 1], [y11, y21 - theta * y11])
     P2 = np.array([[1 + sigma2_mu, -theta], [-theta, 1 + theta**2]])
     assert_allclose(res.predicted_state_cov[..., 1], P2)
     assert_allclose(res.predicted_diffuse_state_cov[..., 1], np.zeros((2, 2)))
-
-    # Miscellaneous
     assert_equal(res.nobs_diffuse, 1)
 
 
 def test_common_level_restricted_analytic():
-    # Analytic test using results from Koopman (1997), section 5.3,
-    # with the restriction mu_bar = 0
     mod = model_common_level(restricted=True)
     y11, y21 = mod.endog[:, 0]
     theta = mod["design", 1, 0]
     sigma2_mu = mod["state_cov", 0, 0]
-
-    # Perform filtering
     res = mod.smooth()
-
-    # Basic initialization variables
     assert_allclose(res.predicted_state_cov[..., 0], 0)
     assert_allclose(res.predicted_diffuse_state_cov[..., 0], 1)
-
-    # Output of the exact diffuse initialization, see Koopman (1997)
     phi = 1 / (1 + theta**2)
-    # Note: since Koopman (1997) did not apply the univariate method,
-    # forecast errors and covariances, and the Kalman gain will not match
-    # assert_allclose(res.forecasts_error[:, 0], [y11, y21])
-    # assert_allclose(res.forecasts_error_cov[0, 0, 0], np.eye(2))
-    # F_inf1 = np.array([[1, theta],
-    #                    [theta, theta**2]])
-    # assert_allclose(res.forecasts_error_diffuse_cov[0, 0, 0], F_inf1)
-    # assert_allclose(res.kalman_gain[..., 0], phi * np.array([1, theta]))
     assert_allclose(res.predicted_state[:, 1], phi * (y11 + theta * y21))
-    # Note: Koopman (1997) actually has phi + sigma2_mu**0.5, but that appears
-    # to be a typo
     assert_allclose(res.predicted_state_cov[..., 1], phi + sigma2_mu)
     assert_allclose(res.predicted_diffuse_state_cov[..., 1], 0)
-
-    # Miscellaneous
     assert_equal(res.nobs_diffuse, 1)
 
 
 class CheckSSMResults:
     atol = 1e-14
     rtol = 1e-07
-    atol_diffuse = 1e-7
+    atol_diffuse = 1e-07
     rtol_diffuse = None
 
     def check_object(self, actual, desired, rtol_diffuse):
-        # Short-circuit the test if desired is set to None (which allows us to
-        # skip testing some objects where appropriate)
         if actual is None or desired is None:
             return
-        # Optionally apply a different relative tolerance to the periods in the
-        # diffuse observations.
-        # This is especially useful when testing against approximate diffuse
-        # initialization. By definition, the first few observations will be
-        # quite different between the exact and approximate approach for many
-        # quantities.
-        # Note that the absolute tolerance is also pretty low (1e-7), mostly
-        # for comparison against zero values in the approximate case
         d = None
         if rtol_diffuse is None:
             rtol_diffuse = self.rtol_diffuse
@@ -441,8 +338,6 @@ class CheckSSMResults:
                     atol=self.atol_diffuse,
                 )
         assert_allclose(actual.T[d:], desired.T[d:], rtol=self.rtol, atol=self.atol)
-
-    # - Filtered results tests -----------------------------------------------
 
     def test_forecasts(self, rtol_diffuse=None):
         actual = self.results_a.forecasts
@@ -459,10 +354,7 @@ class CheckSSMResults:
         desired = self.results_b.forecasts_error_cov
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_filtered_state(self, rtol_diffuse=1e-5):
-        # Note: we do want to check the diffuse values here, with a reduced
-        # tolerance. See the note before the smoothed values for additional
-        # details.
+    def test_filtered_state(self, rtol_diffuse=1e-05):
         actual = self.results_a.filtered_state
         desired = self.results_b.filtered_state
         self.check_object(actual, desired, rtol_diffuse)
@@ -497,19 +389,12 @@ class CheckSSMResults:
             desired = self.results_b.llf_obs
             self.check_object(actual, desired, rtol_diffuse)
 
-    # - Smoothed output tests ------------------------------------------------
-    # Note: for smoothed states, we do want to check some of the diffuse values
-    # even in the approximate case, but with reduced precision. Note also that
-    # there are cases that demonstrate the numerical error associated with the
-    # approximate method, and so some specific tests are overridden in certain
-    # cases, since they would not pass.
-
-    def test_smoothed_state(self, rtol_diffuse=1e-5):
+    def test_smoothed_state(self, rtol_diffuse=1e-05):
         actual = self.results_a.smoothed_state
         desired = self.results_b.smoothed_state
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_smoothed_state_cov(self, rtol_diffuse=1e-5):
+    def test_smoothed_state_cov(self, rtol_diffuse=1e-05):
         actual = self.results_a.smoothed_state_cov
         desired = self.results_b.smoothed_state_cov
         self.check_object(actual, desired, rtol_diffuse)
@@ -519,27 +404,25 @@ class CheckSSMResults:
         desired = self.results_b.smoothed_state_autocov
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_smoothed_measurement_disturbance(self, rtol_diffuse=1e-5):
+    def test_smoothed_measurement_disturbance(self, rtol_diffuse=1e-05):
         actual = self.results_a.smoothed_measurement_disturbance
         desired = self.results_b.smoothed_measurement_disturbance
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_smoothed_measurement_disturbance_cov(self, rtol_diffuse=1e-5):
+    def test_smoothed_measurement_disturbance_cov(self, rtol_diffuse=1e-05):
         actual = self.results_a.smoothed_measurement_disturbance_cov
         desired = self.results_b.smoothed_measurement_disturbance_cov
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_smoothed_state_disturbance(self, rtol_diffuse=1e-5):
+    def test_smoothed_state_disturbance(self, rtol_diffuse=1e-05):
         actual = self.results_a.smoothed_state_disturbance
         desired = self.results_b.smoothed_state_disturbance
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_smoothed_state_disturbance_cov(self, rtol_diffuse=1e-5):
+    def test_smoothed_state_disturbance_cov(self, rtol_diffuse=1e-05):
         actual = self.results_a.smoothed_state_disturbance_cov
         desired = self.results_b.smoothed_state_disturbance_cov
         self.check_object(actual, desired, rtol_diffuse)
-
-    # - Smoothed intermediate tests ------------------------------------------
 
     @pytest.mark.skip("This is not computed in the univariate method or by KFAS.")
     def test_smoothing_error(self, rtol_diffuse=None):
@@ -547,18 +430,15 @@ class CheckSSMResults:
         desired = self.results_b.smoothing_error
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_scaled_smoothed_estimator(self, rtol_diffuse=1e-5):
+    def test_scaled_smoothed_estimator(self, rtol_diffuse=1e-05):
         actual = self.results_a.scaled_smoothed_estimator
         desired = self.results_b.scaled_smoothed_estimator
         self.check_object(actual, desired, rtol_diffuse)
 
-    def test_scaled_smoothed_estimator_cov(self, rtol_diffuse=1e-5):
+    def test_scaled_smoothed_estimator_cov(self, rtol_diffuse=1e-05):
         actual = self.results_a.scaled_smoothed_estimator_cov
         desired = self.results_b.scaled_smoothed_estimator_cov
         self.check_object(actual, desired, rtol_diffuse)
-
-    # - Diffuse objects tests ------------------------------------------------
-    # Note: these cannot be checked against the approximate diffuse method.
 
     def test_forecasts_error_diffuse_cov(self, rtol_diffuse=None):
         actual = self.results_a.forecasts_error_diffuse_cov
@@ -569,13 +449,6 @@ class CheckSSMResults:
         actual = self.results_a.predicted_diffuse_state_cov
         desired = self.results_b.predicted_diffuse_state_cov
         self.check_object(actual, desired, rtol_diffuse)
-
-    # TODO: do something with this other than commenting it out?
-    # We do not currently store this array
-    # def test_kalman_gain_diffuse(self, rtol_diffuse=None):
-    #     actual = self.results_a.
-    #     desired = self.results_b.
-    #     self.check_object(actual, desired, rtol_diffuse)
 
     def test_scaled_smoothed_diffuse_estimator(self, rtol_diffuse=None):
         actual = self.results_a.scaled_smoothed_diffuse_estimator
@@ -591,8 +464,6 @@ class CheckSSMResults:
         actual = self.results_a.scaled_smoothed_diffuse2_estimator_cov
         desired = self.results_b.scaled_smoothed_diffuse2_estimator_cov
         self.check_object(actual, desired, rtol_diffuse)
-
-    # - Simulation smoother results tests ------------------------------------
 
     @pytest.mark.xfail(reason="No sim_a attribute", raises=AttributeError, strict=True)
     def test_simulation_smoothed_state(self):
@@ -621,15 +492,12 @@ class CheckApproximateDiffuseMixin:
     so we do not test them here.
     """
 
-    approximate_diffuse_variance = 1e6
+    approximate_diffuse_variance = 1000000.0
 
     @classmethod
     def setup_class(cls, *args, **kwargs):
         init_approx = kwargs.pop("init_approx", None)
-
         super().setup_class(*args, **kwargs)
-
-        # Get the approximate diffuse results
         kappa = cls.approximate_diffuse_variance
         if init_approx is None:
             init_approx = Initialization(
@@ -639,8 +507,6 @@ class CheckApproximateDiffuseMixin:
             )
         cls.ssm.initialize(init_approx)
         cls.results_b = cls.ssm.smooth()
-
-        # Instruct the tests not to test against the first d values
         cls.rtol_diffuse = np.inf
 
     def test_initialization_approx(self):
@@ -660,25 +526,10 @@ class CheckKFASMixin:
     def setup_class(cls, *args, **kwargs):
         kwargs.setdefault("filter_univariate", True)
         super().setup_class(*args, **kwargs)
-
-        # Get the KFAS results objects
         cls.results_b = kfas_helpers.parse(cls.results_path, cls.ssm)
-
-        # Set some attributes that KFAS does not compute
         cls.results_b.smoothed_state_autocov = None
-
-        # Remove the Kalman gain matrix since KFAS computes it using the
-        # non-univariate method
         cls.results_b.kalman_gain = None
-
-        # Remove the filtered_state_cov since KFAS v1.3.1 has a bug for these
-        # matrices (they are not even symmetric)
         cls.results_b.filtered_state_cov = None
-
-        # KFAS v1.3.1 seems to compute the loglikelihood incorrectly, so we
-        # correct for it here
-        # (we need to add back in the constant term for all of the non-missing
-        # diffuse observations for which Finf is nonsingular)
         Finf = cls.results_b.forecasts_error_diffuse_cov.T
         Finf_nonsingular_obs = np.c_[[np.diag(Finf_t) for Finf_t in Finf]] > 0
         nonmissing = ~np.isnan(cls.ssm.endog).T
@@ -688,10 +539,8 @@ class CheckKFASMixin:
         cls.results_b.llf_obs += constant[: cls.results_a.nobs_diffuse].sum()
 
 
-# - VAR(1) -------------------------------------------------------------------
-
-
 class CheckVAR1(CheckSSMResults):
+
     @classmethod
     def setup_class(cls, **kwargs):
         filter_univariate = kwargs.pop("filter_univariate", False)
@@ -714,15 +563,13 @@ class TestVAR1_Approx(CheckApproximateDiffuseMixin, CheckVAR1):
 
 
 class TestVAR1_KFAS(CheckKFASMixin, CheckVAR1):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_R.csv"
+    results_path = Path(current_path).joinpath(
+        "results", "results_exact_initial_var1_R.csv"
     )
 
 
-# - VAR(1) + Measurement error -----------------------------------------------
-
-
 class CheckVAR1MeasurementError(CheckVAR1):
+
     @classmethod
     def setup_class(cls, **kwargs):
         kwargs["measurement_error"] = True
@@ -732,35 +579,21 @@ class CheckVAR1MeasurementError(CheckVAR1):
 class TestVAR1MeasurementError_Approx(
     CheckApproximateDiffuseMixin, CheckVAR1MeasurementError
 ):
-    # Note: somewhat fragile, we need to increase the approximate variance to
-    # 1e9 for the tests to pass at the appropriate level of precision, but
-    # we cannot increase too much more than this because then we start get
-    # numerical errors (e.g. 1e10 is fine but 1e11 does not pass)
-    approximate_diffuse_variance = 1e9
+    approximate_diffuse_variance = 1000000000.0
 
     def test_smoothed_measurement_disturbance_cov(self):
-        # Note: this test would fail here with most rtol, because
-        # this is an example where the numerical errors associated with the
-        # approximate method result in noticeable errors
-        # term: (x is the exact method, y is the approximate method)
-        # x: array([[[3.355072, 0.      ],
-        #            [0.      , 4.221227]]])
-        # y: array([[[ 3.355072, -0.600856],
-        #            [-0.600856,  4.221227]]])
         rtol_diffuse = None
         super().test_smoothed_measurement_disturbance_cov(rtol_diffuse=rtol_diffuse)
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_measurement_error_R.csv"
+    results_path = Path(current_path).joinpath(
+        "results", "results_exact_initial_var1_measurement_error_R.csv"
     )
 
 
-# - VAR(1) + Missing data ----------------------------------------------------
-
-
 class CheckVAR1Missing(CheckVAR1):
+
     @classmethod
     def setup_class(cls, **kwargs):
         levels = macrodata[["realgdp", "realcons"]]
@@ -768,7 +601,6 @@ class CheckVAR1Missing(CheckVAR1):
         endog.iloc[0:5, 0] = np.nan
         endog.iloc[8:12, :] = np.nan
         kwargs["endog"] = endog
-
         super().setup_class(**kwargs)
 
     def test_nobs_diffuse(self):
@@ -776,41 +608,19 @@ class CheckVAR1Missing(CheckVAR1):
 
 
 class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
-    # Note: somewhat fragile, we need to increase the approximate variance to
-    # 1e10 for the tests to pass at the appropriate level of precision, but
-    # we cannot increase it any more than this because then we start get
-    # numerical errors (e.g. 1e11 does not pass)
-    approximate_diffuse_variance = 1e10
+    approximate_diffuse_variance = 10000000000.0
 
     def test_smoothed_state_cov(self):
-        # Note: this test would fail here with essentially any rtol, because
-        # this is an example where the numerical errors associated with the
-        # approximate method result in extreme errors: here a negative variance
-        # term: (x is the exact method, y is the approximate method)
-        # x: array([[[ 5.601218e+01,  0.000000e+00],
-        #            [ 0.000000e+00,  0.000000e+00]],
-        # ...
-        # y: array([[[-12.083676,   0.      ],
-        #            [  0.      ,   0.      ]],
         rtol_diffuse = None
         super().test_smoothed_state_cov(rtol_diffuse=rtol_diffuse)
 
 
 class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_missing_R.csv"
+    results_path = Path(current_path).joinpath(
+        "results", "results_exact_initial_var1_missing_R.csv"
     )
 
     def test_forecasts_error_cov(self):
-        # TODO: fails for the general version of forecasts_error_cov because
-        # (1) the routines in kalman_filter.py fill in values for all variables
-        # regardless of missing status and also it uses the multivariate
-        # approach rather than the univariate approach, and (2) KFAS fills in
-        # values for all variables regardless of missing status (but does use
-        # the univariate method).
-        # Here we remove the off-diagonal elements so that the test passes (but
-        # note that this is **not** a general solution since it depends on
-        # which variables are missing).
         bak = self.results_a.forecasts_error_cov[:]
         self.results_a.forecasts_error_cov[0, 1, :] = 0
         self.results_a.forecasts_error_cov[1, 0, :] = 0
@@ -818,24 +628,19 @@ class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
         self.results_a.forecasts_error_cov = bak
 
 
-# - VAR(1) + Mixed stationary / diffuse initialization -----------------------
-
-
 class CheckVAR1Mixed(CheckVAR1):
+
     @classmethod
     def setup_class(cls, **kwargs):
         k_states = 2
-
         init = Initialization(k_states)
         init.set(0, "diffuse")
         init.set(1, "stationary")
-
         if kwargs.pop("approx", False):
             init_approx = Initialization(k_states)
             init_approx.set(0, "approximate_diffuse")
             init_approx.set(1, "stationary")
             kwargs["init_approx"] = init_approx
-
         super().setup_class(init=init, **kwargs)
 
     def test_nobs_diffuse(self):
@@ -848,6 +653,7 @@ class CheckVAR1Mixed(CheckVAR1):
 
 
 class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin, CheckVAR1):
+
     @classmethod
     def setup_class(cls, **kwargs):
         kwargs["approx"] = True
@@ -863,15 +669,10 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin, CheckVA
 
 
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
-    # TODO: fails
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_mixed_R.csv"
+    results_path = Path(current_path).joinpath(
+        "results", "results_exact_initial_var1_mixed_R.csv"
     )
 
-    # TODO: KFAS disagrees for the diffuse observations for all of these
-    # states, but it appears that they have a bug (e.g. since the approximate
-    # diffuse case agrees with us), so we should double-check against a third
-    # package (RATS?)
     def test_predicted_state(self):
         super().test_predicted_state(rtol_diffuse=np.inf)
 
@@ -882,10 +683,8 @@ class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
         super().test_smoothed_state(rtol_diffuse=np.inf)
 
 
-# - DFM ----------------------------------------------------------------------
-
-
 class CheckDFM(CheckSSMResults):
+
     @classmethod
     def setup_class(cls, **kwargs):
         filter_univariate = kwargs.pop("filter_univariate", False)
@@ -904,22 +703,14 @@ class CheckDFM(CheckSSMResults):
 
 
 class TestDFM_Approx(CheckApproximateDiffuseMixin, CheckDFM):
-    # Note: somewhat fragile, we need to increase the approximate variance to
-    # 5e10 for the tests to pass at the appropriate level of precision, but
-    # we cannot increase it too much more than this because then we start get
-    # numerical errors (e.g. 1e11 works but 1e12 does not pass)
-    approximate_diffuse_variance = 5e10
+    approximate_diffuse_variance = 50000000000.0
 
 
 class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_dfm_R.csv"
+    results_path = Path(current_path).joinpath(
+        "results", "results_exact_initial_dfm_R.csv"
     )
 
-    # TODO: KFAS disagrees for the diffuse observations for all of these
-    # states, but it appears that they have a bug (e.g. since the approximate
-    # diffuse case agrees with us), so we should double-check against a third
-    # package (RATS?)
     def test_predicted_state(self):
         super().test_predicted_state(rtol_diffuse=np.inf)
 
@@ -930,10 +721,8 @@ class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
         super().test_smoothed_state(rtol_diffuse=np.inf)
 
 
-# - DFM + Collapsed ----------------------------------------------------------
-
-
 class CheckDFMCollapsed(CheckSSMResults):
+
     @classmethod
     def setup_class(cls, **kwargs):
         filter_univariate = kwargs.pop("filter_univariate", True)
@@ -953,71 +742,32 @@ class CheckDFMCollapsed(CheckSSMResults):
 
 
 class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
-    # Note: somewhat fragile, we need to increase the approximate variance to
-    # 1e9 for the tests to pass at the appropriate level of precision, but
-    # we cannot increase it too much more than this because then we start get
-    # numerical errors (e.g. 1e10 does not pass)
-    approximate_diffuse_variance = 1e9
-
-
-# FIXME: do not leave this commented-out
-# Note: we cannot test against KFAS, since it does not support collapsed
-# filtering
-# class TestDFMCollapsed_KFAS(CheckKFASMixin, TestDFMCollapsed):
-#     results_path = os.path.join(
-#         current_path, 'results', '')
-
-# - TODO: additional tests ---------------------------------------------------
-# - Local level model, above
-# - Local linear trend model, above
-# - Common level model, above
-# - multivariate test with non-diagonal observation covariance matrix
-# - simulation smoother
+    approximate_diffuse_variance = 1000000000.0
 
 
 @pytest.mark.xfail
 def test_irrelevant_state():
-    # This test records a case in which exact diffuse initialization leads to
-    # numerical problems, because the existence of an irrelevant state
-    # initialized as diffuse means that there is never a transition to the
-    # usual Kalman filter.
     endog = macrodata.infl
-
     spec = {
         "freq_seasonal": [{"period": 8, "harmonics": 6}, {"period": 36, "harmonics": 6}]
     }
-
-    # Approximate diffuse version
     mod = UnobservedComponents(endog, "llevel", **spec)
     mod.ssm.initialization = Initialization(mod.k_states, "approximate_diffuse")
     res = mod.smooth([3.4, 7.2, 0.01, 0.01])
-
-    # Exact diffuse version
     mod2 = UnobservedComponents(endog, "llevel", **spec)
     mod2.ssm.filter_univariate = True
     mod2.ssm.initialization = Initialization(mod2.k_states, "diffuse")
     res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
-
-    # Check that e.g. the filtered state for the level is equal
-    assert_allclose(res.filtered_state[0, 25:], res2.filtered_state[0, 25:], atol=1e-5)
+    assert_allclose(res.filtered_state[0, 25:], res2.filtered_state[0, 25:], atol=1e-05)
 
 
 def test_nondiagonal_obs_cov():
-    # All diffuse handling is done using the univariate filtering approach,
-    # even if the usual multivariate filtering method is being used for the
-    # other periods. This means that if the observation covariance matrix is
-    # not a diagonal matrix during the diffuse periods, we need to transform
-    # the observation equation as we would if we were using the univariate
-    # filter.
-
     mod = TVSS(np.zeros((10, 2)))
     res1 = mod.smooth([])
     mod.ssm.filter_univariate = True
     res2 = mod.smooth([])
-
-    atol = 0.002 if PLATFORM_WIN else 1e-5
-    rtol = 0.002 if PLATFORM_WIN else 1e-4
-    # Here we'll just test a few values
+    atol = 0.002 if PLATFORM_WIN else 1e-05
+    rtol = 0.002 if PLATFORM_WIN else 0.0001
     assert_allclose(res1.llf, res2.llf, rtol=rtol, atol=atol)
     assert_allclose(res1.forecasts[0], res2.forecasts[0], rtol=rtol, atol=atol)
     assert_allclose(res1.filtered_state, res2.filtered_state, rtol=rtol, atol=atol)

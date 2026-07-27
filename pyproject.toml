@@ -206,6 +206,8 @@ select = [
   "S",
   # isort
   "I",
+  # flake8-use-pathlib
+  "PTH",
 ]
 
 # pydocstyle ("D") is intentionally NOT selected above. This project already

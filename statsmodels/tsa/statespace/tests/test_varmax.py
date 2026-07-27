@@ -5,7 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -20,13 +20,11 @@ from statsmodels.tsa.statespace import sarimax, varmax
 
 from .results import results_varmax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-
-var_path = os.path.join("results", "results_var_stata.csv")
-var_results = pd.read_csv(os.path.join(current_path, var_path))
-
-varmax_path = os.path.join("results", "results_varmax_stata.csv")
-varmax_results = pd.read_csv(os.path.join(current_path, varmax_path))
+current_path = Path(__file__).resolve().parent
+var_path = Path("results").joinpath("results_var_stata.csv")
+var_results = pd.read_csv(Path(current_path).joinpath(var_path))
+varmax_path = Path("results").joinpath("results_varmax_stata.csv")
+varmax_results = pd.read_csv(Path(current_path).joinpath(varmax_path))
 
 
 class CheckVARMAX:
@@ -40,10 +38,7 @@ class CheckVARMAX:
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
-            # Fit with all transformations
-            # results = self.model.fit(method='powell', disp=-1)
             results = self.model.fit(maxiter=100, disp=False)
-            # Fit now without transformations
             self.model.enforce_stationarity = False
             self.model.enforce_invertibility = False
             results = self.model.fit(
@@ -51,40 +46,27 @@ class CheckVARMAX:
             )
             self.model.enforce_stationarity = True
             self.model.enforce_invertibility = True
-            assert_allclose(results.llf, self.results.llf, rtol=1e-5)
+            assert_allclose(results.llf, self.results.llf, rtol=1e-05)
 
     @pytest.mark.smoke
     @pytest.mark.thread_unsafe
     def test_params(self):
-        # Smoke test to make sure the start_params are well-defined and
-        # lead to a well-defined model
         model = self.model
-
         model.filter(model.start_params)
-        # Similarly a smoke test for param_names
         assert len(model.start_params) == len(model.param_names)
-
-        # Finally make sure the transform and untransform do their job
         actual = model.transform_params(model.untransform_params(model.start_params))
         assert_allclose(actual, model.start_params)
-
-        # Also in the case of enforce invertibility and stationarity = False
         model.enforce_stationarity = False
         model.enforce_invertibility = False
         actual = model.transform_params(model.untransform_params(model.start_params))
-
         model.enforce_stationarity = True
         model.enforce_invertibility = True
         assert_allclose(actual, model.start_params)
 
     @pytest.mark.smoke
     def test_results(self):
-        # Smoke test for creating the summary
         self.results.summary()
-
         model = self.model
-        # Test cofficient matrix creation
-        #   (via a different, more direct, method)
         if model.k_ar > 0:
             params_ar = np.array(self.results.params[model._params_ar])
             coefficients = params_ar.reshape(model.k_endog, model.k_endog * model.k_ar)
@@ -102,7 +84,6 @@ class CheckVARMAX:
         if model.k_ma > 0:
             params_ma = np.array(self.results.params[model._params_ma])
             coefficients = params_ma.reshape(model.k_endog, model.k_endog * model.k_ma)
-
             coefficient_matrices = np.array(
                 [
                     coefficients[
@@ -116,24 +97,20 @@ class CheckVARMAX:
             assert_equal(self.results.coefficient_matrices_vma, None)
 
     def test_loglike(self):
-        assert_allclose(self.results.llf, self.true["loglike"], rtol=1e-6)
+        assert_allclose(self.results.llf, self.true["loglike"], rtol=1e-06)
 
     def test_aic(self):
-        # We only get 3 digits from Stata
         assert_allclose(self.results.aic, self.true["aic"], atol=3)
 
     def test_bic(self):
-        # We only get 3 digits from Stata
         assert_allclose(self.results.bic, self.true["bic"], atol=3)
 
-    def test_predict(self, end, atol=1e-6, **kwargs):
-        # Tests predict + forecast
+    def test_predict(self, end, atol=1e-06, **kwargs):
         assert_allclose(
             self.results.predict(end=end, **kwargs), self.true["predict"], atol=atol
         )
 
-    def test_dynamic_predict(self, end, dynamic, atol=1e-6, **kwargs):
-        # Tests predict + dynamic predict + forecast
+    def test_dynamic_predict(self, end, dynamic, atol=1e-06, **kwargs):
         assert_allclose(
             self.results.predict(end=end, dynamic=dynamic, **kwargs),
             self.true["dynamic_predict"],
@@ -148,6 +125,7 @@ class CheckVARMAX:
 
 
 class CheckLutkepohl(CheckVARMAX):
+
     @classmethod
     def setup_class(
         cls,
@@ -160,23 +138,18 @@ class CheckLutkepohl(CheckVARMAX):
         **kwargs,
     ):
         cls.true = true
-        # 1960:Q1 - 1982:Q4
         dta = pd.DataFrame(
             results_varmax.lutkepohl_data,
             columns=["inv", "inc", "consump"],
             index=pd.date_range("1960-01-01", "1982-10-01", freq="QS"),
         )
-
         dta["dln_inv"] = np.log(dta["inv"]).diff()
         dta["dln_inc"] = np.log(dta["inc"]).diff()
         dta["dln_consump"] = np.log(dta["consump"]).diff()
-
         endog = dta.loc["1960-04-01":"1978-10-01", list(included_vars)]
-
         cls.model = varmax.VARMAX(
             endog, order=order, trend=trend, error_cov_type=error_cov_type, **kwargs
         )
-
         cls.results = cls.model.smooth(true["params"], cov_type=cov_type)
 
     def test_predict(self, **kwargs):
@@ -187,6 +160,7 @@ class CheckLutkepohl(CheckVARMAX):
 
 
 class TestVAR(CheckLutkepohl):
+
     @classmethod
     def setup_class(cls):
         true = results_varmax.lutkepohl_var1.copy()
@@ -201,43 +175,30 @@ class TestVAR(CheckLutkepohl):
     @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
-        assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
+        assert_allclose(bse**2, self.true["var_oim"], atol=0.0001)
 
     @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
-        assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
+        assert_allclose(bse**2, self.true["var_oim"], atol=0.01)
 
     def test_summary(self):
         summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
-
-        # Check the model overview table
-        assert re.search(r"Model:.*VAR\(1\)", tables[0])
-
-        # For each endogenous variable, check the output
+        assert re.search("Model:.*VAR\\(1\\)", tables[0])
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
             table = tables[i + 2]
-
-            # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
-
-            # -> Make sure it's the right size
             assert len(table.split("\n")) == 8
-
-            # -> Check that we have the right coefficients
             assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
             assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
             assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
-
-        # Test the error covariance matrix table
         table = tables[-1]
         assert re.search("Error covariance matrix", table)
         assert len(table.split("\n")) == 11
-
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
@@ -245,6 +206,7 @@ class TestVAR(CheckLutkepohl):
 
 
 class TestVAR_diagonal(CheckLutkepohl):
+
     @classmethod
     def setup_class(cls):
         true = results_varmax.lutkepohl_var1_diag.copy()
@@ -259,43 +221,30 @@ class TestVAR_diagonal(CheckLutkepohl):
     @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
-        assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
+        assert_allclose(bse**2, self.true["var_oim"], atol=1e-05)
 
     @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
-        assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
+        assert_allclose(bse**2, self.true["var_oim"], atol=0.01)
 
     def test_summary(self):
         summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
-
-        # Check the model overview table
-        assert re.search(r"Model:.*VAR\(1\)", tables[0])
-
-        # For each endogenous variable, check the output
+        assert re.search("Model:.*VAR\\(1\\)", tables[0])
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
             table = tables[i + 2]
-
-            # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
-
-            # -> Make sure it's the right size
             assert len(table.split("\n")) == 8
-
-            # -> Check that we have the right coefficients
             assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
             assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
             assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
-
-        # Test the error covariance matrix table
         table = tables[-1]
         assert re.search("Error covariance matrix", table)
         assert len(table.split("\n")) == 8
-
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
@@ -332,39 +281,26 @@ class TestVAR_measurement_error(CheckLutkepohl):
             error_cov_type="diagonal",
             measurement_error=True,
         )
-
-        # Create another filter results with positive measurement errors
         cls.true_measurement_error_variances = [1.0, 2.0, 3.0]
         params = np.r_[true["params"][:-3], cls.true_measurement_error_variances]
         cls.results2 = cls.model.smooth(params)
 
     def test_mle(self):
-        # With the additional measurment error parameters, this would not be
-        # a meaningful test
         pass
 
     def test_bse_approx(self):
-        # This would just test the same thing
-        # as TestVAR_diagonal.test_bse_approx
         pass
 
     def test_bse_oim(self):
-        # This would just test the same thing as TestVAR_diagonal.test_bse_oim
         pass
 
     def test_aic(self):
-        # Since the measurement error is added, the number
-        # of parameters, and hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the measurement error is added, the number
-        # of parameters, and hence the aic and bic, will be off
         pass
 
     def test_representation(self):
-        # Test that the state space representation in the measurement error
-        # case is correct
         for name in self.model.ssm.shapes.keys():
             if name == "obs":
                 pass
@@ -384,33 +320,20 @@ class TestVAR_measurement_error(CheckLutkepohl):
         summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
-
-        # Check the model overview table
-        assert re.search(r"Model:.*VAR\(1\)", tables[0])
-
-        # For each endogenous variable, check the output
+        assert re.search("Model:.*VAR\\(1\\)", tables[0])
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
             table = tables[i + 2]
-
-            # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
-
-            # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
-
-            # -> Check that we have the right coefficients
             assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
             assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
             assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
             assert re.search("measurement_variance +%.4g" % params[-(i + 1)], table)
-
-        # Test the error covariance matrix table
         table = tables[-1]
         assert re.search("Error covariance matrix", table)
         assert len(table.split("\n")) == 8
-
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
@@ -418,6 +341,7 @@ class TestVAR_measurement_error(CheckLutkepohl):
 
 
 class TestVAR_obs_intercept(CheckLutkepohl):
+
     @classmethod
     def setup_class(cls):
         true = results_varmax.lutkepohl_var1_obs_intercept.copy()
@@ -438,27 +362,22 @@ class TestVAR_obs_intercept(CheckLutkepohl):
     @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
-        assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
+        assert_allclose(bse**2, self.true["var_oim"], atol=0.0001)
 
     @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
-        assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
+        assert_allclose(bse**2, self.true["var_oim"], atol=0.01)
 
     def test_aic(self):
-        # Since the obs_intercept is added in an ad-hoc way here, the number
-        # of parameters, and hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the obs_intercept is added in an ad-hoc way here, the number
-        # of parameters, and hence the aic and bic, will be off
         pass
 
 
 class TestVAR_exog(CheckLutkepohl):
-    # Note: unlike the other tests in this file, this is against the Stata
-    # var function rather than the Stata dfactor function
+
     @classmethod
     def setup_class(cls):
         true = results_varmax.lutkepohl_var1_exog.copy()
@@ -484,72 +403,44 @@ class TestVAR_exog(CheckLutkepohl):
         pass
 
     def test_aic(self):
-        # Stata's var calculates AIC differently
         pass
 
     def test_bic(self):
-        # Stata's var calculates BIC differently
         pass
 
     @pytest.mark.thread_unsafe
     def test_bse_approx(self):
-        # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
-        assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-5)
+        assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-05)
 
     @pytest.mark.thread_unsafe
     def test_bse_oim(self):
-        # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
-        assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-5)
+        assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-05)
 
     def test_predict(self):
-        super(CheckLutkepohl, self).test_predict(end="1978-10-01", atol=1e-3)
+        super(CheckLutkepohl, self).test_predict(end="1978-10-01", atol=0.001)
 
     def test_dynamic_predict(self):
-        # Stata's var cannot subsequently use dynamic
         pass
 
     @pytest.mark.thread_unsafe
     def test_forecast(self):
-        # Tests forecast
         exog = (np.arange(75, 75 + 16) + 2)[:, np.newaxis]
-
-        # Test it through the results class wrapper
         desired = self.results.forecast(steps=16, exog=exog)
-        assert_allclose(desired, self.true["fcast"], atol=1e-6)
-
-        # Test it directly (i.e. without the wrapping done in
-        # VARMAXResults.get_prediction which converts exog to state_intercept)
-        # beta = self.results.params[-9:-6]
-        # state_intercept = np.concatenate([
-        #     exog*beta[0], exog*beta[1], exog*beta[2]], axis=1).T
-        # desired = mlemodel.MLEResults.get_prediction(
-        #     self.results._results, start=75, end=75+15,
-        #     state_intercept=state_intercept).predicted_mean
-        # assert_allclose(desired, self.true['fcast'], atol=1e-6)
+        assert_allclose(desired, self.true["fcast"], atol=1e-06)
 
     def test_summary(self):
         summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
-
-        # Check the model overview table
-        assert re.search(r"Model:.*VARX\(1\)", tables[0])
-
-        # For each endogenous variable, check the output
+        assert re.search("Model:.*VARX\\(1\\)", tables[0])
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog
             table = tables[i + 2]
-
-            # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
-
-            # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
-
-            # -> Check that we have the right coefficients
             assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
             assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
             assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
@@ -557,12 +448,9 @@ class TestVAR_exog(CheckLutkepohl):
                 "beta.x1 +" + forg(params[self.model._params_regression][i], prec=4),
                 table,
             )
-
-        # Test the error covariance matrix table
         table = tables[-1]
         assert re.search("Error covariance matrix", table)
         assert len(table.split("\n")) == 11
-
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
@@ -570,10 +458,7 @@ class TestVAR_exog(CheckLutkepohl):
 
 
 class TestVAR_exog2(CheckLutkepohl):
-    # This is a regression test, to make sure that the setup with multiple exog
-    # works correctly. The params are from Stata, but the loglike is from
-    # this model. Likely the small discrepancy (see the results file) is from
-    # the approximate diffuse initialization.
+
     @classmethod
     def setup_class(cls):
         true = results_varmax.lutkepohl_var1_exog2.copy()
@@ -611,22 +496,20 @@ class TestVAR_exog2(CheckLutkepohl):
         pass
 
     def test_predict(self):
-        super(CheckLutkepohl, self).test_predict(end="1978-10-01", atol=1e-3)
+        super(CheckLutkepohl, self).test_predict(end="1978-10-01", atol=0.001)
 
     def test_dynamic_predict(self):
-        # Stata's var cannot subsequently use dynamic
         pass
 
     @pytest.mark.thread_unsafe
     def test_forecast(self):
-        # Tests forecast
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75 + 16) + 2)[:, np.newaxis]]
-
         desired = self.results.forecast(steps=16, exog=exog)
-        assert_allclose(desired, self.true["fcast"], atol=1e-6)
+        assert_allclose(desired, self.true["fcast"], atol=1e-06)
 
 
 class TestVAR2(CheckLutkepohl):
+
     @classmethod
     def setup_class(cls):
         true = results_varmax.lutkepohl_var2.copy()
@@ -644,47 +527,32 @@ class TestVAR2(CheckLutkepohl):
 
     @pytest.mark.thread_unsafe
     def test_bse_approx(self):
-        # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
-        assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=1e-5)
+        assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=1e-05)
 
     @pytest.mark.thread_unsafe
     def test_bse_oim(self):
-        # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
-        assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=1e-2)
+        assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=0.01)
 
     def test_summary(self):
         summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
-
-        # Check the model overview table
-        assert re.search(r"Model:.*VAR\(2\)", tables[0])
-
-        # For each endogenous variable, check the output
+        assert re.search("Model:.*VAR\\(2\\)", tables[0])
         for i in range(self.model.k_endog):
             offset = i * self.model.k_endog * self.model.k_ar
             table = tables[i + 2]
-
-            # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
-
-            # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
-
-            # -> Check that we have the right coefficients
             assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
             assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
             assert re.search("L2.dln_inv +%.4f" % params[offset + 2], table)
             assert re.search("L2.dln_inc +%.4f" % params[offset + 3], table)
-
-        # Test the error covariance matrix table
         table = tables[-1]
         assert re.search("Error covariance matrix", table)
         assert len(table.split("\n")) == 8
-
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
@@ -692,27 +560,24 @@ class TestVAR2(CheckLutkepohl):
 
 
 class CheckFREDManufacturing(CheckVARMAX):
+
     @classmethod
     def setup_class(
         cls, true, order, trend, error_cov_type, cov_type="approx", **kwargs
     ):
         cls.true = true
-        # 1960:Q1 - 1982:Q4
-        path = os.path.join(current_path, "results", "manufac.dta")
-        with open(path, "rb") as test_data:
+        path = Path(current_path).joinpath("results", "manufac.dta")
+        with Path(path).open("rb") as test_data:
             dta = pd.read_stata(test_data)
         dta.index = pd.DatetimeIndex(dta.month, freq="MS")
         dta["dlncaputil"] = dta["lncaputil"].diff()
         dta["dlnhours"] = dta["lnhours"].diff()
-
         endog = dta.loc["1972-02-01":, ["dlncaputil", "dlnhours"]]
-
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             cls.model = varmax.VARMAX(
                 endog, order=order, trend=trend, error_cov_type=error_cov_type, **kwargs
             )
-
         cls.results = cls.model.smooth(true["params"], cov_type=cov_type)
 
 
@@ -730,39 +595,27 @@ class TestVARMA(CheckFREDManufacturing):
         true["dynamic_predict"] = varmax_results.iloc[1:][
             ["dyn_predict_varma11_1", "dyn_predict_varma11_2"]
         ]
-
         super().setup_class(true, order=(1, 1), trend="n", error_cov_type="diagonal")
 
     def test_mle(self):
-        # Since the VARMA model here is generic (we're just forcing zeros
-        # in some params) whereas Stata's is restricted, the MLE test is not
-        # meaninful
         pass
 
     @pytest.mark.skip("Known failure: standard errors do not match.")
     def test_bse_approx(self):
-        # Standard errors do not match Stata's
         pass
 
     @pytest.mark.skip("Known failure: standard errors do not match.")
     def test_bse_oim(self):
-        # Standard errors do not match Stata's
         pass
 
     def test_aic(self):
-        # Since the VARMA model here is generic (we're just putting in zeros
-        # for some params), Stata assumes a different estimated number of
-        # parameters; hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the VARMA model here is generic (we're just putting in zeros
-        # for some params), Stata assumes a different estimated number of
-        # parameters; hence the aic and bic, will be off
         pass
 
     def test_predict(self):
-        super().test_predict(end="2009-05-01", atol=1e-4)
+        super().test_predict(end="2009-05-01", atol=0.0001)
 
     def test_dynamic_predict(self):
         super().test_dynamic_predict(end="2009-05-01", dynamic="2000-01-01")
@@ -771,24 +624,14 @@ class TestVARMA(CheckFREDManufacturing):
         summary = self.results.summary()
         tables = [str(table) for table in summary.tables]
         params = self.true["params"]
-
-        # Check the model overview table
-        assert re.search(r"Model:.*VARMA\(1,1\)", tables[0])
-
-        # For each endogenous variable, check the output
+        assert re.search("Model:.*VARMA\\(1,1\\)", tables[0])
         for i in range(self.model.k_endog):
             offset_ar = i * self.model.k_endog
             offset_ma = self.model.k_endog**2 * self.model.k_ar + i * self.model.k_endog
             table = tables[i + 2]
-
-            # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
             assert re.search("Results for equation %s" % name, table)
-
-            # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
-
-            # -> Check that we have the right coefficients
             assert re.search(
                 "L1.dlncaputil +" + forg(params[offset_ar + 0], prec=4), table
             )
@@ -796,17 +639,14 @@ class TestVARMA(CheckFREDManufacturing):
                 "L1.dlnhours +" + forg(params[offset_ar + 1], prec=4), table
             )
             assert re.search(
-                r"L1.e\(dlncaputil\) +" + forg(params[offset_ma + 0], prec=4), table
+                "L1.e\\(dlncaputil\\) +" + forg(params[offset_ma + 0], prec=4), table
             )
             assert re.search(
-                r"L1.e\(dlnhours\) +" + forg(params[offset_ma + 1], prec=4), table
+                "L1.e\\(dlnhours\\) +" + forg(params[offset_ma + 1], prec=4), table
             )
-
-        # Test the error covariance matrix table
         table = tables[-1]
         assert re.search("Error covariance matrix", table)
         assert len(table.split("\n")) == 7
-
         params = params[self.model._params_state_cov]
         names = self.model.param_names[self.model._params_state_cov]
         for i in range(len(names)):
@@ -825,96 +665,61 @@ class TestVMA1(CheckFREDManufacturing):
         true["dynamic_predict"] = varmax_results.iloc[1:][
             ["dyn_predict_vma1_1", "dyn_predict_vma1_2"]
         ]
-
         super().setup_class(true, order=(0, 1), trend="n", error_cov_type="diagonal")
 
     def test_mle(self):
-        # Since the VARMA model here is generic (we're just forcing zeros
-        # in some params) whereas Stata's is restricted, the MLE test is not
-        # meaninful
         pass
 
     @pytest.mark.skip("Known failure: standard errors do not match.")
     def test_bse_approx(self):
-        # Standard errors do not match Stata's
         pass
 
     @pytest.mark.skip("Known failure: standard errors do not match.")
     def test_bse_oim(self):
-        # Standard errors do not match Stata's
         pass
 
     def test_aic(self):
-        # Since the VARMA model here is generic (we're just putting in zeros
-        # for some params), Stata assumes a different estimated number of
-        # parameters; hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the VARMA model here is generic (we're just putting in zeros
-        # for some params), Stata assumes a different estimated number of
-        # parameters; hence the aic and bic, will be off
         pass
 
     def test_predict(self):
-        super().test_predict(end="2009-05-01", atol=1e-4)
+        super().test_predict(end="2009-05-01", atol=0.0001)
 
     def test_dynamic_predict(self):
         super().test_dynamic_predict(end="2009-05-01", dynamic="2000-01-01")
 
 
 def test_specifications():
-    # Tests for model specification and state space creation
     endog = np.arange(20).reshape(10, 2)
     exog = np.arange(10)
     exog2 = pd.Series(exog, index=pd.date_range("2000-01-01", "2009-01-01", freq="YS"))
-
-    # Test successful model creation
     varmax.VARMAX(endog, exog=exog, order=(1, 0))
-
-    # Test successful model creation with pandas exog
     varmax.VARMAX(endog, exog=exog2, order=(1, 0))
 
 
 def test_misspecifications():
     varmax.__warningregistry__ = {}
-
-    # Tests for model specification and misspecification exceptions
     endog = np.arange(20).reshape(10, 2)
-
-    # Bad trend specification
     with pytest.raises(ValueError):
         varmax.VARMAX(endog, order=(1, 0), trend="")
-
-    # Bad error_cov_type specification
     with pytest.raises(ValueError):
         varmax.VARMAX(endog, order=(1, 0), error_cov_type="")
-
-    # Bad order specification
     with pytest.raises(ValueError):
         varmax.VARMAX(endog, order=(0, 0))
-
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         varmax.VARMAX(endog, order=(1, 1))
-
-    # Warning with VARMA specification
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-
         varmax.VARMAX(endog, order=(1, 1))
-
-        message = (
-            "Estimation of VARMA(p,q) models is not generically robust,"
-            " due especially to identification issues."
-        )
+        message = "Estimation of VARMA(p,q) models is not generically robust, due especially to identification issues."
         assert str(w[0].message) == message
-
     warnings.resetwarnings()
 
 
 def test_misc_exog():
-    # Tests for missing data
     nobs = 20
     k_endog = 2
     rs = np.random.RandomState(1208)
@@ -923,21 +728,17 @@ def test_misc_exog():
     endog[2:6, 1] = np.nan
     exog1 = rs.normal(size=(nobs, 1))
     exog2 = rs.normal(size=(nobs, 2))
-
     index = pd.date_range("1970-01-01", freq="QS", periods=nobs)
     endog_pd = pd.DataFrame(endog, index=index)
     exog1_pd = pd.Series(exog1.squeeze(), index=index)
     exog2_pd = pd.DataFrame(exog2, index=index)
-
     models = [
         varmax.VARMAX(endog, exog=exog1, order=(1, 0)),
         varmax.VARMAX(endog, exog=exog2, order=(1, 0)),
         varmax.VARMAX(endog_pd, exog=exog1_pd, order=(1, 0)),
         varmax.VARMAX(endog_pd, exog=exog2_pd, order=(1, 0)),
     ]
-
     for mod in models:
-        # Smoke tests
         assert isinstance(mod.start_params, np.ndarray)
         res = mod.fit(disp=False)
         assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
@@ -949,21 +750,15 @@ def test_misc_exog():
         assert isinstance(res.predict(), typ)
         assert isinstance(res.predict(dynamic=True), typ)
         assert isinstance(res.get_prediction().predicted_mean, typ)
-
         oos_exog = rs.normal(size=(1, mod.k_exog))
         assert isinstance(res.forecast(steps=1, exog=oos_exog), typ)
         assert isinstance(res.get_forecast(steps=1, exog=oos_exog).predicted_mean, typ)
-
-        # Smoke tests for invalid exog
         oos_exog = rs.normal(size=(2, mod.k_exog))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
-
         oos_exog = rs.normal(size=(1, mod.k_exog + 1))
         with pytest.raises(ValueError):
             res.forecast(steps=1, exog=oos_exog)
-
-    # Test invalid model specifications
     with pytest.raises(ValueError):
         varmax.VARMAX(endog, exog=np.zeros((10, 4)), order=(1, 0))
 
@@ -978,32 +773,22 @@ def test_predict_custom_index():
 
 
 def test_forecast_exog():
-    # Test forecasting with various shapes of `exog`
     nobs = 100
     endog = np.ones((nobs, 2)) * 2.0
     exog = np.ones(nobs)
-
     mod = varmax.VARMAX(endog, order=(1, 0), exog=exog, trend="n")
     res = mod.smooth(np.r_[[0] * 4, 2.0, 2.0, 1, 0, 1])
-
-    # 1-step-ahead, valid
     exog_fcast_scalar = 1.0
     exog_fcast_1dim = np.ones(1)
     exog_fcast_2dim = np.ones((1, 1))
-
     assert_allclose(res.forecast(1, exog=exog_fcast_scalar), 2.0)
     assert_allclose(res.forecast(1, exog=exog_fcast_1dim), 2.0)
     assert_allclose(res.forecast(1, exog=exog_fcast_2dim), 2.0)
-
-    # h-steps-ahead, valid
     h = 10
     exog_fcast_1dim = np.ones(h)
     exog_fcast_2dim = np.ones((h, 1))
-
     assert_allclose(res.forecast(h, exog=exog_fcast_1dim), 2.0)
     assert_allclose(res.forecast(h, exog=exog_fcast_2dim), 2.0)
-
-    # h-steps-ahead, invalid
     with pytest.raises(ValueError):
         res.forecast(h, exog=1.0)
     with pytest.raises(ValueError):
@@ -1022,7 +807,6 @@ def check_equivalent_models(mod, mod2):
         "enforce_invertibility",
         "k_params",
     ]
-
     ssm_attrs = [
         "nobs",
         "k_endog",
@@ -1036,13 +820,10 @@ def check_equivalent_models(mod, mod2):
         "selection",
         "state_cov",
     ]
-
     for attr in attrs:
         assert_equal(getattr(mod2, attr), getattr(mod, attr))
-
     for attr in ssm_attrs:
         assert_equal(getattr(mod2.ssm, attr), getattr(mod.ssm, attr))
-
     assert_equal(mod2._get_init_kwds(), mod._get_init_kwds())
 
 
@@ -1050,14 +831,12 @@ def test_recreate_model():
     nobs = 100
     endog = np.ones((nobs, 3)) * 2.0
     exog = np.ones(nobs)
-
     orders = [(1, 0), (1, 1)]
     trends = ["t", "n"]
     error_cov_types = ["diagonal", "unstructured"]
     measurement_errors = [False, True]
     enforce_stationarities = [False, True]
     enforce_invertibilities = [False, True]
-
     import itertools
 
     names = [
@@ -1077,7 +856,6 @@ def test_recreate_model():
         enforce_invertibilities,
     ):
         kwargs = dict(zip(names, element))
-
         with warnings.catch_warnings(record=False):
             warnings.simplefilter("ignore")
             mod = varmax.VARMAX(endog, exog=exog, **kwargs)
@@ -1089,20 +867,15 @@ def test_append_results():
     endog = np.arange(200).reshape(100, 2)
     exog = np.ones(100)
     params = [0.1, 0.2, 0.5, -0.1, 0.0, 0.2, 1.0, 2.0, 1.0, 0.0, 1.0]
-
     mod1 = varmax.VARMAX(endog, order=(1, 0), trend="t", exog=exog)
     res1 = mod1.smooth(params)
-
     mod2 = varmax.VARMAX(endog[:50], order=(1, 0), trend="t", exog=exog[:50])
     res2 = mod2.smooth(params)
     res3 = res2.append(endog[50:], exog=exog[50:])
-
     assert_equal(res1.specification, res3.specification)
-
     assert_allclose(res3.cov_params_default, res2.cov_params_default)
     for attr in ["nobs", "llf", "llf_obs", "loglikelihood_burn"]:
         assert_equal(getattr(res3, attr), getattr(res1, attr))
-
     for attr in [
         "filtered_state",
         "filtered_state_cov",
@@ -1126,7 +899,6 @@ def test_append_results():
         "smoothed_state_disturbance_cov",
     ]:
         assert_equal(getattr(res3, attr), getattr(res1, attr))
-
     assert_allclose(
         res3.forecast(10, exog=np.ones(10)), res1.forecast(10, exog=np.ones(10))
     )
@@ -1142,24 +914,16 @@ def test_extend_results(trend, forecast):
     if trend == "ct":
         trend_params = [0.1, 0.2, 1.0, 2.0]
     params = np.r_[trend_params, 0.5, -0.1, 0.0, 0.2, 1.0, 0.0, 1.0]
-
     mod1 = varmax.VARMAX(endog, order=(1, 0), trend=trend)
     res1 = mod1.smooth(params)
     if forecast:
-        # Call `forecast` to trigger the _set_final_exog and
-        # _set_final_predicted_state context managers
         res1.forecast()
-
     mod2 = mod1.clone(endog[:50])
     res2 = mod2.smooth(params)
     if forecast:
-        # Call `forecast` to trigger the _set_final_exog and
-        # _set_final_predicted_state context managers
         res2.forecast()
     res3 = res2.extend(endog[50:])
-
     assert_allclose(res3.llf_obs, res1.llf_obs[50:])
-
     for attr in [
         "filtered_state",
         "filtered_state_cov",
@@ -1184,7 +948,6 @@ def test_extend_results(trend, forecast):
         if desired is not None:
             desired = desired[..., 50:]
         assert_allclose(getattr(res3, attr), desired, atol=1e-12)
-
     assert_allclose(res3.forecast(10), res1.forecast(10))
 
 
@@ -1192,16 +955,12 @@ def test_extend_results_exog():
     endog = np.arange(200).reshape(100, 2)
     exog = np.ones(100)
     params = [0.1, 0.2, 0.5, -0.1, 0.0, 0.2, 1.0, 2.0, 1.0, 0.0, 1.0]
-
     mod1 = varmax.VARMAX(endog, order=(1, 0), trend="t", exog=exog)
     res1 = mod1.smooth(params)
-
     mod2 = varmax.VARMAX(endog[:50], order=(1, 0), trend="t", exog=exog[:50])
     res2 = mod2.smooth(params)
     res3 = res2.extend(endog[50:], exog=exog[50:])
-
     assert_allclose(res3.llf_obs, res1.llf_obs[50:])
-
     for attr in [
         "filtered_state",
         "filtered_state_cov",
@@ -1228,7 +987,6 @@ def test_extend_results_exog():
         if desired is not None:
             desired = desired[..., 50:]
         assert_equal(getattr(res3, attr), desired)
-
     assert_allclose(
         res3.forecast(10, exog=np.ones(10)), res1.forecast(10, exog=np.ones(10))
     )
@@ -1238,21 +996,15 @@ def test_apply_results():
     endog = np.arange(200).reshape(100, 2)
     exog = np.ones(100)
     params = [0.1, 0.2, 0.5, -0.1, 0.0, 0.2, 1.0, 2.0, 1.0, 0.0, 1.0]
-
     mod1 = varmax.VARMAX(endog[:50], order=(1, 0), trend="t", exog=exog[:50])
     res1 = mod1.smooth(params)
-
     mod2 = varmax.VARMAX(endog[50:], order=(1, 0), trend="t", exog=exog[50:])
     res2 = mod2.smooth(params)
-
     res3 = res2.apply(endog[:50], exog=exog[:50])
-
     assert_equal(res1.specification, res3.specification)
-
     assert_allclose(res3.cov_params_default, res2.cov_params_default)
     for attr in ["nobs", "llf", "llf_obs", "loglikelihood_burn"]:
         assert_equal(getattr(res3, attr), getattr(res1, attr))
-
     for attr in [
         "filtered_state",
         "filtered_state_cov",
@@ -1276,27 +1028,22 @@ def test_apply_results():
         "smoothed_state_disturbance_cov",
     ]:
         assert_equal(getattr(res3, attr), getattr(res1, attr))
-
     assert_allclose(
         res3.forecast(10, exog=np.ones(10)), res1.forecast(10, exog=np.ones(10))
     )
 
 
 def test_vma1_exog():
-    # Test the VMAX(1) case against univariate MAX(1) models
     dta = pd.DataFrame(
         results_varmax.lutkepohl_data,
         columns=["inv", "inc", "consump"],
         index=pd.date_range("1960-01-01", "1982-10-01", freq="QS"),
     )
     dta = np.log(dta).diff().iloc[1:]
-
     endog = dta.iloc[:, :2]
     exog = dta.iloc[:, 2]
-
     ma_params1 = [-0.01, 1.4, -0.3, 0.002]
     ma_params2 = [0.004, 0.8, -0.5, 0.0001]
-
     vma_params = [
         ma_params1[0],
         ma_params2[0],
@@ -1309,25 +1056,17 @@ def test_vma1_exog():
         ma_params1[3],
         ma_params2[3],
     ]
-
-    # Joint VMA model
     mod_vma = varmax.VARMAX(endog, exog=exog, order=(0, 1), error_cov_type="diagonal")
     mod_vma.ssm.initialize_diffuse()
     res_mva = mod_vma.smooth(vma_params)
-
-    # Smoke test that start_params does not raise an error
     sp = mod_vma.start_params
     assert_equal(len(sp), len(mod_vma.param_names))
-
-    # Univariate MA models
     mod_ma1 = sarimax.SARIMAX(endog.iloc[:, 0], exog=exog, order=(0, 0, 1), trend="c")
     mod_ma1.ssm.initialize_diffuse()
     mod_ma2 = sarimax.SARIMAX(endog.iloc[:, 1], exog=exog, order=(0, 0, 1), trend="c")
     mod_ma2.ssm.initialize_diffuse()
     res_ma1 = mod_ma1.smooth(ma_params1)
     res_ma2 = mod_ma2.smooth(ma_params2)
-
-    # Have to ignore first 2 observations due to differences in initialization
     assert_allclose(res_mva.llf_obs[2:], (res_ma1.llf_obs + res_ma2.llf_obs)[2:])
 
 
@@ -1343,20 +1082,14 @@ def test_param_names_trend():
         "sqrt.var.y2",
     ]
     base_params = [0.5, 0, 0, 0.4, 1.0, 0.0, 1.0]
-
-    # No trend
     mod = varmax.VARMAX(endog, order=(1, 0), trend="n")
     desired = base_names
     assert_equal(mod.param_names, desired)
-
-    # Intercept
     mod = varmax.VARMAX(endog, order=(1, 0), trend=[1])
     desired = ["intercept.y1", "intercept.y2"] + base_names
     assert_equal(mod.param_names, desired)
     mod.update([1.2, -0.5] + base_params)
     assert_allclose(mod["state_intercept"], [1.2, -0.5])
-
-    # Intercept + drift
     mod = varmax.VARMAX(endog, order=(1, 0), trend=[1, 1])
     desired = ["intercept.y1", "drift.y1", "intercept.y2", "drift.y2"] + base_names
     assert_equal(mod.param_names, desired)
@@ -1369,16 +1102,12 @@ def test_param_names_trend():
     mod.update([1.2, 1, -0.5, 1.1] + base_params)
     assert_allclose(mod["state_intercept", 0], 1.2 + np.arange(2, 5))
     assert_allclose(mod["state_intercept", 1], -0.5 + 1.1 * np.arange(2, 5))
-
-    # Drift only
     mod = varmax.VARMAX(endog, order=(1, 0), trend=[0, 1])
     desired = ["drift.y1", "drift.y2"] + base_names
     assert_equal(mod.param_names, desired)
     mod.update([1, 1.1] + base_params)
     assert_allclose(mod["state_intercept", 0], np.arange(2, 5))
     assert_allclose(mod["state_intercept", 1], 1.1 * np.arange(2, 5))
-
-    # Intercept + third order
     mod = varmax.VARMAX(endog, order=(1, 0), trend=[1, 0, 1])
     desired = ["intercept.y1", "trend.2.y1", "intercept.y2", "trend.2.y2"] + base_names
     assert_equal(mod.param_names, desired)

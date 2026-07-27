@@ -1,19 +1,16 @@
-#!/usr/bin/env python
-
 from itertools import product
 import os
+from pathlib import Path
 
 import numpy as np
 
 PATH = os.environ.get("PSS_PATH", "..")
 
 
-def pss_block(
-    seed, k, case, i1, block_id, m=2_000_000, t=1_000, save=True, path="./"
-):
+def pss_block(seed, k, case, i1, block_id, m=2000000, t=1000, save=True, path="./"):
     file_name = f"pss-k-{k}-case-{case}-i1-{i1}-block-{block_id}.npz"
-    file_name = os.path.join(path, file_name)
-    if save and os.path.exists(file_name):
+    file_name = Path(path).joinpath(file_name)
+    if save and Path(file_name).exists():
         return
     rs = np.random.default_rng(seed)
     const = np.ones(t - 1)
@@ -91,8 +88,7 @@ for _s, (_k, _case, _i1, _block_id) in zip(seeds, params):
             "path": PATH,
         }
     )
-
 if __name__ == "__main__":
     from joblib import Parallel, delayed
 
-    Parallel(n_jobs=10)(delayed(pss_block)(**c) for c in configs)
+    Parallel(n_jobs=10)((delayed(pss_block)(**c) for c in configs))

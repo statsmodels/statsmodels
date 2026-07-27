@@ -2,7 +2,7 @@
 Test functions for models.robust.scale
 """
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.random import standard_normal
@@ -17,27 +17,21 @@ from statsmodels.robust import scale
 import statsmodels.robust.norms as rnorms
 from statsmodels.robust.scale import mad, scale_tau
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
-
+cur_dir = Path(__file__).parent.resolve()
 file_name = "hbk.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 dta_hbk = pd.read_csv(file_path)
-
-
-# Example from Section 5.5, Venables & Ripley (2002)
-
 DECIMAL = 4
-# TODO: Can replicate these tests using stackloss data and R if this
-#  data is a problem
 
 
 class TestChem:
+
     @classmethod
     def setup_class(cls):
         cls.chem = np.array(
             [
-                2.20,
-                2.20,
+                2.2,
+                2.2,
                 2.4,
                 2.4,
                 2.5,
@@ -46,7 +40,7 @@ class TestChem:
                 2.9,
                 3.03,
                 3.03,
-                3.10,
+                3.1,
                 3.37,
                 3.4,
                 3.4,
@@ -73,7 +67,7 @@ class TestChem:
         assert_almost_equal(scale.mad(self.chem), 0.52632, DECIMAL)
 
     def test_iqr(self):
-        assert_almost_equal(scale.iqr(self.chem), 0.68570, DECIMAL)
+        assert_almost_equal(scale.iqr(self.chem), 0.6857, DECIMAL)
 
     def test_qn(self):
         assert_almost_equal(scale.qn_scale(self.chem), 0.73231, DECIMAL)
@@ -98,6 +92,7 @@ class TestChem:
 
 
 class TestMad:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -128,6 +123,7 @@ class TestMad:
 
 
 class TestMadAxes:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -151,6 +147,7 @@ class TestMadAxes:
 
 
 class TestIqr:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -173,6 +170,7 @@ class TestIqr:
 
 
 class TestIqrAxes:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -196,6 +194,7 @@ class TestIqrAxes:
 
 
 class TestQn:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -213,20 +212,16 @@ class TestQn:
             scale.qn_scale(self.range), scale._qn_naive(self.range), DECIMAL
         )
         assert_almost_equal(
-            scale.qn_scale(self.exponential),
-            scale._qn_naive(self.exponential),
-            DECIMAL,
+            scale.qn_scale(self.exponential), scale._qn_naive(self.exponential), DECIMAL
         )
 
     def test_qn_robustbase(self):
-        # from R's robustbase with finite.corr = FALSE
         assert_almost_equal(scale.qn_scale(self.range), 13.3148, DECIMAL)
         assert_almost_equal(
             scale.qn_scale(self.stackloss),
             np.array([8.87656, 8.87656, 2.21914, 4.43828]),
             DECIMAL,
         )
-        # sunspot.year from datasets in R only goes up to 289
         assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL)
 
     def test_qn_empty(self):
@@ -242,6 +237,7 @@ class TestQn:
 
 
 class TestQnAxes:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -265,6 +261,7 @@ class TestQnAxes:
 
 
 class TestHuber:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
@@ -277,11 +274,12 @@ class TestHuber:
 
 
 class TestHuberAxes:
+
     @classmethod
     def setup_class(cls):
         rs = np.random.RandomState(54321)
         cls.X = rs.standard_normal((40, 10, 30))
-        cls.h = scale.Huber(maxiter=100, tol=1.0e-05)
+        cls.h = scale.Huber(maxiter=100, tol=1e-05)
 
     def test_default(self):
         m, s = self.h(self.X, axis=0)
@@ -301,7 +299,6 @@ class TestHuberAxes:
 
 
 def test_mad_axis_none():
-    # GH 7027
     a = np.array([[0, 1, 2], [2, 3, 2]])
 
     def m(x):
@@ -310,21 +307,15 @@ def test_mad_axis_none():
     direct = mad(a=a, axis=None)
     custom = mad(a=a, axis=None, center=m)
     axis0 = mad(a=a.ravel(), axis=0)
-
     np.testing.assert_allclose(direct, custom)
     np.testing.assert_allclose(direct, axis0)
 
 
 def test_tau_scale1():
     x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 1000.0]
-
-    # from R robustbase
-    # > scaleTau2(x, mu.too = TRUE, consistency = FALSE)
-    res2 = [4.09988889476747, 2.82997006475080]
+    res2 = [4.09988889476747, 2.8299700647508]
     res1 = scale_tau(x, normalize=False, ddof=0)
     assert_allclose(res1, res2, rtol=1e-13)
-
-    # > scaleTau2(x, mu.too = TRUE)
     res2 = [4.09988889476747, 2.94291554004125]
     res1 = scale_tau(x, ddof=0)
     assert_allclose(res1, res2, rtol=1e-13)
@@ -333,46 +324,25 @@ def test_tau_scale1():
 def test_tau_scale2():
     import pandas as pd
 
-    cur_dir = os.path.abspath(os.path.dirname(__file__))
+    cur_dir = Path(__file__).parent.resolve()
     file_name = "hbk.csv"
-    file_path = os.path.join(cur_dir, "results", file_name)
+    file_path = Path(cur_dir).joinpath("results", file_name)
     dta_hbk = pd.read_csv(file_path)
-
-    # from R robustbase
-    # > scaleTau2(hbk[,1], mu.too = TRUE, consistency = FALSE)
-    # [1] 1.55545438650723 1.93522607240954
-    # > scaleTau2(hbk[,2], mu.too = TRUE, consistency = FALSE)
-    # [1] 1.87924505206092 1.72121373687210
-    # > scaleTau2(hbk[,3], mu.too = TRUE, consistency = FALSE)
-    # [1] 1.74163126730520 1.81045973143159
-    # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = FALSE)
-    # [1] -0.0443521228044396  0.8343974588144727
-
     res2 = np.array(
         [
             [1.55545438650723, 1.93522607240954],
-            [1.87924505206092, 1.72121373687210],
-            [1.74163126730520, 1.81045973143159],
+            [1.87924505206092, 1.7212137368721],
+            [1.7416312673052, 1.81045973143159],
             [-0.0443521228044396, 0.8343974588144727],
         ]
     )
     res1 = scale_tau(dta_hbk, normalize=False, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
-
-    # > scaleTau2(hbk[,1], mu.too = TRUE, consistency = TRUE)
-    # [1] 1.55545438650723 2.01246188181448
-    # > scaleTau2(hbk[,2], mu.too = TRUE, consistency = TRUE)
-    # [1] 1.87924505206092 1.78990821036102
-    # > scaleTau2(hbk[,3], mu.too = TRUE, consistency = TRUE)
-    # [1] 1.74163126730520 1.88271605576794
-    # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = TRUE)
-    # [1] -0.0443521228044396  0.8676986653327993
-
     res2 = np.array(
         [
             [1.55545438650723, 2.01246188181448],
             [1.87924505206092, 1.78990821036102],
-            [1.74163126730520, 1.88271605576794],
+            [1.7416312673052, 1.88271605576794],
             [-0.0443521228044396, 0.8676986653327993],
         ]
     )
@@ -381,13 +351,11 @@ def test_tau_scale2():
 
 
 def test_scale_iter():
-    # regression test, and approximately correct
     rs = np.random.RandomState(54321)
     v = np.array([1, 0.5, 0.4])
     x = rs.standard_normal((40, 3)) * np.sqrt(v)
     x[:2] = [2, 2, 2]
-
-    x = x[:, 0]  # 1d only ?
+    x = x[:, 0]
     v = v[0]
 
     def meef_scale(x):
@@ -395,21 +363,18 @@ def test_scale_iter():
 
     scale_bias = 0.43684963023076195
     s = scale._scale_iter(x, meef_scale=meef_scale, scale_bias=scale_bias)
-    assert_allclose(s, v, rtol=1e-1)
-    assert_allclose(s, 1.0683298, rtol=1e-6)  # regression test number
-
+    assert_allclose(s, v, rtol=0.1)
+    assert_allclose(s, 1.0683298, rtol=1e-06)
     chi = rnorms.TukeyBiweight()
     scale_bias = 0.43684963023076195
     mscale_biw = scale.MScale(chi, scale_bias)
     s_biw = mscale_biw(x)
     assert_allclose(s_biw, s, rtol=1e-10)
-
-    # regression test with 50% breakdown tuning
     chi = rnorms.TukeyBiweight(c=1.547)
     scale_bias = 0.1995
     mscale_biw = scale.MScale(chi, scale_bias)
     s_biw = mscale_biw(x)
-    assert_allclose(s_biw, 1.0326176662, rtol=1e-9)  # regression test number
+    assert_allclose(s_biw, 1.0326176662, rtol=1e-09)
 
 
 class TestMScale:
@@ -418,48 +383,42 @@ class TestMScale:
         rs = np.random.RandomState(54321)
         nobs = 50
         x = 1.5 * rs.standard_normal(nobs)
-
-        # test equivalence of HuberScale and TrimmedMean M-scale
         chi_tm = rnorms.TrimmedMean(c=2.5)
         scale_bias_tm = 0.4887799917273257
         mscale_tm = scale.MScale(chi_tm, scale_bias_tm)
         s_tm = mscale_tm(x)
-
         mscale_hub = scale.HuberScale()
         s_hub = mscale_hub(nobs, nobs, x)
-
-        assert_allclose(s_tm, s_hub, rtol=1e-6)
+        assert_allclose(s_tm, s_hub, rtol=1e-06)
 
     def test_biweight(self):
         y = dta_hbk["Y"].to_numpy()
         ry = y - np.median(y)
-
         chi = rnorms.TukeyBiweight(c=1.54764)
         scale_bias = 0.19959963130721095
         mscale_biw = scale.MScale(chi, scale_bias)
         scale0 = mscale_biw(ry)
-        scale1 = 0.817260483784376  # from R RobStatTM scaleM
-        assert_allclose(scale0, scale1, rtol=1e-6)
+        scale1 = 0.817260483784376
+        assert_allclose(scale0, scale1, rtol=1e-06)
 
 
 def test_scale_trimmed_approx():
-    scale_trimmed = scale.scale_trimmed  # shorthand
+    scale_trimmed = scale.scale_trimmed
     nobs = 500
     rs = np.random.RandomState(965578)
     x = 2 * rs.randn(nobs)
     x[:10] = 60
-
     alpha = 0.2
     res = scale_trimmed(x, alpha)
-    assert_allclose(res.scale, 2, rtol=1e-1)
+    assert_allclose(res.scale, 2, rtol=0.1)
     s = scale_trimmed(np.column_stack((x, 2 * x)), alpha).scale
-    assert_allclose(s, [2, 4], rtol=1e-1)
+    assert_allclose(s, [2, 4], rtol=0.1)
     s = scale_trimmed(np.column_stack((x, 2 * x)).T, alpha, axis=1).scale
-    assert_allclose(s, [2, 4], rtol=1e-1)
+    assert_allclose(s, [2, 4], rtol=0.1)
     s = scale_trimmed(np.column_stack((x, x)).T, alpha, axis=None).scale
-    assert_allclose(s, [2], rtol=1e-1)
+    assert_allclose(s, [2], rtol=0.1)
     s2 = scale_trimmed(np.column_stack((x, x)).ravel(), alpha).scale
-    assert_allclose(s2, [2], rtol=1e-1)
-    assert_allclose(s2, s, rtol=1e-1)
+    assert_allclose(s2, [2], rtol=0.1)
+    assert_allclose(s2, s, rtol=0.1)
     s = scale_trimmed(x, alpha, distr=stats.t, distargs=(100,)).scale
-    assert_allclose(s, [2], rtol=1e-1)
+    assert_allclose(s, [2], rtol=0.1)

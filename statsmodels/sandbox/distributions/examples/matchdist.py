@@ -16,54 +16,34 @@ TODO:
 
 """
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
-# stats.distributions.beta_gen._fitstart = lambda self, data : (5,5,0,1)
-
 
 def plothist(x, distfn, args, loc, scale, right=1):
-
     plt.figure()
-    # the histogram of the data
     n, bins, patches = plt.hist(x, 25, normed=1, facecolor="green", alpha=0.75)
     maxheight = max([p.get_height() for p in patches])
     print(maxheight)
     axlim = list(plt.axis())
-    # print(axlim)
     axlim[-1] = maxheight * 1.05
-    # plt.axis(tuple(axlim))
-    #    print(bins)
-    #    print('args in plothist', args)
-    # add a 'best fit' line
-    # yt = stats.norm.pdf( bins, loc=loc, scale=scale)
-    yt = distfn.pdf(bins,  loc, scale, *args)
+    yt = distfn.pdf(bins, loc, scale, *args)
     yt[yt > maxheight] = maxheight
     plt.plot(bins, yt, "r--", linewidth=1)
-    ys = (
-        stats.t.pdf(
-            bins,
-            10,
-            scale=10,
-        )
-        * right
-    )
+    ys = stats.t.pdf(bins, 10, scale=10) * right
     plt.plot(bins, ys, "b-", linewidth=1)
-
     plt.xlabel("Smarts")
     plt.ylabel("Probability")
-    plt.title(rf"$\mathrm{{Testing: {distfn.name} :}}\ \mu={loc:f},\ \sigma={scale:f}$")
-
-    # plt.axis([bins[0], bins[-1], 0, 0.134+0.05])
-
+    plt.title(
+        f"$\\mathrm{{Testing: {distfn.name} :}}\\ \\mu={loc:f},\\ \\sigma={scale:f}$"
+    )
     plt.grid(True)
     plt.draw()
-    # plt.show()
-    # plt.close()
 
 
-# targetdist = ['norm','t','truncnorm','johnsonsu','johnsonsb',
 targetdist = [
     "norm",
     "alpha",
@@ -159,7 +139,6 @@ targetdist = [
     "zipf",
     "dlaplace",
 ]
-
 left = []
 right = []
 finite = []
@@ -167,28 +146,20 @@ unbound = []
 other = []
 contdist = []
 discrete = []
-
 categ = {
     ("open", "open"): "unbound",
     ("0", "open"): "right",
-    (
-        "open",
-        "0",
-    ): "left",
+    ("open", "0"): "left",
     ("finite", "finite"): "finite",
     ("oth", "oth"): "other",
 }
 categ = {
     ("open", "open"): unbound,
     ("0", "open"): right,
-    (
-        "open",
-        "0",
-    ): left,
+    ("open", "0"): left,
     ("finite", "finite"): finite,
     ("oth", "oth"): other,
 }
-
 categ2 = {
     ("open", "0"): ["frechet_l", "weibull_max", "levy_l"],
     ("finite", "finite"): ["anglit", "cosine", "rdist", "semicircular"],
@@ -272,18 +243,13 @@ categ2 = {
     ],
     ("finite", "open"): ["pareto"],
 }
-
-# Note: weibull_max == frechet_l
-
 right_incorrect = ["genextreme"]
-
 right_all = (
-    categ2[("0", "open")]
-    + categ2[("0", "finite")]
-    + categ2[("finite", "open")]
+    categ2["0", "open"]
+    + categ2["0", "finite"]
+    + categ2["finite", "open"]
     + right_incorrect
 )
-
 for distname in targetdist:
     distfn = getattr(stats, distname)
     if hasattr(distfn, "_pdf"):
@@ -301,23 +267,13 @@ for distname in targetdist:
             high = "finite"
         contdist.append(distname)
         categ.setdefault((low, high), []).append(distname)
-
 not_good = ["genextreme", "reciprocal", "vonmises"]
-# 'genextreme' is right (or left?), 'reciprocal' requires 0<a<b, 'vonmises' no a,b
-targetdist = [f for f in categ[("open", "open")] if f not in not_good]
+targetdist = [f for f in categ["open", "open"] if f not in not_good]
 not_good = ["wrapcauchy"]
 not_good = ["vonmises"]
 not_good = ["genexpon", "vonmises"]
-# 'wrapcauchy' requires additional parameter (scale) in argcheck
 targetdist = [f for f in contdist if f not in not_good]
-# targetdist = contdist
-# targetdist = not_good
-# targetdist = ['t', 'f']
-# targetdist = ['norm','burr']
-
 if __name__ == "__main__":
-
-    # TODO: calculate correct tail probability for mixture
     prefix = "run_conv500_1_"
     convol = 0.75
     n = 500
@@ -343,7 +299,6 @@ if __name__ == "__main__":
             if distname in right_all:
                 rvs = rvs_right
                 rind = rightfactor
-
             else:
                 rvs = rvs_orig
                 rind = 1
@@ -363,7 +318,6 @@ if __name__ == "__main__":
                 par_est = tuple(distfn.fit(rvs, 0.5, loc=0, scale=sstd))
             elif distname == "f":
                 par_est = tuple(distfn.fit(rvs, 10, 15, loc=0, scale=1))
-
             elif distname in right:
                 sm = rvs.mean()
                 sstd = np.sqrt(rvs.var())
@@ -372,7 +326,6 @@ if __name__ == "__main__":
                 sm = rvs.mean()
                 sstd = np.sqrt(rvs.var())
                 par_est = tuple(distfn.fit(rvs, loc=sm, scale=sstd))
-
             print("fit", par_est)
             arg_est = par_est[:-2]
             loc_est = par_est[-2]
@@ -381,9 +334,7 @@ if __name__ == "__main__":
             ks_stat, ks_pval = stats.kstest(rvs_normed, distname, arg_est)
             print("kstest", ks_stat, ks_pval)
             quant = 0.1
-            crit = distfn.ppf(
-                1 - quant * float(rind), loc_est, scale_est, *par_est
-            )
+            crit = distfn.ppf(1 - quant * float(rind), loc_est, scale_est, *par_est)
             tail_prob = stats.t.sf(crit, dgp_arg, scale=dgp_scale)
             print("crit, prob", quant, crit, tail_prob)
             results.append(
@@ -398,26 +349,15 @@ if __name__ == "__main__":
                     tail_prob,
                 ]
             )
-            # plothist(rvs,distfn,arg_est,loc_est,scale_est)
-
-    # plothist(rvs,distfn,arg_est,loc_est,scale_est)
-    # plt.show()
-    # plt.close()
-    # TODO: collect results and compare tail quantiles
-
     from operator import itemgetter
 
     res_sort = sorted(results, key=itemgetter(2))
-
-    res_sort.reverse()  # kstest statistic: smaller is better, pval larger is better
-
+    res_sort.reverse()
     print("number of distributions", len(res_sort))
     imagedir = "matchresults"
-    import os
 
-    if not os.path.exists(imagedir):
-        os.makedirs(imagedir)
-
+    if not Path(imagedir).exists():
+        Path(imagedir).mkdir(parents=True)
     for ii, di in enumerate(res_sort):
         distname, ks_stat, ks_pval, arg_est, loc_est, scale_est, crit, tail_prob = di[:]
         distfn = getattr(stats, distname)
@@ -433,9 +373,7 @@ if __name__ == "__main__":
             "%s ks-stat = %f, ks-pval = %f tail_prob = %f)"
             % (distname, ks_stat, ks_pval, tail_prob)
         )
-        #    print('arg_est = %s, loc_est = %f scale_est = %f)' % \
-        #          (repr(arg_est),loc_est,scale_est))
         plothist(rvs, distfn, arg_est, loc_est, scale_est, right=rind)
         plt.savefig(
-            os.path.join(imagedir, "%s%s%02d_%s.png" % (prefix, ri, ii, distname))
+            Path(imagedir).joinpath("%s%s%02d_%s.png" % (prefix, ri, ii, distname))
         )

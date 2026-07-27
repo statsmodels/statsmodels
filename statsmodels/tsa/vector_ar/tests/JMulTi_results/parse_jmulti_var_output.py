@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import re
 
 import numpy as np
@@ -6,8 +7,7 @@ import numpy as np
 from .parse_jmulti_vecm_output import stringify_var_names, sublists
 
 debug_mode = False
-
-here = os.path.dirname(os.path.realpath(__file__))
+here = Path(os.path.realpath(__file__)).parent
 
 
 def print_debug_output(results, dt):
@@ -46,8 +46,8 @@ def dt_s_tup_to_string(dt_s_tup):
         "c" --> "cs"
         "ct" --> "cst"
     """
-    dt_string = dt_s_tup[0]  # string for identifying the file to parse.
-    if dt_s_tup[1] > 0:  # if there are seasons in the model
+    dt_string = dt_s_tup[0]
+    if dt_s_tup[1] > 0:
         if dt_string == "nc":
             dt_string = dt_string[:2] + "s"
         if dt_string == "c" or dt_string == "ct":
@@ -79,19 +79,14 @@ def load_results_jmulti(dataset, dt_s_list):
         of dicts (keys: strings "alpha", "beta", "Gamma" and other results)
     """
     source = "jmulti"
-
     results_dict_per_det_terms = dict.fromkeys(dt_s_list)
-
     for dt_s in dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
-        params_file = dataset.__str__()+"_"+source+"_"+dt_string+".txt"
-        params_file = os.path.join(here, params_file)
-        # sections in jmulti output:
-        section_headers = ["Lagged endogenous term",  # parameter matrices
-                           "Deterministic term"]      # c, s, ct
+        params_file = dataset.__str__() + "_" + source + "_" + dt_string + ".txt"
+        params_file = Path(here).joinpath(params_file)
+        section_headers = ["Lagged endogenous term", "Deterministic term"]
         if dt_string == "nc":
             del section_headers[-1]
-
         results = {}
         results["est"] = dict.fromkeys(section_headers)
         results["se"] = dict.fromkeys(section_headers)
@@ -101,21 +96,18 @@ def load_results_jmulti(dataset, dt_s_list):
         result_se = []
         result_t = []
         result_p = []
-
         rows = 0
         started_reading_section = False
         start_end_mark = "-----"
-
-        # ---------------------------------------------------------------------
-        # parse information about \alpha, \beta, \Gamma, deterministic of VECM
-        # and A_i and deterministic of corresponding VAR:
         section = -1
-        params_file = open(params_file, encoding="latin_1")
+        params_file = Path(params_file).open(encoding="latin_1")
         for line in params_file:
-            if section == -1 and section_headers[section+1] not in line:
+            if section == -1 and section_headers[section + 1] not in line:
                 continue
-            if section < len(section_headers)-1 \
-                    and section_headers[section+1] in line:  # new section
+            if (
+                section < len(section_headers) - 1
+                and section_headers[section + 1] in line
+            ):
                 section += 1
                 continue
             if not started_reading_section:
@@ -124,34 +116,27 @@ def load_results_jmulti(dataset, dt_s_list):
                 continue
             if started_reading_section:
                 if line.startswith(start_end_mark):
-                    if result == []:  # no values collected in section "Legend"
+                    if result == []:
                         started_reading_section = False
                         continue
-                    results["est"][section_headers[section]] = np.column_stack(
-                            result)
+                    results["est"][section_headers[section]] = np.column_stack(result)
                     result = []
-                    results["se"][section_headers[section]] = np.column_stack(
-                            result_se)
+                    results["se"][section_headers[section]] = np.column_stack(result_se)
                     result_se = []
-                    results["t"][section_headers[section]] = np.column_stack(
-                            result_t)
+                    results["t"][section_headers[section]] = np.column_stack(result_t)
                     result_t = []
-                    results["p"][section_headers[section]] = np.column_stack(
-                            result_p)
+                    results["p"][section_headers[section]] = np.column_stack(result_p)
                     result_p = []
                     started_reading_section = False
                     continue
-                str_number = r"-?\d+\.\d{3}"
-                regex_est = re.compile(str_number + r"[^\)\]\}]")
+                str_number = "-?\\d+\\.\\d{3}"
+                regex_est = re.compile(str_number + "[^\\)\\]\\}]")
                 est_col = re.findall(regex_est, line)
-                # standard errors in parantheses in JMulTi output:
-                regex_se = re.compile(r"\(" + str_number + r"\)")
+                regex_se = re.compile("\\(" + str_number + "\\)")
                 se_col = re.findall(regex_se, line)
-                # t-values in brackets in JMulTi output:
-                regex_t_value = re.compile(r"\[" + str_number + r"\]")
+                regex_t_value = re.compile("\\[" + str_number + "\\]")
                 t_col = re.findall(regex_t_value, line)
-                # p-values in braces in JMulTi output:
-                regex_p_value = re.compile(r"\{" + str_number + r"\}")
+                regex_p_value = re.compile("\\{" + str_number + "\\}")
                 p_col = re.findall(regex_p_value, line)
                 if result == [] and est_col != []:
                     rows = len(est_col)
@@ -174,20 +159,17 @@ def load_results_jmulti(dataset, dt_s_list):
                     p_col = [float(el) for el in p_col]
                     result_p.append(p_col)
         params_file.close()
-
-        # ---------------------------------------------------------------------
-        # parse information regarding \Sigma_u
-        sigmau_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_Sigmau" + ".txt"
-        sigmau_file = os.path.join(here, sigmau_file)
+        sigmau_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_Sigmau" + ".txt"
+        )
+        sigmau_file = Path(here).joinpath(sigmau_file)
         rows_to_parse = 0
-        # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
-        regex_est = re.compile(r"\s+\S+e\S+")
+        regex_est = re.compile("\\s+\\S+e\\S+")
         sigmau_section_reached = False
-        sigmau_file = open(sigmau_file, encoding="latin_1")
+        sigmau_file = Path(sigmau_file).open(encoding="latin_1")
         for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
-                line = line[len("Log Likelihood:"):]
+                line = line[len("Log Likelihood:") :]
                 results["log_like"] = float(re.findall(regex_est, line)[0])
                 continue
             if not sigmau_section_reached and "Covariance:" not in line:
@@ -195,25 +177,21 @@ def load_results_jmulti(dataset, dt_s_list):
             if "Covariance:" in line:
                 sigmau_section_reached = True
                 row = re.findall(regex_est, line)
-                rows_to_parse = len(row)  # Sigma_u quadratic ==> # rows==#cols
+                rows_to_parse = len(row)
                 sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_est, line)
             rows_to_parse -= 1
-            sigma_u[rows_to_parse] = row  # rows are added in reverse order...
+            sigma_u[rows_to_parse] = row
             if rows_to_parse == 0:
                 break
         sigmau_file.close()
-        results["est"]["Sigma_u"] = sigma_u[::-1]  # ...and reversed again here
-
-        # ---------------------------------------------------------------------
-        # parse forecast related output:
-        fc_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_fc5" + ".txt"
-        fc_file = os.path.join(here, fc_file)
-        fc, lower, upper, plu_min = [], [], [], []
-        fc_file = open(fc_file, encoding="latin_1")
+        results["est"]["Sigma_u"] = sigma_u[::-1]
+        fc_file = dataset.__str__() + "_" + source + "_" + dt_string + "_fc5" + ".txt"
+        fc_file = Path(here).joinpath(fc_file)
+        fc, lower, upper, plu_min = ([], [], [], [])
+        fc_file = Path(fc_file).open(encoding="latin_1")
         for line in fc_file:
-            str_number = r"(\s+-?\d+\.\d{3}\s*)"
+            str_number = "(\\s+-?\\d+\\.\\d{3}\\s*)"
             regex_number = re.compile(str_number)
             numbers = re.findall(regex_number, line)
             if numbers == []:
@@ -231,9 +209,6 @@ def load_results_jmulti(dataset, dt_s_list):
         results["fc"]["fc"] = fc
         results["fc"]["lower"] = lower
         results["fc"]["upper"] = upper
-
-        # ---------------------------------------------------------------------
-        # parse output related to Granger-caus. and instantaneous causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
         results["granger_caus"]["p"] = {}
         results["granger_caus"]["test_stat"] = {}
@@ -241,21 +216,26 @@ def load_results_jmulti(dataset, dt_s_list):
         results["inst_caus"]["p"] = {}
         results["inst_caus"]["test_stat"] = {}
         vn = dataset.variable_names
-        # all possible combinations of potentially causing variables
-        # (at least 1 variable and not all variables together):
-        var_combs = sublists(vn, 1, len(vn)-1)
+        var_combs = sublists(vn, 1, len(vn) - 1)
         if debug_mode:
             print("\n\n\n" + dt_string)
         for causing in var_combs:
-            caused = tuple(name for name in vn if name not in causing)
-            causality_file = dataset.__str__() + "_" + source + "_" \
-                + dt_string + "_granger_causality_" \
-                + stringify_var_names(causing, "_") + ".txt"
-            causality_file = os.path.join(here, causality_file)
-            causality_file = open(causality_file, encoding="latin_1")
+            caused = tuple((name for name in vn if name not in causing))
+            causality_file = (
+                dataset.__str__()
+                + "_"
+                + source
+                + "_"
+                + dt_string
+                + "_granger_causality_"
+                + stringify_var_names(causing, "_")
+                + ".txt"
+            )
+            causality_file = Path(here).joinpath(causality_file)
+            causality_file = Path(causality_file).open(encoding="latin_1")
             causality_results = []
             for line in causality_file:
-                str_number = r"\d+\.\d{4}"
+                str_number = "\\d+\\.\\d{4}"
                 regex_number = re.compile(str_number)
                 number = re.search(regex_number, line)
                 if number is None:
@@ -263,42 +243,32 @@ def load_results_jmulti(dataset, dt_s_list):
                 number = float(number.group(0))
                 causality_results.append(number)
             causality_file.close()
-            results["granger_caus"]["test_stat"][(causing, caused)] = \
-                causality_results[0]
-            results["granger_caus"]["p"][(causing, caused)] =\
-                causality_results[1]
-            results["inst_caus"]["test_stat"][(causing, caused)] = \
-                causality_results[2]
-            results["inst_caus"]["p"][(causing, caused)] = \
-                causality_results[3]
-
-        # ---------------------------------------------------------------------
-        # parse output related to impulse-response analysis:
-        ir_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_ir" + ".txt"
-        ir_file = os.path.join(here, ir_file)
-        ir_file = open(ir_file, encoding="latin_1")
+            results["granger_caus"]["test_stat"][causing, caused] = causality_results[0]
+            results["granger_caus"]["p"][causing, caused] = causality_results[1]
+            results["inst_caus"]["test_stat"][causing, caused] = causality_results[2]
+            results["inst_caus"]["p"][causing, caused] = causality_results[3]
+        ir_file = dataset.__str__() + "_" + source + "_" + dt_string + "_ir" + ".txt"
+        ir_file = Path(here).joinpath(ir_file)
+        ir_file = Path(ir_file).open(encoding="latin_1")
         causing = None
         caused = None
         data = None
-        regex_vars = re.compile(r"\w+")
-        regex_vals = re.compile(r"-?\d+\.\d{4}")
+        regex_vars = re.compile("\\w+")
+        regex_vals = re.compile("-?\\d+\\.\\d{4}")
         line_start_causing = "time"
         data_line_indicator = "point estimate"
         data_rows_read = 0
         for line in ir_file:
-            if causing is None and not line.startswith(line_start_causing):
-                continue  # no relevant info in the header
+            if causing is None and (not line.startswith(line_start_causing)):
+                continue
             if line.startswith(line_start_causing):
                 line = line[4:]
                 causing = re.findall(regex_vars, line)
-                # 21 periods shown in JMulTi output
                 data = np.empty((21, len(causing)))
                 continue
             if caused is None:
                 caused = re.findall(regex_vars, line)
                 continue
-            # now start collecting the values:
             if data_line_indicator not in line:
                 continue
             start = line.find(data_line_indicator) + len(data_line_indicator)
@@ -307,13 +277,11 @@ def load_results_jmulti(dataset, dt_s_list):
             data_rows_read += 1
         ir_file.close()
         results["ir"] = data
-
-        # ---------------------------------------------------------------------
-        # parse output related to lag order selection:
-        lagorder_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_lagorder" + ".txt"
-        lagorder_file = os.path.join(here, lagorder_file)
-        lagorder_file = open(lagorder_file, encoding="latin_1")
+        lagorder_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_lagorder" + ".txt"
+        )
+        lagorder_file = Path(here).joinpath(lagorder_file)
+        lagorder_file = Path(lagorder_file).open(encoding="latin_1")
         results["lagorder"] = {}
         aic_start = "Akaike Info Criterion:"
         fpe_start = "Final Prediction Error:"
@@ -321,21 +289,19 @@ def load_results_jmulti(dataset, dt_s_list):
         bic_start = "Schwarz Criterion:"
         for line in lagorder_file:
             if line.startswith(aic_start):
-                results["lagorder"]["aic"] = int(line[len(aic_start):])
+                results["lagorder"]["aic"] = int(line[len(aic_start) :])
             elif line.startswith(fpe_start):
-                results["lagorder"]["fpe"] = int(line[len(fpe_start):])
+                results["lagorder"]["fpe"] = int(line[len(fpe_start) :])
             elif line.startswith(hqic_start):
-                results["lagorder"]["hqic"] = int(line[len(hqic_start):])
+                results["lagorder"]["hqic"] = int(line[len(hqic_start) :])
             elif line.startswith(bic_start):
-                results["lagorder"]["bic"] = int(line[len(bic_start):])
+                results["lagorder"]["bic"] = int(line[len(bic_start) :])
         lagorder_file.close()
-
-        # ---------------------------------------------------------------------
-        # parse output related to non-normality-test:
-        test_norm_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_diag" + ".txt"
-        test_norm_file = os.path.join(here, test_norm_file)
-        test_norm_file = open(test_norm_file, encoding="latin_1")
+        test_norm_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_diag" + ".txt"
+        )
+        test_norm_file = Path(here).joinpath(test_norm_file)
+        test_norm_file = Path(test_norm_file).open(encoding="latin_1")
         results["test_norm"] = {}
         section_start_marker = "TESTS FOR NONNORMALITY"
         section_reached = False
@@ -346,7 +312,7 @@ def load_results_jmulti(dataset, dt_s_list):
         for line in test_norm_file:
             if not section_reached:
                 if section_start_marker in line:
-                    section_reached = True  # section w/ relevant results found
+                    section_reached = True
                 continue
             if not subsection_reached:
                 if subsection_start_marker in line:
@@ -355,19 +321,17 @@ def load_results_jmulti(dataset, dt_s_list):
             if "joint_pvalue" in results["test_norm"].keys():
                 break
             if line.startswith(line_start_statistic):
-                line_end = line[len(line_start_statistic):]
+                line_end = line[len(line_start_statistic) :]
                 results["test_norm"]["joint_test_statistic"] = float(line_end)
             if line.startswith(line_start_pvalue):
-                line_end = line[len(line_start_pvalue):]
+                line_end = line[len(line_start_pvalue) :]
                 results["test_norm"]["joint_pvalue"] = float(line_end)
         test_norm_file.close()
-
-        # ---------------------------------------------------------------------
-        # parse output related to testing the whiteness of the residuals:
-        whiteness_file = dataset.__str__() + "_" + source + "_" + dt_string \
-            + "_diag" + ".txt"
-        whiteness_file = os.path.join(here, whiteness_file)
-        whiteness_file = open(whiteness_file, encoding="latin_1")
+        whiteness_file = (
+            dataset.__str__() + "_" + source + "_" + dt_string + "_diag" + ".txt"
+        )
+        whiteness_file = Path(here).joinpath(whiteness_file)
+        whiteness_file = Path(whiteness_file).open(encoding="latin_1")
         results["whiteness"] = {}
         section_start_marker = "PORTMANTEAU TEST"
         order_start = "tested order:"
@@ -375,7 +339,6 @@ def load_results_jmulti(dataset, dt_s_list):
         p_start = " p-value:"
         adj_statistic_start = "adjusted test statistic:"
         unadjusted_finished = False
-
         in_section = False
         for line in whiteness_file:
             if not in_section and section_start_marker not in line:
@@ -384,32 +347,29 @@ def load_results_jmulti(dataset, dt_s_list):
                 in_section = True
                 continue
             if line.startswith(order_start):
-                results["whiteness"]["tested order"] = int(
-                        line[len(order_start):])
+                results["whiteness"]["tested order"] = int(line[len(order_start) :])
                 continue
             if line.startswith(statistic_start):
                 results["whiteness"]["test statistic"] = float(
-                        line[len(statistic_start):])
+                    line[len(statistic_start) :]
+                )
                 continue
             if line.startswith(adj_statistic_start):
                 results["whiteness"]["test statistic adj."] = float(
-                        line[len(adj_statistic_start):])
+                    line[len(adj_statistic_start) :]
+                )
                 continue
-            if line.startswith(p_start):  # same for unadjusted and adjusted
+            if line.startswith(p_start):
                 if not unadjusted_finished:
-                    results["whiteness"]["p-value"] = \
-                        float(line[len(p_start):])
+                    results["whiteness"]["p-value"] = float(line[len(p_start) :])
                     unadjusted_finished = True
                 else:
-                    results["whiteness"]["p-value adjusted"] = \
-                        float(line[len(p_start):])
+                    results["whiteness"]["p-value adjusted"] = float(
+                        line[len(p_start) :]
+                    )
                     break
         whiteness_file.close()
-
-        # ---------------------------------------------------------------------
         if debug_mode:
             print_debug_output(results, dt_string)
-
         results_dict_per_det_terms[dt_s] = results
-
     return results_dict_per_det_terms

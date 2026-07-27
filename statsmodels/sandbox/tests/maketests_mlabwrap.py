@@ -3,6 +3,8 @@
 currently matlab: princomp, garchar, garchma
 """
 
+from pathlib import Path
+
 import numpy as np
 from numpy import array
 from numpy.testing import assert_array_almost_equal
@@ -111,11 +113,11 @@ xo = array(
         [1923, 329, -152, 1128],
     ]
 )
-
 x = xo / 1000.0
 
 
 class HoldIt:
+
     def __init__(self, name):
         self.name = name
 
@@ -130,40 +132,34 @@ class HoldIt:
                 txt.append("from statsmodels.tools.testing import Holder\n\n")
         else:
             txt = []
-
         if useinstant:
             txt.append("%s = Holder()" % self.name)
             prefix = "%s." % self.name
         else:
             prefix = ""
-
         if comment is not None:
             txt.append(f"{prefix}comment = '{comment}'")
-
         for x in what:
             txt.append(f"{prefix}{x} = {getattr(self, x)!r}")
-        txt.extend(["", ""])  # add empty lines at end
+        txt.extend(["", ""])
         if filename is not None:
-            with open(filename, "a+", encoding="utf-8") as fd:
+            with Path(filename).open("a+", encoding="utf-8") as fd:
                 fd.write("\n".join(txt))
         return txt
 
 
 def generate_princomp(xo, filen="testsave.py"):
-    # import mlabwrap only when run as script
     from mlabwrap import mlab
 
     np.set_printoptions(precision=14, linewidth=100)
     data = HoldIt("data")
     data.xo = xo
     data.save(filename="testsave.py", comment="generated data, divide by 1000")
-
     res_princomp = HoldIt("princomp1")
     res_princomp.coef, res_princomp.factors, res_princomp.values = mlab.princomp(
         x, nout=3
     )
     res_princomp.save(filename=filen, header=False, comment="mlab.princomp(x, nout=3)")
-
     res_princomp = HoldIt("princomp2")
     res_princomp.coef, res_princomp.factors, res_princomp.values = mlab.princomp(
         x[:20,], nout=3
@@ -172,7 +168,6 @@ def generate_princomp(xo, filen="testsave.py"):
     res_princomp.save(
         filename=filen, header=False, comment="mlab.princomp(x[:20,], nout=3)"
     )
-
     res_princomp = HoldIt("princomp3")
     res_princomp.coef, res_princomp.factors, res_princomp.values = mlab.princomp(
         x[:20,] - x[:20,].mean(0), nout=3
@@ -186,22 +181,17 @@ def generate_princomp(xo, filen="testsave.py"):
 
 
 def generate_armarep(filen="testsave.py"):
-    # import mlabwrap only when run as script
     from mlabwrap import mlab
 
     res_armarep = HoldIt("armarep")
     res_armarep.ar = np.array([1.0, -0.5, +0.8])
     res_armarep.ma = np.array([1.0, -0.6, 0.08])
-
     res_armarep.marep = mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)
     res_armarep.arrep = mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)
     res_armarep.save(
         filename=filen,
         header=False,
-        comment=(
-            "''mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)\n"
-            "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''"
-        ),
+        comment="''mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)\nmlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)''",
     )
 
 
@@ -211,7 +201,6 @@ def exampletest(res_armarep):
     arrep = tsa.arma_impulse_response(res_armarep.ma, res_armarep.ar, nobs=21)[1:]
     marep = tsa.arma_impulse_response(res_armarep.ar, res_armarep.ma, nobs=21)[1:]
     assert_array_almost_equal(res_armarep.marep.ravel(), marep, 14)
-    # difference in sign convention to matlab for AR term
     assert_array_almost_equal(-res_armarep.arrep.ravel(), arrep, 14)
 
 
@@ -222,7 +211,6 @@ if __name__ == "__main__":
     xo = savedrvs.rvsdata.xar2
     x100 = xo[-100:] / 1000.0
     x1000 = xo / 1000.0
-
     filen = "testsavetls.py"
     res_pacf = HoldIt("mlpacf")
     res_pacf.comment = "mlab.parcorr(x, [], 2, nout=3)"
@@ -233,7 +221,6 @@ if __name__ == "__main__":
         x1000, [], 2, nout=3
     )
     res_pacf.save(filename=filen, header=True)
-
     res_acf = HoldIt("mlacf")
     res_acf.comment = "mlab.autocorr(x, [], 2, nout=3)"
     res_acf.acf100, res_acf.lags100, res_acf.bounds100 = mlab.autocorr(
@@ -243,7 +230,6 @@ if __name__ == "__main__":
         x1000, [], 2, nout=3
     )
     res_acf.save(filename=filen, header=False)
-
     res_ccf = HoldIt("mlccf")
     res_ccf.comment = "mlab.crosscorr(x[4:], x[:-4], [], 2, nout=3)"
     res_ccf.ccf100, res_ccf.lags100, res_ccf.bounds100 = mlab.crosscorr(
@@ -253,7 +239,6 @@ if __name__ == "__main__":
         x1000[4:], x1000[:-4], [], 2, nout=3
     )
     res_ccf.save(filename=filen, header=False)
-
     res_ywar = HoldIt("mlywar")
     res_ywar.comment = "mlab.ar(x100-x100.mean(), 10, 'yw').a.ravel()"
     mbaryw = mlab.ar(x100 - x100.mean(), 10, "yw")

@@ -5,7 +5,7 @@ Author: Josef Perktold
 
 """
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -16,9 +16,9 @@ import pytest
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-dta_path = os.path.join(current_path, "Matlab_results", "test_coint.csv")
-with open(dta_path, "rb") as fd:
+current_path = Path(__file__).resolve().parent
+dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
+with Path(dta_path).open("rb") as fd:
     dta = np.genfromtxt(fd)
 
 
@@ -37,7 +37,6 @@ class CheckCointJoh:
         assert_almost_equal(table2, self.res2_m.reshape(table2.shape, order="F"))
 
     def test_normalization(self):
-        # GH 5517
         evec = self.res.evec
         non_zero = evec.flat != 0
         assert evec.flat[non_zero][0] > 0
@@ -49,13 +48,12 @@ class TestCointJoh12(CheckCointJoh):
     def setup_class(cls):
         cls.res = coint_johansen(dta, 1, 2)
         cls.nobs_r = 173 - 1 - 2
-
         cls.res1_m = np.array(
             [
                 241.985452556075,
                 166.4781461662553,
                 110.3298006342814,
-                70.79801574443575,
+                70.79801574443574,
                 44.90887371527634,
                 27.22385073668511,
                 11.74205493173769,
@@ -71,7 +69,7 @@ class TestCointJoh12(CheckCointJoh):
                 175.1584,
                 139.278,
                 107.3429,
-                79.34220000000001,
+                79.3422,
                 55.2459,
                 35.0116,
                 18.3985,
@@ -122,7 +120,6 @@ class TestCointJoh12(CheckCointJoh):
                 6.6349,
             ]
         )
-
         evec = np.array(
             [
                 0.01102517075074406,
@@ -173,7 +170,7 @@ class TestCointJoh12(CheckCointJoh):
                 0.1004753600191269,
                 -0.02239205763487946,
                 -0.02169291468272568,
-                0.08782313160608619,
+                0.0878231316060862,
                 -0.07696508791577318,
                 0.008925177304198475,
                 -0.06230900392092828,
@@ -188,11 +185,10 @@ class TestCointJoh12(CheckCointJoh):
                 -0.08624395993789938,
                 0.02108183181049973,
                 -0.08470307289295617,
-                -5.135072530480897e-005,
+                -5.135072530480897e-05,
             ]
         )
         cls.evec_m = evec.reshape(cls.res.evec.shape, order="F")
-
         cls.eig_m = np.array(
             [
                 0.3586376068088151,
@@ -223,7 +219,6 @@ class TestCointJoh09(CheckCointJoh):
     def setup_class(cls):
         cls.res = coint_johansen(dta, 0, 9)
         cls.nobs_r = 173 - 1 - 9
-        # fprintf(1, '%18.16g, ', r1)
         cls.res1_m = np.array(
             [
                 307.6888935095814,
@@ -260,7 +255,6 @@ class TestCointJoh09(CheckCointJoh):
                 6.6349,
             ]
         )
-        # r2 = [res.lr2 res.cvm]
         cls.res2_m = np.array(
             [
                 102.3049705697569,
@@ -305,7 +299,6 @@ class TestCointJohMin18(CheckCointJoh):
     def setup_class(cls):
         cls.res = coint_johansen(dta, -1, 8)
         cls.nobs_r = 173 - 1 - 8
-
         cls.res1_m = np.array(
             [
                 260.6786029744658,
@@ -335,7 +328,7 @@ class TestCointJohMin18(CheckCointJoh):
                 154.7977,
                 121.7375,
                 92.7136,
-                67.63670000000001,
+                67.6367,
                 46.5716,
                 29.5147,
                 16.364,
@@ -388,8 +381,6 @@ class TestCointJoh25(CheckCointJoh):
             warnings.simplefilter("ignore", category=HypothesisTestWarning)
             cls.res = coint_johansen(dta, 2, 5)
         cls.nobs_r = 173 - 1 - 5
-
-        # Note: critical values not available if trend>1
         cls.res1_m = np.array(
             [
                 270.1887263915158,
@@ -468,7 +459,6 @@ class TestCointJoh25(CheckCointJoh):
 
 @pytest.mark.smoke
 def test_coint_johansen_0lag():
-    # GH 5731
     rs = np.random.RandomState(1927451)
     x_diff = rs.normal(0, 1, 1000)
     x = pd.Series(np.cumsum(x_diff))
