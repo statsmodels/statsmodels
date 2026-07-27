@@ -73,7 +73,7 @@ class TestMICEData:
         rs = np.random.RandomState(821443)
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         imp_data = mice.MICEData(df, rng=rs)
         nrow, ncol = df.shape
 
@@ -159,7 +159,7 @@ class TestMICEData:
         rs = np.random.RandomState(80223)
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         nrow, ncol = df.shape
 
         for pert_meth in "gaussian", "boot":
@@ -233,7 +233,7 @@ class TestMICEData:
 
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         nrow, ncol = df.shape
 
         imp_data = mice.MICEData(df, rng=rs)
@@ -433,7 +433,7 @@ def test_micedata_miss1():
     data_imp = mice.MICEData(data, rng=gen)
     data_imp.update_all()
 
-    assert_equal(data_imp.data.isnull().values.sum(), 0)
+    assert_equal(data_imp.data.isna().values.sum(), 0)
 
     ix_miss = {
         "var1": np.array([], dtype=np.int64),

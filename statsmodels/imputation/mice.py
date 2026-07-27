@@ -305,7 +305,7 @@ class MICEData:
         self.data.fillna(imp_values, inplace=True)
 
     def _split_indices(self, vec):
-        null = pd.isnull(vec)
+        null = pd.isna(vec)
         ix_obs = np.flatnonzero(~null)
         ix_miss = np.flatnonzero(null)
         if len(ix_obs) == 0:

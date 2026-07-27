@@ -3194,8 +3194,8 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
     tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
-    ii = pd.notnull(data).all(1)
+    ii = pd.notna(data).all(1)
     if type(groups) is not str:
-        ii &= pd.notnull(groups)
+        ii &= pd.notna(groups)
 
     return data.loc[ii, :], groups[np.asarray(ii)]

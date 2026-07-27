@@ -516,7 +516,7 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
         r2 = pd.Series({("R-squared", ""): rsquared,
                         ("R-squared Adj.", ""): rsquared_adj})
 
-        if r2.notnull().any():
+        if r2.notna().any():
             r2 = r2.apply(lambda x: float_format % x)
             res = pd.concat([res, r2], axis=0)
 

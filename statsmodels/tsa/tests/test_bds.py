@@ -59,7 +59,7 @@ class TestBDSSequence(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[0][data[0].notnull()]
+        cls.data = data[0][data[0].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -73,7 +73,7 @@ class TestBDSNormal(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[1][data[1].notnull()]
+        cls.data = data[1][data[1].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -87,7 +87,7 @@ class TestBDSCombined(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[2][data[2].notnull()]
+        cls.data = data[2][data[2].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -105,5 +105,5 @@ class TestBDSGDPC1(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[3][data[3].notnull()]
+        cls.data = data[3][data[3].notna()]
         cls.res = bds(cls.data, 5)

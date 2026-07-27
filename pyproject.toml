@@ -352,10 +352,6 @@ ignore = [
   "DTZ005", # 4
   # inplace=True is used deliberately in a number of places
   "PD002", # 10
-  # .isnull()/.notnull() instead of .isna()/.notna(): both spellings are
-  # supported by pandas, this codebase just prefers the null/notnull names
-  "PD003", # 20
-  "PD004", # 10
   # .pivot()/.unstack() and .stack() instead of .pivot_table()/.melt():
   # deliberate choices, not accidental API misuse
   "PD010", # 25
@@ -363,9 +359,6 @@ ignore = [
   # .values instead of .to_numpy(): a pervasive, long-standing idiom
   # throughout this codebase, not worth a mechanical rewrite
   "PD011", # 308
-  # pd.merge() instead of the .merge() method: used deliberately in a
-  # couple of places
-  "PD015", # 2
   # os.path used throughout instead of pathlib; a real modernization
   # opportunity, but a bigger migration than a quick fix
   "PTH100", # 107

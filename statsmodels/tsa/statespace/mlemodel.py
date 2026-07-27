@@ -5627,10 +5627,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     columns=columns,
                 )
                 try:
-                    data = data.map(lambda num: "" if pd.isnull(num) else f"{num:.2f}")
+                    data = data.map(lambda num: "" if pd.isna(num) else f"{num:.2f}")
                 except AttributeError:
                     data = data.applymap(
-                        lambda num: "" if pd.isnull(num) else f"{num:.2f}"
+                        lambda num: "" if pd.isna(num) else f"{num:.2f}"
                     )
                 data.index.name = "Residual of\nDep. variable"
                 data = data.reset_index()

@@ -148,14 +148,14 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
     if updates:
         assert_allclose(news.update_impacts, update_impacts, atol=1e-12)
     else:
-        assert_(np.all(news.update_impacts.isnull()))
+        assert_(np.all(news.update_impacts.isna()))
 
     # Impacts from revisions
     if revisions:
         assert_allclose(news.revision_impacts, revision_impacts, atol=1e-12)
     else:
         assert_(news.news_results.revision_impacts is None)
-        assert_(np.all(news.revision_impacts.isnull()))
+        assert_(np.all(news.revision_impacts.isna()))
 
     # Total impacts
     total_impacts = (news.revision_impacts.astype(float).fillna(0) +
@@ -1174,7 +1174,7 @@ def test_grouped_revisions(revisions_details_start):
     # revision, weight
     key = ("2009Q3", "all prior revisions", "2009Q3")
     cols = ["revised", "observed (prev)", "revision", "weight"]
-    assert np.all(revision_details.loc[key, cols].isnull())
+    assert np.all(revision_details.loc[key, cols].isna())
 
     # Expected grouped impacts are the sum of the detailed impacts from
     # `test_detailed_revisions`
@@ -1263,7 +1263,7 @@ def test_mixed_revisions(revisions_details_start):
     # revision, weight
     key = ("2009Q2", "all prior revisions", "2009Q3")
     cols = ["revised", "observed (prev)", "revision", "weight"]
-    assert np.all(revision_details.loc[key, cols].isnull())
+    assert np.all(revision_details.loc[key, cols].isna())
 
     # Expected grouped impacts are the sum of the detailed impacts from
     # `test_detailed_revisions` for revisions to 2009Q2
