@@ -25,7 +25,7 @@ def iter_subclasses(cls, _seen=None, template_classes=()):
     """
     if not isinstance(cls, type):
         raise TypeError(
-            "itersubclasses must be called with " "new-style classes, not %.100r" % cls
+            "itersubclasses must be called with new-style classes, not %.100r" % cls
         )
     if _seen is None:
         _seen = set()
@@ -39,8 +39,8 @@ def iter_subclasses(cls, _seen=None, template_classes=()):
             # we do not want to yield the templates, but we do want to
             # recurse on them
             yield sub
-        for sub in iter_subclasses(sub, _seen, template_classes):
-            yield sub
+        for child in iter_subclasses(sub, _seen, template_classes):
+            yield child
 
 
 def write_formula_api(directory):

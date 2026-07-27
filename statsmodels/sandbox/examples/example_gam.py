@@ -11,7 +11,8 @@ import numpy.random as R
 import scipy.stats
 
 from statsmodels.genmod.families import family
-from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
+from statsmodels.sandbox.gam import AdditiveModel  # ?
+from statsmodels.sandbox.gam import Model as GAM
 
 example = 2  # 1,2 or 3
 

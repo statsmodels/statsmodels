@@ -30,9 +30,7 @@ def find_modules(path):
     for pkg in find_packages(path):
         modules.add(pkg)
         pkgpath = path + "/" + pkg.replace(".", "/")
-        if sys.version_info.major == 2 or (
-            sys.version_info.major == 3 and sys.version_info.minor < 6
-        ):
+        if sys.version_info < (3, 6):
             for _, name, ispkg in iter_modules([pkgpath]):
                 if not ispkg:
                     modules.add(pkg + "." + name)
@@ -183,7 +181,7 @@ def generate_diff(api, other):
 
         rst.write(header("Methods with New Arguments"))
         for val in sorted(expanded_methods):
-            args = map(lambda v: f"``{v}``", expanded_methods[val])
+            args = (f"``{v}``" for v in expanded_methods[val])
             rst.write(f"* :meth:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Methods with Changed Arguments"))
@@ -193,14 +191,12 @@ def generate_diff(api, other):
             args = ", ".join(changed_methods[val]["current"])
             if args.startswith("self"):
                 args = args[4:]
-                if args.startswith(", "):
-                    args = args[2:]
+                args = args.removeprefix(", ")
             rst.write(f"   * New: ``{name}({args})``\n")
             args = ", ".join(changed_methods[val]["other"])
             if args.startswith("self"):
                 args = args[4:]
-                if args.startswith(", "):
-                    args = args[2:]
+                args = args.removeprefix(", ")
             rst.write(f"   * Old: ``{name}({args})``\n")
 
         rst.write(header("New Functions"))
@@ -212,7 +208,7 @@ def generate_diff(api, other):
 
         rst.write(header("Functions with New Arguments"))
         for val in sorted(expanded_funcs):
-            args = map(lambda v: f"``{v}``", expanded_funcs[val])
+            args = (f"``{v}``" for v in expanded_funcs[val])
             rst.write(f"* :func:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Functions with Changed Arguments"))

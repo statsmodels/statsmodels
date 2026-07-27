@@ -28,9 +28,9 @@ References
 
 """
 
-# TODO: make default behavior efficient=True above a certain n_obs
 from statsmodels.compat.pandas import deprecate_kwarg
 
+# TODO: make default behavior efficient=True above a certain n_obs
 import copy
 import warnings
 
