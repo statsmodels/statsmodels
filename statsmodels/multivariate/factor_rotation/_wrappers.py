@@ -269,9 +269,9 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             )
     elif method == "oblimin":
         assert len(method_args) == 2, (
-            "Both %s family parameter and "
+            f"Both {method} family parameter and "
             "rotation_method should be "
-            "provided" % method
+            "provided"
         )
         rotation_method = method_args[1]
         assert rotation_method in [
@@ -302,12 +302,12 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         else:
             raise ValueError(
-                "Algorithm {} is not possible for {} rotation".format(algorithm, method)
+                f"Algorithm {algorithm} is not possible for {method} rotation"
             )
     elif method == "CF":
         assert len(method_args) == 2, (
-            "Both %s family parameter and "
-            "rotation_method should be provided" % method
+            f"Both {method} family parameter and "
+            "rotation_method should be provided"
         )
         rotation_method = method_args[1]
         assert rotation_method in [
@@ -343,7 +343,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         else:
             raise ValueError(
-                "Algorithm {} is not possible for {} rotation".format(algorithm, method)
+                f"Algorithm {algorithm} is not possible for {method} rotation"
             )
     elif method == "quartimax":
         return rotate_factors(A, "orthomax", 0, **algorithm_kwargs)
@@ -366,7 +366,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     elif method == "target":
         assert len(method_args) == 2, (
             "only the rotation target and orthogonal/oblique should be provide"
-            " for %s rotation" % method
+            f" for {method} rotation"
         )
         H = method_args[0]
         rotation_method = method_args[1]
@@ -397,7 +397,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             )
     elif method == "partial_target":
         assert len(method_args) == 2, (
-            "2 additional arguments are expected for %s rotation" % method
+            f"2 additional arguments are expected for {method} rotation"
         )
         H = method_args[0]
         W = method_args[1]
@@ -414,7 +414,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             vgQ = None
         else:
             raise ValueError(
-                "Algorithm {} is not possible for {} rotation".format(algorithm, method)
+                f"Algorithm {algorithm} is not possible for {method} rotation"
             )
     else:
         raise ValueError("Invalid method")

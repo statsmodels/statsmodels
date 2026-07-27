@@ -380,17 +380,15 @@ class SARIMAXParams:
         """Represent SARIMAXParams object as a string"""
         components = []
         if self.k_exog_params:
-            components.append("exog=%s" % str(self.exog_params))
+            components.append(f"exog={self.exog_params!s}")
         if self.k_ar_params:
-            components.append("ar=%s" % str(self.ar_params))
+            components.append(f"ar={self.ar_params!s}")
         if self.k_ma_params:
-            components.append("ma=%s" % str(self.ma_params))
+            components.append(f"ma={self.ma_params!s}")
         if self.k_seasonal_ar_params:
-            components.append("seasonal_ar=%s" %
-                              str(self.seasonal_ar_params))
+            components.append(f"seasonal_ar={self.seasonal_ar_params!s}")
         if self.k_seasonal_ma_params:
-            components.append("seasonal_ma=%s" %
-                              str(self.seasonal_ma_params))
+            components.append(f"seasonal_ma={self.seasonal_ma_params!s}")
         if not self.spec.concentrate_scale:
-            components.append("sigma2=%s" % self.sigma2)
-        return "SARIMAXParams(%s)" % ", ".join(components)
+            components.append(f"sigma2={self.sigma2}")
+        return "SARIMAXParams({})".format(", ".join(components))

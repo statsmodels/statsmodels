@@ -120,7 +120,7 @@ class CheckPoissonConstrainedMixin:
             elif DEBUG:
                 import warnings
 
-                message = "test: ll_0 not available, llnull=%6.4F" % res1.llnull
+                message = f"test: ll_0 not available, llnull={res1.llnull:6.4F}"
                 warnings.warn(message, InvalidTestWarning, stacklevel=2)
 
         else:

@@ -943,7 +943,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "filtered_joint_probabilities_log",
         ]
         result = HamiltonFilterResults(
-            self, Bunch(**dict(zip(names, self._filter(params))))
+            self, Bunch(**dict(zip(names, self._filter(params), strict=True)))
         )
 
         # Wrap in a results object
@@ -1069,7 +1069,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "predicted_joint_probabilities_log",
             "filtered_joint_probabilities_log",
         ]
-        result = Bunch(**dict(zip(names, self._filter(params))))
+        result = Bunch(**dict(zip(names, self._filter(params), strict=True)))
 
         # Kim smoother
         out = self._smooth(
@@ -1609,14 +1609,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.tvtp:
             # TODO add support for exog_tvtp_names
             param_names[self.parameters["regime_transition"]] = [
-                "p[%d->%d].tvtp%d" % (j, i, k)
+                f"p[{j:d}->{i:d}].tvtp{k:d}"
                 for i in range(self.k_regimes - 1)
                 for k in range(self.k_tvtp)
                 for j in range(self.k_regimes)
             ]
         else:
             param_names[self.parameters["regime_transition"]] = [
-                "p[%d->%d]" % (j, i)
+                f"p[{j:d}->{i:d}]"
                 for i in range(self.k_regimes - 1)
                 for j in range(self.k_regimes)
             ]
@@ -2264,9 +2264,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         if self.data.dates is not None:
             dates = self.data.dates
             d = dates[start]
-            sample = ["%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample = [f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
             d = dates[-1]
-            sample += ["- " + "%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample += ["- " + f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
         else:
             sample = [str(start), " - " + str(self.model.nobs)]
 
@@ -2291,10 +2291,10 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         top_right = [
             ("No. Observations:", [self.model.nobs]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         if hasattr(self, "cov_type"):
@@ -2351,7 +2351,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         for i in range(self.k_regimes):
             mask = regime_masks[i]
             if len(mask) > 0:
-                table = make_table(self, mask, "Regime %d parameters" % i)
+                table = make_table(self, mask, f"Regime {i:d} parameters")
                 summary.tables.append(table)
 
         mask = []
@@ -2374,8 +2374,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         if self._rank < len(self.params):
             etext.append(
                 "Covariance matrix is singular or near-singular,"
-                " with condition number %6.3g. Standard errors may be"
-                " unstable." % _safe_cond(self.cov_params())
+                f" with condition number {_safe_cond(self.cov_params()):6.3g}. Standard errors may be"
+                " unstable."
             )
 
         if etext:

@@ -345,8 +345,8 @@ class ARIMA(sarimax.SARIMAX):
             required_kwargs = ["enforce_invertibility"]
         for name in required_kwargs:
             if name in method_kwargs:
-                raise ValueError('Cannot override model level value for "%s"'
-                                 ' when method="%s".' % (name, method))
+                raise ValueError(f'Cannot override model level value for "{name}"'
+                                 f' when method="{method}".')
             method_kwargs[name] = getattr(self, name)
 
         # Handle kwargs related to GLS estimation
@@ -358,9 +358,9 @@ class ARIMA(sarimax.SARIMAX):
         # parameters in this class?
         if start_params is not None:
             if method not in ["statespace", "innovations_mle"]:
-                raise ValueError('Estimation method "%s" does not use starting'
+                raise ValueError(f'Estimation method "{method}" does not use starting'
                                  ' parameters, but `start_params` argument was'
-                                 ' given.' % method)
+                                 ' given.')
 
             method_kwargs["start_params"] = start_params
             method_kwargs["transformed"] = transformed
@@ -390,8 +390,7 @@ class ARIMA(sarimax.SARIMAX):
             elif method != "statespace":
                 raise ValueError("If `exog` is given and GLS is disabled"
                                  " (`gls=False`), then the only valid"
-                                 " method is 'statespace'. Got '%s'."
-                                 % method)
+                                 f" method is 'statespace'. Got '{method}'.")
             else:
                 method_kwargs.setdefault("disp", 0)
 
@@ -410,7 +409,7 @@ class ARIMA(sarimax.SARIMAX):
             if self._spec_arima.is_integrated:
                 warnings.warn('Provided `endog` series has been differenced'
                               ' to eliminate integration prior to parameter'
-                              ' estimation by method "%s".' % method,
+                              f' estimation by method "{method}".',
                               stacklevel=2,)
                 endog = diff(
                     endog, k_diff=self._spec_arima.diff,

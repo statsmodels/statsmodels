@@ -2782,7 +2782,7 @@ class TestRegularized:
 
             cur_dir = os.path.dirname(os.path.abspath(__file__))
             data = np.loadtxt(
-                os.path.join(cur_dir, "results", "enet_%s.csv" % dtype),
+                os.path.join(cur_dir, "results", f"enet_{dtype}.csv"),
                 delimiter=",",
             )
 
@@ -2796,7 +2796,7 @@ class TestRegularized:
 
             for j in range(9):
 
-                vn = "rslt_%s_%d" % (dtype, j)
+                vn = f"rslt_{dtype}_{j:d}"
                 r_result = getattr(glmnet_r_results, vn)
                 L1_wt = r_result[0]
                 alpha = r_result[1]
@@ -3039,7 +3039,7 @@ def test_output_exposure_null():
     rs = np.random.RandomState(0)
     # Variable exposures for each observation
     exposure = rs.randint(100, 200, size=1000)
-    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure)]
+    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure, strict=True)]
     x = add_constant(x0)
 
     model = GLM(endog=y, exog=x, exposure=exposure, family=sm.families.Poisson()).fit()

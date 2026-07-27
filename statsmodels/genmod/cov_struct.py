@@ -396,7 +396,7 @@ class Exchangeable(CovStruct):
     def summary(self):
         return (
             "The correlation between two observations in the "
-            + "same cluster is %.3f" % self.dep_params
+            f"same cluster is {self.dep_params:.3f}"
         )
 
 
@@ -579,7 +579,7 @@ class Nested(CovStruct):
             dep_names.extend(self.model._dep_data_names)
         else:
             dep_names.extend(
-                ["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)]
+                [f"Component {k + 1:d}:" for k in range(len(self.vcomp_coeff) - 1)]
             )
         if hasattr(self.model, "_groups_name"):
             dep_names[0] = self.model._groups_name
@@ -1015,7 +1015,7 @@ class Autoregressive(CovStruct):
 
     def summary(self):
 
-        return "Autoregressive(1) dependence parameter: %.3f\n" % self.dep_params
+        return f"Autoregressive(1) dependence parameter: {self.dep_params:.3f}\n"
 
 
 class CategoricalCovStruct(CovStruct):
@@ -1151,7 +1151,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
         wts = [1 / v for v in var]
         wtsum = sum(wts)
         wts = [w / wtsum for w in wts]
-        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio)])
+        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio, strict=True)])
 
         return np.exp(log_pooled_or)
 
@@ -1281,7 +1281,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             )
 
     def summary(self):
-        return "Global odds ratio: %.3f\n" % self.dep_params
+        return f"Global odds ratio: {self.dep_params:.3f}\n"
 
 
 class OrdinalIndependence(CategoricalCovStruct):

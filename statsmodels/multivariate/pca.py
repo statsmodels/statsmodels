@@ -595,9 +595,9 @@ estimates are based on only {eff_series} (effective) series."""
                 import warnings
 
                 warnings.warn(
-                    "Only {num:d} eigenvalues are positive.  "
+                    f"Only {num_good:d} eigenvalues are positive.  "
                     "This is the maximum number of components "
-                    "that can be extracted.".format(num=num_good),
+                    "that can be extracted.",
                     EstimationWarning,
                     stacklevel=2,
                 )

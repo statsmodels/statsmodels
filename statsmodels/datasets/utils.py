@@ -195,7 +195,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
         data, from_cache = _urlopen_cached(url, cache)
     except HTTPError as err:
         if "404" in str(err):
-            raise ValueError("Dataset %s was not found." % dataname) from err
+            raise ValueError(f"Dataset {dataname} was not found.") from err
         else:
             raise err
 

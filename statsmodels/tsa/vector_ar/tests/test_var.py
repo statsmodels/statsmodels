@@ -587,7 +587,7 @@ def get_lutkepohl_data(name="e2"):
 
 
 def test_lutkepohl_parse():
-    files = ["e%d" % i for i in range(1, 7)]
+    files = [f"e{i:d}" for i in range(1, 7)]
 
     for f in files:
         get_lutkepohl_data(f)

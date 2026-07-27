@@ -80,9 +80,9 @@ def outlier_test(
     if infl is None:
         results = maybe_unwrap_results(model_results)
         raise AttributeError(
-            "model_results object %s does not have a "
+            f"model_results object {results.__class__.__name__} does not have a "
             "get_influence "
-            "method." % results.__class__.__name__
+            "method."
         )
     resid = infl().resid_studentized_external
     if order:

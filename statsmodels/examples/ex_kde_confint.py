@@ -35,7 +35,7 @@ ax.hist(x, bins=15, density=True, alpha=0.25)
 
 ax.plot(kde.support, kde.density, lw=2, color="red")
 ax.fill_between(kde.support, ci[:, 0], ci[:, 1], color="grey", alpha="0.7")
-ax.set_title("Kernel Density Gaussian (bw = %4.2f)" % kde.bw)
+ax.set_title(f"Kernel Density Gaussian (bw = {kde.bw:4.2f})")
 
 
 # use all kernels directly

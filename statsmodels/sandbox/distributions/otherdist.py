@@ -287,12 +287,12 @@ if __name__ == "__main__":
         for i, loc in enumerate([0.0, 0.5, 1.0, 2.0]):
             fig.add_subplot(2, 2, i + 1)
             cnorm.plot(x=np.linspace(-1, 4, 51), loc=loc, scale=np.sqrt(2))
-            plt.title("clipped normal, loc = %3.2f" % loc)
+            plt.title(f"clipped normal, loc = {loc:3.2f}")
 
         loc = 1.5
         rvs = cnorm.rvs(loc=loc, size=2000)
         plt.figure()
         plt.hist(rvs, bins=50)
-        plt.title("clipped normal rvs, loc = %3.2f" % loc)
+        plt.title(f"clipped normal rvs, loc = {loc:3.2f}")
 
     # plt.show()

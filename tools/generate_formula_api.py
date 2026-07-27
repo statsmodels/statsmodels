@@ -25,7 +25,7 @@ def iter_subclasses(cls, _seen=None, template_classes=()):
     """
     if not isinstance(cls, type):
         raise TypeError(
-            "itersubclasses must be called with new-style classes, not %.100r" % cls
+            f"itersubclasses must be called with new-style classes, not {cls!r:.100}"
         )
     if _seen is None:
         _seen = set()
@@ -39,8 +39,7 @@ def iter_subclasses(cls, _seen=None, template_classes=()):
             # we do not want to yield the templates, but we do want to
             # recurse on them
             yield sub
-        for child in iter_subclasses(sub, _seen, template_classes):
-            yield child
+        yield from iter_subclasses(sub, _seen, template_classes)
 
 
 def write_formula_api(directory):
@@ -68,7 +67,7 @@ def write_formula_api(directory):
     path = os.path.join(directory, "statsmodels", "formula", "api.py")
     fout = open(path, "w", encoding="utf-8")
     for model in iter_subclasses(Model, template_classes=template_classes):
-        print("Generating API for %s" % model.__name__)
+        print(f"Generating API for {model.__name__}")
         fout.write("from " + model.__module__ + " import " + model.__name__ + "\n")
         fout.write(model.__name__.lower() + " = " + model.__name__ + ".from_formula\n")
     fout.close()
@@ -77,7 +76,7 @@ def write_formula_api(directory):
 if __name__ == "__main__":
     import statsmodels.api as sm
 
-    print("Generating formula API for statsmodels version %s" % sm.version.full_version)
+    print(f"Generating formula API for statsmodels version {sm.version.full_version}")
     directory = sys.argv[1]
     cur_dir = os.path.dirname(__file__)
     os.chdir(directory)

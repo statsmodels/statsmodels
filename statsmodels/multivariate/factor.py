@@ -47,7 +47,7 @@ def _check_args_1(endog, n_factor, corr, nobs):
         )
 
     if n_factor <= 0:
-        raise ValueError("n_factor must be larger than 0! %d < 0" % (n_factor))
+        raise ValueError(f"n_factor must be larger than 0! {n_factor:d} < 0")
 
     if nobs is not None and endog is not None:
         warnings.warn("nobs is ignored when endog is provided", stacklevel=2)
@@ -73,7 +73,7 @@ def _check_args_2(endog, n_factor, corr, nobs, k_endog):
     if n_factor > k_endog:
         raise ValueError(
             "n_factor cannot be greater than the number"
-            " of variables! %d > %d" % (n_factor, k_endog)
+            f" of variables! {n_factor:d} > {k_endog:d}"
         )
 
     if np.max(np.abs(np.diag(corr) - 1)) > 1e-10:
@@ -82,7 +82,7 @@ def _check_args_2(endog, n_factor, corr, nobs, k_endog):
     if corr.shape[0] != corr.shape[1]:
         raise ValueError(
             "Correlation matrix corr must be a square "
-            "(rows %d != cols %d)" % corr.shape
+            "(rows {:d} != cols {:d})".format(*corr.shape)
         )
 
 
@@ -271,7 +271,7 @@ class Factor(Model):
             rng = check_random_state(rng)
             return self._fit_ml(start, em_iter, opt_method, opt, rng)
         else:
-            msg = "Unknown factor extraction approach '%s'" % self.method
+            msg = f"Unknown factor extraction approach '{self.method}'"
             raise ValueError(msg)
 
     def _fit_pa(self, maxiter=50, tol=1e-8):
@@ -299,14 +299,14 @@ class Factor(Model):
         if self.n_factor > self.n_comp:
             raise ValueError(
                 "n_factor must be smaller or equal to the rank"
-                " of endog! %d > %d" % (self.n_factor, self.n_comp)
+                f" of endog! {self.n_factor:d} > {self.n_comp:d}"
             )
         if maxiter <= 0:
-            raise ValueError("n_max_iter must be larger than 0! %d < 0" % (maxiter))
+            raise ValueError(f"n_max_iter must be larger than 0! {maxiter:d} < 0")
         if tol <= 0 or tol > 0.01:
             raise ValueError(
                 "tolerance must be larger than 0 and smaller than"
-                " 0.01! Got %f instead" % (tol)
+                f" 0.01! Got {tol:f} instead"
             )
 
         #  Initial communality estimation
@@ -728,7 +728,7 @@ class FactorResults:
             "biquartimin",
             "promax",
         ]:
-            raise ValueError("Unknown rotation method %s" % (method))
+            raise ValueError(f"Unknown rotation method {method}")
 
         if method in [
             "varimax",
@@ -894,7 +894,7 @@ class FactorResults:
         summ.add_title("Factor analysis results")
         loadings_no_rot = pd.DataFrame(
             self.loadings_no_rot,
-            columns=["factor %d" % (i) for i in range(self.loadings_no_rot.shape[1])],
+            columns=[f"factor {i:d}" for i in range(self.loadings_no_rot.shape[1])],
             index=self.endog_names,
         )
         if hasattr(self, "eigenvals"):
@@ -917,10 +917,10 @@ class FactorResults:
         if self.rotation_method is not None:
             loadings = pd.DataFrame(
                 self.loadings,
-                columns=["factor %d" % (i) for i in range(self.loadings.shape[1])],
+                columns=[f"factor {i:d}" for i in range(self.loadings.shape[1])],
                 index=self.endog_names,
             )
-            summ.add_dict({"": "%s rotated loadings" % (self.rotation_method)})
+            summ.add_dict({"": f"{self.rotation_method} rotated loadings"})
             summ.add_df(loadings)
         return summ
 
@@ -992,7 +992,7 @@ class FactorResults:
 
         loadings_df = pd.DataFrame(
             self.loadings,
-            columns=["factor %d" % (i) for i in range(self.loadings.shape[1])],
+            columns=[f"factor {i:d}" for i in range(self.loadings.shape[1])],
             index=self.endog_names,
         )
 
@@ -1027,7 +1027,7 @@ class FactorResults:
                     takes threshold from outer scope
                     """
                     color = "white" if np.abs(val) < threshold else "black"
-                    return "color: %s" % color
+                    return f"color: {color}"
 
                 try:
                     sty = loadings_df.style.map(color_white_small)
@@ -1056,7 +1056,7 @@ class FactorResults:
                 if sty is None:
                     sty = loadings_df.style
 
-                sty.format("{:.%sf}" % decimals)
+                sty.format(f"{{:.{decimals}f}}")
 
             if sty is None:
                 return loadings_df
@@ -1119,7 +1119,7 @@ class FactorResults:
         if plot_prerotated:
             title = "Prerotated Factor Pattern"
         else:
-            title = "%s Rotated Factor Pattern" % (self.rotation_method)
+            title = f"{self.rotation_method} Rotated Factor Pattern"
         var_explained = self.eigenvals / self.n_comp * 100
 
         return plot_loadings(

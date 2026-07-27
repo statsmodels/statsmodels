@@ -70,14 +70,10 @@ class AR_simulator(GEE_simulator):
     distfun = [lambda x, y: np.sqrt(np.sum((x-y)**2)),]
 
     def print_dparams(self, dparams_est):
-        OUT.write("AR coefficient estimate:   %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("AR coefficient truth:      %8.4f\n" %
-                  self.dep_params[0])
-        OUT.write("Error variance estimate:   %8.4f\n" %
-                  dparams_est[1])
-        OUT.write("Error variance truth:      %8.4f\n" %
-                  self.error_sd**2)
+        OUT.write(f"AR coefficient estimate:   {dparams_est[0]:8.4f}\n")
+        OUT.write(f"AR coefficient truth:      {self.dep_params[0]:8.4f}\n")
+        OUT.write(f"Error variance estimate:   {dparams_est[1]:8.4f}\n")
+        OUT.write(f"Error variance truth:      {self.error_sd**2:8.4f}\n")
         OUT.write("\n")
 
     def simulate(self):
@@ -130,15 +126,14 @@ class Nested_simulator(GEE_simulator):
 
     def print_dparams(self, dparams_est):
         for j in range(len(self.nest_sizes)):
-            OUT.write("Nest %d variance estimate:  %8.4f\n" % (j + 1, dparams_est[j]))
+            OUT.write(f"Nest {j + 1:d} variance estimate:  {dparams_est[j]:8.4f}\n")
             OUT.write(
-                "Nest %d variance truth:     %8.4f\n" % (j + 1, self.dep_params[j])
+                f"Nest {j + 1:d} variance truth:     {self.dep_params[j]:8.4f}\n"
             )
         OUT.write(
-            "Error variance estimate:   %8.4f\n"
-            % (dparams_est[-1] - sum(dparams_est[0:-1]))
+            f"Error variance estimate:   {dparams_est[-1] - sum(dparams_est[0:-1]):8.4f}\n"
         )
-        OUT.write("Error variance truth:      %8.4f\n" % self.error_sd**2)
+        OUT.write(f"Error variance truth:      {self.error_sd**2:8.4f}\n")
         OUT.write("\n")
 
     def simulate(self):
@@ -156,7 +151,7 @@ class Nested_simulator(GEE_simulator):
 
             # The random effects
             variances = [np.sqrt(v)*np.random.normal(size=n)
-                         for v, n in zip(vcomp, self.nest_sizes)]
+                         for v, n in zip(vcomp, self.nest_sizes, strict=True)]
 
             gpe = np.random.normal() * np.sqrt(group_effect_var)
 
@@ -170,7 +165,7 @@ class Nested_simulator(GEE_simulator):
 
                 # The sum of all random effects that apply to this
                 # unit
-                ref = gpe + sum([v[j] for v, j in zip(variances, nest)])
+                ref = gpe + sum([v[j] for v, j in zip(variances, nest, strict=True)])
 
                 exog1 = np.random.normal(size=5)
                 exog1[0] = 1
@@ -244,7 +239,7 @@ def gendat_nested1():
 if __name__ == "__main__":
 
     try:
-        np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
+        np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                             suppress=True)
     except TypeError:
         # older numpy versions do not have formatter option
@@ -333,9 +328,7 @@ if __name__ == "__main__":
         OUT.write("Right hand side:\n")
         OUT.write(np.array_str(rhs) + "\n")
         OUT.write("Observed p-values   Expected Null p-values\n")
-        for q in np.arange(0.1, 0.91, 0.1):
-            OUT.write("%20.3f %20.3f\n" %
-                      (pvalues[int(q*len(pvalues))], q))
+        OUT.writelines(f"{pvalues[int(q*len(pvalues))]:20.3f} {q:20.3f}\n" for q in np.arange(0.1, 0.91, 0.1))
 
         OUT.write("=" * 80 + "\n\n")
 

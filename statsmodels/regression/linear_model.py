@@ -206,15 +206,15 @@ def _get_sigma(sigma, nobs):
     if sigma.ndim == 1:
         if sigma.shape != (nobs,):
             raise ValueError(
-                "Sigma must be a scalar, 1d of length %s or a 2d "
-                "array of shape %s x %s" % (nobs, nobs, nobs)
+                f"Sigma must be a scalar, 1d of length {nobs} or a 2d "
+                f"array of shape {nobs} x {nobs}"
             )
         cholsigmainv = 1 / np.sqrt(sigma)
     else:
         if sigma.shape != (nobs, nobs):
             raise ValueError(
-                "Sigma must be a scalar, 1d of length %s or a 2d "
-                "array of shape %s x %s" % (nobs, nobs, nobs)
+                f"Sigma must be a scalar, 1d of length {nobs} or a 2d "
+                f"array of shape {nobs} x {nobs}"
             )
         cholsigmainv, info = dtrtri(
             cholesky(sigma, lower=True), lower=True, overwrite_c=True
@@ -224,7 +224,7 @@ def _get_sigma(sigma, nobs):
                 "Cholesky decomposition of sigma yields a singular matrix"
             )
         elif info < 0:
-            raise ValueError("Invalid input to dtrtri (info = %d)" % info)
+            raise ValueError(f"Invalid input to dtrtri (info = {info:d})")
     return sigma, cholsigmainv
 
 
@@ -492,10 +492,10 @@ class RegressionModel(base.LikelihoodModel):
 
 
 class GLS(RegressionModel):
-    __doc__ = r"""
+    __doc__ = rf"""
     Generalized Least Squares
 
-    {params}
+    {base._model_params_doc}
     sigma : scalar or array
         The array or scalar `sigma` is the weighting matrix of the covariance.
         The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -504,7 +504,7 @@ class GLS(RegressionModel):
         is an n-length vector, then `sigma` is assumed to be a diagonal
         matrix with the given `sigma` on the diagonal.  This should be the
         same as WLS.
-    {extra_params}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Attributes
     ----------
@@ -562,10 +562,7 @@ class GLS(RegressionModel):
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
     >>> print(gls_results.summary())
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
 
     def __init__(
         self, endog, exog, sigma=None, missing="none", hasconst=None, **kwargs
@@ -738,19 +735,19 @@ class GLS(RegressionModel):
 
 
 class WLS(RegressionModel):
-    __doc__ = """
+    __doc__ = f"""
     Weighted Least Squares
 
     The weights are presumed to be (proportional to) the inverse of
     the variance of the observations.  That is, if the variables are
     to be transformed by 1/sqrt(W) you must supply weights = 1/W.
 
-    {params}
+    {base._model_params_doc}
     weights : array_like, optional
         A 1d array of weights.  If you supply 1/W then the variables are
         pre- multiplied by 1/sqrt(W).  If no weights are supplied the
         default value is 1 and WLS results are the same as OLS.
-    {extra_params}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Attributes
     ----------
@@ -785,10 +782,7 @@ class WLS(RegressionModel):
      t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
     >>> print(results.f_test([0, 1]))
     <F test: F=array([[ 0.12733784]]), p=[[ 0.73577409]], df_denom=5, df_num=1>
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
 
     def __init__(
         self, endog, exog, weights=1.0, missing="none", hasconst=None, **kwargs
@@ -939,11 +933,11 @@ class WLS(RegressionModel):
 
 
 class OLS(WLS):
-    __doc__ = """
+    __doc__ = f"""
     Ordinary Least Squares
 
-    {params}
-    {extra_params}
+    {base._model_params_doc}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Attributes
     ----------
@@ -990,10 +984,7 @@ class OLS(WLS):
     >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20,
      df_denom=43, df_num=2>
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
 
     def __init__(self, endog, exog=None, missing="none", hasconst=None, **kwargs):
         if "weights" in kwargs:
@@ -1180,7 +1171,7 @@ class OLS(WLS):
 
         # In the future we could add support for other penalties, e.g. SCAD.
         if method not in ("elastic_net", "sqrt_lasso"):
-            msg = "Unknown method '%s' for fit_regularized" % method
+            msg = f"Unknown method '{method}' for fit_regularized"
             raise ValueError(msg)
 
         # Set default parameters.
@@ -1314,13 +1305,13 @@ class OLS(WLS):
 
 
 class GLSAR(GLS):
-    __doc__ = """
+    __doc__ = f"""
     Generalized Least Squares with AR covariance structure
 
-    {params}
+    {base._model_params_doc}
     rho : int
         The order of the autoregressive covariance.
-    {extra_params}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Notes
     -----
@@ -1365,10 +1356,7 @@ class GLSAR(GLS):
     >>> res = model2.iterative_fit(maxiter=6)
     >>> model2.rho
     array([-0.60479146, -0.85841922])
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
     # TODO: Complete docstring
 
     def __init__(
@@ -2904,13 +2892,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
         rsquared_type = "" if self.k_constant else " (uncentered)"
         top_right = [
-            ("R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared]),
-            ("Adj. R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared_adj]),
-            ("F-statistic:", ["%#8.4g" % self.fvalue]),
-            ("Prob (F-statistic):", ["%#6.3g" % self.f_pvalue]),
+            ("R-squared" + rsquared_type + ":", [f"{self.rsquared:#8.3f}"]),
+            ("Adj. R-squared" + rsquared_type + ":", [f"{self.rsquared_adj:#8.3f}"]),
+            ("F-statistic:", [f"{self.fvalue:#8.4g}"]),
+            ("Prob (F-statistic):", [f"{self.f_pvalue:#6.3g}"]),
             ("Log-Likelihood:", None),
-            ("AIC:", ["%#8.4g" % self.aic]),
-            ("BIC:", ["%#8.4g" % self.bic]),
+            ("AIC:", [f"{self.aic:#8.4g}"]),
+            ("BIC:", [f"{self.bic:#8.4g}"]),
         ]
 
         if slim:
@@ -2927,7 +2915,7 @@ class RegressionResults(base.LikelihoodModelResults):
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
-            top_right = top_right + [("", [])] * (len(top_left) - len(top_right))
+            top_right = top_right + [("", [""])] * (len(top_left) - len(top_right))
         else:
             jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
             omni, omnipv = omni_normtest(self.wresid)
@@ -2942,17 +2930,17 @@ class RegressionResults(base.LikelihoodModelResults):
             )
 
             diagn_left = [
-                ("Omnibus:", ["%#6.3f" % omni]),
-                ("Prob(Omnibus):", ["%#6.3f" % omnipv]),
-                ("Skew:", ["%#6.3f" % skew]),
-                ("Kurtosis:", ["%#6.3f" % kurtosis]),
+                ("Omnibus:", [f"{omni:#6.3f}"]),
+                ("Prob(Omnibus):", [f"{omnipv:#6.3f}"]),
+                ("Skew:", [f"{skew:#6.3f}"]),
+                ("Kurtosis:", [f"{kurtosis:#6.3f}"]),
             ]
 
             diagn_right = [
-                ("Durbin-Watson:", ["%#8.3f" % durbin_watson(self.wresid)]),
-                ("Jarque-Bera (JB):", ["%#8.3f" % jb]),
-                ("Prob(JB):", ["%#8.3g" % jbpv]),
-                ("Cond. No.", ["%#8.3g" % condno]),
+                ("Durbin-Watson:", [f"{durbin_watson(self.wresid):#8.3f}"]),
+                ("Jarque-Bera (JB):", [f"{jb:#8.3f}"]),
+                ("Prob(JB):", [f"{jbpv:#8.3g}"]),
+                ("Cond. No.", [f"{condno:#8.3g}"]),
             ]
 
         if title is None:
@@ -3069,14 +3057,14 @@ class RegressionResults(base.LikelihoodModelResults):
         eigvals = self.eigenvals
         condno = self.condition_number
         diagnostic = {
-            "Omnibus:": "%.3f" % omni,
-            "Prob(Omnibus):": "%.3f" % omnipv,
-            "Skew:": "%.3f" % skew,
-            "Kurtosis:": "%.3f" % kurtosis,
-            "Durbin-Watson:": "%.3f" % dw,
-            "Jarque-Bera (JB):": "%.3f" % jb,
-            "Prob(JB):": "%.3f" % jbpv,
-            "Condition No.:": "%.0f" % condno,
+            "Omnibus:": f"{omni:.3f}",
+            "Prob(Omnibus):": f"{omnipv:.3f}",
+            "Skew:": f"{skew:.3f}",
+            "Kurtosis:": f"{kurtosis:.3f}",
+            "Durbin-Watson:": f"{dw:.3f}",
+            "Jarque-Bera (JB):": f"{jb:.3f}",
+            "Prob(JB):": f"{jbpv:.3f}",
+            "Condition No.:": f"{condno:.0f}",
         }
 
         # Summary
@@ -3109,18 +3097,16 @@ class RegressionResults(base.LikelihoodModelResults):
         # Warnings
         if eigvals[-1] < 1e-10:
             warn = (
-                "The smallest eigenvalue is %6.3g. This might indicate that\
+                f"The smallest eigenvalue is {eigvals[-1]:6.3g}. This might indicate that\
                 there are strong multicollinearity problems or that the design\
                 matrix is singular."
-                % eigvals[-1]
             )
             etext.append(warn)
         elif condno > 1000:
             warn = (
-                "The condition number is large, %6.3g. This might indicate\
+                f"The condition number is large, {condno:6.3g}. This might indicate\
                 that there are strong multicollinearity or other numerical\
                 problems."
-                % condno
             )
             etext.append(warn)
 

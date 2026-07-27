@@ -173,11 +173,11 @@ class CheckExponentialSmoothing:
         cls.name = name
         cls.res = res
         cls.nobs = res.nobs
-        cls.nforecast = len(results_predict["%s_mean" % cls.name]) - cls.nobs
+        cls.nforecast = len(results_predict[f"{cls.name}_mean"]) - cls.nobs
         cls.forecast = res.get_forecast(cls.nforecast)
 
     def test_fitted(self):
-        predicted = results_predict["%s_mean" % self.name]
+        predicted = results_predict[f"{self.name}_mean"]
         assert_allclose(self.res.fittedvalues, predicted.iloc[: self.nobs])
 
     def test_output(self):
@@ -199,14 +199,14 @@ class CheckExponentialSmoothing:
 
     def test_forecasts(self):
         # Forecast mean
-        predicted = results_predict["%s_mean" % self.name]
+        predicted = results_predict[f"{self.name}_mean"]
         assert_allclose(self.forecast.predicted_mean, predicted.iloc[self.nobs :])
 
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        lower = results_predict["%s_lower" % self.name]
-        upper = results_predict["%s_upper" % self.name]
+        lower = results_predict[f"{self.name}_lower"]
+        upper = results_predict[f"{self.name}_upper"]
 
         assert_allclose(ci_95["lower y"], lower.iloc[self.nobs :])
         assert_allclose(ci_95["upper y"], upper.iloc[self.nobs :])
@@ -529,7 +529,7 @@ class CheckKnownInitialization:
         cls.initial_seasonal = None
         if cls.mod.seasonal:
             cls.initial_seasonal = [cls.res.params["initial_seasonal"]] + [
-                cls.res.params["initial_seasonal.L%d" % i]
+                cls.res.params[f"initial_seasonal.L{i:d}"]
                 for i in range(1, cls.mod.seasonal_periods - 1)
             ]
 
@@ -912,8 +912,8 @@ class TestMultiIndex(CheckExponentialSmoothing):
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        lower = results_predict["%s_lower" % self.name]
-        upper = results_predict["%s_upper" % self.name]
+        lower = results_predict[f"{self.name}_lower"]
+        upper = results_predict[f"{self.name}_upper"]
         assert_allclose(ci_95["lower ('oil', 'data')"], lower.iloc[self.nobs :])
         assert_allclose(ci_95["upper ('oil', 'data')"], upper.iloc[self.nobs :])
 
@@ -970,7 +970,7 @@ def test_invalid():
         )
 
     for arg in ["initial_level", "initial_trend", "initial_seasonal"]:
-        msg = 'Cannot give `%s` argument when initialization is "estimated"' % arg
+        msg = f'Cannot give `{arg}` argument when initialization is "estimated"'
         with pytest.raises(ValueError, match=msg):
             mod = ExponentialSmoothing(aust, **{arg: 0})
 

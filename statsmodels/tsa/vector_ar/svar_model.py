@@ -192,11 +192,11 @@ class SVAR(tsbase.TimeSeriesModel):
             selections = self.select_order(maxlags=maxlags, verbose=verbose)
             if ic not in selections:
                 raise ValueError(
-                    "{} not recognized, must be among {}".format(ic, sorted(selections))
+                    f"{ic} not recognized, must be among {sorted(selections)}"
                 )
             lags = selections[ic]
             if verbose:
-                print("Using %d based on %s criterion" % (lags, ic))
+                print(f"Using {lags:d} based on {ic} criterion")
         elif lags is None:
             lags = 1
 

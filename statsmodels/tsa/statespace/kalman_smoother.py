@@ -1326,7 +1326,7 @@ class SmootherResults(FilterResults):
         # or not we are computing detailed impacts)
         if len(revisions_ix) > 0:
             # Indexes
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=True)
             compute_j = np.arange(revised_j[0], revised_j[-1] + 1)
 
             # Data from updated model
@@ -1425,7 +1425,7 @@ class SmootherResults(FilterResults):
                 # elements
                 revised_j, revised_p = zip(*[
                     s for s in revisions_ix
-                    if s[0] >= revisions_details_start])
+                    if s[0] >= revisions_details_start], strict=True)
                 ix_j = revised_j - revised_j[0]
                 # Shape is: t, k, j * p
                 # Note: have to transpose first so that the two advanced
@@ -1468,7 +1468,7 @@ class SmootherResults(FilterResults):
 
         # Need to also flatten the revisions items that contain all revisions
         if len(revisions_ix) > 0:
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=True)
             ix_j = revised_j - revised_j[0]
 
             revisions_all = revisions_all[ix_j, revised_p]
@@ -1478,7 +1478,7 @@ class SmootherResults(FilterResults):
         # Now handle updates
         if len(updates_ix) > 0:
             # Figure out which time points we need forecast errors for
-            update_t, update_k = zip(*updates_ix)
+            update_t, update_k = zip(*updates_ix, strict=True)
             update_start_t = np.min(update_t)
             update_end_t = np.max(update_t)
 

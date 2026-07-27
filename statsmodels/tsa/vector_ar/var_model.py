@@ -512,7 +512,7 @@ class LagOrderResults:
     def summary(self):  # basically copied from (now deleted) print_ic_table()
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
         str_data = np.array(
-            [["%#10.4g" % v for v in self.ics[c]] for c in cols], dtype=object
+            [[f"{v:#10.4g}" for v in self.ics[c]] for c in cols], dtype=object
         ).T
         # mark minimum with an asterisk
         for i, col in enumerate(cols):
@@ -701,12 +701,12 @@ class VAR(TimeSeriesModel):
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
                 raise ValueError(
-                    "{} not recognized, must be among {}".format(ic, sorted(selections))
+                    f"{ic} not recognized, must be among {sorted(selections)}"
                 )
             lags = getattr(selections, ic)
             if verbose:
                 print(selections)
-                print("Using %d based on %s criterion" % (lags, ic))
+                print(f"Using {lags:d} based on {ic} criterion")
         elif lags is None:
             lags = 1
 
@@ -721,7 +721,7 @@ class VAR(TimeSeriesModel):
             if orig_exog_names:
                 x_names_to_add = orig_exog_names
             else:
-                x_names_to_add = [("exog%d" % i) for i in range(self.exog.shape[1])]
+                x_names_to_add = [(f"exog{i:d}") for i in range(self.exog.shape[1])]
             self.data.xnames = (
                 self.data.xnames[:k_trend] + x_names_to_add + self.data.xnames[k_trend:]
             )
@@ -925,12 +925,9 @@ class VARProcess:
         return util.get_index(self.names, name)
 
     def __str__(self):
-        output = "VAR(%d) process for %d-dimensional response y_t" % (
-            self.k_ar,
-            self.neqs,
-        )
-        output += "\nstable: %s" % self.is_stable()
-        output += "\nmean: %s" % self.mean()
+        output = f"VAR({self.k_ar:d}) process for {self.neqs:d}-dimensional response y_t"
+        output += f"\nstable: {self.is_stable()}"
+        output += f"\nmean: {self.mean()}"
 
         return output
 
@@ -2063,7 +2060,7 @@ class VARResults(VARProcess):
             df = (num_restr, k * self.df_resid)
             dist = stats.f(*df)
         else:
-            raise ValueError("kind %s not recognized" % kind)
+            raise ValueError(f"kind {kind} not recognized")
 
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -2451,7 +2448,7 @@ class FEVD:
         for i in range(self.neqs):
             ppm = output.pprint_matrix(self.decomp[i], rng, self.names)
 
-            buf.write("FEVD for %s\n" % self.names[i])
+            buf.write(f"FEVD for {self.names[i]}\n")
             buf.write(ppm + "\n")
 
         print(buf.getvalue())

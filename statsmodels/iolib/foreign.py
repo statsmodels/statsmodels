@@ -118,15 +118,14 @@ def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
         # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
         if isinstance(fmt, (list, tuple)):
             if len(fmt) != ncol:
-                raise AttributeError("fmt has wrong shape.  %s" % str(fmt))
+                raise AttributeError(f"fmt has wrong shape.  {fmt!s}")
             format = delimiter.join(fmt)
         elif isinstance(fmt, str):
             if fmt.count("%") == 1:
                 fmt = [fmt, ]*ncol
                 format = delimiter.join(fmt)
             elif fmt.count("%") != ncol:
-                raise AttributeError("fmt has wrong number of %% formats.  %s"
-                                     % fmt)
+                raise AttributeError(f"fmt has wrong number of % formats.  {fmt}")
             else:
                 format = fmt
 

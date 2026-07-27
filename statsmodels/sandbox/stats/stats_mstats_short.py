@@ -186,7 +186,7 @@ def scoreatpercentile(data, per, limit=(), alphap=0.4, betap=0.4, axis=0, maskna
     per = np.asarray(per, float)
     if (per < 0).any() or (per > 100.0).any():
         raise ValueError(
-            "The percentile should be between 0. and 100. ! (got %s)" % per
+            f"The percentile should be between 0. and 100. ! (got {per})"
         )
     return quantiles(
         data,
@@ -403,7 +403,7 @@ if __name__ == "__main__":
     np.testing.assert_equal(
         plotting_positions(np.arange(10)), (1 + np.arange(10) - 0.4) / (10 + 0.2)
     )
-    print("")
+    print()
     print(scoreatpercentile(x, [10, 90]))
     print(plotting_positions_w1d(x[:, 0]))
     print((plotting_positions_w1d(x[:, 0]) == plotting_positions(x[:, 0])).all())

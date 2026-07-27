@@ -33,7 +33,7 @@ def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
 
 def _check_method(method, methods):
     if method not in methods:
-        message = "Unknown fit method %s" % method
+        message = f"Unknown fit method {method}"
         raise ValueError(message)
 
 
@@ -547,14 +547,14 @@ def _fit_newton(
         warnflag = 1
         if disp:
             print("Warning: Maximum number of iterations has been exceeded.")
-            print("         Current function value: %f" % fval)
-            print("         Iterations: %d" % iterations)
+            print(f"         Current function value: {fval:f}")
+            print(f"         Iterations: {iterations:d}")
     else:
         warnflag = 0
         if disp:
             print("Optimization terminated successfully.")
-            print("         Current function value: %f" % fval)
-            print("         Iterations %d" % iterations)
+            print(f"         Current function value: {fval:f}")
+            print(f"         Iterations {iterations:d}")
     if full_output:
         xopt, fopt, niter, gopt, hopt = (
             newparams,

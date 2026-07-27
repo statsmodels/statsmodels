@@ -5,10 +5,9 @@ Author: Josef Perktold
 editted by: Paul Hobson (2012-08-19)
 """
 
-from matplotlib import pyplot as plt
-
 # example with the new ProbPlot class
 import numpy as np
+from matplotlib import pyplot as plt
 from scipy import stats
 
 import statsmodels.api as sm

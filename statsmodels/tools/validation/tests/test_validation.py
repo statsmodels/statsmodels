@@ -68,7 +68,11 @@ class TestArrayLike:
         assert a.ndim == 2
         a = array_like(data, "a", ndim=2, shape=(20, None))
         assert a.shape == (20, 10)
-        a = array_like(data, "a", ndim=2, shape=(20,))
+        with pytest.raises(
+                ValueError,
+                match=r"Provided shape \(20,\) does not have the correct dimension",
+        ):
+            array_like(data, "a", ndim=2, shape=(20,))
         assert a.shape == (20, 10)
         a = array_like(data, "a", ndim=2, shape=(None, 10))
         assert a.shape == (20, 10)
@@ -80,7 +84,7 @@ class TestArrayLike:
         assert a.shape == (20, 10, 1)
 
         with pytest.raises(ValueError, match="a is required to have shape"):
-            array_like(data, "a", ndim=2, shape=(10,))
+            array_like(data, "a", ndim=2, shape=(10, 10))
         with pytest.raises(ValueError, match="a is required to have shape"):
             array_like(data, "a", ndim=2, shape=(20, 20))
         with pytest.raises(ValueError, match="a is required to have shape"):
@@ -105,7 +109,7 @@ class TestArrayLike:
         assert a.shape == (5, 6, 7)
         a = array_like(data, "a", ndim=5)
         assert a.shape == (5, 6, 7, 1, 1)
-        with pytest.raises(ValueError, match="a is required to have shape"):
+        with pytest.raises(ValueError, match=r"Provided shape \(10,\) does not have the correct dimension"):
             array_like(data, "a", ndim=3, shape=(10,))
         with pytest.raises(ValueError, match="a is required to have shape"):
             array_like(data, "a", ndim=3, shape=(None, None, 5))

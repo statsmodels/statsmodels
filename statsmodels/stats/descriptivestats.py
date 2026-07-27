@@ -302,7 +302,7 @@ class Description:
     def __init__(
         self,
         data: np.ndarray | pd.Series | pd.DataFrame,
-        stats: Sequence[str] = None,
+        stats: Sequence[str] | None = None,
         *,
         numeric: bool = True,
         categorical: bool = True,
@@ -657,7 +657,7 @@ ds.replace_block(
 @Appender(str(ds))
 def describe(
     data: np.ndarray | pd.Series | pd.DataFrame,
-    stats: Sequence[str] = None,
+    stats: Sequence[str] | None = None,
     *,
     numeric: bool = True,
     categorical: bool = True,

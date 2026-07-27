@@ -733,7 +733,7 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="es=%4.2F" % es,
+                    label=f"es={es:4.2F}",
                 )
                 xlabel = "Number of Observations"
         elif dep_var in ["effect size", "effect_size", "es"]:
@@ -747,10 +747,10 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="N=%4.2F" % n,
+                    label=f"N={n:4.2F}",
                 )
                 xlabel = "Effect Size"
-        elif dep_var in ["alpha"]:
+        elif dep_var == "alpha":
             # experimental nobs as defining separate lines
             colors = rainbow(len(nobs))
 
@@ -762,7 +762,7 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="N=%4.2F" % n,
+                    label=f"N={n:4.2F}",
                 )
                 xlabel = "alpha"
         else:

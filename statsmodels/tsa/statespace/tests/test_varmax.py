@@ -223,15 +223,15 @@ class TestVAR(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 8
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -281,15 +281,15 @@ class TestVAR_diagonal(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 8
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -395,16 +395,16 @@ class TestVAR_measurement_error(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
-            assert re.search("measurement_variance +%.4g" % params[-(i + 1)], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
+            assert re.search(f"measurement_variance +{params[-(i + 1)]:.4g}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -544,15 +544,15 @@ class TestVAR_exog(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
             assert re.search(
                 "beta.x1 +" + forg(params[self.model._params_regression][i], prec=4),
                 table,
@@ -669,16 +669,16 @@ class TestVAR2(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L2.dln_inv +%.4f" % params[offset + 2], table)
-            assert re.search("L2.dln_inc +%.4f" % params[offset + 3], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L2.dln_inv +{params[offset + 2]:.4f}", table)
+            assert re.search(f"L2.dln_inc +{params[offset + 3]:.4f}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -783,7 +783,7 @@ class TestVARMA(CheckFREDManufacturing):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
@@ -1076,7 +1076,7 @@ def test_recreate_model():
         enforce_stationarities,
         enforce_invertibilities,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
 
         with warnings.catch_warnings(record=False):
             warnings.simplefilter("ignore")

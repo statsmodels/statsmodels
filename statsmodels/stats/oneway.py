@@ -1110,7 +1110,7 @@ def simulate_power_equivalence_oneway(
     rng = check_random_state(rng)
     for _ in range(k_mc):
         y0, y1, y2, y3 = (
-            m + std * rng.standard_normal(n) for (n, m, std) in zip(nobs, means, stds)
+            m + std * rng.standard_normal(n) for (n, m, std) in zip(nobs, means, stds, strict=True)
         )
 
         res_i = []

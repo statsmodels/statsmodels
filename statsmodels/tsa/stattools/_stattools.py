@@ -6,7 +6,7 @@ from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Literal, Union
+from typing import Literal
 import warnings
 
 import numpy as np
@@ -37,7 +37,7 @@ from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
-ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
+ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 __all__ = [
     "acf",
@@ -1697,9 +1697,9 @@ def breakvar_heteroskedasticity_test(
     for i, dof in enumerate(numer_dof):
         if dof < 2:
             warnings.warn(
-                "Early subset of data for variable %d"
+                f"Early subset of data for variable {i:d}"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i,
+                " calculate test statistic.",
                 stacklevel=2,
             )
             numer_squared_sum[i] = np.nan
@@ -1710,9 +1710,9 @@ def breakvar_heteroskedasticity_test(
     for i, dof in enumerate(denom_dof):
         if dof < 2:
             warnings.warn(
-                "Later subset of data for variable %d"
+                f"Later subset of data for variable {i:d}"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i,
+                " calculate test statistic.",
                 stacklevel=2,
             )
             denom_squared_sum[i] = np.nan
@@ -1845,9 +1845,7 @@ def grangercausalitytests(x, maxlag, addconst=True):
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
-            "Insufficient observations. Maximum allowable lag is {}".format(
-                int((x.shape[0] - int(addconst)) / 3) - 1
-            )
+            f"Insufficient observations. Maximum allowable lag is {int((x.shape[0] - int(addconst)) / 3) - 1}"
         )
 
     resli = {}
@@ -2904,9 +2902,7 @@ class ZivotAndrewsUnitRoot:
                 if o.df_model < exog.shape[1] - 1:
                     raise ValueError(
                         "ZA: auxiliary exog matrix is not full rank.\n"
-                        "  cols (exc intercept) = {}  rank = {}".format(
-                            exog.shape[1] - 1, o.df_model
-                        )
+                        f"  cols (exc intercept) = {exog.shape[1] - 1}  rank = {o.df_model}"
                     )
                 stats[bp] = o.tvalues[basecols - 1]
             else:

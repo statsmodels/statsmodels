@@ -57,8 +57,8 @@ class Appender:
         self.join = join
 
     def __call__(self, func):
-        func.__doc__ = func.__doc__ if func.__doc__ else ""
-        self.addendum = self.addendum if self.addendum else ""
+        func.__doc__ = func.__doc__ or ""
+        self.addendum = self.addendum or ""
         docitems = [func.__doc__, self.addendum]
         func.__doc__ = dedent(self.join.join(docitems))
         return func

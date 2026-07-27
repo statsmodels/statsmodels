@@ -97,8 +97,8 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
     nobs, k_endog = y.shape
     nobs1, k_exog = x.shape
     if nobs != nobs1:
-        raise ValueError("x(n=%d) and y(n=%d) should have the same number of "
-                         "rows!" % (nobs1, nobs))
+        raise ValueError(f"x(n={nobs1:d}) and y(n={nobs:d}) should have the same number of "
+                         "rows!")
 
     # Calculate the matrices necessary for hypotheses testing
     df_resid = nobs - k_exog
@@ -129,7 +129,7 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
     else:
-        raise ValueError("%s is not a supported method!" % method)
+        raise ValueError(f"{method} is not a supported method!")
 
 
 def multivariate_stats(eigenvals,
@@ -342,7 +342,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
             name, L, M, C = hypo
         else:
             raise ValueError("hypotheses must be a tuple of length 2, 3 or 4."
-                             " len(hypotheses)=%d" % len(hypo))
+                             f" len(hypotheses)={len(hypo):d}")
         mgr = FormulaManager()
         if any(isinstance(j, str) for j in L):
             L = mgr.get_linear_constraints(L, variable_names=exog_names).constraint_matrix
@@ -351,8 +351,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                 raise ValueError("Contrast matrix L must be a 2-d array!")
             if L.shape[1] != k_xvar:
                 raise ValueError("Contrast matrix L should have the same "
-                                 "number of columns as exog! %d != %d" %
-                                 (L.shape[1], k_xvar))
+                                 f"number of columns as exog! {L.shape[1]:d} != {k_xvar:d}")
         if M is None:
             M = np.eye(k_yvar)
         elif any(isinstance(j, str) for j in M):
@@ -363,8 +362,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
             if M.shape[0] != k_yvar:
                 raise ValueError("Transform matrix M should have the same "
                                  "number of rows as the number of columns "
-                                 "of endog! %d != %d" %
-                                 (M.shape[0], k_yvar))
+                                 f"of endog! {M.shape[0]:d} != {k_yvar:d}")
         if C is None:
             C = np.zeros([L.shape[0], M.shape[1]])
         elif not isinstance(C, np.ndarray):
@@ -372,12 +370,10 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
 
         if C.shape[0] != L.shape[0]:
             raise ValueError("contrast L and constant C must have the same "
-                             "number of rows! %d!=%d"
-                             % (L.shape[0], C.shape[0]))
+                             f"number of rows! {L.shape[0]:d}!={C.shape[0]:d}")
         if C.shape[1] != M.shape[1]:
             raise ValueError("transform M and constant C must have the same "
-                             "number of columns! %d!=%d"
-                             % (M.shape[1], C.shape[1]))
+                             f"number of columns! {M.shape[1]:d}!={C.shape[1]:d}")
         E, H, q, df_resid = fn(L, M, C)
         EH = np.add(E, H)
         p = matrix_rank(EH)
@@ -505,7 +501,7 @@ class _MultivariateOLSResults(LikelihoodModelResults):
             else:
                 hypotheses = []
                 for i in range(k_xvar):
-                    name = "x%d" % (i)
+                    name = f"x{i:d}"
                     L = np.zeros([1, k_xvar])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])

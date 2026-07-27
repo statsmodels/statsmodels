@@ -95,7 +95,7 @@ class BayesGaussMI:
             v = self._data[:, i]
             v = v[np.isfinite(v)]
             if len(v) == 0:
-                msg = "Column %d has no observed values" % i
+                msg = f"Column {i:d} has no observed values"
                 raise ValueError(msg)
             mean.append(v.mean())
         self.mean = np.asarray(mean)
@@ -440,8 +440,8 @@ class MIResults(LikelihoodModelResults):
         info["Method:"] = "MI"
         info["Model:"] = self.mi.model.__name__
         info["Dependent variable:"] = self._model.endog_names
-        info["Sample size:"] = "%d" % self.mi.imp.data.shape[0]
-        info["Num. imputations"] = "%d" % self.mi.nrep
+        info["Sample size:"] = f"{self.mi.imp.data.shape[0]:d}"
+        info["Num. imputations"] = f"{self.mi.nrep:d}"
 
         smry.add_dict(info, align="l", float_format=float_format)
 

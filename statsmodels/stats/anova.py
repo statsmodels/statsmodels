@@ -22,7 +22,7 @@ def _get_covariance(model, robust):
     elif robust == "hc3":
         return model.cov_HC3
     else:  # pragma: no cover
-        raise ValueError("robust options %s not understood" % robust)
+        raise ValueError(f"robust options {robust} not understood")
 
 
 # NOTE: these need to take into account weights !
@@ -64,7 +64,7 @@ def anova_single(model, **kwargs):
     mgr = FormulaManager()
     n_rows = len(model_spec.terms) - mgr.has_intercept(model_spec) + 1
 
-    pr_test = "PR(>%s)" % test
+    pr_test = f"PR(>{test})"
     names = ["df", "sum_sq", "mean_sq", test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 5)), columns=names)
@@ -80,7 +80,7 @@ def anova_single(model, **kwargs):
     elif typ in [4, "IV"]:
         raise NotImplementedError("Type IV not yet implemented")
     else:  # pragma: no cover
-        raise ValueError("Type %s not understood" % str(typ))
+        raise ValueError(f"Type {typ!s} not understood")
 
 
 def anova1_lm_single(
@@ -394,13 +394,13 @@ def anova_lm(*args, **kwargs):
 
     if typ not in [1, "I"]:
         raise ValueError(
-            "Multiple models only supported for type I. Got type %s" % str(typ)
+            f"Multiple models only supported for type I. Got type {typ!s}"
         )
 
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
     n_models = len(args)
-    pr_test = "Pr(>%s)" % test
+    pr_test = f"Pr(>{test})"
     names = ["df_resid", "ssr", "df_diff", "ss_diff", test, pr_test]
     table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
@@ -614,8 +614,8 @@ class AnovaRM:
         y = self.data[self.depvar].values
 
         # Construct OLS endog and exog from string using patsy
-        within = ["C(%s, Sum)" % i for i in self.within]
-        subject = "C(%s, Sum)" % self.subject
+        within = [f"C({i}, Sum)" for i in self.within]
+        subject = f"C({self.subject}, Sum)"
         factors = [*within, subject]
         mgr = FormulaManager()
         x = mgr.get_matrices("*".join(factors), data=self.data, pandas=False)

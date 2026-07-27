@@ -258,7 +258,7 @@ def multipletests(
             pvals, alpha=alpha, method="bh", maxiter=maxiter, is_sorted=True
         )[:2]
 
-    elif method.lower() in ["fdr_gbs"]:
+    elif method.lower() == "fdr_gbs":
         # adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
         #        notreject = pvals > alphaf / np.arange(ntests, 0, -1) # alphacSidak
         #        notrejectmin = np.min(np.nonzero(notreject))

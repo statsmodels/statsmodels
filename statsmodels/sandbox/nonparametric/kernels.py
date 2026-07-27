@@ -282,7 +282,7 @@ class CustomKernel:
         if len(xs) > 0:
             w = np.sum(self((xs - x) / self.h))
             # TODO: change the below to broadcasting when shape is sorted
-            v = np.sum([yy * self((xx - x) / self.h) for xx, yy in zip(xs, ys)])
+            v = np.sum([yy * self((xx - x) / self.h) for xx, yy in zip(xs, ys, strict=True)])
             return v / w
         else:
             return np.nan
@@ -295,7 +295,7 @@ class CustomKernel:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square(subtract(ys, fittedvals))
             w = np.sum(self((xs - x) / self.h))
-            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid)])
+            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid, strict=True)])
             return v / w
         else:
             return np.nan
@@ -310,7 +310,7 @@ class CustomKernel:
             sqresid = square(subtract(ys, fittedvals))
             w = np.sum(self((xs - x) / self.h))
             # var = sqresid.sum() / (len(sqresid) - 0)  # nonlocal var ? JP just trying
-            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid)])
+            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid, strict=True)])
             var = v / w
             sd = np.sqrt(var)
             K = self.L2Norm

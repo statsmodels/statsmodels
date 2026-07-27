@@ -90,7 +90,7 @@ class Pca:
         xl, xu = plt.xlim()
         yl, yu = plt.ylim()
         dx, dy = (xu - xl), (yu - yl)
-        for val, vec, c in zip(vals, evs.T, self._colors):
+        for val, vec, c in zip(vals, evs.T, self._colors, strict=True):
             plt.arrow(
                 0,
                 0,

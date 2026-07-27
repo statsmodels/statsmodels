@@ -284,7 +284,7 @@ class DescrStatsW:
                 rslt.append(self._quantile(vec, probs))
             rslt = np.column_stack(rslt)
             if return_pandas:
-                columns = ["col%d" % (j + 1) for j in range(rslt.shape[1])]
+                columns = [f"col{j + 1:d}" for j in range(rslt.shape[1])]
                 rslt = pd.DataFrame(data=rslt, columns=columns, index=probs)
 
         if return_pandas:
@@ -968,7 +968,7 @@ class CompareMeans:
 
         title = "Test for equality of means"
         yname = "y"  # not used in params_frame
-        xname = ["subset #%d" % (ii + 1) for ii in range(tstat.shape[0])]
+        xname = [f"subset #{ii + 1:d}" for ii in range(tstat.shape[0])]
 
         from statsmodels.iolib.summary import summary_params
 

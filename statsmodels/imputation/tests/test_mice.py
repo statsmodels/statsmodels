@@ -51,7 +51,7 @@ def gendat():
     endog = exog.sum(1) + gen.normal(size=n)
 
     df = pd.DataFrame(exog)
-    df.columns = ["x%d" % k for k in range(1, p + 1)]
+    df.columns = [f"x{k:d}" for k in range(1, p + 1)]
 
     df["y"] = endog
 
@@ -257,9 +257,9 @@ class TestMICEData:
                     isinstance(imp_data.results["x3"], GLMResultsWrapper), True
                 )
             else:
-                assert_equal(isinstance(imp_data.models["x%d" % j], sm.OLS), True)
+                assert_equal(isinstance(imp_data.models[f"x{j:d}"], sm.OLS), True)
                 assert_equal(
-                    isinstance(imp_data.results["x%d" % j], RegressionResultsWrapper),
+                    isinstance(imp_data.results[f"x{j:d}"], RegressionResultsWrapper),
                     True,
                 )
 

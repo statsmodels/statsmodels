@@ -564,7 +564,7 @@ class DistributedModel:
 
         else:
             raise ValueError(
-                "parallel_method: %s is currently not supported" % parallel_method
+                f"parallel_method: {parallel_method} is currently not supported"
             )
 
         params = self.join_method(results_l, **self.join_kwds)
@@ -613,7 +613,7 @@ class DistributedModel:
 
         else:
 
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
 
             for pnum, ((endog, exog), init_kwds_e) in tup_gen:
 
@@ -670,14 +670,14 @@ class DistributedModel:
                 )
 
         elif parallel_backend is None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
             results_l = par(
                 f(self, pnum, endog, exog, fit_kwds, init_kwds)
                 for pnum, ((endog, exog), init_kwds) in tup_gen
             )
 
         elif parallel_backend is not None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
             with parallel_backend:
                 results_l = par(
                     f(self, pnum, endog, exog, fit_kwds, init_kwds)

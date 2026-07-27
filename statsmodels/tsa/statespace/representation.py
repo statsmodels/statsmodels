@@ -394,7 +394,7 @@ class Representation:
         # If only a string is given then we must be getting an entire matrix
         if _type is str:
             if key not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key)
+                raise IndexError(f'"{key}" is an invalid state space matrix name')
             matrix = getattr(self, "_" + key)
 
             # See note on time-varying arrays, below
@@ -406,7 +406,7 @@ class Representation:
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % name)
+                raise IndexError(f'"{name}" is an invalid state space matrix name')
 
             matrix = getattr(self, "_" + name)
 
@@ -431,14 +431,14 @@ class Representation:
         # If only a string is given then we must be setting an entire matrix
         if _type is str:
             if key not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key)
+                raise IndexError(f'"{key}" is an invalid state space matrix name')
             setattr(self, key, value)
         # If it's a tuple (with a string as the first element) then we must be
         # setting a slice of a matrix
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key[0])
+                raise IndexError(f'"{key[0]}" is an invalid state space matrix name')
 
             # Change the dtype of the corresponding matrix
             dtype = np.array(value).dtype
@@ -491,7 +491,7 @@ class Representation:
                 kwargs[key] = val
             if kwargs[key] != val:
                 raise ValueError(
-                    "Cannot change the dimension of %s when cloning." % key
+                    f"Cannot change the dimension of {key} when cloning."
                 )
 
         # Get defaults for time-invariant system matrices, if not otherwise
@@ -505,9 +505,9 @@ class Representation:
                 mat = getattr(self, name)
                 if mat.shape[-1] != 1:
                     raise ValueError(
-                        "The `%s` matrix is time-varying. Cloning"
+                        f"The `{name}` matrix is time-varying. Cloning"
                         " this model requires specifying an"
-                        " updated matrix." % name
+                        " updated matrix."
                     )
                 kwargs[name] = mat
 
@@ -715,8 +715,8 @@ class Representation:
         endog = self.endog.T
         if len(new_endog) < len(endog):
             raise ValueError(
-                "Given data (length %d) is too short to diff"
-                " against model data (length %d)." % (len(new_endog), len(endog))
+                f"Given data (length {len(new_endog):d}) is too short to diff"
+                f" against model data (length {len(endog):d})."
             )
         if len(new_endog) > len(endog):
             nobs_append = len(new_endog) - len(endog)
@@ -732,8 +732,8 @@ class Representation:
         is_new = existing_nan & ~new_nan
         is_revision[is_new] = False
 
-        revision_ix = list(zip(*np.where(is_revision)))
-        new_ix = list(zip(*np.where(is_new)))
+        revision_ix = list(zip(*np.where(is_revision), strict=True))
+        new_ix = list(zip(*np.where(is_new), strict=True))
 
         return revision_ix, new_ix
 
@@ -976,13 +976,12 @@ class Representation:
         if not constant.shape == (self.k_states,):
             raise ValueError(
                 "Invalid dimensions for constant state vector."
-                " Requires shape (%d,), got %s" % (self.k_states, str(constant.shape))
+                f" Requires shape ({self.k_states:d},), got {constant.shape!s}"
             )
         if not stationary_cov.shape == (self.k_states, self.k_states):
             raise ValueError(
                 "Invalid dimensions for stationary covariance"
-                " matrix. Requires shape (%d,%d), got %s"
-                % (self.k_states, self.k_states, str(stationary_cov.shape))
+                f" matrix. Requires shape ({self.k_states:d},{self.k_states:d}), got {stationary_cov.shape!s}"
             )
 
         self.initialize("known", constant=constant, stationary_cov=stationary_cov)

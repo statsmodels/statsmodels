@@ -559,6 +559,6 @@ def test_get_term_name_alt(engine, data):
     terms = model_spec.terms[:]  # copy
     names = ("Intercept",) if engine == "patsy" else ("1",)
     names += ("c", "x", "z")
-    for term, name in zip(terms, names):
+    for term, name in zip(terms, names, strict=True):
         term_name = mgr.get_term_name(term)
         assert term_name == name, (terms, names)

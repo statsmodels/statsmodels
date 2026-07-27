@@ -26,14 +26,14 @@ def get_griliches76_data():
     griliches76_data = pd.read_stata(path)
 
     # create year dummies
-    years = griliches76_data["year"].unique()
+    years = griliches76_data["year"].unique().astype(int)
     N = griliches76_data.shape[0]
 
     for yr in years:
-        griliches76_data["D_%i" % yr] = np.zeros(N)
+        griliches76_data[f"D_{yr:d}"] = np.zeros(N)
         for i in range(N):
             if griliches76_data.loc[griliches76_data.index[i], "year"] == yr:
-                griliches76_data.loc[griliches76_data.index[i], "D_%i" % yr] = 1
+                griliches76_data.loc[griliches76_data.index[i], f"D_{yr:d}"] = 1
             else:
                 pass
 
@@ -1108,7 +1108,7 @@ def test_gmm_basic():
     )
     summ = res.summary()
     assert_equal(len(summ.tables[1]), len(res.params) + 1)
-    pnames = ["p%2d" % i for i in range(len(res.params))]
+    pnames = [f"p{i:2d}" for i in range(len(res.params))]
     assert_equal(res.model.exog_names, pnames)
 
     # check set_param_names method

@@ -26,7 +26,7 @@ class CheckPredictReturns:
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
         # plain dict
-        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T))
+        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T, strict=True))
         with pytest.warns(DeprecationWarning, match="Using"):
             pred = res.predict(xd)
         assert_equal(pred.index, np.arange(len(pred)))
@@ -97,7 +97,7 @@ class TestPredictOLS(CheckPredictReturns):
         rs = np.random.RandomState(987128)
         x = rs.randn(nobs, 3)
         y = x.sum(1) + rs.randn(nobs)
-        index = ["obs%02d" % i for i in range(nobs)]
+        index = [f"obs{i:02d}" for i in range(nobs)]
         # add one extra column to check that it does not matter
         cls.data = pd.DataFrame(
             np.round(np.column_stack((y, x)), 4),
@@ -116,7 +116,7 @@ class TestPredictGLM(CheckPredictReturns):
         rs = np.random.RandomState(987128)
         x = rs.randn(nobs, 3)
         y = x.sum(1) + rs.randn(nobs)
-        index = ["obs%02d" % i for i in range(nobs)]
+        index = [f"obs{i:02d}" for i in range(nobs)]
         # add one extra column to check that it does not matter
         cls.data = pd.DataFrame(
             np.round(np.column_stack((y, x)), 4),
@@ -139,7 +139,7 @@ class TestPredictGLM(CheckPredictReturns):
         assert_allclose(pred.values, fitted.values, rtol=1e-13)
 
         # plain dict
-        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T))
+        xd = dict(zip(data.columns, data.iloc[1:10:2].values.T, strict=True))
         with pytest.warns(DeprecationWarning, match="Using"):
             pred = res.predict(xd, offset=offset)
         assert_equal(pred.index, np.arange(len(pred)))

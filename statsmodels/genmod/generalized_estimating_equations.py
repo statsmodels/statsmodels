@@ -60,7 +60,7 @@ from statsmodels.graphics._regressionplots_doc import (
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -701,6 +701,7 @@ class GEE(GLM):
     # Override to allow groups and time to be passed as variable
     # names.
     @classmethod
+    @Substitution(missing_param_doc=base._missing_param_doc)
     def from_formula(
         cls,
         formula,
@@ -777,9 +778,7 @@ class GEE(GLM):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-        """.format(
-            missing_param_doc=base._missing_param_doc
-        )
+        """
 
         groups_name = "Groups"
         if isinstance(groups, str):
@@ -2226,9 +2225,9 @@ class GEEResults(GLMResults):
             ("No. clusters:", [len(self.model.endog_li)]),
             ("Min. cluster size:", [min(NY)]),
             ("Max. cluster size:", [max(NY)]),
-            ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-            ("Num. iterations:", ["%d" % len(self.fit_history["params"])]),
-            ("Scale:", ["%.3f" % self.scale]),
+            ("Mean cluster size:", [f"{np.mean(NY):.1f}"]),
+            ("Num. iterations:", ["{:d}".format(len(self.fit_history["params"]))]),
+            ("Scale:", [f"{self.scale:.3f}"]),
             ("Time:", None),
         ]
 
@@ -2239,13 +2238,13 @@ class GEEResults(GLMResults):
         kurt2 = stats.kurtosis(self.centered_resid)
 
         diagn_left = [
-            ("Skew:", ["%12.4f" % skew1]),
-            ("Centered skew:", ["%12.4f" % skew2]),
+            ("Skew:", [f"{skew1:12.4f}"]),
+            ("Centered skew:", [f"{skew2:12.4f}"]),
         ]
 
         diagn_right = [
-            ("Kurtosis:", ["%12.4f" % kurt1]),
-            ("Centered kurtosis:", ["%12.4f" % kurt2]),
+            ("Kurtosis:", [f"{kurt1:12.4f}"]),
+            ("Centered kurtosis:", [f"{kurt2:12.4f}"]),
         ]
 
         if title is None:
@@ -2383,7 +2382,7 @@ class GEEResults(GLMResults):
         # All within-group pairwise time distances (xdt) and the
         # corresponding products of scaled residuals (xre).
         xre, xdt = [], []
-        for re, ti in zip(resid, time):
+        for re, ti in zip(resid, time, strict=True):
             ix = np.tril_indices(re.shape[0], 0)
             re = re[ix[0]] * re[ix[1]] / self.scale**2
             xre.append(re)
@@ -2581,7 +2580,7 @@ class OrdinalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset)
+        zipper = zip(exog, endog, groups, time, offset, strict=True)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2598,11 +2597,11 @@ class OrdinalGEE(GEE):
         exog_out = np.concatenate((intercepts, exog_out), axis=1)
 
         # exog column names, including intercepts
-        xnames = ["I(y>%.1f)" % v for v in endog_cuts]
+        xnames = [f"I(y>{v:.1f})" for v in endog_cuts]
         if type(self.exog_orig) is pd.DataFrame:
             xnames.extend(self.exog_orig.columns)
         else:
-            xnames.extend(["x%d" % k for k in range(1, exog.shape[1] + 1)])
+            xnames.extend([f"x{k:d}" for k in range(1, exog.shape[1] + 1)])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve the endog name if there is one
@@ -2723,7 +2722,7 @@ class OrdinalGEEResults(GEEResults):
 
             for k in ev.keys():
                 if k not in self.model.exog_names:
-                    raise ValueError("%s is not a variable in the model" % k)
+                    raise ValueError(f"{k} is not a variable in the model")
 
             # Get the fitted probability for each level, at the given
             # covariate values.
@@ -2924,7 +2923,7 @@ class NominalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset)
+        zipper = zip(exog, endog, groups, time, offset, strict=True)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2943,7 +2942,7 @@ class NominalGEE(GEE):
         if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
-            xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
+            xnames_in = [f"x{k:d}" for k in range(1, exog.shape[1] + 1)]
         xnames = []
         for tr in endog_cuts:
             xnames.extend([f"{v}[{tr:.1f}]" for v in xnames_in])
@@ -3169,7 +3168,7 @@ class NominalGEEResults(GEEResults):
 
             for k in ev.keys():
                 if k not in exog_names:
-                    raise ValueError("%s is not a variable in the model" % k)
+                    raise ValueError(f"{k} is not a variable in the model")
 
                 ii = exog_names.index(k)
                 exog[ii] = ev[k]
@@ -3459,7 +3458,7 @@ class GEEMargins:
                     "std err",
                     "z",
                     "P>|z|",
-                    "[%3.1f%% Conf. Int.]" % (100 - alpha * 100),
+                    f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
                 ]
                 tble.insert_header_row(0, header)
                 # from IPython.core.debugger import Pdb; Pdb().set_trace()
@@ -3482,7 +3481,7 @@ class GEEMargins:
                 "std err",
                 "z",
                 "P>|z|",
-                "[%3.1f%% Conf. Int.]" % (100 - alpha * 100),
+                f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
             ]
             table.insert_header_row(0, header)
 

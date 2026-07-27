@@ -78,9 +78,9 @@ def _int_ifclose(x, dec=1, width=4):
     """
     xint = round(x)
     if np.max(np.abs(xint - x)) < 1e-14:
-        return xint, "%4d" % xint
+        return xint, f"{xint:4d}"
     else:
-        return x, "%4.1f" % x
+        return x, f"{x:4.1f}"
 
 
 def aggregate_raters(data, n_cat=None):

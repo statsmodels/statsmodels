@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
-
 import numpy as np
 from numpy.linalg import LinAlgError
 import pandas as pd
@@ -14,7 +12,7 @@ from statsmodels.tools.validation import (
     string_like,
 )
 
-ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
+ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
@@ -132,7 +130,7 @@ def arma_order_select_ic(
 
     dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
 
-    res = dict(zip(ic, dfs))
+    res = dict(zip(ic, dfs, strict=True))
 
     # add the minimums to the results dict
     min_res = {}

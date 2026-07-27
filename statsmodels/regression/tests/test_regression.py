@@ -150,7 +150,7 @@ class CheckRegressionResults:
             self.res1.mse_total,
             self.res2.mse_total,
             self.decimal_mse_total,
-            err_msg="Test class %s" % self,
+            err_msg=f"Test class {self}",
         )
 
     decimal_fvalue = DECIMAL_4

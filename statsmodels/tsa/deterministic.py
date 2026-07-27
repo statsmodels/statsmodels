@@ -10,7 +10,7 @@ from statsmodels.compat.pandas import (
 
 from abc import ABC, abstractmethod
 import datetime as dt
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -29,8 +29,8 @@ from statsmodels.tsa.tsatools import freq_to_period
 if TYPE_CHECKING:
     from collections.abc import Hashable, Sequence
 
-DateLike = Union[dt.datetime, pd.Timestamp, np.datetime64]
-IntLike = Union[int, np.integer]
+DateLike = dt.datetime | pd.Timestamp | np.datetime64
+IntLike = int | np.integer
 
 
 START_BEFORE_INDEX_ERR = """\
@@ -174,7 +174,7 @@ class DeterministicTerm(ABC):
             oth_attr = other._eq_attr
             if len(own_attr) != len(oth_attr):
                 return False
-            return all(a == b for a, b in zip(own_attr, oth_attr))
+            return all(a == b for a, b in zip(own_attr, oth_attr, strict=True))
         else:
             return False
 
@@ -394,7 +394,7 @@ class Seasonality(DeterministicTerm):
             freq = index.freq
         elif isinstance(index, pd.DatetimeIndex):
             with _infer_freq_returns_offset():
-                freq = index.freq if index.freq else index.inferred_freq
+                freq = index.freq or index.inferred_freq
         else:
             raise TypeError("index must be a DatetimeIndex or PeriodIndex")
         if freq is None:
@@ -1419,7 +1419,7 @@ support extension. Only PeriodIndex, DatetimeIndex with a frequency, \
 RangeIndex, and integral Indexes that start at 0 and have only unit \
 differences can be extended when producing out-of-sample forecasts.
 """)
-        if type(self._index) in (pd.RangeIndex,) or is_int_index(self._index):
+        if type(self._index) is pd.RangeIndex or is_int_index(self._index):
             start = required_int_like(start, "start")
             stop = required_int_like(stop, "stop")
             # Add 1 to ensure that the end point is inclusive

@@ -912,7 +912,7 @@ def plot_survfunc(survfuncs, ax=None):
             surv_times = np.concatenate((surv_times, [mxt]))
             surv_prob = np.concatenate((surv_prob, [surv_prob[-1]]))
 
-        label = getattr(sf, "title", "Group %d" % (gx + 1))
+        label = getattr(sf, "title", f"Group {gx + 1:d}")
 
         li, = ax.step(surv_times, surv_prob, "-", label=label, lw=2,
                       where="post")

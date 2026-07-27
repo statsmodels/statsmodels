@@ -260,7 +260,7 @@ def isestimable(c, d):
     d = array_like(d, "d", ndim=2)
     c = c[None, :] if c.ndim == 1 else c
     if c.shape[1] != d.shape[1]:
-        raise ValueError("Contrast should have %d columns" % d.shape[1])
+        raise ValueError(f"Contrast should have {d.shape[1]:d} columns")
     new = np.vstack([c, d])
     if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(d):
         return False

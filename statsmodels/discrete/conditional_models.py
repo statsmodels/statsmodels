@@ -143,9 +143,9 @@ class _ConditionalModel(base.LikelihoodModel):
         crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
         crslt._group_stats = [
-            "%d" % min(self._groupsize),
-            "%d" % max(self._groupsize),
-            "%.1f" % np.mean(self._groupsize),
+            f"{min(self._groupsize):d}",
+            f"{max(self._groupsize):d}",
+            f"{np.mean(self._groupsize):.1f}",
         ]
         rslt = ConditionalResultsWrapper(crslt)
         return rslt

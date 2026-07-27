@@ -264,8 +264,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
         chis,
         pval,
         (pval > alpha),
-        "chisquare - test for %s"
-        "at arg = %s with pval = %s" % (msg, str(arg), str(pval)),
+        f"chisquare - test for {msg} at arg = {arg!s} with pval = {pval!s}",
     )
 
 

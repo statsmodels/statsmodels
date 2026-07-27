@@ -34,15 +34,15 @@ args = {"method": "bfgs", "disp": 0}
 
 def get_results(n, p, ext, ties):
     if ext is None:
-        coef_name = "coef_%d_%d_%s" % (n, p, ties)
-        se_name = "se_%d_%d_%s" % (n, p, ties)
-        time_name = "time_%d_%d_%s" % (n, p, ties)
-        hazard_name = "hazard_%d_%d_%s" % (n, p, ties)
+        coef_name = f"coef_{n:d}_{p:d}_{ties}"
+        se_name = f"se_{n:d}_{p:d}_{ties}"
+        time_name = f"time_{n:d}_{p:d}_{ties}"
+        hazard_name = f"hazard_{n:d}_{p:d}_{ties}"
     else:
-        coef_name = "coef_%d_%d_%s_%s" % (n, p, ext, ties)
-        se_name = "se_%d_%d_%s_%s" % (n, p, ext, ties)
-        time_name = "time_%d_%d_%s_%s" % (n, p, ext, ties)
-        hazard_name = "hazard_%d_%d_%s_%s" % (n, p, ext, ties)
+        coef_name = f"coef_{n:d}_{p:d}_{ext}_{ties}"
+        se_name = f"se_{n:d}_{p:d}_{ext}_{ties}"
+        time_name = f"time_{n:d}_{p:d}_{ext}_{ties}"
+        hazard_name = f"hazard_{n:d}_{p:d}_{ext}_{ties}"
     coef = getattr(survival_r_results, coef_name)
     se = getattr(survival_r_results, se_name)
     time = getattr(survival_r_results, time_name)
@@ -406,10 +406,10 @@ class TestPHReg:
             # Penalty weights
             for js, s in enumerate([0, 0.1]):
 
-                coef_name = "coef_%d_%d_%d" % (n, p, js)
+                coef_name = f"coef_{n:d}_{p:d}_{js:d}"
                 params = getattr(survival_enet_r_results, coef_name)
 
-                fname = "survival_data_%d_%d.csv" % (n, p)
+                fname = f"survival_data_{n:d}_{p:d}.csv"
                 time, status, entry, exog = self.load_file(fname)
 
                 exog -= exog.mean(0)

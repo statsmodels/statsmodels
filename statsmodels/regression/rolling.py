@@ -412,9 +412,9 @@ class RollingWLS:
         if (endog.ndim > 1 and endog.shape[1] > 1) or endog.ndim > 2:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {}. This occurs when "
+                f"columns that has shape {endog.shape}. This occurs when "
                 "the variable converted to endog is non-numeric"
-                " (e.g., bool or str).".format(endog.shape)
+                " (e.g., bool or str)."
             )
 
         kwargs.update({"missing": missing, "window": window})
@@ -720,7 +720,7 @@ class RollingRegressionResults:
             cols = np.asarray(cols)
             lower = lower[:, cols]
             upper = upper[:, cols]
-        return np.asarray(list(zip(lower, upper)))
+        return np.asarray(list(zip(lower, upper, strict=True)))
 
     @Appender(LikelihoodModelResults.conf_int.__doc__)
     def conf_int(self, alpha=0.05, cols=None):

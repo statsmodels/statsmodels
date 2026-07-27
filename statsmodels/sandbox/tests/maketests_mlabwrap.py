@@ -132,8 +132,8 @@ class HoldIt:
             txt = []
 
         if useinstant:
-            txt.append("%s = Holder()" % self.name)
-            prefix = "%s." % self.name
+            txt.append(f"{self.name} = Holder()")
+            prefix = f"{self.name}."
         else:
             prefix = ""
 

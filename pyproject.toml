@@ -134,7 +134,9 @@ setup = ['--vsenv']
 [tool.ruff]
 line-length = 88
 fix = false
-target-version = "py39"
+# Matches requires-python (>=3.10) and [tool.black]'s target-version below;
+# also affects which pyupgrade (UP) rules apply.
+target-version = "py310"
 # archive/ is explicitly documented (archive/README) as deprecated, no
 # longer maintained legacy code; excluded so it's not linted as if it
 # were part of the active codebase.
@@ -206,6 +208,8 @@ select = [
   "S",
   # isort
   "I",
+  # pyupgrade
+  "UP",
 ]
 
 # pydocstyle ("D") is intentionally NOT selected above. This project already
@@ -273,7 +277,6 @@ ignore = [
   # Too many places without match= in pytest raises
   # Would be goot enforce eventually
   "PT011", # 511
-  "RUF013", # Enable when Py 3.10 is min
   "RUF059", # 319
   "PERF401", # 53
   # collection-literal-concatenation
@@ -282,8 +285,6 @@ ignore = [
   "RUF012", #  178
   # repeated-equality-comparison
   "PLR1714", # 28
-  # Object does not implement `__hash__` method
-  "PLW1641", # 2
 
   ### New 2026-07-27 when enabling ASYNC, EXE, G, LOG, FURB, S, full ICN
   # assert is used pervasively outside of tests in this codebase (input
@@ -302,16 +303,6 @@ ignore = [
   # of dev/CI helper scripts, not on untrusted input
   "S602", # 2
   "S603", # 2
-  # logging-format: only a couple of stray f-string/%.format() log calls
-  "G001", # 1
-  "G004", # 2
-  # root-logger-call
-  "LOG015", # 3
-  # refurb style suggestions not yet applied everywhere
-  "FURB105", # 7
-  "FURB110", # 7
-  "FURB122", # 4
-  "FURB171", # 31
 ]
 
 [tool.ruff.lint.isort]

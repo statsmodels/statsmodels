@@ -602,10 +602,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
-            zip(self._internal_param_names, np.arange(self._k_params_internal))
+            zip(self._internal_param_names, np.arange(self._k_params_internal), strict=True)
         )
         self._params_index = OrderedDict(
-            zip(self.param_names, np.arange(self.k_params))
+            zip(self.param_names, np.arange(self.k_params), strict=True)
         )
 
     def set_bounds(self, bounds):
@@ -1355,7 +1355,7 @@ class ETSResults(base.StateSpaceMLEResults):
         for attr in model_definition_attrs:
             setattr(self, attr, getattr(model, attr))
         self.param_names = [
-            "%s (fixed)" % name if name in self.fixed_params else name
+            f"{name} (fixed)" if name in self.fixed_params else name
             for name in (self.model.param_names or [])
         ]
 
@@ -1842,7 +1842,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # Wrap data / squeeze where appropriate
         if repetitions > 1:
-            names = ["simulation.%d" % num for num in range(repetitions)]
+            names = [f"simulation.{num:d}" for num in range(repetitions)]
         else:
             names = "simulation"
         return self.model._wrap_data(
@@ -2113,7 +2113,7 @@ class ETSResults(base.StateSpaceMLEResults):
                 params = params[0]
             names = self.model.initial_state_names
             param_header = [
-                "initialization method: %s" % self.model.initialization_method
+                f"initialization method: {self.model.initialization_method}"
             ]
             params_stubs = names
             params_data = [[forg(params[i], prec=4)] for i in range(len(params))]

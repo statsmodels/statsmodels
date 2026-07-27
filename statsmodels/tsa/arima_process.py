@@ -898,9 +898,7 @@ class ArmaProcess:
         )
 
     def __str__(self):
-        return "ArmaProcess\nAR: {}\nMA: {}".format(
-            self.ar.tolist(), self.ma.tolist()
-        )
+        return f"ArmaProcess\nAR: {self.ar.tolist()}\nMA: {self.ma.tolist()}"
 
     @Appender(remove_parameters(arma_acovf.__doc__, ["ar", "ma", "sigma2"]))
     def acovf(self, nobs=None):

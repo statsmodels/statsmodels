@@ -122,7 +122,7 @@ if "ex1" in examples:
     print("mean from fixed effects   ", m.params[-2:])
     print("mean of estimated RE      ", b_re.mean(0))
 
-    print("")
+    print()
     absmean_true = np.abs(gamma_re_true).mean(0)
     mape = ((m.params[-2:] + b_re) / gamma_re_true - 1).mean(0) * 100
     mean_abs_perc = (

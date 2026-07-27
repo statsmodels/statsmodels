@@ -38,7 +38,7 @@ def test_rate_poisson_consistency(method):
     pv2 = smr.test_poisson(count, nobs, value=ci[1], method=method).pvalue
 
     rtol = 1e-10
-    if method in ["midp-c"]:
+    if method == "midp-c":
         # numerical root finding, lower precision
         rtol = 1e-6
     assert_allclose(pv1, 0.05, rtol=rtol)
@@ -138,7 +138,7 @@ def test_tol_int(case):
     assert_equal(ti, rs)
 
     # check without parameter uncertainty, confint at alpha=1
-    if meth not in ["exact-c"]:
+    if meth != "exact-c":
         # confint for "exact-c" does not collapse to point if alpha=1, check
         ti = tolerance_int_poisson(
             count, exposure, prob, exposure_new=exposure_new,
@@ -175,7 +175,7 @@ def test_tol_int(case):
     assert_equal(ciq[0], rs[0])
 
 
-class TestMethodsCompar1samp():
+class TestMethodsCompar1samp:
     # check that all methods for test and confint produce similar results
 
     @pytest.mark.parametrize("meth", method_names_poisson_1samp["test"])
@@ -212,7 +212,7 @@ def test_rate_poisson_diff_consistency(method):
                                   method=method, compare="diff").pvalue
 
     rtol = 1e-10
-    if method in ["score"]:
+    if method == "score":
         # numerical root finding, lower precision
         rtol = 1e-6
     assert_allclose(pv1, 0.05, rtol=rtol)
@@ -679,7 +679,7 @@ def test_alternative(case):
     assert_allclose(pv, cases_alt[case], rtol=1e-13)
 
 
-class TestMethodsCompare2indep():
+class TestMethodsCompare2indep:
     # check that all methods for test and confint produce similar results
 
     @pytest.mark.parametrize(

@@ -492,8 +492,8 @@ class QIFResults(base.LikelihoodModelResults):
                      ("No. clusters:", [len(NY)]),
                      ("Min. cluster size:", [min(NY)]),
                      ("Max. cluster size:", [max(NY)]),
-                     ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-                     ("Scale:", ["%.3f" % self.scale]),
+                     ("Mean cluster size:", [f"{np.mean(NY):.1f}"]),
+                     ("Scale:", [f"{self.scale:.3f}"]),
                      ]
 
         if title is None:

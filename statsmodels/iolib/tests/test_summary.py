@@ -51,7 +51,7 @@ class TestSummaryLatex:
         reg = OLS(y, x).fit()
 
         actual = reg.summary().tables[1]._repr_latex_()
-        actual = "\n%s\n" % actual
+        actual = f"\n{actual}\n"
         assert_equal(actual, desired)
 
 

@@ -743,7 +743,7 @@ class MixedLM(base.LikelihoodModel):
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError(
-                    "argument %s not permitted for MixedLM initialization" % x
+                    f"argument {x} not permitted for MixedLM initialization"
                 )
 
         self.use_sqrt = use_sqrt
@@ -867,7 +867,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Set the fixed effects parameter names
         if self.exog_names is None:
-            self.exog_names = ["FE%d" % (k + 1) for k in range(self.exog.shape[1])]
+            self.exog_names = [f"FE{k + 1:d}" for k in range(self.exog.shape[1])]
 
         # Precompute this
         self._aex_r = []
@@ -1491,7 +1491,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Quadratic terms for random effects covariance.
         ii = np.tril_indices(k_re)
-        ix = [(a, b) for a, b in zip(ii[0], ii[1])]
+        ix = [(a, b) for a, b in zip(ii[0], ii[1], strict=True)]
         for i1 in range(k_re2):
             for i2 in range(k_re2):
                 ix1 = ix[i1]
@@ -2312,8 +2312,7 @@ class MixedLM(base.LikelihoodModel):
         disallowed_kwargs = sorted(set(fit_kwargs).difference(_allowed_kwargs))
         if disallowed_kwargs:
             warnings.warn(
-                "Argument(s) %s not used by MixedLM.fit"
-                % ", ".join(disallowed_kwargs),
+                "Argument(s) {} not used by MixedLM.fit".format(", ".join(disallowed_kwargs)),
                 RuntimeWarning,
                 stacklevel=2,
             )
@@ -2327,7 +2326,7 @@ class MixedLM(base.LikelihoodModel):
 
         for meth in method:
             if meth.lower() in ["newton", "ncg"]:
-                raise ValueError("method %s not available for MixedLM" % meth)
+                raise ValueError(f"method {meth} not available for MixedLM")
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -2384,7 +2383,7 @@ class MixedLM(base.LikelihoodModel):
                 if j + 1 < len(method):
                     next_method = method[j + 1]
                     warnings.warn(
-                        "Retrying MixedLM optimization with %s" % next_method,
+                        f"Retrying MixedLM optimization with {next_method}",
                         ConvergenceWarning,
                         stacklevel=2,
                     )
@@ -2404,7 +2403,7 @@ class MixedLM(base.LikelihoodModel):
         if not converged:
             gn = self.score(rslt.params)
             gn = np.sqrt(np.sum(gn**2))
-            msg = "Gradient optimization failed, |grad| = %f" % gn
+            msg = f"Gradient optimization failed, |grad| = {gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         # Convert to the final parameterization (i.e. undo the square
@@ -2842,7 +2841,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         """
         if r_matrix.shape[1] != self.k_fe:
-            raise ValueError("r_matrix for t-test should have %d columns" % self.k_fe)
+            raise ValueError(f"r_matrix for t-test should have {self.k_fe:d} columns")
 
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
@@ -2894,13 +2893,13 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         if xname_fe is not None:
             if len(xname_fe) != k_fe_params:
-                msg = "xname_fe should be a list of length %d" % k_fe_params
+                msg = f"xname_fe should be a list of length {k_fe_params:d}"
                 raise ValueError(msg)
             param_names[:k_fe_params] = xname_fe
 
         if xname_re is not None:
             if len(xname_re) != k_re_params:
-                msg = "xname_re should be a list of length %d" % k_re_params
+                msg = f"xname_re should be a list of length {k_re_params:d}"
                 raise ValueError(msg)
             param_names[k_fe_params:] = xname_re
 
@@ -2908,9 +2907,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["No. Groups:"] = str(self.model.n_groups)
 
         gs = np.array([len(x) for x in self.model.endog_li])
-        info["Min. group size:"] = "%.0f" % min(gs)
-        info["Max. group size:"] = "%.0f" % max(gs)
-        info["Mean group size:"] = "%.1f" % np.mean(gs)
+        info["Min. group size:"] = f"{min(gs):.0f}"
+        info["Max. group size:"] = f"{max(gs):.0f}"
+        info["Mean group size:"] = f"{np.mean(gs):.1f}"
 
         info["Dependent Variable:"] = yname
         info["Method:"] = self.method

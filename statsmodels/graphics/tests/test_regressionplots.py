@@ -319,7 +319,7 @@ class TestAddedVariablePlot:
                         ti += "\nPoisson regression\n"
                         ti += effect_str + "\n"
                         ti += weight_str + "\n"
-                        ti += "Using '%s' residuals" % resid_type
+                        ti += f"Using '{resid_type}' residuals"
                         ax.set_title(ti)
                         close_or_save(pdf, fig)
                         close_figures()

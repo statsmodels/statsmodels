@@ -1510,29 +1510,27 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
     # Enforce dimension
     if ndim not in [2, 3]:
-        raise ValueError("Invalid value for %s matrix. Requires a"
-                         " 2- or 3-dimensional array, got %d dimensions" %
-                         (name, ndim))
+        raise ValueError(f"Invalid value for {name} matrix. Requires a"
+                         f" 2- or 3-dimensional array, got {ndim:d} dimensions")
     # Enforce the shape of the matrix
     if not shape[0] == nrows:
-        raise ValueError("Invalid dimensions for %s matrix: requires %d"
-                         " rows, got %d" % (name, nrows, shape[0]))
+        raise ValueError(f"Invalid dimensions for {name} matrix: requires {nrows:d}"
+                         f" rows, got {shape[0]:d}")
     if not shape[1] == ncols:
-        raise ValueError("Invalid dimensions for %s matrix: requires %d"
-                         " columns, got %d" % (name, ncols, shape[1]))
+        raise ValueError(f"Invalid dimensions for {name} matrix: requires {ncols:d}"
+                         f" columns, got {shape[1]:d}")
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
-        raise ValueError("Invalid dimensions for %s matrix: time-varying"
+        raise ValueError(f"Invalid dimensions for {name} matrix: time-varying"
                          " matrices cannot be given unless `nobs` is specified"
                          " (implicitly when a dataset is bound or else set"
-                         " explicity)" % name)
+                         " explicity)")
 
     # Enforce time-varying array size
     if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
-        raise ValueError("Invalid dimensions for time-varying %s"
-                         " matrix. Requires shape (*,*,%d), got %s" %
-                         (name, nobs, str(shape)))
+        raise ValueError(f"Invalid dimensions for time-varying {name}"
+                         f" matrix. Requires shape (*,*,{nobs:d}), got {shape!s}")
 
 
 def validate_vector_shape(name, shape, nrows, nobs):
@@ -1560,26 +1558,24 @@ def validate_vector_shape(name, shape, nrows, nobs):
     ndim = len(shape)
     # Enforce dimension
     if ndim not in [1, 2]:
-        raise ValueError("Invalid value for %s vector. Requires a"
-                         " 1- or 2-dimensional array, got %d dimensions" %
-                         (name, ndim))
+        raise ValueError(f"Invalid value for {name} vector. Requires a"
+                         f" 1- or 2-dimensional array, got {ndim:d} dimensions")
     # Enforce the shape of the vector
     if not shape[0] == nrows:
-        raise ValueError("Invalid dimensions for %s vector: requires %d"
-                         " rows, got %d" % (name, nrows, shape[0]))
+        raise ValueError(f"Invalid dimensions for {name} vector: requires {nrows:d}"
+                         f" rows, got {shape[0]:d}")
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
-        raise ValueError("Invalid dimensions for %s vector: time-varying"
+        raise ValueError(f"Invalid dimensions for {name} vector: time-varying"
                          " vectors cannot be given unless `nobs` is specified"
                          " (implicitly when a dataset is bound or else set"
-                         " explicity)" % name)
+                         " explicity)")
 
     # Enforce time-varying array size
     if ndim == 2 and shape[1] not in [1, nobs]:
-        raise ValueError("Invalid dimensions for time-varying %s"
-                         " vector. Requires shape (*,%d), got %s" %
-                         (name, nobs, str(shape)))
+        raise ValueError(f"Invalid dimensions for time-varying {name}"
+                         f" vector. Requires shape (*,{nobs:d}), got {shape!s}")
 
 
 def reorder_missing_matrix(matrix, missing, reorder_rows=False,

@@ -234,7 +234,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     ax.plot(x1, y, "bo", label=results.model.endog_names)
     if y_true is not None:
         ax.plot(x1, y_true[x1_argsort], "b-", label="True values")
-    title = "Fitted values versus %s" % exog_name
+    title = f"Fitted values versus {exog_name}"
 
     ax.plot(
         x1, results.fittedvalues[x1_argsort], "D", color="r", label="fitted", **kwargs
@@ -323,7 +323,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     ax = fig.add_subplot(2, 2, 2)
     ax.plot(x1, results.resid, "o")
     ax.axhline(y=0, color="black")
-    ax.set_title("Residuals versus %s" % exog_name, fontsize="large")
+    ax.set_title(f"Residuals versus {exog_name}", fontsize="large")
     ax.set_xlabel(exog_name)
     ax.set_ylabel("resid")
 
@@ -350,7 +350,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     # ax.set_xlabel(exog_name)
     # ax.set_ylabel("Fitted values + resids")
 
-    fig.suptitle("Regression Plots for %s" % exog_name, fontsize="large")
+    fig.suptitle(f"Regression Plots for {exog_name}", fontsize="large")
 
     fig.tight_layout()
 
@@ -506,8 +506,8 @@ def plot_partregress(
 
     if x_axis_endog_name == "y":  # for no names regression will just get a y
         x_axis_endog_name = "x"  # this is misleading, so use x
-    ax.set_xlabel("e(%s | X)" % x_axis_endog_name)
-    ax.set_ylabel("e(%s | X)" % y_axis_endog_name)
+    ax.set_xlabel(f"e({x_axis_endog_name} | X)")
+    ax.set_ylabel(f"e({y_axis_endog_name} | X)")
     ax.set_title("Partial Regression Plot", **title_kwargs)
 
     # NOTE: if we want to get super fancy, we could annotate if a point is
@@ -728,8 +728,8 @@ def plot_ccpr(results, exog_idx, ax=None):
     fig = abline_plot(*params, **dict(ax=ax))
     # ax.plot(x1, x1beta, '-')
     ax.set_title("Component and component plus residual plot")
-    ax.set_ylabel("Residual + %s*beta_%d" % (exog_name, exog_idx))
-    ax.set_xlabel("%s" % exog_name)
+    ax.set_ylabel(f"Residual + {exog_name}*beta_{exog_idx:d}")
+    ax.set_xlabel(f"{exog_name}")
 
     return fig
 
@@ -972,7 +972,7 @@ def _influence_plot(
     elif criterion.lower().startswith("dff"):
         psize = np.abs(infl.dffits[0])
     else:
-        raise ValueError("Criterion %s not understood" % criterion)
+        raise ValueError(f"Criterion {criterion} not understood")
 
     # scale the variables
     # TODO: what is the correct scaling and the assumption here?
@@ -1251,7 +1251,7 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
 
     if not isinstance(model, (GLM, GEE, OLS)):
         raise ValueError(
-            "ceres residuals not available for %s" % model.__class__.__name__
+            f"ceres residuals not available for {model.__class__.__name__}"
         )
 
     focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
@@ -1341,7 +1341,7 @@ def partial_resids(results, focus_exog):
     elif isinstance(model, (OLS, GLS, WLS)):
         pass  # No need to do anything
     else:
-        raise ValueError("Partial residuals for '%s' not implemented." % type(model))
+        raise ValueError(f"Partial residuals for '{type(model)}' not implemented.")
 
     if type(focus_exog) is str:
         focus_col = model.exog_names.index(focus_exog)
@@ -1398,8 +1398,7 @@ def added_variable_resids(
     model = results.model
     if not isinstance(model, (GEE, GLM, OLS)):
         raise ValueError(
-            "model type %s not supported for added variable residuals"
-            % model.__class__.__name__
+            f"model type {model.__class__.__name__} not supported for added variable residuals"
         )
 
     exog = model.exog
@@ -1438,7 +1437,7 @@ def added_variable_resids(
     try:
         endog_resid = getattr(new_result, resid_type)
     except AttributeError as exc:
-        raise ValueError("'%s' residual type not available" % resid_type) from exc
+        raise ValueError(f"'{resid_type}' residual type not available") from exc
 
     import statsmodels.regression.linear_model as lm
 

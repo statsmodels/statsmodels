@@ -108,9 +108,9 @@ def plot_loadings(loadings, col_names=None, row_names=None,
             for j in range(i + 1, n_factor):
                 loading_pairs.append([i, j])
     if col_names is None:
-        col_names = ["factor %d" % i for i in range(n_factor)]
+        col_names = [f"factor {i:d}" for i in range(n_factor)]
     if row_names is None:
-        row_names = ["var %d" % i for i in range(k_var)]
+        row_names = [f"var {i:d}" for i in range(k_var)]
     figs = []
     for item in loading_pairs:
         i = item[0]

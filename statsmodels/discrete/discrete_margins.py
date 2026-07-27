@@ -17,9 +17,9 @@ def _check_margeff_args(at, method):
     Checks valid options for margeff
     """
     if at not in ["overall", "mean", "median", "zero", "all"]:
-        raise ValueError("%s not a valid option for `at`." % at)
+        raise ValueError(f"{at} not a valid option for `at`.")
     if method not in ["dydx", "eyex", "dyex", "eydx"]:
-        raise ValueError("method is not understood.  Got %s" % method)
+        raise ValueError(f"method is not understood.  Got {method}")
 
 
 def _check_discrete_args(at, method):
@@ -27,9 +27,9 @@ def _check_discrete_args(at, method):
     Checks the arguments for margeff if the exogenous variables are discrete.
     """
     if method in ["dyex", "eyex"]:
-        raise ValueError("%s not allowed for discrete variables" % method)
+        raise ValueError(f"{method} not allowed for discrete variables")
     if at in ["median", "zero"]:
-        raise ValueError("%s not allowed for discrete variables" % at)
+        raise ValueError(f"{at} not allowed for discrete variables")
 
 
 def _get_const_index(exog):
@@ -521,7 +521,7 @@ class DiscreteMargins:
             ynames = np.repeat(yname_list, len(var_names))
             xnames = np.tile(var_names, len(yname_list))
             index = MultiIndex.from_tuples(
-                list(zip(ynames, xnames)), names=["endog", "exog"]
+                list(zip(ynames, xnames, strict=True)), names=["endog", "exog"]
             )
         else:
             table = np.column_stack(

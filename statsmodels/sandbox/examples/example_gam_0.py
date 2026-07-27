@@ -124,7 +124,7 @@ if example > 1:
     plt.title("gam.GAM " + mod_name)
 
     counter = 2
-    for ii, xx in zip(["z", "x1", "x2"], [z, x1, x2]):
+    for ii, xx in zip(["z", "x1", "x2"], [z, x1, x2], strict=True):
         sortidx = np.argsort(xx)
         # plt.figure()
         plt.subplot(2, 2, counter)

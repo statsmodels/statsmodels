@@ -408,7 +408,8 @@ class CheckStratifiedMixin:
         assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
 
     def test_pandas(self):
-
+        self.rslt_pandas.summary().as_text()
+        self.rslt.summary().as_text()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             assert_equal(

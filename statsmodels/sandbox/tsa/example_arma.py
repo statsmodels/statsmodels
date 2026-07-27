@@ -161,7 +161,7 @@ cases = [
 for c, args in cases:
 
     ar, ma = args
-    print("")
+    print()
     print(c, ar, ma)
     myacovf = arma_acovf(ar, ma, nobs=10)
     myacf = arma_acf(ar, ma, lags=10)
@@ -359,7 +359,7 @@ def pltxcorr(
         maxlags = Nx - 1
 
     if maxlags >= Nx or maxlags < 1:
-        raise ValueError("maxlags must be None or strictly positive < %d" % Nx)
+        raise ValueError(f"maxlags must be None or strictly positive < {Nx:d}")
 
     lags = np.arange(-maxlags, maxlags + 1)
     c = c[Nx - 1 - maxlags : Nx + maxlags]

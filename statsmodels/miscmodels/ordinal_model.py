@@ -6,6 +6,7 @@ License: BSD-3
 """
 
 
+from itertools import pairwise
 import warnings
 
 import numpy as np
@@ -253,9 +254,7 @@ class OrderedModel(GenericLikelihoodModel):
         else:  # no exog in model
             self.nobs, self.k_vars = self.endog.shape[0], 0
 
-        threshold_names = [
-            str(x) + "/" + str(y) for x, y in zip(labels[:-1], labels[1:])
-        ]
+        threshold_names = [str(x) + "/" + str(y) for x, y in pairwise(labels)]
 
         # from GenericLikelihoodModel.fit
         if self.exog is not None:

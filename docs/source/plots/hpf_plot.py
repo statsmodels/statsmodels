@@ -1,5 +1,5 @@
-from load_macrodata import dta
 import matplotlib.pyplot as plt
+from load_macrodata import dta
 
 import statsmodels.api as sm
 

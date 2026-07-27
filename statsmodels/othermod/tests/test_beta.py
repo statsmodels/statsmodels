@@ -177,7 +177,7 @@ class TestBetaModel:
         )
 
 
-class TestBetaMeth():
+class TestBetaMeth:
 
     @classmethod
     def setup_class(cls):
@@ -351,7 +351,7 @@ class TestBetaMeth():
         assert_allclose(dfmw, dfm6, rtol=1e-13)
 
 
-class TestBetaIncome():
+class TestBetaIncome:
 
     @classmethod
     def setup_class(cls):

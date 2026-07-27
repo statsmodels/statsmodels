@@ -103,7 +103,7 @@ def print_results(res):
 
     print("\nCheck for heteroscedasticity, ")
     print("variance and standard deviation for individual regressions")
-    print(" " * 12, " ".join("group %-10s" % (gr) for gr in res.unique))
+    print(" " * 12, " ".join(f"group {gr!s:<10}" for gr in res.unique))
     print("variance    ", res.sigmabygroup)
     print("standard dev", np.sqrt(res.sigmabygroup))
 

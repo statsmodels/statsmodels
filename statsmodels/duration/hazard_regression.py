@@ -219,7 +219,7 @@ class PHSurvivalTime:
             # uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
             uft_map = {x: i for i, x in enumerate(uft)}  # 2.6
             uft_ix = [[] for k in range(nuft)]
-            for ix, ti in zip(ift, ft):
+            for ix, ti in zip(ift, ft, strict=True):
                 uft_ix[uft_map[ti]].append(ix)
 
             # Indices of cases (failed or censored) that enter the
@@ -490,10 +490,7 @@ class PHReg(model.LikelihoodModel):
         # TODO process for missing values
         if groups is not None:
             if len(groups) != len(self.endog):
-                msg = "len(groups) = %d and len(endog) = %d differ" % (
-                    len(groups),
-                    len(self.endog),
-                )
+                msg = f"len(groups) = {len(groups):d} and len(endog) = {len(self.endog):d} differ"
                 raise ValueError(msg)
             self.groups = np.asarray(groups)
         else:
@@ -1356,7 +1353,7 @@ class PHReg(model.LikelihoodModel):
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
-            msg = "Type %s not allowed for prediction" % pred_type
+            msg = f"Type {pred_type} not allowed for prediction"
             raise ValueError(msg)
 
         class bunch:
@@ -1786,26 +1783,26 @@ class PHRegResults(base.LikelihoodModelResults):
 
         if self.groups is not None:
             mn, mx, avg, num = self._group_stats(self.groups)
-            info["Num groups:"] = "%.0f" % num
-            info["Min group size:"] = "%.0f" % mn
-            info["Max group size:"] = "%.0f" % mx
-            info["Avg group size:"] = "%.1f" % avg
+            info["Num groups:"] = f"{num:.0f}"
+            info["Min group size:"] = f"{mn:.0f}"
+            info["Max group size:"] = f"{mx:.0f}"
+            info["Avg group size:"] = f"{avg:.1f}"
 
         if self.model.strata is not None:
             mn, mx, avg, num = self._group_stats(self.model.strata)
-            info["Num strata:"] = "%.0f" % num
-            info["Min stratum size:"] = "%.0f" % mn
-            info["Max stratum size:"] = "%.0f" % mx
-            info["Avg stratum size:"] = "%.1f" % avg
+            info["Num strata:"] = f"{num:.0f}"
+            info["Min stratum size:"] = f"{mn:.0f}"
+            info["Max stratum size:"] = f"{mx:.0f}"
+            info["Avg stratum size:"] = f"{avg:.1f}"
 
         smry.add_dict(info, align="l", float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
         param = param.rename(columns={"Coef.": "log HR", "Std.Err.": "log HR SE"})
         param.insert(2, "HR", np.exp(param["log HR"]))
-        a = "[%.3f" % (alpha / 2)
+        a = f"[{alpha / 2:.3f}"
         param.loc[:, a] = np.exp(param.loc[:, a])
-        a = "%.3f]" % (1 - alpha / 2)
+        a = f"{1 - alpha / 2:.3f}]"
         param.loc[:, a] = np.exp(param.loc[:, a])
         if xname is not None:
             param.index = xname
@@ -1818,14 +1815,14 @@ class PHRegResults(base.LikelihoodModelResults):
             if dstrat == 1:
                 smry.add_text("1 stratum dropped for having no events")
             else:
-                smry.add_text("%d strata dropped for having no events" % dstrat)
+                smry.add_text(f"{dstrat:d} strata dropped for having no events")
 
         if self.model.entry is not None:
             n_entry = sum(self.model.entry != 0)
             if n_entry == 1:
                 smry.add_text("1 observation has a positive entry time")
             else:
-                smry.add_text("%d observations have positive entry times" % n_entry)
+                smry.add_text(f"{n_entry:d} observations have positive entry times")
 
         if self.groups is not None:
             smry.add_text("Standard errors account for dependence within groups")

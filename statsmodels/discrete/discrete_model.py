@@ -176,8 +176,8 @@ def _validate_l1_method(method):
     """
     if method not in ["l1", "l1_cvxopt_cp"]:
         raise ValueError(
-            "`method` = {method} is not supported, use either "
-            '"l1" or "l1_cvxopt_cp"'.format(method=method)
+            f"`method` = {method} is not supported, use either "
+            '"l1" or "l1_cvxopt_cp"'
         )
 
 
@@ -763,7 +763,7 @@ class MultinomialModel(BinaryModel):
             yname = "y"
 
         if not isinstance(ynames, dict):
-            ynames = dict(zip(range(endog_dummies.shape[1]), ynames))
+            ynames = dict(zip(range(endog_dummies.shape[1]), ynames, strict=True))
 
         self._ynames_map = ynames
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
@@ -2624,13 +2624,13 @@ class GeneralizedPoisson(CountModel):
 
 
 class Logit(BinaryModel):
-    __doc__ = """
+    __doc__ = f"""
     Logit Model
 
-    {params}
+    {base._model_params_doc}
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
-    {extra_params}
+    {base._missing_param_doc + _check_rank_doc}
 
     Attributes
     ----------
@@ -2638,10 +2638,7 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + _check_rank_doc,
-    )
+    """
 
     _continuous_ok = True
 
@@ -2932,13 +2929,13 @@ class Logit(BinaryModel):
 
 
 class Probit(BinaryModel):
-    __doc__ = """
+    __doc__ = f"""
     Probit Model
 
-    {params}
+    {base._model_params_doc}
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
-    {extra_params}
+    {base._missing_param_doc + _check_rank_doc}
 
     Attributes
     ----------
@@ -2946,10 +2943,7 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + _check_rank_doc,
-    )
+    """
 
     @cache_readonly
     def link(self):
@@ -3259,7 +3253,7 @@ class Probit(BinaryModel):
 
 
 class MNLogit(MultinomialModel):
-    __doc__ = """
+    __doc__ = f"""
     Multinomial Logit Model
 
     Parameters
@@ -3273,7 +3267,7 @@ class MNLogit(MultinomialModel):
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`.
-    {extra_params}
+    {base._missing_param_doc + _check_rank_doc}
 
     Attributes
     ----------
@@ -3299,7 +3293,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """.format(extra_params=base._missing_param_doc + _check_rank_doc)
+    """
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
@@ -4864,7 +4858,7 @@ class NegativeBinomialP(CountModel):
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(y_values, size[:, None], prob[:, None])
         else:
-            raise ValueError('keyword "which" = %s not recognized' % which)
+            raise ValueError(f'keyword "which" = {which} not recognized')
 
     def convert_params(self, params, mu):
         alpha = params[-1]
@@ -5460,17 +5454,17 @@ class DiscreteResults(base.LikelihoodModelResults):
             ("Method:", [self.method]),
             ("Date:", None),
             ("Time:", None),
-            ("converged:", ["%s" % self.mle_retvals["converged"]]),
+            ("converged:", ["{}".format(self.mle_retvals["converged"])]),
         ]
 
         top_right = [
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),
-            ("Pseudo R-squ.:", ["%#6.4g" % self.prsquared]),
+            ("Pseudo R-squ.:", [f"{self.prsquared:#6.4g}"]),
             ("Log-Likelihood:", None),
-            ("LL-Null:", ["%#8.5g" % self.llnull]),
-            ("LLR p-value:", ["%#6.4g" % self.llr_pvalue]),
+            ("LL-Null:", [f"{self.llnull:#8.5g}"]),
+            ("LLR p-value:", [f"{self.llr_pvalue:#6.4g}"]),
         ]
 
         if hasattr(self, "cov_type"):
@@ -5494,12 +5488,12 @@ class DiscreteResults(base.LikelihoodModelResults):
             xname=xname,
             title=title,
         )
-
+        smry.as_latex()
         # for parameters, etc
         smry.add_table_params(
             self, yname=yname_list, xname=xname, alpha=alpha, use_t=self.use_t
         )
-
+        smry.as_latex()
         if hasattr(self, "constraints"):
             smry.add_extra_txt(
                 ["Model has been estimated subject to linear equality constraints."]
@@ -5831,7 +5825,7 @@ class BinaryResults(DiscreteResults):
             etext.append(wstr)
         elif predclose_frac > 0.1:  # TODO: get better diagnosis
             wstr = "Possibly complete quasi-separation: A fraction "
-            wstr += "%4.2f of observations can be\n" % predclose_frac
+            wstr += f"{predclose_frac:4.2f} of observations can be\n"
             wstr += "perfectly predicted. This might indicate that there "
             wstr += "is complete\nquasi-separation. In this case some "
             wstr += "parameters will not be identified."

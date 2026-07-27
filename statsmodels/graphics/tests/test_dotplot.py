@@ -292,7 +292,7 @@ def test_all(close_figures):
         styles_order=styles_order,
     )
     handles, labels = ax.get_legend_handles_labels()
-    lh = dict(zip(labels, handles))
+    lh = dict(zip(labels, handles, strict=True))
     handles = [lh[idx] for idx in styles_order]
     leg = plt.figlegend(
         handles, styles_order, loc="center right", numpoints=1, handletextpad=0.0001
@@ -452,7 +452,7 @@ def test_all(close_figures):
 
     plt.clf()
     points = range(20)
-    lines = ["%d::%d" % (i, 100 + i) for i in range(20)]
+    lines = [f"{i:d}::{100 + i:d}" for i in range(20)]
 
     def fmt_left(x):
         return "lft_" + x
@@ -476,7 +476,7 @@ def test_all(close_figures):
 
     plt.clf()
     points = range(20)
-    lines = ["%d::%d" % (i, 100 + i) for i in range(20)]
+    lines = [f"{i:d}::{100 + i:d}" for i in range(20)]
     ax = plt.axes()
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::", show_names="right")
     ax.set_title("Show right names only")

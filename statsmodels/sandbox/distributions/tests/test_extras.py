@@ -44,9 +44,7 @@ def test_skewnorm():
     cdf_sn = skewnorm.cdf([-2, -1, 0, 1, 2], 10)
     maxabs = np.max(np.abs(cdf_sn - cdf_r))
     maxrel = np.max(np.abs(cdf_sn - cdf_r) / (cdf_r + 1e-50))
-    msg = "maxabs={:15.13g}, maxrel={:15.13g}\n{!r}\n{!r}".format(
-        maxabs, maxrel, cdf_sn, cdf_r
-    )
+    msg = f"maxabs={maxabs:15.13g}, maxrel={maxrel:15.13g}\n{cdf_sn!r}\n{cdf_r!r}"
     # assert_(np.allclose(cdf_sn, cdf_r, rtol=1e-13, atol=1e-25), msg=msg)
     assert_almost_equal(cdf_sn, cdf_r, decimal=10)
 

@@ -206,7 +206,7 @@ class NewsResults:
         self.revisions_details_start = news_results.revisions_details_start
 
         self.revisions_iloc = pd.DataFrame(
-            list(zip(*news_results.revisions_ix)),
+            list(zip(*news_results.revisions_ix, strict=True)),
             index=["revision date", "revised variable"]).T
         iloc = self.revisions_iloc
         if len(iloc) > 0:
@@ -221,7 +221,7 @@ class NewsResults:
         self.revisions_ix_detailed = self.revisions_ix[mask]
 
         self.updates_iloc = pd.DataFrame(
-            list(zip(*news_results.updates_ix)),
+            list(zip(*news_results.updates_ix, strict=True)),
             index=["update date", "updated variable"]).T
         iloc = self.updates_iloc
         if len(iloc) > 0:
@@ -1184,7 +1184,7 @@ class NewsResults:
                 if key in details:
                     args = (
                         # mark_ones
-                        key in ["weight"],
+                        key == "weight",
                         # mark_zeroes
                         key in ["weight", "impact"])
                     details[key] = details[key].apply(str_format, args=args)
@@ -1271,12 +1271,12 @@ class NewsResults:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].map(str))
             data.iloc[:, 2:-1] = data.iloc[:, 2:-1].map(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isnull(num) else f"{num:.2f}")
         except AttributeError:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].applymap(str))
             data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isnull(num) else f"{num:.2f}")
 
         # Sparsify the date column
         if sparsify:
@@ -1330,12 +1330,12 @@ class NewsResults:
             data[str_cols] = data[str_cols].map(str)
             for col in data.columns[2:]:
                 data[col] = data[col].map(
-                    lambda num: "" if pd.isnull(num) else "%.2f" % num
+                    lambda num: "" if pd.isnull(num) else f"{num:.2f}"
                 )
         except AttributeError:
             data[str_cols] = data[str_cols].applymap(str)
             data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num
+                lambda num: "" if pd.isnull(num) else f"{num:.2f}"
             )
 
         # Sparsify the date column
@@ -1469,9 +1469,9 @@ class NewsResults:
                 mask = ~np.isnan(model.endog).all(axis=1)
                 ix = model._index[mask]
                 d = ix[0]
-                sample = ["%s" % d]
+                sample = [f"{d}"]
                 d = ix[-1]
-                sample += ["- " + "%s" % d]
+                sample += ["- " + f"{d}"]
             else:
                 sample = [str(0), " - " + str(model.nobs)]
 

@@ -356,7 +356,7 @@ class VariableScreening:
                                   warn_convergence=False,
                                   **fit_kwds)
         # set exog_names for final model
-        xnames = ["var%4d" % ii for ii in idx_nonzero]
+        xnames = [f"var{ii:4d}" for ii in idx_nonzero]
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
 
         res = ScreeningResults(self,
@@ -419,7 +419,7 @@ class VariableScreening:
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
 
-        exog_winner_names = ["var%d_%d" % (bidx, idx)
+        exog_winner_names = [f"var{bidx:d}_{idx:d}"
                              for bidx, batch in enumerate(exog_idx)
                              for idx in batch]
 

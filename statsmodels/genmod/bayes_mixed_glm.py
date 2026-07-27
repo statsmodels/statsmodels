@@ -245,11 +245,11 @@ class _BayesMixedGLM(base.Model):
             if hasattr(exog, "columns"):
                 fep_names = exog.columns.tolist()
             else:
-                fep_names = ["FE_%d" % (k + 1) for k in range(exog.shape[1])]
+                fep_names = [f"FE_{k + 1:d}" for k in range(exog.shape[1])]
 
         # Get the variance parameter names
         if vcp_names is None:
-            vcp_names = ["VC_%d" % (k + 1) for k in range(int(max(ident)) + 1)]
+            vcp_names = [f"VC_{k + 1:d}" for k in range(int(max(ident)) + 1)]
         elif len(vcp_names) != len(set(ident)):
             msg = "The lengths of vcp_names and ident should be the same"
             raise ValueError(msg)
@@ -523,9 +523,9 @@ class _BayesMixedGLM(base.Model):
 
         r = minimize(fun, start, method=method, jac=grad, options=minim_opts)
         if not r.success:
-            msg = "Laplace fitting did not converge, |gradient|=%.6f" % np.sqrt(
+            msg = "Laplace fitting did not converge, |gradient|={:.6f}".format(np.sqrt(
                 np.sum(r.jac**2)
-            )
+            ))
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         from statsmodels.tools.numdiff import approx_fprime
@@ -707,7 +707,7 @@ class _VariationalBayesMixedGLM:
         sd_grad = np.concatenate((fep_sd_grad, vcp_sd_grad, vc_sd_grad))
 
         if self.verbose:
-            print("|G|=%f" % np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)))
+            print(f"|G|={np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)):f}")
 
         return mean_grad, sd_grad
 
@@ -786,7 +786,7 @@ class _VariationalBayesMixedGLM:
         else:
             if len(mean) != ml:
                 raise ValueError(
-                    "mean has incorrect length, %d != %d" % (len(mean), ml)
+                    f"mean has incorrect length, {len(mean):d} != {ml:d}"
                 )
             m = mean.copy()
         if sd is None:
@@ -794,7 +794,7 @@ class _VariationalBayesMixedGLM:
             s = -0.5 + 0.1 * rng.normal(size=n)
         else:
             if len(sd) != ml:
-                raise ValueError("sd has incorrect length, %d != %d" % (len(sd), ml))
+                raise ValueError(f"sd has incorrect length, {len(sd):d} != {ml:d}")
 
             # s is parametrized on the log-scale internally when
             # optimizing the ELBO function (this is transparent to the
@@ -963,9 +963,9 @@ class BayesMixedGLMResults:
         df["SD"] = np.exp(df["Post. Mean"])
         df["SD (LB)"] = np.exp(df["Post. Mean"] - 2 * df["Post. SD"])
         df["SD (UB)"] = np.exp(df["Post. Mean"] + 2 * df["Post. SD"])
-        df["SD"] = ["%.3f" % x for x in df.SD]
-        df["SD (LB)"] = ["%.3f" % x for x in df["SD (LB)"]]
-        df["SD (UB)"] = ["%.3f" % x for x in df["SD (UB)"]]
+        df["SD"] = [f"{x:.3f}" for x in df.SD]
+        df["SD (LB)"] = [f"{x:.3f}" for x in df["SD (LB)"]]
+        df["SD (UB)"] = [f"{x:.3f}" for x in df["SD (UB)"]]
         df.loc[df.index < self.model.k_fep, "SD"] = ""
         df.loc[df.index < self.model.k_fep, "SD (LB)"] = ""
         df.loc[df.index < self.model.k_fep, "SD (UB)"] = ""

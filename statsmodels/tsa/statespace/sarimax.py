@@ -878,12 +878,12 @@ class SARIMAX(MLEModel):
                 residuals = Y - np.dot(X, params)
             except ValueError:
                 if warning_description is not None:
-                    warning_description = " for %s" % warning_description
+                    warning_description = f" for {warning_description}"
                 else:
                     warning_description = ""
-                warn("Too few observations to estimate starting parameters%s."
+                warn(f"Too few observations to estimate starting parameters{warning_description}."
                      " All parameters except for variances will be set to"
-                     " zeros." % warning_description, EstimationWarning,
+                     " zeros.", EstimationWarning,
                      stacklevel=2)
                 # Typically this will be raised if there are not enough
                 # observations for the `lagmat` calls.
@@ -1148,10 +1148,10 @@ class SARIMAX(MLEModel):
         if not self.simple_differencing:
             k_ar_states += (self.seasonal_periods * self._k_seasonal_diff +
                             self._k_diff)
-        names = ["state.%d" % i for i in range(k_ar_states)]
+        names = [f"state.{i:d}" for i in range(k_ar_states)]
 
         if self._k_exog > 0 and self.state_regression:
-            names += ["beta.%s" % self.exog_names[i]
+            names += [f"beta.{self.exog_names[i]}"
                       for i in range(self._k_exog)]
 
         return names
@@ -1525,9 +1525,9 @@ class SARIMAX(MLEModel):
             fix_all = param_names.issuperset(names)
             fix_any = len(param_names.intersection(names)) > 0
             if condition and fix_any and not fix_all:
-                raise ValueError("Cannot fix individual %s parameters when"
-                                 " %s. Must either fix all %s parameters or"
-                                 " none." % (title, condition_desc, title))
+                raise ValueError(f"Cannot fix individual {title} parameters when"
+                                 f" {condition_desc}. Must either fix all {title} parameters or"
+                                 " none.")
 
     def update(self, params, transformed=True, includes_fixed=False,
                complex_step=False):
@@ -1922,12 +1922,12 @@ class SARIMAXResults(MLEResults):
             else:
                 k = self.model_orders[name]
             end += k
-            setattr(self, "_params_%s" % name, self.params[start:end])
+            setattr(self, f"_params_{name}", self.params[start:end])
             start += k
         # GH7527, all terms must be defined
         all_terms = ["ar", "ma", "seasonal_ar", "seasonal_ma", "variance"]
         for name in set(all_terms).difference(self.param_terms):
-            setattr(self, "_params_%s" % name, np.empty(0))
+            setattr(self, f"_params_{name}", np.empty(0))
 
         # Handle removing data
         self._data_attr_model.extend(["orig_endog", "orig_exog"])
@@ -2030,7 +2030,7 @@ class SARIMAXResults(MLEResults):
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
             k_diff = 0 if self.model.simple_differencing else self.model.k_diff
-            order = "(%s, %d, %s)" % (order_ar, k_diff, order_ma)
+            order = f"({order_ar}, {k_diff:d}, {order_ma})"
         # See if we have an SARIMA component
         seasonal_order = ""
         has_seasonal = (
@@ -2056,10 +2056,7 @@ class SARIMAXResults(MLEResults):
             k_seasonal_diff = self.model.k_seasonal_diff
             if self.model.simple_differencing:
                 k_seasonal_diff = 0
-            seasonal_order = ("(%s, %d, %s, %d)" %
-                              (str(order_seasonal_ar), k_seasonal_diff,
-                               str(order_seasonal_ma),
-                               self.model.seasonal_periods))
+            seasonal_order = (f"({order_seasonal_ar!s}, {k_seasonal_diff:d}, {order_seasonal_ma!s}, {self.model.seasonal_periods:d})")
             if order != "":
                 order += "x"
         model_name = f"{self.model.__class__.__name__}{order}{seasonal_order}"

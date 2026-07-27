@@ -61,7 +61,7 @@ _init_example = """
 
 
 class BetaModel(GenericLikelihoodModel):
-    __doc__ = """
+    __doc__ = f"""
     Beta Regression
 
     The Model is parameterized by mean and precision. Both can depend on
@@ -96,15 +96,13 @@ class BetaModel(GenericLikelihoodModel):
 
     Examples
     --------
-    {example}
+    {_init_example}
 
     See Also
     --------
     :ref:`links`
 
-    """.format(
-        example=_init_example
-    )
+    """
 
     def __init__(
         self,
@@ -123,7 +121,7 @@ class BetaModel(GenericLikelihoodModel):
             exog_precision = np.ones((len(endog), 1), dtype="f")
         else:
             extra_names = [
-                "precision-%s" % zc
+                f"precision-{zc}"
                 for zc in (
                     exog_precision.columns
                     if hasattr(exog_precision, "columns")
@@ -230,7 +228,7 @@ class BetaModel(GenericLikelihoodModel):
             res = self._predict_var(params, exog=exog, exog_precision=exog_precision)
 
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
         return res
 

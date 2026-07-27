@@ -114,7 +114,7 @@ def lzip(*args, **kwargs):
     list
         The values produced by ``zip``.
     """
-    return list(zip(*args, **kwargs))
+    return list(zip(*args, strict=True, **kwargs))
 
 
 def lmap(*args, **kwargs):

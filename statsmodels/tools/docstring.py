@@ -192,7 +192,7 @@ class NumpyDocString(Mapping):
 
     def __setitem__(self, key, val):
         if key not in self._parsed_data:
-            self._error_location("Unknown section %s" % key)
+            self._error_location(f"Unknown section {key}")
         else:
             self._parsed_data[key] = val
 
@@ -343,8 +343,8 @@ class NumpyDocString(Mapping):
                 if line_match.group("trailing") and description:
                     self._error_location(
                         "Unexpected comma or period after function list at "
-                        "index %d of line "
-                        '"%s"' % (line_match.end("trailing"), line)
+                        "index {:d} of line "
+                        '"{}"'.format(line_match.end("trailing"), line)
                     )
             if not description and line.startswith(" "):
                 rest.append(line.strip())
@@ -533,7 +533,7 @@ class NumpyDocString(Mapping):
                 elif func_role:
                     link = f":{func_role}:`{func}`"
                 else:
-                    link = "%s" % func
+                    link = f"{func}"
                 links.append(link)
             link = ", ".join(links)
             out += [link]
@@ -555,7 +555,7 @@ class NumpyDocString(Mapping):
         default_index = idx.get("default", "")
         if default_index:
             output_index = True
-        out += [".. index:: %s" % default_index]
+        out += [f".. index:: {default_index}"]
         for section, references in idx.items():
             if section == "default":
                 continue

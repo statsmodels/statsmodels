@@ -341,14 +341,14 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         if np.any(self.switching_coeffs):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "exog"]] = [
-                    "%s[%d]" % (exog_name, i) for exog_name in self.exog_names]
+                    f"{exog_name}[{i:d}]" for exog_name in self.exog_names]
         else:
             param_names[self.parameters["exog"]] = self.exog_names
 
         # Variances
         if self.switching_variance:
             for i in range(self.k_regimes):
-                param_names[self.parameters[i, "variance"]] = "sigma2[%d]" % i
+                param_names[self.parameters[i, "variance"]] = f"sigma2[{i:d}]"
         else:
             param_names[self.parameters["variance"]] = "sigma2"
 

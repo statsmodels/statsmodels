@@ -285,8 +285,8 @@ class TestResults(ResultsGeneric):
         pval = [self.pval1, self.pval2, self.pval3]
         description = ["nonrobust", "dispersed", "HC"]
 
-        for row in zip(description, stat, pval):
-            txt += "%-12s  statistic = %6.4f  pvalue = %6.5f\n" % row
+        for row in zip(description, stat, pval, strict=True):
+            txt += "{:<12}  statistic = {:6.4f}  pvalue = {:6.5f}\n".format(*row)
 
         txt += "\nAssumptions:\n"
         txt += "nonrobust: variance is correctly specified\n"

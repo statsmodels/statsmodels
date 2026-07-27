@@ -2782,7 +2782,7 @@ def test_non_binary():
 
 def test_mnlogit_factor():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=True)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -2807,7 +2807,7 @@ def test_mnlogit_factor():
 
 def test_mnlogit_factor_categorical():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=True)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
