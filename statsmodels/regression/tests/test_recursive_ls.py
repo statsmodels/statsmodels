@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -23,10 +22,10 @@ from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
 
 current_path = Path(__file__).resolve().parent
-results_R_path = "results" + os.sep + "results_rls_R.csv"
-results_R = pd.read_csv(current_path + os.sep + results_R_path)
-results_stata_path = "results" + os.sep + "results_rls_stata.csv"
-results_stata = pd.read_csv(current_path + os.sep + results_stata_path)
+results_R_path = Path("results") / "results_rls_R.csv"
+results_R = pd.read_csv(current_path / results_R_path)
+results_stata_path = Path("results") / "results_rls_stata.csv"
+results_stata = pd.read_csv(current_path / results_stata_path)
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
 endog = dta["cpi"]

@@ -55,8 +55,7 @@ jobs:
     displayName: 'Build Cython Extensions'
 
   - pwsh: |
-      ruff check statsmodels
-      isort --check-only statsmodels
+      ruff check statsmodels tools docs
     displayName: "Lint"
     condition: eq(variables['lint'], 'true')
 

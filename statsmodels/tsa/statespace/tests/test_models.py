@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -54,7 +53,7 @@ class TestIntercepts:
 
     @classmethod
     def setup_class(cls, which="mixed", **kwargs):
-        path = current_path + os.sep + "results/results_intercepts_R.csv"
+        path = current_path / "results/results_intercepts_R.csv"
         cls.desired = pd.read_csv(path)
         dta = datasets.macrodata.load_pandas().data
         dta.index = pd.date_range(start="1959-01-01", end="2009-7-01", freq="QS")
