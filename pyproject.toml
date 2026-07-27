@@ -118,7 +118,6 @@ dev = [
     # code quality
     "flake8",
     "flake8-bugbear",
-    "isort",
     "ruff",
 ]
 
@@ -205,6 +204,8 @@ select = [
   "FURB",
   # flake8-bandit
   "S",
+  # isort
+  "I",
 ]
 
 # pydocstyle ("D") is intentionally NOT selected above. This project already
@@ -314,11 +315,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-# Mirrors [tool.isort] below as closely as ruff's isort implementation
-# allows. NOTE: "I" is not yet added to [tool.ruff.lint] select above - the
-# codebase has not been swept for isort violations under ruff, so this
-# section has no effect until "I" is enabled. It exists so that config is
-# ready in advance of that switch.
+# Mirrors original [tool.isort] below as closely as ruff's isort implementation
+# allows. 
 combine-as-imports = true
 force-sort-within-sections = true
 known-first-party = ["statsmodels"]
@@ -397,21 +395,6 @@ markers = [
     "singleton_randomstate: mark a test as changing the singleton RandomState",
     "joblib: mark a test as using joblib for parallel computation",
 ]
-
-[tool.isort]
-profile = "black"
-src_paths = ["statsmodels"]
-sections = ["FUTURE","COMPAT","STDLIB","THIRDPARTY","FIRSTPARTY","LOCALFOLDER"]
-known_first_party = ["statsmodels"]
-known_compat = ["statsmodels.compat.*","setuptools,setuptools.*"]
-known_third_party=["Cython","numpy","matplotlib","pandas","patsy","pytest","cvxopt","cython"]
-line_length=88
-force_grid_wrap=0
-multi_line_output=3
-combine_as_imports=true
-force_sort_within_sections=true
-include_trailing_comma=true
-use_parentheses=true
 
 [tool.coverage.run]
 source = ["statsmodels"]
