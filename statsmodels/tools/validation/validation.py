@@ -437,7 +437,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
         If the input is not in ``options`` when ``options`` is set.
 
     """
-    if value is None:
+    if optional and value is None:
         return None
     if not isinstance(value, str):
         extra_text = " or None" if optional else ""
