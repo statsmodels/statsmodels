@@ -294,6 +294,11 @@ def test_string():
         match="value must be one of: 'apple', 'banana', 'cherry'",
     ):
         string_like("date", "value", options=("apple", "banana", "cherry"))
+    # None is only allowed when optional is True
+    with pytest.raises(TypeError, match="value must be a string"):
+        string_like(None, "value")
+    with pytest.raises(TypeError, match="value must be a string"):
+        string_like(None, "value", options=("apple", "banana", "cherry"))
 
 
 def test_optional_string():
