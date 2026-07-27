@@ -1807,6 +1807,17 @@ class GLMResults(base.LikelihoodModelResults):
     statsmodels.base.model.LikelihoodModelResults
     """
 
+    _data_in_cache_preserve = (
+        "llf",
+        "llnull",
+        "deviance",
+        "null_deviance",
+        "pearson_chi2",
+        "aic",
+        "bic_llf",
+        "bic_deviance",
+    )
+
     def __init__(
         self,
         model,
@@ -2663,25 +2674,6 @@ class GLMResults(base.LikelihoodModelResults):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr if "_data." not in i])
 
-        # GH#9147: preserve summary statistics that have already been computed.
-        # ``remove_data`` must not force lazy statistics to be evaluated, but it
-        # must retain cached scalar values so a previously generated summary can
-        # still be rendered after the data arrays are removed.
-        preserved_stats = {
-            name: self._cache[name]
-            for name in (
-                "llf",
-                "llnull",
-                "deviance",
-                "null_deviance",
-                "pearson_chi2",
-                "aic",
-                "bic_llf",
-                "bic_deviance",
-            )
-            if self._cache.get(name) is not None
-        }
-
         super(self.__class__, self).remove_data()
 
         # TODO: what are these in results?
@@ -2690,9 +2682,6 @@ class GLMResults(base.LikelihoodModelResults):
         self._var_weights = None
         self._iweights = None
         self._n_trials = None
-
-        # Keep already computed scalar statistics available (see above).
-        self._cache.update(preserved_stats)
 
     @Appender(_plot_added_variable_doc % {"extra_params_doc": ""})
     def plot_added_variable(

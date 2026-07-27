@@ -15,6 +15,8 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.base.model import LikelihoodModelResults
+from statsmodels.tools._decorators import cached_data
 
 # log used in TestPickleFormula5
 log = np.log
@@ -28,6 +30,24 @@ def check_pickle(obj):
     res = pickle.load(fh)
     fh.close()
     return res, plen
+
+
+def test_remove_data_preserves_opted_in_cached_values():
+    class PreservingResults(LikelihoodModelResults):
+        _data_in_cache_preserve = ("data_sum",)
+
+        @cached_data
+        def data_sum(self):
+            return self.model.endog.sum()
+
+    model = sm.OLS(np.arange(5.0), np.ones((5, 1)))
+    results = PreservingResults(model, np.ones(1))
+    expected = results.data_sum
+
+    results.remove_data()
+
+    assert results.model.endog is None
+    assert results.data_sum == expected
 
 
 class RemoveDataPickle:

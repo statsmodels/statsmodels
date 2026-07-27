@@ -1488,6 +1488,7 @@ class LikelihoodModelResults(Results):
 
     # by default we use normal distribution
     # can be overwritten by instances or subclasses
+    _data_in_cache_preserve = ()
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.0, **kwargs):
         super().__init__(model, params)
@@ -2501,9 +2502,18 @@ class LikelihoodModelResults(Results):
         result._data_in_cache : arrays that may exist as values in
             result._cache
 
+        result._data_in_cache_preserve : cached values that are retained if
+            they have already been computed
+
         result._data_attr_model : arrays attached to the model
             instance but not to the results instance
         """
+        preserved_cache = {
+            name: self._cache[name]
+            for name in self._data_in_cache_preserve
+            if self._cache.get(name) is not None
+        }
+
         cls = self.__class__
         # Note: we cannot just use `getattr(cls, x)` or `getattr(self, x)`
         # because of redirection involved with property-like accessors
@@ -2544,6 +2554,8 @@ class LikelihoodModelResults(Results):
                 self._cache[key] = None
             except (AttributeError, KeyError):
                 pass
+
+        self._cache.update(preserved_cache)
 
 
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
