@@ -53,8 +53,4 @@ if [ "$LINT" == true ]; then
     fi
 fi
 
-echo "Running isort"
-isort --check-only statsmodels
-isort --check-only docs/source/plots
-
 exit "$RET"

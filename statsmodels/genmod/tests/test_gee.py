@@ -9,6 +9,8 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 
+from statsmodels.compat import lrange
+
 import os
 import warnings
 
@@ -25,7 +27,6 @@ import pytest
 from scipy.stats.distributions import norm
 
 from statsmodels import tools
-from statsmodels.compat import lrange
 import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
