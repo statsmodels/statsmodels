@@ -158,7 +158,6 @@ press, 2010.
 
 """
 
-
 import numpy as np
 from scipy import stats
 
@@ -271,6 +270,14 @@ class ResultsGeneric:
 
 
 class TestResults(ResultsGeneric):
+
+    def __init__(self, c1, pval1, c2, pval2, c3, pval3):
+        self.c1 = c1
+        self.pval1 = pval1
+        self.c2 = c2
+        self.pval2 = pval2
+        self.c3 = c3
+        self.pval3 = pval3
 
     def summary(self):
         txt = "Specification Test (LM, score)\n"

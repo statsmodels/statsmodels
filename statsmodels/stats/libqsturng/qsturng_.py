@@ -22,6 +22,7 @@ see:
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
+
 from statsmodels.compat.python import lrange
 
 import math
@@ -1904,7 +1905,7 @@ A = {
 p_keys = [0.1, 0.5, 0.675, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99, 0.995, 0.999]
 
 # v values that are defined in the A table
-v_keys = lrange(2, 21) + [24, 30, 40, 60, 120, inf]
+v_keys = [*lrange(2, 21), 24, 30, 40, 60, 120, inf]
 
 
 def _isfloat(x):

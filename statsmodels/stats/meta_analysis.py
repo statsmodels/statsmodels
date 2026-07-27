@@ -37,6 +37,9 @@ class CombineResults:
 
         # memoize ci_samples
         self.cache_ci = {}
+        # Populated by `conf_int_samples`; declared here so it exists (as
+        # None) even before that method has been called.
+        self.ci_sample_distr = None
 
     def conf_int_samples(self, alpha=0.05, use_t=None, nobs=None, ci_func=None):
         """
@@ -281,7 +284,8 @@ class CombineResults:
         """
         if use_t is None:
             use_t = self.use_t
-        labels = list(self.row_names) + [
+        labels = [
+            *list(self.row_names),
             "fixed effect",
             "random effect",
             "fixed effect wls",

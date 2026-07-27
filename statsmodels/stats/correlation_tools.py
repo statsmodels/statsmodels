@@ -950,6 +950,13 @@ class MultivariateKernel:
     (a 1d ndarray) to each row of `loc` (a 2d ndarray).
     """
 
+    def __init__(self):
+        # Populated by `set_bandwidth`/`set_default_bw`; declared here so
+        # they exist (as None) even before either has been called.
+        self.bw = None
+        self.bwk = None
+        self.bw2 = None
+
     def call(self, x, loc):
         raise NotImplementedError
 

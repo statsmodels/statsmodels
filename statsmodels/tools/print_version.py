@@ -33,7 +33,7 @@ def safe_version(module, attr="__version__", *others):
     if not isinstance(attr, list):
         attr = [attr]
     try:
-        return reduce(getattr, [module] + attr)
+        return reduce(getattr, [module, *attr])
     except AttributeError:
         if others:
             return safe_version(module, others[0], *others[1:])
@@ -47,7 +47,7 @@ def _show_versions_only():
 
     import os
 
-    (sysname, nodename, release, version, machine) = os.uname()
+    sysname, nodename, release, version, machine = os.uname()
     print(f"OS: {sysname} {release} {version} {machine}")
     print("byteorder: %s" % sys.byteorder)
     print("LC_ALL: %s" % os.environ.get("LC_ALL", "None"))
@@ -311,17 +311,13 @@ def show_versions(show_dirs=True):
     try:
         import IPython
 
-        print(
-            f"IPython: {safe_version(IPython)} ({dirname(IPython.__file__)})"
-        )
+        print(f"IPython: {safe_version(IPython)} ({dirname(IPython.__file__)})")
     except ImportError:
         print("IPython: Not installed")
     try:
         import jinja2
 
-        print(
-            f"    jinja2: {safe_version(jinja2)} ({dirname(jinja2.__file__)})"
-        )
+        print(f"    jinja2: {safe_version(jinja2)} ({dirname(jinja2.__file__)})")
     except ImportError:
         print("    jinja2: Not installed")
 

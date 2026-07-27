@@ -220,11 +220,10 @@ class PandasWrapper:
 
         if obj.shape[0] + trim_start + trim_end != self._pandas_obj.shape[0]:
             raise ValueError(
-                "obj must have the same number of elements in "
-                "axis 0 as orig"
+                "obj must have the same number of elements in axis 0 as orig"
             )
         index = self._pandas_obj.index
-        index = index[trim_start: index.shape[0] - trim_end]
+        index = index[trim_start : index.shape[0] - trim_end]
         if obj.ndim == 1:
             if columns is None:
                 name = getattr(self._pandas_obj, "name", None)
@@ -240,10 +239,7 @@ class PandasWrapper:
             if columns is None:
                 columns = getattr(self._pandas_obj, "columns", None)
             if append is not None:
-                new = []
-                for c in columns:
-                    new.append(append if c is None else f"{c}_{append}")
-                columns = new
+                columns = [append if c is None else f"{c}_{append}" for c in columns]
             return pd.DataFrame(obj, columns=columns, index=index)
         else:
             raise ValueError("Can only wrap 1 or 2-d array_like")
@@ -286,8 +282,7 @@ def bool_like(value, name, optional=False, strict=False):
         return bool(value)
     except Exception as exc:
         raise TypeError(
-            "{} must be a bool (or bool-compatible)"
-            "{}".format(name, extra_text)
+            "{} must be a bool (or bool-compatible){}".format(name, extra_text)
         ) from exc
 
 
@@ -408,8 +403,7 @@ def float_like(value, name, optional=False, strict=False):
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{} must be float_like (float or np.inexact)"
-        "{}".format(name, extra_text)
+        "{} must be float_like (float or np.inexact){}".format(name, extra_text)
     )
 
 
@@ -453,9 +447,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
     if options is not None and value not in options:
         extra_text = "If not None, " if optional else ""
         options_text = "'" + "', '".join(options) + "'"
-        msg = "{}{} must be one of: {}".format(
-            extra_text, name, options_text
-        )
+        msg = "{}{} must be one of: {}".format(extra_text, name, options_text)
         raise ValueError(msg)
     return value
 
@@ -483,9 +475,7 @@ def dict_like(value, name, optional=False, strict=True):
     """
     if optional and value is None:
         return None
-    if not isinstance(value, Mapping) or (
-        strict and not (isinstance(value, dict))
-    ):
+    if not isinstance(value, Mapping) or (strict and not (isinstance(value, dict))):
         extra_text = "If not None, " if optional else ""
         strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
         msg = f"{extra_text}{name} must be a dict{strict_text}"

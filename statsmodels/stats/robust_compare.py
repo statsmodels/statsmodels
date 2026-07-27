@@ -56,7 +56,7 @@ def trimboth(a, proportiontocut, axis=0):
     nobs = a.shape[axis]
     lowercut = int(proportiontocut * nobs)
     uppercut = nobs - lowercut
-    if (lowercut >= uppercut):
+    if lowercut >= uppercut:
         raise ValueError("Proportion too big.")
 
     sl = [slice(None)] * a.ndim
@@ -123,7 +123,7 @@ class TrimmedMean:
         self.nobs = nobs = self.data.shape[axis]
         self.lowercut = lowercut = int(fraction * nobs)
         self.uppercut = uppercut = nobs - lowercut
-        if (lowercut >= uppercut):
+        if lowercut >= uppercut:
             raise ValueError("Proportion too big.")
         self.nobs_reduced = nobs - 2 * lowercut
 
@@ -194,8 +194,7 @@ class TrimmedMean:
         #               (tm.nobs - 1.) / tm.nobs)
         return std_
 
-    def ttest_mean(self, value=0, transform="trimmed",
-                   alternative="two-sided"):
+    def ttest_mean(self, value=0, transform="trimmed", alternative="two-sided"):
         """
         One sample t-test for trimmed or Winsorized mean
 
@@ -227,6 +226,7 @@ class TrimmedMean:
         is symmetric.
         """
         import statsmodels.stats.weightstats as smws
+
         df = self.nobs_reduced - 1
         if transform == "trimmed":
             mean_ = self.mean_trimmed
@@ -237,9 +237,10 @@ class TrimmedMean:
         else:
             raise ValueError("transform can only be 'trimmed' or 'winsorized'")
 
-        res = smws._tstat_generic(mean_, 0, std_,
-                                  df, alternative=alternative, diff=value)
-        return res + (df,)
+        res = smws._tstat_generic(
+            mean_, 0, std_, df, alternative=alternative, diff=value
+        )
+        return (*res, df)
 
     def reset_fraction(self, frac):
         """
@@ -257,8 +258,7 @@ class TrimmedMean:
         TrimmedMean
             Instance of TrimmedMean with the new trimming fraction.
         """
-        tm = TrimmedMean(self.data_sorted, frac, is_sorted=True,
-                         axis=self.axis)
+        tm = TrimmedMean(self.data_sorted, frac, is_sorted=True, axis=self.axis)
         tm.data = self.data
         # TODO: this will not work if there is processing of meta-information
         #       in __init__,
@@ -266,8 +266,7 @@ class TrimmedMean:
         return tm
 
 
-def scale_transform(data, center="median", transform="abs", trim_frac=0.2,
-                    axis=0):
+def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=0):
     """
     Transform data for variance comparison for Levene type tests
 
@@ -296,11 +295,15 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2,
     if transform == "abs":
         tfunc = np.abs
     elif transform == "square":
+
         def tfunc(x):
             return x * x
+
     elif transform == "identity":
+
         def tfunc(x):
             return x
+
     elif callable(transform):
         tfunc = transform
     else:

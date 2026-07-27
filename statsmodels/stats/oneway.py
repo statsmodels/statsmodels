@@ -685,7 +685,7 @@ def anova_oneway(
     else:
         # uniques = None  # not used yet, add to info?
         pass
-    args = list(map(np.asarray, data))
+    args = [np.asarray(x) for x in data]
     if any(x.ndim != 1 for x in args):
         raise ValueError("data arrays have to be one-dimensional")
 
@@ -1234,9 +1234,10 @@ def test_scale_oneway(
     scale_transform
     """
 
-    data = map(np.asarray, data)
     xxd = [
-        scale_transform(x, center=center, transform=transform, trim_frac=trim_frac_mean)
+        scale_transform(
+            np.asarray(x), center=center, transform=transform, trim_frac=trim_frac_mean
+        )
         for x in data
     ]
 
@@ -1326,9 +1327,10 @@ def equivalence_scale_oneway(
     scale_transform
     equivalence_oneway
     """
-    data = map(np.asarray, data)
     xxd = [
-        scale_transform(x, center=center, transform=transform, trim_frac=trim_frac_mean)
+        scale_transform(
+            np.asarray(x), center=center, transform=transform, trim_frac=trim_frac_mean
+        )
         for x in data
     ]
 

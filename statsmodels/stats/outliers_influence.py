@@ -777,22 +777,22 @@ class MLEInfluence(_BaseInfluenceMixin):
         # grab the results
         if self.hat_matrix_diag is not None:
             summary_data = DataFrame(
-                dict(
-                    cooks_d=self.cooks_distance[0],
-                    standard_resid=self.resid_studentized,
-                    hat_diag=self.hat_matrix_diag,
-                    dffits_internal=self.d_fittedvalues_scaled,
-                ),
+                {
+                    "cooks_d": self.cooks_distance[0],
+                    "standard_resid": self.resid_studentized,
+                    "hat_diag": self.hat_matrix_diag,
+                    "dffits_internal": self.d_fittedvalues_scaled,
+                },
                 index=row_labels,
             )
         else:
             summary_data = DataFrame(
-                dict(
-                    cooks_d=self.cooks_distance[0],
+                {
+                    "cooks_d": self.cooks_distance[0],
                     # standard_resid=self.resid_studentized,
                     # hat_diag=self.hat_matrix_diag,
-                    dffits_internal=self.d_fittedvalues_scaled,
-                ),
+                    "dffits_internal": self.d_fittedvalues_scaled,
+                },
                 index=row_labels,
             )
 
@@ -845,6 +845,9 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         self.aux_regression_exog = {}
         self.aux_regression_endog = {}
+        # Populated by `summary_table`; declared here so it exists (as
+        # None) even before `summary_table` has been called.
+        self.table_data = None
 
     @cache_readonly
     def hat_matrix_diag(self):
@@ -1235,7 +1238,11 @@ class OLSInfluence(_BaseInfluenceMixin):
             mse_resid[outidx] = res_i.mse_resid
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
-        return dict(params=params, mse_resid=mse_resid, det_cov_params=det_cov_params)
+        return {
+            "params": params,
+            "mse_resid": mse_resid,
+            "det_cov_params": det_cov_params,
+        }
 
     def summary_frame(self):
         """
@@ -1272,14 +1279,14 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         # grab the results
         summary_data = DataFrame(
-            dict(
-                cooks_d=self.cooks_distance[0],
-                standard_resid=self.resid_studentized_internal,
-                hat_diag=self.hat_matrix_diag,
-                dffits_internal=self.dffits_internal[0],
-                student_resid=self.resid_studentized_external,
-                dffits=self.dffits[0],
-            ),
+            {
+                "cooks_d": self.cooks_distance[0],
+                "standard_resid": self.resid_studentized_internal,
+                "hat_diag": self.hat_matrix_diag,
+                "dffits_internal": self.dffits_internal[0],
+                "student_resid": self.resid_studentized_external,
+                "dffits": self.dffits[0],
+            },
             index=row_labels,
         )
         # NOTE: if we do not give columns, order of above will be arbitrary
@@ -1691,10 +1698,10 @@ class GLMInfluence(MLEInfluence):
             scale[outidx] = res_i.scale
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
-        return dict(
-            params=params,
-            scale=scale,
-            mse_resid=scale,
+        return {
+            "params": params,
+            "scale": scale,
+            "mse_resid": scale,
             # alias for now
-            det_cov_params=det_cov_params,
-        )
+            "det_cov_params": det_cov_params,
+        }

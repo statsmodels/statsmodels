@@ -48,11 +48,11 @@ class PytestTester:
 
         if extra_args is None:
             extra_args = ["--tb=short", "--disable-pytest-warnings"]
-        cmd = [self.package_path] + extra_args
+        cmd = [self.package_path, *extra_args]
         print("Running pytest " + " ".join(cmd))
         status = pytest.main(cmd)
         if exit:
             print(f"Exit status: {status}")
             sys.exit(status)
 
-        return (status == 0)
+        return status == 0

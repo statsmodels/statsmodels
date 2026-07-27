@@ -232,12 +232,13 @@ def proportion_confint(
             # Enforce symmetry
             reverse = False
             _q = q_.flat[index]
+            c_work = c
             if c > n // 2:
-                c = n - c
+                c_work = n - c
                 reverse = True
                 _q = 1 - _q
-            func = func_factory(c, n)
-            if c == 0:
+            func = func_factory(c_work, n)
+            if c_work == 0:
                 ci_low.flat[index] = 0.0
             else:
                 lower_bnd = _bound_proportion_confint(func, _q, lower=True)
@@ -250,7 +251,7 @@ def proportion_confint(
                         new_lb = val - (val - lower_bnd) / 2**power
                     val, _ = _bisection_search_conservative(func, new_lb, _q)
                 ci_low.flat[index] = val
-            if c == n:
+            if c_work == n:
                 ci_upp.flat[index] = 1.0
             else:
                 upper_bnd = _bound_proportion_confint(func, _q, lower=False)
@@ -1984,7 +1985,12 @@ def test_proportions_2indep(
         # TODO: odds ratio does not work if value=1 for score test
         value = 0 if compare == "diff" else 1
 
-    count1, nobs1, count2, nobs2 = map(np.asarray, [count1, nobs1, count2, nobs2])
+    count1, nobs1, count2, nobs2 = (
+        np.asarray(count1),
+        np.asarray(nobs1),
+        np.asarray(count2),
+        np.asarray(nobs2),
+    )
 
     p1 = count1 / nobs1
     p2 = count2 / nobs2

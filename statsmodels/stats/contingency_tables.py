@@ -80,10 +80,8 @@ class _Bunch:
         ky = [k for k, _ in self.__dict__.items()]
         ky.sort()
         m = max([len(k) for k in ky])
-        tab = []
         f = "{:" + str(m) + "}   {}"
-        for k in ky:
-            tab.append(f.format(k, self.__dict__[k]))
+        tab = [f.format(k, self.__dict__[k]) for k in ky]
         return "\n".join(tab)
 
 
