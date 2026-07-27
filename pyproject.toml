@@ -136,6 +136,10 @@ setup = ['--vsenv']
 line-length = 88
 fix = false
 target-version = "py39"
+# archive/ is explicitly documented (archive/README) as deprecated, no
+# longer maintained legacy code; excluded so it's not linted as if it
+# were part of the active codebase.
+extend-exclude = ["archive"]
 
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]
@@ -183,13 +187,33 @@ select = [
   "FLY",
   # flake8-future-annotations
   "FA",
-  # unconventional-import-alias
-  "ICN001",
+  # flake8-import-conventions
+  "ICN",
   # flake8-slots
   "SLOT",
   # flake8-raise
-  "RSE"
+  "RSE",
+  # flake8-async
+  "ASYNC",
+  # flake8-executable
+  "EXE",
+  # flake8-logging-format
+  "G",
+  # flake8-logging
+  "LOG",
+  # refurb
+  "FURB",
+  # flake8-bandit
+  "S",
 ]
+
+# pydocstyle ("D") is intentionally NOT selected above. This project already
+# validates numpydoc docstring structure via tools/validate_docstrings.py
+# (built on the numpydoc package), which understands our numpydoc convention
+# far more precisely than ruff's generic pydocstyle checks do - even with
+# `[tool.ruff.lint.pydocstyle] convention = "numpy"` set, D still produces
+# tens of thousands of violations and disagrees with the dedicated
+# validator in places. Do not add "D" to select.
 
 ignore = [
   # Required to allow black formatting
@@ -199,6 +223,19 @@ ignore = [
   "E501",
   # Multiple statements on one line (colon) (E701)
   "E701",
+
+  ### Never enable: these conflict with the black/ruff-format formatter.
+  # Kept here even though COM is not currently in `select`, so that turning
+  # on COM (or a broader Q sweep) later doesn't silently reintroduce a
+  # formatter fight. ISC001 is deliberately NOT in this list: we keep ISC001
+  # enabled and fix the occasional real violation by hand instead of
+  # suppressing it.
+  "COM812", # missing-trailing-comma: black decides this, not us
+  "COM819", # prohibited-trailing-comma: black decides this, not us
+  "Q000", # bad-quotes-inline-string: quote style is the formatter's job
+  "Q001", # bad-quotes-multiline-string
+  "Q002", # bad-quotes-docstring
+  "Q003", # avoidable-escaped-quote
 
   ### Intentionally disabled
   # Too many arguments to function call
@@ -240,15 +277,58 @@ ignore = [
   "PERF401", # 53
   # collection-literal-concatenation
   "RUF005", # 186
-  # pairwise-over-zipped
-  "RUF007", # 1
   # mutable-class-default
   "RUF012", #  178
   # repeated-equality-comparison
   "PLR1714", # 28
   # Object does not implement `__hash__` method
   "PLW1641", # 2
+
+  ### New 2026-07-27 when enabling ASYNC, EXE, G, LOG, FURB, S, full ICN
+  # assert is used pervasively outside of tests in this codebase (input
+  # validation, invariant checks); not adopting flake8-bandit's blanket
+  # objection to it
+  "S101", # 1670
+  # try/except/pass: mostly deliberate best-effort cleanup code
+  "S110", # 5
+  # pickle usage: needed for model persistence, a documented feature
+  "S301", # 11
+  # eval usage in a handful of expression-parsing helpers
+  "S307", # 3
+  # urlopen used only for fetching public, hardcoded dataset URLs
+  "S310", # 2
+  # subprocess with shell=True / without shell=True check: used in a couple
+  # of dev/CI helper scripts, not on untrusted input
+  "S602", # 2
+  "S603", # 2
+  # logging-format: only a couple of stray f-string/%.format() log calls
+  "G001", # 1
+  "G004", # 2
+  # root-logger-call
+  "LOG015", # 3
+  # refurb style suggestions not yet applied everywhere
+  "FURB105", # 7
+  "FURB110", # 7
+  "FURB122", # 4
+  "FURB171", # 31
 ]
+
+[tool.ruff.lint.isort]
+# Mirrors [tool.isort] below as closely as ruff's isort implementation
+# allows. NOTE: "I" is not yet added to [tool.ruff.lint] select above - the
+# codebase has not been swept for isort violations under ruff, so this
+# section has no effect until "I" is enabled. It exists so that config is
+# ready in advance of that switch.
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["statsmodels"]
+known-third-party = ["Cython", "cython", "numpy", "matplotlib", "pandas", "patsy", "pytest", "cvxopt"]
+section-order = ["future", "compat", "standard-library", "third-party", "first-party", "local-folder"]
+split-on-trailing-comma = true
+
+[tool.ruff.lint.isort.sections]
+# Mirrors known_compat from [tool.isort].
+compat = ["statsmodels.compat", "setuptools"]
 
 [tool.ruff.lint.per-file-ignores]
 # relative imports allowed for asv_bench

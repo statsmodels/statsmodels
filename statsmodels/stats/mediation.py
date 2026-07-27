@@ -170,6 +170,11 @@ class Mediation:
         # Position of the mediator variable in the outcome model.
         self._med_pos_outcome = self._variable_pos("mediator", "outcome")
 
+        # Populated by `fit`; declared here so they exist (as None) even
+        # before `fit` has been called.
+        self.indirect_effects = None
+        self.direct_effects = None
+
     def _variable_pos(self, var, model):
         if model == "mediator":
             mod = self.mediator_model

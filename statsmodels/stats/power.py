@@ -31,6 +31,7 @@ refactoring
 
 
 """
+
 import warnings
 
 import numpy as np
@@ -448,19 +449,23 @@ class Power:
     so far this could all be class methods
     """
 
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
+    def __init__(self):
+        # Populated by `solve_power`; declared here so they exist (as
+        # None) even before `solve_power` has been called.
+        self._counter = None
+        self.cache_fit_res = None
+
         # used only for instance level start values
-        self.start_ttp = dict(
-            effect_size=0.01,
-            nobs=10.0,
-            alpha=0.15,
-            power=0.6,
-            nobs1=10.0,
-            ratio=1,
-            df_num=10,
-            df_denom=3,  # for FTestPower
-        )
+        self.start_ttp = {
+            "effect_size": 0.01,
+            "nobs": 10.0,
+            "alpha": 0.15,
+            "power": 0.6,
+            "nobs1": 10.0,
+            "ratio": 1,
+            "df_num": 10,
+            "df_denom": 3,  # for FTestPower
+        }
         # TODO: nobs1 and ratio are for ttest_ind,
         #      need start_ttp for each test/class separately,
         # possible rootfinding problem for effect_size, starting small seems to
@@ -469,13 +474,13 @@ class Power:
 
         self.start_bqexp = defaultdict(dict)
         for key in ["nobs", "nobs1", "df_num", "df_denom"]:
-            self.start_bqexp[key] = dict(low=2.0, start_upp=50.0)
+            self.start_bqexp[key] = {"low": 2.0, "start_upp": 50.0}
         for key in ["df_denom"]:
-            self.start_bqexp[key] = dict(low=1.0, start_upp=50.0)
+            self.start_bqexp[key] = {"low": 1.0, "start_upp": 50.0}
         for key in ["ratio"]:
-            self.start_bqexp[key] = dict(low=1e-8, start_upp=2)
+            self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2}
         for key in ["alpha"]:
-            self.start_bqexp[key] = dict(low=1e-12, upp=1 - 1e-12)
+            self.start_bqexp[key] = {"low": 1e-12, "upp": 1 - 1e-12}
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -1572,7 +1577,7 @@ class FTestAnovaPower(Power):
         # update start values for root finding
         if k_groups is not None:
             self.start_ttp["nobs"] = k_groups * 10
-            self.start_bqexp["nobs"] = dict(low=k_groups * 2, start_upp=k_groups * 10)
+            self.start_bqexp["nobs"] = {"low": k_groups * 2, "start_upp": k_groups * 10}
         # first attempt at special casing
         if effect_size is None:
             return self._solve_effect_size(

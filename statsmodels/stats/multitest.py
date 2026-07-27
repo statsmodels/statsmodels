@@ -477,7 +477,7 @@ def fdrcorrection_twostage(
         pvals, alpha=alpha_prime, method="indep", is_sorted=True
     )
     r1 = rej.sum()
-    if (r1 == 0) or (r1 == ntests):
+    if r1 in (0, ntests):
         # return rej, pvalscorr * fact, ntests - r1, alpha_stages
         reject = rej
         pvalscorr *= fact

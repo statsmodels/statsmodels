@@ -154,33 +154,32 @@ class NumpyDocString(Mapping):
         The numpydoc-formatted docstring to parse.
     """
 
-    sections = {
-        "Signature": "",
-        "Summary": [""],
-        "Extended Summary": [],
-        "Parameters": [],
-        "Returns": [],
-        "Yields": [],
-        "Receives": [],
-        "Raises": [],
-        "Warns": [],
-        "Other Parameters": [],
-        "Attributes": [],
-        "Methods": [],
-        "See Also": [],
-        "Notes": [],
-        "Warnings": [],
-        "References": "",
-        "Examples": "",
-        "index": {},
-    }
-
     def __init__(self, docstring):
         orig_docstring = docstring
         docstring = textwrap.dedent(docstring).split("\n")
 
         self._doc = Reader(docstring)
-        self._parsed_data = copy.deepcopy(self.sections)
+
+        self._parsed_data = {
+            "Signature": "",
+            "Summary": [""],
+            "Extended Summary": [],
+            "Parameters": [],
+            "Returns": [],
+            "Yields": [],
+            "Receives": [],
+            "Raises": [],
+            "Warns": [],
+            "Other Parameters": [],
+            "Attributes": [],
+            "Methods": [],
+            "See Also": [],
+            "Notes": [],
+            "Warnings": [],
+            "References": "",
+            "Examples": "",
+            "index": {},
+        }
 
         try:
             self._parse()
@@ -360,7 +359,7 @@ class NumpyDocString(Mapping):
                     text = text[match_end:].strip()
                     if text and text[0] == ",":
                         text = text[1:].strip()
-                rest = list(filter(None, [description]))
+                rest = [description] if description else []
                 items.append((funcs, rest))
             else:
                 raise ParseError(f"{line} is not a item name")
@@ -380,9 +379,9 @@ class NumpyDocString(Mapping):
         if len(section) > 1:
             out["default"] = strip_each_in(section[1].split(","))[0]
         for line in content:
-            line = line.split(":")
-            if len(line) > 2:
-                out[line[1]] = strip_each_in(line[2].split(","))
+            line_parts = line.split(":")
+            if len(line_parts) > 2:
+                out[line_parts[1]] = strip_each_in(line_parts[2].split(","))
         return out
 
     def _parse_summary(self):
@@ -425,35 +424,35 @@ class NumpyDocString(Mapping):
             raise ValueError(msg)
 
         for section, content in sections:
-            if not section.startswith(".."):
-                section = (s.capitalize() for s in section.split(" "))
-                section = " ".join(section)
-                if self.get(section):
-                    self._error_location("The section %s appears twice" % section)
+            section_name = section
+            if not section_name.startswith(".."):
+                section_name = " ".join(s.capitalize() for s in section_name.split(" "))
+                if self.get(section_name):
+                    self._error_location(f"The section {section_name} appears twice")
 
-            if section in (
+            if section_name in (
                 "Parameters",
                 "Other Parameters",
                 "Attributes",
                 "Methods",
             ):
-                self[section] = self._parse_param_list(content)
-            elif section in (
+                self[section_name] = self._parse_param_list(content)
+            elif section_name in (
                 "Returns",
                 "Yields",
                 "Raises",
                 "Warns",
                 "Receives",
             ):
-                self[section] = self._parse_param_list(
+                self[section_name] = self._parse_param_list(
                     content, single_element_is_type=True
                 )
-            elif section.startswith(".. index::"):
-                self["index"] = self._parse_index(section, content)
-            elif section == "See Also":
+            elif section_name.startswith(".. index::"):
+                self["index"] = self._parse_index(section_name, content)
+            elif section_name == "See Also":
                 self["See Also"] = self._parse_see_also(content)
             else:
-                self[section] = content
+                self[section_name] = content
 
     def _error_location(self, msg):
         if hasattr(self, "_obj"):
@@ -479,7 +478,7 @@ class NumpyDocString(Mapping):
 
     def _str_signature(self):
         if self["Signature"]:
-            return [self["Signature"].replace("*", r"\*")] + [""]
+            return [self["Signature"].replace("*", r"\*"), ""]
         else:
             return [""]
 
@@ -678,7 +677,7 @@ class Docstring:
         if self._docstring is None:
             # Protection against -oo execution
             return
-        block_name = " ".join(map(str.capitalize, block_name.split(" ")))
+        block_name = " ".join(word.capitalize() for word in block_name.split(" "))
         if block_name not in self._ds:
             raise ValueError(f"{block_name} is not a block in the docstring")
         if not isinstance(block, list) and isinstance(self._ds[block_name], list):

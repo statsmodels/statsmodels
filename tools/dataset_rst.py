@@ -58,7 +58,7 @@ if __name__ == "__main__":
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    for dataset in datasets:
+    for dataset, data_mod in datasets.items():
         rst_file_name = dataset + ".rst"
         write_pth = join(dest_dir, rst_file_name)
         if os.path.exists(write_pth):
@@ -69,7 +69,6 @@ if __name__ == "__main__":
                     "than the data files.".format(rst_file_name)
                 )
                 continue
-        data_mod = datasets[dataset]
         title = data_mod.TITLE
         descr = data_mod.DESCRLONG
         copyr = data_mod.COPYRIGHT

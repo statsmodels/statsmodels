@@ -8,9 +8,9 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 
-# pylint: disable-msg=E1101
 from statsmodels.compat.pandas import assert_index_equal
 
+# pylint: disable-msg=E1101
 import os
 import warnings
 

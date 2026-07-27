@@ -84,7 +84,8 @@ from scipy import stats
 from statsmodels.genmod.families import family, links
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
+from statsmodels.sandbox.gam import AdditiveModel  # ?
+from statsmodels.sandbox.gam import Model as GAM
 
 
 class Dummy:

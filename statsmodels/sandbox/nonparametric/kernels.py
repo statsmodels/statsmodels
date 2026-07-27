@@ -12,12 +12,12 @@ Pointwise Kernel Confidence Bounds
 http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 """
 
+from statsmodels.compat.python import lzip
+
 # pylint: disable-msg=C0103
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-from statsmodels.compat.python import lzip
-
 import numpy as np
 from numpy import divide, exp, inf, multiply, square, subtract
 import scipy.integrate

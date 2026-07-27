@@ -241,8 +241,8 @@ def prob_larger_2ordinal(probs1, probs2):
     freq1 = np.asarray(probs1)
     freq2 = np.asarray(probs2)
     # add zero at beginning of choices for cdf computation
-    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1), axis=-1)
-    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2), axis=-1)
+    freq1_ = np.concatenate((np.zeros((*freq1.shape[:-1], 1)), freq1), axis=-1)
+    freq2_ = np.concatenate((np.zeros((*freq2.shape[:-1], 1)), freq2), axis=-1)
 
     cdf1 = freq1_.cumsum(axis=-1)
     cdf2 = freq2_.cumsum(axis=-1)

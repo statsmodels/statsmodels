@@ -6,9 +6,18 @@ RET=0
 
 echo "Running ruff check"
 ruff check statsmodels
-ruff check docs/source/plots
 if [ $? -ne "0" ]; then
-    echo "ruff checks failed"
+    echo "ruff checks failed in statsmodels"
+    RET=1
+fi
+ruff check docs
+if [ $? -ne "0" ]; then
+    echo "ruff checks failed in docs"
+    RET=1
+fi
+ruff check tools
+if [ $? -ne "0" ]; then
+    echo "ruff checks failed in tools"
     RET=1
 fi
 

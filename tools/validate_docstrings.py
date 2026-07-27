@@ -33,18 +33,18 @@ import tempfile
 import textwrap
 
 import flake8.main.application
-import matplotlib
-import numpy
+import matplotlib as mpl
+import numpy as np
 from numpydoc.docscrape import NumpyDocString
-import pandas
+import pandas as pd
 from pandas.io.formats.printing import pprint_thing
 
 # Template backend makes matplotlib to not plot anything. This is useful
 # to avoid that plot windows are open from the doctests while running the
 # script. Setting here before matplotlib is loaded.
 # We don't warn for the number of open plots, as none is actually being opened
-matplotlib.use("agg")
-matplotlib.rc("figure", max_open_warning=10000)
+mpl.use("agg")
+mpl.rc("figure", max_open_warning=10000)
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -119,7 +119,7 @@ for member in members:
     if not member[0]:
         continue
     if member[0][0] in string.ascii_uppercase:
-        if not type(member[1]) is type:
+        if type(member[1]) is not type:
             continue
         name = str(member[1]).split("'")[1]
         if not name.startswith("statsmodels."):
@@ -163,7 +163,7 @@ ERROR_MSGS = {
     "whitespace only",
     "GL06": 'Found unknown section "{section}". Allowed sections are: '
     "{allowed_sections}",
-    "GL07": "Sections are in the wrong order. " "Correct order is: {correct_sections}",
+    "GL07": "Sections are in the wrong order. Correct order is: {correct_sections}",
     "GL08": "The object does not have a docstring",
     "GL09": "Deprecation warning should precede extended summary",
     "SS01": "No summary found (a short summary in a single line should be "
@@ -307,7 +307,7 @@ def get_api_items(api_doc_fd):
                 func = getattr(func, part)
 
             yield (
-                ".".join([current_module, item]),
+                f"{current_module}.{item}",
                 func,
                 current_section,
                 current_subsection,
@@ -360,7 +360,7 @@ class Docstring:
                 continue
 
         if "obj" not in locals():
-            raise ImportError("No module can be imported " 'from "{}"'.format(name))
+            raise ImportError('No module can be imported from "{}"'.format(name))
 
         for part in func_parts:
             obj = getattr(obj, part)
@@ -534,7 +534,7 @@ class Docstring:
                         params.append(param)
                     return tuple([param.name for param in doc["Parameters"]])
             except Exception as exc:
-                print(f"!! numpydoc failed  on {str(self.obj)}!!")
+                print(f"!! numpydoc failed  on {self.obj!s}!!")
                 print(exc)
                 return ()
         params = list(sig.parameters.keys())
@@ -691,7 +691,7 @@ class Docstring:
         flags = doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
         finder = doctest.DocTestFinder()
         runner = doctest.DocTestRunner(optionflags=flags)
-        context = {"np": numpy, "pd": pandas, "sm": statsmodels.api}
+        context = {"np": np, "pd": pd, "sm": statsmodels.api}
         error_msgs = ""
         for test in finder.find(self.raw_doc, self.name, globs=context):
             f = StringIO()
@@ -1003,7 +1003,7 @@ def validate_all(prefix, ignore_deprecated=False):
             continue
         with open(api_doc_fname, encoding="utf8") as f:
             api_items += list(get_api_items(f))
-    for func_name, func_obj, section, subsection in api_items:
+    for func_name, _func_obj, section, subsection in api_items:
         if prefix and not func_name.startswith(prefix):
             continue
         doc_info = validate_one(func_name)
@@ -1024,7 +1024,7 @@ def validate_all(prefix, ignore_deprecated=False):
 
         seen[shared_code_key] = func_name
     # functions from introspecting Series and DataFrame
-    api_item_names = set(list(zip(*api_items))[0])
+    api_item_names = set(next(zip(*api_items)))
     for class_name, class_ in API_CLASSES:
         for member in inspect.getmembers(class_):
             func_name = class_name + "." + member[0]

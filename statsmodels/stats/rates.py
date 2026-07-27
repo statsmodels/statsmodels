@@ -6,7 +6,6 @@ License: BSD-3
 
 """
 
-
 import numpy as np
 from scipy import optimize, stats
 
@@ -849,7 +848,12 @@ def test_poisson_2indep(
     """
 
     # shortcut names
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -1146,7 +1150,12 @@ def etest_poisson_2indep(
     for the Difference of Two Poisson Means.” Computational Statistics & Data
     Analysis 51 (6): 3085-99. https://doi.org/10.1016/j.csda.2006.02.004.
     """
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
@@ -1555,7 +1564,12 @@ def confint_poisson_2indep(
     """
 
     # shortcut names
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
@@ -1758,7 +1772,7 @@ def power_poisson_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -1886,7 +1900,7 @@ def power_equivalence_poisson_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -2137,7 +2151,7 @@ def power_poisson_diff_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     diff = rate1 - rate2
     _, std_null, std_alt = _std_2poisson_power(
@@ -2320,7 +2334,7 @@ def power_negbin_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
@@ -2457,7 +2471,7 @@ def power_equivalence_neginb_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
 

@@ -171,13 +171,13 @@ def do_one(
         convert(nb, dst, to=to)
         with open(hash_file, encoding="utf-8", mode="w") as hf:
             json.dump(current_hash, hf)
-    except TraitError:
+    except TraitError as exc:
         kernels = jupyter_client.kernelspec.find_kernel_specs()
-        msg = (
-            "Could not find kernel named `%s`, Available kernels:\n %s" % kernel_name,
+        msg = "Could not find kernel named `%s`, Available kernels:\n %s" % (
+            kernel_name,
             kernels,
         )
-        raise ValueError(msg)
+        raise ValueError(msg) from exc
 
     return dst
 
@@ -325,7 +325,7 @@ parser.add_argument(
     "--skip-existing",
     dest="skip_existing",
     action="store_true",
-    help="Skip execution of an executed file exists and " "is newer than the notebook.",
+    help="Skip execution of an executed file exists and is newer than the notebook.",
 )
 parser.add_argument(
     "--execution-blacklist",

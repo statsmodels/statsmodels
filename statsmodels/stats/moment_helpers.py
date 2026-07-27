@@ -54,7 +54,7 @@ def mc2mnc(mc):
 
     def _local_counts(mc):
         mean = mc[0]
-        mc = [1] + list(mc)  # add zero moment = 1
+        mc = [1, *list(mc)]  # add zero moment = 1
         mc[1] = 0  # define central mean as zero for formula
         mnc = [1, mean]  # zero and first raw moments
         for nn, _ in enumerate(mc[2:]):
@@ -92,7 +92,7 @@ def mnc2mc(mnc, wmean=True):
 
     def _local_counts(mnc):
         mean = mnc[0]
-        mnc = [1] + list(mnc)  # add zero moment = 1
+        mnc = [1, *list(mnc)]  # add zero moment = 1
         mu = []
         for n, _ in enumerate(mnc):
             mu.append(0)
@@ -133,7 +133,7 @@ def cum2mc(kappa):
     def _local_counts(kappa):
         mc = [1, 0.0]  # _kappa[0]]  # insert 0-moment and mean
         kappa0 = kappa[0]
-        kappa = [1] + list(kappa)
+        kappa = [1, *list(kappa)]
         for nn, _ in enumerate(kappa[2:]):
             n = nn + 2
             mc.append(0)
@@ -170,7 +170,7 @@ def mnc2cum(mnc):
     X = _convert_to_multidim(mnc)
 
     def _local_counts(mnc):
-        mnc = [1] + list(mnc)
+        mnc = [1, *list(mnc)]
         kappa = [1]
         for nn, m in enumerate(mnc[1:]):
             n = nn + 1
@@ -230,8 +230,8 @@ def mvsk2mc(args):
         cnt = [None] * 4
         cnt[0] = mu
         cnt[1] = sig2
-        cnt[2] = sk * sig2 ** 1.5
-        cnt[3] = (kur + 3.0) * sig2 ** 2.0
+        cnt[2] = sk * sig2**1.5
+        cnt[3] = (kur + 3.0) * sig2**2.0
         return tuple(cnt)
 
     res = np.apply_along_axis(_local_counts, 0, X)
@@ -260,10 +260,10 @@ def mvsk2mnc(args):
         mc, mc2, skew, kurt = args
         mnc = mc
         mnc2 = mc2 + mc * mc
-        mc3 = skew * (mc2 ** 1.5)  # 3rd central moment
-        mnc3 = mc3 + 3 * mc * mc2 + mc ** 3  # 3rd non-central moment
-        mc4 = (kurt + 3.0) * (mc2 ** 2.0)  # 4th central moment
-        mnc4 = mc4 + 4 * mc * mc3 + 6 * mc * mc * mc2 + mc ** 4
+        mc3 = skew * (mc2**1.5)  # 3rd central moment
+        mnc3 = mc3 + 3 * mc * mc2 + mc**3  # 3rd non-central moment
+        mc4 = (kurt + 3.0) * (mc2**2.0)  # 4th central moment
+        mnc4 = mc4 + 4 * mc * mc3 + 6 * mc * mc * mc2 + mc**4
         return (mnc, mnc2, mnc3, mnc4)
 
     res = np.apply_along_axis(_local_counts, 0, X)
@@ -290,8 +290,8 @@ def mc2mvsk(args):
 
     def _local_counts(args):
         mc, mc2, mc3, mc4 = args
-        skew = np.divide(mc3, mc2 ** 1.5)
-        kurt = np.divide(mc4, mc2 ** 2.0) - 3.0
+        skew = np.divide(mc3, mc2**1.5)
+        kurt = np.divide(mc4, mc2**2.0) - 3.0
         return (mc, mc2, skew, kurt)
 
     res = np.apply_along_axis(_local_counts, 0, X)
@@ -320,13 +320,14 @@ def mnc2mvsk(args):
         mnc, mnc2, mnc3, mnc4 = args
         mc = mnc
         mc2 = mnc2 - mnc * mnc
-        mc3 = mnc3 - (3 * mc * mc2 + mc ** 3)  # 3rd central moment
-        mc4 = mnc4 - (4 * mc * mc3 + 6 * mc * mc * mc2 + mc ** 4)
+        mc3 = mnc3 - (3 * mc * mc2 + mc**3)  # 3rd central moment
+        mc4 = mnc4 - (4 * mc * mc3 + 6 * mc * mc * mc2 + mc**4)
         return mc2mvsk((mc, mc2, mc3, mc4))
 
     res = np.apply_along_axis(_local_counts, 0, X)
     # for backward compatibility convert 1-dim output to list/tuple
     return _convert_from_multidim(res, tuple)
+
 
 # def mnc2mc(args):
 #    """convert four non-central moments to central moments

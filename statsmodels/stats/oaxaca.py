@@ -188,6 +188,20 @@ class OaxacaBlinder:
         self._f_model = OLS(endog_f, exog_f).fit(cov_type=cov_type, cov_kwds=cov_kwds)
         self._s_model = OLS(endog_s, exog_s).fit(cov_type=cov_type, cov_kwds=cov_kwds)
 
+        # Populated by `two_fold`/`three_fold` (and read back by
+        # `variance`); declared here so they exist (as None) even before
+        # either decomposition method has been called.
+        self.submitted_n = None
+        self.submitted_conf = None
+        self.submitted_weight = None
+        self.t_params = None
+        self._t_model = None
+        self.endow_eff = None
+        self.coef_eff = None
+        self.int_eff = None
+        self.unexplained = None
+        self.explained = None
+
     def variance(self, decomp_type, n=5000, conf=0.99):
         """
         A helper function to calculate the variance/std

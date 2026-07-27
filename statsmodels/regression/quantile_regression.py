@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Quantile regression model
 
