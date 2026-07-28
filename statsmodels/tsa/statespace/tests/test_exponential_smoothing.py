@@ -809,30 +809,42 @@ class TestMultiIndex(CheckExponentialSmoothing):
 
 
 def test_invalid():
-    with pytest.raises(ValueError, match="Cannot have a seasonal period of 1."):
+    with pytest.raises(ValueError, match=r"Cannot have a seasonal period of 1."):
         ExponentialSmoothing(aust, seasonal=1)
     with pytest.raises(
         TypeError,
-        match="seasonal must be integer_like \\(int or np.integer, but not bool or timedelta64\\) or None",
+        match=(
+                r"seasonal must be integer_like \\(int or np.integer, but not bool "
+                r"or timedelta64\\) or None"
+        ),
     ):
         ExponentialSmoothing(aust, seasonal=True)
-    with pytest.raises(ValueError, match='Invalid initialization method "invalid".'):
+    with pytest.raises(ValueError, match=r'Invalid initialization method "invalid".'):
         ExponentialSmoothing(aust, initialization_method="invalid")
     with pytest.raises(
         ValueError,
-        match='`initial_level` argument must be provided when initialization method is set to "known".',
+        match=(
+                r'`initial_level` argument must be provided when initialization '
+                r'method is set to "known".'
+        ),
     ):
         ExponentialSmoothing(aust, initialization_method="known")
     with pytest.raises(
         ValueError,
-        match='`initial_trend` argument must be provided for models with a trend component when initialization method is set to "known".',
+        match=(
+                r'`initial_trend` argument must be provided for models with a trend '
+                r'component when initialization method is set to "known".'
+        ),
     ):
         ExponentialSmoothing(
             aust, trend=True, initialization_method="known", initial_level=0
         )
     with pytest.raises(
         ValueError,
-        match='`initial_seasonal` argument must be provided for models with a seasonal component when initialization method is set to "known".',
+        match=(
+                r'`initial_seasonal` argument must be provided for models with a '
+                r'seasonal component when initialization method is set to "known".'
+        ),
     ):
         ExponentialSmoothing(
             aust, seasonal=4, initialization_method="known", initial_level=0
@@ -843,7 +855,10 @@ def test_invalid():
             mod = ExponentialSmoothing(aust, **{arg: 0})
     with pytest.raises(
         ValueError,
-        match="Invalid length of initial seasonal values. Must be one of s or s-1, where s is the number of seasonal periods.",
+        match=(
+                r"Invalid length of initial seasonal values. Must be one of s or s-1, "
+                r"where s is the number of seasonal periods."
+        ),
     ):
         ExponentialSmoothing(
             aust,
@@ -853,7 +868,7 @@ def test_invalid():
             initial_seasonal=0,
         )
     with pytest.raises(
-        NotImplementedError, match="ExponentialSmoothing does not support `exog`."
+        NotImplementedError, match=r"ExponentialSmoothing does not support `exog`."
     ):
         mod = ExponentialSmoothing(aust)
         mod.clone(aust, exog=air)

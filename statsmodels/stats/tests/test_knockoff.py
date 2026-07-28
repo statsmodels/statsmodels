@@ -1,3 +1,5 @@
+import importlib
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal, assert_equal
 import pytest
@@ -10,12 +12,7 @@ from statsmodels.stats._knockoff import (
     _design_knockoff_sdp,
 )
 
-try:
-    import cvxopt  # noqa:F401
-
-    has_cvxopt = True
-except ImportError:
-    has_cvxopt = False
+HAS_CVXOPT = bool(importlib.util.find_spec("cvxopt"))
 
 
 def test_equi():
@@ -41,7 +38,7 @@ def test_equi():
 def test_sdp():
     # Test the structure of the SDP knockoff construction.
 
-    if not has_cvxopt:
+    if not HAS_CVXOPT:
         return
 
     rs = np.random.RandomState(2342)
@@ -76,7 +73,7 @@ def test_sdp():
 @pytest.mark.parametrize("method", ["equi", "sdp"])
 def test_testers(p, tester, method):
 
-    if method == "sdp" and not has_cvxopt:
+    if method == "sdp" and not HAS_CVXOPT:
         return
 
     rs = np.random.RandomState(2432)
@@ -106,7 +103,7 @@ def test_sim(method, tester, n, p, es):
     # This function assesses the performance of the knockoff approach
     # relative to its theoretical claims.
 
-    if method == "sdp" and not has_cvxopt:
+    if method == "sdp" and not HAS_CVXOPT:
         return
 
     rs = np.random.RandomState(43234)
@@ -120,7 +117,7 @@ def test_sim(method, tester, n, p, es):
     # Number of siumulation replications
     nrep = 10
 
-    if method == "sdp" and not has_cvxopt:
+    if method == "sdp" and not HAS_CVXOPT:
         return
 
     fdr, power = 0, 0

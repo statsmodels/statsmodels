@@ -283,7 +283,6 @@ class TestGAM6Bfgs0:
 
     @classmethod
     def setup_class(cls):
-        s_scale = 0.0263073404164214
         cc = CyclicCubicSplines(data_mcycle["times"].values, df=[6])
         gam_cc = GLMGam(data_mcycle["accel"], smoother=cc, alpha=0)
         cls.res1 = gam_cc.fit(method="bfgs")

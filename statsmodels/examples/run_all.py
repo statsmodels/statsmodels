@@ -55,7 +55,7 @@ if "y" in cont.lower():
             print("\n\nExecuting example file", run_all_f)
             print("-----------------------" + "-" * len(run_all_f))
             with Path(run_all_f).open(encoding="utf-8") as f:
-                exec(f.read())
+                exec(f.read())  # noqa: S102
         except Exception:
             print("**********************" + "*" * len(run_all_f))
             print("ERROR in example file", run_all_f)

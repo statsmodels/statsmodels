@@ -10,6 +10,7 @@ tests.
 
 from statsmodels.compat.pandas import assert_index_equal
 
+import importlib
 from pathlib import Path
 import warnings
 
@@ -49,12 +50,8 @@ from statsmodels.tools.sm_exceptions import (
 
 from .results.results_discrete import Anes, DiscreteL1, RandHIE, Spector
 
-try:
-    import cvxopt
+HAS_CVXOPT = bool(importlib.util.find_spec("cvxopt"))
 
-    has_cvxopt = True
-except ImportError:
-    has_cvxopt = False
 DECIMAL_14 = 14
 DECIMAL_10 = 10
 DECIMAL_9 = 9
@@ -656,13 +653,13 @@ class TestLogitL1(CheckLikelihoodModelL1):
 
 
 @pytest.mark.skipif(
-    not has_cvxopt, reason="Skipped test_cvxopt since cvxopt is not available"
+    not HAS_CVXOPT, reason="Skipped test_cvxopt since cvxopt is not available"
 )
 class TestCVXOPT:
 
     @classmethod
     def setup_class(cls):
-        if not has_cvxopt:
+        if not HAS_CVXOPT:
             pytest.skip("Skipped test_cvxopt since cvxopt is not available")
         cls.data = sm.datasets.spector.load()
         cls.data.endog = np.asarray(cls.data.endog)

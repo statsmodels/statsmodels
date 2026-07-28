@@ -3,6 +3,7 @@ Test functions for models.GLM
 """
 
 import copy
+from pathlib import Path
 import re
 import warnings
 
@@ -49,7 +50,6 @@ if pdf_output:
     pdf = PdfPages("test_glm.pdf")
 else:
     pdf = None
-from pathlib import Path
 
 
 def close_or_save(pdf, fig):

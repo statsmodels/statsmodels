@@ -7,14 +7,26 @@ from collections import defaultdict
 import datetime as dt
 import gzip
 import logging
+from pathlib import Path
 import pickle
 
+import black
 import numpy as np
 import pandas as pd
 from scipy import stats
-from yapf.yapflib.yapf_api import FormatCode
 
-import statsmodels.api as sm
+from statsmodels.regression.linear_model import WLS
+
+BLACK_MODE = black.Mode(
+    line_length=88,
+    target_versions={
+        black.TargetVersion.PY311,
+        black.TargetVersion.PY312,
+        black.TargetVersion.PY313,
+        black.TargetVersion.PY314,
+    },
+)
+
 
 NUM_SIM = 10000000
 MAX_MEMORY = 2**28
@@ -53,7 +65,6 @@ MAX_SIM_SIZE = MAX_MEMORY // (MAX_SIZE * 8)
 PERCENTILES = [1, 5, 10, 25, 50, 75, 90, 92.5, 95, 97.5, 99, 99.5, 99.7, 99.9]
 seed = 113682199084250344115761738871133961874
 seed = np.array([(seed >> 32 * i) % 2**32 for i in range(4)], dtype=np.uint32)
-from pathlib import Path
 
 
 def simulations(sim_type, save=False):
@@ -121,7 +132,7 @@ def simulations(sim_type, save=False):
     w = np.ones_like(all_y).reshape(len(PERCENTILES), -1)
     w[6:, -5:] = 3
     w = w.ravel()
-    res = sm.WLS(all_y, all_x, weights=w).fit()
+    res = WLS(all_y, all_x, weights=w).fit()
     params = []
     for i in range(len(PERCENTILES)):
         params.append(np.r_[res.params[i], res.params[-2:]])
@@ -151,9 +162,9 @@ if __name__ == "__main__":
     footer = "\n# Critical Value\ncritical_values = {'normal': normal_crit_vals,\n                   'exp': exp_crit_vals}\nasymp_critical_values = {'normal': normal_asymp_crit_vals,\n                         'exp': exp_asymp_crit_vals}\n\n"
     cv_filename = "../../_lilliefors_critical_values.py"
     with Path(cv_filename).open("w", newline="\n", encoding="utf-8") as cv:
-        cv.write(FormatCode(header)[0])
-        cv.write(FormatCode(normal)[0])
+        cv.write(black.format_str(header, mode=BLACK_MODE))
+        cv.write(black.format_str(normal, mode=BLACK_MODE))
         cv.write("\n\n")
-        cv.write(FormatCode(exp)[0])
+        cv.write(black.format_str(exp, mode=BLACK_MODE))
         cv.write("\n\n")
-        cv.write(FormatCode(footer)[0])
+        cv.write(black.format_str(footer, mode=BLACK_MODE))

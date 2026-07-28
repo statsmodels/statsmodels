@@ -356,7 +356,6 @@ class TestKernelReg(KernelRegressionTestBase):
                 bw=bw_cv_ls,
             )
         sm_mean, sm_mfx = model.fit()
-        sm_R2 = model.r_squared()
         npt.assert_allclose(sm_mfx[0, :], [b1, b2, b3], rtol=0.2)
 
     @pytest.mark.slow

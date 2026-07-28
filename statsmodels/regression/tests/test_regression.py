@@ -5,6 +5,8 @@ Test functions for models.regression
 from statsmodels.compat.python import lrange
 from statsmodels.compat.scipy import SP_LT_116
 
+import importlib
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -25,13 +27,8 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
-try:
-    import cvxopt
 
-    has_cvxopt = True
-except ImportError:
-    has_cvxopt = False
-from pathlib import Path
+has_cvxopt = bool(importlib.util.find_spec("cvxopt"))
 
 
 class CheckRegressionResults:

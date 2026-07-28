@@ -240,7 +240,6 @@ def test_multivariate_penalty():
 def test_generic_smoother():
     x, y, poly = multivariate_sample_data()
     alphas = [0.4, 0.7]
-    weights = [1, 1]
     gs = GenericSmoothers(poly.x, poly.smoothers)
     gam_gs = GLMGam(y, smoother=gs, alpha=alphas)
     gam_gs_res = gam_gs.fit()
@@ -280,11 +279,9 @@ def test_multivariate_gam_cv():
     df = [10]
     degree = [5]
     bsplines = BSplines(x, degree=degree, df=df)
-    alphas = [0.0251]
     alphas = [2]
     cv = KFold(3)
-    gp = MultivariateGamPenalty(bsplines, alpha=alphas)
-    gam_cv = MultivariateGAMCV(
+    _ = MultivariateGAMCV(
         smoother=bsplines,
         alphas=alphas,
         gam=GLMGam,
@@ -293,7 +290,6 @@ def test_multivariate_gam_cv():
         exog=None,
         cv_iterator=cv,
     )
-    gam_cv_res = gam_cv.fit()
 
 
 def test_multivariate_gam_cv_path():
@@ -306,8 +302,6 @@ def test_multivariate_gam_cv_path():
     data_from_r = pd.read_csv(file_path)
     x = data_from_r.x.values
     y = data_from_r.y.values
-    se_from_mgcv = data_from_r.y_est_se
-    y_mgcv = data_from_r.y_mgcv_gcv
     df = [10]
     degree = [6]
     bsplines = BSplines(x, degree=degree, df=df, include_intercept=True)
@@ -325,7 +319,6 @@ def test_multivariate_gam_cv_path():
         exog=None,
         cv_iterator=cv,
     )
-    gam_cv_res = gam_cv.fit()
     glm_gam = GLMGam(y, smoother=bsplines, alpha=gam_cv.alpha_cv)
     res_glm_gam = glm_gam.fit(method="irls", max_start_irls=0, disp=1, maxiter=10000)
     y_est = res_glm_gam.predict(bsplines.basis)
@@ -420,7 +413,6 @@ def test_cyclic_cubic_splines():
     data_from_r = pd.read_csv(file_path)
     x = data_from_r[["x0", "x2"]].values
     y = data_from_r["y"].values
-    y_est_mgcv = data_from_r[["y_est"]].values
     s_mgcv = data_from_r[["s(x0)", "s(x2)"]].values
     dfs = [10, 10]
     ccs = CyclicCubicSplines(x, df=dfs)
@@ -475,7 +467,6 @@ def test_glm_pirls_compatibility():
     y -= y.mean()
     y0 -= y0.mean()
     alphas = [5.75] * 2
-    alphas_glm = [1.2] * 2
     cs = BSplines(x, df=[10, 10], degree=[3, 3], constraints="center")
     gam_pirls = GLMGam(y, smoother=cs, alpha=alphas)
     gam_glm = GLMGam(y, smoother=cs, alpha=alphas)
@@ -536,7 +527,6 @@ def test_partial_values2():
     bsplines = BSplines(x, degree=[3] * 2, df=[10] * 2, include_intercept=[True, False])
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(method="pirls", max_start_irls=0, disp=0, maxiter=5000)
-    glm = GLM(y, bsplines.basis)
     ex = np.column_stack(
         (bsplines.smoothers[0].basis, np.zeros_like(bsplines.smoothers[1].basis))
     )
@@ -559,7 +549,6 @@ def test_partial_values():
     alpha = 0.025 / 115 * 500
     glm_gam = GLMGam(y, smoother=bsplines, alpha=alpha)
     res_glm_gam = glm_gam.fit(maxiter=10000, method="bfgs")
-    univ_bsplines = bsplines.smoothers[0]
     hat_y, se = res_glm_gam.partial_values(0)
     assert_allclose(hat_y, data_from_r["y_est"], rtol=0, atol=0.008)
     bug_fact = np.sqrt(res_glm_gam.scale) * 0.976
@@ -574,7 +563,6 @@ def test_partial_plot(close_figures):
     data_from_r = pd.read_csv(file_path)
     x = data_from_r.x.values
     y = data_from_r.y.values
-    se_from_mgcv = data_from_r.y_est_se
     df = [10]
     degree = [6]
     bsplines = BSplines(x, degree=degree, df=df)

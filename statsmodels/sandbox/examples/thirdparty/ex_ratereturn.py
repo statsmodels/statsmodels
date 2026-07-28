@@ -79,7 +79,7 @@ fig.colorbar(images[0], cax=cax)
 fig.savefig("corrmatrixgrid.png", dpi=120)
 has_sklearn = True
 try:
-    import sklearn
+    from sklearn.covariance import MCD, OAS, LedoitWolf
 except ImportError:
     has_sklearn = False
     print("sklearn not available")
@@ -92,7 +92,6 @@ def cov2corr(cov):
 
 
 if has_sklearn:
-    from sklearn.covariance import MCD, OAS, LedoitWolf
 
     lw = LedoitWolf(store_precision=False)
     lw.fit(rr, assume_centered=False)

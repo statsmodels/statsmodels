@@ -27,7 +27,7 @@ __all__ = [
     "Probit",
 ]
 
-
+import importlib
 import warnings
 
 import numpy as np
@@ -57,12 +57,7 @@ from statsmodels.tools.sm_exceptions import (
     SpecificationWarning,
 )
 
-try:
-    import cvxopt  # noqa:F401
-
-    have_cvxopt = True
-except ImportError:
-    have_cvxopt = False
+HAS_CVXOPT = bool(importlib.util.find_spec("cvxopt"))
 
 
 # TODO: When we eventually get user-settable precision, we need to change
@@ -423,7 +418,7 @@ class DiscreteModel(base.LikelihoodModel):
         # For the 'extra' parameters, pass all that are available,
         # even if we know (at this point) we will only use one.
         extra_fit_funcs = {"l1": fit_l1_slsqp}
-        if have_cvxopt and method == "l1_cvxopt_cp":
+        if HAS_CVXOPT and method == "l1_cvxopt_cp":
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
 
             extra_fit_funcs["l1_cvxopt_cp"] = fit_l1_cvxopt_cp

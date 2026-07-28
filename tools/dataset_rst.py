@@ -19,8 +19,8 @@ dest_dir = (
 datasets = dict(inspect.getmembers(sm.datasets, inspect.ismodule))
 datasets.pop("utils")
 last_mod_time = {}
-for dataset in datasets:
-    root = Path(datasets[dataset].__file__).resolve().parent
+for dataset in datasets.items():
+    root = Path(dataset.__file__).resolve().parent
     files = list(root.glob("*"))
     if not files:
         raise NotImplementedError("Must be files to read the date")

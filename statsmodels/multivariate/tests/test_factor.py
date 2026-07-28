@@ -1,3 +1,4 @@
+import importlib
 from pathlib import Path
 
 import numpy as np
@@ -161,9 +162,7 @@ def test_getframe_smoke():
     df = res.get_loadings_frame(style="raw")
     assert_(isinstance(df, pd.DataFrame))
     lds = res.get_loadings_frame(style="strings", decimals=3, threshold=0.3)
-    try:
-        from jinja2 import Template
-    except ImportError:
+    if not importlib.util.find_spec("jinja2"):
         return
     lds.style.to_latex()
     try:

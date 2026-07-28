@@ -1,6 +1,7 @@
 """Euro area 18 - Total Turnover Index, Manufacture of electrical equipment"""
 
 import os
+from pathlib import Path
 
 import pandas as pd
 
@@ -15,7 +16,6 @@ SOURCE = (
 DESCRSHORT = "EU Manufacture of electrical equipment"
 DESCRLONG = DESCRSHORT
 NOTE = "::\n    Variable name definitions::\n\n        date      - Date in format MMM-1-YYYY\n\n        STS.M.I7.W.TOVT.NS0016.4.000   - Euro area 18 (fixed composition) -\n            Total Turnover Index, NACE 26-27; Treatment and coating of metals;\n            machining; Manufacture of electrical equipment - NACE Rev2;\n            Eurostat; Working day adjusted, not seasonally adjusted\n"
-from pathlib import Path
 
 
 def load_pandas():
