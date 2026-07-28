@@ -9,7 +9,6 @@ from statsmodels.compat.pandas import (
 from statsmodels.compat.python import lrange
 
 from io import BytesIO
-import os
 from pathlib import Path
 import warnings
 
@@ -576,8 +575,8 @@ class E1_Results:
         )
 
 
-basepath = os.path.split(__file__)[0]
-resultspath = Path(basepath).joinpath("results")
+basepath = Path(__file__).parent
+resultspath = basepath / "results"
 
 
 def get_lutkepohl_data(name="e2"):

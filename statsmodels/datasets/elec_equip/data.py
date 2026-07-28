@@ -1,5 +1,4 @@
 """Euro area 18 - Total Turnover Index, Manufacture of electrical equipment"""
-import os
 from pathlib import Path
 
 import pandas as pd
@@ -52,8 +51,8 @@ def load():
 
 
 def _get_data():
-    curr_dir = os.path.split(Path(__file__).resolve())[0]
-    data = pd.read_csv(Path(curr_dir).joinpath("elec_equip.csv"))
+    curr_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(curr_dir / "elec_equip.csv")
     data.index = pd.to_datetime(data.pop("DATE"))
     return data
 

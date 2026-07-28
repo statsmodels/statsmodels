@@ -7,7 +7,6 @@ License: Simplified-BSD
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
-import os
 from pathlib import Path
 import warnings
 
@@ -26,11 +25,11 @@ from .results import results_sarimax
 
 current_path = Path(__file__).resolve().parent
 
-realgdp_path = Path("results").joinpath("results_realgdpar_stata.csv")
-realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
+realgdp_path = Path("results") / "results_realgdpar_stata.csv"
+realgdp_results = pd.read_csv(current_path / realgdp_path)
 
-coverage_path = Path("results").joinpath("results_sarimax_coverage.csv")
-coverage_results = pd.read_csv(Path(current_path).joinpath(coverage_path))
+coverage_path = Path("results") / "results_sarimax_coverage.csv"
+coverage_results = pd.read_csv(current_path / coverage_path)
 
 
 class TestSARIMAXStatsmodels:

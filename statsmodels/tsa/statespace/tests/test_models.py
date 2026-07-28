@@ -4,7 +4,6 @@ Tests for miscellaneous models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-import os
 from pathlib import Path
 
 import numpy as np
@@ -54,7 +53,7 @@ class TestIntercepts:
     @classmethod
     def setup_class(cls, which="mixed", **kwargs):
         # Results
-        path = current_path + os.sep + "results/results_intercepts_R.csv"
+        path = Path(current_path) / "results" / "results_intercepts_R.csv"
         cls.desired = pd.read_csv(path)
 
         # Data
