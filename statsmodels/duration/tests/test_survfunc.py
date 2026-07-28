@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -55,8 +55,8 @@ surv_prob_se2 = np.r_[0.1047566, 0.2518034, 0.2444320, np.nan]
 n_risk2 = np.r_[9, 3, 2, 1]
 n_events2 = np.r_[1.0, 1.0, 1.0, 1.0]
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-fp = os.path.join(cur_dir, "results", "bmt.csv")
+cur_dir = Path(__file__).resolve().parent
+fp = Path(cur_dir).joinpath("results", "bmt.csv")
 bmt = pd.read_csv(fp)
 
 
@@ -130,8 +130,8 @@ def test_bmt():
 
     dfa = bmt[bmt.Group == "ALL"]
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    fp = os.path.join(cur_dir, "results", "bmt_results.csv")
+    cur_dir = Path(__file__).resolve().parent
+    fp = Path(cur_dir).joinpath("results", "bmt_results.csv")
     rslt = pd.read_csv(fp)
 
     sf = SurvfuncRight(dfa["T"].values, dfa.Status.values)

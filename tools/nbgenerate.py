@@ -5,6 +5,7 @@ from functools import partial
 import hashlib
 import json
 import os
+from pathlib import Path
 import shutil
 import sys
 
@@ -27,14 +28,12 @@ if sys.platform == "win32" and sys.version_info < (3, 14):
 
 init()
 
-here = os.path.dirname(__file__)
+here = Path(__file__).parent
 pkgdir = os.path.split(here)[0]
-EXAMPLE_DIR = os.path.abspath(os.path.join(pkgdir, "examples"))
-SOURCE_DIR = os.path.join(EXAMPLE_DIR, "notebooks")
-DOC_SRC_DIR = os.path.join(pkgdir, "docs", "source")
-DST_DIR = os.path.abspath(
-    os.path.join(DOC_SRC_DIR, "examples", "notebooks", "generated")
-)
+EXAMPLE_DIR = Path(pkgdir).joinpath("examples").resolve()
+SOURCE_DIR = Path(EXAMPLE_DIR).joinpath("notebooks")
+DOC_SRC_DIR = Path(pkgdir).joinpath("docs", "source")
+DST_DIR = Path(DOC_SRC_DIR).joinpath("examples", "notebooks", "generated").resolve()
 EXECUTED_DIR = DST_DIR
 
 error_message = """
@@ -45,8 +44,8 @@ ERROR: Error occurred when running {notebook}
 ******************************************************************************
 """
 for dname in [EXECUTED_DIR, DST_DIR]:
-    if not os.path.exists(dname):
-        os.makedirs(dname)
+    if not Path(dname).exists():
+        Path(dname).mkdir(parents=True)
 
 
 def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
@@ -66,7 +65,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     -------
     dst: str
     """
-    with open(src, encoding="utf-8") as f:
+    with Path(src).open(encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(
@@ -74,7 +73,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     )
     ep.preprocess(nb, {"metadata": {"path": SOURCE_DIR}})
 
-    with open(dst, "w", encoding="utf-8") as f:
+    with Path(dst).open("w", encoding="utf-8") as f:
         nbformat.write(nb, f)
     return dst
 
@@ -94,7 +93,7 @@ def convert(src, dst, to="rst"):
     exporter = dispatch[to.lower()]()
 
     body, resources = exporter.from_filename(src)
-    with open(dst, "w", encoding="utf-8") as f:
+    with Path(dst).open("w", encoding="utf-8") as f:
         f.write(body)
     return dst
 
@@ -102,11 +101,7 @@ def convert(src, dst, to="rst"):
 def find_notebooks(directory=None):
     if directory is None:
         directory = SOURCE_DIR
-    nbs = (
-        os.path.join(directory, x)
-        for x in os.listdir(directory)
-        if x.endswith(".ipynb")
-    )
+    nbs = (p for p in Path(directory).iterdir() if p.suffix == ".ipynb")
     return nbs
 
 
@@ -125,18 +120,18 @@ def do_one(
     from traitlets.traitlets import TraitError
 
     os.chdir(SOURCE_DIR)
-    name = os.path.basename(nb)
-    dst = os.path.join(EXECUTED_DIR, name)
-    hash_file = f"{os.path.splitext(dst)[0]}.json"
+    name = Path(nb).name
+    dst = Path(EXECUTED_DIR).joinpath(name)
+    hash_file = dst.with_suffix(".json")
     existing_hash = ""
-    if os.path.exists(hash_file):
-        with open(hash_file, encoding="utf-8") as hf:
+    if Path(hash_file).exists():
+        with Path(hash_file).open(encoding="utf-8") as hf:
             existing_hash = json.load(hf)
-    with open(nb, mode="rb") as f:
+    with Path(nb).open(mode="rb") as f:
         current_hash = hashlib.sha512(f.read()).hexdigest()
     update_needed = existing_hash != current_hash
     # Update if dst missing
-    update_needed = update_needed or not os.path.exists(dst)
+    update_needed = update_needed or not Path(dst).exists()
     update_needed = update_needed or not skip_existing
     if not update_needed:
         print(f"Skipping {nb}")
@@ -161,15 +156,15 @@ def do_one(
         shutil.copy(nb, dst)
 
     if execute_only:
-        with open(hash_file, encoding="utf-8", mode="w") as hf:
+        with Path(hash_file).open(encoding="utf-8", mode="w") as hf:
             json.dump(current_hash, hf)
         return dst
 
-    dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + "." + to
+    dst = str(Path(DST_DIR).joinpath(name).with_suffix("." + to))
     print(f"Converting {nb} to {dst}")
     try:
         convert(nb, dst, to=to)
-        with open(hash_file, encoding="utf-8", mode="w") as hf:
+        with Path(hash_file).open(encoding="utf-8", mode="w") as hf:
             json.dump(current_hash, hf)
     except TraitError as exc:
         kernels = jupyter_client.kernelspec.find_kernel_specs()

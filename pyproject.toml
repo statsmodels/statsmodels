@@ -208,8 +208,6 @@ select = [
   "I",
   # pyupgrade
   "UP",
-
-  ### Added 2026-07-27 auditing statsmodels/, tools/, docs/ for conformance
   # flake8-builtins
   "A",
   # flake8-airflow (this project has no Airflow usage, so this and the
@@ -245,6 +243,8 @@ select = [
   # 1300+ hits, so only the individually-clean rules are selected rather
   # than the whole category.
   "TRY400", "TRY401",
+  # flake8-use-pathlib
+  "PTH",
 ]
 
 # pydocstyle ("D") is intentionally NOT selected above. This project already
@@ -404,6 +404,8 @@ compat = ["statsmodels.compat", "setuptools"]
 "statsmodels/stats/diagnostic_gen.py" = ["PT028"]
 "statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
 "statsmodels/examples/tests/test_notebooks.py" = ["F401"]
+# Example scripts/notebooks are left as-is (not converted to pathlib).
+"**/examples/**" = ["PTH"]
 [tool.pytest.ini_options]
 minversion = "8.4.1"
 addopts = "--strict --durations=30 --junitxml=test-data.xml"

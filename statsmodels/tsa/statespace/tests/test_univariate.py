@@ -12,7 +12,7 @@ univariate smoother must return a diagonal covariance matrix).
 Author: Chad Fulton
 License: Simplified-BSD
 """
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
@@ -24,7 +24,7 @@ from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class TestClark1989:
@@ -251,8 +251,7 @@ class MultivariateMissingGeneralObsCov:
     @classmethod
     def setup_class(cls, which, dtype=float, alternate_timing=False, **kwargs):
         # Results
-        path = os.path.join(current_path, "results",
-                            "results_smoothing_generalobscov_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing_generalobscov_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -510,8 +509,7 @@ class TestMultivariateVAR:
     @classmethod
     def setup_class(cls, which="none", **kwargs):
         # Results
-        path = os.path.join(current_path, "results",
-                            "results_smoothing_generalobscov_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing_generalobscov_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data

@@ -10,8 +10,8 @@ usage
 
 generate_formula_api /home/skipper/statsmodels/statsmodels/
 """
-
 import os
+from pathlib import Path
 import sys
 
 
@@ -64,8 +64,8 @@ def write_formula_api(directory):
         "ARMA",
     ]
 
-    path = os.path.join(directory, "statsmodels", "formula", "api.py")
-    fout = open(path, "w", encoding="utf-8")
+    path = Path(directory).joinpath("statsmodels", "formula", "api.py")
+    fout = Path(path).open("w", encoding="utf-8")
     for model in iter_subclasses(Model, template_classes=template_classes):
         print(f"Generating API for {model.__name__}")
         fout.write("from " + model.__module__ + " import " + model.__name__ + "\n")
@@ -78,7 +78,6 @@ if __name__ == "__main__":
 
     print(f"Generating formula API for statsmodels version {sm.version.full_version}")
     directory = sys.argv[1]
-    cur_dir = os.path.dirname(__file__)
     os.chdir(directory)
     # it needs to be installed to walk the whole subclass chain?
     from statsmodels.base.model import Model

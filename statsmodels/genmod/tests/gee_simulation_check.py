@@ -8,6 +8,7 @@ See the generated file "gee_simulation_check.txt" for results.
 from statsmodels.compat.python import lrange
 
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import scipy
@@ -20,7 +21,7 @@ np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                     suppress=True)
 
 
-OUT = open("gee_simulation_check.txt", "w", encoding="utf-8")
+OUT = Path("gee_simulation_check.txt").open("w", encoding="utf-8")
 
 
 class GEE_simulator:

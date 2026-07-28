@@ -4,8 +4,7 @@ Tests for miscellaneous models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -15,7 +14,7 @@ import pytest
 from statsmodels import datasets
 from statsmodels.tsa.statespace import mlemodel, sarimax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class Intercepts(mlemodel.MLEModel):
@@ -54,7 +53,7 @@ class TestIntercepts:
     @classmethod
     def setup_class(cls, which="mixed", **kwargs):
         # Results
-        path = current_path + os.sep + "results/results_intercepts_R.csv"
+        path = Path(current_path) / "results" / "results_intercepts_R.csv"
         cls.desired = pd.read_csv(path)
 
         # Data

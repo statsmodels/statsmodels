@@ -1,5 +1,5 @@
 import itertools
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -55,8 +55,8 @@ class TestPHReg:
     # Load a data file from the results directory
     @staticmethod
     def load_file(fname):
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        data = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=" ")
+        cur_dir = Path(__file__).resolve().parent
+        data = np.genfromtxt(Path(cur_dir).joinpath("results", fname), delimiter=" ")
         time = data[:, 0]
         status = data[:, 1]
         entry = data[:, 2]
@@ -438,9 +438,9 @@ class TestPHReg:
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, "results")
-fnames = os.listdir(rdir)
+cur_dir = Path(__file__).resolve().parent
+rdir = Path(cur_dir).joinpath("results")
+fnames = [p.name for p in rdir.iterdir()]
 fnames = [x for x in fnames if x.startswith("survival") and x.endswith(".csv")]
 
 ties = ("breslow", "efron")

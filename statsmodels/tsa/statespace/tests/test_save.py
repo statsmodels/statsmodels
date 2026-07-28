@@ -1,8 +1,7 @@
 """
 Tests of save / load / remove_data state space functionality.
 """
-
-import os
+from pathlib import Path
 import pickle
 import tempfile
 
@@ -17,7 +16,7 @@ from statsmodels.tsa.statespace import (
     varmax,
 )
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 macrodata = datasets.macrodata.load_pandas().data
 
 
@@ -156,6 +155,6 @@ def test_varmax_pickle():
 
 
 def test_existing_pickle():
-    pkl_file = os.path.join(current_path, "results", "sm-0.9-sarimax.pkl")
+    pkl_file = Path(current_path).joinpath("results", "sm-0.9-sarimax.pkl")
     loaded = sarimax.SARIMAXResults.load(pkl_file)
     assert isinstance(loaded, sarimax.SARIMAXResultsWrapper)

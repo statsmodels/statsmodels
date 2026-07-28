@@ -1,34 +1,34 @@
 """Results for ARMA models. Produced by gretl"""
-import os
+from pathlib import Path
 
 from numpy import genfromtxt
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-with open(current_path+"/yhat_exact_nc.csv", "rb") as fd:
+current_path = Path(__file__).resolve().parent
+with Path(current_path + "/yhat_exact_nc.csv").open("rb") as fd:
     yhat_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/yhat_css_nc.csv", "rb") as fd:
+with Path(current_path + "/yhat_css_nc.csv").open("rb") as fd:
     yhat_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/yhat_exact_c.csv", "rb") as fd:
+with Path(current_path + "/yhat_exact_c.csv").open("rb") as fd:
     yhatc_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/yhat_css_c.csv", "rb") as fd:
+with Path(current_path + "/yhat_css_c.csv").open("rb") as fd:
     yhatc_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/resids_exact_nc.csv", "rb") as fd:
+with Path(current_path + "/resids_exact_nc.csv").open("rb") as fd:
     resids_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/resids_css_nc.csv", "rb") as fd:
+with Path(current_path + "/resids_css_nc.csv").open("rb") as fd:
     resids_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/resids_exact_c.csv", "rb") as fd:
+with Path(current_path + "/resids_exact_c.csv").open("rb") as fd:
     residsc_mle = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/resids_css_c.csv", "rb") as fd:
+with Path(current_path + "/resids_css_c.csv").open("rb") as fd:
     residsc_css = genfromtxt(fd, delimiter=",", skip_header=1, dtype=float)
 
-with open(current_path+"/results_arma_forecasts.csv", "rb") as fd:
+with Path(current_path + "/results_arma_forecasts.csv").open("rb") as fd:
     forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
 
 

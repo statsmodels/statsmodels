@@ -4,8 +4,7 @@ Generate test data sets for lme.
 After running this script, run lme_results.R with R
 to update the output.
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 
@@ -71,9 +70,8 @@ for pr in [1, 2]:
             )
             header = ",".join(header)
 
-            cur_dir = os.path.dirname(os.path.abspath(__file__))
-
-            fname = os.path.join(cur_dir, f"lme{dsix:02d}.csv")
+            cur_dir = Path(__file__).resolve().parent
+            fname = Path(cur_dir).joinpath(f"lme{dsix:02d}.csv")
             np.savetxt(
                 fname, data, fmt="%.3f", header=header, delimiter=",", comments=""
             )

@@ -4,8 +4,7 @@ Tests for VARMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -19,10 +18,10 @@ from statsmodels.tsa.statespace import dynamic_factor
 
 from .results import results_dynamic_factor, results_varmax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-output_path = os.path.join("results", "results_dynamic_factor_stata.csv")
-output_results = pd.read_csv(os.path.join(current_path, output_path))
+output_path = Path("results").joinpath("results_dynamic_factor_stata.csv")
+output_results = pd.read_csv(Path(current_path).joinpath(output_path))
 
 
 class CheckDynamicFactor:

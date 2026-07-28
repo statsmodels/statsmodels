@@ -12,8 +12,7 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -36,10 +35,10 @@ from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
 
 from .results import results_kalman_filter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-clark1989_path = os.path.join("results", "results_clark1989_R.csv")
-clark1989_results = pd.read_csv(os.path.join(current_path, clark1989_path))
+clark1989_path = Path("results").joinpath("results_clark1989_R.csv")
+clark1989_results = pd.read_csv(Path(current_path).joinpath(clark1989_path))
 
 
 class Clark1987:

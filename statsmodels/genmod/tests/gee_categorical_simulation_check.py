@@ -8,6 +8,8 @@ results.
 """
 from statsmodels.compat.python import lrange
 
+from pathlib import Path
+
 import numpy as np
 from scipy import stats
 
@@ -188,7 +190,7 @@ if __name__ == "__main__":
 
     nrep = 100
 
-    OUT = open("gee_categorical_simulation_check.txt", "w", encoding="utf-8")
+    OUT = Path("gee_categorical_simulation_check.txt").open("w", encoding="utf-8")
 
     np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                         suppress=True)

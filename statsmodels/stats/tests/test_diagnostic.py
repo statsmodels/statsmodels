@@ -8,9 +8,8 @@ License: BSD-3
 currently all tests are against R
 
 """
-
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -33,7 +32,7 @@ from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 
 @pytest.fixture(scope="module")
@@ -1041,8 +1040,8 @@ class TestDiagnosticG:
         # this test is slow
         infl = oi.OLSInfluence(res)
 
-        path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-        with open(path, encoding="utf-8") as fp:
+        path = Path(cur_dir).joinpath("results", "influence_lsdiag_R.json")
+        with Path(path).open(encoding="utf-8") as fp:
             lsdiag = json.load(fp)
 
         # basic
@@ -1073,7 +1072,7 @@ class TestDiagnosticG:
             infl.resid_studentized_external, lsdiag["stud.res"], decimal=12
         )
 
-        fn = os.path.join(cur_dir, "results/influence_measures_R.csv")
+        fn = Path(cur_dir).joinpath("results/influence_measures_R.csv")
         infl_r = pd.read_csv(fn, index_col=0)
         # not used yet:
         # infl_bool_r  = pandas.read_csv(fn, index_col=0,
@@ -1129,10 +1128,10 @@ class TestDiagnosticGPandas(TestDiagnosticG):
 
 
 def test_spec_white():
-    resdir = os.path.join(cur_dir, "results")
+    resdir = Path(cur_dir).joinpath("results")
     wsfiles = ["wspec1.csv", "wspec2.csv", "wspec3.csv", "wspec4.csv"]
     for file in wsfiles:
-        mdlfile = os.path.join(resdir, file)
+        mdlfile = Path(resdir).joinpath(file)
         mdl = np.asarray(pd.read_csv(mdlfile))
         # DV is in last column
         lastcol = mdl.shape[1] - 1
@@ -1239,8 +1238,8 @@ def test_influence_wrapped():
     assert_(isinstance(df, DataFrame))
 
     # this test is slow
-    path = os.path.join(cur_dir, "results", "influence_lsdiag_R.json")
-    with open(path, encoding="utf-8") as fp:
+    path = Path(cur_dir).joinpath("results", "influence_lsdiag_R.json")
+    with Path(path).open(encoding="utf-8") as fp:
         lsdiag = json.load(fp)
 
     c0, c1 = infl.cooks_distance  # TODO: what's c1, it's pvalues? -ss
@@ -1255,7 +1254,7 @@ def test_influence_wrapped():
     assert_almost_equal(dffits, lsdiag["dfits"], 12)
     assert_almost_equal(infl.resid_studentized_external, lsdiag["stud.res"], 12)
 
-    fn = os.path.join(cur_dir, "results/influence_measures_R.csv")
+    fn = Path(cur_dir).joinpath("results/influence_measures_R.csv")
     infl_r = pd.read_csv(fn, index_col=0)
     # not used yet:
     # infl_bool_r  = pandas.read_csv(fn, index_col=0,

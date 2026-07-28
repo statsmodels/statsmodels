@@ -1,6 +1,5 @@
 """Pytest runner that allows tests to be run within Python"""
-
-import os
+from pathlib import Path
 import sys
 
 
@@ -23,7 +22,7 @@ class PytestTester:
             package_path = f.f_locals.get("__file__", None)
             if package_path is None:
                 raise ValueError("Unable to determine path")
-        self.package_path = os.path.dirname(package_path)
+        self.package_path = str(Path(package_path).parent)
         self.package_name = f.f_locals.get("__name__", None)
 
     def __call__(self, extra_args=None, exit=False):

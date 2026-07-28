@@ -1,12 +1,12 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy import genfromtxt
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
-path = os.path.join(cur_dir, "results_arima_forecasts.csv")
-with open(path, "rb") as fd:
+path = Path(cur_dir).joinpath("results_arima_forecasts.csv")
+with Path(path).open("rb") as fd:
     forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
 
 # NOTE:

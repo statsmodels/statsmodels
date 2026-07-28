@@ -5,6 +5,7 @@ This script checks Poisson models.
 
 See the generated file "gee_poisson_simulation_check.txt" for results.
 """
+from pathlib import Path
 
 import numpy as np
 
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                         suppress=True)
 
-    OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
+    OUT = Path("gee_poisson_simulation_check.txt").open("w", encoding="utf-8")
 
     nrep = 100
 

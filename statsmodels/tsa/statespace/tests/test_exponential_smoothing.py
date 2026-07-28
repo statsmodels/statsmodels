@@ -75,8 +75,7 @@ TODO: may want to add a parameter allowing specification of the variance
 Author: Chad Fulton
 License: BSD-3
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -85,11 +84,11 @@ import pytest
 
 from statsmodels.tsa.statespace.exponential_smoothing import ExponentialSmoothing
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-results_path = os.path.join(current_path, "results")
-params_path = os.path.join(results_path, "exponential_smoothing_params.csv")
-predict_path = os.path.join(results_path, "exponential_smoothing_predict.csv")
-states_path = os.path.join(results_path, "exponential_smoothing_states.csv")
+current_path = Path(__file__).resolve().parent
+results_path = Path(current_path).joinpath("results")
+params_path = Path(results_path).joinpath("exponential_smoothing_params.csv")
+predict_path = Path(results_path).joinpath("exponential_smoothing_predict.csv")
+states_path = Path(results_path).joinpath("exponential_smoothing_states.csv")
 results_params = pd.read_csv(params_path, index_col=[0])
 results_predict = pd.read_csv(predict_path, index_col=[0])
 results_states = pd.read_csv(states_path, index_col=[0])

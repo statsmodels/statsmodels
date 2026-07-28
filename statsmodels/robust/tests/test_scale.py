@@ -1,8 +1,7 @@
 """
 Test functions for models.robust.scale
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.random import standard_normal
@@ -17,10 +16,10 @@ from statsmodels.robust import scale
 import statsmodels.robust.norms as rnorms
 from statsmodels.robust.scale import mad, scale_tau
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "hbk.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 dta_hbk = pd.read_csv(file_path)
 
 
@@ -333,9 +332,9 @@ def test_tau_scale1():
 def test_tau_scale2():
     import pandas as pd
 
-    cur_dir = os.path.abspath(os.path.dirname(__file__))
+    cur_dir = Path(__file__).parent.resolve()
     file_name = "hbk.csv"
-    file_path = os.path.join(cur_dir, "results", file_name)
+    file_path = Path(cur_dir).joinpath("results", file_name)
     dta_hbk = pd.read_csv(file_path)
 
     # from R robustbase

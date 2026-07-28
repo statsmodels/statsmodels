@@ -31,7 +31,7 @@ def _open(fname, mode, encoding):
 
         return gzip.open(fname, mode, encoding=encoding)
     else:
-        return open(fname, mode, encoding=encoding)
+        return Path(fname).open(mode, encoding=encoding)
 
 
 def get_file_obj(fname, mode="r", encoding=None):
@@ -65,7 +65,7 @@ def get_file_obj(fname, mode="r", encoding=None):
     elif hasattr(fname, "open"):
         return fname.open(mode=mode, encoding=encoding)
     try:
-        return open(fname, mode, encoding=encoding)
+        return Path(fname).open(mode, encoding=encoding)
     except TypeError:
         try:
             # Make sure the object has the write methods

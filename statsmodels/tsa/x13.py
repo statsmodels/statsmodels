@@ -6,10 +6,10 @@ Notes
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import os
+from pathlib import Path
 import re
 import subprocess
 import tempfile
@@ -77,8 +77,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     _binary_names = BINARY_NAMES
     if x12path is not None and x12path.endswith(_binary_names):
         # remove binary from path if path is not a directory
-        if not os.path.isdir(x12path):
-            x12path = os.path.dirname(x12path)
+        if not Path(x12path).is_dir():
+            x12path = Path(x12path).parent
 
     if not prefer_x13:  # search for x12 first
         _binary_names = _binary_names[::-1]
@@ -92,7 +92,7 @@ def _find_x12(x12path=None, prefer_x13=True):
             x12path = os.getenv("X12PATH", "")
 
     for binary in _binary_names:
-        x12 = os.path.join(x12path, binary)
+        x12 = Path(x12path).joinpath(binary)
         try:
             subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return x12
@@ -255,7 +255,7 @@ def _convert_out_to_series(x, dates, name):
 
 def _open_and_read(fname):
     # opens a file, reads it, and make sure it's closed
-    with open(fname, encoding="utf-8") as fin:
+    with Path(fname).open(encoding="utf-8") as fin:
         fout = fin.read()
     return fout
 
@@ -582,7 +582,7 @@ def x13_arima_analysis(
         rawspec_text = None
 
         try:
-            with open(rawspec) as f:
+            with Path(rawspec).open() as f:
                 rawspec_text = f.read()
         except OSError as os_err:
             if "{" in rawspec:
@@ -666,16 +666,16 @@ def x13_arima_analysis(
         finally:
             try:  # sometimes this gives a permission denied error?
                 #   not sure why. no process should have these open
-                os.remove(ftempin.name)
-                os.remove(ftempout.name)
+                ftempin.name.unlink()
+                ftempout.name.unlink()
             except OSError:
-                if os.path.exists(ftempin.name):
+                if ftempin.name.exists():
                     warn(
                         f"Failed to delete resource {ftempin.name}",
                         IOWarning,
                         stacklevel=2
                     )
-                if os.path.exists(ftempout.name):
+                if ftempout.name.exists():
                     warn(
                         f"Failed to delete resource {ftempout.name}",
                         IOWarning,

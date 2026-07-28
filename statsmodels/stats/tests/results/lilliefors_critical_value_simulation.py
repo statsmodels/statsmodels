@@ -6,6 +6,7 @@ from collections import defaultdict
 import datetime as dt
 import gzip
 import logging
+from pathlib import Path
 import pickle
 
 import numpy as np
@@ -144,7 +145,7 @@ asymp_critical_values = {'normal': normal_asymp_crit_vals,
 
 """
     cv_filename = "../../_lilliefors_critical_values.py"
-    with open(cv_filename, "w", newline="\n", encoding="utf-8") as cv:
+    with Path(cv_filename).open("w", newline="\n", encoding="utf-8") as cv:
         cv.write(FormatCode(header)[0])
         cv.write(FormatCode(normal)[0])
         cv.write("\n\n")

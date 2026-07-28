@@ -4,8 +4,7 @@ Tests for VARMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -20,13 +19,13 @@ from statsmodels.tsa.statespace import sarimax, varmax
 
 from .results import results_varmax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-var_path = os.path.join("results", "results_var_stata.csv")
-var_results = pd.read_csv(os.path.join(current_path, var_path))
+var_path = Path("results").joinpath("results_var_stata.csv")
+var_results = pd.read_csv(Path(current_path).joinpath(var_path))
 
-varmax_path = os.path.join("results", "results_varmax_stata.csv")
-varmax_results = pd.read_csv(os.path.join(current_path, varmax_path))
+varmax_path = Path("results").joinpath("results_varmax_stata.csv")
+varmax_results = pd.read_csv(Path(current_path).joinpath(varmax_path))
 
 
 class CheckVARMAX:
@@ -698,8 +697,8 @@ class CheckFREDManufacturing(CheckVARMAX):
     ):
         cls.true = true
         # 1960:Q1 - 1982:Q4
-        path = os.path.join(current_path, "results", "manufac.dta")
-        with open(path, "rb") as test_data:
+        path = Path(current_path).joinpath("results", "manufac.dta")
+        with Path(path).open("rb") as test_data:
             dta = pd.read_stata(test_data)
         dta.index = pd.DatetimeIndex(dta.month, freq="MS")
         dta["dlncaputil"] = dta["lncaputil"].diff()

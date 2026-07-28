@@ -1,8 +1,8 @@
 from statsmodels.compat.pandas import FUTURE_STACK
 
 from collections import defaultdict
-import glob
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     PATH = os.environ.get("PSS_PATH", "..")
     print(f"Processing {PATH}")
 
-    files = glob.glob(os.path.join(PATH, "*.npz"))
+    files = [str(p) for p in Path(PATH).glob("*.npz")]
     groups = defaultdict(list)
     for f in files:
         keys = f.split("-")
@@ -160,5 +160,5 @@ crit_vals = {crit_vals}
     fm = FileMode(target_versions=targets, line_length=79)
     formatted_code = format_file_contents(raw_code, fast=False, mode=fm)
 
-    with open("../pss_critical_values.py", "w", newline="\n", encoding="utf-8") as out:
+    with Path("../pss_critical_values.py").open("w", newline="\n", encoding="utf-8") as out:
         out.write(formatted_code)

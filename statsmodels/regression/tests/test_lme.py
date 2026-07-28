@@ -1,9 +1,8 @@
 """Tests for linear mixed effects models."""
-
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -65,10 +64,10 @@ class R_Results:
             self.ranef_condvar = np.atleast_2d(self.ranef_condvar)
 
         # Load the data file
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, f"lme{ds_ix:02d}.csv")
-        with open(fname, encoding="utf-8") as fid:
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath(f"lme{ds_ix:02d}.csv")
+        with Path(fname).open(encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]
@@ -379,9 +378,9 @@ class TestMixedLM:
 
     def test_sparse(self):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
 
         # Dense
         data = pd.read_csv(fname)
@@ -417,9 +416,9 @@ class TestMixedLM:
         # Comments below are R code used to extract the numbers used
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -473,9 +472,9 @@ class TestMixedLM:
         # Comments below are the R code used to extract the constants
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -538,9 +537,9 @@ class TestMixedLM:
         # r = lmer(strength ~ (1|batch) + (1|batch:cask), data=data,
         #          reml=FALSE)
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
         data = pd.read_csv(fname)
         vcf = {"cask": "0 + cask"}
 
@@ -886,9 +885,9 @@ def do1(reml, irf, ds_ix):
 # ------------------------------------------------------------------
 
 # Run all the tests against R
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, "results")
-fnames = os.listdir(rdir)
+cur_dir = Path(__file__).resolve().parent
+rdir = Path(cur_dir).joinpath("results")
+fnames = [p.name for p in rdir.iterdir()]
 fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
 

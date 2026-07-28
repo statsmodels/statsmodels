@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -61,8 +61,8 @@ framing_moderated_4231 = pd.DataFrame(df[1:], columns=df[0]).set_index("index")
 @pytest.mark.slow
 def test_framing_example():
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    data = pd.read_csv(os.path.join(cur_dir, "results", "framing.csv"))
+    cur_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(Path(cur_dir).joinpath("results", "framing.csv"))
 
     mgr = FormulaManager()
     outcome = np.asarray(data["cong_mesg"])
@@ -105,8 +105,8 @@ def test_framing_example():
 def test_framing_example_moderator():
     # moderation without formulas, generally not useful but test anyway
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    data = pd.read_csv(os.path.join(cur_dir, "results", "framing.csv"))
+    cur_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(Path(cur_dir).joinpath("results", "framing.csv"))
 
     mgr = FormulaManager()
     outcome = np.asarray(data["cong_mesg"])
@@ -144,8 +144,8 @@ def test_framing_example_moderator():
 @pytest.mark.slow
 def test_framing_example_formula():
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    data = pd.read_csv(os.path.join(cur_dir, "results", "framing.csv"))
+    cur_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(Path(cur_dir).joinpath("results", "framing.csv"))
 
     outcome_model = sm.GLM.from_formula(
         "cong_mesg ~ emo + treat + age + educ + gender + income",
@@ -178,8 +178,8 @@ def test_framing_example_formula():
 @pytest.mark.slow
 def test_framing_example_moderator_formula():
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    data = pd.read_csv(os.path.join(cur_dir, "results", "framing.csv"))
+    cur_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(Path(cur_dir).joinpath("results", "framing.csv"))
 
     outcome_model = sm.GLM.from_formula(
         "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",

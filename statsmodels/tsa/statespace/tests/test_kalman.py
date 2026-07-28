@@ -16,9 +16,8 @@ Hamilton, James D. 1994.
 Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
-
 import copy
-import os
+from pathlib import Path
 import pickle
 
 import numpy as np
@@ -51,7 +50,7 @@ prefix_kalman_filter_map = {
     "z": _kalman_filter.zKalmanFilter,
 }
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class Clark1987:

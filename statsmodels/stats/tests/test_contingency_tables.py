@@ -1,8 +1,7 @@
 """
 Tests for contingency table analyses.
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -13,9 +12,9 @@ import pytest
 import statsmodels.api as sm
 import statsmodels.stats.contingency_tables as ctab
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 fname = "contingency_table_r_results.csv"
-fpath = os.path.join(cur_dir, "results", fname)
+fpath = Path(cur_dir).joinpath("results", fname)
 r_results = pd.read_csv(fpath)
 
 

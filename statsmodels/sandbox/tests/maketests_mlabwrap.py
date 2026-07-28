@@ -2,6 +2,7 @@
 
 currently matlab: princomp, garchar, garchma
 """
+from pathlib import Path
 
 import numpy as np
 from numpy import array
@@ -144,7 +145,7 @@ class HoldIt:
             txt.append(f"{prefix}{x} = {getattr(self, x)!r}")
         txt.extend(["", ""])  # add empty lines at end
         if filename is not None:
-            with open(filename, "a+", encoding="utf-8") as fd:
+            with Path(filename).open("a+", encoding="utf-8") as fd:
                 fd.write("\n".join(txt))
         return txt
 

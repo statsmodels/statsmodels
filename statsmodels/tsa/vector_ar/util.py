@@ -1,7 +1,8 @@
 """Miscellaneous utility code for VAR estimation"""
-
 from statsmodels.compat.pandas import deprecate_kwarg, frequencies
 from statsmodels.compat.python import asbytes
+
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -201,7 +202,7 @@ def parse_lutkepohl_data(path):  # pragma: no cover
     import re
 
     regex = re.compile(asbytes(r"<(.*) (\w)([\d]+)>.*"))
-    with open(path, "rb") as f:
+    with Path(path).open("rb") as f:
         lines = deque(f)
 
     to_skip = 0

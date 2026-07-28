@@ -4,11 +4,10 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -24,13 +23,13 @@ from statsmodels.tsa.statespace import sarimax, tools
 
 from .results import results_sarimax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-realgdp_path = os.path.join("results", "results_realgdpar_stata.csv")
-realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
+realgdp_path = Path("results") / "results_realgdpar_stata.csv"
+realgdp_results = pd.read_csv(current_path / realgdp_path)
 
-coverage_path = os.path.join("results", "results_sarimax_coverage.csv")
-coverage_results = pd.read_csv(os.path.join(current_path, coverage_path))
+coverage_path = Path("results") / "results_sarimax_coverage.csv"
+coverage_results = pd.read_csv(current_path / coverage_path)
 
 
 class TestSARIMAXStatsmodels:

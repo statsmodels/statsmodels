@@ -2,7 +2,7 @@ from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -63,7 +63,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
-CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+CURR_DIR = Path(__file__).resolve().parent
 
 
 @pytest.fixture(scope="module")
@@ -202,7 +202,7 @@ class CheckCorrGram:
 
     data = macrodata.load_pandas()
     x = data.data["realgdp"]
-    filename = os.path.join(CURR_DIR, "results", "results_corrgram.csv")
+    filename = Path(CURR_DIR).joinpath("results", "results_corrgram.csv")
     results = pd.read_csv(filename, delimiter=",")
 
 
@@ -373,7 +373,7 @@ class TestCCF:
     data = macrodata.load_pandas()
     x = data.data["unemp"].diff().dropna()
     y = data.data["infl"].diff().dropna()
-    filename = os.path.join(CURR_DIR, "results", "results_ccf.csv")
+    filename = Path(CURR_DIR).joinpath("results", "results_ccf.csv")
     results = pd.read_csv(filename, delimiter=",")
     nlags = 20
 
@@ -400,7 +400,7 @@ class TestPCCF:
     data = macrodata.load_pandas()
     x = data.data["realgdp"]
     y = data.data["realcons"]
-    filename = os.path.join(CURR_DIR, "results", "results_pccf.csv")
+    filename = Path(CURR_DIR).joinpath("results", "results_pccf.csv")
     results = pd.read_csv(filename, delimiter=",")
     nlags = 20
 
@@ -1727,9 +1727,9 @@ def test_adfuller_maxlag_too_large():
 class SetupZivotAndrews:
     # test directory
     cur_dir = CURR_DIR
-    run_dir = os.path.join(cur_dir, "results")
+    run_dir = Path(cur_dir).joinpath("results")
     # use same file for testing failure modes
-    fail_file = os.path.join(run_dir, "rgnp.csv")
+    fail_file = Path(run_dir).joinpath("rgnp.csv")
     fail_mdl = np.asarray(pd.read_csv(fail_file))
 
 
@@ -1763,7 +1763,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         assert_allclose([res[0], res[1], res[4]], [-5.57615, 0.00312, 20], rtol=1e-3)
 
     def test_gnpdef_case(self):
-        mdlfile = os.path.join(self.run_dir, "gnpdef.csv")
+        mdlfile = Path(self.run_dir).joinpath("gnpdef.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=8, regression="c", autolag="t-stat")
         assert_allclose(
@@ -1773,7 +1773,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
     def test_stkprc_case(self):
-        mdlfile = os.path.join(self.run_dir, "stkprc.csv")
+        mdlfile = Path(self.run_dir).joinpath("stkprc.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=8, regression="ct", autolag="t-stat")
         assert_allclose(
@@ -1783,7 +1783,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
     def test_rgnpq_case(self):
-        mdlfile = os.path.join(self.run_dir, "rgnpq.csv")
+        mdlfile = Path(self.run_dir).joinpath("rgnpq.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=12, regression="t", autolag="t-stat")
         assert_allclose(
@@ -1793,7 +1793,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
     def test_rand10000_case(self):
-        mdlfile = os.path.join(self.run_dir, "rand10000.csv")
+        mdlfile = Path(self.run_dir).joinpath("rand10000.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, regression="c", autolag="t-stat")
         assert_allclose(
@@ -1914,12 +1914,12 @@ def test_zivot_andrews_change_data():
 
 class TestLeybourneMcCabe:
     cur_dir = CURR_DIR
-    run_dir = os.path.join(cur_dir, "results")
+    run_dir = Path(cur_dir).joinpath("results")
 
     # failure mode tests
     def test_fail_inputs(self):
         # use results/BAA.csv file for testing failure modes
-        fail_file = os.path.join(self.run_dir, "BAA.csv")
+        fail_file = Path(self.run_dir).joinpath("BAA.csv")
         fail_mdl = np.asarray(pd.read_csv(fail_file))
         with pytest.raises(ValueError):
             leybourne(fail_mdl, regression="nc")
@@ -1937,7 +1937,7 @@ class TestLeybourneMcCabe:
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13
     def test_baa_results(self):
-        mdl_file = os.path.join(self.run_dir, "BAA.csv")
+        mdl_file = Path(self.run_dir).joinpath("BAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct", method="mle")
         assert_allclose(res[0:3], [5.4438, 0.0000, 3], rtol=1e-4, atol=1e-4)
@@ -1945,7 +1945,7 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
 
     def test_dbaa_results(self):
-        mdl_file = os.path.join(self.run_dir, "DBAA.csv")
+        mdl_file = Path(self.run_dir).joinpath("DBAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.096534, 0.602535, 2], rtol=1e-4, atol=1e-4)
@@ -1953,7 +1953,7 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:3], [0.047924, 0.601817, 2], rtol=1e-4, atol=1e-4)
 
     def test_dsp500_results(self):
-        mdl_file = os.path.join(self.run_dir, "DSP500.csv")
+        mdl_file = Path(self.run_dir).joinpath("DSP500.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.3118, 0.1256, 0], rtol=1e-4, atol=1e-4)
@@ -1961,14 +1961,14 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:3], [0.306886, 0.129934, 0], rtol=1e-4, atol=1e-4)
 
     def test_dun_results(self):
-        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl_file = Path(self.run_dir).joinpath("DUN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct", method="ols")
         assert_allclose(res[0:3], [0.0938, 0.1890, 3], rtol=1e-4, atol=1e-4)
 
     @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
     def test_dun_results_arima(self):
-        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl_file = Path(self.run_dir).joinpath("DUN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct")
         assert_allclose(res[0], 0.024083, rtol=1e-4, atol=1e-4)
@@ -1976,7 +1976,7 @@ class TestLeybourneMcCabe:
         assert res[2] == 3
 
     def test_sp500_results(self):
-        mdl_file = os.path.join(self.run_dir, "SP500.csv")
+        mdl_file = Path(self.run_dir).joinpath("SP500.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, arlags=4, regression="ct", method="mle")
         assert_allclose(res[0:2], [1.8761, 0.0000], rtol=1e-4, atol=1e-4)
@@ -1984,14 +1984,14 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:2], [1.9053, 0.0000], rtol=1e-4, atol=1e-4)
 
     def test_un_results(self):
-        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl_file = Path(self.run_dir).joinpath("UN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, method="ols", varest="var99")
         assert_allclose(res[0:3], [556.0444, 0.0000, 4], rtol=1e-4, atol=1e-4)
 
     @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
     def test_un_results_arima(self):
-        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl_file = Path(self.run_dir).joinpath("UN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, varest="var99")
         assert_allclose(res[0], 285.5181, rtol=1e-4, atol=1e-4)

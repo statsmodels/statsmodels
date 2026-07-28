@@ -1,12 +1,12 @@
 """
 Test functions for models.regression
 """
-
 from statsmodels.compat.python import lrange
 
 # TODO: Test for LM
 from statsmodels.compat.scipy import SP_LT_116
 
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -1176,13 +1176,11 @@ class TestRegularizedFit:
 
     def test_regularized(self):
 
-        import os
-
         from .results import glmnet_r_results
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        cur_dir = Path(__file__).resolve().parent
         data = np.loadtxt(
-            os.path.join(cur_dir, "results", "lasso_data.csv"), delimiter=","
+            Path(cur_dir).joinpath("results", "lasso_data.csv"), delimiter=","
         )
 
         tests = [x for x in dir(glmnet_r_results) if x.startswith("rslt_")]
