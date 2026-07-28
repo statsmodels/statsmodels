@@ -28,6 +28,8 @@ DO_NOT_EDIT = """
 # Edit the notebook and then sync the output with this file.
 #
 # DO NOT EDIT
+#
+# ruff: noqa
 """
 
 logger = logging.getLogger("notebook-exporter")

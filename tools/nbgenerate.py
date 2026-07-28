@@ -69,7 +69,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
         nb = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(
-        allow_errors=False, timeout=timeout, kernel_name=kernel_name
+        allow_errors=False, timeout=timeout, kernel_name=kernel_name, transport='ipc'
     )
     ep.preprocess(nb, {"metadata": {"path": SOURCE_DIR}})
 
