@@ -43,7 +43,7 @@ KNOWN_FAILURES = []
 JOBLIB_NOTEBOOKS = ["distributed_estimation"]
 RPY2_NOTEBOOKS = ["mixed_lm_example", "robust_models_1"]
 
-kernel_name = "python%s" % sys.version_info.major
+kernel_name = f"python{sys.version_info.major}"
 
 head, _ = os.path.split(__file__)
 NOTEBOOK_DIR = os.path.join(head, "..", "..", "..", "examples", "notebooks")

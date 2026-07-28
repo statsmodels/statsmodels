@@ -12,8 +12,8 @@ def test_add_indep():
     x = np.column_stack([x0, x1[:, None] * np.arange(3), x2[:, None] * np.arange(2)])
     varnames = (
         ["const"]
-        + ["var1_%d" % i for i in np.arange(3)]
-        + ["var2_%d" % i for i in np.arange(2)]
+        + [f"var1_{i:d}" for i in np.arange(3)]
+        + [f"var2_{i:d}" for i in np.arange(2)]
     )
     xo, vo = add_indep(x, varnames)
 

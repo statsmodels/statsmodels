@@ -384,7 +384,7 @@ class StatTestMC:
             title = "Quantiles (critical values)"
         # TODO use stub instead
         if varnames is None:
-            varnames = ["var%d" % i for i in range(mmlar.shape[1] // 2)]
+            varnames = [f"var{i:d}" for i in range(mmlar.shape[1] // 2)]
         headers = ["\nprob"] + [f"{i}\n{t}" for i in varnames for t in ["mc", "dist"]]
         return SimpleTable(
             mmlar,
@@ -436,7 +436,7 @@ class StatTestMC:
         # headers = ['\nprob'] + ['var%d\n%s' % (i, t) for i in range(mmlar.shape[1]-1) for t in ['mc']]
 
         if varnames is None:
-            varnames = ["var%d" % i for i in range(mmlar.shape[1] - 1)]
+            varnames = [f"var{i:d}" for i in range(mmlar.shape[1] - 1)]
         headers = ["prob"] + varnames
         return SimpleTable(
             mmlar,

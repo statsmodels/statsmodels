@@ -241,7 +241,7 @@ class TestPredFunc:
                     plt.ylabel("Linear predictor", size=15)
                 else:
                     plt.ylabel("Fitted mean", size=15)
-                plt.title("%s family prediction" % fam_name.capitalize())
+                plt.title(f"{fam_name.capitalize()} family prediction")
 
                 self.close_or_save(fig)
 

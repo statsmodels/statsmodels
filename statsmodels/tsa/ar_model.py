@@ -247,7 +247,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def ar_lags(self) -> list[int] | None:
         """The autoregressive lags included in the model"""
         lags = list(self._lags)
-        return lags if lags else None
+        return lags or None
 
     @property
     def hold_back(self) -> int | None:
@@ -1729,11 +1729,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         top_right = [
             ("No. Observations:", [str(len(self.model.endog))]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
-            ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
+            ("S.D. of innovations", [f"{self.sigma2**0.5:#5.3f}"]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         smry = Summary()
@@ -1744,7 +1744,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         from statsmodels.iolib.table import SimpleTable
 
         if self._max_lag:
-            arstubs = ["AR.%d" % i for i in range(1, self._max_lag + 1)]
+            arstubs = [f"AR.{i:d}" for i in range(1, self._max_lag + 1)]
             stubs = arstubs
             roots = self.roots
             freq = self.arfreq
@@ -1753,10 +1753,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             roots_table = SimpleTable(
                 [
                     (
-                        "%17.4f" % row[0],
-                        "%+17.4fj" % row[1],
-                        "%17.4f" % row[2],
-                        "%17.4f" % row[3],
+                        f"{row[0]:17.4f}",
+                        f"{row[1]:+17.4f}j",
+                        f"{row[2]:17.4f}",
+                        f"{row[3]:17.4f}",
                     )
                     for row in data
                 ],
@@ -2165,7 +2165,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(j for j in range(1, i + 1))
-            lags = lags if lags else 0
+            lags = lags or 0
             ics.append((lags, compute_ics(res)))
     else:
         bits = np.arange(2**maxlag, dtype=np.int32)[:, None]
@@ -2181,7 +2181,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(np.where(mask)[0] + 1)
-            lags = lags if lags else 0
+            lags = lags or 0
             ics.append((lags, compute_ics(res)))
 
     key_loc = {"aic": 0, "bic": 1, "hqic": 2}[ic]

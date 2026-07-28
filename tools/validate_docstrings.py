@@ -360,7 +360,7 @@ class Docstring:
                 continue
 
         if "obj" not in locals():
-            raise ImportError('No module can be imported from "{}"'.format(name))
+            raise ImportError(f'No module can be imported from "{name}"')
 
         for part in func_parts:
             obj = getattr(obj, part)
@@ -1024,7 +1024,7 @@ def validate_all(prefix, ignore_deprecated=False):
 
         seen[shared_code_key] = func_name
     # functions from introspecting Series and DataFrame
-    api_item_names = set(next(zip(*api_items)))
+    api_item_names = set(next(zip(*api_items, strict=True)))
     for class_name, class_ in API_CLASSES:
         for member in inspect.getmembers(class_):
             func_name = class_name + "." + member[0]
@@ -1049,9 +1049,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
             side=char * side_len, title=title, adj=adj
         )
 
-        return "\n{full_line}\n{title_line}\n{full_line}\n\n".format(
-            full_line=full_line, title_line=title_line
-        )
+        return f"\n{full_line}\n{title_line}\n{full_line}\n\n"
 
     exit_status = 0
     if func_name is None:
@@ -1137,7 +1135,7 @@ if __name__ == "__main__":
         choices=format_opts,
         help="format of the output when validating "
         "multiple docstrings (ignored when validating one)."
-        "It can be {}".format(str(format_opts)[1:-1]),
+        f"It can be {str(format_opts)[1:-1]}",
     )
     argparser.add_argument(
         "--prefix",

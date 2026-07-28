@@ -65,8 +65,8 @@ if __name__ == "__main__":
             rst_mtime = os.path.getmtime(write_pth)
             if rst_mtime > last_mod_time[dataset]:
                 print(
-                    "Skipping creation of {} since the rst file is newer "
-                    "than the data files.".format(rst_file_name)
+                    f"Skipping creation of {rst_file_name} since the rst file is newer "
+                    "than the data files."
                 )
                 continue
         title = data_mod.TITLE

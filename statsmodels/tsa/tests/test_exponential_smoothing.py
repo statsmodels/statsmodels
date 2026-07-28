@@ -369,7 +369,7 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
     Fit the model with params as found by R's forecast package
     """
     params = get_params_from_R(results_R)
-    with model.fix_params(dict(zip(model.param_names, params))):
+    with model.fix_params(dict(zip(model.param_names, params, strict=True))):
         fit = model.fit(disp=False)
 
     if set_state:

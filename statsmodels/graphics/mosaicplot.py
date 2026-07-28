@@ -59,7 +59,7 @@ def _normalize_split(proportion):
     if np.allclose(proportion, 0):
         raise ValueError(
             "at least one proportion should be greater than zero"
-            "given value: {}".format(proportion)
+            f"given value: {proportion}"
         )
     # ok, data are meaningful, so go on
 
@@ -139,7 +139,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
 
     results = [
         (s, y, a, h) if horizontal else (x, s, w, a)
-        for s, a in zip(starting, amplitude)
+        for s, a in zip(starting, amplitude, strict=True)
     ]
     return results
 
@@ -205,7 +205,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
         if key_subset == name[:L]:
             # split base on the values given
             divisions = _split_rect(x, y, w, h, values, horizontal, gap)
-            for key, rect in zip(keys, divisions):
+            for key, rect in zip(keys, divisions, strict=True):
                 result[name + (key,)] = rect
         else:
             result[name] = (x, y, w, h)
@@ -256,7 +256,7 @@ def _categories_level(keys):
         values found at that level across all keys.
     """
     res = []
-    for i in zip(*(keys)):
+    for i in zip(*(keys), strict=True):
         tuplefied = _tuplify(i)
         res.append(list(dict.fromkeys(tuplefied)))
     return res
@@ -414,7 +414,10 @@ def _create_default_properties(data):
     hue = lzip(list(hue), categories_levels[0])
     saturation = lzip(list(saturation), categories_levels[1] if Nlevels > 1 else [""])
     value = lzip(list(value), categories_levels[2] if Nlevels > 2 else [""])
-    hatch = lzip(list(hatch), categories_levels[3] if Nlevels > 3 else [""])
+    if Nlevels > 3:
+        hatch = lzip(hatch[:len(categories_levels[3])], categories_levels[3])
+    else:
+        hatch = [(hatch[0], "")]
 
     # create the properties dictionary
     properties = {}
@@ -659,7 +662,7 @@ def _create_labels(rects, horizontal, ax, rotation):
         ticks_pos = ticks_pos[1:] + ticks_pos[:1]
         ticks_lab = ticks_lab[1:] + ticks_lab[:1]
     # clean them
-    for pos, lab in zip(ticks_pos, ticks_lab):
+    for pos, lab in zip(ticks_pos, ticks_lab, strict=True):
         pos([])
         lab([])
     # for each level, for each value in the level, take the mean of all
@@ -892,7 +895,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         # create each rectangle and put a label on it
         x, y, w, h = v
         conf = properties(k)
-        props = conf if conf else default_props[k]
+        props = conf or default_props[k]
         text = labelizer(k)
         Rect = Rectangle((x, y), w, h, label=text, **props)
         ax.add_patch(Rect)

@@ -43,9 +43,8 @@ class ordinal_simulator(GEE_simulator):
         return beta
 
     def print_dparams(self, dparams_est):
-        OUT.write("Odds ratio estimate:   %8.4f\n" % dparams_est[0])
-        OUT.write("Odds ratio truth:      %8.4f\n" %
-                  self.dparams[0])
+        OUT.write(f"Odds ratio estimate:   {dparams_est[0]:8.4f}\n")
+        OUT.write(f"Odds ratio truth:      {self.dparams[0]:8.4f}\n")
         OUT.write("\n")
 
     def simulate(self):
@@ -88,8 +87,8 @@ class nominal_simulator(GEE_simulator):
         return np.concatenate(self.params[:-1])
 
     def print_dparams(self, dparams_est):
-        OUT.write("Odds ratio estimate:   %8.4f\n" % dparams_est[0])
-        OUT.write("Odds ratio truth:      %8.4f\n" % self.dparams[0])
+        OUT.write(f"Odds ratio estimate:   {dparams_est[0]:8.4f}\n")
+        OUT.write(f"Odds ratio truth:      {self.dparams[0]:8.4f}\n")
         OUT.write("\n")
 
     def simulate(self):
@@ -191,7 +190,7 @@ if __name__ == "__main__":
 
     OUT = open("gee_categorical_simulation_check.txt", "w", encoding="utf-8")
 
-    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                         suppress=True)
 
     # Loop over data generating models
@@ -240,8 +239,8 @@ if __name__ == "__main__":
 
         dparams_mean = np.array(sum(dparams) / len(dparams))
 
-        OUT.write("%s data.\n" % ("Nominal", "Ordinal")[jg])
-        OUT.write("%d runs converged successfully.\n" % len(pvalues))
+        OUT.write("{} data.\n".format(("Nominal", "Ordinal")[jg]))
+        OUT.write(f"{len(pvalues):d} runs converged successfully.\n")
 
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
@@ -281,9 +280,7 @@ if __name__ == "__main__":
         OUT.write("Observed   Expected\n")
 
         pvalues.sort()
-        for q in np.arange(0.1, 0.91, 0.1):
-            OUT.write("%10.3f %10.3f\n" %
-                      (pvalues[int(q*len(pvalues))], q))
+        OUT.writelines(f"{pvalues[int(q*len(pvalues))]:10.3f} {q:10.3f}\n" for q in np.arange(0.1, 0.91, 0.1))
 
         OUT.write("=" * 80 + "\n\n")
 

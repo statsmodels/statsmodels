@@ -64,7 +64,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         for param_name in param_names:
             if param_name not in self.param_names:
                 raise ValueError(
-                    'Invalid parameter name passed: "%s".' % param_name
+                    f'Invalid parameter name passed: "{param_name}".'
                 )
 
     @property
@@ -94,7 +94,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if self._fixed_params is None:
             self._fixed_params = {}
             self._params_index = OrderedDict(
-                zip(self.param_names, np.arange(self.k_params))
+                zip(self.param_names, np.arange(self.k_params), strict=True)
             )
 
         # Cache the current fixed parameters
@@ -181,7 +181,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
             return self._param_names
         else:
             try:
-                names = ["param.%d" % i for i in range(len(self.start_params))]
+                names = [f"param.{i:d}" for i in range(len(self.start_params))]
             except NotImplementedError:
                 names = []
             return names
@@ -334,7 +334,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             self._fixed_params = None
             self.fixed_params = []
         self.param_names = [
-            "%s (fixed)" % name if name in self.fixed_params else name
+            f"{name} (fixed)" if name in self.fixed_params else name
             for name in (self.data.param_names or [])
         ]
 
@@ -694,16 +694,16 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 denom_dof = len(denom_resid)
 
                 if numer_dof < 2:
-                    warnings.warn("Early subset of data for variable %d"
+                    warnings.warn(f"Early subset of data for variable {i:d}"
                                   "  has too few non-missing observations to"
-                                  " calculate test statistic." % i,
+                                  " calculate test statistic.",
                                   stacklevel=2,
                                   )
                     numer_resid = np.nan
                 if denom_dof < 2:
-                    warnings.warn("Later subset of data for variable %d"
+                    warnings.warn(f"Later subset of data for variable {i:d}"
                                   "  has too few non-missing observations to"
-                                  " calculate test statistic." % i,
+                                  " calculate test statistic.",
                                   stacklevel=2,
                                   )
                     denom_resid = np.nan
@@ -855,9 +855,9 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         if self.model._index_dates:
             ix = self.model._index
             d = ix[start]
-            sample = ["%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample = [f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
             d = ix[-1]
-            sample += ["- " + "%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample += ["- " + f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
         else:
             sample = [str(start), " - " + str(self.nobs)]
 
@@ -896,14 +896,14 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
         top_right = [
             ("No. Observations:", [self.nobs]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
         ]
         if hasattr(self, "rsquared"):
-            top_right.append(("R-squared:", ["%#8.3f" % self.rsquared]))
+            top_right.append(("R-squared:", [f"{self.rsquared:#8.3f}"]))
         top_right += [
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         if hasattr(self, "filter_results"):
@@ -911,9 +911,9 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                     self.filter_results is not None
                     and self.filter_results.filter_concentrated
             ):
-                top_right.append(("Scale", ["%#5.3f" % self.scale]))
+                top_right.append(("Scale", [f"{self.scale:#5.3f}"]))
         else:
-            top_right.append(("Scale", ["%#5.3f" % self.scale]))
+            top_right.append(("Scale", [f"{self.scale:#5.3f}"]))
 
         if hasattr(self, "cov_type"):
             top_left.append(("Covariance Type:", [self.cov_type]))
@@ -958,8 +958,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 cov_params = cov_params[mask]
             etext.append(
                 "Covariance matrix is singular or near-singular,"
-                " with condition number %6.3g. Standard errors may be"
-                " unstable." % _safe_cond(cov_params)
+                f" with condition number {_safe_cond(cov_params):6.3g}. Standard errors may be"
+                " unstable."
             )
 
         if etext:

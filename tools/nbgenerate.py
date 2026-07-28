@@ -173,10 +173,7 @@ def do_one(
             json.dump(current_hash, hf)
     except TraitError as exc:
         kernels = jupyter_client.kernelspec.find_kernel_specs()
-        msg = "Could not find kernel named `%s`, Available kernels:\n %s" % (
-            kernel_name,
-            kernels,
-        )
+        msg = f"Could not find kernel named `{kernel_name}`, Available kernels:\n {kernels}"
         raise ValueError(msg) from exc
 
     return dst
@@ -227,11 +224,11 @@ def do(
     if parallel and has_futures:
         with futures.ProcessPoolExecutor() as pool:
             for dst in pool.map(func, nbs):
-                print("Finished %s" % dst)
+                print(f"Finished {dst}")
     else:
         for nb in nbs:
             func(nb)
-            print("Finished %s" % nb)
+            print(f"Finished {nb}")
 
     skip_func = partial(
         do_one,
@@ -246,14 +243,14 @@ def do(
     )
     for nb in skip:
         skip_func(nb)
-        print("Finished (without execution) %s" % nb)
+        print(f"Finished (without execution) {nb}")
 
 
 def find_kernel_name():
     import jupyter_client
 
     kernels = jupyter_client.kernelspec.find_kernel_specs()
-    kernel_name = "python%s" % sys.version_info.major
+    kernel_name = f"python{sys.version_info.major}"
     if kernel_name not in kernels:
         return ""
     return kernel_name

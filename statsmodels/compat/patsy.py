@@ -79,13 +79,13 @@ def get_all_sorted_knots(
 
     if upper_bound < lower_bound:
         raise ValueError(
-            "lower_bound > upper_bound ({!r} > {!r})".format(lower_bound, upper_bound)
+            f"lower_bound > upper_bound ({lower_bound!r} > {upper_bound!r})"
         )
 
     if inner_knots is None and n_inner_knots is not None:
         if n_inner_knots < 0:
             raise ValueError(
-                "Invalid requested number of inner knots: {!r}".format(n_inner_knots)
+                f"Invalid requested number of inner knots: {n_inner_knots!r}"
             )
 
         x = x[(lower_bound <= x) & (x <= upper_bound)]
@@ -99,27 +99,27 @@ def get_all_sorted_knots(
             inner_knots = np.array([])
         else:
             raise ValueError(
-                "No data values between lower_bound(=%r) and "
-                "upper_bound(=%r): cannot compute requested "
-                "%r inner knot(s)." % (lower_bound, upper_bound, n_inner_knots)
+                f"No data values between lower_bound(={lower_bound!r}) and "
+                f"upper_bound(={upper_bound!r}): cannot compute requested "
+                f"{n_inner_knots!r} inner knot(s)."
             )
     elif inner_knots is not None:
         inner_knots = np.unique(inner_knots)
         if n_inner_knots is not None and n_inner_knots != inner_knots.size:
             raise ValueError(
-                "Needed number of inner knots=%r does not match "
-                "provided number of inner knots=%r." % (n_inner_knots, inner_knots.size)
+                f"Needed number of inner knots={n_inner_knots!r} does not match "
+                f"provided number of inner knots={inner_knots.size!r}."
             )
         n_inner_knots = inner_knots.size
         if np.any(inner_knots < lower_bound):
             raise ValueError(
-                "Some knot values (%s) fall below lower bound "
-                "(%r)." % (inner_knots[inner_knots < lower_bound], lower_bound)
+                f"Some knot values ({inner_knots[inner_knots < lower_bound]}) fall below lower bound "
+                f"({lower_bound!r})."
             )
         if np.any(inner_knots > upper_bound):
             raise ValueError(
-                "Some knot values (%s) fall above upper bound "
-                "(%r)." % (inner_knots[inner_knots > upper_bound], upper_bound)
+                f"Some knot values ({inner_knots[inner_knots > upper_bound]}) fall above upper bound "
+                f"({upper_bound!r})."
             )
     else:
         raise ValueError("Must specify either 'n_inner_knots' or 'inner_knots'.")
@@ -128,10 +128,9 @@ def get_all_sorted_knots(
     all_knots = np.unique(all_knots)
     if all_knots.size != n_inner_knots + 2:
         raise ValueError(
-            "Unable to compute n_inner_knots(=%r) + 2 distinct "
-            "knots: %r data value(s) found between "
-            "lower_bound(=%r) and upper_bound(=%r)."
-            % (n_inner_knots, x.size, lower_bound, upper_bound)
+            f"Unable to compute n_inner_knots(={n_inner_knots!r}) + 2 distinct "
+            f"knots: {x.size!r} data value(s) found between "
+            f"lower_bound(={lower_bound!r}) and upper_bound(={upper_bound!r})."
         )
 
     return all_knots

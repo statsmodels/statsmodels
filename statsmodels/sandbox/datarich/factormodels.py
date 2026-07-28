@@ -154,7 +154,9 @@ class FactorModelUnivariate:
         #        best = np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
         #                     np.argmin(results[:,-1],0))]
 
-        sumstr += "\n" + " " * 19 + "%5d %4d %6d %5d" % tuple(self.best_nfact)
+        sumstr += "\n" + " " * 19 + "{:5d} {:4d} {:6d} {:5d}".format(
+            *tuple(self.best_nfact)
+        )
 
         from statsmodels.iolib.table import SimpleTable
 

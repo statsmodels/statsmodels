@@ -150,7 +150,7 @@ def violinplot(
     )
 
     # Plot violins.
-    for pos_data, pos in zip(data, positions):
+    for pos_data, pos in zip(data, positions, strict=True):
         _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
     if show_boxplot:
@@ -380,7 +380,7 @@ def beanplot(
     )
 
     legend_txt = plot_opts.get("bean_legend_text", None)
-    for pos_data, pos in zip(data, positions):
+    for pos_data, pos in zip(data, positions, strict=True):
         # Draw violins.
         xvals, violin = _single_violin(ax, pos, pos_data, violin_width, side, plot_opts)
 
@@ -449,7 +449,7 @@ def _jitter_envelope(pos_data, xvals, violin, side, rng):
     elif side == "left":
         low, high = (-1.0, 0)
     else:
-        raise ValueError("`side` input incorrect: %s" % side)
+        raise ValueError(f"`side` input incorrect: {side}")
 
     jitter_envelope = np.interp(pos_data, xvals, violin)
     jitter_coord = jitter_envelope * rng.uniform(low=low, high=high, size=pos_data.size)

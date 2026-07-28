@@ -140,7 +140,7 @@ class PatsyFormula:
 
 class MICEData:
 
-    __doc__ = """\
+    __doc__ = f"""\
     Wrap a data set to allow missing data handling with MICE
 
     Parameters
@@ -184,7 +184,7 @@ class MICEData:
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     {_mice_data_example_1}
-    """.format(_mice_data_example_1=_mice_data_example_1)
+    """
 
     def __init__(
         self,
@@ -305,7 +305,7 @@ class MICEData:
         self.data.fillna(imp_values, inplace=True)
 
     def _split_indices(self, vec):
-        null = pd.isnull(vec)
+        null = pd.isna(vec)
         ix_obs = np.flatnonzero(~null)
         ix_miss = np.flatnonzero(null)
         if len(ix_obs) == 0:
@@ -1068,7 +1068,7 @@ class MICEData:
         elif hasattr(obj, "predicted_values"):
             return obj.predicted_values
         else:
-            raise ValueError("cannot obtain predicted values from %s" % obj.__class__)
+            raise ValueError(f"cannot obtain predicted values from {obj.__class__}")
 
     def impute_pmm(self, vname):
         """
@@ -1159,7 +1159,7 @@ _mice_example_2 = """
 
 class MICE:
 
-    __doc__ = """\
+    __doc__ = f"""\
     Multiple Imputation with Chained Equations
 
     This class can be used to fit most statsmodels models to data sets
@@ -1190,12 +1190,12 @@ class MICE:
     Examples
     --------
     Run all MICE steps and obtain results:
-    {mice_example_1}
+    {_mice_example_1}
 
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
-    {mice_example_2}
-    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
+    {_mice_example_2}
+    """
 
     def __init__(
         self, model_formula, model_class, data, n_skip=3, init_kwds=None, fit_kwds=None
@@ -1378,9 +1378,9 @@ class MICEResults(LikelihoodModelResults):
         info["Method:"] = "MICE"
         info["Model:"] = self.model_class.__name__
         info["Dependent variable:"] = self.endog_names
-        info["Sample size:"] = "%d" % self.model.data.data.shape[0]
-        info["Scale"] = "%.2f" % self.scale
-        info["Num. imputations"] = "%d" % len(self.model.results_list)
+        info["Sample size:"] = f"{self.model.data.data.shape[0]:d}"
+        info["Scale"] = f"{self.scale:.2f}"
+        info["Num. imputations"] = f"{len(self.model.results_list):d}"
 
         smry.add_dict(info, align="l", float_format=float_format)
 

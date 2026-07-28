@@ -82,7 +82,7 @@ SET_USE_BIC_LLF = _use_bic_helper.set_use_bic_llf
 
 
 class GLM(base.LikelihoodModel):
-    __doc__ = """
+    __doc__ = f"""
     Generalized Linear Models
 
     GLM inherits from statsmodels.base.model.LikelihoodModel
@@ -122,7 +122,7 @@ class GLM(base.LikelihoodModel):
         array of 1's with length equal to the endog.
         WARNING: Using weights is not verified yet for all possible options
         and results, see Notes.
-    {extra_params}
+    {base._missing_param_doc}
 
     Attributes
     ----------
@@ -291,7 +291,7 @@ class GLM(base.LikelihoodModel):
     interpretation. The log-likelihood is not correctly specified in this case,
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
-    """.format(extra_params=base._missing_param_doc)
+    """
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
 
@@ -970,13 +970,11 @@ class GLM(base.LikelihoodModel):
                 ) / (self.df_resid)
             else:
                 raise ValueError(
-                    "Scale %s with type %s not understood"
-                    % (self.scaletype, type(self.scaletype))
+                    f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
                 )
         else:
             raise ValueError(
-                "Scale %s with type %s not understood"
-                % (self.scaletype, type(self.scaletype))
+                f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
             )
 
     def _estimate_x2_scale(self, mu):
@@ -1668,7 +1666,7 @@ class GLM(base.LikelihoodModel):
 
         if not mr.success:
             ngrad = np.sqrt(np.sum(mr.jac**2))
-            msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
+            msg = f"GLM ridge optimization may have failed, |grad|={ngrad:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = RegularizedResults(self, params)
@@ -2757,7 +2755,7 @@ class GLMResults(base.LikelihoodModelResults):
             ("Method:", [self.method]),
             ("Date:", None),
             ("Time:", None),
-            ("No. Iterations:", ["%d" % self.fit_history["iteration"]]),
+            ("No. Iterations:", ["{:d}".format(self.fit_history["iteration"])]),
         ]
 
         try:
@@ -2769,11 +2767,11 @@ class GLMResults(base.LikelihoodModelResults):
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),
-            ("Scale:", ["%#8.5g" % self.scale]),
+            ("Scale:", [f"{self.scale:#8.5g}"]),
             ("Log-Likelihood:", None),
-            ("Deviance:", ["%#8.5g" % self.deviance]),
-            ("Pearson chi2:", ["%#6.3g" % self.pearson_chi2]),
-            ("Pseudo R-squ. (CS):", ["%#6.4g" % prsquared]),
+            ("Deviance:", [f"{self.deviance:#8.5g}"]),
+            ("Pearson chi2:", [f"{self.pearson_chi2:#6.3g}"]),
+            ("Pseudo R-squ. (CS):", [f"{prsquared:#6.4g}"]),
         ]
 
         if hasattr(self, "cov_type"):

@@ -66,14 +66,14 @@ for pr in [1, 2]:
 
             header = (
                 ["groups,endog"]
-                + ["exog_fe_%d" % k for k in range(pf)]
-                + ["exog_re_%d" % k for k in range(pr)]
+                + [f"exog_fe_{k:d}" for k in range(pf)]
+                + [f"exog_re_{k:d}" for k in range(pr)]
             )
             header = ",".join(header)
 
             cur_dir = os.path.dirname(os.path.abspath(__file__))
 
-            fname = os.path.join(cur_dir, "lme%02d.csv" % dsix)
+            fname = os.path.join(cur_dir, f"lme{dsix:02d}.csv")
             np.savetxt(
                 fname, data, fmt="%.3f", header=header, delimiter=",", comments=""
             )

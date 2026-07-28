@@ -1962,7 +1962,7 @@ def _phi(p):
 
     if p <= 0 or p >= 1:
         # The original perl code exits here, we'll throw an exception instead
-        raise ValueError("Argument to ltqnorm %f must be in open interval (0,1)" % p)
+        raise ValueError(f"Argument to ltqnorm {p:f} must be in open interval (0,1)")
 
     # Coefficients in rational approximations.
     a = (

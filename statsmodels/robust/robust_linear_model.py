@@ -34,19 +34,19 @@ def _check_convergence(criterion, iteration, tol, maxiter):
 
 
 class RLM(base.LikelihoodModel):
-    __doc__ = """
+    __doc__ = f"""
     Robust Linear Model
 
     Estimate a robust linear model via iteratively reweighted least squares
     given a robust criterion estimator.
 
-    {params}
+    {base._model_params_doc}
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See statsmodels.robust.norms for more information.
-    {extra_params}
+    {base._missing_param_doc}
 
     Attributes
     ----------
@@ -99,9 +99,7 @@ class RLM(base.LikelihoodModel):
     >>> rlm_hamp_hub = mod.fit(scale_est=sm.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
-    """.format(
-        params=base._model_params_doc, extra_params=base._missing_param_doc
-    )
+    """
 
     def __init__(self, endog, exog, M=None, missing="none", **kwargs):
         self._check_kwargs(kwargs)
@@ -214,7 +212,7 @@ class RLM(base.LikelihoodModel):
                 return scale.mad(resid, center=0)
             else:
                 raise ValueError(
-                    "Option %s for scale_est not understood" % scale_est
+                    f"Option {scale_est} for scale_est not understood"
                 )
         elif isinstance(scale_est, scale.HuberScale):
             return scale_est(self.df_resid, self.nobs, resid)
@@ -288,11 +286,11 @@ class RLM(base.LikelihoodModel):
             Results instance
         """
         if cov.upper() not in ["H1", "H2", "H3"]:
-            raise ValueError("Covariance matrix %s not understood" % cov)
+            raise ValueError(f"Covariance matrix {cov} not understood")
         cov = cov.upper()
         conv = conv.lower()
         if conv not in ["weights", "coefs", "dev", "sresid"]:
-            raise ValueError("Convergence argument %s not understood" % conv)
+            raise ValueError(f"Convergence argument {conv} not understood")
 
         if start_params is None:
             wls_results = lm.WLS(self.endog, self.exog).fit()
@@ -301,8 +299,8 @@ class RLM(base.LikelihoodModel):
             start_params = np.atleast_1d(start_params)
             if start_params.shape[0] != self.exog.shape[1] or start_params.ndim != 1:
                 raise ValueError(
-                    "start_params must by a 1-d array with {} "
-                    "values".format(self.exog.shape[1])
+                    f"start_params must by a 1-d array with {self.exog.shape[1]} "
+                    "values"
                 )
             fake_wls = reg_tools._MinimalWLS(
                 self.endog,
@@ -590,7 +588,7 @@ class RLMResults(base.LikelihoodModelResults):
             ("Cov Type:", [self.fit_options["cov"]]),
             ("Date:", None),
             ("Time:", None),
-            ("No. Iterations:", ["%d" % self.fit_history["iteration"]]),
+            ("No. Iterations:", ["{:d}".format(self.fit_history["iteration"])]),
         ]
         top_right = [
             ("No. Observations:", None),

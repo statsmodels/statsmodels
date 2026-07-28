@@ -7,7 +7,7 @@ from collections.abc import Hashable, Mapping, Sequence
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -83,15 +83,15 @@ Alternative: {self.alternative}
 """
 
 
-_UECMOrder = Union[None, int, dict[Hashable, Optional[int]]]
+_UECMOrder = int | dict[Hashable, int | None] | None
 
-_ARDLOrder = Union[
-    None,
-    int,
-    _UECMOrder,
-    Sequence[int],
-    dict[Hashable, Union[int, Sequence[int], None]],
-]
+_ARDLOrder = (
+    int
+    | _UECMOrder
+    | Sequence[int]
+    | dict[Hashable, int | Sequence[int] | None]
+    | None
+)
 
 _INT_TYPES = (int, np.integer)
 
@@ -447,7 +447,7 @@ class ARDL(AutoReg):
     def _fit(
         self,
         cov_type: str = "nonrobust",
-        cov_kwds: Optional[dict[str, Any]] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self._x.shape[1] == 0:
@@ -468,7 +468,7 @@ class ARDL(AutoReg):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: Optional[dict[str, Any]] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
     ) -> ARDLResults:
         """
@@ -1266,11 +1266,11 @@ class ARDLResults(AutoRegResults):
 
         top_right = [
             ("No. Observations:", [str(len(self.model.endog))]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
             ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         smry = Summary()
@@ -1513,7 +1513,7 @@ def ardl_select_order(
     else:
         for io in product(*iter_orders):
             x = np.column_stack([a[:, : io[i]] for i, a in enumerate(select)])
-            key = [io[0] if io[0] else None]
+            key = [io[0] or None]
             for j, val in enumerate(io[1:]):
                 var = var_names[j]
                 if causal:
@@ -1890,7 +1890,7 @@ class UECM(ARDL):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: Optional[dict[str, Any]] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
     ) -> UECMResults:
         params, cov_params, norm_cov_params = self._fit(
@@ -2230,7 +2230,7 @@ class UECMResults(ARDLResults):
         self,
         case: Literal[1, 2, 3, 4, 5],
         cov_type: str = "nonrobust",
-        cov_kwds: Optional[dict[str, Any]] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
         asymptotic: bool = True,
         nsim: int = 100_000,

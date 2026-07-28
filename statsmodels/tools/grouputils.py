@@ -323,7 +323,7 @@ class Group:
                 (prefix + sep.join(["%s"] * len(uni[0]))) % tuple(ii) for ii in uni
             ]
         else:
-            label = [prefix + "%s" % ii for ii in uni]
+            label = [prefix + f"{ii}" for ii in uni]
         return label
 
     def dummy(self, drop_idx=None, sparse=False, dtype=int):

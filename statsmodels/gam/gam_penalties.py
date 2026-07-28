@@ -186,8 +186,8 @@ class MultivariateGamPenalty(Penalty):
         if len(multivariate_smoother.smoothers) != len(alpha):
             msg = (
                 "all the input values should be of the same length."
-                " len(smoothers)=%d, len(alphas)=%d"
-            ) % (len(multivariate_smoother.smoothers), len(alpha))
+                f" len(smoothers)={len(multivariate_smoother.smoothers):d}, len(alphas)={len(alpha):d}"
+            )
             raise ValueError(msg)
 
         self.multivariate_smoother = multivariate_smoother

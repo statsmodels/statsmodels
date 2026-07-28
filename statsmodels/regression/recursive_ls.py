@@ -607,7 +607,7 @@ class RecursiveLSResults(MLEResults):
             # Plot the coefficient
             coef = self.recursive_coefficients
             ax.plot(dates[d:], coef.filtered[variable, d:],
-                    label="Recursive estimates: %s" % exog_names[variable])
+                    label=f"Recursive estimates: {exog_names[variable]}")
 
             # Legend
             handles, labels = ax.get_legend_handles_labels()
@@ -625,8 +625,7 @@ class RecursiveLSResults(MLEResults):
                 ci_poly = ax.fill_between(
                     dates[d:], ci_lower[d:], ci_upper[d:], alpha=0.2
                 )
-                ci_label = ("$%.3g \\%%$ confidence interval"
-                            % ((1 - alpha)*100))
+                ci_label = (f"${(1 - alpha)*100:.3g} \\%$ confidence interval")
 
                 # Only add CI to legend for the first plot
                 if i == 0:
@@ -753,7 +752,7 @@ class RecursiveLSResults(MLEResults):
         # Plot significance bounds
         lower_line, upper_line = self._cusum_significance_bounds(alpha)
         ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+                label=f"{int(alpha * 100):d}% significance")
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)
@@ -865,7 +864,7 @@ class RecursiveLSResults(MLEResults):
         # Plot significance bounds
         lower_line, upper_line = self._cusum_squares_significance_bounds(alpha)
         ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+                label=f"{int(alpha * 100):d}% significance")
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)

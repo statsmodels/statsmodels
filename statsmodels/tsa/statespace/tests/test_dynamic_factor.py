@@ -257,7 +257,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 7)
@@ -276,7 +276,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
             table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            assert re.search("Results for factor equation f%d" % (i + 1), table)
+            assert re.search(f"Results for factor equation f{i + 1:d}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 7)
@@ -393,7 +393,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 8)
@@ -415,7 +415,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            assert re.search("Results for factor equation f%d" % (i + 1), table)
+            assert re.search(f"Results for factor equation f{i + 1:d}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 6)
@@ -521,7 +521,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 6)
@@ -536,7 +536,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             table = tables[2 + model.k_endog + i]
 
             # -> Make sure we have the right table / table name
-            assert re.search("Results for factor equation f%d" % (i + 1), table)
+            assert re.search(f"Results for factor equation f{i + 1:d}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 6)
@@ -551,7 +551,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search(r"Results for error equation e\(%s\)" % name, table)
+            assert re.search(fr"Results for error equation e\({name}\)", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 8)
@@ -559,9 +559,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             # -> Check that we have the right coefficients
             for j in range(model.k_endog):
                 name = model.endog_names[j]
-                pattern = r"L1.e\({}\) +{}".format(
-                    name, forg(params[offset + j], prec=4)
-                )
+                pattern = rf"L1.e\({name}\) +{forg(params[offset + j], prec=4)}"
                 assert re.search(pattern, table)
 
         # Check the Error covariance matrix output
@@ -892,7 +890,7 @@ def test_recreate_model():
     for element in itertools.product(
         k_factors, factor_orders, error_orders, error_vars, error_cov_types
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
 
         mod = dynamic_factor.DynamicFactor(endog, exog=exog, **kwargs)
         mod2 = dynamic_factor.DynamicFactor(endog, exog=exog, **mod._get_init_kwds())

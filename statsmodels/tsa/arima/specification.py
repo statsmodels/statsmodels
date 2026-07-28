@@ -381,20 +381,18 @@ class SARIMAXSpecification:
                                * self.seasonal_periods)
         duplicate_ar_lags = ar_lags.intersection(seasonal_ar_lags)
         if validate_specification and len(duplicate_ar_lags) > 0:
-            raise ValueError("Invalid model: autoregressive lag(s) %s are"
+            raise ValueError(f"Invalid model: autoregressive lag(s) {duplicate_ar_lags} are"
                              " in both the seasonal and non-seasonal"
-                             " autoregressive components."
-                             % duplicate_ar_lags)
+                             " autoregressive components.")
 
         ma_lags = set(self.ma_lags)
         seasonal_ma_lags = set(np.array(self.seasonal_ma_lags)
                                * self.seasonal_periods)
         duplicate_ma_lags = ma_lags.intersection(seasonal_ma_lags)
         if validate_specification and len(duplicate_ma_lags) > 0:
-            raise ValueError("Invalid model: moving average lag(s) %s are"
+            raise ValueError(f"Invalid model: moving average lag(s) {duplicate_ma_lags} are"
                              " in both the seasonal and non-seasonal"
-                             " moving average components."
-                             % duplicate_ma_lags)
+                             " moving average components.")
 
         # Handle trend
         self.trend = trend
@@ -473,7 +471,7 @@ class SARIMAXSpecification:
         if (validate_specification and not faux_endog and
                 self.endog.ndim > 1 and self.endog.shape[1] > 1):
             raise ValueError("SARIMAX models require univariate `endog`. Got"
-                             " shape %s." % str(self.endog.shape))
+                             f" shape {self.endog.shape!s}.")
 
         self._has_missing = (
             None if faux_endog else np.any(np.isnan(self.endog)))
@@ -555,24 +553,24 @@ class SARIMAXSpecification:
     @property
     def ar_names(self):
         """(list of str) Names of (non-seasonal) autoregressive parameters"""
-        return ["ar.L%d" % i for i in self.ar_lags]
+        return [f"ar.L{i:d}" for i in self.ar_lags]
 
     @property
     def ma_names(self):
         """(list of str) Names of (non-seasonal) moving average parameters"""
-        return ["ma.L%d" % i for i in self.ma_lags]
+        return [f"ma.L{i:d}" for i in self.ma_lags]
 
     @property
     def seasonal_ar_names(self):
         """(list of str) Names of seasonal autoregressive parameters"""
         s = self.seasonal_periods
-        return ["ar.S.L%d" % (i * s) for i in self.seasonal_ar_lags]
+        return [f"ar.S.L{i * s:d}" for i in self.seasonal_ar_lags]
 
     @property
     def seasonal_ma_names(self):
         """(list of str) Names of seasonal moving average parameters"""
         s = self.seasonal_periods
-        return ["ma.S.L%d" % (i * s) for i in self.seasonal_ma_lags]
+        return [f"ma.S.L{i * s:d}" for i in self.seasonal_ma_lags]
 
     @property
     def param_names(self):
@@ -694,20 +692,18 @@ class SARIMAXSpecification:
         # Only state space form can support missing data
         if estimator != "statespace":
             if has_missing:
-                raise ValueError("%s estimator does not support missing"
-                                 " values in `endog`." % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support missing"
+                                 " values in `endog`.")
 
         # Only state space and innovations MLE can enforce parameter
         # restrictions
         if estimator not in ["innovations_mle", "statespace"]:
             if self.max_ar_order > 0 and self.enforce_stationarity:
-                raise ValueError("%s estimator cannot enforce a stationary"
-                                 " autoregressive lag polynomial."
-                                 % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator cannot enforce a stationary"
+                                 " autoregressive lag polynomial.")
             if self.max_ma_order > 0 and self.enforce_invertibility:
-                raise ValueError("%s estimator cannot enforce an invertible"
-                                 " moving average lag polynomial."
-                                 % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator cannot enforce an invertible"
+                                 " moving average lag polynomial.")
 
         # Now go through specific disqualifications for each estimator
         has_seasonal_ar_or_ma = (self.max_seasonal_ar_order > 0
@@ -715,15 +711,14 @@ class SARIMAXSpecification:
 
         if estimator in ["yule_walker", "burg"]:
             if has_seasonal_ar_or_ma:
-                raise ValueError("%s estimator does not support seasonal"
-                                 " AR or MA components." % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support seasonal"
+                                 " AR or MA components.")
             if not self.is_ar_consecutive:
-                raise ValueError("%s estimator does not support"
-                                 " non-consecutive autoregressive lags."
-                                 % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support"
+                                 " non-consecutive autoregressive lags.")
             if has_ma:
-                raise ValueError("%s estimator does not support moving average"
-                                 " components." % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support moving average"
+                                 " components.")
         elif estimator == "innovations":
             if has_seasonal_ar_or_ma:
                 raise ValueError("Innovations estimator does not support"
@@ -751,7 +746,7 @@ class SARIMAXSpecification:
             # State space form supports all variations of SARIMAX.
             pass
         else:
-            raise ValueError('"%s" is not a valid estimator.' % estimator)
+            raise ValueError(f'"{estimator}" is not a valid estimator.')
 
     def split_params(self, params, allow_infnan=False):
         """
@@ -796,8 +791,9 @@ class SARIMAXSpecification:
             ix.append(1)
             names.append("sigma2")
         ix = np.cumsum(ix)
-
-        out = dict(zip(names, np.split(params, ix)))
+        # Bug: was creating an extra split, discard the final
+        split_params = np.split(params, ix)
+        out = dict(zip(names, split_params[:-1], strict=True))
         if "sigma2" in out:
             out["sigma2"] = out["sigma2"].item()
 
@@ -856,13 +852,12 @@ class SARIMAXSpecification:
             if k > 0:
                 # Validate
                 if params is None:
-                    raise ValueError("Specification includes %s, but no"
-                                     " parameters were provided." % title)
+                    raise ValueError(f"Specification includes {title}, but no"
+                                     " parameters were provided.")
                 params_arr = np.atleast_1d(np.squeeze(params))
                 if not params_arr.shape == (k,):
-                    raise ValueError("Specification included %d %s, but"
-                                     " parameters with shape %s were provided."
-                                     % (k, title, params_arr.shape))
+                    raise ValueError(f"Specification included {k:d} {title}, but"
+                                     f" parameters with shape {params_arr.shape} were provided.")
 
                 # Otherwise add to the list
                 params_list.append(params_arr)
@@ -1067,25 +1062,23 @@ class SARIMAXSpecification:
             elif i == 1:
                 names.append("drift")
             else:
-                names.append("trend.%d" % i)
+                names.append(f"trend.{i:d}")
         return names
 
     def __repr__(self):
         """Represent SARIMAXSpecification object as a string"""
         components = []
         if self.endog is not None:
-            components.append("endog=%s" % self._model.endog_names)
+            components.append(f"endog={self._model.endog_names}")
         if self.k_exog_params:
-            components.append("exog=%s" % self.exog_names)
-        components.append("order=%s" % str(self.order))
+            components.append(f"exog={self.exog_names}")
+        components.append(f"order={self.order!s}")
         if self.seasonal_periods > 0:
-            components.append("seasonal_order=%s" % str(self.seasonal_order))
+            components.append(f"seasonal_order={self.seasonal_order!s}")
         if self.enforce_stationarity is not None:
-            components.append("enforce_stationarity=%s"
-                              % self.enforce_stationarity)
+            components.append(f"enforce_stationarity={self.enforce_stationarity}")
         if self.enforce_invertibility is not None:
-            components.append("enforce_invertibility=%s"
-                              % self.enforce_invertibility)
+            components.append(f"enforce_invertibility={self.enforce_invertibility}")
         if self.concentrate_scale is not None:
-            components.append("concentrate_scale=%s" % self.concentrate_scale)
-        return "SARIMAXSpecification(%s)" % ", ".join(components)
+            components.append(f"concentrate_scale={self.concentrate_scale}")
+        return "SARIMAXSpecification({})".format(", ".join(components))

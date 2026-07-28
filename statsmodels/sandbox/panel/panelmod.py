@@ -220,7 +220,7 @@ class PanelModel:
             Y = self.time
             uniq = self.timeuniq
         else:
-            raise ValueError("index %s not understood" % index)
+            raise ValueError(f"index {index} not understood")
         print(Y, uniq, uniq[:, None], len(Y), len(uniq), len(uniq[:, None]), index)
         # TODO: use sparse matrices
         dummy = (Y == uniq[:, None]).astype(float)
@@ -270,7 +270,7 @@ class PanelModel:
         model = model.lower()
         if method and method not in ["lsdv", "demeaned", "mle", "gls", "be", "fe"]:
             # get rid of if method with default
-            raise ValueError("%s not a valid method" % method)
+            raise ValueError(f"{method} not a valid method")
         #        if method == "lsdv":
         #            self.fit_lsdv(model)
         if model == "pooled":
@@ -298,7 +298,7 @@ class PanelModel:
             exog = self._group_mean(self.exog, index=effects)
         else:
             raise ValueError(
-                "%s effects is not valid for the between estimator" % effects
+                f"{effects} effects is not valid for the between estimator"
             )
         befit = GLS(endog, exog).fit()
         return befit

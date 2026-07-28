@@ -64,12 +64,12 @@ _extra_param_doc = """
 
 
 class Model:
-    __doc__ = """
+    __doc__ = f"""
     A (predictive) statistical model. Intended to be subclassed, not used
     directly
 
-    {params_doc}
-    {extra_params_doc}
+    {_model_params_doc}
+    {_missing_param_doc + _extra_param_doc}
 
     Attributes
     ----------
@@ -81,10 +81,7 @@ class Model:
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """.format(
-        params_doc=_model_params_doc,
-        extra_params_doc=_missing_param_doc + _extra_param_doc,
-    )
+    """
 
     # Maximum number of endogenous variables when using a formula
     # Default is 1, which is more common. Override in models when needed
@@ -216,9 +213,9 @@ class Model:
         if max_endog is not None and endog.ndim > 1 and endog.shape[1] > max_endog:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {}. This occurs when "
+                f"columns that has shape {endog.shape}. This occurs when "
                 "the variable converted to endog is non-numeric"
-                " (e.g., bool or str).".format(endog.shape)
+                " (e.g., bool or str)."
             )
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
@@ -1161,7 +1158,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         k_miss = len(exog_names) - len(mlefit.params)
         if not k_miss == 0:
             if k_miss < 0:
-                self._set_extra_params_names(["par%d" % i for i in range(-k_miss)])
+                self._set_extra_params_names([f"par{i:d}" for i in range(-k_miss)])
             else:
                 # I do not want to raise after we have already fit()
                 warnings.warn(
@@ -2062,8 +2059,8 @@ class LikelihoodModelResults(Results):
             if J_ < J:
                 warnings.warn(
                     "covariance of constraints does not have full "
-                    "rank. The number of constraints is %d, but "
-                    "rank is %d" % (J, J_),
+                    f"rank. The number of constraints is {int(J):d}, but "
+                    f"rank is {J_:d}",
                     ValueWarning,
                     stacklevel=2,
                 )
@@ -3056,8 +3053,8 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         top_right = [
             ("Log-Likelihood:", None),
-            ("AIC:", ["%#8.4g" % self.aic]),
-            ("BIC:", ["%#8.4g" % self.bic]),
+            ("AIC:", [f"{self.aic:#8.4g}"]),
+            ("BIC:", [f"{self.bic:#8.4g}"]),
         ]
 
         if title is None:

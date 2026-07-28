@@ -99,7 +99,7 @@ def contrast_labels(contrasts, names, reverse=False):
         sl = slice(None)
     labels = [
         "".join(
-            [f"{signstr(c, noplus=True)}{v}" for c, v in zip(row, names)[sl] if c != 0]
+            [f"{signstr(c, noplus=True)}{v}" for c, v in zip(row, names, strict=True)[sl] if c != 0]
         )
         for row in contrasts
     ]
@@ -145,7 +145,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
         "".join(
             [
                 f"{signstr(c, noplus=True)}{v}"
-                for c, v in zip(row, names_prod)[::-1]
+                for c, v in zip(row, names_prod, strict=True)[::-1]
                 if c != 0
             ]
         )
@@ -165,7 +165,7 @@ def contrast_product(names1, names2, intgroup1=None, intgroup2=None, pairs=False
         "".join(
             [
                 f"{signstr(c, noplus=True)}{v}"
-                for c, v in zip(row, names_prod)[::-1]
+                for c, v in zip(row, names_prod, strict=True)[::-1]
                 if c != 0
             ]
         )
@@ -236,11 +236,11 @@ def dummy_1d(x, varname=None):
 
     """
     if varname is None:  # assumes integer
-        labels = ["level_%d" % i for i in range(x.max() + 1)]
+        labels = [f"level_{i:d}" for i in range(x.max() + 1)]
         return (x[:, None] == np.arange(x.max() + 1)).astype(int), labels
     else:
         grouplabels = np.unique(x)
-        labels = [varname + "_%s" % str(i) for i in grouplabels]
+        labels = [varname + f"_{i!s}" for i in grouplabels]
         return (x[:, None] == grouplabels).astype(int), labels
 
 

@@ -51,7 +51,7 @@ def gendat():
     endog = exog.sum(1) + gen.normal(size=n)
 
     df = pd.DataFrame(exog)
-    df.columns = ["x%d" % k for k in range(1, p + 1)]
+    df.columns = [f"x{k:d}" for k in range(1, p + 1)]
 
     df["y"] = endog
 
@@ -73,7 +73,7 @@ class TestMICEData:
         rs = np.random.RandomState(821443)
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         imp_data = mice.MICEData(df, rng=rs)
         nrow, ncol = df.shape
 
@@ -159,7 +159,7 @@ class TestMICEData:
         rs = np.random.RandomState(80223)
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         nrow, ncol = df.shape
 
         for pert_meth in "gaussian", "boot":
@@ -233,7 +233,7 @@ class TestMICEData:
 
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         nrow, ncol = df.shape
 
         imp_data = mice.MICEData(df, rng=rs)
@@ -257,9 +257,9 @@ class TestMICEData:
                     isinstance(imp_data.results["x3"], GLMResultsWrapper), True
                 )
             else:
-                assert_equal(isinstance(imp_data.models["x%d" % j], sm.OLS), True)
+                assert_equal(isinstance(imp_data.models[f"x{j:d}"], sm.OLS), True)
                 assert_equal(
-                    isinstance(imp_data.results["x%d" % j], RegressionResultsWrapper),
+                    isinstance(imp_data.results[f"x{j:d}"], RegressionResultsWrapper),
                     True,
                 )
 
@@ -433,7 +433,7 @@ def test_micedata_miss1():
     data_imp = mice.MICEData(data, rng=gen)
     data_imp.update_all()
 
-    assert_equal(data_imp.data.isnull().values.sum(), 0)
+    assert_equal(data_imp.data.isna().values.sum(), 0)
 
     ix_miss = {
         "var1": np.array([], dtype=np.int64),

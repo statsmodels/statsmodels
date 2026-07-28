@@ -515,7 +515,7 @@ class Test_Factor:
         # Try to recover the structure
         rs = np.random.RandomState(3280129)
         rslt = corr_nearest_factor(mat, dm, maxiter=10000, rng=rs)
-        err_msg = "rank=%d, niter=%d" % (dm, len(rslt.objective_values))
+        err_msg = f"rank={dm:d}, niter={len(rslt.objective_values):d}"
         assert_allclose(
             rslt.objective_values[:5], objvals[dm - 1], rtol=0.5, err_msg=err_msg
         )

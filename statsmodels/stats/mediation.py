@@ -199,7 +199,7 @@ class Mediation:
         if hasattr(model, "formula"):
             return model.formula.split("~")[0].strip()
         else:
-            raise ValueError("cannot infer %s name without formula" % typ)
+            raise ValueError(f"cannot infer {typ} name without formula")
 
     def _simulate_params(self, result, rng):
         """

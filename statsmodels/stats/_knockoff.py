@@ -86,7 +86,7 @@ class RegressionFDR:
         if hasattr(exog, "columns"):
             self.xnames = exog.columns
         else:
-            self.xnames = ["x%d" % j for j in range(exog.shape[1])]
+            self.xnames = [f"x{j:d}" for j in range(exog.shape[1])]
 
         exog = np.asarray(exog)
         endog = np.asarray(endog)

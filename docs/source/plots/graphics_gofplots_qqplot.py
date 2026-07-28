@@ -5,9 +5,8 @@ Author: Josef Perktold
 editted by: Paul Hobson (2012-08-19)
 """
 
-from matplotlib import pyplot as plt
-
 # example with the new ProbPlot class
+from matplotlib import pyplot as plt
 import numpy as np
 from scipy import stats
 

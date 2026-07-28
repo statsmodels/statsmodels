@@ -989,10 +989,10 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         res.resols2 = resols2
         res.ordering = ordering
         res.split = split
-        res._str = """\
+        res._str = f"""\
 The Goldfeld-Quandt test for null hypothesis that the variance in the second
-subsample is {} than in the first subsample:
-F-statistic ={:8.4f} and p-value ={:8.4f}""".format(ordering, fval, fpval)
+subsample is {ordering} than in the first subsample:
+F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
 
         return fval, fpval, ordering, res
 
@@ -1577,7 +1577,7 @@ def breaks_hansen(olsresults):
     Greene section 7.5.1, notation follows Greene
     """
     x = olsresults.model.exog
-    resid = array_like(olsresults.resid, "resid", shape=(x.shape[0], 1))
+    resid = array_like(olsresults.resid, "resid", ndim=1, shape=(x.shape[0],))
     nobs, nvars = x.shape
     resid2 = resid ** 2
     ft = np.c_[x * resid[:, None], (resid2 - resid2.mean())]

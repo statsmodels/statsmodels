@@ -374,10 +374,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if np.any(self.switching_ar):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "autoregressive"]] = [
-                    "ar.L%d[%d]" % (j+1, i) for j in range(self.order)]
+                    f"ar.L{j+1:d}[{i:d}]" for j in range(self.order)]
         else:
             param_names[self.parameters["autoregressive"]] = [
-                "ar.L%d" % (j+1) for j in range(self.order)]
+                f"ar.L{j+1:d}" for j in range(self.order)]
 
         return param_names.tolist()
 

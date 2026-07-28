@@ -417,9 +417,9 @@ class QuantRegResults(RegressionResults):
         ]
 
         top_right = [
-            ("Pseudo R-squared:", ["%#8.4g" % self.prsquared]),
-            ("Bandwidth:", ["%#8.4g" % self.bandwidth]),
-            ("Sparsity:", ["%#8.4g" % self.sparsity]),
+            ("Pseudo R-squared:", [f"{self.prsquared:#8.4g}"]),
+            ("Bandwidth:", [f"{self.bandwidth:#8.4g}"]),
+            ("Sparsity:", [f"{self.sparsity:#8.4g}"]),
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),

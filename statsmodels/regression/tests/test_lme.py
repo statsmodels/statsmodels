@@ -51,7 +51,7 @@ class R_Results:
 
     def __init__(self, meth, irfs, ds_ix):
 
-        bname = "_%s_%s_%d" % (meth, irfs, ds_ix)
+        bname = f"_{meth}_{irfs}_{ds_ix:d}"
 
         self.coef = getattr(lme_r_results, "coef" + bname)
         self.vcov_r = getattr(lme_r_results, "vcov" + bname)
@@ -67,7 +67,7 @@ class R_Results:
         # Load the data file
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
+        fname = os.path.join(rdir, f"lme{ds_ix:02d}.csv")
         with open(fname, encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
@@ -677,7 +677,7 @@ class TestMixedLM:
         # Fit with a formula, passing groups as the actual values.
         df = pd.DataFrame({"endog": endog})
         for k in range(exog.shape[1]):
-            df["exog%d" % k] = exog[:, k]
+            df[f"exog{k:d}"] = exog[:, k]
         df["exog_re"] = exog_re
         fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
         re_fml = "0 + exog_re"
@@ -916,7 +916,7 @@ def test_mixed_lm_wrapper():
     # Fit with a formula, passing groups as the actual values.
     df = pd.DataFrame({"endog": endog})
     for k in range(exog.shape[1]):
-        df["exog%d" % k] = exog[:, k]
+        df[f"exog{k:d}"] = exog[:, k]
     df["exog_re"] = exog_re
     fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
     re_fml = "~ exog_re"
@@ -1156,7 +1156,7 @@ def test_random_effects_getters():
         y.append(yy)
         x.append(xx)
         z.append(zz)
-        g.append(["g%d" % i] * m)
+        g.append([f"g{i:d}"] * m)
 
     y = np.concatenate(y)
     x = np.concatenate(x)
@@ -1192,12 +1192,12 @@ def test_random_effects_getters():
     result = model.fit()
 
     ref = result.random_effects
-    b0 = [ref["g%d" % k][0:2] for k in range(ng)]
+    b0 = [ref[f"g{k:d}"][0:2] for k in range(ng)]
     b0 = np.asarray(b0)
     assert np.corrcoef(b0[:, 0], b[:, 0])[0, 1] > 0.8
     assert np.corrcoef(b0[:, 1], b[:, 1])[0, 1] > 0.8
 
-    cf0 = [ref["g%d" % k][2:6] for k in range(ng)]
+    cf0 = [ref[f"g{k:d}"][2:6] for k in range(ng)]
     cf0 = np.asarray(cf0)
     for k in range(4):
         assert np.corrcoef(cf0[:, k], cc[:, k])[0, 1] > 0.8

@@ -183,7 +183,7 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         if not k:
             raise ValueError('k must be supplied with freq="other"')
     else:
-        raise ValueError("freq %s not understood" % freq)
+        raise ValueError(f"freq {freq} not understood")
 
     n = k*m  # number of indicator series with a benchmark for back-series
     # if k*m != n, then we are going to extrapolate q observations

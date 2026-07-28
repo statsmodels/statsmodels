@@ -348,7 +348,7 @@ estimate_scale(a, scale, mu)
                 return nmu.squeeze(), nscale.squeeze()
         raise ValueError(
             "joint estimation of location and scale failed "
-            "to converge in %d iterations" % self.maxiter
+            f"to converge in {self.maxiter:d} iterations"
         )
 
 

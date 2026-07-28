@@ -302,7 +302,7 @@ class Description:
     def __init__(
         self,
         data: np.ndarray | pd.Series | pd.DataFrame,
-        stats: Sequence[str] = None,
+        stats: Sequence[str] | None = None,
         *,
         numeric: bool = True,
         categorical: bool = True,
@@ -457,7 +457,7 @@ class Description:
             _df = df.copy()
             for col in df:
                 if is_extension_array_dtype(df[col].dtype):
-                    if _df[col].isnull().any():
+                    if _df[col].isna().any():
                         _df[col] = _df[col].fillna(np.nan)
         except ImportError:
             pass
@@ -608,7 +608,7 @@ class Description:
             A table instance supporting export to text, csv and LaTeX
         """
         df = self.frame.astype(object)
-        if df.isnull().any().any():
+        if df.isna().any().any():
             df = df.fillna("")
         cols = [str(col) for col in df.columns]
         stubs = [str(idx) for idx in df.index]
@@ -657,7 +657,7 @@ ds.replace_block(
 @Appender(str(ds))
 def describe(
     data: np.ndarray | pd.Series | pd.DataFrame,
-    stats: Sequence[str] = None,
+    stats: Sequence[str] | None = None,
     *,
     numeric: bool = True,
     categorical: bool = True,

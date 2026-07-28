@@ -287,8 +287,8 @@ class SimulationSmoother(KalmanSmoother):
             return CFASimulationSmoother(self)
         elif method != "kfs":
             raise ValueError(
-                'Invalid simulation smoother method "%s". Valid'
-                ' methods are "kfs" or "cfa".' % method
+                f'Invalid simulation smoother method "{method}". Valid'
+                ' methods are "kfs" or "cfa".'
             )
 
         # Set the class to be the default results class, if None provided

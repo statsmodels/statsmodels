@@ -59,7 +59,7 @@ class TsaDescriptive:
             import matplotlib.pyplot as plt
             fig = plt.figure()
         ax = fig.add_subplot(2, 2, 1)
-        namestr = " for %s" % self.name if self.name else ""
+        namestr = f" for {self.name}" if self.name else ""
         ax.plot(data)
         ax.set_title("Time series" + namestr)
 

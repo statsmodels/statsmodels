@@ -398,7 +398,7 @@ class multivariate_normal_gen(multi_rv_generic):
             cov = np.reshape(cov, (1, 1), copy=False)
 
         if mean.ndim != 1 or mean.shape[0] != dim:
-            raise ValueError("Array 'mean' must be a vector of length %d." % dim)
+            raise ValueError(f"Array 'mean' must be a vector of length {dim:d}.")
         if cov.ndim == 0:
             cov = cov * np.eye(dim)
         elif cov.ndim == 1:
@@ -408,7 +408,7 @@ class multivariate_normal_gen(multi_rv_generic):
             if rows != cols:
                 msg = (
                     "Array 'cov' must be square if it is two dimensional,"
-                    " but cov.shape = %s." % str(cov.shape)
+                    f" but cov.shape = {cov.shape!s}."
                 )
             else:
                 msg = (
@@ -420,7 +420,7 @@ class multivariate_normal_gen(multi_rv_generic):
         elif cov.ndim > 2:
             raise ValueError(
                 "Array 'cov' must be at most two-dimensional,"
-                " but cov.ndim = %d" % cov.ndim
+                f" but cov.ndim = {cov.ndim:d}"
             )
 
         return dim, mean, cov
@@ -1162,7 +1162,7 @@ class multivariate_t_gen(multi_rv_generic):
             shape = np.reshape(shape, (1, 1), copy=False)
 
         if loc.ndim != 1 or loc.shape[0] != dim:
-            raise ValueError("Array 'loc' must be a vector of length %d." % dim)
+            raise ValueError(f"Array 'loc' must be a vector of length {dim:d}.")
         if shape.ndim == 0:
             shape = shape * np.eye(dim)
         elif shape.ndim == 1:
@@ -1172,7 +1172,7 @@ class multivariate_t_gen(multi_rv_generic):
             if rows != cols:
                 msg = (
                     "Array 'cov' must be square if it is two dimensional,"
-                    " but cov.shape = %s." % str(shape.shape)
+                    f" but cov.shape = {shape.shape!s}."
                 )
             else:
                 msg = (
@@ -1184,7 +1184,7 @@ class multivariate_t_gen(multi_rv_generic):
         elif shape.ndim > 2:
             raise ValueError(
                 "Array 'cov' must be at most two-dimensional,"
-                " but cov.ndim = %d" % shape.ndim
+                f" but cov.ndim = {shape.ndim:d}"
             )
 
         # Process degrees of freedom.

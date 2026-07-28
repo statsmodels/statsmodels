@@ -98,7 +98,7 @@ class RemoveDataPickle:
         res, nbytes = check_pickle(results._results)
 
         # for testing attach res
-        msg = "pickle length not %d < %d" % (nbytes, orig_nbytes)
+        msg = f"pickle length not {nbytes:d} < {orig_nbytes:d}"
         assert nbytes < orig_nbytes * self.reduction_factor, msg
         pred3 = results.predict(xf, **pred_kwds)
 

@@ -94,7 +94,7 @@ class TableDist:
             except Exception as exc:
                 raise type(exc)("Calling asymptotic(self.size+1) failed. The "
                                 "error message was:"
-                                "\n\n{err_msg}".format(err_msg=exc.args[0])) from exc
+                                f"\n\n{exc.args[0]}") from exc
             if len(cv) != len(alpha):
                 raise ValueError("asymptotic does not return len(alpha) "
                                  "values")

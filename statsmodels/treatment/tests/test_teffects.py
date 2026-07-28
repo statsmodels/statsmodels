@@ -37,7 +37,7 @@ methods = [
     ]
 
 
-class TestTEffects():
+class TestTEffects:
 
     @classmethod
     def setup_class(cls):

@@ -77,7 +77,7 @@ class ContrastResults:
         self.pvalue = np.squeeze(self.pvalue)
 
         if self.effect is not None:
-            self.c_names = ["c%d" % ii for ii in range(len(self.effect))]
+            self.c_names = [f"c{ii:d}" for ii in range(len(self.effect))]
         else:
             self.c_names = None
 
@@ -172,25 +172,12 @@ class ContrastResults:
             return summ
         elif hasattr(self, "fvalue"):
             # TODO: create something nicer for these casee
-            return "<F test: F={}, p={}, df_denom={:.3g}, df_num={:.3g}>".format(
-                repr(self.fvalue),
-                self.pvalue,
-                self.df_denom,
-                self.df_num,
-            )
+            return f"<F test: F={self.fvalue!r}, p={self.pvalue}, df_denom={self.df_denom:.3g}, df_num={self.df_num:.3g}>"
         elif self.distribution == "chi2":
-            return "<Wald test ({}): statistic={}, p-value={}, df_denom={:.3g}>".format(
-                self.distribution,
-                self.statistic,
-                self.pvalue,
-                self.df_denom,
-            )
+            return f"<Wald test ({self.distribution}): statistic={self.statistic}, p-value={self.pvalue}, df_denom={self.df_denom:.3g}>"
         else:
             # generic
-            return "<Wald test: statistic={}, p-value={}>".format(
-                self.statistic,
-                self.pvalue,
-            )
+            return f"<Wald test: statistic={self.statistic}, p-value={self.pvalue}>"
 
     def summary_frame(self, xname=None, alpha=0.05):
         """
@@ -466,7 +453,7 @@ class WaldTestResults:
     def col_names(self):
         """column names for summary table"""
 
-        pr_test = "P>%s" % self.distribution
+        pr_test = f"P>{self.distribution}"
         col_names = [self.distribution, pr_test, "df constraint"]
         if self.distribution == "F":
             col_names.append("df denom")
@@ -477,7 +464,7 @@ class WaldTestResults:
         if self.dframe is not None:
             return self.dframe
         # rename the column nambes, but do not copy data
-        renaming = dict(zip(self.table.columns, self.col_names))
+        renaming = dict(zip(self.table.columns, self.col_names, strict=True))
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe
 
@@ -509,7 +496,7 @@ def _get_pairs_labels(k_level, level_names):
     """
     idx_pairs_all = np.triu_indices(k_level, 1)
     labels = [
-        f"{level_names[name[1]]}-{level_names[name[0]]}" for name in zip(*idx_pairs_all)
+        f"{level_names[name[1]]}-{level_names[name[0]]}" for name in zip(*idx_pairs_all, strict=True)
     ]
     return labels
 
@@ -592,8 +579,8 @@ def t_test_multi(
         method = [method]
     for meth in method:
         mt = multipletests(tt.pvalue, method=meth, alpha=alpha)
-        res_df["pvalue-%s" % meth] = mt[1]
-        res_df["reject-%s" % meth] = mt[0]
+        res_df[f"pvalue-{meth}"] = mt[1]
+        res_df[f"reject-{meth}"] = mt[0]
     return res_df
 
 
@@ -769,7 +756,7 @@ def t_test_pairwise(
             cat = factor_labels
         else:
             raise ValueError(
-                "factor_labels has the wrong length, should be %d" % len(cat)
+                f"factor_labels has the wrong length, should be {len(cat):d}"
             )
 
     k_level = len(cat)

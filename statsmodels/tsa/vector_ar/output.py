@@ -152,7 +152,7 @@ class VARSummary:
         buf = StringIO()
         dim = k * model.k_ar + model.k_trend + model.k_exog_user
         for i in range(k):
-            section = "Results for equation %s" % model.names[i]
+            section = f"Results for equation {model.names[i]}"
             buf.write(section + "\n")
 
             table = SimpleTable(data[dim * i : dim * (i + 1)], header,
@@ -197,7 +197,7 @@ def hypothesis_test_table(results, title, null_hyp):
 
     buf.write(null_hyp + "\n")
 
-    buf.write("Conclusion: %s H_0" % results["conclusion"])
+    buf.write("Conclusion: {} H_0".format(results["conclusion"]))
     buf.write(" at %.2f%% significance level" % (results["signif"] * 100))
 
     return buf.getvalue()
@@ -224,7 +224,7 @@ def pprint_matrix(values, rlabels, clabels, col_space=None):
     buf.write(head + "\n")
 
     for i, rlab in enumerate(rlabels):
-        line = ("%s" % rlab).ljust(row_space)
+        line = (f"{rlab}").ljust(row_space)
 
         for j in range(K):
             line += _pfixed(values[i, j], col_space[j])
@@ -239,8 +239,8 @@ def _pfixed(s, space, nanRep=None, float_format=None):
         if float_format:
             formatted = float_format(s)
         else:
-            formatted = "%#8.6F" % s
+            formatted = f"{s:#8.6F}"
 
         return formatted.rjust(space)
     else:
-        return ("%s" % s)[:space].rjust(space)
+        return (f"{s}")[:space].rjust(space)

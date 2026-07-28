@@ -1219,7 +1219,7 @@ class KalmanFilter(Representation):
                 impulse = np.squeeze(impulse)
             if not impulse.shape == (self.k_posdef,):
                 raise ValueError("Invalid impulse vector. Must be shaped"
-                                 " (%d,)" % self.k_posdef)
+                                 f" ({self.k_posdef:d},)")
 
         # Orthogonalize the impulses, if requested, using Cholesky on the
         # first state covariance matrix
@@ -2172,8 +2172,7 @@ class PredictionResults(FilterResults):
         """
         # Prevent infinite recursive lookups
         if attr[0] == "_":
-            raise AttributeError("'%s' object has no attribute '%s'" %
-                                 (self.__class__.__name__, attr))
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
         _attr = "_" + attr
 
@@ -2237,8 +2236,7 @@ class PredictionResults(FilterResults):
                         value = np.concatenate([value, oos_value], axis=-1)
                     value = value[..., self.start:self.end]
             else:
-                raise AttributeError("'%s' object has no attribute '%s'" %
-                                     (self.__class__.__name__, attr))
+                raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
             setattr(self, _attr, value)
 

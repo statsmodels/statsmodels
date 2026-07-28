@@ -51,13 +51,13 @@ def _handle_args(names, defaults, *args, **kwargs):
             flags = args[0]
         # otherwise, a user may have just used positional arguments...
         else:
-            flags = dict(zip(names, args))
+            flags = dict(zip(names, args, strict=True))
         output_args = [flags.get(names[i], defaults[i]) for i in range(len(names))]
 
         for name in flags:
             if name in kwargs:
                 raise TypeError(
-                    "loglike() got multiple values for keyword argument '%s'" % name
+                    f"loglike() got multiple values for keyword argument '{name}'"
                 )
     else:
         output_args = [kwargs.pop(names[i], defaults[i]) for i in range(len(names))]
@@ -76,16 +76,16 @@ def _check_index(desired_index, dta, title="data"):
             desired_freq is not None or given_freq is not None
         ) and desired_freq != given_freq:
             raise ValueError(
-                "Given %s does not have an index"
+                f"Given {title} does not have an index"
                 " that extends the index of the"
                 " model. Expected index frequency is"
-                ' "%s", but got "%s".' % (title, desired_freq, given_freq)
+                f' "{desired_freq}", but got "{given_freq}".'
             )
         else:
             raise ValueError(
-                "Given %s does not have an index"
+                f"Given {title} does not have an index"
                 " that extends the index of the"
-                " model." % title
+                " model."
             )
 
 
@@ -471,7 +471,7 @@ class MLEModel(tsbase.TimeSeriesModel):
     def _validate_can_fix_params(self, param_names):
         for param_name in param_names:
             if param_name not in self.param_names:
-                raise ValueError('Invalid parameter name passed: "%s".' % param_name)
+                raise ValueError(f'Invalid parameter name passed: "{param_name}".')
 
     @contextlib.contextmanager
     def fix_params(self, params):
@@ -496,7 +496,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # because param_names may not be available at that point)
         if self._fixed_params is None:
             self._fixed_params = {}
-            self._params_index = dict(zip(self.param_names, np.arange(k_params)))
+            self._params_index = dict(zip(self.param_names, np.arange(k_params), strict=True))
 
         # Cache the current fixed parameters
         cache_fixed_params = self._fixed_params.copy()
@@ -1931,7 +1931,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             return self._param_names
         else:
             try:
-                names = ["param.%d" % i for i in range(len(self.start_params))]
+                names = [f"param.{i:d}" for i in range(len(self.start_params))]
             except NotImplementedError:
                 names = []
             return names
@@ -1942,7 +1942,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         if hasattr(self, "_state_names"):
             return self._state_names
         else:
-            names = ["state.%d" % i for i in range(self.k_states)]
+            names = [f"state.{i:d}" for i in range(self.k_states)]
         return names
 
     def transform_jacobian(self, unconstrained, approx_centered=False):
@@ -2128,8 +2128,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             except ValueError as exc:
                 raise ValueError(
                     "Provided exogenous values are not of the"
-                    " appropriate shape. Required %s, got %s."
-                    % (str(required_exog_shape), str(exog.shape))
+                    f" appropriate shape. Required {required_exog_shape!s}, got {exog.shape!s}."
                 ) from exc
         elif k_exog > 0 and exog is not None:
             exog = None
@@ -2750,7 +2749,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             self._fixed_params = None
             self.fixed_params = []
         self.param_names = [
-            "%s (fixed)" % name if name in self.fixed_params else name
+            f"{name} (fixed)" if name in self.fixed_params else name
             for name in (self.data.param_names or [])
         ]
 
@@ -4367,7 +4366,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     "custom_description": (
                         "Parameters and standard errors were estimated using a"
                         " different dataset and were then applied to this"
-                        " dataset. %s" % self.cov_kwds.get("description", "Unknown.")
+                        " dataset. {}".format(self.cov_kwds.get("description", "Unknown."))
                     ),
                 }
 
@@ -5492,9 +5491,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         if self.model._index_dates:
             ix = self.model._index
             d = ix[start]
-            sample = ["%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample = [f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
             d = ix[-1]
-            sample += ["- " + "%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample += ["- " + f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
         else:
             sample = [str(start), " - " + str(self.nobs)]
 
@@ -5540,17 +5539,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         top_right = [
             ("No. Observations:", [self.nobs]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
         ]
         if hasattr(self, "rsquared"):
-            top_right.append(("R-squared:", ["%#8.3f" % self.rsquared]))
+            top_right.append(("R-squared:", [f"{self.rsquared:#8.3f}"]))
         top_right += [
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
         if self.filter_results is not None and self.filter_results.filter_concentrated:
-            top_right.append(("Scale", ["%#5.3f" % self.scale]))
+            top_right.append(("Scale", [f"{self.scale:#5.3f}"]))
 
         if hasattr(self, "cov_type"):
             cov_type = self.cov_type
@@ -5628,10 +5627,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     columns=columns,
                 )
                 try:
-                    data = data.map(lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                    data = data.map(lambda num: "" if pd.isna(num) else f"{num:.2f}")
                 except AttributeError:
                     data = data.applymap(
-                        lambda num: "" if pd.isnull(num) else "%.2f" % num
+                        lambda num: "" if pd.isna(num) else f"{num:.2f}"
                     )
                 data.index.name = "Residual of\nDep. variable"
                 data = data.reset_index()
@@ -5661,8 +5660,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 cov_params = cov_params[mask]
             etext.append(
                 "Covariance matrix is singular or near-singular,"
-                " with condition number %6.3g. Standard errors may be"
-                " unstable." % _safe_cond(cov_params)
+                f" with condition number {_safe_cond(cov_params):6.3g}. Standard errors may be"
+                " unstable."
             )
 
         if etext:

@@ -585,19 +585,13 @@ class OaxacaResults:
             else:
                 print(
                     dedent(
-                        """\
+                        f"""\
                 Oaxaca-Blinder Two-fold Effects
-                Unexplained Effect: {:.5f}
-                Unexplained Standard Error: {:.5f}
-                Explained Effect: {:.5f}
-                Explained Standard Error: {:.5f}
-                Gap: {:.5f}""".format(
-                            self.params[0],
-                            self.std[0],
-                            self.params[1],
-                            self.std[1],
-                            self.params[2],
-                        )
+                Unexplained Effect: {self.params[0]:.5f}
+                Unexplained Standard Error: {self.std[0]:.5f}
+                Explained Effect: {self.params[1]:.5f}
+                Explained Standard Error: {self.std[1]:.5f}
+                Gap: {self.params[2]:.5f}"""
                     )
                 )
         if self.model_type == 3:

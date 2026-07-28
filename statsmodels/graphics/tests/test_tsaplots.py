@@ -352,7 +352,7 @@ def test_plot_month(close_figures):
                 "Nov",
                 "Dez",
             ]
-            for lbl, exp in zip(labels, expected):
+            for lbl, exp in zip(labels, expected, strict=True):
                 if isinstance(exp, tuple):
                     assert lbl in exp
                 else:
@@ -367,7 +367,7 @@ def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(
         "-Q".join,
-        zip(dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)),
+        zip(dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str), strict=True),
     )
     # test dates argument
     quarter_plot(dta.unemp.values, dates)

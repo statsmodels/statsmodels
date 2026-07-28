@@ -172,7 +172,7 @@ def test_poisson(
         ) / std
 
     else:
-        raise ValueError("unknown method %s" % method)
+        raise ValueError(f"unknown method {method}")
 
     if dist == "normal":
         statistic, pvalue = _zstat_generic2(statistic, 1, alternative)
@@ -384,7 +384,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
         )
 
     else:
-        raise ValueError("unknown method %s" % method)
+        raise ValueError(f"unknown method {method}")
 
     if alternative == "larger":
         ci = (0, ci[1])
@@ -872,20 +872,20 @@ def test_poisson_2indep(
         r = value
         r_d = r / d  # r1 * n1 / (r2 * n2)
 
-        if method in ["score"]:
+        if method == "score":
             stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
             dist = "normal"
-        elif method in ["wald"]:
+        elif method == "wald":
             stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
             dist = "normal"
-        elif method in ["score-log"]:
+        elif method == "score-log":
             stat = np.log(y1 / y2) - np.log(r_d)
             stat /= np.sqrt((2 + 1 / r_d + r_d) / (y1 + y2))
             dist = "normal"
-        elif method in ["wald-log"]:
+        elif method == "wald-log":
             stat = (np.log(y1 / y2) - np.log(r_d)) / np.sqrt(1 / y1 + 1 / y2)
             dist = "normal"
-        elif method in ["sqrt"]:
+        elif method == "sqrt":
             stat = 2 * (np.sqrt(y1 + 3 / 8.0) - np.sqrt((y2 + 3 / 8.0) * r_d))
             stat /= np.sqrt(1 + r_d)
             dist = "normal"
@@ -899,7 +899,7 @@ def test_poisson_2indep(
             pvalue = proportion.binom_test(
                 y1, y_total, prop=bp, alternative=alternative
             )
-            if method in ["cond-midp"]:
+            if method == "cond-midp":
                 # not inplace in case we still want binom pvalue
                 pvalue = pvalue - 0.5 * stats.binom.pmf(y1, y_total, bp)
 
@@ -930,15 +930,15 @@ def test_poisson_2indep(
     elif compare == "diff":
         if value is None:
             value = 0
-        if method in ["wald"]:
+        if method == "wald":
             stat = (rate1 - rate2 - value) / np.sqrt(rate1 / n1 + rate2 / n2)
             dist = "normal"
             "waldccv"
-        elif method in ["waldccv"]:
+        elif method == "waldccv":
             stat = rate1 - rate2 - value
             stat /= np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
             dist = "normal"
-        elif method in ["score"]:
+        elif method == "score":
             # estimate rates with constraint MLE
             count_pooled = y1 + y2
             rate_pooled = count_pooled / (n1 + n2)
@@ -1172,7 +1172,7 @@ def etest_poisson_2indep(
         rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
         rate1_cmle = rate2_cmle * r
 
-        if method in ["score"]:
+        if method == "score":
 
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
@@ -1182,7 +1182,7 @@ def etest_poisson_2indep(
             # rate1_cmle = rate2_cmle * r
             # rate1 = rate1_cmle
             # rate2 = rate2_cmle
-        elif method in ["wald"]:
+        elif method == "wald":
 
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
@@ -1200,12 +1200,12 @@ def etest_poisson_2indep(
         tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
         _, rate1_cmle, rate2_cmle = tmp
 
-        if method in ["score"]:
+        if method == "score":
 
             def stat_func(x1, x2):
                 return _score_diff(x1, n1, x2, n2, value=value)
 
-        elif method in ["wald"]:
+        elif method == "wald":
 
             def stat_func(x1, x2):
                 rate1, rate2 = x1 / n1, x2 / n2
@@ -1642,13 +1642,13 @@ def confint_poisson_2indep(
 
     elif compare == "diff":
 
-        if method in ["wald"]:
+        if method == "wald":
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             half = crit * np.sqrt(rate1 / n1 + rate2 / n2)
             ci = center - half, center + half
 
-        elif method in ["waldccv"]:
+        elif method == "waldccv":
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             std = np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)

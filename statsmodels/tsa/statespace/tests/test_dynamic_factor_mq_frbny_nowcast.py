@@ -314,7 +314,7 @@ def test_emstep1(matlab_results, run):
 
 
 @pytest.mark.parametrize(
-    "k_factors,factor_orders,factor_multiplicities,idiosyncratic_ar1",
+    ("k_factors", "factor_orders", "factor_multiplicities", "idiosyncratic_ar1"),
     [
         (1, 1, 1, True),
         (3, 1, 1, True),
@@ -378,7 +378,7 @@ def test_emstep_methods_missing(
 
 
 @pytest.mark.parametrize(
-    "k_factors,factor_orders,factor_multiplicities,idiosyncratic_ar1",
+    ("k_factors", "factor_orders", "factor_multiplicities", "idiosyncratic_ar1"),
     [
         (1, 1, 1, True),
         (3, 1, 1, True),

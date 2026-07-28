@@ -125,7 +125,7 @@ class MSTL:
         self.periods, self.windows = self._process_periods_and_windows(periods, windows)
         self.iterate = iterate
         self._stl_kwargs = self._remove_overloaded_stl_kwargs(
-            stl_kwargs if stl_kwargs else {}
+            stl_kwargs or {}
         )
 
     def fit(self):
@@ -267,7 +267,7 @@ class MSTL:
     ) -> tuple[Sequence[int], Sequence[int]]:
         if len(periods) != len(windows):
             raise ValueError("Periods and windows must have same length")
-        periods, windows = zip(*sorted(zip(periods, windows)))
+        periods, windows = zip(*sorted(zip(periods, windows, strict=True)), strict=True)
         return periods, windows
 
     @staticmethod

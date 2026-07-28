@@ -160,7 +160,13 @@ def array_like(
             msg = "{0} is required to have ndim {1} but has ndim {2}"
             raise ValueError(msg.format(name, ndim, arr.ndim))
     if shape is not None:
-        for actual, req in zip(arr.shape, shape):
+        if len(shape) != arr.ndim:
+            msg = (
+                f"Provided shape {shape} does not have the correct dimension for "
+                f"{name}, which is dimension {arr.ndim}"
+            )
+            raise ValueError(msg)
+        for actual, req in zip(arr.shape, shape, strict=True):
             if req is not None and actual != req:
                 req_shape = str(shape).replace("None, ", "*, ")
                 msg = "{0} is required to have shape {1} but has shape {2}"
@@ -282,7 +288,7 @@ def bool_like(value, name, optional=False, strict=False):
         return bool(value)
     except Exception as exc:
         raise TypeError(
-            "{} must be a bool (or bool-compatible){}".format(name, extra_text)
+            f"{name} must be a bool (or bool-compatible){extra_text}"
         ) from exc
 
 
@@ -327,8 +333,8 @@ def int_like(
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{} must be integer_like (int or np.integer, but not bool"
-        " or timedelta64){}".format(name, extra_text)
+        f"{name} must be integer_like (int or np.integer, but not bool"
+        f" or timedelta64){extra_text}"
     )
 
 
@@ -403,7 +409,7 @@ def float_like(value, name, optional=False, strict=False):
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{} must be float_like (float or np.inexact){}".format(name, extra_text)
+        f"{name} must be float_like (float or np.inexact){extra_text}"
     )
 
 
@@ -447,7 +453,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
     if options is not None and value not in options:
         extra_text = "If not None, " if optional else ""
         options_text = "'" + "', '".join(options) + "'"
-        msg = "{}{} must be one of: {}".format(extra_text, name, options_text)
+        msg = f"{extra_text}{name} must be one of: {options_text}"
         raise ValueError(msg)
     return value
 

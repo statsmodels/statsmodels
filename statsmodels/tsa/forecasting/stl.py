@@ -3,7 +3,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 from statsmodels.tsa.statespace.kalman_filter import _check_dynamic
 
-DateLike = Union[int, str, dt.datetime, pd.Timestamp, np.datetime64]
+DateLike = int | str | dt.datetime | pd.Timestamp | np.datetime64
 
 ds = Docstring(STL.__doc__)
 ds.insert_parameters(
@@ -322,7 +322,16 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
+        delta = len(left_data) - len(right_data)
+        adelta = abs(delta)
+        if delta < 0:
+            left_data += [[" " * len(left_data[0][0])] * adelta]
+            left_stubs += [" " * len(left_stubs[0])] * adelta
+        elif delta > 0:
+            right_data += [[" " * len(right_data[0][0])] * adelta]
+            right_stubs += [" " * len(right_stubs[0])] * adelta
         tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
+        right_data += [[""]] * (len(left_data) - len(right_data))
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary

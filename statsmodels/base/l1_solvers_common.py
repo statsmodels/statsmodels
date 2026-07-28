@@ -56,10 +56,7 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     passed = passed_array.min()
     if not passed:
         num_failed = (~passed_array).sum()
-        message = "QC check did not pass for %d out of %d parameters" % (
-            num_failed,
-            k_params,
-        )
+        message = f"QC check did not pass for {num_failed:d} out of {k_params:d} parameters"
         message += (
             "\nTry increasing solver accuracy or number of iterations"
             ", decreasing alpha, or switch solvers"
@@ -82,15 +79,10 @@ def _get_verbose_addon(qc_dict):
 
     addon = "\n------ verbose QC printout -----------------"
     addon = "\n------ Recall the problem was rescaled by 1 / nobs ---"
-    addon += "\n|%-10s|%-10s|%-10s|%-10s|" % ("passed", "alpha", "fprime", "param")
+    addon += "\n|{:<10}|{:<10}|{:<10}|{:<10}|".format("passed", "alpha", "fprime", "param")
     addon += "\n--------------------------------------------"
     for i in range(len(alpha)):
-        addon += "\n|%-10s|%-10.3e|%-10.3e|%-10.3e|" % (
-            passed_array[i],
-            alpha[i],
-            fprime[i],
-            params[i],
-        )
+        addon += f"\n|{passed_array[i]!s:<10}|{alpha[i]:<10.3e}|{fprime[i]:<10.3e}|{params[i]:<10.3e}|"
     return addon
 
 
@@ -165,6 +157,6 @@ def do_trim_params(
                     params[i] = 0.0
                     trimmed[i] = True
     else:
-        raise ValueError("trim_mode == %s, which is not recognized" % (trim_mode))
+        raise ValueError(f"trim_mode == {trim_mode}, which is not recognized")
 
     return params, np.asarray(trimmed)

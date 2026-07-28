@@ -414,9 +414,7 @@ class UnobservedComponents(MLEModel):
             if len(stochastic_freq_seasonal) != len(freq_seasonal):
                 raise ValueError(
                     "Length of stochastic_freq_seasonal must equal length"
-                    " of freq_seasonal: {!r} vs {!r}".format(
-                        len(stochastic_freq_seasonal), len(freq_seasonal)
-                    )
+                    f" of freq_seasonal: {len(stochastic_freq_seasonal)!r} vs {len(freq_seasonal)!r}"
                 )
             self.stochastic_freq_seasonal = stochastic_freq_seasonal
         self.stochastic_cycle = stochastic_cycle
@@ -443,8 +441,8 @@ class UnobservedComponents(MLEModel):
             for attribute in trend_attributes:
                 if getattr(self, attribute) is not False:
                     warn(
-                        "Value of `%s` may be overridden when the trend"
-                        " component is specified using a model string." % attribute,
+                        f"Value of `{attribute}` may be overridden when the trend"
+                        " component is specified using a model string.",
                         SpecificationWarning,
                         stacklevel=2
                     )
@@ -508,7 +506,7 @@ class UnobservedComponents(MLEModel):
                 self.stochastic_trend = True
                 self.trend_specification = "random trend"
             else:
-                raise ValueError("Invalid level/trend specification: '%s'" % spec)
+                raise ValueError(f"Invalid level/trend specification: '{spec}'")
 
         # Check for a model that makes sense
         if trend and not level:
@@ -1000,9 +998,7 @@ class UnobservedComponents(MLEModel):
                 idx_fseas_comp = int(key[-1])
                 periodicity = self.freq_seasonal_periods[idx_fseas_comp]
                 harmonics = self.freq_seasonal_harmonics[idx_fseas_comp]
-                freq_seasonal_name = "{p}({h})".format(
-                    p=repr(periodicity), h=repr(harmonics)
-                )
+                freq_seasonal_name = f"{periodicity!r}({harmonics!r})"
                 param_names.append("sigma2." + "freq_seasonal_" + freq_seasonal_name)
             elif key == "cycle_var":
                 param_names.append("sigma2.cycle")
@@ -1012,13 +1008,13 @@ class UnobservedComponents(MLEModel):
                 param_names.append("damping.cycle")
             elif key == "ar_coeff":
                 param_names.extend(
-                    "ar.L%d" % (i + 1) for i in range(self.ar_order)
+                    f"ar.L{i + 1:d}" for i in range(self.ar_order)
                 )
             elif key == "ar_var":
                 param_names.append("sigma2.ar")
             elif key == "reg_coeff":
                 param_names += [
-                    "beta.%s" % self.exog_names[i] for i in range(self.k_exog)
+                    f"beta.{self.exog_names[i]}" for i in range(self.k_exog)
                 ]
             else:
                 param_names.append(key)
@@ -1033,15 +1029,15 @@ class UnobservedComponents(MLEModel):
             names.append("trend")
         if self.seasonal:
             names.append("seasonal")
-            names += ["seasonal.L%d" % i for i in range(1, self._k_seasonal_states)]
+            names += [f"seasonal.L{i:d}" for i in range(1, self._k_seasonal_states)]
         if self.freq_seasonal:
-            names += ["freq_seasonal.%d" % i for i in range(self._k_freq_seas_states)]
+            names += [f"freq_seasonal.{i:d}" for i in range(self._k_freq_seas_states)]
         if self.cycle:
             names += ["cycle", "cycle.auxilliary"]
         if self.ar_order > 0:
-            names += ["ar.L%d" % i for i in range(1, self.ar_order + 1)]
+            names += [f"ar.L{i:d}" for i in range(1, self.ar_order + 1)]
         if self.k_exog > 0 and not self.mle_regression:
-            names += ["beta.%s" % self.exog_names[i] for i in range(self.k_exog)]
+            names += [f"beta.{self.exog_names[i]}" for i in range(self.k_exog)]
         if self._unused_state:
             names += ["dummy"]
 
@@ -1133,7 +1129,7 @@ class UnobservedComponents(MLEModel):
         super()._validate_can_fix_params(param_names)
 
         if "ar_coeff" in self.parameters:
-            ar_names = ["ar.L%d" % (i + 1) for i in range(self.ar_order)]
+            ar_names = [f"ar.L{i + 1:d}" for i in range(self.ar_order)]
             fix_all_ar = param_names.issuperset(ar_names)
             fix_any_ar = len(param_names.intersection(ar_names)) > 0
             if fix_any_ar and not fix_all_ar:
@@ -1765,7 +1761,7 @@ class UnobservedComponentsResults(MLEResults):
             ci_poly = ax.fill_between(
                 dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
             )
-            ci_label = "$%.3g \\%%$ confidence interval" % ((1 - alpha) * 100)
+            ci_label = f"${(1 - alpha) * 100:.3g} \\%$ confidence interval"
 
             # Proxy artist for fill_between legend entry
             # See e.g. https://matplotlib.org/1.3.1/users/legend_guide.html
@@ -1805,8 +1801,6 @@ class UnobservedComponentsResults(MLEResults):
             if which not in component_bunch:
                 raise ValueError("Invalid type of state estimate.")
 
-            which_cov = "%s_cov" % which
-
             # Get the predicted values
             value = component_bunch[which]
 
@@ -1814,20 +1808,22 @@ class UnobservedComponentsResults(MLEResults):
             state_label = f"{title} ({which})"
             ax.plot(dates[llb:], value[llb:], label=state_label)
 
+            # TODO: This has been unused for some time. Investigate why.
             # Get confidence intervals
-            if which_cov in component_bunch:
-                std_errors = np.sqrt(component_bunch["%s_cov" % which])
-                ci_lower = value - critical_value * std_errors
-                ci_upper = value + critical_value * std_errors
-                ci_poly = ax.fill_between(
-                    dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
-                )
-                ci_label = "$%.3g \\%%$ confidence interval" % ((1 - alpha) * 100)
+            # which_cov = f"{which}_cov"
+            # if which_cov in component_bunch:
+            #     std_errors = np.sqrt(component_bunch[f"{which}_cov"])
+            #     ci_lower = value - critical_value * std_errors
+            #     ci_upper = value + critical_value * std_errors
+            #     ci_poly = ax.fill_between(
+            #         dates[llb:], ci_lower[llb:], ci_upper[llb:], alpha=0.2
+            #     )
+            #     ci_label = f"${(1 - alpha) * 100:.3g} \\%$ confidence interval"
 
             # Legend
             ax.legend(loc=legend_loc)
 
-            ax.set_title("%s component" % title)
+            ax.set_title(f"{title} component")
 
         # Add a note if first observations excluded
         if llb > 0:
@@ -1846,7 +1842,7 @@ class UnobservedComponentsResults(MLEResults):
         model_name = [self.specification.trend_specification]
 
         if self.specification.seasonal:
-            seasonal_name = "seasonal(%d)" % self.specification.seasonal_periods
+            seasonal_name = f"seasonal({self.specification.seasonal_periods:d})"
             if self.specification.stochastic_seasonal:
                 seasonal_name = "stochastic " + seasonal_name
             model_name.append(seasonal_name)
@@ -1857,9 +1853,7 @@ class UnobservedComponentsResults(MLEResults):
             ):
                 periodicity = self.specification.freq_seasonal_periods[ix]
                 harmonics = self.specification.freq_seasonal_harmonics[ix]
-                freq_seasonal_name = "freq_seasonal({p}({h}))".format(
-                    p=repr(periodicity), h=repr(harmonics)
-                )
+                freq_seasonal_name = f"freq_seasonal({periodicity!r}({harmonics!r}))"
                 if is_stochastic:
                     freq_seasonal_name = "stochastic " + freq_seasonal_name
                 model_name.append(freq_seasonal_name)
@@ -1873,7 +1867,7 @@ class UnobservedComponentsResults(MLEResults):
             model_name.append(cycle_name)
 
         if self.specification.autoregressive:
-            autoregressive_name = "AR(%d)" % self.specification.ar_order
+            autoregressive_name = f"AR({self.specification.ar_order:d})"
             model_name.append(autoregressive_name)
 
         return super().summary(

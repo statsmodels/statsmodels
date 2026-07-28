@@ -543,8 +543,8 @@ class ThetaModelResults:
         data = np.asarray(self.params)[:, None]
         st = SimpleTable(
             data,
-            ["Parameters", "Estimate"],
-            list(self.params.index),
+            ["Estimate"],
+            ["Parameters"] + list(self.params.index),
             title="Parameter Estimates",
             txt_fmt=table_fmt,
         )

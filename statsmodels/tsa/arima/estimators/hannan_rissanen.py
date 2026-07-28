@@ -496,7 +496,7 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
     all_params = np.r_[fixed_ar_or_ma_params, free_ar_or_ma_params]
     assert set(all_lags) == set(spec_ar_or_ma_lags)
 
-    lag_to_param_map = dict(zip(all_lags, all_params))
+    lag_to_param_map = dict(zip(all_lags, all_params, strict=True))
 
     # Sort params by the order of their corresponding lags in
     # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or

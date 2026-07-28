@@ -80,7 +80,7 @@ def interpret_data(data, colnames=None, rownames=None):
         values = np.asarray(data)
 
         if colnames is None:
-            colnames = ["Y_%d" % i for i in range(values.shape[1])]
+            colnames = [f"Y_{i:d}" for i in range(values.shape[1])]
     elif is_data_frame(data):
         # XXX: hack
         data = data.dropna()

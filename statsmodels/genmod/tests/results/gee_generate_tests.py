@@ -37,8 +37,8 @@ def generate_logistic():
         y = 1*(u < pr)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -76,8 +76,8 @@ def generate_linear():
         y = np.dot(x, beta) + np.random.normal(size=n)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -115,8 +115,8 @@ def generate_nested_linear():
         y += np.sqrt(v3)*np.random.normal(size=10)
 
         for j in range(10):
-            OUT.write("%d, %.3f," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:.3f},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -150,8 +150,8 @@ def generate_ordinal():
         y = (u[:, None] > pr).sum(1)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -188,8 +188,8 @@ def generate_nominal():
         y = (u[:, None] > cpr).sum(1)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -218,7 +218,7 @@ def generate_poisson():
         y = np.array(y)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()

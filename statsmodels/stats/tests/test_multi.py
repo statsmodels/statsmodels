@@ -275,8 +275,7 @@ def test_pvalcorrection_reject(alpha, method, ii):
     reject, pvalscorr = multipletests(pval1, alpha=alpha,
                                       method=method)[:2]
 
-    msg = "case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r" % (
-                     method, alpha, reject.sum(), pval1, pvalscorr)
+    msg = f"case {method} {alpha:3.2f} rejected:{reject.sum():d}\npval_raw={pval1!r}\npvalscorr={pvalscorr!r}"
     assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
 
 

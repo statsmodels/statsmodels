@@ -129,7 +129,9 @@ class Table:
             self.table[self.table == 0] = 0.5
 
     def __str__(self):
-        s = "A %dx%d contingency table with counts:\n" % tuple(self.table.shape)
+        s = "A {:d}x{:d} contingency table with counts:\n".format(
+            *tuple(self.table.shape)
+        )
         s += np.array_str(self.table)
         return s
 
@@ -582,7 +584,7 @@ class SquareTable(Table):
 
         method = method.lower()
         if method not in ["bhapkar", "stuart_maxwell"]:
-            raise ValueError("method '%s' for homogeneity not known" % method)
+            raise ValueError(f"method '{method}' for homogeneity not known")
 
         n_obs = self.table.sum()
         pr = self.table.astype(np.float64) / n_obs
@@ -650,8 +652,8 @@ class SquareTable(Table):
         sy = self.symmetry()
         hm = self.homogeneity()
         data = [
-            [fmt % sy.statistic, fmt % sy.pvalue, "%d" % sy.df],
-            [fmt % hm.statistic, fmt % hm.pvalue, "%d" % hm.df],
+            [fmt % sy.statistic, fmt % sy.pvalue, f"{int(sy.df):d}"],
+            [fmt % hm.statistic, fmt % hm.pvalue, f"{int(hm.df):d}"],
         ]
         tab = iolib.SimpleTable(
             data, headers, stubs, data_aligns="r", table_dec_above=""
@@ -1298,26 +1300,26 @@ class StratifiedTable:
             data, headers, stubs, data_aligns="r", table_dec_above=""
         )
 
-        headers = ["Statistic", "P-value", ""]
+        headers = ["Statistic", "P-value", "   "]
         stubs = ["Test of OR=1", "Test constant OR"]
         rslt1 = self.test_null_odds()
         rslt2 = self.test_equal_odds()
         data = [
-            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, ""]],
-            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, ""]],
+            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, "    "]],
+            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, "    "]],
         ]
         tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab2)
 
-        headers = ["", "", ""]
+        headers = [" ", " ", " "]
         stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
         ss = self.table.sum(0).sum(0)
         data = [
-            ["%d" % self.table.shape[2], "", ""],
-            ["%d" % min(ss), "", ""],
-            ["%d" % max(ss), "", ""],
-            ["%.0f" % np.mean(ss), "", ""],
-            ["%d" % sum(ss), "", "", ""],
+            [f"{self.table.shape[2]:d}", "", ""],
+            [f"{int(min(ss)):d}", "", ""],
+            [f"{int(max(ss)):d}", "", ""],
+            [f"{np.mean(ss):.0f}", "", ""],
+            [f"{int(sum(ss)):d}", "", ""],
         ]
         tab3 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab3)

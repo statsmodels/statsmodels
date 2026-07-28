@@ -35,8 +35,8 @@ def bunch_factory(attribute, columns):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             if not hasattr(self, attribute):
-                raise AttributeError("{} is required and must be passed to "
-                                     "the constructor".format(attribute))
+                raise AttributeError(f"{attribute} is required and must be passed to "
+                                     "the constructor")
             for i, att in enumerate(columns):
                 self[att] = getattr(self, attribute)[:, i]
 

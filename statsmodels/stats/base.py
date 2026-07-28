@@ -152,9 +152,8 @@ class AllPairsResults:
         import statsmodels.stats.multitest as smt
         maxlevel = max(len(ss) for ss in self.all_pairs_names)
 
-        text = ("Corrected p-values using %s p-value correction\n\n"
-                % smt.multitest_methods_names[self.multitest_method])
+        text = (f"Corrected p-values using {smt.multitest_methods_names[self.multitest_method]} p-value correction\n\n")
         text += "Pairs" + (" " * (maxlevel - 5 + 1)) + "p-values\n"
         text += "\n".join(f"{pairs}  {pv:6.4g}" for (pairs, pv) in
-                          zip(self.all_pairs_names, self.pval_corrected()))
+                          zip(self.all_pairs_names, self.pval_corrected(), strict=True))
         return text

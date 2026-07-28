@@ -367,9 +367,9 @@ def summary_model(results):
     info["Link Function:"] = lambda x: x.family.link.__class__.__name__
     info["Dependent Variable:"] = lambda x: x.model.endog_names
     info["Date:"] = time_now
-    info["No. Observations:"] = lambda x: "%#6d" % x.nobs
-    info["Df Model:"] = lambda x: "%#6d" % x.df_model
-    info["Df Residuals:"] = lambda x: "%#6d" % x.df_resid
+    info["No. Observations:"] = lambda x: f"{int(x.nobs):#6d}"
+    info["Df Model:"] = lambda x: f"{int(x.df_model):#6d}"
+    info["Df Residuals:"] = lambda x: f"{int(x.df_resid):#6d}"
     info["Converged:"] = lambda x: x.mle_retvals["converged"]
     info["No. Iterations:"] = lambda x: x.mle_retvals["iterations"]
     info["Method:"] = lambda x: x.method
@@ -378,19 +378,19 @@ def summary_model(results):
     info["Cov. Type:"] = lambda x: x.fit_options["cov"]
 
     rsquared_type = "" if results.k_constant else " (uncentered)"
-    info["R-squared" + rsquared_type + ":"] = lambda x: "%#8.3f" % x.rsquared
-    info["Adj. R-squared" + rsquared_type + ":"] = lambda x: "%#8.3f" % x.rsquared_adj
-    info["Pseudo R-squared:"] = lambda x: "%#8.3f" % x.prsquared
-    info["AIC:"] = lambda x: "%8.4f" % x.aic
-    info["BIC:"] = lambda x: "%8.4f" % x.bic
-    info["Log-Likelihood:"] = lambda x: "%#8.5g" % x.llf
-    info["LL-Null:"] = lambda x: "%#8.5g" % x.llnull
-    info["LLR p-value:"] = lambda x: "%#8.5g" % x.llr_pvalue
-    info["Deviance:"] = lambda x: "%#8.5g" % x.deviance
-    info["Pearson chi2:"] = lambda x: "%#6.3g" % x.pearson_chi2
-    info["F-statistic:"] = lambda x: "%#8.4g" % x.fvalue
-    info["Prob (F-statistic):"] = lambda x: "%#6.3g" % x.f_pvalue
-    info["Scale:"] = lambda x: "%#8.5g" % x.scale
+    info["R-squared" + rsquared_type + ":"] = lambda x: f"{x.rsquared:#8.3f}"
+    info["Adj. R-squared" + rsquared_type + ":"] = lambda x: f"{x.rsquared_adj:#8.3f}"
+    info["Pseudo R-squared:"] = lambda x: f"{x.prsquared:#8.3f}"
+    info["AIC:"] = lambda x: f"{x.aic:8.4f}"
+    info["BIC:"] = lambda x: f"{x.bic:8.4f}"
+    info["Log-Likelihood:"] = lambda x: f"{x.llf:#8.5g}"
+    info["LL-Null:"] = lambda x: f"{x.llnull:#8.5g}"
+    info["LLR p-value:"] = lambda x: f"{x.llr_pvalue:#8.5g}"
+    info["Deviance:"] = lambda x: f"{x.deviance:#8.5g}"
+    info["Pearson chi2:"] = lambda x: f"{x.pearson_chi2:#6.3g}"
+    info["F-statistic:"] = lambda x: f"{x.fvalue:#8.4g}"
+    info["Prob (F-statistic):"] = lambda x: f"{x.f_pvalue:#6.3g}"
+    info["Scale:"] = lambda x: f"{x.scale:#8.5g}"
     out = {}
     for key, func in info.items():
         try:
@@ -516,7 +516,7 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
         r2 = pd.Series({("R-squared", ""): rsquared,
                         ("R-squared Adj.", ""): rsquared_adj})
 
-        if r2.notnull().any():
+        if r2.notna().any():
             r2 = r2.apply(lambda x: float_format % x)
             res = pd.concat([res, r2], axis=0)
 
@@ -719,7 +719,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
     # use unique column names, otherwise the merge will not succeed
-    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols]), strict=True):
         df.columns = [name]
 
     info = reduce(merg, cols)

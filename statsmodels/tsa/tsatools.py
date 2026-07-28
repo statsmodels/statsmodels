@@ -821,6 +821,6 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
         return 24
     else:  # pragma : no cover
         raise ValueError(
-            "freq {} not understood. Please report if you "
-            "think this is in error.".format(freq)
+            f"freq {freq} not understood. Please report if you "
+            "think this is in error."
         )

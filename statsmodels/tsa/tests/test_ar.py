@@ -108,7 +108,7 @@ for param in params:
         final.append(param)
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
-ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param)]) for param in params]
+ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)]) for param in params]
 
 
 @pytest.fixture(scope="module", params=params, ids=ids)
@@ -150,7 +150,7 @@ def fix_ols_attribute(val, attrib, res):
     nparam = res.k_constant + res.df_model
     nobs = nparam + res.df_resid
     df_correction = (nobs - nparam) / nobs
-    if attrib in ("scale",):
+    if attrib == "scale":
         return val * df_correction
     elif attrib == "df_model":
         return val + res.k_constant
@@ -160,9 +160,9 @@ def fix_ols_attribute(val, attrib, res):
         return val * np.sqrt(df_correction)
     elif attrib in ("cov_params", "scale"):
         return val * df_correction
-    elif attrib in ("f_test",):
+    elif attrib == "f_test":
         return val / df_correction
-    elif attrib in ("tvalues",):
+    elif attrib == "tvalues":
         return val / np.sqrt(df_correction)
 
     return val

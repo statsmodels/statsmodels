@@ -1484,7 +1484,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # Parameter slices
         ix = np.split(np.arange(self.k_params),
                       np.cumsum(list(self.params.values()))[:-1])
-        self._p = dict(zip(self.params.keys(), ix))
+        self._p = dict(zip(self.params.keys(), ix, strict=True))
 
         # Cache
         self._loading_constraints = {}
@@ -1706,9 +1706,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         if self._index_dates:
             ix = self._index
             d = ix[0]
-            sample = ["%s" % d]
+            sample = [f"{d}"]
             d = ix[-1]
-            sample += ["- " + "%s" % d]
+            sample += ["- " + f"{d}"]
         else:
             sample = [str(0), " - " + str(self.nobs)]
 
@@ -2815,8 +2815,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         elif mstep_method == "missing":
             func = self._em_maximization_obs_missing
         else:
-            raise ValueError('Invalid maximization step method: "%s".'
-                             % mstep_method)
+            raise ValueError(f'Invalid maximization step method: "{mstep_method}".')
         # TODO: compute H is pretty slow
         Lambda, H = func(res, Eaa, a, compute_H=(not self.idiosyncratic_ar1))
 
@@ -4255,9 +4254,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                 self.filter_results.design[:, mod._s["factors_L1"], 0],
                 index=endog_names, columns=mod.factor_names)
             try:
-                data = data.map(lambda s: "%.2f" % s)
+                data = data.map(lambda s: f"{s:.2f}")
             except AttributeError:
-                data = data.applymap(lambda s: "%.2f" % s)
+                data = data.applymap(lambda s: f"{s:.2f}")
 
             # Idiosyncratic terms
             # data['   '] = '   '
@@ -4317,9 +4316,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                     columns=lag_names)
                 data.index.name = ""
                 try:
-                    data = data.map(lambda s: "%.2f" % s)
+                    data = data.map(lambda s: f"{s:.2f}")
                 except AttributeError:
-                    data = data.applymap(lambda s: "%.2f" % s)
+                    data = data.applymap(lambda s: f"{s:.2f}")
 
                 Q = self.filter_results.state_cov
                 # data[' '] = ''

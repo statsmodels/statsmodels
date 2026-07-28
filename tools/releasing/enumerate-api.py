@@ -22,7 +22,6 @@ import json
 import logging
 import os
 from pkgutil import iter_modules
-import sys
 
 
 def find_modules(path):
@@ -30,14 +29,9 @@ def find_modules(path):
     for pkg in find_packages(path):
         modules.add(pkg)
         pkgpath = path + "/" + pkg.replace(".", "/")
-        if sys.version_info < (3, 6):
-            for _, name, ispkg in iter_modules([pkgpath]):
-                if not ispkg:
-                    modules.add(pkg + "." + name)
-        else:
-            for info in iter_modules([pkgpath]):
-                if not info.ispkg:
-                    modules.add(pkg + "." + info.name)
+        for info in iter_modules([pkgpath]):
+            if not info.ispkg:
+                modules.add(pkg + "." + info.name)
     return modules
 
 
@@ -104,7 +98,7 @@ def walk_modules(path):
                 d[name] = tuple()
             if inspect.isclass(func):
                 update_class(func, api["classes"], v, name)
-            logger.info(f"{module}.{v}")
+            logger.info("%s.%s", module, v)
     return api
 
 
@@ -165,19 +159,15 @@ def generate_diff(api, other):
 
     with open("api-differences.rst", "w", encoding="utf-8") as rst:
         rst.write(header("New Classes", first=True))
-        for val in sorted(new_classes):
-            rst.write(f"* :class:`{val}`\n")
+        rst.writelines(f"* :class:`{val}`\n" for val in sorted(new_classes))
         rst.write(header("Removed Classes"))
-        for val in sorted(removed_classes):
-            rst.write(f"* ``{val}``\n")
+        rst.writelines(f"* ``{val}``\n" for val in sorted(removed_classes))
 
         rst.write(header("New Methods"))
-        for val in sorted(new_methods):
-            rst.write(f"* :meth:`{val}`\n")
+        rst.writelines(f"* :meth:`{val}`\n" for val in sorted(new_methods))
 
         rst.write(header("Removed Methods"))
-        for val in sorted(removed_methods):
-            rst.write(f"* ``{val}``\n")
+        rst.writelines(f"* ``{val}``\n" for val in sorted(removed_methods))
 
         rst.write(header("Methods with New Arguments"))
         for val in sorted(expanded_methods):

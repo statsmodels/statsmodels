@@ -15,6 +15,8 @@ from yapf.yapflib.yapf_api import FormatCode
 
 import statsmodels.api as sm
 
+logger = logging.getLogger(__name__)
+
 NUM_SIM = 10000000
 MAX_MEMORY = 2 ** 28
 SAMPLE_SIZES = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -62,13 +64,12 @@ def simulations(sim_type, save=False):
             d_minus = (cdf - minus[:, None]).max(0)
             d = np.max(np.abs(np.c_[d_plus, d_minus]), 1)
             results[ss].append(d)
-        logging.log(logging.INFO,
-                    "Completed {}, remaining {}".format(NUM_SIM - remaining,
-                                                        remaining))
+        logger.info(
+            "Completed %s, remaining %s", NUM_SIM - remaining, remaining
+        )
         elapsed = dt.datetime.now() - start
         rem = elapsed.total_seconds() / (NUM_SIM - remaining) * remaining
-        logging.log(logging.INFO,
-                    f"({sim_type}) Time remaining {rem:0.1f}s")
+        logger.info("(%s) Time remaining %0.1fs", sim_type, rem)
 
     for key in results:
         results[key] = np.concatenate(results[key])

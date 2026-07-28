@@ -282,7 +282,7 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
 
     """
 
-    if method not in ["all"]:
+    if method != "all":
         raise ValueError(f'unknown method "{method}"')
 
     if hasattr(results, "_results"):

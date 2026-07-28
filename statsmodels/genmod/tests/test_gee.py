@@ -525,7 +525,7 @@ class TestGEE:
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula(
                 "Y ~ X1 + X2 + X3", "Id", D, family=family, cov_struct=v
@@ -841,7 +841,7 @@ class TestGEE:
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula(
                 "Y ~ X1 + X2 + X3", "Id", D, family=family, cov_struct=v
@@ -1183,7 +1183,7 @@ class TestGEE:
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula(
                 "Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, family=family, cov_struct=v
@@ -1569,7 +1569,7 @@ class TestGEE:
         exposure = list(rs.uniform(1, 2, size=n))
         endog = [
             rs.poisson(0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i))
-            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
+            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure, strict=True)
         ]
 
         model = gee.GEE(
@@ -1777,7 +1777,7 @@ class TestGEE:
         ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
-                for a, b in zip(v[0], v[1]):
+                for a, b in zip(v[0], v[1], strict=True):
                     ky = (a, b)
                     assert ky not in ixs
                     ixs.add(ky)
@@ -1888,7 +1888,7 @@ class TestGEEPoissonFormulaCovType(CheckConsistency):
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
 
         cls.mod = gee.GEE.from_formula(
             "Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, family=family, cov_struct=vi

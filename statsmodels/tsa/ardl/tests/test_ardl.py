@@ -832,7 +832,7 @@ def test_ardl_trend_ctt(data, y_lags, x_lags, causal):
     res = ARDL(data.y, y_lags, data.x, x_lags, trend="ctt", causal=causal).fit()
     n_x = data.x.shape[1]
     n_params = 3
-    n_params += y_lags if y_lags else 0
+    n_params += y_lags or 0
     n_params += n_x * (int(not causal) + x_lags) if x_lags else 0
     assert res.params.shape[0] == n_params
     check_results(res)

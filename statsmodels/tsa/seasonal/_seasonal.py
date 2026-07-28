@@ -231,7 +231,7 @@ def seasonal_decompose(
 
     results = []
     for s, name in zip(
-        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None),
+        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None), strict=True,
     ):
         results.append(pw.wrap(s.squeeze(), columns=name))
     return DecomposeResult(
@@ -359,7 +359,7 @@ class DecomposeResult:
             xlim = (0, self._observed.shape[0] - 1)
 
         fig, axs = plt.subplots(len(series), 1, sharex=True)
-        for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):  # noqa: B020
+        for i, (ax, (series, def_name)) in enumerate(zip(axs, series, strict=True)):  # noqa: B020
             if def_name != "residual":
                 ax.plot(series)
             else:

@@ -239,12 +239,12 @@ def gen_k_factor1_nonstationary(
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
     if k > 1:
-        endog_M.columns = ["yM%d_f1" % (i + 1) for i in range(k)]
+        endog_M.columns = [f"yM{i + 1:d}_f1" for i in range(k)]
     else:
         endog_M.columns = ["yM_f1"]
     endog_Q = log_levels_Q.diff().iloc[1:, k:]
     if k > 1:
-        endog_Q.columns = ["yQ%d_f1" % (i + 1) for i in range(k)]
+        endog_Q.columns = [f"yQ{i + 1:d}_f1" for i in range(k)]
     else:
         endog_Q.columns = ["yQ_f1"]
 
@@ -321,12 +321,12 @@ def gen_k_factor1(
     # Compute the growth rate series that we'll actually run the model on
     endog_M = log_levels_M.diff().iloc[1:, :k]
     if k > 1:
-        endog_M.columns = ["yM%d_f1" % (i + 1) for i in range(k)]
+        endog_M.columns = [f"yM{i + 1:d}_f1" for i in range(k)]
     else:
         endog_M.columns = ["yM_f1"]
     endog_Q = log_levels_Q.diff().iloc[1:, k:]
     if k > 1:
-        endog_Q.columns = ["yQ%d_f1" % (i + 1) for i in range(k)]
+        endog_Q.columns = [f"yQ{i + 1:d}_f1" for i in range(k)]
     else:
         endog_Q.columns = ["yQ_f1"]
 

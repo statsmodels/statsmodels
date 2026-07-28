@@ -46,11 +46,11 @@ _doc_zi_params = """
 
 
 class GenericZeroInflated(CountModel):
-    __doc__ = """
+    __doc__ = f"""
     Generic Zero-Inflated Model
 
-    {params}
-    {extra_params}
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -60,10 +60,7 @@ class GenericZeroInflated(CountModel):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=_doc_zi_params + base._missing_param_doc,
-    )
+    """
 
     def __init__(
         self,
@@ -100,7 +97,7 @@ class GenericZeroInflated(CountModel):
             self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]), self.exog_infl)
             self._hessian_inflate = self._hessian_probit
         else:
-            raise ValueError("inflation == %s, which is not handled" % inflation)
+            raise ValueError(f"inflation == {inflation}, which is not handled")
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
@@ -109,7 +106,7 @@ class GenericZeroInflated(CountModel):
             raise ValueError("exog and exog_infl have different number of"
                              "observation. `missing` handling is not supported")
 
-        infl_names = ["inflate_%s" % i for i in self.model_infl.data.param_names]
+        infl_names = [f"inflate_{i}" for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
@@ -583,7 +580,7 @@ class GenericZeroInflated(CountModel):
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
     def _derivative_predict(self, params, exog=None, transform="dydx"):
         """NotImplemented"""
@@ -661,11 +658,11 @@ class GenericZeroInflated(CountModel):
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
-    __doc__ = """
+    __doc__ = f"""
     Poisson Zero-Inflated Model
 
-    {params}
-    {extra_params}
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -675,10 +672,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=_doc_zi_params + base._missing_param_doc,
-    )
+    """
 
     def __init__(
         self,

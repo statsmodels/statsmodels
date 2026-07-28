@@ -41,7 +41,7 @@ class HypothesisTestResults:
             self.conclusion = "reject"
         self.title = title
         self.h0 = h0
-        self.conclusion_str = "Conclusion: %s H_0" % self.conclusion
+        self.conclusion_str = f"Conclusion: {self.conclusion} H_0"
         self.signif_str = f" at {self.signif:.0%} significance level"
 
     def summary(self):
@@ -118,7 +118,7 @@ class CausalityTestResults(HypothesisTestResults):
         method = method.capitalize()
         # attributes used in summary and string representation:
         title = "Granger" if self.test == "granger" else "Instantaneous"
-        title += " causality %s-test" % method
+        title += f" causality {method}-test"
         h0 = "H_0: "
         if len(self.causing) == 1:
             h0 += f"{self.causing[0]} does not "

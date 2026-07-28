@@ -206,7 +206,7 @@ class NewsResults:
         self.revisions_details_start = news_results.revisions_details_start
 
         self.revisions_iloc = pd.DataFrame(
-            list(zip(*news_results.revisions_ix)),
+            list(zip(*news_results.revisions_ix, strict=True)),
             index=["revision date", "revised variable"]).T
         iloc = self.revisions_iloc
         if len(iloc) > 0:
@@ -221,7 +221,7 @@ class NewsResults:
         self.revisions_ix_detailed = self.revisions_ix[mask]
 
         self.updates_iloc = pd.DataFrame(
-            list(zip(*news_results.updates_ix)),
+            list(zip(*news_results.updates_ix, strict=True)),
             index=["update date", "updated variable"]).T
         iloc = self.updates_iloc
         if len(iloc) > 0:
@@ -920,10 +920,10 @@ class NewsResults:
             impacts.index = tmp_index.droplevel(1)
             try:
                 impacts = impacts.map(
-                    lambda num: "" if pd.isnull(num) else float_format % num)
+                    lambda num: "" if pd.isna(num) else float_format % num)
             except AttributeError:
                 impacts = impacts.applymap(
-                    lambda num: "" if pd.isnull(num) else float_format % num)
+                    lambda num: "" if pd.isna(num) else float_format % num)
             impacts = impacts.reset_index()
             try:
                 impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
@@ -935,12 +935,12 @@ class NewsResults:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
                 for col in impacts.columns[2:]:
                     impacts[col] = impacts[col].map(
-                        lambda num: "" if pd.isnull(num) else float_format % num
+                        lambda num: "" if pd.isna(num) else float_format % num
                     )
             except AttributeError:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
                 impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
-                    lambda num: "" if pd.isnull(num) else float_format % num
+                    lambda num: "" if pd.isna(num) else float_format % num
                 )
         # Sparsify the groupby column
         if sparsify and groupby in impacts:
@@ -1166,7 +1166,7 @@ class NewsResults:
 
         # Function for formatting numbers
         def str_format(num, mark_ones=False, mark_zeroes=False):
-            if pd.isnull(num):
+            if pd.isna(num):
                 out = ""
             elif mark_ones and np.abs(1 - num) < self.tolerance:
                 out = "1.0"
@@ -1184,7 +1184,7 @@ class NewsResults:
                 if key in details:
                     args = (
                         # mark_ones
-                        key in ["weight"],
+                        key == "weight",
                         # mark_zeroes
                         key in ["weight", "impact"])
                     details[key] = details[key].apply(str_format, args=args)
@@ -1262,21 +1262,24 @@ class NewsResults:
             - `detailed impacts computed` : whether detailed impacts were
               computed for this revision
         """
-        data = pd.merge(
-            self.data_revisions, self.revisions_all, left_index=True,
-            right_index=True).sort_index().reset_index()
+        data = self.data_revisions.merge(
+            self.revisions_all,
+            left_index=True,
+            right_index=True
+        )
+        data = data.sort_index().reset_index()
         data = data[["revision date", "revised variable", "observed (prev)",
                      "revision", "detailed impacts computed"]]
         try:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].map(str))
             data.iloc[:, 2:-1] = data.iloc[:, 2:-1].map(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isna(num) else f"{num:.2f}")
         except AttributeError:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].applymap(str))
             data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isna(num) else f"{num:.2f}")
 
         # Sparsify the date column
         if sparsify:
@@ -1322,20 +1325,19 @@ class NewsResults:
         --------
         data_updates
         """
-        data = pd.merge(
-            self.data_updates, self.news, left_index=True,
-            right_index=True).sort_index().reset_index()
+        data = self.data_updates.merge(self.news, left_index=True, right_index=True)
+        data = data.sort_index().reset_index()
         str_cols = ["update date", "updated variable"]
         try:
             data[str_cols] = data[str_cols].map(str)
             for col in data.columns[2:]:
                 data[col] = data[col].map(
-                    lambda num: "" if pd.isnull(num) else "%.2f" % num
+                    lambda num: "" if pd.isna(num) else f"{num:.2f}"
                 )
         except AttributeError:
             data[str_cols] = data[str_cols].applymap(str)
             data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num
+                lambda num: "" if pd.isna(num) else f"{num:.2f}"
             )
 
         # Sparsify the date column
@@ -1469,9 +1471,9 @@ class NewsResults:
                 mask = ~np.isnan(model.endog).all(axis=1)
                 ix = model._index[mask]
                 d = ix[0]
-                sample = ["%s" % d]
+                sample = [f"{d}"]
                 d = ix[-1]
-                sample += ["- " + "%s" % d]
+                sample += ["- " + f"{d}"]
             else:
                 sample = [str(0), " - " + str(model.nobs)]
 

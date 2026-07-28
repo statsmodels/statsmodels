@@ -495,7 +495,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                 np.array(
                     [
                         truncated_poisson_factorial_moment(interval, r, p)
-                        for (interval, p) in zip(intervals, counts)
+                        for (interval, p) in zip(intervals, counts, strict=True)
                     ]
                 )
                 for r in range(1, 5)
@@ -548,7 +548,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                     np.log(
                         [
                             poisson_interval(interval, p)
-                            for (interval, p) in zip(intervals, counts)
+                            for (interval, p) in zip(intervals, counts, strict=True)
                         ]
                     )
                 )
@@ -599,7 +599,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
         ci_upper = np.minimum(proportions + (c + 2 * g) / n, 1)
         region = np.array([ci_lower, ci_upper]).T
     else:
-        raise NotImplementedError('method "%s" is not available' % method)
+        raise NotImplementedError(f'method "{method}" is not available')
     return region
 
 
@@ -1565,7 +1565,7 @@ def confint_proportions_2indep(
     elif compare == "odds-ratio":
         # odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
         if method in ["logit", "logit-adjusted", "logit-smoothed"]:
-            if method in ["logit-smoothed"]:
+            if method == "logit-smoothed":
                 adjusted = _shrink_prob(
                     count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=False
                 )[0]
@@ -2073,7 +2073,7 @@ def test_proportions_2indep(
     elif compare == "odds-ratio":
 
         if method in ["logit", "logit-adjusted", "logit-smoothed"]:
-            if method in ["logit-smoothed"]:
+            if method == "logit-smoothed":
                 adjusted = _shrink_prob(
                     count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=False
                 )[0]
@@ -2114,10 +2114,10 @@ def test_proportions_2indep(
             distr = "normal"
             diff_stat = None
         else:
-            raise ValueError('method "%s" not recognized' % method)
+            raise ValueError(f'method "{method}" not recognized')
 
     else:
-        raise ValueError('compare "%s" not recognized' % compare)
+        raise ValueError(f'compare "{compare}" not recognized')
 
     if distr == "normal" and diff_stat is not None:
         statistic, pvalue = _zstat_generic2(

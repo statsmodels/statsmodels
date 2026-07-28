@@ -938,7 +938,7 @@ class MultiComparison:
     def __init__(self, data, groups, group_order=None):
         if len(data) != len(groups):
             raise ValueError(
-                "data has %d elements and groups has %d" % (len(data), len(groups))
+                f"data has {len(data):d} elements and groups has {len(groups):d}"
             )
         self.data = np.asarray(data)
         self.groups = groups = np.asarray(groups)
@@ -950,7 +950,7 @@ class MultiComparison:
             # check if group_order has any names not in groups
             for grp in group_order:
                 if grp not in groups:
-                    raise ValueError("group_order value '%s' not found in groups" % grp)
+                    raise ValueError(f"group_order value '{grp}' not found in groups")
             self.groupsunique = np.array(group_order)
             self.groupintlab = np.empty(len(data), int)
             self.groupintlab.fill(-999)  # instead of a nan
@@ -1016,7 +1016,7 @@ class MultiComparison:
         # simultaneous/separate treatment of multiple tests
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(self.rankdata)  # (xranks)
         print("MultiComparison.kruskal")
-        for i, j in zip(*self.pairindices):
+        for i, j in zip(*self.pairindices, strict=True):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
@@ -1063,7 +1063,7 @@ class MultiComparison:
         from statsmodels.stats.multitest import multipletests
 
         res = []
-        for i, j in zip(*self.pairindices):
+        for i, j in zip(*self.pairindices, strict=True):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = multipletests(
@@ -1114,7 +1114,7 @@ class MultiComparison:
             "FWER=",
             alpha,
             method,
-        ) + "\nalphacSidak={:4.2f}, alphacBonf={:5.3f}".format(alphacSidak, alphacBonf)
+        ) + f"\nalphacSidak={alphacSidak:4.2f}, alphacBonf={alphacBonf:5.3f}"
 
         return (
             results_table,
@@ -1189,7 +1189,7 @@ class MultiComparison:
         )
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
-            "Multiple Comparison of Means - Tukey HSD, " + "FWER=%4.2f" % alpha
+            "Multiple Comparison of Means - Tukey HSD, " + f"FWER={alpha:4.2f}"
         )
 
         return TukeyHSDResults(
@@ -2096,7 +2096,7 @@ if __name__ == "__main__":
         mrs[v2[diffidx]] - mrs[v1[diffidx]]
 
         print("\nkruskal for all pairs")
-        for i, j in zip(v2[diffidx], v1[diffidx]):
+        for i, j in zip(v2[diffidx], v1[diffidx], strict=True):
             print(i, j, stats.kruskal(xli[i], xli[j]))
             mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
             print(mwu, mwupval * 2, mwupval * 2 < 0.05 / 6.0, mwupval * 2 < 0.1 / 6.0)
@@ -2136,7 +2136,7 @@ if __name__ == "__main__":
         f = (tot * (tot + 1.0) / 12.0) - (t / (6.0 * (tot - 1.0)))
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(xranks)
         print("\npairs of mean rank differences")
-        for i, j in zip(v2[diffidx], v1[diffidx]):
+        for i, j in zip(v2[diffidx], v1[diffidx], strict=True):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
@@ -2160,12 +2160,12 @@ if __name__ == "__main__":
 
         tablett, restt, arrtt = multicomp.allpairtest(stats.ttest_ind)
         tablemw, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu)
-        print("")
+        print()
         print(tablett)
-        print("")
+        print()
         print(tablemw)
         tablemwhs, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu, method="hs")
-        print("")
+        print()
         print(tablemwhs)
 
     if "last" in examples:

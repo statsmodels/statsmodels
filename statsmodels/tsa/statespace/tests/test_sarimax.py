@@ -141,7 +141,7 @@ class TestRealGDPARStata:
     def test_filtered_state(self):
         for i in range(12):
             assert_allclose(
-                realgdp_results.iloc[1:]["u%d" % (i + 1)],
+                realgdp_results.iloc[1:][f"u{i + 1:d}"],
                 self.results.filter_results.filtered_state[i],
                 atol=1e-6,
             )
@@ -2289,7 +2289,7 @@ def check_concentrated_scale(filter_univariate=False):
         time_varying_regressions,
         simple_differencings,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
 
@@ -2618,7 +2618,7 @@ def test_recreate_model():
         time_varying_regressions,
         simple_differencings,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
         exog = kwargs.pop("exog", None)

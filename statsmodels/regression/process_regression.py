@@ -288,17 +288,17 @@ class ProcessMLE(base.LikelihoodModel):
         if hasattr(exog, "columns"):
             xnames = list(exog.columns)
         else:
-            xnames = ["Mean%d" % j for j in range(exog.shape[1])]
+            xnames = [f"Mean{j:d}" for j in range(exog.shape[1])]
 
         if hasattr(exog_scale, "columns"):
             xnames += list(exog_scale.columns)
         else:
-            xnames += ["Scale%d" % j for j in range(exog_scale.shape[1])]
+            xnames += [f"Scale{j:d}" for j in range(exog_scale.shape[1])]
 
         if hasattr(exog_smooth, "columns"):
             xnames += list(exog_smooth.columns)
         else:
-            xnames += ["Smooth%d" % j for j in range(exog_smooth.shape[1])]
+            xnames += [f"Smooth{j:d}" for j in range(exog_smooth.shape[1])]
 
         if self._has_noise:
             if hasattr(exog_noise, "columns"):
@@ -306,7 +306,7 @@ class ProcessMLE(base.LikelihoodModel):
                 xnames += list(exog_noise.columns)
             else:
                 # If numpy-like, create default names
-                xnames += ["Noise%d" % j for j in range(exog_noise.shape[1])]
+                xnames += [f"Noise{j:d}" for j in range(exog_noise.shape[1])]
 
         self.data.param_names = xnames
 
@@ -668,7 +668,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         for j, meth in enumerate(method):
 
-            if meth not in ("powell",):
+            if meth != "powell":
 
                 def jac(x):
                     return -self.score(x)
@@ -693,9 +693,9 @@ class ProcessMLE(base.LikelihoodModel):
             if not f.success:
                 msg = "Fitting did not converge"
                 if jac is not None:
-                    msg += ", |gradient|=%.6f" % np.sqrt(np.sum(f.jac**2))
+                    msg += f", |gradient|={np.sqrt(np.sum(f.jac**2)):.6f}"
                 if j < len(method) - 1:
-                    msg += ", trying %s next..." % method[j + 1]
+                    msg += f", trying {method[j + 1]} next..."
                 warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
             if np.isfinite(f.x).all():
@@ -886,7 +886,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         # DefaultDict use len instead of catching a KeyError.
         ix = self.model._groups_ix[group]
         if len(ix) == 0:
-            msg = "Group '%s' does not exist" % str(group)
+            msg = f"Group '{group!s}' does not exist"
             raise ValueError(msg)
 
         scale_data = self.model.exog_scale[ix, :]
@@ -928,8 +928,8 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues))
 
         f = norm.ppf(1 - alpha / 2)
-        df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
-        df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
+        df[f"[{alpha / 2:.3f}"] = df.coef - f * df["std err"]
+        df[f"{1 - alpha / 2:.3f}]"] = df.coef + f * df["std err"]
 
         df.index = self.model.data.param_names
 
