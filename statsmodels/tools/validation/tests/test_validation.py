@@ -165,6 +165,12 @@ class TestArrayLike:
         a = array_like(data, "a", ndim=2)
         assert type(a[1:]) is np.ndarray
 
+    def test_none(self):
+        assert array_like(None, "a", optional=True) is None
+        # None is not array_like, and must not be converted to nan
+        with pytest.raises(TypeError, match="a must be array_like, not None"):
+            array_like(None, "a")
+
 
 def test_right_squeeze():
     x = np.empty((10, 1, 10))
