@@ -140,7 +140,7 @@ target-version = "py310"
 # archive/ is explicitly documented (archive/README) as deprecated, no
 # longer maintained legacy code; excluded so it's not linted as if it
 # were part of the active codebase.
-extend-exclude = ["archive"]
+extend-exclude = ["archive", "examples/python"]
 
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]
