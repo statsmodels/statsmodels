@@ -1,7 +1,6 @@
 """
 Test VAR Model
 """
-
 from statsmodels.compat.pandas import (
     QUARTER_END,
     _infer_freq_returns_offset,
@@ -11,6 +10,7 @@ from statsmodels.compat.python import lrange
 
 from io import BytesIO
 import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -577,11 +577,11 @@ class E1_Results:
 
 
 basepath = os.path.split(__file__)[0]
-resultspath = os.path.join(basepath, "results")
+resultspath = Path(basepath).joinpath("results")
 
 
 def get_lutkepohl_data(name="e2"):
-    path = os.path.join(resultspath, f"{name}.dat")
+    path = Path(resultspath).joinpath(f"{name}.dat")
 
     return util.parse_lutkepohl_data(path)
 

@@ -7,8 +7,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -312,8 +311,8 @@ class TestGLSARGretl:
         reset_2 = [7.268492, 0.00762, 1, 198, "f"]
 
         names = "date   residual        leverage       influence        DFFITS".split()
-        cur_dir = os.path.abspath(os.path.dirname(__file__))
-        fpath = os.path.join(cur_dir, "results/leverage_influence_ols_nostars.txt")
+        cur_dir = Path(__file__).parent.resolve()
+        fpath = Path(cur_dir).joinpath("results/leverage_influence_ols_nostars.txt")
         lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
                             converters={0: lambda s: s})
         # either numpy 1.6 or python 3.2 changed behavior

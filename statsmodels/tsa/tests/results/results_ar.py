@@ -1,8 +1,8 @@
-import os
+from pathlib import Path
 
 import numpy as np
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
 
 class ARLagResults:
@@ -85,7 +85,7 @@ class ARResultsOLS:
             # NOTE: predictions were taken from gretl, but agree with Stata
             #   test predict
             # TODO: remove one of the files
-            filename = os.path.join(cur_dir, "AROLSConstantPredict.csv")
+            filename = Path(cur_dir).joinpath("AROLSConstantPredict.csv")
             predictresults = np.loadtxt(filename)
             fv = predictresults[:300, 0]
             pv = predictresults[300:, 1]
@@ -139,7 +139,7 @@ class ARResultsOLS:
             # self.aic = 8.322747818577421
             self.fpe = 241.0221316614273
 
-            filename = os.path.join(cur_dir, "AROLSNoConstantPredict.csv")
+            filename = Path(cur_dir).joinpath("AROLSNoConstantPredict.csv")
             predictresults = np.loadtxt(filename)
             fv = predictresults[:300, 0]
             pv = predictresults[300:, 1]
@@ -181,9 +181,8 @@ class ARResultsMLE:
         if constant:
 
             # NOTE: Stata's estimated parameters differ from gretl
-            filename = os.path.join(cur_dir, "ARMLEConstantPredict.csv")
-            filename2 = os.path.join(cur_dir,
-                                     "results_ar_forecast_mle_dynamic.csv")
+            filename = Path(cur_dir).joinpath("ARMLEConstantPredict.csv")
+            filename2 = Path(cur_dir).joinpath("results_ar_forecast_mle_dynamic.csv")
             predictresults = np.loadtxt(filename, delimiter=",")
             pv = predictresults[:, 1]
             dynamicpv = np.genfromtxt(filename2, delimiter=",", skip_header=1)

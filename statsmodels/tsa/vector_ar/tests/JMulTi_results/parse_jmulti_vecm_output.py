@@ -1,12 +1,13 @@
 import itertools
 import os
+from pathlib import Path
 import re
 
 import numpy as np
 
 debug_mode = False
 
-here = os.path.dirname(os.path.realpath(__file__))
+here = Path(os.path.realpath(__file__)).parent
 
 
 def print_debug_output(results, dt):
@@ -134,7 +135,7 @@ def load_results_jmulti(dataset):
     for dt_s in dataset.dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
         params_file = "vecm_"+dataset.__str__()+"_"+source+"_"+dt_string+".txt"
-        params_file = os.path.join(here, params_file)
+        params_file = Path(here).joinpath(params_file)
         # sections in jmulti output:
         section_header = ["Lagged endogenous term",  # Gamma
                           "Deterministic term",      # co, s, lo
@@ -184,7 +185,7 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
-        params_file = open(params_file, encoding="latin_1")
+        params_file = Path(params_file).open(encoding="latin_1")
         for line in params_file:
             if section == -1 and section_header[section+1] not in line:
                 continue
@@ -276,12 +277,12 @@ def load_results_jmulti(dataset):
         # parse information regarding \Sigma_u
         sigmau_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                       dt_string + "_Sigmau" + ".txt"
-        sigmau_file = os.path.join(here, sigmau_file)
+        sigmau_file = Path(here).joinpath(sigmau_file)
         rows_to_parse = 0
         # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
-        sigmau_file = open(sigmau_file, encoding="latin_1")
+        sigmau_file = Path(sigmau_file).open(encoding="latin_1")
         for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
                 line = line.split("Log Likelihood:")[1]
@@ -305,9 +306,9 @@ def load_results_jmulti(dataset):
         # parse forecast related output:
         fc_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                   dt_string + "_fc5" + ".txt"
-        fc_file = os.path.join(here, fc_file)
+        fc_file = Path(here).joinpath(fc_file)
         fc, lower, upper, plu_min = [], [], [], []
-        fc_file = open(fc_file, encoding="latin_1")
+        fc_file = Path(fc_file).open(encoding="latin_1")
         for line in fc_file:
             str_number = r"(\s+-?\d+\.\d{4}\s*?)"
             regex_number = re.compile(str_number)
@@ -344,8 +345,8 @@ def load_results_jmulti(dataset):
                 + dt_string + "_granger_causality_" \
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
-            granger_file = os.path.join(here, granger_file)
-            granger_file = open(granger_file, encoding="latin_1")
+            granger_file = Path(here).joinpath(granger_file)
+            granger_file = Path(granger_file).open(encoding="latin_1")
             granger_results = []
             for line in granger_file:
                 str_number = r"\d+\.\d{4}"
@@ -383,8 +384,8 @@ def load_results_jmulti(dataset):
                 + dt_string + "_inst_causality_" \
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
-            inst_file = os.path.join(here, inst_file)
-            inst_file = open(inst_file, encoding="latin_1")
+            inst_file = Path(here).joinpath(inst_file)
+            inst_file = Path(inst_file).open(encoding="latin_1")
             inst_results = []
             for line in inst_file:
                 str_number = r"\d+\.\d{4}"
@@ -404,8 +405,8 @@ def load_results_jmulti(dataset):
         # parse output related to impulse-response analysis:
         ir_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                   dt_string + "_ir" + ".txt"
-        ir_file = os.path.join(here, ir_file)
-        ir_file = open(ir_file, encoding="latin_1")
+        ir_file = Path(here).joinpath(ir_file)
+        ir_file = Path(ir_file).open(encoding="latin_1")
         causing = None
         caused = None
         data = None
@@ -440,8 +441,8 @@ def load_results_jmulti(dataset):
         # parse output related to lag order selection:
         lagorder_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                         dt_string + "_lagorder" + ".txt"
-        lagorder_file = os.path.join(here, lagorder_file)
-        lagorder_file = open(lagorder_file, encoding="latin_1")
+        lagorder_file = Path(here).joinpath(lagorder_file)
+        lagorder_file = Path(lagorder_file).open(encoding="latin_1")
         results["lagorder"] = {}
         aic_start = "Akaike Info Criterion:"
         fpe_start = "Final Prediction Error:"
@@ -462,8 +463,8 @@ def load_results_jmulti(dataset):
         # parse output related to non-normality-test:
         test_norm_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                          dt_string + "_diag" + ".txt"
-        test_norm_file = os.path.join(here, test_norm_file)
-        test_norm_file = open(test_norm_file, encoding="latin_1")
+        test_norm_file = Path(here).joinpath(test_norm_file)
+        test_norm_file = Path(test_norm_file).open(encoding="latin_1")
         results["test_norm"] = {}
         reading_values = False
         line_start_statistic = "joint test statistic:"
@@ -487,8 +488,8 @@ def load_results_jmulti(dataset):
         # parse output related to testing the whiteness of the residuals:
         whiteness_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                          dt_string + "_diag" + ".txt"
-        whiteness_file = os.path.join(here, whiteness_file)
-        whiteness_file = open(whiteness_file, encoding="latin_1")
+        whiteness_file = Path(here).joinpath(whiteness_file)
+        whiteness_file = Path(whiteness_file).open(encoding="latin_1")
         results["whiteness"] = {}
         section_start_marker = "PORTMANTEAU TEST"
         order_start = "tested order:"

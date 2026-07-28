@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import numpy.testing as npt
@@ -13,19 +13,19 @@ from statsmodels.sandbox.nonparametric import kernels
 
 # get results from Stata
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-rfname = os.path.join(curdir, "results", "results_kde.csv")
+curdir = Path(__file__).resolve().parent
+rfname = Path(curdir).joinpath("results", "results_kde.csv")
 # print rfname
-KDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
+KDEResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
 
-rfname = os.path.join(curdir, "results", "results_kde_univ_weights.csv")
-KDEWResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
+rfname = Path(curdir).joinpath("results", "results_kde_univ_weights.csv")
+KDEWResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
 
 # get results from R
-curdir = os.path.dirname(os.path.abspath(__file__))
-rfname = os.path.join(curdir, "results", "results_kcde.csv")
+curdir = Path(__file__).resolve().parent
+rfname = Path(curdir).joinpath("results", "results_kcde.csv")
 # print rfname
-KCDEResults = np.genfromtxt(open(rfname, "rb"), delimiter=",", names=True)
+KCDEResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
 
 # setup test data
 
@@ -201,8 +201,8 @@ class TestKdeWeights(CheckKDE):
     @classmethod
     def setup_class(cls):
         cls.res1 = cls.result_factory()
-        fname = os.path.join(curdir, "results", "results_kde_weights.csv")
-        cls.res_density = np.genfromtxt(open(fname, "rb"), skip_header=1)
+        fname = Path(curdir).joinpath("results", "results_kde_weights.csv")
+        cls.res_density = np.genfromtxt(Path(fname).open("rb"), skip_header=1)
 
     @classmethod
     def result_factory(cls):
@@ -226,8 +226,8 @@ class TestKDEGaussFFT(CheckKDE):
     def setup_class(cls):
         cls.decimal_density = 2  # low accuracy because binning is different
         cls.res1 = cls.result_factory()
-        rfname2 = os.path.join(curdir, "results", "results_kde_fft.csv")
-        cls.res_density = np.genfromtxt(open(rfname2, "rb"))
+        rfname2 = Path(curdir).joinpath("results", "results_kde_fft.csv")
+        cls.res_density = np.genfromtxt(Path(rfname2).open("rb"))
 
     @classmethod
     def result_factory(cls):

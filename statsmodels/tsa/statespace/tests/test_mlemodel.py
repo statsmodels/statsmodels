@@ -4,10 +4,9 @@ Tests for the generic MLEModel
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.pandas import MONTH_END
 
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -33,7 +32,7 @@ from statsmodels.tsa.statespace.tests.results import (
     results_var_misc,
 )
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 # Basic kwargs
 kwargs = {

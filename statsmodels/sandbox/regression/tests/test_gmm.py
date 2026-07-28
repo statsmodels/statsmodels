@@ -4,11 +4,11 @@ Created on Fri Oct 04 13:19:01 2013
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.python import lmap, lrange
 
 import copy
 import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -22,7 +22,7 @@ from statsmodels.tools.tools import add_constant
 
 def get_griliches76_data():
     curdir = os.path.split(__file__)[0]
-    path = os.path.join(curdir, "griliches76.dta")
+    path = Path(curdir).joinpath("griliches76.dta")
     griliches76_data = pd.read_stata(path)
 
     # create year dummies

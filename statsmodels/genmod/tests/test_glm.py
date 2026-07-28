@@ -2,7 +2,7 @@
 Test functions for models.GLM
 """
 import copy
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -66,9 +66,9 @@ def teardown_module():
 
 @pytest.fixture(scope="module")
 def iris():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    cur_dir = Path(__file__).resolve().parent
     return np.genfromtxt(
-        os.path.join(cur_dir, "results", "iris.csv"),
+        Path(cur_dir).joinpath("results", "iris.csv"),
         delimiter=",",
         skip_header=1,
     )
@@ -2774,15 +2774,13 @@ class TestRegularized:
 
     def test_regularized(self):
 
-        import os
-
         from .results import glmnet_r_results
 
         for dtype in "binomial", "poisson":
 
-            cur_dir = os.path.dirname(os.path.abspath(__file__))
+            cur_dir = Path(__file__).resolve().parent
             data = np.loadtxt(
-                os.path.join(cur_dir, "results", f"enet_{dtype}.csv"),
+                Path(cur_dir).joinpath("results", f"enet_{dtype}.csv"),
                 delimiter=",",
             )
 

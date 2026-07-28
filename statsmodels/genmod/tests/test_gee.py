@@ -8,10 +8,9 @@ other correlation structures, the details of the correlation
 estimation differ among implementations and the results will not agree
 exactly.
 """
-
 from statsmodels.compat import lrange
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -47,8 +46,8 @@ def load_data(fname, icept=True):
     variables.
     """
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    Z = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=",")
+    cur_dir = Path(__file__).resolve().parent
+    Z = np.genfromtxt(Path(cur_dir).joinpath("results", fname), delimiter=",")
 
     group = Z[:, 0]
     endog = Z[:, 1]
@@ -275,8 +274,8 @@ class TestGEE:
     # This is in the release announcement for version 0.6.
     def test_poisson_epil(self):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        fname = os.path.join(cur_dir, "results", "epil.csv")
+        cur_dir = Path(__file__).resolve().parent
+        fname = Path(cur_dir).joinpath("results", "epil.csv")
         data = pd.read_csv(fname)
 
         fam = families.Poisson()

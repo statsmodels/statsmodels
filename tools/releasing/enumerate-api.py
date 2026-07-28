@@ -12,7 +12,6 @@ python enumerate-api.py --diff statsmodels-legacy.json
 
 which produces a RST file that can be included in the docs or edited.
 """
-
 from setuptools import find_packages
 
 import argparse
@@ -20,7 +19,7 @@ import importlib
 import inspect
 import json
 import logging
-import os
+from pathlib import Path
 from pkgutil import iter_modules
 
 
@@ -157,7 +156,7 @@ def generate_diff(api, other):
     def header(v, first=False):
         return "\n\n" * (not first) + f"\n{v}\n" + "-" * len(v) + "\n"
 
-    with open("api-differences.rst", "w", encoding="utf-8") as rst:
+    with Path("api-differences.rst").open("w", encoding="utf-8") as rst:
         rst.write(header("New Classes", first=True))
         rst.writelines(f"* :class:`{val}`\n" for val in sorted(new_classes))
         rst.write(header("Removed Classes"))
@@ -249,17 +248,17 @@ def main():
     if file_path is None:
         import statsmodels
 
-        file_path = os.path.dirname(statsmodels.__file__)
+        file_path = Path(statsmodels.__file__).parent
     current_api = walk_modules(file_path)
     out_file = args.out_file
     if out_file is None:
         import statsmodels
 
         out_file = f"statsmodels-{statsmodels.__version__}-api.json"
-    with open(out_file, "w", encoding="utf-8") as api:
+    with Path(out_file).open("w", encoding="utf-8") as api:
         json.dump(current_api, api, indent=2, sort_keys=True)
     if args.diff is not None:
-        with open(args.diff, encoding="utf-8") as other:
+        with Path(args.diff).open(encoding="utf-8") as other:
             other_api = json.load(other)
         generate_diff(current_api, other_api)
 

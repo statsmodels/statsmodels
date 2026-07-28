@@ -4,8 +4,7 @@ Tests for simulation smoothing
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -20,7 +19,7 @@ from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_STATE,
 )
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class MultivariateVARKnown:
@@ -212,9 +211,7 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(
-                current_path, "results", "results_simulation_smoothing0.csv"
-            )
+            path = Path(current_path).joinpath("results", "results_simulation_smoothing0.csv")
             true = pd.read_csv(path)
 
             assert_allclose(
@@ -309,9 +306,7 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(
-                current_path, "results", "results_simulation_smoothing1.csv"
-            )
+            path = Path(current_path).joinpath("results", "results_simulation_smoothing1.csv")
             true = pd.read_csv(path)
             assert_allclose(
                 sim.simulated_state, true[["state1", "state2", "state3"]].T, atol=1e-7
@@ -435,9 +430,7 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(
-                current_path, "results", "results_simulation_smoothing2.csv"
-            )
+            path = Path(current_path).joinpath("results", "results_simulation_smoothing2.csv")
             true = pd.read_csv(path)
             assert_allclose(
                 sim.simulated_state.T, true[["state1", "state2", "state3"]], atol=1e-7
@@ -652,13 +645,9 @@ class TestMultivariateVAR(MultivariateVAR):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        path = os.path.join(
-            current_path, "results", "results_simulation_smoothing3_variates.csv"
-        )
+        path = Path(current_path).joinpath("results", "results_simulation_smoothing3_variates.csv")
         cls.variates = pd.read_csv(path).values.squeeze()
-        path = os.path.join(
-            current_path, "results", "results_simulation_smoothing3.csv"
-        )
+        path = Path(current_path).joinpath("results", "results_simulation_smoothing3.csv")
         cls.true = pd.read_csv(path)
         cls.true_llf = 1695.34872
 

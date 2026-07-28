@@ -7,11 +7,10 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
-
 from statsmodels.compat.pandas import assert_index_equal
 
 # pylint: disable-msg=E1101
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -1227,8 +1226,8 @@ class TestPoissonNewton(CheckModelResults):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
     def test_predict_prob(self):
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(cur_dir, "results", "predict_prob_poisson.csv")
+        cur_dir = Path(__file__).resolve().parent
+        path = Path(cur_dir).joinpath("results", "predict_prob_poisson.csv")
         probs_res = np.loadtxt(path, delimiter=",")
 
         # just check the first 100 obs. vs R to save memory
@@ -2580,11 +2579,11 @@ def test_mnlogit_basinhopping():
 
 
 def test_perfect_prediction():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    iris_dir = os.path.join(cur_dir, "..", "..", "genmod", "tests", "results")
-    iris_dir = os.path.abspath(iris_dir)
+    cur_dir = Path(__file__).resolve().parent
+    iris_dir = Path(cur_dir).joinpath("..", "..", "genmod", "tests", "results")
+    iris_dir = Path(iris_dir).resolve()
     iris = np.genfromtxt(
-        os.path.join(iris_dir, "iris.csv"), delimiter=",", skip_header=1
+        Path(iris_dir).joinpath("iris.csv"), delimiter=",", skip_header=1
     )
     y = iris[:, -1]
     X = iris[:, :-1]
@@ -2687,9 +2686,9 @@ def test_issue_339():
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
     # strip the header from the test
     smry = "\n".join(res1.summary().as_text().split("\n")[9:])
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    test_case_file = os.path.join(cur_dir, "results", "mn_logit_summary.txt")
-    with open(test_case_file, encoding="utf-8") as fd:
+    cur_dir = Path(__file__).resolve().parent
+    test_case_file = Path(cur_dir).joinpath("results", "mn_logit_summary.txt")
+    with Path(test_case_file).open(encoding="utf-8") as fd:
         test_case = fd.read()
     np.testing.assert_equal(smry, test_case[:-1])
     # smoke test for summary2
@@ -3601,8 +3600,8 @@ def test_null_options():
 def test_optim_kwds_prelim():
     # test that fit options for preliminary fit is correctly transmitted
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    filepath = os.path.join(cur_dir, "results", "sm3533.csv")
+    cur_dir = Path(__file__).resolve().parent
+    filepath = Path(cur_dir).joinpath("results", "sm3533.csv")
     df = pd.read_csv(filepath)
 
     features = ["pp"]

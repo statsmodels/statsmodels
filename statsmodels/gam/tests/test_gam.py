@@ -6,8 +6,7 @@ Author: Luca Puggini
 
 Created on 08/07/2015
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -169,8 +168,8 @@ def test_approximation():
 
 
 def test_gam_glm():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
     x = data_from_r.x.values
@@ -201,8 +200,8 @@ def test_gam_glm():
 
 
 def test_gam_discrete():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
     x = data_from_r.x.values
@@ -304,8 +303,8 @@ def test_generic_smoother():
 
 
 def test_multivariate_gam_1d_data():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
     x = data_from_r.x.values
@@ -345,8 +344,8 @@ def test_multivariate_gam_cv():
     def cost(x1, x2):
         return np.linalg.norm(x1 - x2) / len(x1)
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
     # dataset used to train the R model
     x = data_from_r.x.values
@@ -379,8 +378,8 @@ def test_multivariate_gam_cv_path():
     def sample_metric(y1, y2):
         return np.linalg.norm(y1 - y2) / len(y1)
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
 
     data_from_r = pd.read_csv(file_path)
 
@@ -526,8 +525,8 @@ def test_penalized_wls():
 
 
 def test_cyclic_cubic_splines():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "cubic_cyclic_splines_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "cubic_cyclic_splines_from_mgcv.csv")
     data_from_r = pd.read_csv(file_path)
 
     x = data_from_r[["x0", "x2"]].values
@@ -724,8 +723,8 @@ def test_partial_values2():
 def test_partial_values():
     # this test is only approximate because we do not use the same spline
     # basis functions (knots) as mgcv
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
 
     data_from_r = pd.read_csv(file_path)
 
@@ -760,8 +759,8 @@ def test_partial_plot(close_figures):
     # fittedvalues
     # Generate a plot to visualize analyze the result.
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(cur_dir, "results", "prediction_from_mgcv.csv")
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
 
     data_from_r = pd.read_csv(file_path)
 

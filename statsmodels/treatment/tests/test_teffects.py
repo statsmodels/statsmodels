@@ -4,8 +4,7 @@ Created on Feb 3, 2022 1:04:22 PM
 Author: Josef Perktold
 License: BSD-3
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -18,10 +17,10 @@ from statsmodels.treatment.treatment_effects import TreatmentEffect
 
 from .results import results_teffects as res_st
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "cataneo2.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 
 dta_cat = pd.read_csv(file_path)
 

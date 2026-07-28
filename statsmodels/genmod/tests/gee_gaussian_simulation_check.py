@@ -9,6 +9,7 @@ results.
 from statsmodels.compat.python import lrange
 
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 import scipy
@@ -245,7 +246,7 @@ if __name__ == "__main__":
         # older numpy versions do not have formatter option
         pass
 
-    OUT = open("gee_gaussian_simulation_check.txt", "w", encoding="utf-8")
+    OUT = Path("gee_gaussian_simulation_check.txt").open("w", encoding="utf-8")
 
     nrep = 100
 

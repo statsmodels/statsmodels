@@ -13,18 +13,17 @@ Usage::
     $ ./validate_docstrings.py
     $ ./validate_docstrings.py pandas.DataFrame.head
 """
-
 import argparse
 import ast
 import collections
 import doctest
 import functools
-import glob
 import importlib
 import inspect
 from io import StringIO
 import json
 import os
+from pathlib import Path
 import pydoc
 import re
 import string
@@ -46,9 +45,9 @@ from pandas.io.formats.printing import pprint_thing
 mpl.use("agg")
 mpl.rc("figure", max_open_warning=10000)
 
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_PATH = Path(__file__).resolve().parent.parent
 
-sys.path.insert(0, os.path.join(BASE_PATH))
+sys.path.insert(0, str(BASE_PATH))
 # TODO: Single-line ignore GL01, GL02
 # TODO: Complete import location list
 # TODO: Recurse through module to find classes
@@ -128,7 +127,7 @@ for member in members:
 API_CLASSES = sorted(set(API_CLASSES), key=lambda v: v[0])
 RUN_DOCTESTS = False
 
-sys.path.insert(1, os.path.join(BASE_PATH, "doc", "sphinxext"))
+sys.path.insert(1, Path(BASE_PATH).joinpath("doc", "sphinxext"))
 
 PRIVATE_CLASSES = []
 DIRECTIVES = ["versionadded", "versionchanged", "deprecated"]
@@ -996,12 +995,12 @@ def validate_all(prefix, ignore_deprecated=False):
     seen = {}
 
     # functions from the API docs
-    api_doc_fnames = os.path.join(BASE_PATH, "docs", "source", "*.rst")
+    api_doc_dir = Path(BASE_PATH).joinpath("docs", "source")
     api_items = []
-    for api_doc_fname in glob.glob(api_doc_fnames):
-        if "sandbox" in api_doc_fname:
+    for api_doc_fname in api_doc_dir.glob("*.rst"):
+        if "sandbox" in str(api_doc_fname):
             continue
-        with open(api_doc_fname, encoding="utf8") as f:
+        with api_doc_fname.open(encoding="utf8") as f:
             api_items += list(get_api_items(f))
     for func_name, _func_obj, section, subsection in api_items:
         if prefix and not func_name.startswith(prefix):

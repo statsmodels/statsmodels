@@ -1,7 +1,7 @@
 """
 Test Results for discrete models from Stata
 """
-import os
+from pathlib import Path
 
 import numpy as np
 
@@ -14,7 +14,7 @@ class Namespace:
 # Note that there is a slight refactor of the classes, so that one dataset
 # might be used for more than one model
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 
 class Anes:
@@ -48,8 +48,8 @@ class Anes:
             .0229760791, .8443638283, .042138047, .1434089089,
             .0081338625, .0910979921, .025300888, 1.059954821]
         obj.bse = np.reshape(bse, (6, -1), order="F")
-        obj.yhat = np.loadtxt(os.path.join(cur_dir, "yhat_mnlogit.csv"))
-        obj.phat = np.loadtxt(os.path.join(cur_dir, "phat_mnlogit.csv"))
+        obj.yhat = np.loadtxt(Path(cur_dir).joinpath("yhat_mnlogit.csv"))
+        obj.phat = np.loadtxt(Path(cur_dir).joinpath("phat_mnlogit.csv"))
         obj.cov_params = None
         obj.llf = -1461.922747312
         obj.llnull = -1750.34670999
@@ -239,7 +239,7 @@ class Anes:
              .3727166284]]).T
 
         # taken from gretl
-        obj.resid = np.loadtxt(os.path.join(cur_dir, "mnlogit_resid.csv"),
+        obj.resid = np.loadtxt(Path(cur_dir).joinpath("mnlogit_resid.csv"),
                                delimiter=",")
         return obj
 
@@ -829,7 +829,7 @@ class RandHIE:
             .00161284852954, .01223913844387, .00056476496963,
             .00925061122826, .01530987068312, .02627928267502,
             .01116266712362]
-        predict = np.loadtxt(os.path.join(cur_dir, "yhat_poisson.csv"),
+        predict = np.loadtxt(Path(cur_dir).joinpath("yhat_poisson.csv"),
                              delimiter=",")
         obj.phat = predict[:, 0]
         obj.yhat = predict[:, 1]
@@ -887,7 +887,7 @@ class RandHIE:
             .0264611158, .0437974779,
             .0752099666]
         # taken from gretl
-        obj.resid = np.loadtxt(os.path.join(cur_dir, "poisson_resid.csv"),
+        obj.resid = np.loadtxt(Path(cur_dir).joinpath("poisson_resid.csv"),
                                delimiter=",")
         return obj
 

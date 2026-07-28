@@ -1,8 +1,8 @@
 """
 Glue for returning descriptive statistics.
 """
-
 import os
+from pathlib import Path
 
 import numpy as np
 from scipy import stats
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     # p.view(dtype = np.int, type = np.ndarray)
 
     # This is *really* slow ###
-    if os.path.isfile("./Econ724_PS_I_Data.csv"):
+    if Path("./Econ724_PS_I_Data.csv").is_file():
         data2 = np.genfromtxt("./Econ724_PS_I_Data.csv", delimiter=",")
         sum2 = descstats(data2.ahe)
         sum3 = descstats(np.column_stack((data2.ahe, data2.yrseduc)))

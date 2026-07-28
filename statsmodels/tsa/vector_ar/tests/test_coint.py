@@ -4,8 +4,7 @@ Created on Thu Aug 30 21:51:08 2012
 Author: Josef Perktold
 
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -16,9 +15,9 @@ import pytest
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-dta_path = os.path.join(current_path, "Matlab_results", "test_coint.csv")
-with open(dta_path, "rb") as fd:
+current_path = Path(__file__).resolve().parent
+dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
+with Path(dta_path).open("rb") as fd:
     dta = np.genfromtxt(fd)
 
 

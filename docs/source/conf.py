@@ -10,10 +10,8 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
 import contextlib
-import os
-from os.path import dirname, join
+from pathlib import Path
 import sys
 
 from jinja2 import Environment, FileSystemLoader
@@ -30,7 +28,7 @@ contextlib.contextmanager.__doc__ = ""
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath("../sphinxext"))
+sys.path.insert(0, Path("../sphinxext").resolve())
 
 # -- General configuration -----------------------------------------------------
 
@@ -448,19 +446,19 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
 }
 
-plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), "source")
+plot_basedir = str(Path(__file__).resolve().parent.parent / "source")
 
 # ghissue config
 github_project_url = "https://github.com/statsmodels/statsmodels"
 
-example_context = yaml.safe_load(open("examples/landing.yml", encoding="utf-8"))
+example_context = yaml.safe_load(Path("examples/landing.yml").open(encoding="utf-8"))
 
 example_loader = FileSystemLoader("examples")
 # Rendering RST, not HTML, so autoescape must stay off (escaping RST
 # special characters here would corrupt the generated docs).
 example_env = Environment(loader=example_loader, autoescape=False)  # noqa: S701
 example_tmpl = example_env.get_template("index.jinja2")
-with open("examples/index.rst", "w") as example_index:
+with Path("examples/index.rst").open("w") as example_index:
     example_index.write(example_tmpl.render(examples=example_context))
 
 # html_context.update({'examples': example_context})

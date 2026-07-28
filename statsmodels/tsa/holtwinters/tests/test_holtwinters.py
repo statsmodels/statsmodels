@@ -2,12 +2,12 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
-
 from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
 import os
+from pathlib import Path
 import re
 import warnings
 
@@ -35,9 +35,9 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_unrestricted,
 )
 
-base, _ = os.path.split(os.path.abspath(__file__))
+base, _ = os.path.split(Path(__file__).resolve())
 housing_data = pd.read_csv(
-    os.path.join(base, "results", "housing-data.csv"),
+    Path(base).joinpath("results", "housing-data.csv"),
     index_col="DATE",
     parse_dates=True,
 )

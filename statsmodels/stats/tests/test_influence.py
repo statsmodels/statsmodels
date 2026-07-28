@@ -3,10 +3,9 @@ Created on Tue Jun 12 13:18:12 2018
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.pandas import testing as pdt
 
-import os.path
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -23,14 +22,14 @@ from statsmodels.stats.outliers_influence import (
     variance_inflation_factor,
 )
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "binary_constrict.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 data_bin = pd.read_csv(file_path, index_col=0)
 
 file_name = "results_influence_logit.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 results_sas_df = pd.read_csv(file_path, index_col=0)
 
 
