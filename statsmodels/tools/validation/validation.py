@@ -139,8 +139,10 @@ def array_like(
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
 
     """
-    if optional and obj is None:
-        return None
+    if obj is None:
+        if optional:
+            return None
+        raise TypeError(f"{name} must be array_like, not None")
     reqs = ["W"] if writeable else []
     if order == "C" or contiguous:
         reqs += ["C"]
