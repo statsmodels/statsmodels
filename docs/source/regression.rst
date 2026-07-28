@@ -39,6 +39,30 @@ Detailed examples can be found here:
 * `Recursive LS <examples/notebooks/generated/recursive_ls.ipynb>`_
 * `Rolling LS <examples/notebooks/generated/rolling_ls.ipynb>`_
 
+E-Values and Sequential Inference
+---------------------------------
+
+Fitted linear regression results provide anytime-valid sequential inference
+methods based on the fitted model's existing t and F statistics.
+``RegressionResults.e_values`` returns e-values for parameter-wise tests by
+default, or for a joint linear restriction when a restriction matrix or formula
+is supplied. ``RegressionResults.p_values(savi=True)`` returns reciprocal
+e-values clipped at one, and ``RegressionResults.conf_int(savi=True)`` returns
+safe anytime-valid confidence intervals. ``RegressionResults.sequential_p_values``
+and ``RegressionResults.confidence_sequences`` provide explicitly sequential
+names for the same anytime-valid p-values and parameter-wise confidence
+sequences. Set ``savi=True`` in ``RegressionResults.summary`` to replace
+classical p-values with e-values and coefficient confidence intervals with
+confidence sequences. This includes replacing the classical model-level F-test
+p-value with the corresponding e-value. These methods use the current
+covariance estimator, so results refit or converted using robust covariance
+types such as ``HC1`` use the corresponding robust t and F statistics. These
+methods are based on Lindon et al. (2026). For calibration of ``g``, see
+Remark 4.8 ("Practical choice of g") in Lindon et al. (2026), which discusses
+Bayesian, frequentist minimum detectable effect, and width-optimal choices;
+larger ``g`` values lengthen the infinite-width delayed start of confidence
+sequences.
+
 Technical Documentation
 -----------------------
 
@@ -79,6 +103,12 @@ References
 General reference for regression models:
 
 * D.C. Montgomery and E.A. Peck. "Introduction to Linear Regression Analysis." 2nd. Ed., Wiley, 1992.
+
+Anytime-valid inference for linear models:
+
+* M. Lindon et al. "Anytime-Valid Inference in Linear Models with Applications
+  to Regression-Adjusted Causal Inference." Journal of the American Statistical
+  Association, 2026. https://www.tandfonline.com/doi/full/10.1080/01621459.2026.2692052
 
 Econometrics references for regression models:
 
