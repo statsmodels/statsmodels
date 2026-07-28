@@ -132,7 +132,7 @@ def main():
                 "Skipping %s, exported version newer than notebook", nb_name
             )
             continue
-        logger.info(f"Converting {nb_name}")
+        logger.info("Converting %s", nb_name)
         with Path(nb).open(encoding="utf8") as nb_file:
             converter = nbconvert.PythonExporter()
             python = converter.from_file(nb_file)

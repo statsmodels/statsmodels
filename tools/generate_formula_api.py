@@ -78,7 +78,6 @@ if __name__ == "__main__":
 
     print(f"Generating formula API for statsmodels version {sm.version.full_version}")
     directory = sys.argv[1]
-    cur_dir = Path(__file__).parent
     os.chdir(directory)
     # it needs to be installed to walk the whole subclass chain?
     from statsmodels.base.model import Model
