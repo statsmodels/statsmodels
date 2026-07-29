@@ -1000,6 +1000,26 @@ def test_irf_err_bands():
     irf.errband_mc(rng=rs)
 
 
+@pytest.mark.matplotlib
+def test_irf_plot_err_bands_kwarg(close_figures):
+    # test that user can pass precalculated error bands to plot and plot_cum_effects
+    data = get_macrodata()
+    model = VAR(data)
+    results = model.fit(maxlags=2)
+    irf = results.irf()
+
+    # Precalculate
+    err_bands = irf.errband_mc(repl=10)
+
+    # Use in plot (bypassing internal calculation)
+    fig1 = irf.plot(err_bands=err_bands, stderr_type="mc")
+    assert fig1 is not None
+
+    cum_err_bands = irf.cum_errband_mc(repl=10)
+    fig2 = irf.plot_cum_effects(err_bands=cum_err_bands, stderr_type="mc")
+    assert fig2 is not None
+
+
 def test_0_lag():
     # GH 9412
     rs = np.random.RandomState(20260112)

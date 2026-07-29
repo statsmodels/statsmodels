@@ -117,6 +117,7 @@ class BaseIRAnalysis:
         repl=1000,
         rng=None,
         component=None,
+        err_bands=None,
     ):
         """
         Plot impulse responses
@@ -153,6 +154,11 @@ class BaseIRAnalysis:
                seed has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
         component : array or vector of principal component indices
+        err_bands : ndarray of shape (2, periods + 1, neqs, neqs), optional
+            Pre-computed error bands. The first dimension contains the lower
+            and upper bounds of the confidence interval, respectively. If
+            provided, the internal calculation of standard errors is bypassed
+            and ``stderr_type`` is used only for plot formatting.
         """
         svar = self.svar
 
@@ -174,6 +180,14 @@ class BaseIRAnalysis:
 
         if plot_stderr is False:
             stderr = None
+        elif err_bands is not None:
+            expected_shape = (2, self.periods + 1, self.neqs, self.neqs)
+            if np.asarray(err_bands).shape != expected_shape:
+                raise ValueError(
+                    f"err_bands has shape {np.asarray(err_bands).shape}, expected "
+                    f"{expected_shape} (2, periods+1, neqs, neqs)."
+                )
+            stderr = err_bands
         elif stderr_type == "asym":
             stderr = self.cov(orth=orth)
         elif stderr_type == "mc":
@@ -238,6 +252,7 @@ class BaseIRAnalysis:
         stderr_type="asym",
         repl=1000,
         rng=None,
+        err_bands=None,
     ):
         """
         Plot cumulative impulse response functions
@@ -273,6 +288,11 @@ class BaseIRAnalysis:
 
                seed has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
+        err_bands : ndarray of shape (2, periods + 1, neqs, neqs), optional
+            Pre-computed error bands. The first dimension contains the lower
+            and upper bounds of the confidence interval, respectively. If
+            provided, the internal calculation of standard errors is bypassed
+            and ``stderr_type`` is used only for plot formatting.
         """
 
         if orth:
@@ -284,11 +304,18 @@ class BaseIRAnalysis:
             cum_effects = self.cum_effects
             lr_effects = self.lr_effects
 
-        if stderr_type not in ["asym", "mc"]:
-            raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
-
         if not plot_stderr:
             stderr = None
+        elif err_bands is not None:
+            expected_shape = (2, self.periods + 1, self.neqs, self.neqs)
+            if np.asarray(err_bands).shape != expected_shape:
+                raise ValueError(
+                    f"err_bands has shape {np.asarray(err_bands).shape}, expected "
+                    f"{expected_shape} (2, periods+1, neqs, neqs)."
+                )
+            stderr = err_bands
+        elif stderr_type not in ["asym", "mc"]:
+            raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
         elif stderr_type == "asym":
             stderr = self.cum_effect_cov(orth=orth)
         else:  # stderr_type == "mc"
