@@ -111,26 +111,34 @@ class TestTools:
         assert_frame_equal(dfc, output)
 
     def test_drop_missing(self):
-        Y = np.array([[1.0, 2.0, np.nan], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+        _y = np.array([[1.0, 2.0, np.nan], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
         # axis=1 looks for missing values across the columns of each row, so
         # the row holding the nan is dropped
         assert_almost_equal(
-            tools.drop_missing(Y, axis=1),
+            tools.drop_missing(_y, axis=1),
             np.array([[4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]),
         )
         # axis=0 looks across the rows of each column, so the column holding
         # the nan is dropped instead
         assert_almost_equal(
-            tools.drop_missing(Y, axis=0),
+            tools.drop_missing(_y, axis=0),
             np.array([[1.0, 2.0], [4.0, 5.0], [7.0, 8.0]]),
         )
 
     def test_drop_missing_x(self):
-        Y = np.array([[1.0, 2.0], [3.0, np.nan], [5.0, 6.0]])
-        X = np.array([[1.0, np.nan], [1.0, 1.0], [1.0, 1.0]])
-        y, x = tools.drop_missing(Y, X, axis=0)
+        _y = np.array([[1.0, 2.0], [3.0, np.nan], [5.0, 6.0]])
+        _x = np.array([[1.0, np.nan], [1.0, 1.0], [1.0, 1.0]])
+        y, x = tools.drop_missing(_y, _x, axis=0)
         assert_almost_equal(y, np.array([[1.0], [3.0], [5.0]]))
         assert_almost_equal(x, np.array([[1.0], [1.0], [1.0]]))
+
+        # axis=1 with two variables: a row is dropped if either _y or _x
+        # is missing anywhere in that row
+        _y = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        _x = np.array([[1.0, 1.0], [1.0, np.nan], [1.0, 1.0]])
+        y, x = tools.drop_missing(_y, _x, axis=1)
+        assert_almost_equal(y, np.array([[1.0, 2.0], [5.0, 6.0]]))
+        assert_almost_equal(x, np.array([[1.0, 1.0], [1.0, 1.0]]))
 
     def test_recipr(self):
         X = np.array([[2, 1], [-1, 0]])
