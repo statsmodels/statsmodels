@@ -57,3 +57,36 @@ hurdle_poisson.predict_prob = np.array([
 hurdle_poisson.predict_mean_main = 7.036041748046
 # > predict(mod, dfm, type="zero")
 hurdle_poisson.predict_zero = 0.9281532813926
+
+hurdle_l1 = Holder()
+"""
+# R pscl does not allow regularized fits, so we have to rely on internally
+# generated benchmarks.
+# Created on Mon Nov 24, 2025 with:
+from statsmodels.discrete.truncated_model import HurdleCountModel
+from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
+
+endog = DATA["docvis"]
+exog_names = ["aget", "totchr", "const"]
+exog = DATA[exog_names]
+
+hurdle = HurdleCountModel(endog=endog, exog=exog, dist="poisson", zerodist="poisson")
+hurdle_result = hurdle.fit_regularized(method="l1", alpha=1)
+"""
+hurdle_l1.params = [
+        0.01919266, 0.38688315, 0.21549933, 0.01229817, 0.20997089, 1.54160776
+]
+hurdle_l1.conf_int = [
+    [-0.01755779, 0.05594311],
+    [0.34039707, 0.43336923],
+    [0.11909076, 0.3119079],
+    [np.nan, np.nan],
+    [0.20107289, 0.21886889],
+    [1.51681052, 1.56640499],
+]
+hurdle_l1.bse = [
+    0.01875057, 0.02371782, 0.04918895, np.nan, 0.00453988, 0.01265188
+]
+hurdle_l1.nnz_params = 6
+hurdle_l1.aic = 27237.819293111268
+hurdle_l1.bic = 27274.999567554547
