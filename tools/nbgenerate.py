@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+from concurrent import futures
 from functools import partial
 import hashlib
 import json
@@ -13,13 +14,6 @@ from colorama import Fore, init
 from nbconvert import HTMLExporter, RSTExporter
 from nbconvert.preprocessors import ExecutePreprocessor
 import nbformat
-
-try:
-    from concurrent import futures
-
-    has_futures = True
-except ImportError:
-    has_futures = False
 
 if sys.platform == "win32" and sys.version_info < (3, 14):
     # Set the policy to prevent "Event loop is closed" error on Windows
@@ -216,7 +210,7 @@ def do(
         execute_only=execute_only,
     )
 
-    if parallel and has_futures:
+    if parallel:
         with futures.ProcessPoolExecutor() as pool:
             for dst in pool.map(func, nbs):
                 print(f"Finished {dst}")

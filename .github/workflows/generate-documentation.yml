@@ -73,6 +73,7 @@ jobs:
     - name: Build documentation
       run: |
         pushd docs
+        export O="-j auto"
         make html
         popd
     - name: Move and commit documentation
