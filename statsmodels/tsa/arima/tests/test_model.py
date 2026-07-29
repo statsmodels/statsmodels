@@ -351,6 +351,24 @@ def test_append_with_exog_pandas():
     assert_allclose(res2.llf, res_e.llf)
 
 
+def test_extend_with_exog_constant_over_window():
+    # GH 8991: extending with `exog` that is constant over the extension window
+    # (but not over the full sample) must not raise, since `extend` reuses the
+    # already-validated specification of the original model.
+    endog = dta["infl"].iloc[:100].values
+    exog = np.r_[np.arange(50.0), np.ones(50) * 3.0]
+    mod = ARIMA(endog[:50], exog=exog[:50], trend="c")
+    res = mod.fit()
+
+    # Raised ValueError before GH 8991 was fixed
+    res_e = res.extend(endog[50:], exog=exog[50:])
+
+    mod2 = ARIMA(endog, exog=exog, trend="c")
+    res2 = mod2.filter(res.params)
+
+    assert_allclose(res_e.llf_obs, res2.llf_obs[50:])
+
+
 def test_cov_type_none():
     endog = dta["infl"].iloc[:100].values
     mod = ARIMA(endog[:50], trend="c")
