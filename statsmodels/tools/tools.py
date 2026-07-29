@@ -64,15 +64,21 @@ def drop_missing(Y, X=None, axis=1):
     Y = np.asarray(Y)
     if Y.ndim == 1:
         Y = Y[:, None]
+    # ``axis`` is reduced when looking for missing values, so the observations
+    # that are kept must be selected along the other axis.
+    keep_axis = 1 - axis
     if X is not None:
         X = np.array(X)
         if X.ndim == 1:
             X = X[:, None]
         keepidx = np.logical_and(~np.isnan(Y).any(axis), ~np.isnan(X).any(axis))
-        return Y[keepidx], X[keepidx]
+        return (
+            np.compress(keepidx, Y, axis=keep_axis),
+            np.compress(keepidx, X, axis=keep_axis),
+        )
     else:
         keepidx = ~np.isnan(Y).any(axis)
-        return Y[keepidx]
+        return np.compress(keepidx, Y, axis=keep_axis)
 
 
 # TODO: needs to better preserve dtype and be more flexible
