@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from types import MappingProxyType
 
 import numpy as np
 import pandas as pd
@@ -279,13 +280,23 @@ def test_optional_dict_like(dict_type):
 
 
 def test_optional_dict_like_error():
+    # strict only accepts a dict, so the message must not offer a Mapping
+    match = r"value must be a dict$"
+    for value in ([], {"a"}, "a"):
+        with pytest.raises(TypeError, match=match):
+            dict_like(value, "value", optional=True)
+    # without strict any Mapping is accepted, which the message reports
     match = r"value must be a dict or dict_like \(i.e., a Mapping\)"
-    with pytest.raises(TypeError, match=match):
-        dict_like([], "value", optional=True)
-    with pytest.raises(TypeError, match=match):
-        dict_like({"a"}, "value", optional=True)
-    with pytest.raises(TypeError, match=match):
-        dict_like("a", "value", optional=True)
+    for value in ([], {"a"}, "a"):
+        with pytest.raises(TypeError, match=match):
+            dict_like(value, "value", optional=True, strict=False)
+
+
+def test_dict_like_strict_mapping():
+    proxy = MappingProxyType({"a": 1})
+    assert dict_like(proxy, "value", strict=False) is proxy
+    with pytest.raises(TypeError, match=r"value must be a dict$"):
+        dict_like(proxy, "value")
 
 
 def test_string():
