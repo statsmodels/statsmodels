@@ -2510,7 +2510,7 @@ class LikelihoodModelResults(Results):
         """
         preserved_cache = {
             name: self._cache[name]
-            for name in self._data_in_cache_preserve
+            for name in getattr(self, "_data_in_cache_preserve", ())
             if self._cache.get(name) is not None
         }
 
