@@ -239,6 +239,14 @@ class GLMGamResults(GLMResults):
             Some models can take additional arguments or keywords, see the
             predict method of the model for the details.
 
+        Notes
+        -----
+        When predicting out of sample, provide the new values for variables in
+        smooth terms through `exog_smooth`. If the model also has linear
+        terms, provide their new values through `exog`. For example::
+
+            results.predict(exog=X_linear_test, exog_smooth=X_smooth_test)
+
         Returns
         -------
         prediction : ndarray, pandas.Series or pandas.DataFrame
@@ -272,6 +280,14 @@ class GLMGamResults(GLMResults):
         **kwargs
             Some models can take additional arguments or keywords, see the
             predict method of the model for the details.
+
+        Notes
+        -----
+        When predicting out of sample, provide the new values for variables in
+        smooth terms through `exog_smooth`. If the model also has linear
+        terms, provide their new values through `exog`. For example::
+
+            results.predict(exog=X_linear_test, exog_smooth=X_smooth_test)
 
         Returns
         -------
