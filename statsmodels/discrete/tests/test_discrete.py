@@ -4065,6 +4065,7 @@ class TestMNLogitScoreTest:
         hessian = model.hessian(params)
         assert_allclose(hessian_from_factor, hessian, rtol=1e-10)
 
+    @pytest.mark.singleton_randomstate
     def test_score_test_4_categories(self):
         """score_test should work with J=4 categories."""
         np.random.seed(456)

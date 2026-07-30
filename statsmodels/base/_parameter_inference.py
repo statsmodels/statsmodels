@@ -305,16 +305,11 @@ def score_test(
             score = score_obs.sum(0)
         else:
             exog_extra = np.asarray(exog_extra)
-            k_extra = 0
+            k_extra = exog_extra.shape[1]
             ex = np.column_stack((model.exog, exog_extra))
-            # this uses shape not matrix rank to determine k_constraints
-            # requires nonsingular (no added perfect collinearity)
-
-            k_extra += ex.shape[1] - model.exog.shape[1]
 
             score_factor = model.score_factor(params_constrained)
-            hessian_factor = model.hessian_factor(params_constrained,
-                                                  **hess_kwd)
+            hessian_factor = model.hessian_factor(params_constrained, **hess_kwd)
             # see #4714
             from statsmodels.genmod.generalized_linear_model import GLM
 
