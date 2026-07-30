@@ -86,11 +86,7 @@ Alternative: {self.alternative}
 _UECMOrder = int | dict[Hashable, int | None] | None
 
 _ARDLOrder = (
-    int
-    | _UECMOrder
-    | Sequence[int]
-    | dict[Hashable, int | Sequence[int] | None]
-    | None
+    int | _UECMOrder | Sequence[int] | dict[Hashable, int | Sequence[int] | None] | None
 )
 
 _INT_TYPES = (int, np.integer)
@@ -1248,7 +1244,7 @@ class ARDLResults(AutoRegResults):
             sample = [dates[start].strftime("%m-%d-%Y")]
             sample += ["- " + dates[-1].strftime("%m-%d-%Y")]
         else:
-            sample = [str(start), str(len(self.data.orig_endog))]
+            sample = [str(start), str(self._n_totobs)]
         model = self.model.__class__.__name__ + str(self.model.ardl_order)
         if self.model.seasonal:
             model = "Seas. " + model
@@ -1265,7 +1261,7 @@ class ARDLResults(AutoRegResults):
         ]
 
         top_right = [
-            ("No. Observations:", [str(len(self.model.endog))]),
+            ("No. Observations:", [str(self._nobs)]),
             ("Log Likelihood", [f"{self.llf:#5.3f}"]),
             ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
             ("AIC", [f"{self.aic:#5.3f}"]),

@@ -850,3 +850,22 @@ def test_uecm_resid():
 
     # Assert that the override fix is working
     np.testing.assert_allclose(res.resid, res.model._y - res.fittedvalues)
+
+
+@pytest.mark.parametrize("model", [ARDL, UECM])
+@pytest.mark.parametrize("lags", [0, 3])
+@pytest.mark.parametrize("pandas", [True, False])
+def test_ardl_uecm_summary_after_remove_data(model, lags, pandas):
+    """Test that UECMResults.resid is computed correctly using model._y."""
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    order = {"lry": 1, "ibo": 3, "ide": 2}
+    if not pandas:
+        y = np.array(y)
+        x = np.array(x)
+        order = dict(enumerate(order.values()))
+    mod = model(y, lags, x, order)
+    res = mod.fit()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

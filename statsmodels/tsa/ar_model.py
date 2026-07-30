@@ -1706,7 +1706,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample = [dates[start].strftime("%m-%d-%Y")]
             sample += ["- " + dates[-1].strftime("%m-%d-%Y")]
         else:
-            sample = [str(start), str(len(self.data.orig_endog))]
+            sample = [str(start), str(self._n_totobs)]
         model = model.__class__.__name__
         if self.model.seasonal:
             model = "Seas. " + model
@@ -1726,9 +1726,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             ("Sample:", [sample[0]]),
             ("", [sample[1]]),
         ]
-
         top_right = [
-            ("No. Observations:", [str(len(self.model.endog))]),
+            ("No. Observations:", [str(self._nobs)]),
             ("Log Likelihood", [f"{self.llf:#5.3f}"]),
             ("S.D. of innovations", [f"{self.sigma2**0.5:#5.3f}"]),
             ("AIC", [f"{self.aic:#5.3f}"]),
