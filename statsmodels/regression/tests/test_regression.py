@@ -23,6 +23,7 @@ from scipy.stats import t as student_t
 
 from statsmodels.datasets import longley
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import (
     GLS,
     OLS,
@@ -1642,3 +1643,37 @@ def test_slim_summary_skips_diagnostics(monkeypatch):
     # the full summary does compute the normality diagnostics
     with pytest.raises(RuntimeError):
         res.summary()
+
+
+def _fit_ols_for_summary():
+    data = longley.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog = add_constant(exog, prepend=False)
+    return OLS(endog, exog).fit()
+
+
+def _fit_gls_for_summary():
+    data = longley.load()
+    exog = add_constant(
+        np.column_stack((data.exog.iloc[:, 1], data.exog.iloc[:, 4])),
+        prepend=False,
+    )
+    tmp_results = OLS(data.endog, exog).fit()
+    rho = np.corrcoef(tmp_results.resid[1:], tmp_results.resid[:-1])[0][1]
+    order = toeplitz(np.arange(16))
+    sigma = rho**order
+    return GLS(data.endog, exog, sigma=sigma).fit()
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [_fit_ols_for_summary, _fit_gls_for_summary],
+    ids=["OLS", "GLS"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

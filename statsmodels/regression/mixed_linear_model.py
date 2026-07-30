@@ -2914,7 +2914,12 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Dependent Variable:"] = yname
         info["Method:"] = self.method
         info["Scale:"] = self.scale
-        info["Log-Likelihood:"] = self.llf
+        # Cache llf as a plain (non-cache_readonly) attribute so summary()
+        # keeps working after remove_data() has cleared model.exog.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+        if "llf" not in cache:
+            cache["llf"] = self.llf
+        info["Log-Likelihood:"] = cache["llf"]
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
         if title is None:

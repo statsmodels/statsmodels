@@ -17,6 +17,7 @@ import pytest
 from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
+from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
@@ -1407,3 +1408,21 @@ def test_fit_unsupported_kwargs_warns():
     runtime_warnings = [x for x in w if issubclass(x.category, RuntimeWarning)]
     assert len(runtime_warnings) == 1
     assert "not used by MixedLM.fit" in str(runtime_warnings[0].message)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    pid = np.repeat([0, 1], 5)
+    x0 = np.repeat([1], 10)
+    x1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]
+    x2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]
+    y = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    df = pd.DataFrame({"y": y, "pid": pid, "x0": x0, "x1": x1, "x2": x2})
+    endog = df["y"].values
+    exog = df[["x0", "x1", "x2"]].values
+    groups = df["pid"].values
+    res = MixedLM(endog, exog, groups=groups).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
