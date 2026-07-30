@@ -485,7 +485,7 @@ def dict_like(value, name, optional=False, strict=True):
         return None
     if not isinstance(value, Mapping) or (strict and not (isinstance(value, dict))):
         extra_text = "If not None, " if optional else ""
-        strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
+        strict_text = "" if strict else " or dict_like (i.e., a Mapping)"
         msg = f"{extra_text}{name} must be a dict{strict_text}"
         raise TypeError(msg)
     return value
