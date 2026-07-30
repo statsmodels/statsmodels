@@ -1354,6 +1354,8 @@ def test_summary():
 
 
 def test_summary_after_remove_data(tmp_path):
+    import os
+
     # GH#9147: saving with remove_data=True must not break summary() (and
     # pseudo_rsquared) on the reloaded results. The scalar likelihood and
     # information statistics that summary() needs are computed lazily from
