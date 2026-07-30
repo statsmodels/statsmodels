@@ -76,6 +76,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
     return HolderTuple(
+        ("statistic", "pvalue", "df"),
         statistic=lm_stat,
         pvalue=pval,
         df=k_constraints,
@@ -240,21 +241,10 @@ def score_test(
             score = score_obs.sum(0)
         else:
             exog_extra = np.asarray(exog_extra)
-            k_extra = 0
+            k_extra = exog_extra.shape[1]
             ex = np.column_stack((model.exog, exog_extra))
-            # this uses shape not matrix rank to determine k_constraints
-            # requires nonsingular (no added perfect collinearity)
-            k_constraints += ex.shape[1] - model.exog.shape[1]
-            # TODO use diag instead of full np.eye
-            r_matrix = np.eye(len(self.params) + k_constraints)[-k_constraints:]
 
             score_factor = model.score_factor(params_constrained)
-            if score_factor.ndim == 1:
-                score_obs = score_factor[:, None] * ex
-            else:
-                sf = score_factor
-                score_obs = np.column_stack((sf[:, :1] * ex, sf[:, 1:]))
-            score = score_obs.sum(0)
             hessian_factor = model.hessian_factor(params_constrained, **hess_kwd)
             # see #4714
             from statsmodels.genmod.generalized_linear_model import GLM
@@ -334,6 +324,7 @@ def score_test(
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
         return HolderTuple(
+            ("statistic", "pvalue", "df"),
             statistic=chi2stat,
             pvalue=pval,
             df=k_constraints,
