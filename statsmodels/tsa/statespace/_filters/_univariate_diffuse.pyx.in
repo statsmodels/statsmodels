@@ -6,7 +6,7 @@
 """
 State Space Models
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -77,7 +77,7 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
 
     # Iterate over endogenous variables
     for i in range(model._k_endog):
-        # forecast_t, v_t, 
+        # forecast_t, v_t,
         {{prefix}}forecast_error(kfilter, model, i)
 
         # F_{*,t}
@@ -127,7 +127,7 @@ cdef int {{prefix}}forecast_univariate_diffuse({{prefix}}KalmanFilter kfilter, {
             blas.{{prefix}}axpy(&kfilter.k_states, &kfilter._forecast_error[i], kfilter._tmpK0, &inc, kfilter._filtered_state, &inc)
 
             # P_t = np.dot(P_t_inf, L1.T) + np.dot(P_t, L0.T)
-            # `tmp0` array used here, dimension $(m \times m)$  
+            # `tmp0` array used here, dimension $(m \times m)$
             blas.{{prefix}}copy(&kfilter.k_states2, kfilter._filtered_state_cov, &inc, kfilter._tmp0, &inc)
             blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
               &alpha, kfilter._tmp0, &kfilter.k_states,
@@ -214,8 +214,8 @@ cdef {{cython_type}} {{prefix}}forecast_error_diffuse_cov({{prefix}}KalmanFilter
         k_states = model._k_posdef
 
     # *Intermediate calculation*
-    # `M_inf` array used here, dimension $(m \times 1)$  
-    # $M_{i, \infty} = P_{t,i,\infty} Z_{t,i}'$  
+    # `M_inf` array used here, dimension $(m \times 1)$
+    # $M_{i, \infty} = P_{t,i,\infty} Z_{t,i}'$
     # $(m \times 1) = (m \times m) (1 \times m)'$
     blas.{{prefix}}gemv("N", &model._k_states, &model._k_states,
           &alpha, kfilter._predicted_diffuse_state_cov, &kfilter.k_states,
@@ -283,7 +283,7 @@ cdef void {{prefix}}predicted_diffuse_state_cov({{prefix}}KalmanFilter kfilter, 
           &alpha, model._transition, &model._k_states,
                   kfilter._predicted_diffuse_state_cov, &kfilter.k_states,
           &beta, kfilter._tmp0, &kfilter.k_states)
-    # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$  
+    # $P_{t+1} = 1.0 \\#_0 T_t' + 1.0 \\#$
     # $(m \times m) = (m \times m) (m \times m) + (m \times m)$
     blas.{{prefix}}gemm("N", "T", &model._k_states, &model._k_states, &model._k_states,
           &alpha, kfilter._tmp0, &kfilter.k_states,
