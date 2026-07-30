@@ -179,8 +179,8 @@ def add_constant(data, prepend=True, has_constant="skip"):
     data : array_like
         A column-ordered design matrix.
     prepend : bool
-        If true, the constant is in the first column.  Else the constant is
-        appended (last column).
+        If True (default), the constant is in the first column. If False, the
+        constant is appended (last column).
     has_constant : str {'raise', 'add', 'skip'}
         Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
