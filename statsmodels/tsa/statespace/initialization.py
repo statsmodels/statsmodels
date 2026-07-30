@@ -21,12 +21,25 @@ class Initialization:
     Parameters
     ----------
     k_states : int
-    exact_diffuse_initialization : bool, optional
-        Whether or not to use exact diffuse initialization; only has an effect
-        if some states are initialized as diffuse. Default is True.
+        Number of states in the state space model.
+    initialization_type : str, optional
+        The type of initialization to use globally for all of the states. Must
+        be one of 'known', 'diffuse', 'approximate_diffuse', or 'stationary'.
+        If not specified, no global initialization is performed and blocks of
+        states must instead be initialized using the `set` method.
+    initialization_classes : dict, optional
+        Dictionary with BLAS prefixes as keys and the associated Cython
+        initialization classes as values. If not specified, the default
+        mapping is used.
     approximate_diffuse_variance : float, optional
         If using approximate diffuse initialization, the initial variance used.
         Default is 1e6.
+    constant : array_like, optional
+        A vector of constant values, denoted :math:`a`. Only used if
+        `initialization_type` is specified.
+    stationary_cov : array_like, optional
+        The covariance matrix of the stationary part, denoted :math:`Q_0`.
+        Only used if `initialization_type` is specified.
 
     Notes
     -----
@@ -57,7 +70,7 @@ class Initialization:
        warning to be given, since it is not technically invalid but may
        indicate user error.
 
-    The :math:`\eta_0` compoenent is also referred to as the stationary part
+    The :math:`\eta_0` component is also referred to as the stationary part
     because it is often set to the unconditional distribution of a stationary
     process.
 
@@ -88,7 +101,7 @@ class Initialization:
     If a block is initialized as known, then a known (possibly degenerate)
     distribution is used; in particular, the block of states is understood to
     be distributed
-    :math:`\alpha_1^{(i)} \sim N(a^{(i)}, Q_0^{(i)})`. Here, is is possible to
+    :math:`\alpha_1^{(i)} \sim N(a^{(i)}, Q_0^{(i)})`. Here, it is possible to
     set :math:`a^{(i)} = 0`, and it is also possible that
     :math:`Q_0^{(i)}` is only positive-semidefinite; i.e.
     :math:`\alpha_1^{(i)}` may be degenerate. One particular example is
@@ -152,14 +165,14 @@ class Initialization:
 
     Basic examples have one specification for all of the states:
 
-    >>> Initialization(k_states=2, 'known', constant=[0, 1])
-    >>> Initialization(k_states=2, 'known', stationary_cov=np.eye(2))
-    >>> Initialization(k_states=2, 'known', constant=[0, 1],
+    >>> Initialization(2, 'known', constant=[0, 1])
+    >>> Initialization(2, 'known', stationary_cov=np.eye(2))
+    >>> Initialization(2, 'known', constant=[0, 1],
                        stationary_cov=np.eye(2))
-    >>> Initialization(k_states=2, 'diffuse')
-    >>> Initialization(k_states=2, 'approximate_diffuse',
+    >>> Initialization(2, 'diffuse')
+    >>> Initialization(2, 'approximate_diffuse',
                        approximate_diffuse_variance=1e6)
-    >>> Initialization(k_states=2, 'stationary')
+    >>> Initialization(2, 'stationary')
 
     More complex examples initialize different blocks of states separately
 
@@ -176,7 +189,7 @@ class Initialization:
     A still more complex example initializes a block using a previously
     created `Initialization` object:
 
-    >>> init1 = Initialization(k_states=2, 'known', constant=[0, 1])
+    >>> init1 = Initialization(2, 'known', constant=[0, 1])
     >>> init2 = Initialization(k_states=3)
     >>> init2.set((1, 2), init1)
     """
@@ -481,23 +494,23 @@ class Initialization:
         if self.initialization_type is not None and not index == self._states:
             raise ValueError(
                 "Cannot set initialization for the block of"
-                "  states %s because initialization was"
+                f"  states {index!s} because initialization was"
                 " previously performed globally. You must either"
                 " re-initialize globally or"
                 " else unset the global initialization before"
-                " initializing specific blocks of states." % str(index)
+                " initializing specific blocks of states."
             )
         # Make sure that we are not setting a block that *overlaps* with
         # another block (although we are free to *replace* an entire block)
         uninitialized = np.equal(self._initialization[index,], None)
         if index not in self.blocks and not np.all(uninitialized):
             raise ValueError(
-                "Cannot set initialization for the state(s) %s"
+                f"Cannot set initialization for the state(s) {np.array(index)[~uninitialized]!s}"
                 " because they are a subset of a previously"
                 " initialized block. You must either"
                 " re-initialize the entire block as a whole or"
                 " else unset the entire block before"
-                " re-initializing the subset." % str(np.array(index)[~uninitialized])
+                " re-initializing the subset."
             )
 
         # If setting for all states, set this object's initialization
@@ -542,8 +555,7 @@ class Initialization:
                 if not stationary_cov.shape == (k_states, k_states):
                     raise ValueError(
                         "Invalid stationary covariance matrix;"
-                        " given shape %s but require shape %s."
-                        % (str(stationary_cov.shape), str((k_states, k_states)))
+                        f" given shape {stationary_cov.shape!s} but require shape {(k_states, k_states)!s}."
                     )
 
                 # Set values
@@ -575,8 +587,8 @@ class Initialization:
                 constant = np.array(constant)
             if not constant.shape == (k_states,):
                 raise ValueError(
-                    "Invalid constant vector; given shape %s"
-                    " but require shape %s." % (str(constant.shape), str((k_states,)))
+                    f"Invalid constant vector; given shape {constant.shape!s}"
+                    f" but require shape {(k_states,)!s}."
                 )
             self.constant = constant
         # Otherwise, if setting a sub-block, construct the new initialization
@@ -654,9 +666,7 @@ class Initialization:
             )
 
     def clear(self):
-        """
-        Clear all previously set initializations, either global or block level
-        """
+        """Clear all previously set initializations, either global or block level"""
         # Clear initializations
         for i in self._states:
             self._initialization[i] = None
@@ -673,6 +683,7 @@ class Initialization:
 
     @property
     def initialized(self):
+        """bool, whether or not all states have been initialized"""
         return not (
             self.initialization_type is None
             and np.any(np.equal(self._initialization, None))
@@ -692,12 +703,13 @@ class Initialization:
 
         Parameters
         ----------
+        index : ndarray, optional
+            The base index of the block of states being initialized within the
+            full state vector. If not specified, all states are used.
         model : Representation, optional
             A state space model representation object, optional if 'stationary'
             initialization is used and ignored otherwise. See notes for
             details in the stationary initialization case.
-        model_index : ndarray, optional
-            The base index of the block in the model.
         initial_state_mean : ndarray, optional
             An array (or more usually view) in which to place the initial state
             mean.
@@ -707,7 +719,10 @@ class Initialization:
         initial_stationary_state_cov : ndarray, optional
             An array (or more usually view) in which to place the stationary
             component of initial state covariance matrix.
-
+        complex_step : bool, optional
+            Whether or not the model is being evaluated for the purposes of
+            computing a derivative using a complex-step differentiation
+            approach. Default is False.
 
         Returns
         -------

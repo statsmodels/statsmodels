@@ -1,6 +1,6 @@
 """
 Module containing the base object for multivariate kernel density and
-regression, plus some utilities.
+regression, plus some utilities
 """
 
 from __future__ import annotations
@@ -10,6 +10,8 @@ import copy
 import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
+
+from statsmodels.tools.rng_qrng import check_random_state
 
 try:
     import joblib
@@ -38,7 +40,21 @@ kernel_func = dict(
 
 
 def _compute_min_std_IQR(data):
-    """Compute minimum of std and IQR for each variable."""
+    """
+    Compute minimum of std and IQR for each variable
+
+    Parameters
+    ----------
+    data : ndarray
+        The data for which to compute the dispersion measure, variables
+        in columns.
+
+    Returns
+    -------
+    ndarray
+        The minimum of the standard deviation and IQR / 1.349 for each
+        variable.
+    """
     s1 = np.std(data, axis=0)
     q75 = mquantiles(data, 0.75, axis=0).data[0]
     q25 = mquantiles(data, 0.25, axis=0).data[0]
@@ -62,9 +78,54 @@ def _compute_subset(
     bound,
     generator,
 ):
-    """ "Compute bw on subset of data.
+    """
+    Compute bw on subset of data
 
     Called from ``GenericKDE._compute_efficient_*``.
+
+    Parameters
+    ----------
+    class_type : str
+        The class name, one of {"KDEMultivariate", "KDEMultivariateConditional",
+        "KernelReg"}, used to determine which class to instantiate on the
+        subset of data.
+    data : ndarray
+        The full data array from which the subset is drawn.
+    bw : ndarray
+        The bandwidth values used to fit the sub-sample model.
+    co : float
+        Twice the order of the continuous kernel, used in the scaling
+        factor exponent.
+    do : float
+        Twice the order of the discrete kernel, used in the scaling
+        factor exponent.
+    n_cvars : int
+        The number of continuous variables.
+    ix_ord : ndarray
+        Boolean index array indicating which variables are ordered
+        discrete.
+    ix_unord : ndarray
+        Boolean index array indicating which variables are unordered
+        discrete.
+    n_sub : int
+        The size of the sub-sample.
+    class_vars : tuple
+        Additional variables required to instantiate `class_type`.
+    randomize : bool
+        If True, a random sub-sample of size `n_sub` is drawn from `data`.
+        If False, the sub-sample is sliced from `data` using `bound`.
+    bound : tuple of int
+        The (start, stop) indices used to slice `data` when `randomize`
+        is False.
+    generator : {RandomState, Generator}
+        The random number generator used when `randomize` is True.
+
+    Returns
+    -------
+    sample_scale_sub : ndarray
+        The estimated scaling factor for the sub-sample.
+    bw_sub : ndarray
+        The bandwidth estimated on the sub-sample.
 
     Notes
     -----
@@ -81,7 +142,11 @@ def _compute_subset(
 
         var_type = class_vars[0]
         sub_model = KDEMultivariate(
-            sub_data, var_type, bw=bw, defaults=EstimatorSettings(efficient=False)
+            sub_data,
+            var_type,
+            bw=bw,
+            defaults=EstimatorSettings(efficient=False),
+            rng=generator,
         )
     elif class_type == "KDEMultivariateConditional":
         from .kernel_density import KDEMultivariateConditional
@@ -96,6 +161,7 @@ def _compute_subset(
             indep_type,
             bw=bw,
             defaults=EstimatorSettings(efficient=False),
+            rng=generator,
         )
     elif class_type == "KernelReg":
         from .kernel_regression import KernelReg
@@ -110,6 +176,7 @@ def _compute_subset(
             var_type=var_type,
             bw=bw,
             defaults=EstimatorSettings(efficient=False),
+            rng=generator,
         )
 
     else:
@@ -134,12 +201,12 @@ def _compute_subset(
 
 class GenericKDE:
     """
-    Base class for density estimation and regression KDE classes.
+    Base class for density estimation and regression KDE classes
     """
 
     def _compute_bw(self, bw):
         """
-        Computes the bandwidth of the data.
+        Computes the bandwidth of the data
 
         Parameters
         ----------
@@ -177,9 +244,21 @@ class GenericKDE:
 
     def _compute_dispersion(self, data):
         """
-        Computes the measure of dispersion.
+        Computes the measure of dispersion
 
         The minimum of the standard deviation and interquartile range / 1.349
+
+        Parameters
+        ----------
+        data : ndarray
+            The data for which to compute the dispersion measure, variables
+            in columns.
+
+        Returns
+        -------
+        ndarray
+            The minimum of the standard deviation and IQR / 1.349 for each
+            variable.
 
         Notes
         -----
@@ -195,16 +274,33 @@ class GenericKDE:
         return _compute_min_std_IQR(data)
 
     def _get_class_vars_type(self):
-        """Helper method to be able to pass needed vars to _compute_subset.
+        """
+        Helper method to be able to pass needed vars to _compute_subset
 
-        Needs to be implemented by subclasses."""
+        Notes
+        -----
+        Needs to be implemented by subclasses.
+        """
 
     def _compute_efficient(self, bw):
         """
         Computes the bandwidth by estimating the scaling factor (c)
-        in n_res resamples of size ``n_sub`` (in `randomize` case), or by
+
+        Uses n_res resamples of size ``n_sub`` (in `randomize` case), or by
         dividing ``nobs`` into as many ``n_sub`` blocks as needed (if
         `randomize` is False).
+
+        Parameters
+        ----------
+        bw : {array_like, str, None}
+            If a string, the bandwidth selection method, used to set
+            ``self._bw_method``. Otherwise `bw` is returned unchanged.
+
+        Returns
+        -------
+        ndarray
+            The estimated bandwidth if `bw` is a string, otherwise `bw`
+            unchanged.
 
         References
         ----------
@@ -300,7 +396,15 @@ class GenericKDE:
         return bw
 
     def _set_defaults(self, defaults):
-        """Sets the default values for the efficient estimation"""
+        """
+        Sets the default values for the efficient estimation
+
+        Parameters
+        ----------
+        defaults : EstimatorSettings
+            The settings used for the efficient estimation of the
+            bandwidth.
+        """
         self.n_res = defaults.n_res
         self.n_sub = defaults.n_sub
         self.randomize = defaults.randomize
@@ -311,7 +415,12 @@ class GenericKDE:
 
     def _normal_reference(self):
         """
-        Returns Scott's normal reference rule of thumb bandwidth parameter.
+        Returns Scott's normal reference rule of thumb bandwidth parameter
+
+        Returns
+        -------
+        ndarray
+            The bandwidth estimated by the normal reference rule of thumb.
 
         Notes
         -----
@@ -328,8 +437,18 @@ class GenericKDE:
 
     def _set_bw_bounds(self, bw):
         """
-        Sets bandwidth lower bound to effectively zero )1e-10), and for
-        discrete values upper bound to 1.
+        Sets bandwidth lower bound to effectively zero (1e-10), and for
+        discrete values upper bound to 1
+
+        Parameters
+        ----------
+        bw : ndarray
+            The bandwidth values to bound.
+
+        Returns
+        -------
+        ndarray
+            The bounded bandwidth values.
         """
         bw[bw < 0] = 1e-10
         _, ix_ord, ix_unord = _get_type_pos(self.data_type)
@@ -340,13 +459,18 @@ class GenericKDE:
 
     def _cv_ml(self):
         r"""
-        Returns the cross validation maximum likelihood bandwidth parameter.
+        Returns the cross validation maximum likelihood bandwidth parameter
+
+        Returns
+        -------
+        ndarray
+            The bandwidth that maximizes the leave-one-out likelihood.
 
         Notes
         -----
         For more details see p.16, 18, 27 in Ref. [1] (see module docstring).
 
-        Returns the bandwidth estimate that maximizes the leave-out-out
+        Returns the bandwidth estimate that maximizes the leave-one-out
         likelihood.  The leave-one-out log likelihood function is:
 
         .. math:: \ln L=\sum_{i=1}^{n}\ln f_{-i}(X_{i})
@@ -378,13 +502,18 @@ class GenericKDE:
 
     def _cv_ls(self):
         r"""
-        Returns the cross-validation least squares bandwidth parameter(s).
+        Returns the cross-validation least squares bandwidth parameter(s)
+
+        Returns
+        -------
+        ndarray
+            The bandwidth that minimizes the integrated mean square error.
 
         Notes
         -----
         For more details see pp. 16, 27 in Ref. [1] (see module docstring).
 
-        Returns the value of the bandwidth that maximizes the integrated mean
+        Returns the value of the bandwidth that minimizes the integrated mean
         square error between the estimated and actual distribution.  The
         integrated mean square error (IMSE) is given by:
 
@@ -400,12 +529,19 @@ class GenericKDE:
         return bw
 
     def loo_likelihood(self):
+        """
+        Returns the leave-one-out likelihood function
+
+        Notes
+        -----
+        Needs to be implemented by subclasses.
+        """
         raise NotImplementedError
 
 
 class EstimatorSettings:
     """
-    Object to specify settings for density estimation or regression.
+    Object to specify settings for density estimation or regression
 
     `EstimatorSettings` has several properties related to how bandwidth
     estimation for the `KDEMultivariate`, `KDEMultivariateConditional`,
@@ -472,24 +608,24 @@ class EstimatorSettings:
 
 class LeaveOneOut:
     """
-    Generator to give leave-one-out views on X.
+    Generator to give leave-one-out views on X
 
     Parameters
     ----------
     X : array_like
         2-D array.
 
+    Notes
+    -----
+    A little lighter weight than sklearn LOO. We do not need test index.
+    Also passes views on X, not the index.
+
     Examples
     --------
     >>> X = np.random.normal(0, 1, [10,2])
     >>> loo = LeaveOneOut(X)
     >>> for x in loo:
-    ...    print x
-
-    Notes
-    -----
-    A little lighter weight than sklearn LOO. We do not need test index.
-    Also passes views on X, not the index.
+    ...    print(x)
     """
 
     def __init__(self, X):
@@ -506,6 +642,24 @@ class LeaveOneOut:
 
 
 def _get_type_pos(var_type):
+    """
+    Splits `var_type` into boolean index arrays by variable type
+
+    Parameters
+    ----------
+    var_type : str
+        The variable types, composed of the characters "c" (continuous),
+        "o" (ordered discrete) and "u" (unordered discrete).
+
+    Returns
+    -------
+    ix_cont : ndarray
+        Boolean index array, True for continuous variables.
+    ix_ord : ndarray
+        Boolean index array, True for ordered discrete variables.
+    ix_unord : ndarray
+        Boolean index array, True for unordered discrete variables.
+    """
     ix_cont = np.array([c == "c" for c in var_type])
     ix_ord = np.array([c == "o" for c in var_type])
     ix_unord = np.array([c == "u" for c in var_type])
@@ -513,7 +667,21 @@ def _get_type_pos(var_type):
 
 
 def _adjust_shape(dat, k_vars):
-    """Returns an array of shape (nobs, k_vars) for use with `gpke`."""
+    """
+    Returns an array of shape (nobs, k_vars) for use with `gpke`
+
+    Parameters
+    ----------
+    dat : array_like
+        The data to reshape.
+    k_vars : int
+        The number of variables (columns) that `dat` should have.
+
+    Returns
+    -------
+    ndarray
+        `dat` reshaped to have shape (nobs, k_vars).
+    """
     dat = np.asarray(dat)
     if dat.ndim > 2:
         dat = np.squeeze(dat)
@@ -552,7 +720,7 @@ def gpke(
         The training data.
     data_predict : 1-D ndarray
         The evaluation points at which the kernel estimation is performed.
-    var_type : str, optional
+    var_type : str
         The variable type (continuous, ordered, unordered).
     ckertype : str, optional
         The kernel used for the continuous variables.
@@ -605,18 +773,19 @@ def gpke(
 
 
 def initialize_generator(
-    seed: None | int | np.random.RandomState | np.random.Generator,
+    entropy: int | np.random.RandomState | np.random.Generator | None,
 ) -> np.random.Generator | np.random.RandomState:
     """
     Handle seed transformation to a NumPy random generator object
 
     Parameters
     ----------
-    seed : {int, Generator, RandomState, None}, optional
+    entropy : {None, int, array_like[int], Generator, RandomState}, optional
         If an initialized NumPy random Generator or an initialized RandomState,
-        the object is returned unchanged. If it is an integer, the value is
-        passed ot numpy.random.default_rng. If None, the functions will continue
-        to use the legacy singleton RandomState.
+        the object is returned unchanged. If it is an integer or array_like of
+        integers, the value is used to seed a new numpy.random.default_rng. If
+        None, the functions will continue to use the legacy singleton
+        RandomState.
 
         .. deprecated:: 0.15.0
 
@@ -624,14 +793,12 @@ def initialize_generator(
             using None will initialize a new numpy.random.default_rng using
             system entropy.
 
-
     Returns
     -------
-    generator: {RandomState, BitGenerator}
-
+    generator: {Generator, RandomState}
         The object that is used for random number generation.
     """
-    if seed is None:
+    if entropy is None:
         import warnings
 
         warnings.warn(
@@ -642,8 +809,4 @@ def initialize_generator(
             stacklevel=3,
         )
         return np.random.mtrand._rand
-    elif isinstance(seed, int):
-        return np.random.default_rng(seed)
-    elif not isinstance(seed, (np.random.Generator, np.random.RandomState)):
-        raise TypeError("Seed must be a Generator, RandomState, integer or None ")
-    return seed
+    return check_random_state(entropy)

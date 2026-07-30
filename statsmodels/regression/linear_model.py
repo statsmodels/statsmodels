@@ -80,7 +80,7 @@ __all__ = [
 dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
 
 _fit_regularized_doc = r"""
-        Return a regularized fit to a linear regression model.
+        Return a regularized fit to a linear regression model
 
         Parameters
         ----------
@@ -159,8 +159,8 @@ _fit_regularized_doc = r"""
         zero_tol : float
             Coefficients below this threshold are treated as zero.
 
-        The cvxopt module is required to estimate model using the square root
-        lasso.
+        The cvxopt module is required to estimate a model using the square
+        root lasso.
 
         References
         ----------
@@ -176,10 +176,27 @@ _fit_regularized_doc = r"""
 
 def _get_sigma(sigma, nobs):
     """
-    Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
-    Cholesky decomposition.  Handles dimensions and checks integrity.
+    Validate sigma and compute the inverse of its Cholesky decomposition
+
+    Handles dimensions and checks integrity of `sigma` for use in GLS.
     If sigma is None, returns None, None. Otherwise returns sigma,
     cholsigmainv.
+
+    Parameters
+    ----------
+    sigma : None, scalar, 1d array_like or 2d array_like
+        The weighting matrix of the covariance. See GLS for a description.
+    nobs : int
+        The number of observations.
+
+    Returns
+    -------
+    sigma : ndarray or None
+        The array or matrix `sigma` used to define the covariance, or None
+        if `sigma` is None.
+    cholsigmainv : ndarray or None
+        The inverse of the Cholesky decomposition of `sigma`, or None if
+        `sigma` is None.
     """
     if sigma is None:
         return None, None
@@ -189,15 +206,15 @@ def _get_sigma(sigma, nobs):
     if sigma.ndim == 1:
         if sigma.shape != (nobs,):
             raise ValueError(
-                "Sigma must be a scalar, 1d of length %s or a 2d "
-                "array of shape %s x %s" % (nobs, nobs, nobs)
+                f"Sigma must be a scalar, 1d of length {nobs} or a 2d "
+                f"array of shape {nobs} x {nobs}"
             )
         cholsigmainv = 1 / np.sqrt(sigma)
     else:
         if sigma.shape != (nobs, nobs):
             raise ValueError(
-                "Sigma must be a scalar, 1d of length %s or a 2d "
-                "array of shape %s x %s" % (nobs, nobs, nobs)
+                f"Sigma must be a scalar, 1d of length {nobs} or a 2d "
+                f"array of shape {nobs} x {nobs}"
             )
         cholsigmainv, info = dtrtri(
             cholesky(sigma, lower=True), lower=True, overwrite_c=True
@@ -207,7 +224,7 @@ def _get_sigma(sigma, nobs):
                 "Cholesky decomposition of sigma yields a singular matrix"
             )
         elif info < 0:
-            raise ValueError("Invalid input to dtrtri (info = %d)" % info)
+            raise ValueError(f"Invalid input to dtrtri (info = {info:d})")
     return sigma, cholsigmainv
 
 
@@ -224,7 +241,7 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(["pinv_wexog", "wendog", "wexog", "weights"])
 
     def initialize(self):
-        """Initialize model components."""
+        """Initialize model components"""
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -348,40 +365,27 @@ class RegressionModel(base.LikelihoodModel):
         to solve the least squares minimization.
 
         """
+        # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
+        # rank are recomputed from self.wexog on every call (rather than
+        # cached based on whether they already exist) so that the model's
+        # state after fit() depends only on the current data, never on
+        # which `method` a previous fit() call happened to use.
         if method == "pinv":
-            if not (
-                hasattr(self, "pinv_wexog")
-                and hasattr(self, "normalized_cov_params")
-                and hasattr(self, "rank")
-            ):
-
-                self.pinv_wexog, singular_values = pinv_extended(self.wexog)
-                self.normalized_cov_params = np.dot(
-                    self.pinv_wexog, np.transpose(self.pinv_wexog)
-                )
-
-                # Cache these singular values for use later.
-                self.wexog_singular_values = singular_values
-                self.rank = np.linalg.matrix_rank(np.diag(singular_values))
+            pinv_wexog, singular_values = pinv_extended(self.wexog)
+            self.pinv_wexog = pinv_wexog
+            self.normalized_cov_params = np.dot(
+                pinv_wexog, np.transpose(pinv_wexog)
+            )
+            self.wexog_singular_values = singular_values
+            self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
         elif method == "qr":
-            if not (
-                hasattr(self, "exog_Q")
-                and hasattr(self, "exog_R")
-                and hasattr(self, "normalized_cov_params")
-                and hasattr(self, "rank")
-            ):
-                Q, R = np.linalg.qr(self.wexog)
-                self.exog_Q, self.exog_R = Q, R
-                self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
-
-                # Cache singular values from R.
-                self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = np.linalg.matrix_rank(R)
-            else:
-                Q, R = self.exog_Q, self.exog_R
+            Q, R = np.linalg.qr(self.wexog)
+            self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+            self.wexog_singular_values = np.linalg.svd(R, 0, 0)
+            self.rank = np.linalg.matrix_rank(R)
             # Needed for some covariance estimators, see GH #8157
             self.pinv_wexog = np.linalg.pinv(self.wexog)
             # used in ANOVA
@@ -488,10 +492,10 @@ class RegressionModel(base.LikelihoodModel):
 
 
 class GLS(RegressionModel):
-    __doc__ = r"""
+    __doc__ = rf"""
     Generalized Least Squares
 
-    {params}
+    {base._model_params_doc}
     sigma : scalar or array
         The array or scalar `sigma` is the weighting matrix of the covariance.
         The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -500,17 +504,16 @@ class GLS(RegressionModel):
         is an n-length vector, then `sigma` is assumed to be a diagonal
         matrix with the given `sigma` on the diagonal.  This should be the
         same as WLS.
-    {extra_params}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Attributes
     ----------
     pinv_wexog : ndarray
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
-    cholsimgainv : ndarray
+    cholsigmainv : ndarray
         The transpose of the Cholesky decomposition of the pseudoinverse.
     df_model : float
         p - 1, where p is the number of regressors including the intercept.
-        of freedom.
     df_resid : float
         Number of observations n less the number of parameters p.
     llf : float
@@ -519,8 +522,6 @@ class GLS(RegressionModel):
         The number of observations n.
     normalized_cov_params : ndarray
         p x p array :math:`(X^{{T}}\Sigma^{{-1}}X)^{{-1}}`
-    results : RegressionResults instance
-        A property that returns the RegressionResults class if fit.
     sigma : ndarray
         `sigma` is the n x n covariance structure of the error terms.
     wexog : ndarray
@@ -561,10 +562,7 @@ class GLS(RegressionModel):
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
     >>> print(gls_results.summary())
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
 
     def __init__(
         self, endog, exog, sigma=None, missing="none", hasconst=None, **kwargs
@@ -737,19 +735,19 @@ class GLS(RegressionModel):
 
 
 class WLS(RegressionModel):
-    __doc__ = """
+    __doc__ = f"""
     Weighted Least Squares
 
     The weights are presumed to be (proportional to) the inverse of
     the variance of the observations.  That is, if the variables are
     to be transformed by 1/sqrt(W) you must supply weights = 1/W.
 
-    {params}
+    {base._model_params_doc}
     weights : array_like, optional
         A 1d array of weights.  If you supply 1/W then the variables are
         pre- multiplied by 1/sqrt(W).  If no weights are supplied the
         default value is 1 and WLS results are the same as OLS.
-    {extra_params}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Attributes
     ----------
@@ -784,10 +782,7 @@ class WLS(RegressionModel):
      t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
     >>> print(results.f_test([0, 1]))
     <F test: F=array([[ 0.12733784]]), p=[[ 0.73577409]], df_denom=5, df_num=1>
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
 
     def __init__(
         self, endog, exog, weights=1.0, missing="none", hasconst=None, **kwargs
@@ -862,7 +857,7 @@ class WLS(RegressionModel):
                   -\frac{n}{2}\left(1+\log\left(\frac{2\pi}{n}\right)\right)
                   +\frac{1}{2}\log\left(\left|W\right|\right)
 
-        where :math:`W` is a diagonal weight matrix matrix,
+        where :math:`W` is a diagonal weight matrix,
         :math:`\left|W\right|` is its determinant, and
         :math:`SSR=\left(Y-\hat{Y}\right)^\prime W \left(Y-\hat{Y}\right)` is
         the sum of the squared weighted residuals.
@@ -938,11 +933,11 @@ class WLS(RegressionModel):
 
 
 class OLS(WLS):
-    __doc__ = """
+    __doc__ = f"""
     Ordinary Least Squares
 
-    {params}
-    {extra_params}
+    {base._model_params_doc}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Attributes
     ----------
@@ -989,10 +984,7 @@ class OLS(WLS):
     >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20,
      df_denom=43, df_num=2>
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
 
     def __init__(self, endog, exog=None, missing="none", hasconst=None, **kwargs):
         if "weights" in kwargs:
@@ -1179,7 +1171,7 @@ class OLS(WLS):
 
         # In the future we could add support for other penalties, e.g. SCAD.
         if method not in ("elastic_net", "sqrt_lasso"):
-            msg = "Unknown method '%s' for fit_regularized" % method
+            msg = f"Unknown method '{method}' for fit_regularized"
             raise ValueError(msg)
 
         # Set default parameters.
@@ -1313,13 +1305,13 @@ class OLS(WLS):
 
 
 class GLSAR(GLS):
-    __doc__ = """
+    __doc__ = f"""
     Generalized Least Squares with AR covariance structure
 
-    {params}
+    {base._model_params_doc}
     rho : int
         The order of the autoregressive covariance.
-    {extra_params}
+    {base._missing_param_doc + base._extra_param_doc}
 
     Notes
     -----
@@ -1364,10 +1356,7 @@ class GLSAR(GLS):
     >>> res = model2.iterative_fit(maxiter=6)
     >>> model2.rho
     array([-0.60479146, -0.85841922])
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + base._extra_param_doc,
-    )
+    """
     # TODO: Complete docstring
 
     def __init__(
@@ -1426,8 +1415,6 @@ class GLSAR(GLS):
         i = -1  # need to initialize for maxiter < 1 (skip loop)
         history = {"params": [], "rho": [self.rho]}
         for i in range(maxiter - 1):
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
             self.initialize()
             results = self.fit()
             history["params"].append(results.params)
@@ -1446,8 +1433,6 @@ class GLSAR(GLS):
         # Use kwarg to insert history
         if not converged and maxiter > 0:
             # maxiter <= 0 just does OLS
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
             self.initialize()
 
         # if converged then this is a duplicate fit, because we did not
@@ -1797,12 +1782,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def nobs(self):
-        """Number of observations n."""
+        """Number of observations n"""
         return float(self.model.wexog.shape[0])
 
     @cache_readonly
     def fittedvalues(self):
-        """The predicted values for the original (unwhitened) design."""
+        """The predicted values for the original (unwhitened) design"""
         return self.model.predict(self.params, self.model.exog)
 
     @cache_readonly
@@ -1814,7 +1799,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid(self):
-        """The residuals of the model."""
+        """The residuals of the model"""
         return self.model.endog - self.model.predict(self.params, self.model.exog)
 
     # TODO: fix writable example
@@ -1831,13 +1816,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def ssr(self):
-        """Sum of squared (whitened) residuals."""
+        """Sum of squared (whitened) residuals"""
         wresid = self.wresid
         return np.dot(wresid, wresid)
 
     @cache_readonly
     def centered_tss(self):
-        """The total (weighted) sum of squares centered about the mean."""
+        """The total (weighted) sum of squares centered about the mean"""
         model = self.model
         weights = getattr(model, "weights", None)
         sigma = getattr(model, "sigma", None)
@@ -1985,7 +1970,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def f_pvalue(self):
-        """The p-value of the F-statistic."""
+        """The p-value of the F-statistic"""
         # Special case for df_model 0
         if self.df_model == 0:
             return np.full_like(self.fvalue, np.nan)
@@ -1993,7 +1978,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bse(self):
-        """The standard errors of the parameter estimates."""
+        """The standard errors of the parameter estimates"""
         return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
@@ -2032,7 +2017,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        Value of information criterion.
+        float
+            Value of information criterion.
 
         References
         ----------
@@ -2136,8 +2122,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         White's (1980) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
         where e_i = resid[i].
 
@@ -2153,8 +2137,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         MacKinnon and White's (1985) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as sqrt(diag(n/(n-p)*HC_0).
 
         When HC1_se or cov_HC1 is called the RegressionResults instance will
@@ -2169,8 +2151,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         MacKinnon and White's (1985) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T
 
@@ -2186,8 +2166,6 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         MacKinnon and White's (1985) heteroskedasticity robust standard errors.
 
-        Notes
-        -----
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T.
 
@@ -2226,6 +2204,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def _is_nested(self, restricted):
         """
+        Check whether the restricted model is nested in the current model.
+
         Parameters
         ----------
         restricted : Result instance
@@ -2241,7 +2221,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Notes
         -----
-        A most nests another model if the regressors in the smaller
+        A model nests another model if the regressors in the smaller
         model are spanned by the regressors in the larger model and
         the regressand is identical.
 
@@ -2275,13 +2255,13 @@ class RegressionResults(base.LikelihoodModelResults):
             is required to have two attributes, residual sum of
             squares, `ssr`, residual degrees of freedom, `df_resid`.
         demean : bool
-            Flag indicating whether the demean the scores based on the
+            Flag indicating whether to demean the scores based on the
             residuals from the restricted model.  If True, the covariance of
             the scores are used and the LM test is identical to the large
             sample version of the LR test.
         use_lr : bool
             A flag indicating whether to estimate the covariance of the model
-            scores using the unrestricted model. Setting the to True improves
+            scores using the unrestricted model. Setting this to True improves
             the power of the test.
 
         Returns
@@ -2472,20 +2452,6 @@ class RegressionResults(base.LikelihoodModelResults):
         without taking unspecified heteroscedasticity or correlation
         into account.
 
-        This test compares the loglikelihood of the two models.  This
-        may not be a valid test, if there is unspecified
-        heteroscedasticity or correlation. This method will issue a
-        warning if this is detected but still return the results
-        without taking unspecified heteroscedasticity or correlation
-        into account.
-
-        is the average score of the model evaluated using the
-        residuals from null model and the regressors from the
-        alternative model and :math:`S` is the covariance of the
-        scores, :math:`s_{i}`.  The covariance of the scores is
-        estimated using the same estimator as in the alternative
-        model.
-
         """
         # TODO: put into separate function, needs tests
 
@@ -2589,7 +2555,7 @@ class RegressionResults(base.LikelihoodModelResults):
             adjusted. When `use_t` is also True, then pvalues are
             computed using the Student's t distribution using the
             corrected values. These may differ substantially from
-            p-values based on the normal is the number of groups is
+            p-values based on the normal if the number of groups is
             small.
             If False, then `df_resid` of the results instance is not
             adjusted.
@@ -2606,7 +2572,7 @@ class RegressionResults(base.LikelihoodModelResults):
             The available kernels are ['bartlett', 'uniform']. The default is
             Bartlett.
           ``use_correction`` : {False, 'hac', 'cluster'}, optional
-            If False the the sandwich covariance is calculated without small
+            If False the sandwich covariance is calculated without small
             sample correction. If `use_correction = 'cluster'` (default),
             then the same small sample correction as in the case of
             `covtype='cluster'` is used.
@@ -2676,7 +2642,7 @@ class RegressionResults(base.LikelihoodModelResults):
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False:  # i.e. in [None, True]:
-                # user did not explicitely set it to False
+                # user did not explicitly set it to False
                 adjust_df = True
 
         res.cov_kwds["adjust_df"] = adjust_df
@@ -2689,6 +2655,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds["description"] = descriptions["fixed_scale"]
 
             res.cov_kwds["scale"] = scale = kwargs.get("scale", 1.0)
+            res.scale = scale
             res.cov_params_default = scale * res.normalized_cov_params
         elif cov_type.upper() in ("HC0", "HC1", "HC2", "HC3"):
             if kwargs:
@@ -2925,13 +2892,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
         rsquared_type = "" if self.k_constant else " (uncentered)"
         top_right = [
-            ("R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared]),
-            ("Adj. R-squared" + rsquared_type + ":", ["%#8.3f" % self.rsquared_adj]),
-            ("F-statistic:", ["%#8.4g" % self.fvalue]),
-            ("Prob (F-statistic):", ["%#6.3g" % self.f_pvalue]),
+            ("R-squared" + rsquared_type + ":", [f"{self.rsquared:#8.3f}"]),
+            ("Adj. R-squared" + rsquared_type + ":", [f"{self.rsquared_adj:#8.3f}"]),
+            ("F-statistic:", [f"{self.fvalue:#8.4g}"]),
+            ("Prob (F-statistic):", [f"{self.f_pvalue:#6.3g}"]),
             ("Log-Likelihood:", None),
-            ("AIC:", ["%#8.4g" % self.aic]),
-            ("BIC:", ["%#8.4g" % self.bic]),
+            ("AIC:", [f"{self.aic:#8.4g}"]),
+            ("BIC:", [f"{self.bic:#8.4g}"]),
         ]
 
         if slim:
@@ -2948,7 +2915,7 @@ class RegressionResults(base.LikelihoodModelResults):
             diagn_left = diagn_right = []
             top_left = [elem for elem in top_left if elem[0] in slimlist]
             top_right = [elem for elem in top_right if elem[0] in slimlist]
-            top_right = top_right + [("", [])] * (len(top_left) - len(top_right))
+            top_right = top_right + [("", [""])] * (len(top_left) - len(top_right))
         else:
             jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
             omni, omnipv = omni_normtest(self.wresid)
@@ -2963,17 +2930,17 @@ class RegressionResults(base.LikelihoodModelResults):
             )
 
             diagn_left = [
-                ("Omnibus:", ["%#6.3f" % omni]),
-                ("Prob(Omnibus):", ["%#6.3f" % omnipv]),
-                ("Skew:", ["%#6.3f" % skew]),
-                ("Kurtosis:", ["%#6.3f" % kurtosis]),
+                ("Omnibus:", [f"{omni:#6.3f}"]),
+                ("Prob(Omnibus):", [f"{omnipv:#6.3f}"]),
+                ("Skew:", [f"{skew:#6.3f}"]),
+                ("Kurtosis:", [f"{kurtosis:#6.3f}"]),
             ]
 
             diagn_right = [
-                ("Durbin-Watson:", ["%#8.3f" % durbin_watson(self.wresid)]),
-                ("Jarque-Bera (JB):", ["%#8.3f" % jb]),
-                ("Prob(JB):", ["%#8.3g" % jbpv]),
-                ("Cond. No.", ["%#8.3g" % condno]),
+                ("Durbin-Watson:", [f"{durbin_watson(self.wresid):#8.3f}"]),
+                ("Jarque-Bera (JB):", [f"{jb:#8.3f}"]),
+                ("Prob(JB):", [f"{jbpv:#8.3g}"]),
+                ("Cond. No.", [f"{condno:#8.3g}"]),
             ]
 
         if title is None:
@@ -3090,14 +3057,14 @@ class RegressionResults(base.LikelihoodModelResults):
         eigvals = self.eigenvals
         condno = self.condition_number
         diagnostic = {
-            "Omnibus:": "%.3f" % omni,
-            "Prob(Omnibus):": "%.3f" % omnipv,
-            "Skew:": "%.3f" % skew,
-            "Kurtosis:": "%.3f" % kurtosis,
-            "Durbin-Watson:": "%.3f" % dw,
-            "Jarque-Bera (JB):": "%.3f" % jb,
-            "Prob(JB):": "%.3f" % jbpv,
-            "Condition No.:": "%.0f" % condno,
+            "Omnibus:": f"{omni:.3f}",
+            "Prob(Omnibus):": f"{omnipv:.3f}",
+            "Skew:": f"{skew:.3f}",
+            "Kurtosis:": f"{kurtosis:.3f}",
+            "Durbin-Watson:": f"{dw:.3f}",
+            "Jarque-Bera (JB):": f"{jb:.3f}",
+            "Prob(JB):": f"{jbpv:.3f}",
+            "Condition No.:": f"{condno:.0f}",
         }
 
         # Summary
@@ -3130,18 +3097,16 @@ class RegressionResults(base.LikelihoodModelResults):
         # Warnings
         if eigvals[-1] < 1e-10:
             warn = (
-                "The smallest eigenvalue is %6.3g. This might indicate that\
+                f"The smallest eigenvalue is {eigvals[-1]:6.3g}. This might indicate that\
                 there are strong multicollinearity problems or that the design\
                 matrix is singular."
-                % eigvals[-1]
             )
             etext.append(warn)
         elif condno > 1000:
             warn = (
-                "The condition number is large, %6.3g. This might indicate\
+                f"The condition number is large, {condno:6.3g}. This might indicate\
                 that there are strong multicollinearity or other numerical\
                 problems."
-                % condno
             )
             etext.append(warn)
 
@@ -3157,7 +3122,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
 class OLSResults(RegressionResults):
     """
-    Results class for for an OLS model.
+    Results class for an OLS model.
 
     Parameters
     ----------
@@ -3181,7 +3146,7 @@ class OLSResults(RegressionResults):
     See Also
     --------
     RegressionResults
-        Results store for WLS and GLW models.
+        Results store for WLS and GLS models.
 
     Notes
     -----

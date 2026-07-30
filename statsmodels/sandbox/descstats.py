@@ -1,8 +1,8 @@
 """
 Glue for returning descriptive statistics.
 """
-
 import os
+from pathlib import Path
 
 import numpy as np
 from scipy import stats
@@ -50,72 +50,70 @@ def descstats(data, cols=None, axis=0):
             Univariate Descriptive Statistics
             ---------------------------------------------
 
-            Var. Name   %(name)12s
+            Var. Name   {name:>12}
             ----------
-            Obs.          %(nobs)22i  Range                  %(range)22s
-            Sum of Wts.   %(sum)22s  Coeff. of Variation     %(coeffvar)22.4g
-            Mode          %(mode)22.4g  Skewness                %(skewness)22.4g
-            Repeats       %(nmode)22i  Kurtosis                %(kurtosis)22.4g
-            Mean          %(mean)22.4g  Uncorrected SS          %(uss)22.4g
-            Median        %(median)22.4g  Corrected SS            %(ss)22.4g
-            Variance      %(variance)22.4g  Sum Observations        %(sobs)22.4g
-            Std. Dev.     %(stddev)22.4g
-            """ % {
-            "name": cols,
-            "sum": "N/A",
-            "nobs": len(x),
-            "mode": stats.mode(x)[0][0],
-            "nmode": stats.mode(x)[1][0],
-            "mean": x.mean(),
-            "median": np.median(x),
-            "range": "(" + str(x.min()) + ", " + str(x.max()) + ")",
-            "variance": x.var(),
-            "stddev": x.std(),
-            "coeffvar": stats.variation(x),
-            "skewness": stats.skew(x),
-            "kurtosis": stats.kurtosis(x),
-            "uss": np.sum(x**2, axis=0),
-            "ss": np.sum((x - x.mean()) ** 2, axis=0),
-            "sobs": np.sum(x),
-        }
+            Obs.          {nobs:22d}  Range                  {range:>22}
+            Sum of Wts.   {sum:>22}  Coeff. of Variation     {coeffvar:22.4g}
+            Mode          {mode:22.4g}  Skewness                {skewness:22.4g}
+            Repeats       {nmode:22d}  Kurtosis                {kurtosis:22.4g}
+            Mean          {mean:22.4g}  Uncorrected SS          {uss:22.4g}
+            Median        {median:22.4g}  Corrected SS            {ss:22.4g}
+            Variance      {variance:22.4g}  Sum Observations        {sobs:22.4g}
+            Std. Dev.     {stddev:22.4g}
+            """.format(
+            name=str(cols),
+            sum="N/A",
+            nobs=len(x),
+            mode=stats.mode(x)[0][0],
+            nmode=stats.mode(x)[1][0],
+            mean=x.mean(),
+            median=np.median(x),
+            range="(" + str(x.min()) + ", " + str(x.max()) + ")",
+            variance=x.var(),
+            stddev=x.std(),
+            coeffvar=stats.variation(x),
+            skewness=stats.skew(x),
+            kurtosis=stats.kurtosis(x),
+            uss=np.sum(x**2, axis=0),
+            ss=np.sum((x - x.mean()) ** 2, axis=0),
+            sobs=np.sum(x),
+        )
         desc += """
 
         Percentiles
         -------------
-        1  %%          %12.4g
-        5  %%          %12.4g
-        10 %%          %12.4g
-        25 %%          %12.4g
+        1  %          {:12.4g}
+        5  %          {:12.4g}
+        10 %          {:12.4g}
+        25 %          {:12.4g}
 
-        50 %%          %12.4g
+        50 %          {:12.4g}
 
-        75 %%          %12.4g
-        90 %%          %12.4g
-        95 %%          %12.4g
-        99 %%          %12.4g
-        """ % tuple(
+        75 %          {:12.4g}
+        90 %          {:12.4g}
+        95 %          {:12.4g}
+        99 %          {:12.4g}
+        """.format(*tuple(
             [
                 stats.scoreatpercentile(x, per)
                 for per in (1, 5, 10, 25, 50, 75, 90, 95, 99)
             ]
-        )
+        ))
         t, p_t = stats.ttest_1samp(x, 0)
         M, p_M = sign_test(x)
         S, p_S = stats.wilcoxon(np.squeeze(x))
 
-        desc += """
+        desc += f"""
 
         Tests of Location (H0: Mu0=0)
         -----------------------------
         Test                Statistic       Two-tailed probability
         -----------------+-----------------------------------------
-        Student's t      |  t {:7.5f}   Pr > |t|   <{:.4f}
-        Sign             |  M {:8.2f}   Pr >= |M|  <{:.4f}
-        Signed Rank      |  S {:8.2f}   Pr >= |S|  <{:.4f}
+        Student's t      |  t {t:7.5f}   Pr > |t|   <{p_t:.4f}
+        Sign             |  M {M:8.2f}   Pr >= |M|  <{p_M:.4f}
+        Signed Rank      |  S {S:8.2f}   Pr >= |S|  <{p_S:.4f}
 
-        """.format(
-            t, p_t, M, p_M, S, p_S
-        )
+        """
         # Should this be part of a 'descstats'
         # in any event these should be split up, so that they can be called
         # individually and only returned together if someone calls summary
@@ -139,8 +137,8 @@ def descstats(data, cols=None, axis=0):
                 "range": "(" + str(xv.min()) + ", " + str(xv.max()) + ")" + os.linesep,
             }
             desc += (
-                "%(name)15s %(obs)9i %(mean)12.4g %(stddev)12.4g "
-                "%(range)20s" % kwargs
+                "{name:>15} {obs:9d} {mean:12.4g} {stddev:12.4g} "
+                "{range:>20}".format(**kwargs)
             )
     else:
         raise ValueError("data not understood")
@@ -198,7 +196,7 @@ if __name__ == "__main__":
     # p.view(dtype = np.int, type = np.ndarray)
 
     # This is *really* slow ###
-    if os.path.isfile("./Econ724_PS_I_Data.csv"):
+    if Path("./Econ724_PS_I_Data.csv").is_file():
         data2 = np.genfromtxt("./Econ724_PS_I_Data.csv", delimiter=",")
         sum2 = descstats(data2.ahe)
         sum3 = descstats(np.column_stack((data2.ahe, data2.yrseduc)))

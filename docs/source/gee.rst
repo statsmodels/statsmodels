@@ -124,25 +124,9 @@ The dependence structures currently implemented are
 Families
 ^^^^^^^^
 
-The distribution families are the same as for GLM, currently implemented are
-
-.. module:: statsmodels.genmod.families.family
-   :synopsis: Generalized Linear Model (GLM) families
-
-.. currentmodule:: statsmodels.genmod.families.family
-
-.. autosummary::
-   :toctree: generated/
-
-   Family
-   Binomial
-   Gamma
-   Gaussian
-   InverseGaussian
-   NegativeBinomial
-   Poisson
-   Tweedie
-
+The distribution families are the same as for GLM, currently implemented are.
+See :ref:`the list of families on the GLM page <families>` for a complete list of
+the available families.
 
 Link Functions
 ^^^^^^^^^^^^^^
@@ -155,21 +139,5 @@ The list of available link functions can be obtained by
 
     >>> sm.families.family.<familyname>.links
 
-.. currentmodule:: statsmodels.genmod.families.links
-
-.. autosummary::
-   :toctree: generated/
-
-   Link
-
-   CDFLink
-   CLogLog
-   Log
-   Logit
-   NegativeBinomial
-   Power
-   Cauchy
-   Identity
-   InversePower
-   InverseSquared
-   Probit
+See :ref:`the list of links on the GLM page <links>` for a complete list of
+the available link functions.

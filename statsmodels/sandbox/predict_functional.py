@@ -171,8 +171,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     unmatched = list(unmatched)
     if len(unmatched) > 0:
         warnings.warn(
-            "%s in data frame but not in summaries or values."
-            % ", ".join(["'%s'" % x for x in unmatched]),
+            "{} in data frame but not in summaries or values.".format(", ".join([f"'{x}'" for x in unmatched])),
             ValueWarning,
             stacklevel=2,
         )
@@ -180,7 +179,7 @@ def _make_exog_from_formula(result, focus_var, summaries, values, num_points):
     # Initialize at zero so each column can be converted to any dtype.
     ix = range(num_points)
     fexog = pd.DataFrame(index=ix, columns=colnames)
-    for d, x in zip(dtypes, colnames):
+    for d, x in zip(dtypes, colnames, strict=True):
         fexog[x] = pd.Series(index=ix, dtype=d)
 
     # The values of the 'focus variable' are a sequence of percentiles
@@ -232,8 +231,7 @@ def _make_exog_from_arrays(result, focus_var, summaries, values, num_points):
     unmatched = list(unmatched)
     if len(unmatched) > 0:
         warnings.warn(
-            "%s in model but not in `summaries` or `values`."
-            % ", ".join(["'%s'" % x for x in unmatched]),
+            "{} in model but not in `summaries` or `values`.".format(", ".join([f"'{x}'" for x in unmatched])),
             ValueWarning,
             stacklevel=2,
         )

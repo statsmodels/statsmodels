@@ -17,7 +17,7 @@ from statsmodels.tsa.stattools import acovf
 @deprecate_kwarg("unbiased", "adjusted")
 def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
     """
-    Estimate AR parameters at multiple orders using Durbin-Levinson recursions.
+    Estimate AR parameters at multiple orders using Durbin-Levinson recursions
 
     Parameters
     ----------

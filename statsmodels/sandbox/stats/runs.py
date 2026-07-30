@@ -182,7 +182,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     -----
     Wald-Wolfowitz runs test.
 
-    If there are ties, then then the test statistic and p-value that is
+    If there are ties, then the test statistic and p-value that is
     reported, is based on the higher p-value between sorting all tied
     observations of the same group
 

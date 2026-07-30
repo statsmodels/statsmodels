@@ -11,6 +11,8 @@ copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -47,7 +49,8 @@ class CopulaDistribution:
         self.cop_args = cop_args
         self.k_vars = len(marginals)
 
-    def rvs(self, nobs=1, cop_args=None, marg_args=None, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, cop_args=None, marg_args=None, rng=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Sample the joint distribution.
@@ -67,15 +70,17 @@ class CopulaDistribution:
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        random_state : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -97,7 +102,7 @@ class CopulaDistribution:
         if marg_args is None:
             marg_args = [()] * self.k_vars
 
-        sample = self.copula.rvs(nobs=nobs, args=cop_args, random_state=random_state)
+        sample = self.copula.rvs(nobs=nobs, args=cop_args, rng=rng)
 
         for i, dist in enumerate(self.marginals):
             sample[:, i] = dist.ppf(
@@ -235,8 +240,8 @@ class Copula(ABC):
 
     1. Sample :math:`V \sim F = LS^{−1}(\phi)`.
     2. Sample i.i.d. :math:`X_i \sim U[0,1], i \in \{1,...,d\}`.
-    3. Return:math:`(U_1,..., U_d)`, where :math:`U_i = \phi(−\log(X_i)/V), i
-       \in \{1, ...,d\}`.
+    3. Return :math:`(U_1,..., U_d)`, where
+       :math:`U_i = \phi(−\log(X_i)/V), i \in \{1, ...,d\}`.
 
     Detailed properties of each copula can be found in [3]_.
 
@@ -268,7 +273,8 @@ class Copula(ABC):
     def __init__(self, k_dim=2):
         self.k_dim = k_dim
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -280,15 +286,17 @@ class Copula(ABC):
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        random_state : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -364,7 +372,7 @@ class Copula(ABC):
             Copula cdf evaluated at points ``u``.
         """
 
-    def plot_scatter(self, sample=None, nobs=500, random_state=None, ax=None):
+    def plot_scatter(self, sample=None, nobs=500, rng=None, ax=None):
         """Sample the copula and plot.
 
         Parameters
@@ -374,15 +382,12 @@ class Copula(ABC):
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        random_state : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         ax : AxesSubplot, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -403,7 +408,7 @@ class Copula(ABC):
             raise ValueError("Can only plot 2-dimensional Copula.")
 
         if sample is None:
-            sample = self.rvs(nobs=nobs, random_state=random_state)
+            sample = self.rvs(nobs=nobs, rng=rng)
 
         fig, ax = utils.create_mpl_ax(ax)
         ax.scatter(sample[:, 0], sample[:, 1])
@@ -476,16 +481,26 @@ class Copula(ABC):
 
         return fig
 
-    def tau_simulated(self, nobs=1024, random_state=None):
+    def tau_simulated(self, nobs=1024, rng=None):
         """Kendall's tau based on simulated samples.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
         tau : float
             Kendall's tau.
-
         """
-        x = self.rvs(nobs, random_state=random_state)
+        x = self.rvs(nobs, rng=rng)
         return stats.kendalltau(x[:, 0], x[:, 1])[0]
 
     def fit_corr_param(self, data):

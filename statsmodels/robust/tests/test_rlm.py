@@ -410,6 +410,6 @@ def test_fit_history_scale():
     hist_scale = res.fit_history["scale"]
     hist_params = res.fit_history["params"][1:]
     assert len(hist_scale) == len(hist_params)
-    for recorded, params in zip(hist_scale, hist_params):
+    for recorded, params in zip(hist_scale, hist_params, strict=True):
         assert_allclose(recorded, mad(endog - exog @ params, center=0))
     assert_allclose(hist_scale[-1], res.scale)

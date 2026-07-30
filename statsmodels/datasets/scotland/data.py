@@ -1,4 +1,4 @@
-"""Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+"""Taxation Powers Vote for the Scottish Parliament 1997 dataset"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
@@ -7,11 +7,11 @@ COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
 TITLE = "Taxation Powers Vote for the Scottish Parliament 1997"
 SOURCE = """
-Jeff Gill's `Generalized Linear Models: A Unified Approach`
+Jeff Gill's *Generalized Linear Models: A Unified Approach*
 
 http://jgill.wustl.edu/research/books.html
 """
-DESCRSHORT = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
+DESCRSHORT = """Taxation Powers' Yes Vote for Scottish Parliament-1997"""
 
 DESCRLONG = """
 This data is based on the example in Gill and describes the proportion of
@@ -38,7 +38,7 @@ NOTE = """::
 
         YES    - Proportion voting yes to granting taxation powers to the
                  Scottish parliament.
-        COUTAX - Amount of council tax collected in pounds steling as of
+        COUTAX - Amount of council tax collected in pounds sterling as of
                  April '97
         UNEMPF - Female percentage of total unemployment benefits claims as of
                 January 1998

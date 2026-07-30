@@ -12,8 +12,7 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -36,10 +35,10 @@ from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
 
 from .results import results_kalman_filter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-clark1989_path = os.path.join("results", "results_clark1989_R.csv")
-clark1989_results = pd.read_csv(os.path.join(current_path, clark1989_path))
+clark1989_path = Path("results").joinpath("results_clark1989_R.csv")
+clark1989_results = pd.read_csv(Path(current_path).joinpath(clark1989_path))
 
 
 class Clark1987:
@@ -78,7 +77,7 @@ class Clark1987:
         cls.model.selection = np.eye(cls.model.k_states)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(cls.true["parameters"])
+        sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(cls.true["parameters"])
         cls.model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         cls.model.state_cov[
             np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)
@@ -1099,7 +1098,8 @@ def test_simulate():
     nsimulations = 10
     sigma2 = 2
     measurement_shocks = np.zeros(nsimulations)
-    state_shocks = np.random.normal(scale=sigma2**0.5, size=nsimulations)
+    rs = np.random.RandomState(9991617)
+    state_shocks = rs.normal(scale=sigma2**0.5, size=nsimulations)
 
     # Random walk model, so simulated series is just the cumulative sum of
     # the shocks

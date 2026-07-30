@@ -34,7 +34,7 @@ if __name__ == '__main__':
             try:
                 sys.stdout = REDIRECT_STDOUT
                 sys.stderr = REDIRECT_STDERR
-                exec(code)
+                exec(code)  # noqa: S102
             except Exception as e:
                 sys.stderr = SAVE_STDERR
                 print(f'FAIL: {example}', file=sys.stderr)

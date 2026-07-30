@@ -84,8 +84,8 @@ class Test_Trim:
         assert_equal(trim_mean([5, 4, 3, 1, 2, 0], 2 / 6.0), 2.5)
 
         # check axis argument
-        np.random.seed(1234)
-        a = np.random.randint(20, size=(5, 6, 4, 7))
+        rs = np.random.RandomState(1234)
+        a = rs.randint(20, size=(5, 6, 4, 7))
         for axis in [0, 1, 2, 3, -1]:
             res1 = trim_mean(a, 2 / 6.0, axis=axis)
             res2 = trim_mean(np.rollaxis(a, axis), 2 / 6.0)

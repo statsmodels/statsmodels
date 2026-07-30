@@ -36,7 +36,7 @@ def gls(
     arma_estimator_kwargs=None,
 ):
     """
-    Estimate ARMAX parameters by GLS.
+    Estimate ARMAX parameters by GLS
 
     Parameters
     ----------

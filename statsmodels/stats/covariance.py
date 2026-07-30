@@ -37,7 +37,8 @@ def _term_integrate(rho):
 
 
 def transform_corr_normal(corr, method, return_var=False, possdef=True):
-    """transform correlation matrix to be consistent at normal distribution
+    """
+    Transform correlation matrix to be consistent at normal distribution
 
     Parameters
     ----------
@@ -161,9 +162,20 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
 
 
 def corr_rank(data):
-    """Spearman rank correlation
+    """
+    Spearman rank correlation
 
-    simplified version of scipy.stats.spearmanr
+    Simplified version of scipy.stats.spearmanr.
+
+    Parameters
+    ----------
+    data : array_like
+        2-D data with observations in rows and variables in columns.
+
+    Returns
+    -------
+    corr : ndarray
+        correlation matrix
     """
     x = np.asarray(data)
     axisout = 0
@@ -173,7 +185,8 @@ def corr_rank(data):
 
 
 def corr_normal_scores(data):
-    """Gaussian rank (normal scores) correlation
+    """
+    Gaussian rank (normal scores) correlation
 
     Status: unverified, subject to change
 
@@ -208,7 +221,8 @@ def corr_normal_scores(data):
 
 
 def corr_quadrant(data, transform=np.sign, normalize=False):
-    """Quadrant correlation
+    """
+    Quadrant correlation
 
     Status: unverified, subject to change
 
@@ -216,6 +230,12 @@ def corr_quadrant(data, transform=np.sign, normalize=False):
     ----------
     data : array_like
         2-D data with observations in rows and variables in columns
+    transform : callable
+        Function used to transform the demeaned data before computing the
+        correlation. Default is ``np.sign``.
+    normalize : bool
+        If True, normalize the resulting matrix by the standard deviations
+        so that it is a proper correlation matrix. Default is False.
 
     Returns
     -------

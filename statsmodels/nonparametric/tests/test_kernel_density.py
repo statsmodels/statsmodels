@@ -268,11 +268,12 @@ class TestKDEUnivariate(KDETestBase):
         npt.assert_allclose(kde_vals, kde_expected, atol=1e-6)
         npt.assert_allclose(kde_vals0, kde_expected, atol=1e-6)
 
-    def test_weighted_pdf_non_fft(self, reset_randomstate):
+    def test_weighted_pdf_non_fft(self):
 
         kde = nparam.KDEUnivariate(self.noise)
         weights = self.weights_orig.copy()
         kde.fit(weights=weights, fft=False, bw="scott")
+        npt.assert_allclose(weights, self.weights_orig)
 
         grid = kde.support
         testx = np.array([grid[10 * i] for i in range(6)])
@@ -299,8 +300,9 @@ class TestKDEUnivariate(KDETestBase):
         with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
             kde.fit()
 
-    def test_int(self, reset_randomstate):
-        x = np.random.randint(0, 100, size=1000)
+    def test_int(self):
+        rs = np.random.RandomState(3321839021)
+        x = rs.randint(0, 100, size=1000)
         kde = nparam.KDEUnivariate(x)
         kde.fit()
 
@@ -410,6 +412,7 @@ class TestKDEMultivariate(KDETestBase):
         R_result = [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 400
@@ -430,6 +433,7 @@ class TestKDEMultivariate(KDETestBase):
         bw = np.array([0.3404, 0.1666])
         npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 400
@@ -451,6 +455,7 @@ class TestKDEMultivariate(KDETestBase):
         bw = np.array([0.4471, 0.2861])
         npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_efficient_notrandom(self):
         nobs = 400
@@ -627,6 +632,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         expected = [0.83378885, 0.97684477, 0.90655143, 0.79393161, 0.43629083]
         npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 500
@@ -640,14 +646,14 @@ class TestKDEMultivariateConditional(KDETestBase):
         Y = b0 + b1 * C1 + b2 * ovals + noise
 
         dens_efficient = nparam.KDEMultivariateConditional(
-                endog=[Y],
-                exog=[C1],
-                dep_type="c",
-                indep_type="c",
-                bw="cv_ml",
-                defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
-                seed=12345,
-                )
+            endog=[Y],
+            exog=[C1],
+            dep_type="c",
+            indep_type="c",
+            bw="cv_ml",
+            defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
+            rng=12345,
+        )
 
         # dens = nparam.KDEMultivariateConditional(endog=[Y], exog=[C1],
         #                   dep_type='c', indep_type='c', bw='cv_ml')
@@ -674,8 +680,9 @@ class TestKDEMultivariateConditional(KDETestBase):
 
 
 @pytest.mark.parametrize("kernel", ["biw", "cos", "epa", "gau", "tri", "triw", "uni"])
-def test_all_kernels(kernel, reset_randomstate):
-    data = np.random.normal(size=200)
+def test_all_kernels(kernel):
+    rs = np.random.RandomState(32989053)
+    data = rs.normal(size=200)
     x_grid = np.linspace(min(data), max(data), 200)
     density = sm.nonparametric.KDEUnivariate(data)
     density.fit(kernel="gau", fft=False)

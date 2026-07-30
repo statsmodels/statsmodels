@@ -5,7 +5,7 @@ from statsmodels.tools.tools import Bunch
 
 class _MinimalWLS:
     """
-    Minimal implementation of WLS optimized for performance.
+    Minimal implementation of WLS optimized for performance
 
     Parameters
     ----------
@@ -19,7 +19,7 @@ class _MinimalWLS:
     weights : array_like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
-        is 1 and WLS reults are the same as OLS.
+        is 1 and WLS results are the same as OLS.
     check_endog : bool, optional
         Flag indicating whether to check for inf/nan in endog.
         If True and any are found, ValueError is raised.
@@ -61,7 +61,7 @@ class _MinimalWLS:
 
     def fit(self, method="pinv"):
         """
-        Minimal implementation of WLS optimized for performance.
+        Estimate the model parameters using weighted least squares
 
         Parameters
         ----------
@@ -87,7 +87,7 @@ class _MinimalWLS:
 
         Notes
         -----
-        Does not perform and checks on the input data
+        Does not perform any checks on the input data
 
         See Also
         --------
@@ -109,13 +109,21 @@ class _MinimalWLS:
         """
         Construct results
 
+        Parameters
+        ----------
         params : ndarray
             Model parameters
+
+        Returns
+        -------
+        Bunch
+            Named tuple containing the fewest terms needed to implement
+            iterative estimation in models.
 
         Notes
         -----
         Allows results to be constructed from either existing parameters or
-        when estimated using using ``fit``
+        when estimated using ``fit``
 
         """
         fitted_values = self.exog.dot(params)

@@ -45,15 +45,12 @@ from packaging.version import Version, parse
 __all__ = [
     "NP_LT_2",
     "NP_LT_24",
-    "NP_LT_114",
     "NP_LT_123",
     "inplace_reshape",
-    "lstsq",
     "np_matrix_rank",
     "np_new_unique",
 ]
 
-NP_LT_114 = parse(np.__version__) < Version("1.13.99")
 NP_LT_123 = parse(np.__version__) < Version("1.22.99")
 NP_LT_2 = parse(np.__version__) < Version("1.99.99")
 NP_LT_24 = parse(np.__version__) < Version("2.3.99")
@@ -62,17 +59,22 @@ np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
 
 
-def lstsq(a, b, rcond=None):
-    """
-    Shim that allows modern rcond setting with backward compat for NumPY
-    earlier than 1.14
-    """
-    if NP_LT_114 and rcond is None:
-        rcond = -1
-    return np.linalg.lstsq(a, b, rcond=rcond)
-
-
 def inplace_reshape(arr: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
+    """
+    Reshape an array in place when possible, falling back to a copy
+
+    Parameters
+    ----------
+    arr : ndarray
+        The array to reshape.
+    shape : tuple[int, ...]
+        The new shape.
+
+    Returns
+    -------
+    ndarray
+        The reshaped array.
+    """
     try:
         return arr.reshape(shape, copy=False)
     except TypeError:

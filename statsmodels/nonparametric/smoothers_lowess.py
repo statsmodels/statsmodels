@@ -1,4 +1,5 @@
-"""Lowess - wrapper for cythonized extension
+"""
+Lowess - wrapper for cythonized extension
 
 Author : Chris Jordan-Squire
 Author : Carl Vogel
@@ -22,9 +23,10 @@ def lowess(
     missing="drop",
     return_sorted=True,
 ):
-    """LOWESS (Locally Weighted Scatterplot Smoothing)
+    """
+    LOWESS (Locally Weighted Scatterplot Smoothing)
 
-    A lowess function that outs smoothed estimates of endog
+    A lowess function that outputs smoothed estimates of endog
     at the given exog values from points (exog, endog)
 
     Parameters
@@ -42,7 +44,7 @@ def lowess(
     delta : float
         Distance within which to use linear-interpolation
         instead of weighted regression.
-    xvals: 1-D numpy array
+    xvals : 1-D numpy array
         Values of the exogenous variable at which to evaluate the regression.
         If supplied, cannot use delta.
     is_sorted : bool

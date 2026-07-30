@@ -17,6 +17,7 @@ class BoxCox:
         Parameters
         ----------
         x : array_like
+            The data to transform.
         lmbda : float
             The lambda parameter for the Box-Cox transform. If None, a value
             will be estimated by means of the specified method.
@@ -41,14 +42,14 @@ class BoxCox:
         References
         ----------
         Guerrero, Victor M. 1993. "Time-series analysis supported by power
-        transformations". `Journal of Forecasting`. 12 (1): 37-48.
+        transformations". *Journal of Forecasting*. 12 (1): 37-48.
 
         Guerrero, Victor M. and Perera, Rafael. 2004. "Variance Stabilizing
-        Power Transformation for Time Series," `Journal of Modern Applied
-        Statistical Methods`. 3 (2): 357-369.
+        Power Transformation for Time Series," *Journal of Modern Applied
+        Statistical Methods*. 3 (2): 357-369.
 
         Box, G. E. P., and D. R. Cox. 1964. "An Analysis of Transformations".
-        `Journal of the Royal Statistical Society`. 26 (2): 211-252.
+        *Journal of the Royal Statistical Society*. 26 (2): 211-252.
         """
         x = np.asarray(x)
 
@@ -133,7 +134,7 @@ class BoxCox:
         method = method.lower()
 
         if len(bounds) != 2:
-            raise ValueError("Bounds of length {} not understood.".format(len(bounds)))
+            raise ValueError(f"Bounds of length {len(bounds)} not understood.")
         elif bounds[0] >= bounds[1]:
             raise ValueError("Lower bound exceeds upper bound.")
 
@@ -158,6 +159,7 @@ class BoxCox:
         Parameters
         ----------
         x : array_like
+            The untransformed data.
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
@@ -170,6 +172,11 @@ class BoxCox:
             standard deviation, but the more robust 'mad' is also available.
         options : dict
             The options (as a dict) to be passed to the optimizer.
+
+        Returns
+        -------
+        float
+            The estimated lambda parameter.
         """
         options = {"maxiter": 25} if options is None else options
         nobs = len(x)
@@ -205,8 +212,14 @@ class BoxCox:
         Parameters
         ----------
         x : array_like
+            The untransformed data.
         options : dict
             The options (as a dict) to be passed to the optimizer.
+
+        Returns
+        -------
+        float
+            The estimated lambda parameter.
         """
         options = {"maxiter": 25} if options is None else options
         sum_x = np.sum(np.log(x))

@@ -348,7 +348,7 @@ if __name__ == "__main__":
                 rvs = rvs_orig
                 rind = 1
             print("-" * 30)
-            print("target = %s" % distname)
+            print(f"target = {distname}")
             sm = rvs.mean()
             sstd = np.sqrt(rvs.var())
             ssupp = (rvs.min(), rvs.max())
@@ -430,12 +430,11 @@ if __name__ == "__main__":
             ri = ""
             rind = 1
         print(
-            "%s ks-stat = %f, ks-pval = %f tail_prob = %f)"
-            % (distname, ks_stat, ks_pval, tail_prob)
+            f"{distname} ks-stat = {ks_stat:f}, ks-pval = {ks_pval:f} tail_prob = {tail_prob:f})"
         )
         #    print('arg_est = %s, loc_est = %f scale_est = %f)' % \
         #          (repr(arg_est),loc_est,scale_est))
         plothist(rvs, distfn, arg_est, loc_est, scale_est, right=rind)
         plt.savefig(
-            os.path.join(imagedir, "%s%s%02d_%s.png" % (prefix, ri, ii, distname))
+            os.path.join(imagedir, f"{prefix}{ri}{ii:02d}_{distname}.png")
         )

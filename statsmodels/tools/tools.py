@@ -1,4 +1,5 @@
-"""Utility functions used by statsmodels models."""
+"""Utility functions used by statsmodels models"""
+
 import numpy as np
 import pandas as pd
 import scipy.linalg
@@ -8,7 +9,20 @@ from statsmodels.tools.validation import array_like
 
 
 def asstr2(s):
-    """Return s as a text string."""
+    """
+    Return s as a text string
+
+    Parameters
+    ----------
+    s : str, bytes or object
+        Value to convert to a text string. Bytes are decoded using the
+        latin1 codec; any other type is converted with ``str``.
+
+    Returns
+    -------
+    str
+        `s` as a text string.
+    """
     if isinstance(s, str):
         return s
     elif isinstance(s, bytes):
@@ -17,40 +31,54 @@ def asstr2(s):
         return str(s)
 
 
-def drop_missing(Y, X=None, axis=1):
+def drop_missing(y, x=None, axis=1):
     """
-    Returns views on the arrays Y and X where missing observations are dropped.
+    Return views on the arrays y and x where missing observations are dropped
 
-    Y : array_like
-    X : array_like, optional
+    Parameters
+    ----------
+    y : array_like
+        Data with observations possibly containing NaN values.
+    x : array_like, optional
+        Additional data with observations possibly containing NaN
+        values. If provided, an observation is dropped if it is
+        missing in either `y` or `x`.
     axis : int
         Axis along which to look for missing observations.  Default is 1, ie.,
         observations in rows.
 
     Returns
     -------
-    Y : ndarray
-        All Y where the
-    X : ndarray
+    y : ndarray
+        `y` with the rows (or columns) containing missing observations
+        removed.
+    x : ndarray
+        `x` with the rows (or columns) containing missing observations
+        removed. Only returned if `x` is not None.
 
     Notes
     -----
-    If either Y or X is 1d, it is reshaped to be 2d.
+    If either y or x is 1d, it is reshaped to be 2d.
 
     """
-    Y = np.asarray(Y)
-    if Y.ndim == 1:
-        Y = Y[:, None]
-    if X is not None:
-        X = np.array(X)
-        if X.ndim == 1:
-            X = X[:, None]
-        keepidx = np.logical_and(~np.isnan(Y).any(axis),
-                                 ~np.isnan(X).any(axis))
-        return Y[keepidx], X[keepidx]
+    y = np.asarray(y)
+    if y.ndim == 1:
+        y = y[:, None]
+    # ``axis`` is reduced when looking for missing values, so the observations
+    # that are kept must be selected along the other axis.
+    keep_axis = 1 - axis
+    if x is not None:
+        x = np.array(x)
+        if x.ndim == 1:
+            x = x[:, None]
+        keepidx = np.logical_and(~np.isnan(y).any(axis), ~np.isnan(x).any(axis))
+        return (
+            np.compress(keepidx, y, axis=keep_axis),
+            np.compress(keepidx, x, axis=keep_axis),
+        )
     else:
-        keepidx = ~np.isnan(Y).any(axis)
-        return Y[keepidx]
+        keepidx = ~np.isnan(y).any(axis)
+        return np.compress(keepidx, y, axis=keep_axis)
 
 
 # TODO: needs to better preserve dtype and be more flexible
@@ -93,9 +121,9 @@ def categorical(data, col=None, dictnames=False, drop=False):
     Notes
     -----
     This returns a dummy variable for *each* distinct variable.  If a
-    a DaataFrame is provided, the names for the new variable is the
-    old variable name - underscore - category name.  So if the a variable
-    'vote' had answers as 'yes' or 'no' then the returned array would have to
+    DataFrame is provided, the names for the new variable is the
+    old variable name - underscore - category name.  So if the variable
+    'vote' had answers as 'yes' or 'no' then the returned array would have two
     new variables-- 'vote_yes' and 'vote_no'.  There is currently
     no name checking.
 
@@ -144,7 +172,7 @@ def categorical(data, col=None, dictnames=False, drop=False):
 # TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True, has_constant="skip"):
     """
-    Add a column of ones to an array.
+    Add a column of ones to an array
 
     Parameters
     ----------
@@ -173,6 +201,7 @@ def add_constant(data, prepend=True, has_constant="skip"):
     """
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
+
         return add_trend(data, trend="c", prepend=prepend, has_constant=has_constant)
 
     # Special case for NumPy
@@ -203,7 +232,7 @@ def add_constant(data, prepend=True, has_constant="skip"):
 
 def isestimable(c, d):
     """
-    True if (Q, P) contrast `c` is estimable for (N, P) design `d`.
+    True if (Q, P) contrast `c` is estimable for (N, P) design `d`
 
     From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
     the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
@@ -237,7 +266,7 @@ def isestimable(c, d):
     d = array_like(d, "d", ndim=2)
     c = c[None, :] if c.ndim == 1 else c
     if c.shape[1] != d.shape[1]:
-        raise ValueError("Contrast should have %d columns" % d.shape[1])
+        raise ValueError(f"Contrast should have {d.shape[1]:d} columns")
     new = np.vstack([c, d])
     if np.linalg.matrix_rank(new) != np.linalg.matrix_rank(d):
         return False
@@ -246,9 +275,25 @@ def isestimable(c, d):
 
 def pinv_extended(x, rcond=1e-15):
     """
-    Return the pinv of an array X as well as the singular values
-    used in computation.
+    Return the pinv of an array x as well as the singular values used in computation
 
+    Parameters
+    ----------
+    x : array_like
+        The array to invert, 2d.
+    rcond : float
+        Singular values below ``rcond * max(singular values)`` are
+        treated as zero.
+
+    Returns
+    -------
+    ndarray
+        The pseudo-inverse of `x`.
+    ndarray
+        The singular values of `x` used in computing the pseudo-inverse.
+
+    Notes
+    -----
     Code adapted from numpy.
     """
     x = np.asarray(x)
@@ -260,17 +305,16 @@ def pinv_extended(x, rcond=1e-15):
     cutoff = rcond * np.maximum.reduce(s)
     for i in range(min(n, m)):
         if s[i] > cutoff:
-            s[i] = 1./s[i]
+            s[i] = 1.0 / s[i]
         else:
-            s[i] = 0.
-    res = np.dot(np.transpose(vt), np.multiply(s[:, np.newaxis],
-                                               np.transpose(u)))
+            s[i] = 0.0
+    res = np.dot(np.transpose(vt), np.multiply(s[:, np.newaxis], np.transpose(u)))
     return res, s_orig
 
 
 def recipr(x):
     """
-    Reciprocal of an array with entries less than or equal to 0 set to 0.
+    Reciprocal of an array with entries less than or equal to 0 set to 0
 
     Parameters
     ----------
@@ -295,7 +339,7 @@ def recipr(x):
 
 def recipr0(x):
     """
-    Reciprocal of an array with entries less than 0 set to 0.
+    Reciprocal of an array with entries less than 0 set to 0
 
     Parameters
     ----------
@@ -320,7 +364,7 @@ def recipr0(x):
 
 def clean0(matrix):
     """
-    Erase columns of zeros: can save some time in pseudoinverse.
+    Erase columns of zeros: can save some time in pseudoinverse
 
     Parameters
     ----------
@@ -340,7 +384,7 @@ def clean0(matrix):
 
 def fullrank(x, r=None):
     """
-    Return an array whose column span is the same as x.
+    Return an array whose column span is the same as x
 
     Parameters
     ----------
@@ -366,15 +410,13 @@ def fullrank(x, r=None):
     v, d, u = np.linalg.svd(x, full_matrices=False)
     order = np.argsort(d)
     order = order[::-1]
-    value = []
-    for i in range(r):
-        value.append(v[:, order[i]])
+    value = [v[:, order[i]] for i in range(r)]
     return np.asarray(np.transpose(value)).astype(np.float64)
 
 
 def unsqueeze(data, axis, oldshape):
     """
-    Unsqueeze a collapsed array.
+    Unsqueeze a collapsed array
 
     Parameters
     ----------
@@ -411,7 +453,7 @@ def unsqueeze(data, axis, oldshape):
 
 def nan_dot(A, B):
     """
-    Return np.dot(A, B), preserving NaNs from nonzero products.
+    Return np.dot(A, B), preserving NaNs from nonzero products
 
     nan * 0 = 0 and nan * x = nan if x != 0.
 
@@ -444,24 +486,35 @@ def nan_dot(A, B):
 
 def maybe_unwrap_results(results):
     """
-    Gets raw results back from wrapped results.
+    Get raw results back from wrapped results
 
     Can be used in plotting functions or other post-estimation type
     routines.
+
+    Parameters
+    ----------
+    results : Results or ResultsWrapper
+        A results instance, possibly wrapped in a ResultsWrapper.
+
+    Returns
+    -------
+    Results
+        The underlying (unwrapped) results instance, or `results`
+        itself if it was not wrapped.
     """
     return getattr(results, "_results", results)
 
 
 class Bunch(dict):
     """
-    Returns a dict-like object with keys accessible via attribute lookup.
+    Returns a dict-like object with keys accessible via attribute lookup
 
     Parameters
     ----------
     *args
         Arguments passed to dict constructor, tuples (key, value).
     **kwargs
-        Keyword agument passed to dict constructor, key=value.
+        Keyword argument passed to dict constructor, key=value.
 
     """
 
@@ -472,10 +525,12 @@ class Bunch(dict):
 
 def _ensure_2d(x, ndarray=False):
     """
+    Ensure that an input is 2 dimensional, converting or reshaping as needed
+
     Parameters
     ----------
     x : ndarray, Series, DataFrame or None
-        Input to verify dimensions, and to transform as necesary
+        Input to verify dimensions, and to transform as necessary
     ndarray : bool
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a
@@ -484,7 +539,7 @@ def _ensure_2d(x, ndarray=False):
     Returns
     -------
     out : ndarray, DataFrame or None
-        array or DataFrame with 2 dimensiona.  One dimensional arrays are
+        array or DataFrame with 2 dimensions.  One dimensional arrays are
         returned as nobs by 1. None is returned if x is None.
     names : list of str or None
         list containing variables names when the input is a pandas datatype.
@@ -545,11 +600,11 @@ def matrix_rank(m, tol=None, method="qr"):
     m = array_like(m, "m", ndim=2)
     if method == "ip":
         m = m[:, np.any(m != 0, axis=0)]
-        m = m / np.sqrt((m ** 2).sum(0))
+        m = m / np.sqrt((m**2).sum(0))
         m = m.T @ m
         return np.linalg.matrix_rank(m, tol=tol, hermitian=True)
     elif method == "qr":
-        r, = scipy.linalg.qr(m, mode="r")
+        (r,) = scipy.linalg.qr(m, mode="r")
         abs_diag = np.abs(np.diag(r))
         if tol is None:
             tol = abs_diag[0] * m.shape[1] * np.finfo(float).eps

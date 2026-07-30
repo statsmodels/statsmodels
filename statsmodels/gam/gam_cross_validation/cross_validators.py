@@ -11,12 +11,17 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 
 class BaseCrossValidator(with_metaclass(ABCMeta)):
     """
-    The BaseCrossValidator class is a base class for all the iterators that
-    split the data in train and test as for example KFolds or LeavePOut
+    Base class for cross-validation iterators
+
+    Subclasses split the data into train and test sets, for example
+    ``KFold`` or ``LeavePOut``.
     """
+
     def __init__(self):
         pass
 
@@ -27,16 +32,23 @@ class BaseCrossValidator(with_metaclass(ABCMeta)):
 
 class KFold(BaseCrossValidator):
     """
-    K-Folds cross validation iterator:
-    Provides train/test indexes to split data in train test sets
+    K-Folds cross validation iterator
+
+    Provides train/test indexes to split data in train and test sets.
 
     Parameters
     ----------
-    k: int
-        number of folds
+    k_folds : int
+        Number of folds.
     shuffle : bool
         If true, then the index is shuffled before splitting into train and
         test indices.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -44,13 +56,31 @@ class KFold(BaseCrossValidator):
     the remainder.
     """
 
-    def __init__(self, k_folds, shuffle=False):
+    def __init__(self, k_folds, shuffle=False, rng=None):
         self.nobs = None
         self.k_folds = k_folds
         self.shuffle = shuffle
+        self.rng = check_random_state(rng)
 
     def split(self, X, y=None, label=None):
-        """yield index split into train and test sets
+        """
+        Yield index splits into train and test sets
+
+        Parameters
+        ----------
+        X : array_like
+            Data used only to determine the number of observations.
+        y : array_like, optional
+            Unused, present for signature compatibility.
+        label : array_like, optional
+            Unused, present for signature compatibility.
+
+        Yields
+        ------
+        train_index : ndarray
+            Boolean index array selecting the training observations.
+        test_index : ndarray
+            Boolean index array selecting the test observations.
         """
         # TODO: X and y are redundant, we only need nobs
 
@@ -58,7 +88,7 @@ class KFold(BaseCrossValidator):
         index = np.array(range(nobs))
 
         if self.shuffle:
-            np.random.shuffle(index)
+            self.rng.shuffle(index)
 
         folds = np.array_split(index, self.k_folds)
         for fold in folds:

@@ -95,7 +95,7 @@ alphas = 1 / np.logspace(-0.5, 2, N)
 # Sweep alpha and store the coefficients
 # QC check does not always pass with the default options.
 # Use the options QC_verbose=True and disp=True
-# to to see what is happening.  It just barely does not pass, so I decreased
+# to see what is happening.  It just barely does not pass, so I decreased
 # acc and increased QC_tol to make it pass
 for n, alpha in enumerate(alphas):
     logit_res = logit_mod.fit_regularized(

@@ -22,7 +22,7 @@ examples = ["ex1"]
 
 if "ex1" in examples:
     # np.random.seed(54321)
-    np.random.seed(978326)
+    rs = np.random.RandomState(978326)
     nsubj = 2000
     units = []
 
@@ -38,7 +38,7 @@ if "ex1" in examples:
         # create data for one unit
 
         # random effect/coefficient
-        gamma_re = gamma + 0.2 * np.random.standard_normal(nz)
+        gamma_re = gamma + 0.2 * rs.standard_normal(nz)
         # store true parameter for checking
         gamma_re_true.append(gamma_re)
 
@@ -47,11 +47,11 @@ if "ex1" in examples:
             nobs_i = 6
 
         # generate exogenous variables
-        X = np.random.standard_normal((nobs_i, nx))
-        Z = np.random.standard_normal((nobs_i, nz - 1))
+        X = rs.standard_normal((nobs_i, nx))
+        Z = rs.standard_normal((nobs_i, nz - 1))
         Z = np.column_stack((np.ones(nobs_i), Z))
 
-        noise = 0.1 * np.random.randn(nobs_i)  # sig_e = 0.1
+        noise = 0.1 * rs.randn(nobs_i)  # sig_e = 0.1
 
         # generate endogenous variable
         Y = np.dot(X, beta) + np.dot(Z, gamma_re) + noise

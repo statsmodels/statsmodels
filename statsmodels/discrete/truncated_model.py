@@ -37,8 +37,8 @@ class TruncatedLFGeneric(CountModel):
 
     .. versionadded:: 0.14.0
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -49,15 +49,16 @@ class TruncatedLFGeneric(CountModel):
     truncation : int, optional
         Truncation parameter specify truncation point out of the support
         of the distribution. pmf(k) = 0 for k <= truncation
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, truncation=0, offset=None,
                  exposure=None, missing="none", **kwargs):
@@ -85,7 +86,7 @@ class TruncatedLFGeneric(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Truncated model
+        Log-likelihood of Generic Truncated model.
 
         Parameters
         ----------
@@ -106,7 +107,7 @@ class TruncatedLFGeneric(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Truncated model
+        Log-likelihood for observations of Generic Truncated model.
 
         Parameters
         ----------
@@ -152,7 +153,7 @@ class TruncatedLFGeneric(CountModel):
 
     def score_obs(self, params):
         """
-        Generic Truncated model score (gradient) vector of the log-likelihood
+        Generic Truncated model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -163,7 +164,7 @@ class TruncatedLFGeneric(CountModel):
         -------
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            log-likelihood function, evaluated at `params`
         """
         score_main = self.model_main.score_obs(params)
 
@@ -187,7 +188,7 @@ class TruncatedLFGeneric(CountModel):
 
     def score(self, params):
         """
-        Generic Truncated model score (gradient) vector of the log-likelihood
+        Generic Truncated model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -198,7 +199,7 @@ class TruncatedLFGeneric(CountModel):
         -------
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            log-likelihood function, evaluated at `params`
         """
         return self.score_obs(params).sum(0)
 
@@ -274,7 +275,7 @@ class TruncatedLFGeneric(CountModel):
             discretefit = self.result_class_reg(self, cntfit)
         else:
             raise TypeError(
-                    "argument method == %s, which is not handled" % method)
+                    f"argument method == {method}, which is not handled")
 
         return self.result_class_reg_wrapper(discretefit)
 
@@ -282,7 +283,7 @@ class TruncatedLFGeneric(CountModel):
 
     def hessian(self, params):
         """
-        Generic Truncated model Hessian matrix of the loglikelihood
+        Generic Truncated model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -292,7 +293,7 @@ class TruncatedLFGeneric(CountModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
 
         Notes
@@ -321,10 +322,10 @@ class TruncatedLFGeneric(CountModel):
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
         which : str (optional)
-            Statitistic to predict. Default is 'mean'.
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x)
             - 'mean-main' : mean parameter of truncated count model.
@@ -435,7 +436,7 @@ class TruncatedLFGeneric(CountModel):
             return v
         else:
             raise ValueError(
-                "argument which == %s not handled" % which)
+                f"argument which == {which} not handled")
 
 
 class TruncatedLFPoisson(TruncatedLFGeneric):
@@ -444,8 +445,8 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
     .. versionadded:: 0.14.0
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -456,15 +457,16 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
     truncation : int, optional
         Truncation parameter specify truncation point out of the support
         of the distribution. pmf(k) = 0 for k <= truncation
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, missing="none", **kwargs):
@@ -489,7 +491,8 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
         self.result_class_reg_wrapper = L1TruncatedLFGenericResultsWrapper
 
     def _predict_mom_trunc0(self, params, mu):
-        """Predict mean and variance of zero-truncated distribution.
+        """
+        Predict mean and variance of zero-truncated distribution
 
         experimental api, will likely be replaced by other methods
 
@@ -517,8 +520,8 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
     .. versionadded:: 0.14.0
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -529,15 +532,16 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
     truncation : int, optional
         Truncation parameter specify truncation point out of the support
         of the distribution. pmf(k) = 0 for k <= truncation
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, p=2, missing="none", **kwargs):
@@ -567,7 +571,8 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
         self.result_class_reg_wrapper = L1TruncatedLFGenericResultsWrapper
 
     def _predict_mom_trunc0(self, params, mu):
-        """Predict mean and variance of zero-truncated distribution.
+        """
+        Predict mean and variance of zero-truncated distribution
 
         experimental api, will likely be replaced by other methods
 
@@ -603,8 +608,8 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
 
     .. versionadded:: 0.14.0
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -615,15 +620,16 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
     truncation : int, optional
         Truncation parameter specify truncation point out of the support
         of the distribution. pmf(k) = 0 for k <= truncation
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  truncation=0, p=2, missing="none", **kwargs):
@@ -657,8 +663,8 @@ class _RCensoredGeneric(CountModel):
     __doc__ = """
     Generic right Censored model for count data
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -666,15 +672,16 @@ class _RCensoredGeneric(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None, exposure=None,
                  missing="none", **kwargs):
@@ -691,7 +698,7 @@ class _RCensoredGeneric(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Censored model
+        Log-likelihood of Generic Censored model.
 
         Parameters
         ----------
@@ -712,7 +719,7 @@ class _RCensoredGeneric(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Censored model
+        Log-likelihood for observations of Generic Censored model.
 
         Parameters
         ----------
@@ -740,7 +747,7 @@ class _RCensoredGeneric(CountModel):
 
     def score_obs(self, params):
         """
-        Generic Censored model score (gradient) vector of the log-likelihood
+        Generic Censored model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -751,7 +758,7 @@ class _RCensoredGeneric(CountModel):
         -------
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            log-likelihood function, evaluated at `params`
         """
         score_main = self.model_main.score_obs(params)
         llf_main = self.model_main.loglikeobs(params)
@@ -767,7 +774,7 @@ class _RCensoredGeneric(CountModel):
 
     def score(self, params):
         """
-        Generic Censored model score (gradient) vector of the log-likelihood
+        Generic Censored model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -778,7 +785,7 @@ class _RCensoredGeneric(CountModel):
         -------
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            log-likelihood function, evaluated at `params`
         """
         return self.score_obs(params).sum(0)
 
@@ -849,7 +856,7 @@ class _RCensoredGeneric(CountModel):
             discretefit = self.result_class_reg(self, cntfit)
         else:
             raise TypeError(
-                    "argument method == %s, which is not handled" % method)
+                    f"argument method == {method}, which is not handled")
 
         return self.result_class_reg_wrapper(discretefit)
 
@@ -857,7 +864,7 @@ class _RCensoredGeneric(CountModel):
 
     def hessian(self, params):
         """
-        Generic Censored model Hessian matrix of the loglikelihood
+        Generic Censored model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -867,7 +874,7 @@ class _RCensoredGeneric(CountModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
 
         Notes
@@ -880,8 +887,8 @@ class _RCensoredPoisson(_RCensoredGeneric):
     __doc__ = """
     Censored Poisson model for count data
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -889,15 +896,16 @@ class _RCensoredPoisson(_RCensoredGeneric):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None,
                  exposure=None, missing="none", **kwargs):
@@ -916,8 +924,8 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
     __doc__ = """
     Censored Generalized Poisson model for count data
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -925,15 +933,16 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing="none", **kwargs):
@@ -954,8 +963,8 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
     __doc__ = """
     Censored Negative Binomial model for count data
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -963,15 +972,16 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None, p=2,
                  exposure=None, missing="none", **kwargs):
@@ -998,8 +1008,8 @@ class _RCensored(_RCensoredGeneric):
     __doc__ = """
     Censored model for count data
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1007,15 +1017,16 @@ class _RCensored(_RCensoredGeneric):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, model=Poisson,
                  distribution=truncatedpoisson, offset=None,
@@ -1041,7 +1052,8 @@ class _RCensored(_RCensoredGeneric):
         self.result_class_reg_wrapper = L1TruncatedLFGenericResultsWrapper
 
     def _prob_nonzero(self, mu, params):
-        """Probability that count is not zero
+        """
+        Probability that count is not zero
 
         internal use in Censored model, will be refactored or removed
         """
@@ -1055,8 +1067,8 @@ class HurdleCountModel(CountModel):
 
     .. versionadded:: 0.14.0
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1074,9 +1086,9 @@ class HurdleCountModel(CountModel):
     pzero : scalar
         Define parameterization parameter zero hurdle model family.
         Used when zerodist='negbin'.
-    """ % {"params": base._model_params_doc,
-           "extra_params":
-           """offset : array_like
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like
         Log(exposure) is added to the linear prediction with coefficient
@@ -1093,7 +1105,8 @@ class HurdleCountModel(CountModel):
     ----------
     not yet
 
-    """ + base._missing_param_doc}
+    """ + base._missing_param_doc,
+       )
 
     def __init__(self, endog, exog, offset=None,
                  dist="poisson", zerodist="poisson",
@@ -1142,7 +1155,7 @@ class HurdleCountModel(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Hurdle model
+        Log-likelihood of Generic Hurdle model.
 
         Parameters
         ----------
@@ -1232,10 +1245,6 @@ class HurdleCountModel(CountModel):
         exog : ndarray, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        exog_infl : ndarray, optional
-            Explanatory variables for the zero-inflation model.
-            ``exog_infl`` has to be provided if ``exog`` was provided unless
-            ``exog_infl`` in the model is only a constant.
         offset : ndarray, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
@@ -1245,10 +1254,10 @@ class HurdleCountModel(CountModel):
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
         which : str (optional)
-            Statitistic to predict. Default is 'mean'.
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x)
             - 'mean-main' : mean parameter of truncated count model.
@@ -1259,7 +1268,7 @@ class HurdleCountModel(CountModel):
             - 'prob-main' : probability of selecting the main model which is
               the probability of observing a nonzero count P(y > 0 | x).
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x).
-              This is equal to is ``1 - prob-main``
+              This is equal to ``1 - prob-main``.
             - 'prob-trunc' : probability of truncation of the truncated count
               model. This is the probability of observing a zero count implied
               by the truncation model.
@@ -1346,7 +1355,7 @@ class HurdleCountModel(CountModel):
             probs_main[:, 0] = prob_zero
             return probs_main
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
 
 class TruncatedLFGenericResults(CountResults):

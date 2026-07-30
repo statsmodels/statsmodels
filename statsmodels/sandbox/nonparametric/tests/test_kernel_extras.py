@@ -8,13 +8,13 @@ class KernelExtrasTestBase:
     @classmethod
     def setup_class(cls):
         nobs = 60
-        np.random.seed(123456)
-        cls.o = np.random.binomial(2, 0.7, size=(nobs, 1))
-        cls.o2 = np.random.binomial(3, 0.7, size=(nobs, 1))
-        cls.c1 = np.random.normal(size=(nobs, 1))
-        cls.c2 = np.random.normal(10, 1, size=(nobs, 1))
-        cls.c3 = np.random.normal(10, 2, size=(nobs, 1))
-        cls.noise = np.random.normal(size=(nobs, 1))
+        rs = np.random.RandomState(123456)
+        cls.o = rs.binomial(2, 0.7, size=(nobs, 1))
+        cls.o2 = rs.binomial(3, 0.7, size=(nobs, 1))
+        cls.c1 = rs.normal(size=(nobs, 1))
+        cls.c2 = rs.normal(10, 1, size=(nobs, 1))
+        cls.c3 = rs.normal(10, 2, size=(nobs, 1))
+        cls.noise = rs.normal(size=(nobs, 1))
         b0 = 0.3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -240,15 +240,20 @@ class TestSemiLinear(KernelExtrasTestBase):
 
     def test_basic(self):
         nobs = 300
-        np.random.seed(1234)
-        C1 = np.random.normal(0, 2, size=(nobs,))
-        C2 = np.random.normal(2, 1, size=(nobs,))
-        e = np.random.normal(size=(nobs,))
+        rs = np.random.RandomState(1234)
+        C1 = rs.normal(0, 2, size=(nobs,))
+        C2 = rs.normal(2, 1, size=(nobs,))
+        e = rs.normal(size=(nobs,))
         b1 = 1.3
         b2 = -0.7
         Y = b1 * C1 + np.exp(b2 * C2) + e
         model = SemiLinear(
-            endog=[Y], exog=[C1], exog_nonparametric=[C2], var_type="c", k_linear=1
+            endog=[Y],
+            exog=[C1],
+            exog_nonparametric=[C2],
+            var_type="c",
+            k_linear=1,
+            rng=rs,
         )
         b_hat = np.squeeze(model.b)
         # Only tests for the linear part of the regression

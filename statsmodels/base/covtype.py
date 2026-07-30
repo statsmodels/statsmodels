@@ -51,10 +51,12 @@ def normalize_cov_type(cov_type):
     Parameters
     ----------
     cov_type : str
+        The covariance type to normalize.
 
     Returns
     -------
-    normalized_cov_type : str
+    str
+        The normalized covariance type.
     """
     if cov_type == "nw-panel":
         cov_type = "hac-panel"
@@ -64,18 +66,18 @@ def normalize_cov_type(cov_type):
 
 
 def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
-    """create new results instance with robust covariance as default
+    """Create new results instance with robust covariance as default
 
     Parameters
     ----------
     cov_type : str
-        the type of robust sandwich estimator to use. see Notes below
+        The type of robust sandwich estimator to use. See Notes below.
     use_t : bool
         If true, then the t distribution is used for inference.
         If false, then the normal distribution is used.
     kwds : depends on cov_type
         Required or optional arguments for robust covariance calculation.
-        see Notes below
+        See Notes below.
 
     Returns
     -------
@@ -139,7 +141,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         adjusted. When `use_t` is also True, then pvalues are
         computed using the Student's t distribution using the
         corrected values. These may differ substantially from
-        p-values based on the normal is the number of groups is
+        p-values based on the normal if the number of groups is
         small.
         If False, then `df_resid` of the results instance is not
         adjusted.
@@ -157,7 +159,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         The available kernels are ['bartlett', 'uniform']. The default is
         Bartlett.
       ``use_correction`` : {False, 'hac', 'cluster'}, optional
-        If False the the sandwich covariance is calculated without small
+        If False the sandwich covariance is calculated without small
         sample correction. If `use_correction = 'cluster'` (default),
         then the same small sample correction as in the case of
         `covtype='cluster'` is used.
@@ -233,7 +235,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         # TODO: check also use_correction, do I need all combinations?
 
         if df_correction is not False:  # i.e. in [None, True]:
-            # user did not explicitely set it to False
+            # user did not explicitly set it to False
 
             adjust_df = True
     res.cov_kwds["adjust_df"] = adjust_df

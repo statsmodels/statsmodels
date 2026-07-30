@@ -5,11 +5,10 @@ Test AR Model
 from __future__ import annotations
 
 from statsmodels.compat.pandas import MONTH_END
-from statsmodels.compat.pytest import pytest_warns
 
 import datetime as dt
 from itertools import product
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
@@ -21,7 +20,11 @@ import pytest
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    EstimationWarning,
+    SpecificationWarning,
+    ValueWarning,
+)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import (
     AutoReg,
@@ -105,7 +108,7 @@ for param in params:
         final.append(param)
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
-ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param)]) for param in params]
+ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)]) for param in params]
 
 
 @pytest.fixture(scope="module", params=params, ids=ids)
@@ -147,7 +150,7 @@ def fix_ols_attribute(val, attrib, res):
     nparam = res.k_constant + res.df_model
     nobs = nparam + res.df_resid
     df_correction = (nobs - nparam) / nobs
-    if attrib in ("scale",):
+    if attrib == "scale":
         return val * df_correction
     elif attrib == "df_model":
         return val + res.k_constant
@@ -157,9 +160,9 @@ def fix_ols_attribute(val, attrib, res):
         return val * np.sqrt(df_correction)
     elif attrib in ("cov_params", "scale"):
         return val * df_correction
-    elif attrib in ("f_test",):
+    elif attrib == "f_test":
         return val / df_correction
-    elif attrib in ("tvalues",):
+    elif attrib == "tvalues":
         return val / np.sqrt(df_correction)
 
     return val
@@ -287,8 +290,8 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
             exog = pd.DataFrame(exog, columns=cols, index=index)
 
     class DataSet(NamedTuple):
-        endog: Union[np.ndarray, pd.Series]
-        exog: Union[np.ndarray, pd.DataFrame]
+        endog: np.ndarray | pd.Series
+        exog: np.ndarray | pd.DataFrame
 
     return DataSet(endog=endog, exog=exog)
 
@@ -363,7 +366,7 @@ def plot_data(request):
     )
 
 
-@pytest.mark.thread_unsafe("MPL can fail under threaded runs if figs are created or destroyed")
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
 def test_autoreg_smoke_plots(plot_data, close_figures):
@@ -429,6 +432,7 @@ def test_autoreg_predict_smoke(ar_data):
         mod.predict(res.params, 0, 250, exog_oos=exog_oos)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_parameterless_autoreg(close_figures):
     data = gen_data(250, 0, False)
@@ -679,18 +683,12 @@ def test_autoreg_info_criterion(lag):
     assert_allclose(r.fpe, r2.fpe)
 
 
-@pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_named_series(reset_randomstate, old_names):
-    warning = FutureWarning if old_names else None
+def test_autoreg_named_series():
+    rs = np.random.RandomState(982738)
     dates = period_range(start="2011-1", periods=72, freq="M")
-    y = Series(np.random.randn(72), name="foobar", index=dates)
-    with pytest_warns(warning):
-        results = AutoReg(y, lags=2, old_names=old_names).fit()
-
-    if old_names:
-        idx = Index(["intercept", "foobar.L1", "foobar.L2"])
-    else:
-        idx = Index(["const", "foobar.L1", "foobar.L2"])
+    y = Series(rs.randn(72), name="foobar", index=dates)
+    results = AutoReg(y, lags=2).fit()
+    idx = Index(["const", "foobar.L1", "foobar.L2"])
     assert results.params.index.equals(idx)
 
 
@@ -745,25 +743,18 @@ def test_autoreg_constant_column_trend():
         AutoReg(sample, lags=7, trend="n")
 
 
-@pytest.mark.parametrize("old_names", [True, False])
-def test_autoreg_summary_corner(old_names):
+def test_autoreg_summary_corner():
     data = macrodata.load_pandas().data["cpi"].diff().dropna()
     dates = period_range(start="1959Q1", periods=len(data), freq="Q")
     data.index = dates
-    warning = FutureWarning if old_names else None
-    with pytest_warns(warning):
-        res = AutoReg(data, lags=4, old_names=old_names).fit()
+    res = AutoReg(data, lags=4).fit()
     summ = res.summary().as_text()
     assert "AutoReg(4)" in summ
     assert "cpi.L4" in summ
     assert "03-31-1960" in summ
-    with pytest_warns(warning):
-        res = AutoReg(data, lags=0, old_names=old_names).fit()
+    res = AutoReg(data, lags=0).fit()
     summ = res.summary().as_text()
-    if old_names:
-        assert "intercept" in summ
-    else:
-        assert "const" in summ
+    assert "const" in summ
     assert "AutoReg(0)" in summ
 
 
@@ -786,8 +777,9 @@ def test_autoreg_roots():
     assert_almost_equal(res.roots, np.array([1.0 / res.params[-1]]))
 
 
-def test_equiv_dynamic(reset_randomstate):
-    e = np.random.standard_normal(1001)
+def test_equiv_dynamic():
+    rs = np.random.RandomState(42121221)
+    e = rs.standard_normal(1001)
     y = np.empty(1001)
     y[0] = e[0] * np.sqrt(1.0 / (1 - 0.9**2))
     for i in range(1, 1001):
@@ -979,7 +971,8 @@ def test_forecast_start_end_equiv(dynamic):
 
 @pytest.mark.parametrize("start", [21, 25])
 def test_autoreg_start(start):
-    y_train = pd.Series(np.random.normal(size=20))
+    rs = np.random.RandomState(982731)
+    y_train = pd.Series(rs.normal(size=20))
     m = AutoReg(y_train, lags=2)
     mf = m.fit()
     end = start + 5
@@ -987,8 +980,9 @@ def test_autoreg_start(start):
     assert pred.shape[0] == end - start + 1
 
 
-def test_deterministic(reset_randomstate):
-    y = pd.Series(np.random.normal(size=200))
+def test_deterministic():
+    rs = np.random.RandomState(982737)
+    y = pd.Series(rs.normal(size=200))
     terms = [TimeTrend(constant=True, order=1), Seasonality(12)]
     dp = DeterministicProcess(y.index, additional_terms=terms)
     m = AutoReg(y, trend="n", seasonal=False, lags=2, deterministic=dp)
@@ -1002,8 +996,9 @@ def test_deterministic(reset_randomstate):
         AutoReg(y, 2, deterministic="ct")
 
 
-def test_autoreg_predict_forecast_equiv(reset_randomstate):
-    e = np.random.normal(size=1000)
+def test_autoreg_predict_forecast_equiv():
+    rs = np.random.RandomState(982735)
+    e = rs.normal(size=1000)
     nobs = e.shape[0]
     idx = pd.date_range(dt.datetime(2020, 1, 1), freq="D", periods=nobs)
     for i in range(1, nobs):
@@ -1023,7 +1018,8 @@ def test_autoreg_predict_forecast_equiv(reset_randomstate):
 
 def test_autoreg_forecast_period_index():
     pi = pd.period_range("1990-1-1", periods=524, freq="M")
-    y = np.random.RandomState(0).standard_normal(500)
+    rs = np.random.RandomState(0)
+    y = rs.standard_normal(500)
     ys = pd.Series(y, index=pi[:500], name="y")
     mod = AutoReg(ys, 3, seasonal=True)
     res = mod.fit()
@@ -1032,9 +1028,11 @@ def test_autoreg_forecast_period_index():
     pd.testing.assert_index_equal(fcast.index, pi[-24:])
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_autoreg_plot_err(close_figures):
-    y = np.random.standard_normal(100)
+    rs = np.random.RandomState(982734)
+    y = rs.standard_normal(100)
     mod = AutoReg(y, lags=[1, 3])
     res = mod.fit()
     with pytest.raises(ValueError):
@@ -1043,7 +1041,7 @@ def test_autoreg_plot_err(close_figures):
 
 def test_autoreg_resids():
     idx = pd.date_range(dt.datetime(1900, 1, 1), periods=250, freq=MONTH_END)
-    rs = np.random.RandomState(0)
+    rs = np.random.RandomState(982733)
     idx_dates = sorted(rs.choice(idx, size=100, replace=False))
     e = rs.standard_normal(250)
     y = np.zeros(250)
@@ -1136,16 +1134,11 @@ def test_exog_prediction(ar2):
     assert_allclose(dyn_base, dyn_repl)
 
 
-def test_old_names(ar2):
-    with pytest.warns(FutureWarning):
-        mod = AutoReg(ar2, 2, trend="ct", seasonal=True, old_names=True)
-    new = AutoReg(ar2, 2, trend="ct", seasonal=True, old_names=False)
+def test_new_names(ar2):
+    new = AutoReg(ar2, 2, trend="ct", seasonal=True)
 
     assert new.trend == "ct"
     assert new.period == 12
-
-    assert "intercept" in mod.exog_names
-    assert "seasonal.1" in mod.exog_names
 
     assert "const" in new.exog_names
     assert "s(2,12)" in new.exog_names
@@ -1213,18 +1206,19 @@ def test_autoreg_apply(ols_autoreg_result):
         assert not np.allclose(fcasts_refit, fcasts_apply)
 
 
-def test_autoreg_apply_exception(reset_randomstate):
-    y = np.random.standard_normal(250)
+def test_autoreg_apply_exception():
+    rs = np.random.RandomState(982732)
+    y = rs.standard_normal(250)
     mod = AutoReg(y, lags=10)
     res = mod.fit()
-    with pytest.raises(ValueError, match="An exception occured"):
+    with pytest.raises(ValueError, match="An exception occurred"):
         res.apply(y[:5])
 
-    x = np.random.standard_normal((y.shape[0], 3))
+    x = rs.standard_normal((y.shape[0], 3))
     res = AutoReg(y, lags=1, exog=x).fit()
     with pytest.raises(ValueError, match="exog must be provided"):
         res.apply(y[50:150])
-    x = np.random.standard_normal((y.shape[0], 3))
+    x = rs.standard_normal((y.shape[0], 3))
     res = AutoReg(y, lags=1, exog=x).fit()
     with pytest.raises(ValueError, match="The number of exog"):
         res.apply(y[50:150], exog=x[50:150, :2])
@@ -1349,3 +1343,13 @@ def test_autoreg_append_deterministic(append_data):
         deterministic=dp.apply(y_both.index),
     ).fit()
     assert_allclose(res_append.params, res_direct.params)
+
+
+def test_no_obs_for_adjustment():
+    # Ensure model work when there are insufficient observations to
+    # apply a small sample adjustment
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal(7)
+    mod = AutoReg(x, lags=3, trend="c")
+    with pytest.warns(EstimationWarning, match="The adjusted number of observations"):
+        mod.fit()

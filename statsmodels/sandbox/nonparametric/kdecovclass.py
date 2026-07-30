@@ -74,9 +74,9 @@ def plotkde(covfact):
 
 
 def test_kde_1d():
-    np.random.seed(8765678)
+    rs = np.random.RandomState(8765678)
     n_basesample = 500
-    xn = np.random.randn(n_basesample)
+    xn = rs.randn(n_basesample)
     xnmean = xn.mean()
     xnstd = xn.std(ddof=1)
     print(xnmean, xnstd)
@@ -121,13 +121,13 @@ def test_kde_1d():
 if __name__ == "__main__":
     # generate a sample
     n_basesample = 1000
-    np.random.seed(8765678)
+    rs = np.random.RandomState(8765678)
     alpha = 0.6  # weight for (prob of) lower distribution
     mlow, mhigh = (-3, 3)  # mean locations for gaussian mixture
     xn = np.concatenate(
         [
-            mlow + np.random.randn(alpha * n_basesample),
-            mhigh + np.random.randn((1 - alpha) * n_basesample),
+            mlow + rs.randn(alpha * n_basesample),
+            mhigh + rs.randn((1 - alpha) * n_basesample),
         ]
     )
 
@@ -177,9 +177,9 @@ if __name__ == "__main__":
 
     test_kde_1d()
 
-    np.random.seed(8765678)
+    rs = np.random.RandomState(8765678)
     n_basesample = 1000
-    xn = np.random.randn(n_basesample)
+    xn = rs.randn(n_basesample)
     xnmean = xn.mean()
     xnstd = xn.std(ddof=1)
 

@@ -3,7 +3,7 @@ from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
 
-COPYRIGHT = """This is public domain. """
+COPYRIGHT = """This is public domain."""
 TITLE = __doc__
 SOURCE = """
 Brownlee, K. A. (1965), "Statistical Theory and Methodology in
@@ -25,7 +25,7 @@ NOTE = """::
     Variable name definitions::
 
         STACKLOSS - 10 times the percentage of ammonia going into the plant
-                    that escapes from the absoroption column
+                    that escapes from the absorption column
         AIRFLOW   - Rate of operation of the plant
         WATERTEMP - Cooling water temperature in the absorption tower
         ACIDCONC  - Acid concentration of circulating acid minus 50 times 10.

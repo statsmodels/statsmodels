@@ -57,10 +57,10 @@ def check_cont_fit(distname, arg):
         truearg = np.hstack([arg, [0.0, 1.0]])
         diff = est - truearg
         if np.any((np.abs(diff) - diffthreshold) > 0.0):
-            txt = "parameter: %s\n" % str(truearg)
-            txt += "estimated: %s\n" % str(est)
-            txt += "diff     : %s\n" % str(diff)
-            raise AssertionError("fit not very good in %s\n" % distfn.name + txt)
+            txt = f"parameter: {truearg!s}\n"
+            txt += f"estimated: {est!s}\n"
+            txt += f"diff     : {diff!s}\n"
+            raise AssertionError(f"fit not very good in {distfn.name}\n" + txt)
 
 
 if __name__ == "__main__":

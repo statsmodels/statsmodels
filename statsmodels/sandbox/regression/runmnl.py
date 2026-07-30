@@ -219,7 +219,7 @@ class RU2NMNL:
         else:
             keys.append(tree)
             self.probs[tree] = [
-                tree + "-prob" + "(%s)" % ", ".join(self.paramsind[tree])
+                tree + "-prob" + "({})".format(", ".join(self.paramsind[tree]))
             ]
             if testxb:
                 leavessum = sum(datadict[bi] for bi in tree)
@@ -343,11 +343,9 @@ print(clogit.fit())
 
 tree0 = ("top", [("Fly", ["Air"]), ("Ground", ["Train", "Car", "Bus"])])
 
-datadict = dict(zip(["Air", "Train", "Bus", "Car"], [xifloat[i] for i in range(4)]))
-
 # for testing only (mock that returns it's own name
 datadict = dict(
-    zip(["Air", "Train", "Bus", "Car"], ["Airdata", "Traindata", "Busdata", "Cardata"])
+    zip(["Air", "Train", "Bus", "Car"], ["Airdata", "Traindata", "Busdata", "Cardata"], strict=True)
 )
 
 datadict.update({"top": [], "Fly": [], "Ground": []})

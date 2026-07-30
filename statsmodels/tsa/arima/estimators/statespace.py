@@ -1,5 +1,5 @@
 """
-State space approach to estimating SARIMAX models.
+State space approach to estimating SARIMAX models
 
 Author: Chad Fulton
 License: BSD-3
@@ -17,12 +17,15 @@ def statespace(endog, exog=None, order=(0, 0, 0),
                enforce_stationarity=True, enforce_invertibility=True,
                concentrate_scale=False, start_params=None, fit_kwargs=None):
     """
-    Estimate SARIMAX parameters using state space methods.
+    Estimate SARIMAX parameters using state space methods
 
     Parameters
     ----------
     endog : array_like
         Input time series array.
+    exog : array_like, optional
+        Array of exogenous regressors. If not included, then `include_constant`
+        must be True, and then `exog` will only include the constant column.
     order : tuple, optional
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters. Default is (0, 0, 0).
@@ -59,7 +62,7 @@ def statespace(endog, exog=None, order=(0, 0, 0),
     other_results : Bunch
         Includes two components, `spec`, containing the `SARIMAXSpecification`
         instance corresponding to the input arguments; and
-        `state_space_results`, corresponding to the results from the underlying
+        `statespace_results`, corresponding to the results from the underlying
         state space model and Kalman filter / smoother.
 
     Notes

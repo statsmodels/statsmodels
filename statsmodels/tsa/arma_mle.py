@@ -11,7 +11,7 @@ TODO: check everywhere initialization of signal.lfilter
 
 class Arma:
     """
-    Removed in 0.14. Use SARIMAX, ARIMA or AutoReg.
+    Removed in 0.14. Use SARIMAX, ARIMA or AutoReg
 
     See Also
     --------

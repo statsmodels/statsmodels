@@ -1,5 +1,5 @@
 """
-Input/Output tools for working with binary data.
+Input/Output tools for working with binary data
 
 See Also
 --------
@@ -12,7 +12,7 @@ from statsmodels.iolib.openfile import get_file_obj
 
 def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
     """
-    Save an array to a text file.
+    Save an array to a text file
 
     This is just a copy of numpy.savetxt patched to support structured arrays
     or a header of names.  Does not include py3 support now in savetxt.
@@ -118,15 +118,14 @@ def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
         # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
         if isinstance(fmt, (list, tuple)):
             if len(fmt) != ncol:
-                raise AttributeError("fmt has wrong shape.  %s" % str(fmt))
+                raise AttributeError(f"fmt has wrong shape.  {fmt!s}")
             format = delimiter.join(fmt)
         elif isinstance(fmt, str):
             if fmt.count("%") == 1:
                 fmt = [fmt, ]*ncol
                 format = delimiter.join(fmt)
             elif fmt.count("%") != ncol:
-                raise AttributeError("fmt has wrong number of %% formats.  %s"
-                                     % fmt)
+                raise AttributeError(f"fmt has wrong number of % formats.  {fmt}")
             else:
                 format = fmt
 

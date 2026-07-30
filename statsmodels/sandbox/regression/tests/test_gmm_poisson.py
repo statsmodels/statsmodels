@@ -3,8 +3,9 @@
 TestGMMMultTwostepDefault() has lower precision
 
 """
-
 from statsmodels.compat.python import lmap
+
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -20,7 +21,7 @@ def get_data():
     import os
 
     curdir = os.path.split(__file__)[0]
-    dt = pd.read_csv(os.path.join(curdir, "racd10data_with_transformed.csv"))
+    dt = pd.read_csv(Path(curdir).joinpath("racd10data_with_transformed.csv"))
 
     # Transformations compared to original data
     # dt3['income'] /= 10.

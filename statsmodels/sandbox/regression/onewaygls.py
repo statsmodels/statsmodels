@@ -217,7 +217,7 @@ class OneWayLS:
 
         # Note: I'm keeping some duplication for testing
         pairs = np.triu_indices(len(self.unique), 1)
-        for ind1, ind2 in zip(*pairs):  # replace with group1, group2 in sorted(keys)
+        for ind1, ind2 in zip(*pairs, strict=True):  # replace with group1, group2 in sorted(keys)
             if ind1 == 0:
                 continue  # need comparison with benchmark/normalization group separate
             g1 = self.unique[ind1]
@@ -251,9 +251,9 @@ class OneWayLS:
         summarytable : list of tuples
            contains (pair, (fvalue, pvalue,df_denom, df_num)) for each f-test
 
-        Note
-        ----
-        This are the raw results and not formatted for nice printing.
+        Notes
+        -----
+        These are the raw results and not formatted for nice printing.
 
         """
         if not hasattr(self, "lsjoint"):
@@ -275,12 +275,12 @@ class OneWayLS:
         #            txt.append(fres.__str__())
         #            summarytable.append((group,(fres.fvalue, fres.pvalue, fres.df_denom, fres.df_num)))
         pairs = np.triu_indices(len(self.unique), 1)
-        for ind1, ind2 in zip(*pairs):  # replace with group1, group2 in sorted(keys)
+        for ind1, ind2 in zip(*pairs, strict=True):  # replace with group1, group2 in sorted(keys)
             g1 = self.unique[ind1]
             g2 = self.unique[ind2]
             txt.append(
                 "F-test for equality of coefficients between group"
-                " %s and group %s" % (g1, g2)
+                f" {g1} and group {g2}"
             )
             group = (g1, g2)
             fres = self.lsjoint.f_test(self.contrasts[group])

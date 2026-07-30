@@ -657,28 +657,28 @@ def printresults(sample, arg, bres, kind="bootstrap"):
     """
     print("true parameter value")
     print(arg)
-    print("MLE estimate of parameters using sample (nobs=%d)" % (nobs))
+    print(f"MLE estimate of parameters using sample (nobs={nobs:d})")
     argest = distr.fit_fr(sample, frozen=[np.nan, 0.0, 1.0])
     print(argest)
     if kind == "bootstrap":
         # bootstrap compares to estimate from sample
         arg = argest
 
-    print("%s distribution of parameter estimate (nrepl=%d)" % (kind, nrepl))
+    print(f"{kind} distribution of parameter estimate (nrepl={nrepl:d})")
     print(f"mean = {bres.mean(0):f}, bias={bres.mean(0)-arg:f}")
     print("median", np.median(bres, axis=0))
     print("var and std", bres.var(0), np.sqrt(bres.var(0)))
     bmse = ((bres - arg) ** 2).mean(0)
     print("mse, rmse", bmse, np.sqrt(bmse))
     bressorted = np.sort(bres)
-    print("%s confidence interval (90%% coverage)" % kind)
+    print(f"{kind} confidence interval (90% coverage)")
     print(bressorted[np.floor(nrepl * 0.05)], bressorted[np.floor(nrepl * 0.95)])
-    print("%s confidence interval (90%% coverage) normal approximation" % kind)
+    print(f"{kind} confidence interval (90% coverage) normal approximation")
     print(
         stats.norm.ppf(0.05, loc=bres.mean(), scale=bres.std()),
     )
     print(stats.norm.isf(0.05, loc=bres.mean(), scale=bres.std()))
-    print("Kolmogorov-Smirnov test for normality of %s distribution" % kind)
+    print(f"Kolmogorov-Smirnov test for normality of {kind} distribution")
     print(" - estimated parameters, p-values not really correct")
     print(stats.kstest(bres, "norm", (bres.mean(), bres.std())))
 

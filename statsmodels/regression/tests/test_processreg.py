@@ -29,19 +29,18 @@ def model1(noise):
     return mn_par, sc_par, sm_par, no_par
 
 
-def setup1(n, get_model, noise):
-
+def setup1(n, get_model, noise, rng):
     mn_par, sc_par, sm_par, no_par = get_model(noise)
 
     groups = np.kron(np.arange(n // 5), np.ones(5))
     time = np.kron(np.ones(n // 5), np.arange(5))
     time_z = (time - time.mean()) / time.std()
 
-    x_mean = np.random.normal(size=(n, len(mn_par)))
-    x_sc = np.random.normal(size=(n, len(sc_par)))
+    x_mean = rng.normal(size=(n, len(mn_par)))
+    x_sc = rng.normal(size=(n, len(sc_par)))
     x_sc[:, 0] = 1
     x_sc[:, 1] = time_z
-    x_sm = np.random.normal(size=(n, len(sm_par)))
+    x_sm = rng.normal(size=(n, len(sm_par)))
     x_sm[:, 0] = 1
     x_sm[:, 1] = time_z
 
@@ -50,7 +49,7 @@ def setup1(n, get_model, noise):
     sm = np.exp(np.dot(x_sm, sm_par))
 
     if noise:
-        x_no = np.random.normal(size=(n, len(no_par)))
+        x_no = rng.normal(size=(n, len(no_par)))
         x_no[:, 0] = 1
         x_no[:, 1] = time_z
         no = np.exp(np.dot(x_no, no_par))
@@ -68,18 +67,18 @@ def setup1(n, get_model, noise):
     for ii in ix.values():
         c = gc.get_cov(time[ii], sc[ii], sm[ii])
         r = np.linalg.cholesky(c)
-        y[ii] += np.dot(r, np.random.normal(size=len(ii)))
+        y[ii] += np.dot(r, rng.normal(size=len(ii)))
 
     # Additive white noise
     if noise:
-        y += no * np.random.normal(size=y.shape)
+        y += no * rng.normal(size=y.shape)
 
     return y, x_mean, x_sc, x_sm, x_no, time, groups
 
 
-def run_arrays(n, get_model, noise):
+def run_arrays(n, get_model, noise, rng):
 
-    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise, rng)
 
     preg = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
 
@@ -91,9 +90,9 @@ def run_arrays(n, get_model, noise):
 @pytest.mark.parametrize("noise", [False, True])
 def test_arrays(noise):
 
-    np.random.seed(8234)
+    rs = np.random.RandomState(8234)
 
-    f = run_arrays(1000, model1, noise)
+    f = run_arrays(1000, model1, noise, rng=rs)
     mod = f.model
 
     f.summary()  # Smoke test
@@ -103,8 +102,7 @@ def test_arrays(noise):
     assert_allclose(f.params, epar, atol=0.3, rtol=0.3)
 
     # Test the fitted covariance matrix
-    cv = f.covariance(mod.time[0:5], mod.exog_scale[0:5, :],
-                      mod.exog_smooth[0:5, :])
+    cv = f.covariance(mod.time[0:5], mod.exog_scale[0:5, :], mod.exog_smooth[0:5, :])
     assert_allclose(cv, cv.T)  # Check symmetry
     a, _ = np.linalg.eig(cv)
     assert_equal(a > 0, True)  # Check PSD
@@ -121,23 +119,25 @@ def test_arrays(noise):
     f.t_test(np.eye(len(f.params)))
 
 
-def run_formula(n, get_model, noise):
+def run_formula(n, get_model, noise, rng):
 
-    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(n, get_model, noise, rng)
 
-    df = pd.DataFrame({
-        "y": y,
-        "x1": x_mean[:, 0],
-        "x2": x_mean[:, 1],
-        "x3": x_mean[:, 2],
-        "x4": x_mean[:, 3],
-        "xsc1": x_sc[:, 0],
-        "xsc2": x_sc[:, 1],
-        "xsm1": x_sm[:, 0],
-        "xsm2": x_sm[:, 1],
-        "time": time,
-        "groups": groups
-    })
+    df = pd.DataFrame(
+        {
+            "y": y,
+            "x1": x_mean[:, 0],
+            "x2": x_mean[:, 1],
+            "x3": x_mean[:, 2],
+            "x4": x_mean[:, 3],
+            "xsc1": x_sc[:, 0],
+            "xsc2": x_sc[:, 1],
+            "xsm1": x_sm[:, 0],
+            "xsm2": x_sm[:, 1],
+            "time": time,
+            "groups": groups,
+        }
+    )
 
     if noise:
         df["xno1"] = x_no[:, 0]
@@ -159,7 +159,8 @@ def run_formula(n, get_model, noise):
         smooth_formula=smooth_formula,
         noise_formula=noise_formula,
         time="time",
-        groups="groups")
+        groups="groups",
+    )
     f = preg.fit()
 
     return f, df
@@ -170,9 +171,9 @@ def run_formula(n, get_model, noise):
 @pytest.mark.parametrize("noise", [False, True])
 def test_formulas(noise):
 
-    np.random.seed(8789)
+    rs = np.random.RandomState(8789)
 
-    f, df = run_formula(1000, model1, noise)
+    f, df = run_formula(1000, model1, noise, rng=rs)
     mod = f.model
 
     f.summary()  # Smoke test
@@ -182,10 +183,8 @@ def test_formulas(noise):
     assert_allclose(f.params, epar, atol=0.1, rtol=1)
 
     # Test the fitted covariance matrix
-    exog_scale = pd.DataFrame(mod.exog_scale[0:5, :],
-                              columns=["xsc1", "xsc2"])
-    exog_smooth = pd.DataFrame(mod.exog_smooth[0:5, :],
-                               columns=["xsm1", "xsm2"])
+    exog_scale = pd.DataFrame(mod.exog_scale[0:5, :], columns=["xsc1", "xsc2"])
+    exog_smooth = pd.DataFrame(mod.exog_smooth[0:5, :], columns=["xsm1", "xsm2"])
     cv = f.covariance(mod.time[0:5], exog_scale, exog_smooth)
     assert_allclose(cv, cv.T)
     a, _ = np.linalg.eig(cv)
@@ -206,8 +205,8 @@ def test_formulas(noise):
 # Test the score functions using numerical derivatives.
 @pytest.mark.parametrize("noise", [False, True])
 def test_score_numdiff(noise):
-
-    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(1000, model1, noise)
+    rs = np.random.RandomState(3422121)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(1000, model1, noise, rng=rs)
 
     preg = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
 
@@ -218,12 +217,12 @@ def test_score_numdiff(noise):
     if noise:
         q += x_no.shape[1]
 
-    np.random.seed(342)
+    rs = np.random.RandomState(342)
 
     atol = 2e-3 if PLATFORM_OSX else 1e-2
     for _ in range(5):
         par0 = preg._get_start()
-        par = par0 + 0.1 * np.random.normal(size=q)
+        par = par0 + 0.1 * rs.normal(size=q)
         score = preg.score(par)
         score_nd = nd.approx_fprime(par, loglike, epsilon=1e-7)
         assert_allclose(score, score_nd, atol=atol, rtol=1e-4)

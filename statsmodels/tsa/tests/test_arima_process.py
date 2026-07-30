@@ -353,12 +353,12 @@ class TestArmaProcess:
         process1 = ArmaProcess.from_coeffs([0.9], [0.2])
         out = process1.__str__()
         print(out)
-        assert (out.find("AR: [1.0, -0.9]") != -1)
-        assert (out.find("MA: [1.0, 0.2]") != -1)
+        assert out.find("AR: [1.0, -0.9]") != -1
+        assert out.find("MA: [1.0, 0.2]") != -1
 
         out = process1.__repr__()
-        assert (out.find("nobs=100") != -1)
-        assert (out.find("at " + str(hex(id(process1)))) != -1)
+        assert out.find("nobs=100") != -1
+        assert out.find("at " + str(hex(id(process1)))) != -1
 
     def test_acf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -367,7 +367,7 @@ class TestArmaProcess:
         assert_array_almost_equal(acf, expected)
 
         acf = process1.acf()
-        assert (acf.shape[0] == process1.nobs)
+        assert acf.shape[0] == process1.nobs
 
     def test_pacf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -376,7 +376,7 @@ class TestArmaProcess:
         assert_array_almost_equal(pacf, expected)
 
         pacf = process1.pacf()
-        assert (pacf.shape[0] == process1.nobs)
+        assert pacf.shape[0] == process1.nobs
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])
@@ -461,7 +461,8 @@ def test_from_estimation(d, seasonal):
     ma = [0.4] if not seasonal else [0.4, 0, 0, 0.2, -0.08]
     ap = ArmaProcess.from_coeffs(ar, ma, 500)
     idx = pd.date_range(dt.datetime(1900, 1, 1), periods=500, freq=QUARTER_END)
-    data = ap.generate_sample(500)
+    rs = np.random.RandomState(12345111)
+    data = ap.generate_sample(500, distrvs=rs.standard_normal)
     if d == 1:
         data = np.cumsum(data)
     data = pd.Series(data, index=idx)

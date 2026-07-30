@@ -4,6 +4,7 @@ Basic tests for the BM model
 These test standard that the state space model is set up as desired, that
 expected exceptions are raised, etc.
 """
+
 from statsmodels.compat.pandas import (
     MONTH_END,
     QUARTER_END,
@@ -36,17 +37,16 @@ def test_default():
     index_M = pd.period_range(start="2000", periods=12, freq="M")
     index_Q = pd.period_range(start="2000", periods=4, freq="Q")
 
-    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
-                         columns=["M0", "M1"])
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M, columns=["M0", "M1"])
     dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=["Q0", "Q1"])
     # Add some noise so the variables aren't constants
-    dta_M.iloc[0] = 1.
-    dta_Q.iloc[1] = 1.
+    dta_M.iloc[0] = 1.0
+    dta_Q.iloc[1] = 1.0
 
     # Create the model instance
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        dta_M, endog_quarterly=dta_Q, factors=1, factor_orders=1,
-        idiosyncratic_ar1=True)
+        dta_M, endog_quarterly=dta_Q, factors=1, factor_orders=1, idiosyncratic_ar1=True
+    )
 
     # Test dimensions
     assert_equal(mod.k_endog, 2 + 2)
@@ -55,20 +55,31 @@ def test_default():
 
     # Test names
     assert_equal(mod.endog_names, ["M0", "M1", "Q0", "Q1"])
-    desired = (["0", "L1.0", "L2.0", "L3.0", "L4.0"] +
-               ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"] +
-               ["L1.eps_Q.Q0", "L1.eps_Q.Q1"] +
-               ["L2.eps_Q.Q0", "L2.eps_Q.Q1"] +
-               ["L3.eps_Q.Q0", "L3.eps_Q.Q1"] +
-               ["L4.eps_Q.Q0", "L4.eps_Q.Q1"])
+    desired = (
+        ["0", "L1.0", "L2.0", "L3.0", "L4.0"]
+        + ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"]
+        + ["L1.eps_Q.Q0", "L1.eps_Q.Q1"]
+        + ["L2.eps_Q.Q0", "L2.eps_Q.Q1"]
+        + ["L3.eps_Q.Q0", "L3.eps_Q.Q1"]
+        + ["L4.eps_Q.Q0", "L4.eps_Q.Q1"]
+    )
     assert_equal(mod.state_names, desired)
     desired = [
-        "loading.0->M0", "loading.0->M1", "loading.0->Q0",
+        "loading.0->M0",
+        "loading.0->M1",
+        "loading.0->Q0",
         "loading.0->Q1",
-        "L1.0->0", "fb(0).cov.chol[1,1]",
-        "L1.eps_M.M0", "L1.eps_M.M1",
-        "L1.eps_Q.Q0", "L1.eps_Q.Q1",
-        "sigma2.M0", "sigma2.M1", "sigma2.Q0", "sigma2.Q1"]
+        "L1.0->0",
+        "fb(0).cov.chol[1,1]",
+        "L1.eps_M.M0",
+        "L1.eps_M.M1",
+        "L1.eps_Q.Q0",
+        "L1.eps_Q.Q1",
+        "sigma2.M0",
+        "sigma2.M1",
+        "sigma2.Q0",
+        "sigma2.Q1",
+    ]
     assert_equal(mod.param_names, desired)
 
     # Test fixed elements of state space representation
@@ -103,11 +114,86 @@ def test_default():
     assert_allclose(mod["obs_intercept"], 0)
 
     # -> design
-    desired = np.array([
-        [2., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [3., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [4., 8., 12, 8., 4., 0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1., 0.],
-        [5., 10, 15, 10, 5., 0., 0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1.]])
+    desired = np.array(
+        [
+            [
+                2.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ],
+            [
+                3.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+            ],
+            [
+                4.0,
+                8.0,
+                12,
+                8.0,
+                4.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                2.0,
+                0.0,
+                3.0,
+                0.0,
+                2.0,
+                0.0,
+                1.0,
+                0.0,
+            ],
+            [
+                5.0,
+                10,
+                15,
+                10,
+                5.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                2.0,
+                0.0,
+                3.0,
+                0.0,
+                2.0,
+                0.0,
+                1.0,
+            ],
+        ]
+    )
     assert_allclose(mod["design"], desired)
 
     # -> obs_cov
@@ -117,35 +203,42 @@ def test_default():
     assert_allclose(mod["state_intercept"], 0)
 
     # -> transition
-    desired = np.array([
-        [6., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 8., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 9., 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 11., 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1., 0, 0]])
+    desired = np.array(
+        [
+            [6.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 8.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 9.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 11.0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0],
+        ]
+    )
     assert_allclose(mod["transition"], desired)
 
     # -> selection
     assert_allclose(np.sum(mod["selection"]), 5)
 
     # -> state_cov
-    desired = np.array([[49., 0., 0., 0., 0.],
-                        [0., 12., 0., 0., 0.],
-                        [0., 0., 13., 0., 0.],
-                        [0., 0., 0., 14., 0.],
-                        [0., 0., 0., 0., 15.]])
+    desired = np.array(
+        [
+            [49.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 12.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 13.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 14.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 15.0],
+        ]
+    )
     assert_allclose(mod["state_cov"], desired)
 
 
@@ -157,17 +250,20 @@ def test_k_factors_gt1():
     index_M = pd.period_range(start="2000", periods=12, freq="M")
     index_Q = pd.period_range(start="2000", periods=4, freq="Q")
 
-    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
-                         columns=["M0", "M1"])
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M, columns=["M0", "M1"])
     dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=["Q0", "Q1"])
     # Add some noise so the variables aren't constants
-    dta_M.iloc[0] = 1.
-    dta_Q.iloc[1] = 1.
+    dta_M.iloc[0] = 1.0
+    dta_Q.iloc[1] = 1.0
 
     # Create the model instance
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        dta_M, endog_quarterly=dta_Q, factors=2, factor_orders={("0", "1"): 1},
-        idiosyncratic_ar1=True)
+        dta_M,
+        endog_quarterly=dta_Q,
+        factors=2,
+        factor_orders={("0", "1"): 1},
+        idiosyncratic_ar1=True,
+    )
 
     # Test dimensions
     assert_equal(mod.k_endog, 2 + 2)
@@ -176,24 +272,40 @@ def test_k_factors_gt1():
 
     # Test names
     assert_equal(mod.endog_names, ["M0", "M1", "Q0", "Q1"])
-    desired = (["0", "1", "L1.0", "L1.1", "L2.0", "L2.1",
-                "L3.0", "L3.1", "L4.0", "L4.1"] +
-               ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"] +
-               ["L1.eps_Q.Q0", "L1.eps_Q.Q1"] +
-               ["L2.eps_Q.Q0", "L2.eps_Q.Q1"] +
-               ["L3.eps_Q.Q0", "L3.eps_Q.Q1"] +
-               ["L4.eps_Q.Q0", "L4.eps_Q.Q1"])
+    desired = (
+        ["0", "1", "L1.0", "L1.1", "L2.0", "L2.1", "L3.0", "L3.1", "L4.0", "L4.1"]
+        + ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"]
+        + ["L1.eps_Q.Q0", "L1.eps_Q.Q1"]
+        + ["L2.eps_Q.Q0", "L2.eps_Q.Q1"]
+        + ["L3.eps_Q.Q0", "L3.eps_Q.Q1"]
+        + ["L4.eps_Q.Q0", "L4.eps_Q.Q1"]
+    )
     assert_equal(mod.state_names, desired)
     desired = [
-        "loading.0->M0", "loading.1->M0", "loading.0->M1",
+        "loading.0->M0",
+        "loading.1->M0",
+        "loading.0->M1",
         "loading.1->M1",
-        "loading.0->Q0", "loading.1->Q0", "loading.0->Q1",
+        "loading.0->Q0",
+        "loading.1->Q0",
+        "loading.0->Q1",
         "loading.1->Q1",
-        "L1.0->0", "L1.1->0", "L1.0->1", "L1.1->1",
-        "fb(0).cov.chol[1,1]", "fb(0).cov.chol[2,1]", "fb(0).cov.chol[2,2]",
-        "L1.eps_M.M0", "L1.eps_M.M1",
-        "L1.eps_Q.Q0", "L1.eps_Q.Q1",
-        "sigma2.M0", "sigma2.M1", "sigma2.Q0", "sigma2.Q1"]
+        "L1.0->0",
+        "L1.1->0",
+        "L1.0->1",
+        "L1.1->1",
+        "fb(0).cov.chol[1,1]",
+        "fb(0).cov.chol[2,1]",
+        "fb(0).cov.chol[2,2]",
+        "L1.eps_M.M0",
+        "L1.eps_M.M1",
+        "L1.eps_Q.Q0",
+        "L1.eps_Q.Q1",
+        "sigma2.M0",
+        "sigma2.M1",
+        "sigma2.Q0",
+        "sigma2.Q1",
+    ]
     assert_equal(mod.param_names, desired)
 
     # Test fixed elements of state space representation
@@ -228,17 +340,23 @@ def test_k_factors_gt1():
     assert_allclose(mod["obs_intercept"], 0)
 
     # -> design
-    desired = np.array([
-        [2., 3., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [4., 5., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [6., 7., 12, 14, 18, 21, 12, 14, 6., 7.],
-        [8., 9., 16, 18, 24, 27, 16, 18, 8., 9.]])
+    desired = np.array(
+        [
+            [2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [4.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [6.0, 7.0, 12, 14, 18, 21, 12, 14, 6.0, 7.0],
+            [8.0, 9.0, 16, 18, 24, 27, 16, 18, 8.0, 9.0],
+        ]
+    )
     assert_allclose(mod["design", :, :10], desired)
-    desired = np.array([
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1., 0.],
-        [0., 0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1.]])
+    desired = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0],
+        ]
+    )
     assert_allclose(mod["design", :, 10:], desired)
 
     # -> obs_cov
@@ -248,47 +366,56 @@ def test_k_factors_gt1():
     assert_allclose(mod["state_intercept"], 0)
 
     # -> transition
-    desired = np.array([
-        [10, 11, 0., 0., 0., 0., 0., 0., 0., 0.],
-        [12, 13, 0., 0., 0., 0., 0., 0., 0., 0.],
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
+    desired = np.array(
+        [
+            [10, 11, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [12, 13, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["transition", :10, :10], desired)
     assert_allclose(mod["transition", :10, 10:], 0)
     assert_allclose(mod["transition", 10:, :10], 0)
-    desired = np.array([
-        [17, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 18, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 19, 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 20, 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
+    desired = np.array(
+        [
+            [17, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 18, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 19, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 20, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["transition", 10:, 10:], desired)
 
     # -> selection
     assert_allclose(np.sum(mod["selection"]), 6)
 
     # -> state_cov
-    L = np.array([[14., 0],
-                  [15., 16.]])
-    desired = np.array([[0., 0., 0., 0., 0., 0.],
-                        [0., 0., 0., 0., 0., 0.],
-                        [0., 0., 21, 0., 0., 0.],
-                        [0., 0., 0., 22, 0., 0.],
-                        [0., 0., 0., 0., 23, 0.],
-                        [0., 0., 0., 0., 0., 24]])
+    L = np.array([[14.0, 0], [15.0, 16.0]])
+    desired = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 21, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 22, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 23, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 24],
+        ]
+    )
     desired[:2, :2] = np.dot(L, L.T)
     assert_allclose(mod["state_cov"], desired)
 
@@ -301,17 +428,16 @@ def test_factor_order_gt1():
     index_M = pd.period_range(start="2000", periods=12, freq="M")
     index_Q = pd.period_range(start="2000", periods=4, freq="Q")
 
-    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
-                         columns=["M0", "M1"])
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M, columns=["M0", "M1"])
     dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=["Q0", "Q1"])
     # Add some noise so the variables aren't constants
-    dta_M.iloc[0] = 1.
-    dta_Q.iloc[1] = 1.
+    dta_M.iloc[0] = 1.0
+    dta_Q.iloc[1] = 1.0
 
     # Create the model instance
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        dta_M, endog_quarterly=dta_Q, factors=1, factor_orders=6,
-        idiosyncratic_ar1=True)
+        dta_M, endog_quarterly=dta_Q, factors=1, factor_orders=6, idiosyncratic_ar1=True
+    )
 
     # Test dimensions
     assert_equal(mod.k_endog, 2 + 2)
@@ -320,23 +446,36 @@ def test_factor_order_gt1():
 
     # Test names
     assert_equal(mod.endog_names, ["M0", "M1", "Q0", "Q1"])
-    desired = (["0", "L1.0", "L2.0", "L3.0", "L4.0",
-                "L5.0"] +
-               ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"] +
-               ["L1.eps_Q.Q0", "L1.eps_Q.Q1"] +
-               ["L2.eps_Q.Q0", "L2.eps_Q.Q1"] +
-               ["L3.eps_Q.Q0", "L3.eps_Q.Q1"] +
-               ["L4.eps_Q.Q0", "L4.eps_Q.Q1"])
+    desired = (
+        ["0", "L1.0", "L2.0", "L3.0", "L4.0", "L5.0"]
+        + ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"]
+        + ["L1.eps_Q.Q0", "L1.eps_Q.Q1"]
+        + ["L2.eps_Q.Q0", "L2.eps_Q.Q1"]
+        + ["L3.eps_Q.Q0", "L3.eps_Q.Q1"]
+        + ["L4.eps_Q.Q0", "L4.eps_Q.Q1"]
+    )
     assert_equal(mod.state_names, desired)
     desired = [
-        "loading.0->M0", "loading.0->M1", "loading.0->Q0",
+        "loading.0->M0",
+        "loading.0->M1",
+        "loading.0->Q0",
         "loading.0->Q1",
-        "L1.0->0", "L2.0->0", "L3.0->0", "L4.0->0",
-        "L5.0->0", "L6.0->0",
+        "L1.0->0",
+        "L2.0->0",
+        "L3.0->0",
+        "L4.0->0",
+        "L5.0->0",
+        "L6.0->0",
         "fb(0).cov.chol[1,1]",
-        "L1.eps_M.M0", "L1.eps_M.M1",
-        "L1.eps_Q.Q0", "L1.eps_Q.Q1",
-        "sigma2.M0", "sigma2.M1", "sigma2.Q0", "sigma2.Q1"]
+        "L1.eps_M.M0",
+        "L1.eps_M.M1",
+        "L1.eps_Q.Q0",
+        "L1.eps_Q.Q1",
+        "sigma2.M0",
+        "sigma2.M1",
+        "sigma2.Q0",
+        "sigma2.Q1",
+    ]
     assert_equal(mod.param_names, desired)
 
     # Test fixed elements of state space representation
@@ -371,17 +510,23 @@ def test_factor_order_gt1():
     assert_allclose(mod["obs_intercept"], 0)
 
     # -> design
-    desired = np.array([
-        [2., 0., 0., 0., 0., 0.],
-        [3., 0., 0., 0., 0., 0.],
-        [4., 8., 12, 8., 4., 0.],
-        [5., 10, 15, 10, 5., 0.]])
+    desired = np.array(
+        [
+            [2.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [4.0, 8.0, 12, 8.0, 4.0, 0.0],
+            [5.0, 10, 15, 10, 5.0, 0.0],
+        ]
+    )
     assert_allclose(mod["design", :, :6], desired)
-    desired = np.array([
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1., 0.],
-        [0., 0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1.]])
+    desired = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0],
+        ]
+    )
     assert_allclose(mod["design", :, 6:], desired)
 
     # -> obs_cov
@@ -391,37 +536,385 @@ def test_factor_order_gt1():
     assert_allclose(mod["state_intercept"], 0)
 
     # -> transition
-    desired = np.array([
-        [6., 7., 8., 9., 10, 11, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 13, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 14, 0., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 15, 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 16, 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0, 0],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0, 0]
-    ])
+    desired = np.array(
+        [
+            [
+                6.0,
+                7.0,
+                8.0,
+                9.0,
+                10,
+                11,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                13,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                14,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                15,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                16,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0,
+                0,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0,
+                0,
+            ],
+        ]
+    )
     assert_allclose(mod["transition"], desired)
 
     # -> selection
     assert_allclose(np.sum(mod["selection"]), 5)
 
     # -> state_cov
-    desired = np.array([[144, 0., 0., 0., 0.],
-                        [0., 17., 0., 0., 0.],
-                        [0., 0., 18., 0., 0.],
-                        [0., 0., 0., 19., 0.],
-                        [0., 0., 0., 0., 20.]])
+    desired = np.array(
+        [
+            [144, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 17.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 18.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 19.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 20.0],
+        ]
+    )
     assert_allclose(mod["state_cov"], desired)
 
 
@@ -433,17 +926,20 @@ def test_factor_order_12():
     index_M = pd.period_range(start="2000", periods=12, freq="M")
     index_Q = pd.period_range(start="2000", periods=4, freq="Q")
 
-    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
-                         columns=["M0", "M1"])
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M, columns=["M0", "M1"])
     dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=["Q0", "Q1"])
     # Add some noise so the variables aren't constants
-    dta_M.iloc[0] = 1.
-    dta_Q.iloc[1] = 1.
+    dta_M.iloc[0] = 1.0
+    dta_Q.iloc[1] = 1.0
 
     # Create the model instance
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        dta_M, endog_quarterly=dta_Q, factors=2, factor_orders={"0": 2},
-        idiosyncratic_ar1=True)
+        dta_M,
+        endog_quarterly=dta_Q,
+        factors=2,
+        factor_orders={"0": 2},
+        idiosyncratic_ar1=True,
+    )
 
     # Test dimensions
     assert_equal(mod.k_endog, 2 + 2)
@@ -452,22 +948,38 @@ def test_factor_order_12():
 
     # Test names
     assert_equal(mod.endog_names, ["M0", "M1", "Q0", "Q1"])
-    desired = (["0", "L1.0", "L2.0", "L3.0", "L4.0", "1",
-                "L1.1", "L2.1", "L3.1", "L4.1"] +
-               ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"] +
-               ["L1.eps_Q.Q0", "L1.eps_Q.Q1"] +
-               ["L2.eps_Q.Q0", "L2.eps_Q.Q1"] +
-               ["L3.eps_Q.Q0", "L3.eps_Q.Q1"] +
-               ["L4.eps_Q.Q0", "L4.eps_Q.Q1"])
+    desired = (
+        ["0", "L1.0", "L2.0", "L3.0", "L4.0", "1", "L1.1", "L2.1", "L3.1", "L4.1"]
+        + ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"]
+        + ["L1.eps_Q.Q0", "L1.eps_Q.Q1"]
+        + ["L2.eps_Q.Q0", "L2.eps_Q.Q1"]
+        + ["L3.eps_Q.Q0", "L3.eps_Q.Q1"]
+        + ["L4.eps_Q.Q0", "L4.eps_Q.Q1"]
+    )
     assert_equal(mod.state_names, desired)
     desired = [
-        "loading.0->M0", "loading.1->M0", "loading.0->M1", "loading.1->M1",
-        "loading.0->Q0", "loading.1->Q0", "loading.0->Q1", "loading.1->Q1",
-        "L1.0->0", "L2.0->0", "L1.1->1",
-        "fb(0).cov.chol[1,1]", "fb(1).cov.chol[1,1]",
-        "L1.eps_M.M0", "L1.eps_M.M1",
-        "L1.eps_Q.Q0", "L1.eps_Q.Q1",
-        "sigma2.M0", "sigma2.M1", "sigma2.Q0", "sigma2.Q1"]
+        "loading.0->M0",
+        "loading.1->M0",
+        "loading.0->M1",
+        "loading.1->M1",
+        "loading.0->Q0",
+        "loading.1->Q0",
+        "loading.0->Q1",
+        "loading.1->Q1",
+        "L1.0->0",
+        "L2.0->0",
+        "L1.1->1",
+        "fb(0).cov.chol[1,1]",
+        "fb(1).cov.chol[1,1]",
+        "L1.eps_M.M0",
+        "L1.eps_M.M1",
+        "L1.eps_Q.Q0",
+        "L1.eps_Q.Q1",
+        "sigma2.M0",
+        "sigma2.M1",
+        "sigma2.Q0",
+        "sigma2.Q1",
+    ]
     assert_equal(mod.param_names, desired)
 
     # Test fixed elements of state space representation
@@ -505,17 +1017,20 @@ def test_k_factors_gt1_factor_order_gt1():
     index_M = pd.period_range(start="2000", periods=12, freq="M")
     index_Q = pd.period_range(start="2000", periods=4, freq="Q")
 
-    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
-                         columns=["M0", "M1"])
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M, columns=["M0", "M1"])
     dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=["Q0", "Q1"])
     # Add some noise so the variables aren't constants
-    dta_M.iloc[0] = 1.
-    dta_Q.iloc[1] = 1.
+    dta_M.iloc[0] = 1.0
+    dta_Q.iloc[1] = 1.0
 
     # Create the model instance
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        dta_M, endog_quarterly=dta_Q, factors=2, factor_orders={("0", "1"): 6},
-        idiosyncratic_ar1=True)
+        dta_M,
+        endog_quarterly=dta_Q,
+        factors=2,
+        factor_orders={("0", "1"): 6},
+        idiosyncratic_ar1=True,
+    )
 
     # Test dimensions
     assert_equal(mod.k_endog, 2 + 2)
@@ -524,30 +1039,73 @@ def test_k_factors_gt1_factor_order_gt1():
 
     # Test names
     assert_equal(mod.endog_names, ["M0", "M1", "Q0", "Q1"])
-    desired = (["0", "1", "L1.0", "L1.1", "L2.0", "L2.1",
-                "L3.0", "L3.1", "L4.0", "L4.1", "L5.0",
-                "L5.1"] +
-               ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"] +
-               ["L1.eps_Q.Q0", "L1.eps_Q.Q1"] +
-               ["L2.eps_Q.Q0", "L2.eps_Q.Q1"] +
-               ["L3.eps_Q.Q0", "L3.eps_Q.Q1"] +
-               ["L4.eps_Q.Q0", "L4.eps_Q.Q1"])
+    desired = (
+        [
+            "0",
+            "1",
+            "L1.0",
+            "L1.1",
+            "L2.0",
+            "L2.1",
+            "L3.0",
+            "L3.1",
+            "L4.0",
+            "L4.1",
+            "L5.0",
+            "L5.1",
+        ]
+        + ["eps_M.M0", "eps_M.M1", "eps_Q.Q0", "eps_Q.Q1"]
+        + ["L1.eps_Q.Q0", "L1.eps_Q.Q1"]
+        + ["L2.eps_Q.Q0", "L2.eps_Q.Q1"]
+        + ["L3.eps_Q.Q0", "L3.eps_Q.Q1"]
+        + ["L4.eps_Q.Q0", "L4.eps_Q.Q1"]
+    )
     assert_equal(mod.state_names, desired)
     desired = [
-        "loading.0->M0", "loading.1->M0", "loading.0->M1",
+        "loading.0->M0",
+        "loading.1->M0",
+        "loading.0->M1",
         "loading.1->M1",
-        "loading.0->Q0", "loading.1->Q0", "loading.0->Q1",
+        "loading.0->Q0",
+        "loading.1->Q0",
+        "loading.0->Q1",
         "loading.1->Q1",
-        "L1.0->0", "L1.1->0", "L2.0->0", "L2.1->0",
-        "L3.0->0", "L3.1->0", "L4.0->0", "L4.1->0",
-        "L5.0->0", "L5.1->0", "L6.0->0", "L6.1->0",
-        "L1.0->1", "L1.1->1", "L2.0->1", "L2.1->1",
-        "L3.0->1", "L3.1->1", "L4.0->1", "L4.1->1",
-        "L5.0->1", "L5.1->1", "L6.0->1", "L6.1->1",
-        "fb(0).cov.chol[1,1]", "fb(0).cov.chol[2,1]", "fb(0).cov.chol[2,2]",
-        "L1.eps_M.M0", "L1.eps_M.M1",
-        "L1.eps_Q.Q0", "L1.eps_Q.Q1",
-        "sigma2.M0", "sigma2.M1", "sigma2.Q0", "sigma2.Q1"]
+        "L1.0->0",
+        "L1.1->0",
+        "L2.0->0",
+        "L2.1->0",
+        "L3.0->0",
+        "L3.1->0",
+        "L4.0->0",
+        "L4.1->0",
+        "L5.0->0",
+        "L5.1->0",
+        "L6.0->0",
+        "L6.1->0",
+        "L1.0->1",
+        "L1.1->1",
+        "L2.0->1",
+        "L2.1->1",
+        "L3.0->1",
+        "L3.1->1",
+        "L4.0->1",
+        "L4.1->1",
+        "L5.0->1",
+        "L5.1->1",
+        "L6.0->1",
+        "L6.1->1",
+        "fb(0).cov.chol[1,1]",
+        "fb(0).cov.chol[2,1]",
+        "fb(0).cov.chol[2,2]",
+        "L1.eps_M.M0",
+        "L1.eps_M.M1",
+        "L1.eps_Q.Q0",
+        "L1.eps_Q.Q1",
+        "sigma2.M0",
+        "sigma2.M1",
+        "sigma2.Q0",
+        "sigma2.Q1",
+    ]
     assert_equal(mod.param_names, desired)
 
     # Test fixed elements of state space representation
@@ -582,17 +1140,23 @@ def test_k_factors_gt1_factor_order_gt1():
     assert_allclose(mod["obs_intercept"], 0)
 
     # -> design
-    desired = np.array([
-        [2., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [4., 5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [6., 7., 12, 14, 18, 21, 12, 14, 6., 7., 0., 0.],
-        [8., 9., 16, 18, 24, 27, 16, 18, 8., 9., 0., 0.]])
+    desired = np.array(
+        [
+            [2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [4.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [6.0, 7.0, 12, 14, 18, 21, 12, 14, 6.0, 7.0, 0.0, 0.0],
+            [8.0, 9.0, 16, 18, 24, 27, 16, 18, 8.0, 9.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["design", :, :12], desired)
-    desired = np.array([
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1., 0.],
-        [0., 0., 0., 1., 0., 2., 0., 3., 0., 2., 0., 1.]])
+    desired = np.array(
+        [
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0],
+        ]
+    )
     assert_allclose(mod["design", :, 12:], desired)
 
     # -> obs_cov
@@ -602,49 +1166,58 @@ def test_k_factors_gt1_factor_order_gt1():
     assert_allclose(mod["state_intercept"], 0)
 
     # -> transition
-    desired = np.array([
-        [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
-        [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
+    desired = np.array(
+        [
+            [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["transition", :12, :12], desired)
     assert_allclose(mod["transition", :12, 12:], 0)
     assert_allclose(mod["transition", 12:, :12], 0)
-    desired = np.array([
-        [37, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 38, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 39, 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 40, 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
+    desired = np.array(
+        [
+            [37, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 38, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 39, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 40, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["transition", 12:, 12:], desired)
 
     # -> selection
     assert_allclose(np.sum(mod["selection"]), 6)
 
     # -> state_cov
-    L = np.array([[34., 0],
-                  [35., 36.]])
-    desired = np.array([[0., 0., 0., 0., 0., 0.],
-                        [0., 0., 0., 0., 0., 0.],
-                        [0., 0., 41, 0., 0., 0.],
-                        [0., 0., 0., 42, 0., 0.],
-                        [0., 0., 0., 0., 43, 0.],
-                        [0., 0., 0., 0., 0., 44]])
+    L = np.array([[34.0, 0], [35.0, 36.0]])
+    desired = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 41, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 42, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 43, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 44],
+        ]
+    )
     desired[:2, :2] = np.dot(L, L.T)
     assert_allclose(mod["state_cov"], desired)
 
@@ -657,17 +1230,20 @@ def test_k_factors_gt1_factor_order_gt1_no_idiosyncratic_ar1():
     index_M = pd.period_range(start="2000", periods=12, freq="M")
     index_Q = pd.period_range(start="2000", periods=4, freq="Q")
 
-    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M,
-                         columns=["M0", "M1"])
+    dta_M = pd.DataFrame(np.zeros((12, 2)), index=index_M, columns=["M0", "M1"])
     dta_Q = pd.DataFrame(np.zeros((4, 2)), index=index_Q, columns=["Q0", "Q1"])
     # Add some noise so the variables aren't constants
-    dta_M.iloc[0] = 1.
-    dta_Q.iloc[1] = 1.
+    dta_M.iloc[0] = 1.0
+    dta_Q.iloc[1] = 1.0
 
     # Create the model instance
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        dta_M, endog_quarterly=dta_Q, factors=2, factor_orders={("0", "1"): 6},
-        idiosyncratic_ar1=False)
+        dta_M,
+        endog_quarterly=dta_Q,
+        factors=2,
+        factor_orders={("0", "1"): 6},
+        idiosyncratic_ar1=False,
+    )
 
     # Test dimensions
     assert_equal(mod.k_endog, 2 + 2)
@@ -676,28 +1252,69 @@ def test_k_factors_gt1_factor_order_gt1_no_idiosyncratic_ar1():
 
     # Test names
     assert_equal(mod.endog_names, ["M0", "M1", "Q0", "Q1"])
-    desired = (["0", "1", "L1.0", "L1.1", "L2.0", "L2.1",
-                "L3.0", "L3.1", "L4.0", "L4.1", "L5.0",
-                "L5.1"] +
-               ["eps_Q.Q0", "eps_Q.Q1"] +
-               ["L1.eps_Q.Q0", "L1.eps_Q.Q1"] +
-               ["L2.eps_Q.Q0", "L2.eps_Q.Q1"] +
-               ["L3.eps_Q.Q0", "L3.eps_Q.Q1"] +
-               ["L4.eps_Q.Q0", "L4.eps_Q.Q1"])
+    desired = (
+        [
+            "0",
+            "1",
+            "L1.0",
+            "L1.1",
+            "L2.0",
+            "L2.1",
+            "L3.0",
+            "L3.1",
+            "L4.0",
+            "L4.1",
+            "L5.0",
+            "L5.1",
+        ]
+        + ["eps_Q.Q0", "eps_Q.Q1"]
+        + ["L1.eps_Q.Q0", "L1.eps_Q.Q1"]
+        + ["L2.eps_Q.Q0", "L2.eps_Q.Q1"]
+        + ["L3.eps_Q.Q0", "L3.eps_Q.Q1"]
+        + ["L4.eps_Q.Q0", "L4.eps_Q.Q1"]
+    )
     assert_equal(mod.state_names, desired)
     desired = [
-        "loading.0->M0", "loading.1->M0", "loading.0->M1",
+        "loading.0->M0",
+        "loading.1->M0",
+        "loading.0->M1",
         "loading.1->M1",
-        "loading.0->Q0", "loading.1->Q0", "loading.0->Q1",
+        "loading.0->Q0",
+        "loading.1->Q0",
+        "loading.0->Q1",
         "loading.1->Q1",
-        "L1.0->0", "L1.1->0", "L2.0->0", "L2.1->0",
-        "L3.0->0", "L3.1->0", "L4.0->0", "L4.1->0",
-        "L5.0->0", "L5.1->0", "L6.0->0", "L6.1->0",
-        "L1.0->1", "L1.1->1", "L2.0->1", "L2.1->1",
-        "L3.0->1", "L3.1->1", "L4.0->1", "L4.1->1",
-        "L5.0->1", "L5.1->1", "L6.0->1", "L6.1->1",
-        "fb(0).cov.chol[1,1]", "fb(0).cov.chol[2,1]", "fb(0).cov.chol[2,2]",
-        "sigma2.M0", "sigma2.M1", "sigma2.Q0", "sigma2.Q1"]
+        "L1.0->0",
+        "L1.1->0",
+        "L2.0->0",
+        "L2.1->0",
+        "L3.0->0",
+        "L3.1->0",
+        "L4.0->0",
+        "L4.1->0",
+        "L5.0->0",
+        "L5.1->0",
+        "L6.0->0",
+        "L6.1->0",
+        "L1.0->1",
+        "L1.1->1",
+        "L2.0->1",
+        "L2.1->1",
+        "L3.0->1",
+        "L3.1->1",
+        "L4.0->1",
+        "L4.1->1",
+        "L5.0->1",
+        "L5.1->1",
+        "L6.0->1",
+        "L6.1->1",
+        "fb(0).cov.chol[1,1]",
+        "fb(0).cov.chol[2,1]",
+        "fb(0).cov.chol[2,2]",
+        "sigma2.M0",
+        "sigma2.M1",
+        "sigma2.Q0",
+        "sigma2.Q1",
+    ]
     assert_equal(mod.param_names, desired)
 
     # Test fixed elements of state space representation
@@ -730,17 +1347,23 @@ def test_k_factors_gt1_factor_order_gt1_no_idiosyncratic_ar1():
     assert_allclose(mod["obs_intercept"], 0)
 
     # -> design
-    desired = np.array([
-        [2., 3., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [4., 5., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [6., 7., 12, 14, 18, 21, 12, 14, 6., 7., 0., 0.],
-        [8., 9., 16, 18, 24, 27, 16, 18, 8., 9., 0., 0.]])
+    desired = np.array(
+        [
+            [2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [4.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [6.0, 7.0, 12, 14, 18, 21, 12, 14, 6.0, 7.0, 0.0, 0.0],
+            [8.0, 9.0, 16, 18, 24, 27, 16, 18, 8.0, 9.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["design", :, :12], desired)
-    desired = np.array([
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [1., 0., 2., 0., 3., 0., 2., 0., 1., 0.],
-        [0., 1., 0., 2., 0., 3., 0., 2., 0., 1.]])
+    desired = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 2.0, 0.0, 1.0],
+        ]
+    )
     assert_allclose(mod["design", :, 12:], desired)
 
     # -> obs_cov
@@ -750,45 +1373,54 @@ def test_k_factors_gt1_factor_order_gt1_no_idiosyncratic_ar1():
     assert_allclose(mod["state_intercept"], 0)
 
     # -> transition
-    desired = np.array([
-        [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
-        [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
+    desired = np.array(
+        [
+            [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["transition", :12, :12], desired)
     assert_allclose(mod["transition", :12, 12:], 0)
     assert_allclose(mod["transition", 12:, :12], 0)
-    desired = np.array([
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [1., 0., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 1., 0., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 1., 0., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 1., 0., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 1., 0., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 1., 0., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 1., 0., 0., 0.],
-        [0., 0., 0., 0., 0., 0., 0., 1., 0., 0.]])
+    desired = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+        ]
+    )
     assert_allclose(mod["transition", 12:, 12:], desired)
 
     # -> selection
     assert_allclose(np.sum(mod["selection"]), 4)
 
     # -> state_cov
-    L = np.array([[34., 0],
-                  [35., 36.]])
-    desired = np.array([[0., 0., 0., 0.],
-                        [0., 0., 0., 0.],
-                        [0., 0., 39, 0.],
-                        [0., 0., 0., 40]])
+    L = np.array([[34.0, 0], [35.0, 36.0]])
+    desired = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 39, 0.0],
+            [0.0, 0.0, 0.0, 40],
+        ]
+    )
     desired[:2, :2] = np.dot(L, L.T)
     assert_allclose(mod["state_cov"], desired)
 
@@ -797,18 +1429,23 @@ def test_invalid_model_specification():
     # Test for errors that can be raised for invalid model specifications
     # during __init__
     dta = np.zeros((10, 2))
-    dta[0] = 1.
+    dta[0] = 1.0
     dta_pd = pd.DataFrame(dta)
     dta_period_W = pd.DataFrame(
-        dta, index=pd.period_range(start="2000", periods=10, freq="W"))
+        dta, index=pd.period_range(start="2000", periods=10, freq="W")
+    )
     dta_date_W = pd.DataFrame(
-        dta, index=pd.date_range(start="2000", periods=10, freq="W"))
+        dta, index=pd.date_range(start="2000", periods=10, freq="W")
+    )
     dta_period_M = pd.DataFrame(
-        dta, index=pd.period_range(start="2000", periods=10, freq="M"))
+        dta, index=pd.period_range(start="2000", periods=10, freq="M")
+    )
     dta_date_M = pd.DataFrame(
-        dta, index=pd.date_range(start="2000", periods=10, freq=MONTH_END))
+        dta, index=pd.date_range(start="2000", periods=10, freq=MONTH_END)
+    )
     dta_period_Q = pd.DataFrame(
-        dta, index=pd.period_range(start="2000", periods=10, freq="Q"))
+        dta, index=pd.period_range(start="2000", periods=10, freq="Q")
+    )
 
     # Error if k_factors == 0
     msg = "The model must contain at least one factor."
@@ -817,39 +1454,46 @@ def test_invalid_model_specification():
 
     # Error if k_factors, factor_multiplicities, or factor_orders is something
     # besides int or dict
-    msg = ("`factors` argument must an integer number of factors, a list of"
-           " global factor names, or a dictionary, mapping observed variables"
-           " to factors.")
+    msg = (
+        "`factors` argument must an integer number of factors, a list of"
+        " global factor names, or a dictionary, mapping observed variables"
+        " to factors."
+    )
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factors=True)
     msg = "`factor_orders` argument must either be an integer or a dictionary."
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factor_orders=True)
-    msg = ("`factor_multiplicities` argument must either be an integer or a"
-           " dictionary.")
+    msg = "`factor_multiplicities` argument must either be an integer or a dictionary."
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factor_multiplicities=True)
 
     # Error if k_factors > k_endog_M
-    msg = fr"Number of factors \({dta.shape[1] + 1}\) cannot be greater than"
+    msg = rf"Number of factors \({dta.shape[1] + 1}\) cannot be greater than"
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factors=dta.shape[1] + 1)
 
     # Error if factor assigned to more than one block
     factor_orders = {("a", "b"): 1, "b": 2}
-    msg = ("Each factor can be assigned to at most one block of factors in"
-           " `factor_orders`.")
+    msg = (
+        "Each factor can be assigned to at most one block of factors in"
+        " `factor_orders`."
+    )
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(dta, factors=["a", "b"],
-                                          factor_orders=factor_orders)
+        dynamic_factor_mq.DynamicFactorMQ(
+            dta, factors=["a", "b"], factor_orders=factor_orders
+        )
 
     # Error if k_endog_monthly and endog_quarterly both specified
-    msg = ("If `endog_quarterly` is specified, then `endog` must contain only"
-           " monthly variables, and so `k_endog_monthly` cannot be specified"
-           " since it will be inferred from the shape of `endog`.")
+    msg = (
+        "If `endog_quarterly` is specified, then `endog` must contain only"
+        " monthly variables, and so `k_endog_monthly` cannot be specified"
+        " since it will be inferred from the shape of `endog`."
+    )
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(dta_period_M, k_endog_monthly=2,
-                                          endog_quarterly=dta)
+        dynamic_factor_mq.DynamicFactorMQ(
+            dta_period_M, k_endog_monthly=2, endog_quarterly=dta
+        )
 
     # Error if invalid standardize
     msg = "Invalid value passed for `standardize`."
@@ -857,19 +1501,24 @@ def test_invalid_model_specification():
         dynamic_factor_mq.DynamicFactorMQ(dta_period_M, standardize="a")
 
     # No factors for one endog
-    msg = ("If a `factors` dictionary is provided, then it must include"
-           " entries for each observed variable.")
+    msg = (
+        "If a `factors` dictionary is provided, then it must include"
+        " entries for each observed variable."
+    )
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta, factors={"y1": ["a"]})
-    msg = ("Each observed variable must be mapped to at"
-           " least one factor in the `factors` dictionary.")
+    msg = (
+        "Each observed variable must be mapped to at"
+        " least one factor in the `factors` dictionary."
+    )
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(
-            dta, factors={"y1": ["a"], "y2": []})
+        dynamic_factor_mq.DynamicFactorMQ(dta, factors={"y1": ["a"], "y2": []})
 
     # Singular column of data + standardization
-    msg = (r"Constant variable\(s\) found in observed variables, but constants"
-           " cannot be included in this model.")
+    msg = (
+        r"Constant variable\(s\) found in observed variables, but constants"
+        " cannot be included in this model."
+    )
     with pytest.raises(ValueError, match=msg):
         dynamic_factor_mq.DynamicFactorMQ(dta * 0)
 
@@ -897,21 +1546,17 @@ def test_invalid_model_specification():
     msg = "Index of given monthly dataset has a non-monthly frequency"
     # (test once with period index for monthly...)
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(
-            dta_period_W, endog_quarterly=dta_period_Q)
+        dynamic_factor_mq.DynamicFactorMQ(dta_period_W, endog_quarterly=dta_period_Q)
     # (...and once with date index for monthly)
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(
-            dta_date_W, endog_quarterly=dta_period_Q)
+        dynamic_factor_mq.DynamicFactorMQ(dta_date_W, endog_quarterly=dta_period_Q)
     msg = "Index of given quarterly dataset has a non-quarterly frequency"
     # (test once with period index for quarterly...)
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(
-            dta_period_M, endog_quarterly=dta_period_W)
+        dynamic_factor_mq.DynamicFactorMQ(dta_period_M, endog_quarterly=dta_period_W)
     # (and once with date index for quarterly...)
     with pytest.raises(ValueError, match=msg):
-        dynamic_factor_mq.DynamicFactorMQ(
-            dta_date_M, endog_quarterly=dta_date_W)
+        dynamic_factor_mq.DynamicFactorMQ(dta_date_M, endog_quarterly=dta_date_W)
 
 
 @pytest.mark.parametrize(
@@ -926,15 +1571,15 @@ def test_invalid_model_specification():
     ],
 )
 @pytest.mark.parametrize("freq_M", [MONTH_END, "MS"])
-def test_date_indexes(reset_randomstate, freq_M, freq_Q):
+def test_date_indexes(freq_M, freq_Q):
     # Test that using either PeriodIndex or DatetimeIndex for monthly or
     # quarterly data, with a variety of DatetimeIndex frequencies, works
-
+    rs = np.random.RandomState(328908)
     # Monthly datasets
     nobs_M = 10
     dates_M = pd.date_range(start="2000", periods=nobs_M, freq=freq_M)
     periods_M = pd.period_range(start="2000", periods=nobs_M, freq="M")
-    dta_M = np.random.normal(size=(nobs_M, 2))
+    dta_M = rs.normal(size=(nobs_M, 2))
     endog_period_M = pd.DataFrame(dta_M.copy(), index=periods_M)
     endog_date_M = pd.DataFrame(dta_M.copy(), index=dates_M)
 
@@ -942,29 +1587,31 @@ def test_date_indexes(reset_randomstate, freq_M, freq_Q):
     nobs_Q = 3
     dates_Q = pd.date_range(start="2000", periods=nobs_Q, freq=freq_Q)
     periods_Q = pd.period_range(start="2000", periods=nobs_Q, freq="Q")
-    dta_Q = np.random.normal(size=(nobs_Q, 2))
+    dta_Q = rs.normal(size=(nobs_Q, 2))
     endog_period_Q = pd.DataFrame(dta_Q.copy(), index=periods_Q)
     endog_date_Q = pd.DataFrame(dta_Q.copy(), index=dates_Q)
 
     # Baseline is monthly periods and quarterly periods
     mod_base = dynamic_factor_mq.DynamicFactorMQ(
-        endog_period_M, endog_quarterly=endog_period_Q)
+        endog_period_M, endog_quarterly=endog_period_Q
+    )
 
     # Test against monthly dates and quarterly dates
-    mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog_date_M, endog_quarterly=endog_date_Q)
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog_date_M, endog_quarterly=endog_date_Q)
     assert_(mod._index.equals(mod_base._index))
     assert_allclose(mod.endog, mod_base.endog)
 
     # Test against monthly dates and quarterly periods
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog_date_M, endog_quarterly=endog_period_Q)
+        endog_date_M, endog_quarterly=endog_period_Q
+    )
     assert_(mod._index.equals(mod_base._index))
     assert_allclose(mod.endog, mod_base.endog)
 
     # Test against monthly periods and quarterly dates
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog_period_M, endog_quarterly=endog_date_Q)
+        endog_period_M, endog_quarterly=endog_date_Q
+    )
     assert_(mod._index.equals(mod_base._index))
     assert_allclose(mod.endog, mod_base.endog)
 
@@ -985,36 +1632,40 @@ def gen_dfm_data(k_endog=2, nobs=1000):
     return endog, loadings, phi, sigma2, idio_ar1, idio_var
 
 
-def test_results_factors(reset_randomstate):
+def test_results_factors():
     # Tests for the `factors` attribute in the results object
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=2, nobs=1000)
 
     mod_dfm = dynamic_factor_mq.DynamicFactorMQ(
-        endog, factors=["global"], factor_multiplicities=2,
-        standardize=False, idiosyncratic_ar1=False)
+        endog,
+        factors=["global"],
+        factor_multiplicities=2,
+        standardize=False,
+        idiosyncratic_ar1=False,
+    )
     res_dfm = mod_dfm.smooth(mod_dfm.start_params)
 
-    assert_allclose(res_dfm.factors.smoothed,
-                    res_dfm.states.smoothed[["global.1", "global.2"]])
-    assert_allclose(res_dfm.factors.smoothed_cov.values,
-                    res_dfm.states.smoothed_cov.values, atol=1e-12)
+    assert_allclose(
+        res_dfm.factors.smoothed, res_dfm.states.smoothed[["global.1", "global.2"]]
+    )
+    assert_allclose(
+        res_dfm.factors.smoothed_cov.values,
+        res_dfm.states.smoothed_cov.values,
+        atol=1e-12,
+    )
 
 
-def test_coefficient_of_determination(
-        reset_randomstate, close_figures):
+def test_coefficient_of_determination(close_figures):
     # Get simulated data, and add in some missing entries
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=3, nobs=1000)
     endog.iloc[0, 10:20] = np.nan
     endog.iloc[2, 15:25] = np.nan
 
     # Setup the model and get the results
-    factors = {
-        0: ["global", "block"],
-        1: ["global", "block"],
-        2: ["global"]
-    }
+    factors = {0: ["global", "block"], 1: ["global", "block"], 2: ["global"]}
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog, factors=factors, standardize=False, idiosyncratic_ar1=False)
+        endog, factors=factors, standardize=False, idiosyncratic_ar1=False
+    )
     res = mod.smooth(mod.start_params)
 
     # For most of the tests, we'll use smoothed estimates, which are the
@@ -1023,8 +1674,9 @@ def test_coefficient_of_determination(
 
     # Test for method='individual'
     actual = res.get_coefficients_of_determination(method="individual")
-    desired = pd.DataFrame(np.zeros((3, 2)), index=[0, 1, 2],
-                           columns=["global", "block"])
+    desired = pd.DataFrame(
+        np.zeros((3, 2)), index=[0, 1, 2], columns=["global", "block"]
+    )
     for i in range(3):
         for j in range(2):
             if i == 2 and j == 1:
@@ -1056,15 +1708,16 @@ def test_coefficient_of_determination(
 
     # Test for method='cumulative'
     actual = res.get_coefficients_of_determination(method="cumulative")
-    desired = pd.DataFrame(np.zeros((3, 2)), index=[0, 1, 2],
-                           columns=["global", "block"])
+    desired = pd.DataFrame(
+        np.zeros((3, 2)), index=[0, 1, 2], columns=["global", "block"]
+    )
     for i in range(3):
         for j in range(2):
             if i == 2 and j == 1:
                 desired.iloc[i, j] = np.nan
             else:
                 y = endog.iloc[:, i]
-                X = add_constant(factors.iloc[:, :j + 1])
+                X = add_constant(factors.iloc[:, : j + 1])
                 mod_ols = OLS(y, X, missing="drop")
                 res_ols = mod_ols.fit()
                 desired.iloc[i, j] = res_ols.rsquared
@@ -1075,9 +1728,11 @@ def test_coefficient_of_determination(
     # Test for method='individual', which='filtered'
     factors = res.factors.filtered
     actual = res.get_coefficients_of_determination(
-        method="individual", which="filtered")
-    desired = pd.DataFrame(np.zeros((3, 2)), index=[0, 1, 2],
-                           columns=["global", "block"])
+        method="individual", which="filtered"
+    )
+    desired = pd.DataFrame(
+        np.zeros((3, 2)), index=[0, 1, 2], columns=["global", "block"]
+    )
     for i in range(3):
         for j in range(2):
             if i == 2 and j == 1:
@@ -1093,11 +1748,10 @@ def test_coefficient_of_determination(
     # Optional smoke test for plot_coefficient_of_determination
     try:
         import matplotlib.pyplot as plt
-        try:
-            from pandas.plotting import register_matplotlib_converters
-            register_matplotlib_converters()
-        except ImportError:
-            pass
+        from pandas.plotting import register_matplotlib_converters
+
+        register_matplotlib_converters()
+
         fig1 = plt.figure()
         res.plot_coefficients_of_determination(method="individual", fig=fig1)
         fig2 = plt.figure()
@@ -1111,7 +1765,7 @@ def test_coefficient_of_determination(
 
 
 @pytest.mark.filterwarnings("ignore:Log-likelihood decreased")
-def test_quasi_newton_fitting(reset_randomstate):
+def test_quasi_newton_fitting():
     # Test that the typical state space quasi-Newton fitting mechanisms work
     # here too, even if they aren't used much
     # Note: to match the quasi-Newton results, which use the stationary
@@ -1126,12 +1780,12 @@ def test_quasi_newton_fitting(reset_randomstate):
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=2, nobs=1000)
 
     # Create the test Dynamic Factor MQ models
-    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1,
-                                                standardize=False,
-                                                idiosyncratic_ar1=False)
-    mod_dfm_ar1 = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1,
-                                                    standardize=False,
-                                                    idiosyncratic_ar1=True)
+    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=False
+    )
+    mod_dfm_ar1 = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=True
+    )
 
     # Check that transform and untransform works
     x = mod_dfm_ar1.start_params
@@ -1166,18 +1820,18 @@ def test_quasi_newton_fitting(reset_randomstate):
     assert_allclose(params_lbfgs, params_em, atol=5e-2, rtol=1e-5)
 
 
-def test_summary(reset_randomstate):
+def test_summary():
     # Smoke tests for summaries
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=10, nobs=100)
 
     # Create the test Dynamic Factor MQ models
-    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1,
-                                                standardize=False,
-                                                idiosyncratic_ar1=False)
+    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=False
+    )
     res_dfm = mod_dfm.smooth(mod_dfm.start_params)
-    mod_dfm_ar1 = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1,
-                                                    standardize=False,
-                                                    idiosyncratic_ar1=True)
+    mod_dfm_ar1 = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=True
+    )
     res_dfm_ar1 = mod_dfm_ar1.smooth(mod_dfm_ar1.start_params)
 
     mod_dfm.summary()
@@ -1187,17 +1841,16 @@ def test_summary(reset_randomstate):
     res_dfm_ar1.summary()
 
 
-def test_append_extend_apply(reset_randomstate):
+def test_append_extend_apply():
     # Most of `append`, `extend`, and `apply` are tested in
     # `test_standardized_{monthly,MQ}`, but here we test a couple of minor
     # things
-    endog, loadings, phi, sigma2, _, idio_var = (
-        gen_dfm_data(k_endog=10, nobs=100))
+    endog, loadings, phi, sigma2, _, idio_var = gen_dfm_data(k_endog=10, nobs=100)
     endog1 = endog.iloc[:-10]
     endog2 = endog.iloc[-10:]
-    mod = dynamic_factor_mq.DynamicFactorMQ(endog1, factor_orders=1,
-                                            standardize=False,
-                                            idiosyncratic_ar1=False)
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog1, factor_orders=1, standardize=False, idiosyncratic_ar1=False
+    )
     params = np.r_[loadings, phi, sigma2, idio_var]
     res = mod.smooth(params)
 
@@ -1214,14 +1867,14 @@ def test_append_extend_apply(reset_randomstate):
     res2 = mod.smooth(params)
     # These asserts just show that the initialization really is different
     assert_allclose(res.filter_results.initial_state, 0)
-    assert_allclose(res.filter_results.initial_state_cov, 4 / 3.)
+    assert_allclose(res.filter_results.initial_state_cov, 4 / 3.0)
     assert_allclose(res2.filter_results.initial_state, 0.1)
     assert_allclose(res2.filter_results.initial_state_cov, 1.0)
 
     # Check append
     res3 = res2.append(endog2, copy_initialization=False)
     assert_allclose(res3.filter_results.initial_state, 0)
-    assert_allclose(res3.filter_results.initial_state_cov, 4 / 3.)
+    assert_allclose(res3.filter_results.initial_state_cov, 4 / 3.0)
 
     res4 = res2.append(endog2, copy_initialization=True)
     assert_allclose(res4.filter_results.initial_state, 0.1)
@@ -1230,14 +1883,14 @@ def test_append_extend_apply(reset_randomstate):
     # Check apply
     res5 = res2.apply(endog, copy_initialization=False)
     assert_allclose(res5.filter_results.initial_state, 0)
-    assert_allclose(res5.filter_results.initial_state_cov, 4 / 3.)
+    assert_allclose(res5.filter_results.initial_state_cov, 4 / 3.0)
 
     res6 = res2.apply(endog, copy_initialization=True)
     assert_allclose(res6.filter_results.initial_state, 0.1)
     assert_allclose(res6.filter_results.initial_state_cov, 1.0)
 
 
-def test_news_monthly(reset_randomstate):
+def test_news_monthly():
     # Most of `news` is tested in `test_standardized_{monthly,MQ}`, but here
     # we test a couple of minor things
     endog, _, _, _, _, _ = gen_dfm_data(k_endog=10, nobs=100)
@@ -1246,27 +1899,39 @@ def test_news_monthly(reset_randomstate):
     endog_pre.iloc[-1, 1] = np.nan
 
     # Base model
-    mod = dynamic_factor_mq.DynamicFactorMQ(endog_pre, factor_orders=1,
-                                            standardize=False,
-                                            idiosyncratic_ar1=False)
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog_pre, factor_orders=1, standardize=False, idiosyncratic_ar1=False
+    )
     params = mod.start_params
     res = mod.smooth(params)
 
     # Updated results and desired news output (created using a results object)
     mod2 = mod.clone(endog)
     res2 = mod2.smooth(params)
-    desired = res2.news(res, start=endog.index[-1], periods=1,
-                        comparison_type="previous")
+    desired = res2.news(
+        res, start=endog.index[-1], periods=1, comparison_type="previous"
+    )
 
     # Actual news output, created using the updated dataset
-    actual = res.news(endog, start=endog.index[-1], periods=1,
-                      comparison_type="updated")
+    actual = res.news(
+        endog, start=endog.index[-1], periods=1, comparison_type="updated"
+    )
 
     attributes = [
-        "total_impacts", "update_impacts", "revision_impacts", "news",
-        "weights", "update_forecasts", "update_realized",
-        "prev_impacted_forecasts", "post_impacted_forecasts", "revisions_iloc",
-        "revisions_ix", "updates_iloc", "updates_ix"]
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
     for attr in attributes:
         w = getattr(actual, attr)
         x = getattr(desired, attr)
@@ -1276,11 +1941,12 @@ def test_news_monthly(reset_randomstate):
             assert_frame_equal(w, x)
 
 
-def test_news_MQ(reset_randomstate):
+def test_news_MQ():
     # Most of `news` is tested in `test_standardized_{monthly,MQ}`, but here
     # we test a couple of minor things
     endog_M, endog_Q, f1 = test_dynamic_factor_mq_monte_carlo.gen_k_factor1(
-        100, k=2, idiosyncratic_ar1=False)
+        100, k=2, idiosyncratic_ar1=False
+    )
     endog_M_pre = endog_M.iloc[:-1].copy()
     endog_M_pre.iloc[-1, 0] *= 1.2
     endog_M_pre.iloc[-1, 1] = np.nan
@@ -1291,27 +1957,46 @@ def test_news_MQ(reset_randomstate):
 
     # Base model
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog_M_pre, endog_quarterly=endog_Q_pre, factor_orders=1,
-        standardize=False, idiosyncratic_ar1=False)
+        endog_M_pre,
+        endog_quarterly=endog_Q_pre,
+        factor_orders=1,
+        standardize=False,
+        idiosyncratic_ar1=False,
+    )
     params = mod.start_params
     res = mod.smooth(params)
 
     # Updated results and desired news output (created using a results object)
     mod2 = mod.clone(endog_M, endog_quarterly=endog_Q)
     res2 = mod2.smooth(params)
-    desired = res2.news(res, start=endog_M.index[-1], periods=1,
-                        comparison_type="previous")
+    desired = res2.news(
+        res, start=endog_M.index[-1], periods=1, comparison_type="previous"
+    )
 
     # Actual news output, created using the updated dataset
-    actual = res.news(endog_M, endog_quarterly=endog_Q,
-                      start=endog_M.index[-1], periods=1,
-                      comparison_type="updated")
+    actual = res.news(
+        endog_M,
+        endog_quarterly=endog_Q,
+        start=endog_M.index[-1],
+        periods=1,
+        comparison_type="updated",
+    )
 
     attributes = [
-        "total_impacts", "update_impacts", "revision_impacts", "news",
-        "weights", "update_forecasts", "update_realized",
-        "prev_impacted_forecasts", "post_impacted_forecasts", "revisions_iloc",
-        "revisions_ix", "updates_iloc", "updates_ix"]
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
     for attr in attributes:
         w = getattr(actual, attr)
         x = getattr(desired, attr)
@@ -1321,7 +2006,7 @@ def test_news_MQ(reset_randomstate):
             assert_frame_equal(w, x)
 
 
-def test_ar6_no_quarterly(reset_randomstate):
+def test_ar6_no_quarterly():
     # Test to make sure that an example with > 5 lags (which are the number of
     # lags that are always included in models with quarterly data) works,
     # for the case without quarterly data
@@ -1330,18 +2015,18 @@ def test_ar6_no_quarterly(reset_randomstate):
     ix = pd.period_range(start="1950-01", periods=1, freq="M")
     faux = pd.Series([0], index=ix)
     mod = sarimax.SARIMAX(faux, order=(6, 0, 0))
-    params = np.r_[0., 0., 0., 0., 0., 0.5, 1.0]
+    params = np.r_[0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0]
     endog = mod.simulate(params, 100)
 
     # Create the baseline SARIMAX and the test Dynamic Factor MQ model
     mod_ar = sarimax.SARIMAX(endog, order=(6, 0, 0))
-    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=6,
-                                                standardize=False,
-                                                idiosyncratic_ar1=False)
+    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=6, standardize=False, idiosyncratic_ar1=False
+    )
 
     # Test that SARIMAX and DFM MQ produce the same loglike
     llf_ar = mod_ar.loglike(params)
-    llf_dfm = mod_dfm.loglike(np.r_[1, params, 0.])
+    llf_dfm = mod_dfm.loglike(np.r_[1, params, 0.0])
     assert_allclose(llf_dfm, llf_ar)
 
     # Monte Carlo-type test, skipped by default
@@ -1357,22 +2042,23 @@ def test_ar6_no_quarterly(reset_randomstate):
         assert_allclose(res_dfm.params[1:-1], params, atol=1e-2)
 
 
-def test_idiosyncratic_ar1_False(reset_randomstate):
+def test_idiosyncratic_ar1_False():
     # Test the case with idiosyncratic_ar1=False (which is not tested in
     # the test_dynamic_factor_mq_frbny_nowcast) by comparison to a model with
     # idiosyncratic_ar1=True but no actual serial correlation in the
     # idiosyncratic component
     endog, loadings, phi, sigma2, idio_ar1, idio_var = gen_dfm_data(
-        k_endog=10, nobs=1000)
+        k_endog=10, nobs=1000
+    )
 
     # Create the baseline SARIMAX and the test Dynamic Factor MQ model
     mod_base = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
-    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1,
-                                                standardize=False,
-                                                idiosyncratic_ar1=False)
-    mod_dfm_ar1 = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1,
-                                                    standardize=False,
-                                                    idiosyncratic_ar1=True)
+    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=False
+    )
+    mod_dfm_ar1 = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=True
+    )
 
     params = np.r_[loadings, idio_var, phi]
     params_dfm = np.r_[loadings, phi, sigma2, idio_var]
@@ -1391,10 +2077,13 @@ def test_idiosyncratic_ar1_False(reset_randomstate):
     # idiosyncratic disturbance
     res0_dfm = mod_dfm.smooth(params_dfm)
     res0_dfm_ar1 = mod_dfm_ar1.smooth(params_dfm_ar1)
-    assert_allclose(res0_dfm.smoothed_measurement_disturbance,
-                    res0_dfm_ar1.smoothed_state[1:])
-    assert_allclose(res0_dfm.smoothed_measurement_disturbance_cov,
-                    res0_dfm_ar1.smoothed_state_cov[1:, 1:, :])
+    assert_allclose(
+        res0_dfm.smoothed_measurement_disturbance, res0_dfm_ar1.smoothed_state[1:]
+    )
+    assert_allclose(
+        res0_dfm.smoothed_measurement_disturbance_cov,
+        res0_dfm_ar1.smoothed_state_cov[1:, 1:, :],
+    )
 
     # Note: it is difficult to test the EM algorithm for the idiosyncratic
     # variance terms, because actually the EM algorithm is slightly different
@@ -1441,47 +2130,65 @@ def test_invalid_standardize_1d():
     endog_pd = pd.Series(endog, name="y1")
 
     # Wrong shape
-    options = [([], 10), (10, []), ([], []), ([1, 2], [1.]), ([1], [1, 2.])]
+    options = [([], 10), (10, []), ([], []), ([1, 2], [1.0]), ([1], [1, 2.0])]
     msg = "Invalid value passed for `standardize`: each element must be shaped"
     for standardize in options:
         with pytest.raises(ValueError, match=msg):
             dynamic_factor_mq.DynamicFactorMQ(
-                endog, factors=1, factor_orders=1, idiosyncratic_ar1=False,
-                standardize=standardize)
+                endog,
+                factors=1,
+                factor_orders=1,
+                idiosyncratic_ar1=False,
+                standardize=standardize,
+            )
 
     # Wrong index: ndarray
     options = [
         (pd.Series(10), pd.Series(10)),
         (pd.Series(10, index=["y"]), pd.Series(10, index=["y1"])),
         (pd.Series(10, index=["y1"]), pd.Series(10, index=["y1"])),
-        (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"]))]
-    msg = ("Invalid value passed for `standardize`: if a Pandas Series, must"
-           " have index")
+        (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"])),
+    ]
+    msg = "Invalid value passed for `standardize`: if a Pandas Series, must have index"
     for standardize in options:
         with pytest.raises(ValueError, match=msg):
             dynamic_factor_mq.DynamicFactorMQ(
-                endog, factors=1, factor_orders=1, idiosyncratic_ar1=False,
-                standardize=standardize)
+                endog,
+                factors=1,
+                factor_orders=1,
+                idiosyncratic_ar1=False,
+                standardize=standardize,
+            )
 
     # Wrong index: pd.Series
     options = [
         (pd.Series(10), pd.Series(10)),
         (pd.Series(10, index=["y"]), pd.Series(10, index=["y1"])),
         (pd.Series(10, index=["y"]), pd.Series(10, index=["y"])),
-        (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"]))]
-    msg = ("Invalid value passed for `standardize`: if a Pandas Series, must"
-           " have index")
+        (pd.Series([10], index=["y"]), pd.Series([10, 1], index=["y1", "y2"])),
+    ]
+    msg = "Invalid value passed for `standardize`: if a Pandas Series, must have index"
     for standardize in options:
         with pytest.raises(ValueError, match=msg):
             dynamic_factor_mq.DynamicFactorMQ(
-                endog_pd, factors=1, factor_orders=1, idiosyncratic_ar1=False,
-                standardize=standardize)
+                endog_pd,
+                factors=1,
+                factor_orders=1,
+                idiosyncratic_ar1=False,
+                standardize=standardize,
+            )
 
 
 @pytest.mark.parametrize("use_pandas", [True, False])
-@pytest.mark.parametrize("standardize", [
-    (10, 10), ([10], [10]), (np.array(10), np.array(10)),
-    (pd.Series([10], index=["y"]), pd.Series([10], index=["y"]))])
+@pytest.mark.parametrize(
+    "standardize",
+    [
+        (10, 10),
+        ([10], [10]),
+        (np.array(10), np.array(10)),
+        (pd.Series([10], index=["y"]), pd.Series([10], index=["y"])),
+    ],
+)
 def test_simulate_standardized_1d(standardize, use_pandas):
     endog = np.zeros(100) + 10
     if use_pandas:
@@ -1489,8 +2196,12 @@ def test_simulate_standardized_1d(standardize, use_pandas):
 
     # Create the model, get the results
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog, factors=1, factor_orders=1, idiosyncratic_ar1=False,
-        standardize=standardize)
+        endog,
+        factors=1,
+        factor_orders=1,
+        idiosyncratic_ar1=False,
+        standardize=standardize,
+    )
     lambda1 = 2.0
     phi = 0.5
     params = [lambda1, phi, 0.0, 0]
@@ -1499,66 +2210,79 @@ def test_simulate_standardized_1d(standardize, use_pandas):
     # Desired value from the simulation
     mean = np.atleast_1d(standardize[0])[0]
     std = np.atleast_1d(standardize[1])[0]
-    desired = phi**np.arange(10) * lambda1 * std + mean
+    desired = phi ** np.arange(10) * lambda1 * std + mean
     desired_nd = desired[:, None] if use_pandas else desired[:, None, None]
 
     # Test without repetitition
-    actual = res.simulate(10, initial_state=[1.])
+    actual = res.simulate(10, initial_state=[1.0])
     assert_equal(actual.shape, (10,))
     assert_allclose(actual, desired)
 
     # Test with 1 repetitition
-    actual = res.simulate(10, initial_state=[1.], repetitions=1)
+    actual = res.simulate(10, initial_state=[1.0], repetitions=1)
     desired_shape = (10, 1) if use_pandas else (10, 1, 1)
     assert_equal(actual.shape, desired_shape)
     assert_allclose(actual, desired_nd)
 
     # Test with 2 repetititions
-    actual = res.simulate(10, initial_state=[1.], repetitions=2)
+    actual = res.simulate(10, initial_state=[1.0], repetitions=2)
     desired_shape = (10, 2) if use_pandas else (10, 1, 2)
     assert_equal(actual.shape, desired_shape)
     assert_allclose(actual, np.repeat(desired_nd, 2, axis=-1))
 
 
 @pytest.mark.parametrize("use_pandas", [True, False])
-@pytest.mark.parametrize("standardize", [
-    ([10, -4], [10., 10.]), (np.array([10, -4]), np.array([10, 10])),
-    (pd.Series([10, -4], index=["y1", "y2"]),
-     pd.Series([10, 10], index=["y1", "y2"]))])
+@pytest.mark.parametrize(
+    "standardize",
+    [
+        ([10, -4], [10.0, 10.0]),
+        (np.array([10, -4]), np.array([10, 10])),
+        (
+            pd.Series([10, -4], index=["y1", "y2"]),
+            pd.Series([10, 10], index=["y1", "y2"]),
+        ),
+    ],
+)
 def test_simulate_standardized_2d(standardize, use_pandas):
     endog = np.zeros((100, 2)) + [10, -4]
     if use_pandas:
         endog = pd.DataFrame(endog, columns=["y1", "y2"])
 
     mod = dynamic_factor_mq.DynamicFactorMQ(
-        endog, factors=1, factor_orders=1, idiosyncratic_ar1=False,
-        standardize=standardize)
+        endog,
+        factors=1,
+        factor_orders=1,
+        idiosyncratic_ar1=False,
+        standardize=standardize,
+    )
     lambda1 = 2.0
     lambda2 = 0.5
     phi = 0.5
-    params = [lambda1, lambda2, phi, 0.0, 0, 0.]
+    params = [lambda1, lambda2, phi, 0.0, 0, 0.0]
     res = mod.smooth(params)
 
     # Desired value from the simulation
     means = np.atleast_1d(standardize[0])
     stds = np.atleast_1d(standardize[1])
-    desired = np.c_[phi**np.arange(10) * lambda1 * stds[0] + means[0],
-                    phi**np.arange(10) * lambda2 * stds[1] + means[1]]
+    desired = np.c_[
+        phi ** np.arange(10) * lambda1 * stds[0] + means[0],
+        phi ** np.arange(10) * lambda2 * stds[1] + means[1],
+    ]
     desired_nd = desired if use_pandas else desired[..., None]
 
     # Test without repetitition
-    actual = res.simulate(10, initial_state=[1.])
+    actual = res.simulate(10, initial_state=[1.0])
     assert_equal(actual.shape, (10, 2))
     assert_allclose(actual, desired)
 
     # Test with 1 repetitition
-    actual = res.simulate(10, initial_state=[1.], repetitions=1)
+    actual = res.simulate(10, initial_state=[1.0], repetitions=1)
     desired_shape = (10, 2) if use_pandas else (10, 2, 1)
     assert_equal(actual.shape, desired_shape)
     assert_allclose(actual, desired_nd)
 
     # Test with 2 repetititions
-    actual = res.simulate(10, initial_state=[1.], repetitions=2)
+    actual = res.simulate(10, initial_state=[1.0], repetitions=2)
     desired_shape = (10, 4) if use_pandas else (10, 2, 2)
     assert_equal(actual.shape, desired_shape)
     assert_allclose(actual, np.repeat(desired_nd, 2, axis=-1))
@@ -1575,8 +2299,7 @@ def check_standardized_results(res1, res2, check_diagnostics=True):
     # in a difference in loglikelihood computation through the determinant
     # term. If we add that term in to the model that has been standardized, we
     # get back the loglikelihood from the model with "manual" standardization
-    tmp = ((1 - res1.filter_results.missing.T) *
-           np.array(mod1._endog_std)[None, :]**2)
+    tmp = (1 - res1.filter_results.missing.T) * np.array(mod1._endog_std)[None, :] ** 2
     mask = res1.filter_results.missing.T.astype(bool)
     tmp[mask] = 1.0
     llf_obs_diff = -0.5 * np.log(tmp).sum(axis=1)
@@ -1628,76 +2351,98 @@ def check_standardized_results(res1, res2, check_diagnostics=True):
     predict_actual = res1.predict()
     forecast_actual = res1.forecast(10)
     predict_dynamic_forecast_actual = res1.predict(
-        start=start, end=end, dynamic=dynamic)
+        start=start, end=end, dynamic=dynamic
+    )
 
     get_predict_actual = res1.get_prediction()
     get_forecast_actual = res1.get_forecast(10)
     get_predict_dynamic_forecast_actual = res1.get_prediction(
-        start=start, end=end, dynamic=dynamic)
+        start=start, end=end, dynamic=dynamic
+    )
 
     # "Manual" standardization
     predict_desired = res2.predict()
     forecast_desired = res2.forecast(10)
     predict_dynamic_forecast_desired = res2.predict(
-        start=start, end=end, dynamic=dynamic)
+        start=start, end=end, dynamic=dynamic
+    )
 
     get_predict_desired = res2.get_prediction()
     get_forecast_desired = res2.get_forecast(10)
     get_predict_dynamic_forecast_desired = res2.get_prediction(
-        start=start, end=end, dynamic=dynamic)
+        start=start, end=end, dynamic=dynamic
+    )
 
     assert_allclose(predict_actual, predict_desired)
     assert_allclose(forecast_actual, forecast_desired)
-    assert_allclose(predict_dynamic_forecast_actual,
-                    predict_dynamic_forecast_desired)
+    assert_allclose(predict_dynamic_forecast_actual, predict_dynamic_forecast_desired)
 
     for i in range(mod1.k_endog):
-        assert_allclose(get_predict_actual.summary_frame(endog=i),
-                        get_predict_desired.summary_frame(endog=i))
-        assert_allclose(get_forecast_actual.summary_frame(endog=i),
-                        get_forecast_desired.summary_frame(endog=i))
+        assert_allclose(
+            get_predict_actual.summary_frame(endog=i),
+            get_predict_desired.summary_frame(endog=i),
+        )
+        assert_allclose(
+            get_forecast_actual.summary_frame(endog=i),
+            get_forecast_desired.summary_frame(endog=i),
+        )
         assert_allclose(
             get_predict_dynamic_forecast_actual.summary_frame(endog=i),
-            get_predict_dynamic_forecast_desired.summary_frame(endog=i))
+            get_predict_dynamic_forecast_desired.summary_frame(endog=i),
+        )
 
     # - Test simulation ------------------------------------------------------
 
     # Generate shocks
-    np.random.seed(1234)
+    rs = np.random.RandomState(1234)
     nsimulations = 100
-    initial_state = np.random.multivariate_normal(
-        res1.filter_results.initial_state,
-        res1.filter_results.initial_state_cov)
-    raw_measurement_shocks = np.random.multivariate_normal(
-        np.zeros(mod1.k_endog), np.eye(mod1.k_endog), size=nsimulations)
-    state_shocks = np.random.multivariate_normal(
-        np.zeros(mod1.ssm.k_posdef), mod1["state_cov"], size=nsimulations)
+    initial_state = rs.multivariate_normal(
+        res1.filter_results.initial_state, res1.filter_results.initial_state_cov
+    )
+    raw_measurement_shocks = rs.multivariate_normal(
+        np.zeros(mod1.k_endog), np.eye(mod1.k_endog), size=nsimulations
+    )
+    state_shocks = rs.multivariate_normal(
+        np.zeros(mod1.ssm.k_posdef), mod1["state_cov"], size=nsimulations
+    )
 
-    L1 = np.diag(mod1["obs_cov"].diagonal()**0.5)
+    L1 = np.diag(mod1["obs_cov"].diagonal() ** 0.5)
     measurement_shocks1 = (L1 @ raw_measurement_shocks.T).T
 
-    L2 = np.diag(mod2["obs_cov"].diagonal()**0.5)
+    L2 = np.diag(mod2["obs_cov"].diagonal() ** 0.5)
     measurement_shocks2 = (L2 @ raw_measurement_shocks.T).T
 
     # Default simulation
     sim_actual = res1.simulate(
-        nsimulations=nsimulations, initial_state=initial_state,
-        measurement_shocks=measurement_shocks1, state_shocks=state_shocks)
+        nsimulations=nsimulations,
+        initial_state=initial_state,
+        measurement_shocks=measurement_shocks1,
+        state_shocks=state_shocks,
+    )
     sim_desired = res2.simulate(
-        nsimulations=nsimulations, initial_state=initial_state,
-        measurement_shocks=measurement_shocks2, state_shocks=state_shocks)
+        nsimulations=nsimulations,
+        initial_state=initial_state,
+        measurement_shocks=measurement_shocks2,
+        state_shocks=state_shocks,
+    )
 
     assert_allclose(sim_actual, sim_desired)
 
     # Anchored simulation
     sim_actual = res1.simulate(
-        nsimulations=nsimulations, initial_state=initial_state,
-        measurement_shocks=measurement_shocks1, state_shocks=state_shocks,
-        anchor="end")
+        nsimulations=nsimulations,
+        initial_state=initial_state,
+        measurement_shocks=measurement_shocks1,
+        state_shocks=state_shocks,
+        anchor="end",
+    )
     sim_desired = res2.simulate(
-        nsimulations=nsimulations, initial_state=initial_state,
-        measurement_shocks=measurement_shocks2, state_shocks=state_shocks,
-        anchor="end")
+        nsimulations=nsimulations,
+        initial_state=initial_state,
+        measurement_shocks=measurement_shocks2,
+        state_shocks=state_shocks,
+        anchor="end",
+    )
 
     assert_allclose(sim_actual, sim_desired)
 
@@ -1715,16 +2460,16 @@ def check_standardized_results(res1, res2, check_diagnostics=True):
     irfs_desired = res2.impulse_responses(10, cumulative=True)
     assert_allclose(irfs_actual, irfs_desired)
 
-    irfs_actual = res1.impulse_responses(
-        10, orthogonalized=True, cumulative=True)
-    irfs_desired = res2.impulse_responses(
-        10, orthogonalized=True, cumulative=True)
+    irfs_actual = res1.impulse_responses(10, orthogonalized=True, cumulative=True)
+    irfs_desired = res2.impulse_responses(10, orthogonalized=True, cumulative=True)
     assert_allclose(irfs_actual, irfs_desired)
 
     irfs_actual = res1.impulse_responses(
-        10, orthogonalized=True, cumulative=True, anchor="end")
+        10, orthogonalized=True, cumulative=True, anchor="end"
+    )
     irfs_desired = res2.impulse_responses(
-        10, orthogonalized=True, cumulative=True, anchor="end")
+        10, orthogonalized=True, cumulative=True, anchor="end"
+    )
     assert_allclose(irfs_actual, irfs_desired)
 
 
@@ -1775,28 +2520,40 @@ def check_append(res1, res2, endog_M2, endog_Q2):
     # Check that the models are the same
     check_identical_models(mod1, mod1_append, check_nobs=False)
     assert_equal(mod1_append.nobs, mod1.nobs + len(endog_M2))
-    assert_allclose(mod1_append.endog[:mod1.nobs], mod1.endog)
+    assert_allclose(mod1_append.endog[: mod1.nobs], mod1.endog)
 
     # Check that the results are the same prior to the appended data
-    assert_allclose(res1_append.filter_results.initial_state_cov,
-                    res1.filter_results.initial_state_cov)
-
-    assert_allclose(res1_append.llf_obs[:mod1.nobs], res1.llf_obs)
-    assert_allclose(res1_append.filter_results.forecasts[:, :mod1.nobs],
-                    res1.filter_results.forecasts)
-    assert_allclose(res1_append.filter_results.forecasts_error[:, :mod1.nobs],
-                    res1.filter_results.forecasts_error)
-
-    assert_allclose(res1_append.filter_results.initial_state,
-                    res1.filter_results.initial_state)
-    assert_allclose(res1_append.filter_results.initial_state_cov,
-                    res1.filter_results.initial_state_cov)
-
-    assert_allclose(res1_append.filter_results.filtered_state[:, :mod1.nobs],
-                    res1.filter_results.filtered_state)
     assert_allclose(
-        res1_append.filter_results.filtered_state_cov[..., :mod1.nobs],
-        res1.filter_results.filtered_state_cov)
+        res1_append.filter_results.initial_state_cov,
+        res1.filter_results.initial_state_cov,
+    )
+
+    assert_allclose(res1_append.llf_obs[: mod1.nobs], res1.llf_obs)
+    assert_allclose(
+        res1_append.filter_results.forecasts[:, : mod1.nobs],
+        res1.filter_results.forecasts,
+    )
+    assert_allclose(
+        res1_append.filter_results.forecasts_error[:, : mod1.nobs],
+        res1.filter_results.forecasts_error,
+    )
+
+    assert_allclose(
+        res1_append.filter_results.initial_state, res1.filter_results.initial_state
+    )
+    assert_allclose(
+        res1_append.filter_results.initial_state_cov,
+        res1.filter_results.initial_state_cov,
+    )
+
+    assert_allclose(
+        res1_append.filter_results.filtered_state[:, : mod1.nobs],
+        res1.filter_results.filtered_state,
+    )
+    assert_allclose(
+        res1_append.filter_results.filtered_state_cov[..., : mod1.nobs],
+        res1.filter_results.filtered_state_cov,
+    )
 
     # Test that "manual standardization" continues to work with append
     res2_append = res2.append(endog_M2, endog_quarterly=endog_Q2)
@@ -1816,25 +2573,37 @@ def check_append(res1, res2, endog_M2, endog_Q2):
     check_identical_models(mod2, mod2_append, check_nobs=False)
 
     # Check that the results are the same prior to the appended data
-    assert_allclose(res2_append.filter_results.initial_state_cov,
-                    res2.filter_results.initial_state_cov)
-
-    assert_allclose(res2_append.llf_obs[:mod2.nobs], res2.llf_obs)
-    assert_allclose(res2_append.filter_results.forecasts[:, :mod2.nobs],
-                    res2.filter_results.forecasts)
-    assert_allclose(res2_append.filter_results.forecasts_error[:, :mod2.nobs],
-                    res2.filter_results.forecasts_error)
-
-    assert_allclose(res2_append.filter_results.initial_state,
-                    res2.filter_results.initial_state)
-    assert_allclose(res2_append.filter_results.initial_state_cov,
-                    res2.filter_results.initial_state_cov)
-
-    assert_allclose(res2_append.filter_results.filtered_state[:, :mod2.nobs],
-                    res2.filter_results.filtered_state)
     assert_allclose(
-        res2_append.filter_results.filtered_state_cov[..., :mod2.nobs],
-        res2.filter_results.filtered_state_cov)
+        res2_append.filter_results.initial_state_cov,
+        res2.filter_results.initial_state_cov,
+    )
+
+    assert_allclose(res2_append.llf_obs[: mod2.nobs], res2.llf_obs)
+    assert_allclose(
+        res2_append.filter_results.forecasts[:, : mod2.nobs],
+        res2.filter_results.forecasts,
+    )
+    assert_allclose(
+        res2_append.filter_results.forecasts_error[:, : mod2.nobs],
+        res2.filter_results.forecasts_error,
+    )
+
+    assert_allclose(
+        res2_append.filter_results.initial_state, res2.filter_results.initial_state
+    )
+    assert_allclose(
+        res2_append.filter_results.initial_state_cov,
+        res2.filter_results.initial_state_cov,
+    )
+
+    assert_allclose(
+        res2_append.filter_results.filtered_state[:, : mod2.nobs],
+        res2.filter_results.filtered_state,
+    )
+    assert_allclose(
+        res2_append.filter_results.filtered_state_cov[..., : mod2.nobs],
+        res2.filter_results.filtered_state_cov,
+    )
 
     # Check res1_append vs res2_append
     check_standardized_results(res1_append, res2_append)
@@ -1873,8 +2642,7 @@ def check_extend(res1, res2, endog_M2, endog_Q2):
     check_identical_models(mod2, mod2_extend, check_nobs=False)
 
     # Check res1_extend vs res2_extend
-    check_standardized_results(res1_extend, res2_extend,
-                               check_diagnostics=False)
+    check_standardized_results(res1_extend, res2_extend, check_diagnostics=False)
 
 
 def check_apply(res1, res2, endog_M, endog_Q):
@@ -1910,19 +2678,18 @@ def check_apply(res1, res2, endog_M, endog_Q):
     check_identical_models(mod2, mod2_apply, check_nobs=False)
 
     # Check res1_apply vs res2_apply
-    check_standardized_results(res1_apply, res2_apply,
-                               check_diagnostics=False)
+    check_standardized_results(res1_apply, res2_apply, check_diagnostics=False)
 
 
 @pytest.mark.parametrize("use_pandas", [True, False])
 @pytest.mark.parametrize("k_endog", [1, 2])
 @pytest.mark.parametrize("idiosyncratic_ar1", [True, False])
-def test_standardized_monthly(reset_randomstate, idiosyncratic_ar1, k_endog,
-                              use_pandas):
+def test_standardized_monthly(idiosyncratic_ar1, k_endog, use_pandas):
     nobs = 100
     k2 = 2
     _, _, f2 = test_dynamic_factor_mq_monte_carlo.gen_k_factor2(
-        nobs, k=k2, idiosyncratic_ar1=idiosyncratic_ar1)
+        nobs, k=k2, idiosyncratic_ar1=idiosyncratic_ar1
+    )
 
     if k_endog == 1:
         endog = f2.iloc[:, 0]
@@ -1941,9 +2708,13 @@ def test_standardized_monthly(reset_randomstate, idiosyncratic_ar1, k_endog,
     # - Actual ---------------------------------------------------------------
     # Baseline model
     mod1 = dynamic_factor_mq.DynamicFactorMQ(
-        endog, factors=1, factor_multiplicities=1, factor_orders=1,
+        endog,
+        factors=1,
+        factor_multiplicities=1,
+        factor_orders=1,
         idiosyncratic_ar1=idiosyncratic_ar1,
-        standardize=(endog_mean, endog_std))
+        standardize=(endog_mean, endog_std),
+    )
 
     params = pd.Series(mod1.start_params, index=mod1.param_names)
     res1 = mod1.smooth(params)
@@ -1951,16 +2722,20 @@ def test_standardized_monthly(reset_randomstate, idiosyncratic_ar1, k_endog,
     # - Desired --------------------------------------------------------------
     # Create an identical model, but without standardization
     mod2 = dynamic_factor_mq.DynamicFactorMQ(
-        endog, factors=1, factor_multiplicities=1, factor_orders=1,
+        endog,
+        factors=1,
+        factor_multiplicities=1,
+        factor_orders=1,
         idiosyncratic_ar1=idiosyncratic_ar1,
-        standardize=False)
+        standardize=False,
+    )
     # Start with the parameters from the standardized model
     mod2.update(params)
 
     # Update the observation equation to manually implement the standardization
     mod2["obs_intercept"] = np.array(endog_mean)
     mod2["design"] *= np.array(endog_std)[:, None]
-    mod2["obs_cov"] *= np.array(endog_std)[:, None]**2
+    mod2["obs_cov"] *= np.array(endog_std)[:, None] ** 2
 
     # Prevent the model from overwriting our changes
     mod2.update = lambda params, **kwargs: params
@@ -1973,15 +2748,18 @@ def test_standardized_monthly(reset_randomstate, idiosyncratic_ar1, k_endog,
 
 
 @pytest.mark.parametrize("idiosyncratic_ar1", [True, False])
-def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
+def test_standardized_MQ(idiosyncratic_ar1):
+    rs = np.random.RandomState(328909)
     nobs = 100
     idiosyncratic_ar1 = False
     k1 = 2
     k2 = 2
     endog1_M, endog1_Q, f1 = test_dynamic_factor_mq_monte_carlo.gen_k_factor1(
-        nobs, k=k1, idiosyncratic_ar1=idiosyncratic_ar1)
+        nobs, k=k1, idiosyncratic_ar1=idiosyncratic_ar1
+    )
     endog2_M, endog2_Q, f2 = test_dynamic_factor_mq_monte_carlo.gen_k_factor2(
-        nobs, k=k2, idiosyncratic_ar1=idiosyncratic_ar1)
+        nobs, k=k2, idiosyncratic_ar1=idiosyncratic_ar1
+    )
 
     endog_M = pd.concat([endog1_M, f2, endog2_M], axis=1, sort=True)
     endog_Q = pd.concat([endog1_Q, endog2_Q], axis=1, sort=True)
@@ -2000,16 +2778,18 @@ def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
 
     # - Actual ---------------------------------------------------------------
     # Baseline model
-    endog_mean = pd.Series(
-        np.random.normal(size=len(factors)), index=factors.keys())
-    endog_std = pd.Series(
-        np.abs(np.random.normal(size=len(factors))), index=factors.keys())
+    endog_mean = pd.Series(rs.normal(size=len(factors)), index=factors.keys())
+    endog_std = pd.Series(np.abs(rs.normal(size=len(factors))), index=factors.keys())
 
     mod1 = dynamic_factor_mq.DynamicFactorMQ(
-        endog_M1, endog_quarterly=endog_Q1,
-        factors=factors, factor_multiplicities=factor_multiplicities,
-        factor_orders=6, idiosyncratic_ar1=idiosyncratic_ar1,
-        standardize=(endog_mean, endog_std))
+        endog_M1,
+        endog_quarterly=endog_Q1,
+        factors=factors,
+        factor_multiplicities=factor_multiplicities,
+        factor_orders=6,
+        idiosyncratic_ar1=idiosyncratic_ar1,
+        standardize=(endog_mean, endog_std),
+    )
 
     params = pd.Series(mod1.start_params, index=mod1.param_names)
     res1 = mod1.smooth(params)
@@ -2017,17 +2797,21 @@ def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
     # - Desired --------------------------------------------------------------
     # Create an identical model, but without standardization
     mod2 = dynamic_factor_mq.DynamicFactorMQ(
-        endog_M1, endog_quarterly=endog_Q1,
-        factors=factors, factor_multiplicities=factor_multiplicities,
-        factor_orders=6, idiosyncratic_ar1=idiosyncratic_ar1,
-        standardize=False)
+        endog_M1,
+        endog_quarterly=endog_Q1,
+        factors=factors,
+        factor_multiplicities=factor_multiplicities,
+        factor_orders=6,
+        idiosyncratic_ar1=idiosyncratic_ar1,
+        standardize=False,
+    )
     # Start with the parameters from the standardized model
     mod2.update(params)
 
     # Update the observation equation to manually implement the standardization
     mod2["obs_intercept"] = endog_mean
     mod2["design"] *= np.array(endog_std)[:, None]
-    mod2["obs_cov"] *= np.array(endog_std)[:, None]**2
+    mod2["obs_cov"] *= np.array(endog_std)[:, None] ** 2
 
     # Prevent the model from overwriting our changes
     mod2.update = lambda params, **kwargs: params
@@ -2057,15 +2841,27 @@ def test_standardized_MQ(reset_randomstate, idiosyncratic_ar1):
     mod2_apply.update = lambda params, **kwargs: params
     res2_apply = mod2_apply.smooth(res2_apply.params)
 
-    news1 = res1_apply.news(res1, start="1958-01", end="1958-03",
-                            comparison_type="previous")
-    news2 = res2_apply.news(res2, start="1958-01", end="1958-03",
-                            comparison_type="previous")
+    news1 = res1_apply.news(
+        res1, start="1958-01", end="1958-03", comparison_type="previous"
+    )
+    news2 = res2_apply.news(
+        res2, start="1958-01", end="1958-03", comparison_type="previous"
+    )
     attributes = [
-        "total_impacts", "update_impacts", "revision_impacts", "news",
-        "weights", "update_forecasts", "update_realized",
-        "prev_impacted_forecasts", "post_impacted_forecasts", "revisions_iloc",
-        "revisions_ix", "updates_iloc", "updates_ix"]
+        "total_impacts",
+        "update_impacts",
+        "revision_impacts",
+        "news",
+        "weights",
+        "update_forecasts",
+        "update_realized",
+        "prev_impacted_forecasts",
+        "post_impacted_forecasts",
+        "revisions_iloc",
+        "revisions_ix",
+        "updates_iloc",
+        "updates_ix",
+    ]
     for attr in attributes:
         w = getattr(news1, attr)
         x = getattr(news2, attr)

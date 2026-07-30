@@ -6,8 +6,8 @@ Author: Josef Perktold
 License: BSD-3
 
 
-Reference
----------
+References
+----------
 quick reading of some section on mixed effects models in S-plus and of
 outline for GEE.
 

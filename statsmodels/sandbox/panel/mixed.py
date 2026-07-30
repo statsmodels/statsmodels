@@ -580,7 +580,7 @@ class OneWayMixedResults(LikelihoodModelResults):
             # ax.plot(points, normal.pdf(points, loc=loc, scale=scale))
             # loc of sample is approx. zero, with Z appended to X
             # alternative, add fixed  to mean
-            ax.set_title("Random Effect %d Marginal Distribution" % ii)
+            ax.set_title(f"Random Effect {ii:d} Marginal Distribution")
             ax.plot(points, normal.pdf(points, loc=loc[ii], scale=scale[ii]), "r")
 
         return fig
@@ -621,7 +621,7 @@ class OneWayMixedResults(LikelihoodModelResults):
         re2 = self.params_random_units[:, idx2]
         ax.plot(re1, re2, "o", alpha=0.75)
         if title is None:
-            title = "Random Effects %d and %d" % (idx1, idx2)
+            title = f"Random Effects {idx1:d} and {idx2:d}"
         ax.set_title(title)
         ax_or_fig = ax
 

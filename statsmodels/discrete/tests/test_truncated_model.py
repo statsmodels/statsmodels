@@ -107,12 +107,14 @@ class TestTruncatedLFPoisson_predict:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5]
-        np.random.seed(123)
+        rs = np.random.RandomState(123)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = exog.dot(cls.expected_params)
-        cls.endog = truncatedpoisson.rvs(mu_true, 0, size=mu_true.shape)
+        cls.endog = truncatedpoisson.rvs(
+            mu_true, 0, size=mu_true.shape, random_state=rs
+        )
         model = TruncatedLFPoisson(cls.endog, exog, truncation=0)
         cls.res = model.fit(method="bfgs", maxiter=5000)
 
@@ -146,13 +148,13 @@ class TestTruncatedNBP_predict:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, 0.5, 0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = truncatednegbin.rvs(
-            mu_true, cls.expected_params[-1], 2, 0, size=mu_true.shape
+            mu_true, cls.expected_params[-1], 2, 0, size=mu_true.shape, random_state=rs
         )
         model = TruncatedLFNegativeBinomialP(cls.endog, exog, truncation=0, p=2)
         cls.res = model.fit(method="nm", maxiter=5000, maxfun=5000)

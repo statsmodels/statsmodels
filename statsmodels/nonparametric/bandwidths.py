@@ -8,7 +8,7 @@ from statsmodels.sandbox.nonparametric import kernels
 
 def _select_sigma(x, percentile=25):
     """
-    Returns the smaller of std(X, ddof=1) or normalized IQR(X) over axis 0.
+    Returns the smaller of std(X, ddof=1) or normalized IQR(X) over axis 0
 
     References
     ----------
@@ -94,7 +94,7 @@ def bw_silverman(x, kernel=None):
 
 def bw_normal_reference(x, kernel=None):
     """
-    Plug-in bandwidth with kernel specific constant based on normal reference.
+    Plug-in bandwidth with kernel specific constant based on normal reference
 
     This bandwidth minimizes the mean integrated square error if the true
     distribution is the normal. This choice is an appropriate bandwidth for
@@ -156,16 +156,17 @@ def select_bandwidth(x, bw, kernel):
     """
     Selects bandwidth for a selection rule bw
 
-    this is a wrapper around existing bandwidth selection rules
+    This is a wrapper around existing bandwidth selection rules.
 
     Parameters
     ----------
     x : array_like
         Array for which to get the bandwidth
     bw : str
-        name of bandwidth selection rule, currently supported are:
+        Name of the bandwidth selection rule, currently supported are:
         %s
-    kernel : not used yet
+    kernel : object
+        Not used yet.
 
     Returns
     -------

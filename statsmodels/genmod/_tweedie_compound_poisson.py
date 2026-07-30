@@ -9,7 +9,7 @@ Dunn, Peter K. and Smyth,  Gordon K. 2001. Tweedie family densities: methods of
     Statistical Modelling, Odense, Denmark, 2-6 July.
 
 Jørgensen, B., Demétrio, C.G.B., Kristensen, E., Banta, G.T., Petersen, H.C.,
-    Delefosse, M.: Bias-corrected Pearson estimating functions for Taylor`s
+    Delefosse, M.: Bias-corrected Pearson estimating functions for Taylor's
     power law applied to benthic macrofauna data. Stat. Probab. Lett. 81,
     749-758 (2011)
 

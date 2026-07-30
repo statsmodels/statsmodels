@@ -26,8 +26,8 @@ examples = [1, 2]
 if 1 in examples:
     data = sm.datasets.longley.load()
     y, x = data.endog, sm.add_constant(data.exog, prepend=False)
-    des_cols = ["x.%d" % (i + 1) for i in range(x.shape[1])]
-    formula = r("y~%s-1" % "+".join(des_cols))
+    des_cols = [f"x.{i + 1:d}" for i in range(x.shape[1])]
+    formula = r("y~{}-1".format("+".join(des_cols)))
     frame = r.data_frame(y=y, x=x)
     results = r.lm(formula, data=frame)
     print(list(results.keys()))
@@ -37,8 +37,8 @@ if 2 in examples:
     data2 = sm.datasets.star98.load()
     y2, x2 = data2.endog, sm.add_constant(data2.exog, prepend=False)
     y2 = y2[:, 0] / y2.sum(axis=1)
-    des_cols2 = ["x.%d" % (i + 1) for i in range(x2.shape[1])]
-    formula2 = r("y~%s-1" % "+".join(des_cols2))
+    des_cols2 = [f"x.{i + 1:d}" for i in range(x2.shape[1])]
+    formula2 = r("y~{}-1".format("+".join(des_cols2)))
     frame2 = r.data_frame(y=y2, x=x2)
     results2 = r.glm(formula2, data=frame2, family="binomial")
     params_est = [results2["coefficients"][k] for k in sorted(results2["coefficients"])]

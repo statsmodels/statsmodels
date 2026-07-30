@@ -16,7 +16,10 @@ import numpy.random as R
 import scipy.stats
 
 from statsmodels.genmod import families
-from statsmodels.sandbox.gam import AdditiveModel, Model as GAM  # ?
+from statsmodels.sandbox.gam import (
+    AdditiveModel,
+    Model as GAM,
+)
 
 example = 2  # 3  # 1,2 or 3
 
@@ -121,7 +124,7 @@ if example > 1:
     plt.title("gam.GAM " + mod_name)
 
     counter = 2
-    for ii, xx in zip(["z", "x1", "x2"], [z, x1, x2]):
+    for ii, xx in zip(["z", "x1", "x2"], [z, x1, x2], strict=True):
         sortidx = np.argsort(xx)
         # plt.figure()
         plt.subplot(2, 2, counter)

@@ -5,17 +5,20 @@ from statsmodels.iolib.table import SimpleTable
 
 class HypothesisTestResults:
     """
-    Results class for hypothesis tests.
+    Results class for hypothesis tests
 
     Parameters
     ----------
     test_statistic : float
+        The test's test statistic.
     crit_value : float
-    pvalue : float, 0 <= `pvalue` <= 1
+        The test's critical value.
+    pvalue : float
+        The test's p-value. Must be between 0 and 1.
     df : int
         Degrees of freedom.
-    signif : float, 0 < `signif` < 1
-        Significance level.
+    signif : float
+        Significance level. Must be between 0 and 1.
     method : str
         The kind of test (e.g. ``"f"`` for F-test, ``"wald"`` for Wald-test).
     title : str
@@ -38,7 +41,7 @@ class HypothesisTestResults:
             self.conclusion = "reject"
         self.title = title
         self.h0 = h0
-        self.conclusion_str = "Conclusion: %s H_0" % self.conclusion
+        self.conclusion_str = f"Conclusion: {self.conclusion} H_0"
         self.signif_str = f" at {self.signif:.0%} significance level"
 
     def summary(self):
@@ -74,10 +77,15 @@ class HypothesisTestResults:
             and np.allclose(self.pvalue, other.pvalue) \
             and np.allclose(self.signif, other.signif)
 
+    # Equality is based on np.allclose, which is not compatible with a
+    # hash based on field values, so instances remain unhashable (this
+    # matches the implicit behavior of defining __eq__ without __hash__).
+    __hash__ = None
+
 
 class CausalityTestResults(HypothesisTestResults):
     """
-    Results class for Granger-causality and instantaneous causality.
+    Results class for Granger-causality and instantaneous causality
 
     Parameters
     ----------
@@ -110,7 +118,7 @@ class CausalityTestResults(HypothesisTestResults):
         method = method.capitalize()
         # attributes used in summary and string representation:
         title = "Granger" if self.test == "granger" else "Instantaneous"
-        title += " causality %s-test" % method
+        title += f" causality {method}-test"
         h0 = "H_0: "
         if len(self.causing) == 1:
             h0 += f"{self.causing[0]} does not "
@@ -141,10 +149,12 @@ class CausalityTestResults(HypothesisTestResults):
                          self.caused == other.causing)
         return test and variables
 
+    __hash__ = None
+
 
 class NormalityTestResults(HypothesisTestResults):
     """
-    Results class for the Jarque-Bera-test for nonnormality.
+    Results class for the Jarque-Bera-test for nonnormality
 
     Parameters
     ----------
@@ -170,7 +180,7 @@ class NormalityTestResults(HypothesisTestResults):
 
 class WhitenessTestResults(HypothesisTestResults):
     """
-    Results class for the Portmanteau-test for residual autocorrelation.
+    Results class for the Portmanteau-test for residual autocorrelation
 
     Parameters
     ----------
@@ -186,6 +196,9 @@ class WhitenessTestResults(HypothesisTestResults):
         Significance level.
     nlags : int
         Number of lags tested.
+    adjusted : bool
+        Whether the test statistic is adjusted for the number of
+        observations used to estimate the autocorrelations.
     """
     def __init__(self, test_statistic, crit_value, pvalue, df, signif, nlags,
                  adjusted):

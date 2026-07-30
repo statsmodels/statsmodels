@@ -275,7 +275,7 @@ class RU2NMNL:
         # sorted alphabetically, order is/should be only internal
 
         self.paramsnames = sorted({i for j in paramsind.values() for i in j}) + [
-            "tau_%s" % bname for bname in self.branches
+            f"tau_{bname}" for bname in self.branches
         ]
 
         self.nparams = len(self.paramsnames)
@@ -383,7 +383,7 @@ class RU2NMNL:
 
                 for k in self.branchleaves[name]:
                     self.probstxt[k] = self.probstxt[k] + [
-                        "*" + name + "-prob" + "(%s)" % ", ".join(self.paramsind[name])
+                        "*" + name + "-prob" + "({})".format(", ".join(self.paramsind[name]))
                     ]
 
                     # TODO: does this use the denominator twice now
@@ -457,7 +457,7 @@ class RU2NMNL:
                 print("parent", parent)
             self.branchleaves[parent].append(tree)  # register leave with parent
             self.probstxt[tree] = [
-                tree + "-prob" + "(%s)" % ", ".join(self.paramsind[tree])
+                tree + "-prob" + "({})".format(", ".join(self.paramsind[tree]))
             ]
             # this is not yet a prob, not normalized to 1, it is exp(x*b)
             leafprob = np.exp(
@@ -506,12 +506,12 @@ if __name__ == "__main__":
     datadict = dict(
         zip(
             ["Air", "Train", "Bus", "Car"],
-            ["Airdata", "Traindata", "Busdata", "Cardata"]
+            ["Airdata", "Traindata", "Busdata", "Cardata"], strict=True
         )
     )
 
     if testxb:
-        datadict = dict(zip(["Air", "Train", "Bus", "Car"], np.arange(4)))
+        datadict = dict(zip(["Air", "Train", "Bus", "Car"], np.arange(4), strict=True))
 
     datadict.update({"top": [], "Fly": [], "Ground": []})
 
@@ -567,7 +567,7 @@ if __name__ == "__main__":
         "top": [],
     }
 
-    datadict2 = dict(list(zip("abcdefgh", lrange(8))))
+    datadict2 = dict(list(zip("abcdefgh", lrange(8), strict=True)))
     datadict2.update(
         {"top": 1000, "B1": 100, "B2": 200, "B21": 21, "B22": 22, "B3": 300}
     )

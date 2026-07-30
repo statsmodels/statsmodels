@@ -32,7 +32,7 @@ if __name__ == "__main__":
     endog = y
 
     print("DGP")
-    print("nobs=%d, beta=%r, sig_e=%3.1f" % (nobs, beta, sig_e))
+    print(f"nobs={nobs:d}, beta={beta!r}, sig_e={sig_e:3.1f}")
 
     mod_ols = OLS(endog, exog[:, :2])
     res_ols = mod_ols.fit()

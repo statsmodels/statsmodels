@@ -321,16 +321,16 @@ def get_summary_str(
     # Format summaries
     # Short summary
     print_str = "\n\n=========== Short Error Summary ============"
-    print_str += "\n\n The maximum likelihood fit RMS error = %.4f" % RMSE_ML
+    print_str += f"\n\n The maximum likelihood fit RMS error = {RMSE_ML:.4f}"
     if get_l1_slsqp_results:
         RMSE_l1_slsqp = get_RMSE(results_l1_slsqp, true_params)
-        print_str += "\n The l1_slsqp fit RMS error = %.4f" % RMSE_l1_slsqp
+        print_str += f"\n The l1_slsqp fit RMS error = {RMSE_l1_slsqp:.4f}"
     if get_l1_cvxopt_results:
         RMSE_l1_cvxopt_cp = get_RMSE(results_l1_cvxopt_cp, true_params)
-        print_str += "\n The l1_cvxopt_cp fit RMS error = %.4f" % RMSE_l1_cvxopt_cp
+        print_str += f"\n The l1_cvxopt_cp fit RMS error = {RMSE_l1_cvxopt_cp:.4f}"
     # Parameters
     print_str += "\n\n\n============== Parameters ================="
-    print_str += "\n\nTrue parameters: \n%s" % true_params
+    print_str += f"\n\nTrue parameters: \n{true_params}"
     # Full summary
     if print_summaries:
         print_str += "\n" + results_ML.summary().as_text()
@@ -339,12 +339,12 @@ def get_summary_str(
         if get_l1_cvxopt_results:
             print_str += "\n" + results_l1_cvxopt_cp.summary().as_text()
     else:
-        print_str += "\n\nThe maximum likelihood params are \n%s" % results_ML.params
+        print_str += f"\n\nThe maximum likelihood params are \n{results_ML.params}"
         if get_l1_slsqp_results:
-            print_str += "\n\nThe l1_slsqp params are \n%s" % results_l1_slsqp.params
+            print_str += f"\n\nThe l1_slsqp params are \n{results_l1_slsqp.params}"
         if get_l1_cvxopt_results:
             print_str += (
-                "\n\nThe l1_cvxopt_cp params are \n%s" % results_l1_cvxopt_cp.params
+                f"\n\nThe l1_cvxopt_cp params are \n{results_l1_cvxopt_cp.params}"
             )
     # Return
     return print_str
