@@ -6,7 +6,6 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
-import pytest
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -18,10 +17,7 @@ import statsmodels.stats._diagnostic_other as diao
 
 class CheckScoreTest:
 
-    @pytest.mark.thread_unsafe(reason="GLM.fit is not thread safe")
     def test_wald_score(self):
-        # Copy to make tests thread sage. fit() method is not thread safe
-        # because it sets/del attributes
         mod_full = self.model_full
         mod_drop = self.model_drop
         restriction = "x5=0, x6=0"
@@ -31,13 +27,14 @@ class CheckScoreTest:
 
         wald = res_full.wald_test(restriction, scalar=True)
         # note: need to use method for res_constr for correct df_resid
-        lm_constr = np.hstack(res_constr.score_test())
-        lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra))
-        lm_full = np.hstack(
-            res_full.score_test(
-                params_constrained=res_constr.params, k_constraints=res_constr.k_constr
-            )
+        res = res_constr.score_test()
+        lm_constr = np.hstack([res.statistic, res.pvalue, res.df])
+        res = score_test(res_drop, exog_extra=self.exog_extra)
+        lm_extra = np.hstack([res.statistic, res.pvalue, res.df])
+        res = res_full.score_test(
+            params_constrained=res_constr.params, k_constraints=res_constr.k_constr
         )
+        lm_full = np.hstack([res.statistic, res.pvalue, res.df])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
@@ -50,10 +47,10 @@ class CheckScoreTest:
         cov_type = "HC0"
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
-        lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))
-        lm_extra = np.hstack(
-            score_test(res_drop, exog_extra=self.exog_extra, cov_type=cov_type)
-        )
+        _res = score_test(res_constr, cov_type=cov_type)
+        lm_constr = np.hstack([_res.statistic, _res.pvalue, _res.df])
+        _res = score_test(res_drop, exog_extra=self.exog_extra, cov_type=cov_type)
+        lm_extra = np.hstack([_res.statistic, _res.pvalue, _res.df])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
@@ -103,26 +100,24 @@ class TestScoreTest(CheckScoreTest):
     def setup_class(cls):
         nobs, k_vars = 500, 5
 
-        rs = np.random.RandomState(786452)
-        x = rs.randn(nobs, k_vars)
+        np.random.seed(786452)
+        x = np.random.randn(nobs, k_vars)
         x[:, 0] = 1
-        x2 = rs.randn(nobs, 2)
+        x2 = np.random.randn(nobs, 2)
         xx = np.column_stack((x, x2))
 
         if cls.dispersed:
-            het = rs.randn(nobs)
-            y = rs.poisson(np.exp(x.sum(1) * 0.5 + het))
+            het = np.random.randn(nobs)
+            y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
-            y = rs.poisson(np.exp(x.sum(1) * 0.5))
+            y = np.random.poisson(np.exp(x.sum(1) * 0.5))
 
         cls.exog_extra = x2
         cls.model_full = GLM(y, xx, family=families.Poisson())
         cls.model_drop = GLM(y, x, family=families.Poisson())
 
-    @pytest.mark.thread_unsafe(reason="GLM.fit is not thread safe")
     def test_dispersion(self):
-        # Copy to make tests thread sage. fit() method is not thread safe
-        # because it sets/del attributes
         res_drop = self.model_drop.fit()
         res_test = diac.test_poisson_dispersion(res_drop)
         res_test_ = np.column_stack((res_test.statistic, res_test.pvalue))
@@ -186,17 +181,18 @@ class TestScoreTestPoisson(TestScoreTest):
         # copy-paste except for model
         nobs, k_vars = 500, 5
 
-        rs = np.random.RandomState(786452)
-        x = rs.randn(nobs, k_vars)
+        np.random.seed(786452)
+        x = np.random.randn(nobs, k_vars)
         x[:, 0] = 1
-        x2 = rs.randn(nobs, 2)
+        x2 = np.random.randn(nobs, 2)
         xx = np.column_stack((x, x2))
 
         if cls.dispersed:
-            het = rs.randn(nobs)
-            y = rs.poisson(np.exp(x.sum(1) * 0.5 + het))
+            het = np.random.randn(nobs)
+            y = np.random.poisson(np.exp(x.sum(1) * 0.5 + het))
+            # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
-            y = rs.poisson(np.exp(x.sum(1) * 0.5))
+            y = np.random.poisson(np.exp(x.sum(1) * 0.5))
 
         cls.exog_extra = x2
         cls.model_full = Poisson(y, xx)
@@ -242,18 +238,18 @@ class TestScoreTestGaussian(CheckScoreTest):
     def setup_class(cls):
         nobs, k_vars = 500, 5
 
-        rs = np.random.RandomState(786452)
-        x = rs.randn(nobs, k_vars)
+        np.random.seed(786452)
+        x = np.random.randn(nobs, k_vars)
         x[:, 0] = 1
-        x2 = rs.randn(nobs, 2)
+        x2 = np.random.randn(nobs, 2)
         xx = np.column_stack((x, x2))
 
         if cls.dispersed:
-            het = rs.randn(nobs)
-            y = rs.randn(nobs) + x.sum(1) * 0.5 + het
+            het = np.random.randn(nobs)
+            y = np.random.randn(nobs) + x.sum(1) * 0.5 + het
             # y_mc = np.random.negative_binomial(np.exp(x.sum(1) * 0.5), 2)
         else:
-            y = rs.randn(nobs) + x.sum(1) * 0.5
+            y = np.random.randn(nobs) + x.sum(1) * 0.5
 
         cls.exog_extra = x2
         cls.model_full = GLM(y, xx, family=families.Gaussian())

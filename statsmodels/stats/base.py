@@ -5,8 +5,6 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip
-
 import numpy as np
 
 from statsmodels.tools.testing import Holder
@@ -134,7 +132,7 @@ class AllPairsResults:
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we do not assume we have all pairs
-        pvals_mat[lzip(*self.all_pairs)] = self.pval_corrected()
+        pvals_mat[list(zip(*self.all_pairs, strict=True))] = self.pval_corrected()
         return pvals_mat
 
     def summary(self):
