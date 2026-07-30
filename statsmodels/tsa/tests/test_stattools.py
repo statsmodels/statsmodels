@@ -35,6 +35,7 @@ from statsmodels.tsa.stattools import (
     acovf,
     adfuller,
     arma_order_select_ic,
+    block_jackknife,
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
@@ -662,9 +663,77 @@ class TestPCCF:
             n_obs = 30 - h
             n_cols = 2 * (h - 1) + 1
             if n_obs <= n_cols and h > 1:
-                assert np.isnan(result[h - 1]), (
-                    f"lag {h}: {n_obs} obs, {n_cols} cols should be NaN"
-                )
+                assert np.isnan(
+                    result[h - 1]
+                ), f"lag {h}: {n_obs} obs, {n_cols} cols should be NaN"
+
+
+class TestBlockJackknife:
+    """
+    Test block (delete-k) jackknife estimator
+    """
+
+    def test_mean_closed_form(self):
+        # Leave-one-out jackknife applied to the sample mean should exactly
+        # reproduce the standard unbiased variance formula: Var(xbar) = s^2/n
+        rng = np.random.default_rng(42)
+        x = rng.normal(loc=10, scale=2, size=100)
+
+        theta_jack, se = block_jackknife(x, np.mean, n_blocks=-1)
+
+        expected_se = np.sqrt(np.var(x, ddof=1) / len(x))
+
+        assert_allclose(se, expected_se, rtol=1e-10)
+        assert_almost_equal(theta_jack, np.mean(x), DECIMAL_6)
+
+    def test_hand_computed(self):
+        # Matches the manually-verified 3-block case:
+        # x = [0..9], n_blocks=3
+        x = np.arange(10)
+
+        theta_jack, se = block_jackknife(x, np.mean, n_blocks=3)
+
+        assert_almost_equal(theta_jack, 4.309523809523809, DECIMAL_8)
+        assert_almost_equal(se, 2.044294088920541, DECIMAL_8)
+
+    def test_acf_runs(self):
+        # Reproduces the motivating AR(1)/ACF use case from the original
+        # feature request; checks shape and finiteness, not exact values,
+        # since there is no independent closed-form to check ACF jackknife
+        # SEs against.
+        rng = np.random.default_rng(0)
+        n = 5000
+        phi = 0.8
+        noise = rng.normal(scale=1.0, size=n)
+        x = np.zeros(n)
+        for t in range(1, n):
+            x[t] = phi * x[t - 1] + noise[t]
+
+        max_lag = 50
+        n_blocks = n // 20
+
+        def est(arr):
+            return acf(arr, nlags=max_lag)
+
+        rho, rho_se = block_jackknife(x, est, n_blocks=n_blocks)
+
+        assert rho.shape == (max_lag + 1,)
+        assert rho_se.shape == (max_lag + 1,)
+        assert np.all(np.isfinite(rho))
+        assert np.all(np.isfinite(rho_se))
+        assert np.all(rho_se >= 0)
+
+    def test_invalid_n_blocks(self):
+        x = np.arange(10)
+        with pytest.raises(ValueError, match="n_blocks must be greater than 1"):
+            block_jackknife(x, np.mean, n_blocks=1)
+        with pytest.raises(ValueError, match="n_blocks cannot exceed"):
+            block_jackknife(x, np.mean, n_blocks=20)
+
+    def test_non_callable_statistic(self):
+        x = np.arange(10)
+        with pytest.raises(ValueError, match="must be callable"):
+            block_jackknife(x, "not_a_function", n_blocks=2)
 
 
 class TestBreakvarHeteroskedasticityTest:
@@ -1107,7 +1176,7 @@ class TestKPSS:
         # clear error
         # GH5925
         nobs = len(self.x)
-        msg = fr"lags \({nobs}\) must be < number of observations \({nobs}\)"
+        msg = rf"lags \({nobs}\) must be < number of observations \({nobs}\)"
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
 
