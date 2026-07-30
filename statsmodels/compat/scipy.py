@@ -126,7 +126,10 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
 
     """
     try:
-        import scipy._lib.array_api_extra as xpx
+        try:
+            import scipy._lib.array_api_extra as xpx
+        except (ImportError, AttributeError):
+            import scipy._external.array_api_extra as xpx
 
         return xpx.apply_where(cond, args, f1, f2, fill_value=fill_value)
     except (ImportError, AttributeError):
