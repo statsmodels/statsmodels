@@ -108,7 +108,10 @@ for param in params:
         final.append(param)
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
-ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)]) for param in params]
+ids = [
+    ", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)])
+    for param in params
+]
 
 
 @pytest.fixture(scope="module", params=params, ids=ids)
@@ -216,9 +219,9 @@ def test_other_tests_autoreg(ols_autoreg_result):
     a.wald_test(r, scalar=True)
 
 
-@pytest.mark.parametrize("pandas",[True, False])
-@pytest.mark.parametrize("nexog",[0, 2])
-def test_summary_after_remove_data(pandas,nexog):
+@pytest.mark.parametrize("pandas", [True, False])
+@pytest.mark.parametrize("nexog", [0, 2])
+def test_summary_after_remove_data(pandas, nexog):
     data = gen_data(250, nexog, pandas)
     # exog = {} if nexog == 0 else {"exog": data.exog}
     mod = AutoReg(data.endog, 0, trend="n", seasonal=pandas, exog=data.exog)
