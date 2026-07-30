@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.iolib.summary import Summary
 
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
@@ -789,3 +790,60 @@ class TestPandasOffset:
             sm.ZeroInflatedPoisson(
                 endog=endog, exog=exog["I"], exposure=exposure, inflation=inflation
             ).fit()
+
+
+def _fit_zero_inflated_poisson_for_summary():
+    data = sm.datasets.randhie.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog_infl = sm.add_constant(exog[:, 0], prepend=False)
+    exog = sm.add_constant(exog[:, 1:4], prepend=False)
+    return sm.ZeroInflatedPoisson(
+        endog, exog, exog_infl=exog_infl, inflation="logit"
+    ).fit(method="newton", maxiter=500, disp=False)
+
+
+def _fit_zero_inflated_generalized_poisson_for_summary():
+    data = sm.datasets.randhie.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog_infl = sm.add_constant(exog[:, 0], prepend=False)
+    exog = sm.add_constant(exog[:, 1:4], prepend=False)
+    return sm.ZeroInflatedGeneralizedPoisson(
+        endog, exog, exog_infl=exog_infl, p=1
+    ).fit(method="newton", maxiter=500, disp=False)
+
+
+def _fit_zero_inflated_negative_binomial_for_summary():
+    data = sm.datasets.randhie.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog_infl = sm.add_constant(exog[:, 0], prepend=False)
+    exog = sm.add_constant(exog[:, 1], prepend=False)
+    # cheating for now, parameters are not well identified in this dataset
+    # see https://github.com/statsmodels/statsmodels/pull/3928#issuecomment-331724022
+    sp = np.array([1.88, -10.28, -0.20, 1.14, 1.34])
+    return sm.ZeroInflatedNegativeBinomialP(
+        endog, exog, exog_infl=exog_infl, p=2
+    ).fit(start_params=sp, method="nm", xtol=1e-6, maxiter=5000, disp=False)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_zero_inflated_poisson_for_summary,
+        _fit_zero_inflated_generalized_poisson_for_summary,
+        _fit_zero_inflated_negative_binomial_for_summary,
+    ],
+    ids=[
+        "ZeroInflatedPoisson",
+        "ZeroInflatedGeneralizedPoisson",
+        "ZeroInflatedNegativeBinomialP",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

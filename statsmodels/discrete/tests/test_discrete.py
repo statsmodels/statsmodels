@@ -40,6 +40,7 @@ from statsmodels.discrete.discrete_model import (
     Probit,
 )
 import statsmodels.formula.api as smf
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     PerfectSeparationError,
@@ -3750,3 +3751,74 @@ def test_mlogit_t_test():
     wt = res1.wald_test("y1_logpopul, y2_logpopul", scalar=True)
     # regression test
     assert_allclose(wt.statistic, 5.68660562, rtol=1e-8)
+
+
+def _fit_logit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Logit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_probit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Probit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_poisson_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return Poisson(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_mnlogit_for_summary():
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomial(data.endog, exog, "nb2").fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_p_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomialP(data.endog, exog, p=2).fit(method="newton", disp=0)
+
+
+def _fit_generalized_poisson_for_summary():
+    data = load_randhie()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return GeneralizedPoisson(data.endog, data.exog, p=2).fit(method="newton", disp=0)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_logit_for_summary,
+        _fit_probit_for_summary,
+        _fit_poisson_for_summary,
+        _fit_mnlogit_for_summary,
+        _fit_negative_binomial_for_summary,
+        _fit_negative_binomial_p_for_summary,
+        _fit_generalized_poisson_for_summary,
+    ],
+    ids=[
+        "Logit",
+        "Probit",
+        "Poisson",
+        "MNLogit",
+        "NegativeBinomial",
+        "NegativeBinomialP",
+        "GeneralizedPoisson",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

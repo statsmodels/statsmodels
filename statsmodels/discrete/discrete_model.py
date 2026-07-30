@@ -5785,6 +5785,35 @@ class BinaryResults(DiscreteResults):
         "extra_attr": "",
     }
 
+    def __init__(self, model, mlefit, cov_type="nonrobust", cov_kwds=None, use_t=None):
+        super().__init__(
+            model, mlefit, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
+        )
+        # Compute and store the separation diagnostic now, since fittedvalues
+        # and model.endog are cleared by remove_data() and summary() must
+        # still be able to run afterwards.
+        fittedvalues = self.model.cdf(self.fittedvalues)
+        absprederror = np.abs(self.model.endog - fittedvalues)
+        predclose_sum = (absprederror < 1e-4).sum()
+        predclose_frac = predclose_sum / len(fittedvalues)
+
+        etext = []
+        if predclose_sum == len(fittedvalues):  # TODO: nobs?
+            wstr = "Complete Separation: The results show that there is"
+            wstr += "complete separation or perfect prediction.\n"
+            wstr += "In this case the Maximum Likelihood Estimator does "
+            wstr += "not exist and the parameters\n"
+            wstr += "are not identified."
+            etext.append(wstr)
+        elif predclose_frac > 0.1:  # TODO: get better diagnosis
+            wstr = "Possibly complete quasi-separation: A fraction "
+            wstr += f"{predclose_frac:4.2f} of observations can be\n"
+            wstr += "perfectly predicted. This might indicate that there "
+            wstr += "is complete\nquasi-separation. In this case some "
+            wstr += "parameters will not be identified."
+            etext.append(wstr)
+        self._separation_etext = etext
+
     def pred_table(self, threshold=0.5):
         """
         Prediction table
@@ -5809,29 +5838,8 @@ class BinaryResults(DiscreteResults):
     @Appender(DiscreteResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=0.05, yname_list=None):
         smry = super().summary(yname, xname, title, alpha, yname_list)
-        fittedvalues = self.model.cdf(self.fittedvalues)
-        absprederror = np.abs(self.model.endog - fittedvalues)
-        predclose_sum = (absprederror < 1e-4).sum()
-        predclose_frac = predclose_sum / len(fittedvalues)
-
-        # add warnings/notes
-        etext = []
-        if predclose_sum == len(fittedvalues):  # TODO: nobs?
-            wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation or perfect prediction.\n"
-            wstr += "In this case the Maximum Likelihood Estimator does "
-            wstr += "not exist and the parameters\n"
-            wstr += "are not identified."
-            etext.append(wstr)
-        elif predclose_frac > 0.1:  # TODO: get better diagnosis
-            wstr = "Possibly complete quasi-separation: A fraction "
-            wstr += f"{predclose_frac:4.2f} of observations can be\n"
-            wstr += "perfectly predicted. This might indicate that there "
-            wstr += "is complete\nquasi-separation. In this case some "
-            wstr += "parameters will not be identified."
-            etext.append(wstr)
-        if etext:
-            smry.add_extra_txt(etext)
+        if self._separation_etext:
+            smry.add_extra_txt(self._separation_etext)
         return smry
 
     @cache_readonly

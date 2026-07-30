@@ -1,12 +1,14 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 
 from statsmodels.discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
     ConditionalPoisson,
 )
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
 
 
@@ -381,3 +383,44 @@ def test_skip_hessian():
     result_hess = model.fit(skip_hessian=False)
     assert result_no_hess.normalized_cov_params is None
     assert isinstance(result_hess.normalized_cov_params, np.ndarray)
+
+
+def _fit_conditional_logit_for_summary():
+    y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[0, 0, 1, 0, 0, 1, 0, 1, 1, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalLogit(y, x, groups=g).fit()
+
+
+def _fit_conditional_poisson_for_summary():
+    y = np.r_[3, 1, 4, 8, 2, 5, 4, 7, 2, 6]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[2, 1, 0, 0, 1, 2, 3, 2, 0, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalPoisson(y, x, groups=g).fit()
+
+
+def _fit_conditional_mnlogit_for_summary():
+    df, rs = gen_mnlogit(90)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    return model.fit(generator=rs)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_conditional_logit_for_summary,
+        _fit_conditional_poisson_for_summary,
+        _fit_conditional_mnlogit_for_summary,
+    ],
+    ids=["ConditionalLogit", "ConditionalPoisson", "ConditionalMNLogit"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
