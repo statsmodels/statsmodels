@@ -31,48 +31,54 @@ def asstr2(s):
         return str(s)
 
 
-def drop_missing(Y, X=None, axis=1):
+def drop_missing(y, x=None, axis=1):
     """
-    Return views on the arrays Y and X where missing observations are dropped
+    Return views on the arrays y and x where missing observations are dropped
 
     Parameters
     ----------
-    Y : array_like
+    y : array_like
         Data with observations possibly containing NaN values.
-    X : array_like, optional
+    x : array_like, optional
         Additional data with observations possibly containing NaN
         values. If provided, an observation is dropped if it is
-        missing in either `Y` or `X`.
+        missing in either `y` or `x`.
     axis : int
         Axis along which to look for missing observations.  Default is 1, ie.,
         observations in rows.
 
     Returns
     -------
-    Y : ndarray
-        `Y` with the rows (or columns) containing missing observations
+    y : ndarray
+        `y` with the rows (or columns) containing missing observations
         removed.
-    X : ndarray
-        `X` with the rows (or columns) containing missing observations
-        removed. Only returned if `X` is not None.
+    x : ndarray
+        `x` with the rows (or columns) containing missing observations
+        removed. Only returned if `x` is not None.
 
     Notes
     -----
-    If either Y or X is 1d, it is reshaped to be 2d.
+    If either y or x is 1d, it is reshaped to be 2d.
 
     """
-    Y = np.asarray(Y)
-    if Y.ndim == 1:
-        Y = Y[:, None]
-    if X is not None:
-        X = np.array(X)
-        if X.ndim == 1:
-            X = X[:, None]
-        keepidx = np.logical_and(~np.isnan(Y).any(axis), ~np.isnan(X).any(axis))
-        return Y[keepidx], X[keepidx]
+    y = np.asarray(y)
+    if y.ndim == 1:
+        y = y[:, None]
+    # ``axis`` is reduced when looking for missing values, so the observations
+    # that are kept must be selected along the other axis.
+    keep_axis = 1 - axis
+    if x is not None:
+        x = np.array(x)
+        if x.ndim == 1:
+            x = x[:, None]
+        keepidx = np.logical_and(~np.isnan(y).any(axis), ~np.isnan(x).any(axis))
+        return (
+            np.compress(keepidx, y, axis=keep_axis),
+            np.compress(keepidx, x, axis=keep_axis),
+        )
     else:
-        keepidx = ~np.isnan(Y).any(axis)
-        return Y[keepidx]
+        keepidx = ~np.isnan(y).any(axis)
+        return np.compress(keepidx, y, axis=keep_axis)
 
 
 # TODO: needs to better preserve dtype and be more flexible
