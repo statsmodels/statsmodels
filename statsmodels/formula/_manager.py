@@ -15,18 +15,11 @@ import pandas as pd
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
-DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
-if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
-    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
-
-
 ensure_patsy_compat()
 
 try:
     import patsy
     import patsy.missing
-
-    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "patsy"
 
     class NAAction(patsy.missing.NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
@@ -41,7 +34,6 @@ try:
     HAVE_PATSY = True
 
 except ImportError:
-    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "formulaic"
 
     class NAAction:
         def __init__(self, on_na="", na_types=("",)):
@@ -57,6 +49,30 @@ try:
 except ImportError:
     # Nothing to do if formulaic is not available
     pass
+
+
+DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
+if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
+    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
+if DEFAULT_FORMULA_ENGINE is None:
+    if HAVE_PATSY:
+        DEFAULT_FORMULA_ENGINE = "patsy"
+    elif HAVE_FORMULAIC:
+        DEFAULT_FORMULA_ENGINE = "formulaic"
+    else:
+        raise ImportError("One of patsy or formulaic must be installed to use statsmodels")
+elif DEFAULT_FORMULA_ENGINE == "patsy" and not HAVE_PATSY:
+    raise RuntimeError(
+        "The DEFAULT_FORMULA_ENGINE is set to 'patsy', but patsy is not installed. "
+        "Please install patsy or change the environment variable SM_FORMULA_ENGINE "
+        "to 'formulaic'."
+    )
+elif DEFAULT_FORMULA_ENGINE == "formulaic" and not HAVE_FORMULAIC:
+    raise RuntimeError(
+        "The DEFAULT_FORMULA_ENGINE is set to 'formulaic', but formulaic is not "
+        "installed. Please install formulaic or change the environment variable "
+        "SM_FORMULA_ENGINE to 'patsy'."
+    )
 
 
 EVAL_ENV_WARNING = """\
