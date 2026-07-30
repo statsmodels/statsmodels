@@ -339,7 +339,7 @@ def recipr(x):
 
 def recipr0(x):
     """
-    Reciprocal of an array with entries less than 0 set to 0
+    Reciprocal of an array with entries equal to 0 set to 0
 
     Parameters
     ----------
