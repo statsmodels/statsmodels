@@ -115,10 +115,14 @@ The dependence structures currently implemented are
 
    CovStruct
    Autoregressive
+   Equivalence
    Exchangeable
    GlobalOddsRatio
    Independence
    Nested
+   NominalIndependence
+   Stationary
+   Unstructured
 
 
 Families
