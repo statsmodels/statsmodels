@@ -158,7 +158,7 @@ The primary reference for the implementation details is:
 
 See also this more recent document:
 
-* http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
+* https://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
 
 All the likelihood, gradient, and Hessian calculations closely follow
 Lindstrom and Bates.
