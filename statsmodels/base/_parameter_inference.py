@@ -225,7 +225,7 @@ def score_test(
 
     else:
         if cov_type == "V":
-            raise ValueError("if exog_extra is not None, then cov_type cannot " "be V")
+            raise ValueError("if exog_extra is not None, then cov_type cannot be V")
         if hasattr(self, "constraints"):
             raise NotImplementedError(
                 "if exog_extra is not None, then self"
@@ -362,7 +362,7 @@ def _scorehess_extra(
     # print(r_matrix.shape, k_cm, k_cp, k_mean_new, k_prec_new)
     # print(index_mean, index_prec)
     r_matrix[:k_cm, index_mean] = np.eye(k_cm)
-    r_matrix[k_cm:  k_cm + k_cp, index_prec] = np.eye(k_cp)
+    r_matrix[k_cm : k_cm + k_cp, index_prec] = np.eye(k_cp)
 
     if hasattr(model, "score_hessian_factor"):
         sf, hf = model.score_hessian_factor(params, return_hessian=True, **hess_kwds)
