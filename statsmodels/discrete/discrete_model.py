@@ -84,12 +84,17 @@ _discrete_results_docs = """
     Parameters
     ----------
     model : A DiscreteModel instance
-    params : array_like
-        The parameters of a fitted model.
-    hessian : array_like
-        The hessian of the fitted model.
-    scale : float
-        A scale parameter for the covariance matrix.
+        The fitted discrete model.
+    mlefit : LikelihoodModelResults instance
+        Results from fitting the model by maximum likelihood.
+    cov_type : str, optional
+        The covariance estimator used for standard errors. The default is
+        ``"nonrobust"``.
+    cov_kwds : dict, optional
+        Keywords passed to the covariance estimator.
+    use_t : bool, optional
+        If True, use the Student's t distribution for inference. If False,
+        use the normal distribution. If None, use the model default.
 
     Attributes
     ----------
