@@ -112,6 +112,12 @@ class SARIMAXSpecification:
         differencing orders and seasonal periodicity are not invalid, and
         that the trend does not duplicate a constant column already present
         in `exog`. Default is True.
+    validate_exog : bool, optional
+        Whether or not to check that `exog` does not contain a constant column
+        that duplicates a constant trend. Has no effect unless
+        `validate_specification` is True. This is separated out so that it can
+        be disabled when extending an already-validated model with data that is
+        constant only over the extension window. Default is True.
 
     Attributes
     ----------
@@ -235,7 +241,8 @@ class SARIMAXSpecification:
                  seasonal_ma_order=None, seasonal_periods=None, trend=None,
                  enforce_stationarity=None, enforce_invertibility=None,
                  concentrate_scale=None, trend_offset=1, dates=None, freq=None,
-                 missing="none", validate_specification=True):
+                 missing="none", validate_specification=True, *,
+                 validate_exog=True):
 
         # Basic parameters
         self.enforce_stationarity = enforce_stationarity
@@ -400,7 +407,7 @@ class SARIMAXSpecification:
 
         # Check for a constant column in the provided exog
         exog_is_pandas = _is_using_pandas(exog, None)
-        if (validate_specification and exog is not None and
+        if (validate_specification and validate_exog and exog is not None and
                 len(self.trend_poly) > 0 and self.trend_poly[0] == 1):
             # Figure out if we have any constant columns
             x = np.asanyarray(exog)

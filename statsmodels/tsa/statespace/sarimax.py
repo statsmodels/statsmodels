@@ -126,6 +126,10 @@ class SARIMAX(MLEModel):
         If 'raise', an error is raised. Default is 'none'.
     validate_specification : bool, optional
         Whether or not to validate the model specification. Default is True.
+    validate_exog : bool, optional
+        Whether or not to check that `exog` does not duplicate a constant trend
+        with a constant column. Has no effect unless `validate_specification`
+        is True. Default is True.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -341,13 +345,14 @@ class SARIMAX(MLEModel):
                  hamilton_representation=False, concentrate_scale=False,
                  trend_offset=1, use_exact_diffuse=False, dates=None,
                  freq=None, missing="none", validate_specification=True,
-                 **kwargs):
+                 validate_exog=True, **kwargs):
 
         self._spec = SARIMAXSpecification(
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification)
+            missing=missing, validate_specification=validate_specification,
+            validate_exog=validate_exog)
         self._params = SARIMAXParams(self._spec)
 
         # Save given orders
@@ -1934,6 +1939,13 @@ class SARIMAXResults(MLEResults):
 
     def extend(self, endog, exog=None, **kwargs):
         kwargs.setdefault("trend_offset", self.nobs + 1)
+        # GH 8991. The specification was already validated when the original
+        # model was created, and `extend` cannot change it. Only the constant-
+        # `exog` check can misfire when re-run on the new data alone: `exog`
+        # that is constant over the extension window but not over the full
+        # sample would raise as though it collided with a constant trend.
+        # Disable just that check and leave the rest of the validation active.
+        kwargs.setdefault("validate_exog", False)
         return super().extend(endog, exog=exog, **kwargs)
 
     @cache_readonly

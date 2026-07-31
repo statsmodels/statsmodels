@@ -2782,6 +2782,40 @@ def test_extend_by_one():
         res2.extend(endog[-1:])
 
 
+def test_extend_constant_exog_with_trend():
+    # GH 8991: `exog` that happens to be constant over the extension window, but
+    # not over the full sample, must not be mistaken for a constant column
+    # colliding with the constant trend.
+    endog = np.arange(100.0)
+    exog = np.r_[np.arange(50.0), np.ones(50) * 7.0]
+    params = [1.0, 1.0, 0.1, 1.0]
+
+    mod1 = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0), trend="c")
+    res1 = mod1.smooth(params)
+
+    mod2 = sarimax.SARIMAX(endog[:50], exog=exog[:50], order=(1, 0, 0), trend="c")
+    res2 = mod2.smooth(params)
+
+    # Raised ValueError before GH 8991 was fixed
+    res3 = res2.extend(endog[50:], exog=exog[50:])
+
+    assert_allclose(res3.llf_obs, res1.llf_obs[50:])
+    for attr in ["filtered_state", "predicted_state", "forecasts", "smoothed_state"]:
+        assert_allclose(getattr(res3, attr), getattr(res1, attr)[..., 50:])
+
+    fcast_exog = np.ones(10) * 7.0
+    assert_allclose(
+        res3.forecast(10, exog=fcast_exog), res1.forecast(10, exog=fcast_exog)
+    )
+
+    # The trend offset must still be applied to the extended model
+    assert_equal(res3.model.trend_offset, res2.nobs + 1)
+
+    # The exog check remains available to callers that explicitly ask for it
+    with pytest.raises(ValueError, match="already contains a column of constants"):
+        res2.extend(endog[50:], exog=exog[50:], validate_exog=True)
+
+
 def test_apply_results():
     endog = np.arange(100)
     exog = np.ones_like(endog)
