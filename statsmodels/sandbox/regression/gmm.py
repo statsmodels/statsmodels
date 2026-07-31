@@ -1175,6 +1175,10 @@ class GMMResults(LikelihoodModelResults):
 
         self.nobs = self.model.nobs
         self.df_resid = np.inf
+        # Does not call Results.__init__, so set these directly; needed for
+        # remove_data() to work (it assumes both attributes exist).
+        self._data_attr = []
+        self._data_in_cache = ["fittedvalues", "resid", "wresid"]
 
         self.cov_params_default = self._cov_params()
 

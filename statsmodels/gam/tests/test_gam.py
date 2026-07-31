@@ -37,6 +37,7 @@ from statsmodels.gam.smooth_basis import (
 )
 from statsmodels.genmod.families.family import Gaussian
 from statsmodels.genmod.generalized_linear_model import GLM, lm
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.linalg import matrix_sqrt
 
 sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
@@ -197,6 +198,23 @@ def test_gam_glm():
     # plt.show()
 
     assert_allclose(y_gam, y_mgcv, atol=1.0e-2)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    cur_dir = Path(__file__).resolve().parent
+    file_path = Path(cur_dir).joinpath("results", "prediction_from_mgcv.csv")
+    data_from_r = pd.read_csv(file_path)
+    x = data_from_r.x.values
+    y = data_from_r.y.values
+
+    bsplines = BSplines(x, degree=[3], df=[10], include_intercept=True)
+    glm_gam = GLMGam(y, smoother=bsplines, alpha=0.1)
+    res = glm_gam.fit(method="bfgs", max_start_irls=0, disp=1, maxiter=10000)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 def test_gam_discrete():

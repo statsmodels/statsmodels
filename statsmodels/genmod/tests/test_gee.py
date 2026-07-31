@@ -29,6 +29,7 @@ from statsmodels import tools
 import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
+from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
@@ -96,6 +97,23 @@ class TestGEE:
 
         # smoke test
         marg.summary()
+
+    def test_summary_after_remove_data(self):
+        # summary() must still work after remove_data() has been called
+        n = 40
+        rs = np.random.RandomState(34234)
+        exog = rs.normal(size=(n, 3))
+        exog[:, 0] = 1
+
+        groups = np.kron(np.arange(n / 4), np.r_[1, 1, 1, 1])
+        endog = exog[:, 1] + rs.normal(size=n)
+
+        model = gee.GEE(endog, exog, groups)
+        res = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+
+        assert isinstance(res.summary(), Summary)
+        res.remove_data()
+        assert isinstance(res.summary(), Summary)
 
     def test_margins_gaussian_lists_tuples(self):
         # Check marginal effects for a Gaussian GEE fit using lists and

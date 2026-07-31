@@ -4218,7 +4218,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         """
         mod = self.model
 
-        # Cache the small state space matrices used below as plain
+         # Cache the small state space matrices used below as plain
         # attributes (not cache_readonly) so summary() keeps working after
         # remove_data() has cleared filter_results.
         cache = self.__dict__.setdefault("_summary_cache", {})

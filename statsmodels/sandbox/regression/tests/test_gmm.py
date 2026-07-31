@@ -15,6 +15,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
 from statsmodels.tools.tools import add_constant
@@ -227,6 +228,35 @@ def test_ivgmm0_r():
 
     score = res.model.score(res.params, w0)
     assert_allclose(score, np.zeros(score.shape), rtol=0, atol=5e-6)  # atol=1e-8) ??
+
+
+def test_iv2sls_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = gmm.IV2SLS(endog, exog, instrument)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_ivgmm_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    nobs, k_instr = instrument.shape
+    w0inv = np.dot(instrument.T, instrument) / nobs
+
+    mod = gmm.IVGMM(endog, exog, instrument)
+    res = mod.fit(
+        np.ones(exog.shape[1], float),
+        maxiter=0,
+        inv_weights=w0inv,
+        optim_method="bfgs",
+        optim_args={"gtol": 1e-8, "disp": 0},
+    )
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 def test_ivgmm1_stata():

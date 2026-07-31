@@ -24,6 +24,7 @@ from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import (
     approx_fprime,
     approx_fprime_cs,
@@ -3197,3 +3198,16 @@ def test_glm_summary2_method():
     res_g1 = mod.fit(start_params=res1.params, method="bfgs")
     summ = res_g1.summary2()
     assert re.compile(r"Method:\s+bfgs").findall(str(summ))
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    data = longley.load()
+    data.endog = np.require(data.endog, requirements="W")
+    data.exog = np.require(data.exog, requirements="W")
+    data.exog = add_constant(data.exog, prepend=False)
+    res = GLM(data.endog, data.exog, family=sm.families.Gaussian()).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

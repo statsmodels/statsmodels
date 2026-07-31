@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary2 import Summary
 
 # All the R results
 from .results import survival_enet_r_results, survival_r_results
@@ -355,6 +356,20 @@ class TestPHReg:
         smry = rslt.summary()
         msg = "200 observations have positive entry times"
         assert_(msg in str(smry))
+
+    def test_summary_after_remove_data(self):
+        # summary() must still work after remove_data() has been called
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
+
+        mod = PHReg(time, exog, status)
+        res = mod.fit()
+
+        assert isinstance(res.summary(), Summary)
+        res.remove_data()
+        assert isinstance(res.summary(), Summary)
 
     @pytest.mark.smoke
     def test_predict(self):
