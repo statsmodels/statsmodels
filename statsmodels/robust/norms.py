@@ -426,7 +426,7 @@ class HuberT(RobustNorm):
         """
         Derivative of the Huber T psi function.
 
-        Parameters 
+        Parameters
         ----------
         z : array_like
             Input residual values.
