@@ -327,13 +327,13 @@ def test_specification_ar_or_ma(n, d, D, s, params, which):
     if which == "p":
         # d unchanged
         p, q = n, 0
-        ar_names = ["ar.L%d" % i for i in range(1, p + 1)]
+        ar_names = [f"ar.L{i:d}" for i in range(1, p + 1)]
         ma_names = []
     else:
         # d unchanged
         p, q = 0, n
         ar_names = []
-        ma_names = ["ma.L%d" % i for i in range(1, q + 1)]
+        ma_names = [f"ma.L{i:d}" for i in range(1, q + 1)]
     ar_params = params[:p]
     ma_params = params[p:-1]
     sigma2 = params[-1]
@@ -497,7 +497,7 @@ def test_specification(
         raise ValueError("Invalid `endog` in test setup.")
 
     if isinstance(exog, int):
-        exog_names = ["x%d" % (i + 1) for i in range(exog)]
+        exog_names = [f"x{i + 1:d}" for i in range(exog)]
         exog = np.arange(nobs * len(exog_names)).reshape(nobs, len(exog_names))
     elif isinstance(exog, list):
         exog_names = exog
@@ -524,17 +524,17 @@ def test_specification(
             "is_ma_consecutive": is_ma_consecutive,
             "exog_names": exog_names,
             "ar_names": [
-                "ar.L%d" % i for i in (p if isinstance(p, list) else range(1, p + 1))
+                f"ar.L{i:d}" for i in (p if isinstance(p, list) else range(1, p + 1))
             ],
             "ma_names": [
-                "ma.L%d" % i for i in (q if isinstance(q, list) else range(1, q + 1))
+                f"ma.L{i:d}" for i in (q if isinstance(q, list) else range(1, q + 1))
             ],
             "seasonal_ar_names": [
-                "ar.S.L%d" % (i * s)
+                f"ar.S.L{i * s:d}"
                 for i in (P if isinstance(P, list) else range(1, P + 1))
             ],
             "seasonal_ma_names": [
-                "ma.S.L%d" % (i * s)
+                f"ma.S.L{i * s:d}"
                 for i in (Q if isinstance(Q, list) else range(1, Q + 1))
             ],
         }

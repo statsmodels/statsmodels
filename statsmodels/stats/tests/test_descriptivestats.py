@@ -48,9 +48,7 @@ data1 = np.array(
         ("delta", "|S2"),
     ],
 )
-data2 = np.array(
-    [(1, 2), (2, 3), (2, 4)], dtype=[("alpha", float), ("beta", float)]
-)
+data2 = np.array([(1, 2), (2, 3), (2, 4)], dtype=[("alpha", float), ("beta", float)])
 
 data3 = np.array([[1, 2, 4, 4], [2, 3, 3, 3], [2, 4, 4, 3]], dtype=float)
 
@@ -106,13 +104,53 @@ def test_odd_percentiles(df):
     percentiles = np.linspace(7.0, 93.0, 13)
     res = Description(df, percentiles=percentiles)
     stats = [
-        "nobs", "missing", "mean", "std_err", "upper_ci", "lower_ci", "std",
-        "iqr", "iqr_normal", "mad", "mad_normal", "coef_var", "range", "max",
-        "min", "skew", "kurtosis", "jarque_bera", "jarque_bera_pval", "mode",
-        "mode_freq", "median", "distinct", "top_1", "top_2", "top_3", "top_4",
-        "top_5", "freq_1", "freq_2", "freq_3", "freq_4", "freq_5", "7.0%",
-        "14.1%", "21.3%", "28.5%", "35.6%", "42.8%", "50.0%", "57.1%", "64.3%",
-        "71.5%", "78.6%", "85.8%", "93.0%"]
+        "nobs",
+        "missing",
+        "mean",
+        "std_err",
+        "upper_ci",
+        "lower_ci",
+        "std",
+        "iqr",
+        "iqr_normal",
+        "mad",
+        "mad_normal",
+        "coef_var",
+        "range",
+        "max",
+        "min",
+        "skew",
+        "kurtosis",
+        "jarque_bera",
+        "jarque_bera_pval",
+        "mode",
+        "mode_freq",
+        "median",
+        "distinct",
+        "top_1",
+        "top_2",
+        "top_3",
+        "top_4",
+        "top_5",
+        "freq_1",
+        "freq_2",
+        "freq_3",
+        "freq_4",
+        "freq_5",
+        "7.0%",
+        "14.1%",
+        "21.3%",
+        "28.5%",
+        "35.6%",
+        "42.8%",
+        "50.0%",
+        "57.1%",
+        "64.3%",
+        "71.5%",
+        "78.6%",
+        "85.8%",
+        "93.0%",
+    ]
     assert_equal(res.frame.index.tolist(), stats)
 
 
@@ -147,6 +185,9 @@ def test_special_stats(df, stat):
 
 
 def test_empty_columns(df):
+    # Do not modify original df
+    df_orig = df.copy()
+    df = df_orig.copy()
     df["c"] = np.nan
     res = Description(df)
     dropped = res.frame.c.dropna()
@@ -154,14 +195,49 @@ def test_empty_columns(df):
     assert "missing" in dropped
     assert "nobs" in dropped
 
+    df = df_orig.copy()
     df["c"] = np.nan
     res = Description(df.c)
     dropped = res.frame.dropna()
     assert dropped.shape[0] == 2
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        pd.DataFrame({"a": pd.Series([], dtype="float64")}),
+        pd.DataFrame({"a": pd.Series([], dtype="category")}),
+        pd.DataFrame(
+            {
+                "a": pd.Series([], dtype="float64"),
+                "b": pd.Series([], dtype="category"),
+            }
+        ),
+    ],
+    ids=["numeric", "categorical", "mixed"],
+)
+def test_empty_rows(data):
+    # GH#9891: describe on a 0-row input used to raise an unhelpful error
+    # from deep inside pandas/numpy (ValueError for numeric columns, KeyError
+    # for categorical ones) instead of returning an empty/NaN summary.
+    res = describe(data)
+    assert isinstance(res, pd.DataFrame)
+    assert list(res.columns) == list(data.columns)
+    # No observations in any column
+    assert (res.loc["nobs"] == 0).all()
+    assert (res.loc["missing"] == 0).all()
+    # Undefined numeric statistics are NaN rather than raising
+    if "a" in data.select_dtypes("number").columns:
+        assert np.isnan(res.loc["mean", "a"])
+        assert np.isnan(res.loc["std", "a"])
+    # Description.frame agrees with the describe convenience wrapper
+    pd.testing.assert_frame_equal(res, Description(data).frame)
+
+
 @pytest.mark.skipif(not hasattr(pd, "NA"), reason="Must support NA")
 def test_extension_types(df):
+    # Do not modify original df
+    df = df.copy()
     df["c"] = pd.Series(np.arange(100.0))
     df["d"] = pd.Series(np.arange(100), dtype=pd.Int64Dtype())
     df.loc[df.index[::2], "c"] = np.nan
@@ -175,8 +251,7 @@ def test_std_err(df):
     Test the standard error of the mean matches result from scipy.stats.sem
     """
     np.testing.assert_allclose(
-        Description(df["a"]).frame.loc["std_err"],
-        scipy.stats.sem(df["a"])
+        Description(df["a"]).frame.loc["std_err"], scipy.stats.sem(df["a"])
     )
 
 

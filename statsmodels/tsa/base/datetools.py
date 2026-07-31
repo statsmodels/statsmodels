@@ -1,7 +1,5 @@
-"""
-Tools for working with dates
-"""
-from statsmodels.compat.python import asstr, lmap, lrange, lzip
+"""Tools for working with dates"""
+from statsmodels.compat.python import lmap, lrange, lzip
 
 import datetime
 import re
@@ -23,12 +21,12 @@ _quarter_to_day = {
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 _months_with_days = lzip(lrange(1, 13), _mdays)
-_month_to_day = dict(zip(map(str, lrange(1, 13)), _months_with_days))
+_month_to_day = dict(zip(map(str, lrange(1, 13)), _months_with_days, strict=True))
 _month_to_day.update(
     dict(
         zip(
             ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"],
-            _months_with_days,
+            _months_with_days, strict=True,
         )
     )
 )
@@ -69,10 +67,27 @@ def _is_leap(year):
 
 def date_parser(timestr, parserinfo=None, **kwargs):
     """
-    Uses dateutil.parser.parse, but also handles monthly dates of the form
-    1999m4, 1999:m4, 1999:mIV, 1999mIV and the same for quarterly data
-    with q instead of m. It is not case sensitive. The default for annual
-    data is the end of the year, which also differs from dateutil.
+    Parse a date string, understanding statsmodels-specific date formats
+
+    Falls back to dateutil.parser.parse, but also handles monthly dates of
+    the form 1999m4, 1999:m4, 1999:mIV, 1999mIV and the same for quarterly
+    data with q instead of m. It is not case sensitive. The default for
+    annual data is the end of the year, which also differs from dateutil.
+
+    Parameters
+    ----------
+    timestr : str
+        The date string to parse.
+    parserinfo : dateutil.parser.parserinfo, optional
+        Not used by this function; retained for backwards compatibility.
+    **kwargs
+        Keyword arguments passed to ``pandas.to_datetime`` when `timestr`
+        does not match a recognized quarterly, monthly, or annual pattern.
+
+    Returns
+    -------
+    datetime.datetime or pandas.Timestamp
+        The parsed date.
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
@@ -96,7 +111,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
 
 def date_range_str(start, end=None, length=None):
     """
-    Returns a list of abbreviated date strings.
+    Returns a list of abbreviated date strings
 
     Parameters
     ----------
@@ -105,7 +120,7 @@ def date_range_str(start, end=None, length=None):
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
-        The length of the returned array of end is None.
+        The length of the returned array if end is None.
 
     Returns
     -------
@@ -128,7 +143,7 @@ def date_range_str(start, end=None, length=None):
             end += "a1"
         split = "a"
     else:
-        raise ValueError("Date %s not understood" % start)
+        raise ValueError(f"Date {start} not understood")
     yr1, offset1 = lmap(int, start.replace(":", "").split(split))
     if end is not None:
         end = end.lower()
@@ -144,11 +159,11 @@ def date_range_str(start, end=None, length=None):
     # tack on last year
     years = years + [(str(yr2))] * offset2
     if split != "a":
-        offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype("S2")
-        offset = np.r_[np.arange(offset1, annual_freq + 1).astype("S2"), offset]
-        offset = np.r_[offset, np.arange(1, offset2 + 1).astype("S2")]
-        date_arr_range = ["".join([i, split, asstr(j)])
-                          for i, j in zip(years, offset)]
+        offset = np.tile(np.arange(1, annual_freq + 1), yr2 - yr1 - 1).astype(str)
+        offset = np.r_[np.arange(offset1, annual_freq + 1).astype(str), offset]
+        offset = np.r_[offset, np.arange(1, offset2 + 1).astype(str)]
+
+        date_arr_range = [f"{i}{split}{j}" for i, j in zip(years, offset, strict=True)]
     else:
         date_arr_range = years
     return date_arr_range
@@ -156,7 +171,7 @@ def date_range_str(start, end=None, length=None):
 
 def dates_from_str(dates):
     """
-    Turns a sequence of date strings and returns a list of datetime.
+    Turns a sequence of date strings and returns a list of datetime
 
     Parameters
     ----------
@@ -175,7 +190,7 @@ def dates_from_str(dates):
 
 def dates_from_range(start, end=None, length=None):
     """
-    Turns a sequence of date strings and returns a list of datetime.
+    Turns a sequence of date strings and returns a list of datetime
 
     Parameters
     ----------
@@ -184,7 +199,12 @@ def dates_from_range(start, end=None, length=None):
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
-        The length of the returned array of end is None.
+        The length of the returned array if end is None.
+
+    Returns
+    -------
+    date_list : ndarray
+        A list of datetime types.
 
     Examples
     --------
@@ -192,12 +212,6 @@ def dates_from_range(start, end=None, length=None):
     >>> import pandas as pd
     >>> nobs = 50
     >>> dates = pd.date_range('1960m1', length=nobs)
-
-
-    Returns
-    -------
-    date_list : ndarray
-        A list of datetime types.
     """
     dates = date_range_str(start, end, length)
     return dates_from_str(dates)

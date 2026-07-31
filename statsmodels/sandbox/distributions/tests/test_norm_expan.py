@@ -19,7 +19,8 @@ class CheckDistribution:
 
     @pytest.mark.smoke
     def test_dist1(self):
-        self.dist1.rvs(size=10)
+        rs = np.random.RandomState(9989881)
+        self.dist1.rvs(size=10, random_state=rs)
         self.dist1.pdf(np.linspace(-4, 4, 11))
 
     def test_cdf_ppf_roundtrip(self):
@@ -71,8 +72,8 @@ class TestExpandNormSample:
     @classmethod
     def setup_class(cls):
         cls.dist1 = dist1 = stats.norm(1, 2)
-        np.random.seed(5999)
-        cls.rvs = dist1.rvs(size=200)
+        rs = np.random.RandomState(5999)
+        cls.rvs = dist1.rvs(size=200, random_state=rs)
         # rvs = np.concatenate([rvs, -rvs])
         # fix mean and std of sample
         # rvs = (rvs - rvs.mean())/rvs.std(ddof=1) * np.sqrt(2) + 1

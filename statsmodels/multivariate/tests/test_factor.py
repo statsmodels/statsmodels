@@ -1,7 +1,4 @@
-from statsmodels.compat.pandas import PD_LT_1_4
-
-import os
-import warnings
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -265,14 +262,8 @@ def test_getframe_smoke():
         return
         # TODO: separate this and do pytest.skip?
 
-    # Old implementation that warns
-    if PD_LT_1_4:
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            lds.to_latex()
-    else:
-        # Smoke test using new style to_latex
-        lds.style.to_latex()
+    # Smoke test using new style to_latex
+    lds.style.to_latex()
     try:
         from pandas.io import formats as pd_formats
     except ImportError:
@@ -308,11 +299,11 @@ def _zscore(x):
 
 @pytest.mark.smoke
 def test_factor_scoring():
-    path = os.path.abspath(__file__)
-    dir_path = os.path.dirname(path)
-    csv_path = os.path.join(dir_path, "results", "factor_data.csv")
+    path = Path(__file__).resolve()
+    dir_path = Path(path).parent
+    csv_path = Path(dir_path).joinpath("results", "factor_data.csv")
     y = pd.read_csv(csv_path)
-    csv_path = os.path.join(dir_path, "results", "factors_stata.csv")
+    csv_path = Path(dir_path).joinpath("results", "factors_stata.csv")
     f_s = pd.read_csv(csv_path)
     #  mostly smoke tests for now
     mod = Factor(y, 2)

@@ -7,6 +7,7 @@ Hastie, Tibshirani, Friedman. (2009) The Elements of Statistical Learning: Data 
 
 Cleveland, W.S. (1979) "Robust Locally Weighted Regression and Smoothing Scatterplots". Journal of the American Statistical Association 74 (368): 829-836.
 """
+from statsmodels.compat.numpy import inplace_reshape
 
 import numpy as np
 from numpy.linalg import lstsq
@@ -16,7 +17,7 @@ def lowess(endog, exog, frac=2.0 / 3, it=3):
     """
     LOWESS (Locally Weighted Scatterplot Smoothing)
 
-    A lowess function that outs smoothed estimates of endog
+    A lowess function that outputs smoothed estimates of endog
     at the given exog values from points (exog, endog)
 
     Parameters
@@ -116,36 +117,35 @@ def lowess(endog, exog, frac=2.0 / 3, it=3):
         _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n)
 
     out = np.array([x_copy, fitted]).T
-    out.shape = (n, 2)
+    out = inplace_reshape(out, (n, 2))
 
     return out
 
 
 def _lowess_initial_fit(x_copy, y_copy, k, n):
     """
-     The initial weighted local linear regression for lowess.
+    The initial weighted local linear regression for lowess
 
-     Parameters
-     ----------
-     x_copy : 1-d ndarray
-         The x-values/exogenous part of the data being smoothed
-     y_copy : 1-d ndarray
-         The y-values/ endogenous part of the data being smoothed
+    Parameters
+    ----------
+    x_copy : 1-d ndarray
+        The x-values/exogenous part of the data being smoothed
+    y_copy : 1-d ndarray
+        The y-values/ endogenous part of the data being smoothed
     k : int
-         The number of data points which affect the linear fit for
-         each estimated point
-     n : int
-         The total number of points
+        The number of data points which affect the linear fit for
+        each estimated point
+    n : int
+        The total number of points
 
-     Returns
-     -------
-     fitted : 1-d ndarray
-         The fitted y-values
-     weights : 2-d ndarray
-         An n by k array. The contribution to the weights in the
-         local linear fit coming from the distances between the
-         x-values
-
+    Returns
+    -------
+    fitted : 1-d ndarray
+        The fitted y-values
+    weights : 2-d ndarray
+        An n by k array. The contribution to the weights in the
+        local linear fit coming from the distances between the
+        x-values
     """
     weights = np.zeros((n, k), dtype=x_copy.dtype)
     nn_indices = [0, k]
@@ -177,7 +177,8 @@ def _lowess_initial_fit(x_copy, y_copy, k, n):
 
 def _lowess_wt_standardize(weights, new_entries, x_copy_i, width):
     """
-    The initial phase of creating the weights.
+    The initial phase of creating the weights
+
     Subtract the current x_i and divide by the width.
 
     Parameters
@@ -202,37 +203,38 @@ def _lowess_wt_standardize(weights, new_entries, x_copy_i, width):
 
 def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     """
-     Additional weighted local linear regressions, performed if
-     iter>0. They take into account the sizes of the residuals,
-     to eliminate the effect of extreme outliers.
+    Additional weighted local linear regressions, performed if iter>0
 
-     Parameters
-     ----------
-     x_copy : 1-d ndarray
-         The x-values/exogenous part of the data being smoothed
-     y_copy : 1-d ndarray
-         The y-values/ endogenous part of the data being smoothed
-     fitted : 1-d ndarray
-         The fitted y-values from the previous iteration
-     weights : 2-d ndarray
-         An n by k array. The contribution to the weights in the
-         local linear fit coming from the distances between the
-         x-values
-     k : int
-         The number of data points which affect the linear fit for
-         each estimated point
-     n : int
-         The total number of points
+    They take into account the sizes of the residuals, to eliminate the
+    effect of extreme outliers.
+
+    Parameters
+    ----------
+    x_copy : 1-d ndarray
+        The x-values/exogenous part of the data being smoothed
+    y_copy : 1-d ndarray
+        The y-values/ endogenous part of the data being smoothed
+    fitted : 1-d ndarray
+        The fitted y-values from the previous iteration
+    weights : 2-d ndarray
+        An n by k array. The contribution to the weights in the
+        local linear fit coming from the distances between the
+        x-values
+    k : int
+        The number of data points which affect the linear fit for
+        each estimated point
+    n : int
+        The total number of points
 
     Returns
-     -------
-     Nothing. The fitted values are modified in place.
+    -------
+    Nothing. The fitted values are modified in place.
     """
     nn_indices = [0, k]
     X = np.ones((k, 2))
 
     residual_weights = np.copy(y_copy)
-    residual_weights.shape = (n,)
+    residual_weights = inplace_reshape(residual_weights, (n,))
     residual_weights -= fitted
     residual_weights = np.absolute(residual_weights)  # , out=residual_weights)
     s = np.median(residual_weights)
@@ -248,7 +250,7 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
 
         X[:, 1] = x_copy[nn_indices[0] : nn_indices[1]]
         y_i = total_weights * y_copy[nn_indices[0] : nn_indices[1]]
-        total_weights.shape = (k, 1)
+        total_weights = inplace_reshape(total_weights, (k, 1))
 
         beta = lstsq(total_weights * X, y_i, rcond=-1)[0]
 
@@ -259,8 +261,7 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
 
 def _lowess_update_nn(x, cur_nn, i):
     """
-    Update the endpoints of the nearest neighbors to
-    the ith point.
+    Update the endpoints of the nearest neighbors to the ith point
 
     Parameters
     ----------
@@ -269,7 +270,7 @@ def _lowess_update_nn(x, cur_nn, i):
     cur_nn : list of length 2
         The two current indices between which are the
         k closest points to x[i]. (The actual value of
-        k is irrelevant for the algorithm.
+        k is irrelevant for the algorithm.)
     i : int
         The index of the current value in x for which
         the k closest points are desired.
@@ -293,7 +294,8 @@ def _lowess_update_nn(x, cur_nn, i):
 
 def _lowess_tricube(t):
     """
-    The _tricube function applied to a numpy array.
+    The _tricube function applied to a numpy array
+
     The tricube function is (1-abs(t)**3)**3.
 
     Parameters
@@ -334,7 +336,8 @@ def _lowess_mycube(t):
 
 def _lowess_bisquare(t):
     """
-    The bisquare function applied to a numpy array.
+    The bisquare function applied to a numpy array
+
     The bisquare function is (1-t**2)**2.
 
     Parameters

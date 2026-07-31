@@ -6,7 +6,7 @@ from statsmodels.duration.hazard_regression import PHReg
 def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
                          dimred=True):
     """
-    Calculates cumulative incidence functions using kernels.
+    Calculates cumulative incidence functions using kernels
 
     Parameters
     ----------
@@ -28,6 +28,15 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
         censoring in two separate models.  If False, exog is used
         directly for calculating kernel weights without dimension
         reduction.
+
+    Returns
+    -------
+    utime : array_like
+        The unique times at which the cumulative incidence functions
+        are estimated.
+    ip : list of arrays
+        ip[k-1] contains the estimated cumulative incidence rates
+        for outcome k=1, 2, ...
     """
 
     # Reorder so time is ascending
@@ -119,7 +128,7 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
 
 def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
     """
-    Estimate the marginal survival function under dependent censoring.
+    Estimate the marginal survival function under dependent censoring
 
     Parameters
     ----------
@@ -147,7 +156,7 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
     ----------
     Zeng, Donglin 2004. Estimating Marginal Survival Function by
     Adjusting for Dependent Censoring Using Many Covariates. The
-    Annals of Statistics 32 (4): 1533 55.
+    Annals of Statistics 32 (4): 1533-55.
     doi:10.1214/009053604000000508.
     https://arxiv.org/pdf/math/0409180.pdf
     """

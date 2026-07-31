@@ -27,32 +27,65 @@ def fit_l1_cvxopt_cp(
 
     Parameters
     ----------
-    All the usual parameters from LikelhoodModel.fit
-    alpha : non-negative scalar or numpy array (same size as parameters)
-        The weight multiplying the l1 penalty term
-    trim_mode : 'auto, 'size', or 'off'
-        If not 'off', trim (set to zero) parameters that would have been zero
-            if the solver reached the theoretical minimum.
-        If 'auto', trim params using the Theory above.
-        If 'size', trim params if they have very small absolute value
-    size_trim_tol : float or 'auto' (default = 'auto')
-        For use when trim_mode === 'size'
-    auto_trim_tol : float
-        For sue when trim_mode == 'auto'.  Use
-    qc_tol : float
-        Print warning and do not allow auto trim when (ii) in "Theory" (above)
-        is violated by this much.
-    qc_verbose : bool
-        If true, print out a full QC report upon failure
-    abstol : float
-        absolute accuracy (default: 1e-7).
-    reltol : float
-        relative accuracy (default: 1e-6).
-    feastol : float
-        tolerance for feasibility conditions (default: 1e-7).
-    refinement : int
-        number of iterative refinement steps when solving KKT equations
-        (default: 1).
+    f : function
+        Objective function to be minimized, as in LikelihoodModel.fit.
+    score : function
+        Gradient of the unregularized objective function.
+    start_params : array_like
+        Starting values for the parameters.
+    args : tuple
+        Extra positional arguments to be passed to `f` and `score`.
+    kwargs : dict
+        All the usual parameters from LikelihoodModel.fit, plus:
+
+        alpha : non-negative scalar or numpy array (same size as parameters)
+            The weight multiplying the l1 penalty term.
+        trim_mode : 'auto, 'size', or 'off'
+            If not 'off', trim (set to zero) parameters that would have
+            been zero if the solver reached the theoretical minimum.
+            If 'auto', trim params using the Theory above.
+            If 'size', trim params if they have very small absolute value.
+        size_trim_tol : float or 'auto' (default = 'auto')
+            Threshold below which a parameter is trimmed. Used when
+            trim_mode == 'size'.
+        auto_trim_tol : float
+            Threshold used to decide whether the theoretical condition (ii)
+            above holds closely enough to trim a parameter. Used when
+            trim_mode == 'auto'.
+        qc_tol : float
+            Print warning and do not allow auto trim when (ii) in "Theory"
+            (above) is violated by this much.
+        qc_verbose : bool
+            If true, print out a full QC report upon failure.
+        abstol : float
+            Absolute accuracy (default: 1e-7).
+        reltol : float
+            Relative accuracy (default: 1e-6).
+        feastol : float
+            Tolerance for feasibility conditions (default: 1e-7).
+        refinement : int
+            Number of iterative refinement steps when solving KKT equations
+            (default: 1).
+    disp : bool
+        Set to True to print convergence messages.
+    maxiter : int
+        The maximum number of iterations to perform.
+    callback : function, optional
+        Unused; present for interface compatibility with other solvers.
+    retall : bool
+        Unused; present for interface compatibility with other solvers.
+    full_output : bool
+        Set to True to also return auxiliary output from the solver.
+    hess : function
+        Hessian of the unregularized objective function.
+
+    Returns
+    -------
+    params : ndarray
+        The trimmed, regularized parameter estimates.
+    retvals : dict
+        Only returned if `full_output` is True. Contains convergence and
+        other diagnostic information from the optimizer.
     """
     from cvxopt import matrix, solvers
 
@@ -148,9 +181,7 @@ def fit_l1_cvxopt_cp(
 
 
 def _objective_func(f, x, k_params, alpha, *args):
-    """
-    The regularized objective function.
-    """
+    """The regularized objective function"""
     from cvxopt import matrix
 
     x_arr = np.asarray(x)
@@ -163,9 +194,7 @@ def _objective_func(f, x, k_params, alpha, *args):
 
 
 def _fprime(score, x, k_params, alpha):
-    """
-    The regularized derivative.
-    """
+    """The regularized derivative"""
     from cvxopt import matrix
 
     x_arr = np.asarray(x)
@@ -178,9 +207,7 @@ def _fprime(score, x, k_params, alpha):
 
 
 def _get_G(k_params):
-    """
-    The linear inequality constraint matrix.
-    """
+    """The linear inequality constraint matrix"""
     from cvxopt import matrix
 
     eye = np.eye(k_params)

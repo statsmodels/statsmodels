@@ -66,13 +66,13 @@ class TestPoissonMLE(CompareMixin):
     def setup_class(cls):
 
         # generate artificial data
-        np.random.seed(98765678)
+        rs = np.random.RandomState(98765678)
         nobs = 200
-        rvs = np.random.randn(nobs, 6)
+        rvs = rs.randn(nobs, 6)
         data_exog = rvs
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 0.1 + 0.1 * rvs.sum(1)
-        data_endog = np.random.poisson(np.exp(xbeta))
+        data_endog = rs.poisson(np.exp(xbeta))
 
         # estimate discretemod.Poisson as benchmark
         cls.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
@@ -86,22 +86,33 @@ class TestPoissonMLE(CompareMixin):
             start_params=0.9 * cls.res_discrete.params, method="bfgs", disp=0
         )
 
-    def test_predict_distribution(self):
-        res = self.res
-        model = self.mod
 
-        with pytest.raises(ValueError):
-            # No "result" attribute
-            model.predict_distribution(model.exog)
+def test_predict_distribution_poisson_mle():
+    # Moved out of class to avoid setting properties on objects for threaded testing
+    rs = np.random.RandomState(98765678)
+    nobs = 200
+    rvs = rs.randn(nobs, 6)
+    data_exog = rvs
+    data_exog = sm.add_constant(data_exog, prepend=False)
+    xbeta = 0.1 + 0.1 * rvs.sum(1)
+    data_endog = rs.poisson(np.exp(xbeta))
 
-        try:
-            model.result = res
-            dist = model.predict_distribution(model.exog)
-            assert isinstance(dist, stats._distn_infrastructure.rv_frozen)
-            assert_almost_equal(dist.mean(), np.exp(model.exog.dot(res.params)), 15)
-        finally:
-            # leave the model object how we found it
-            model.__delattr__("result")
+    model = PoissonGMLE(data_endog, data_exog)
+    res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
+    res = model.fit(start_params=0.9 * res_discrete.params, method="bfgs", disp=0)
+
+    with pytest.raises(ValueError):
+        # No "result" attribute
+        model.predict_distribution(model.exog)
+
+    try:
+        model.result = res
+        dist = model.predict_distribution(model.exog)
+        assert isinstance(dist, stats._distn_infrastructure.rv_frozen)
+        assert_almost_equal(dist.mean(), np.exp(model.exog.dot(res.params)), 15)
+    finally:
+        # leave the model object how we found it
+        model.__delattr__("result")
 
 
 class TestPoissonOffset(CompareMixin):
@@ -109,13 +120,13 @@ class TestPoissonOffset(CompareMixin):
     @classmethod
     def setup_class(cls):
         # generate artificial data
-        np.random.seed(98765678)
+        rs = np.random.RandomState(98765678)
         nobs = 200
-        rvs = np.random.randn(nobs, 6)
+        rvs = rs.randn(nobs, 6)
         data_exog = rvs
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1 * rvs.sum(1)
-        data_endog = np.random.poisson(np.exp(xbeta))
+        data_endog = rs.poisson(np.exp(xbeta))
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         cls.res_glm = mod_glm.fit()
@@ -161,13 +172,13 @@ class TestPoissonZi(CompareMixin):
     def setup_class(cls):
 
         # generate artificial data
-        np.random.seed(98765678)
+        rs = np.random.RandomState(98765678)
         nobs = 200
-        rvs = np.random.randn(nobs, 6)
+        rvs = rs.randn(nobs, 6)
         data_exog = rvs
         data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1 * rvs.sum(1)
-        data_endog = np.random.poisson(np.exp(xbeta))
+        data_endog = rs.poisson(np.exp(xbeta))
         cls.k_extra = 1
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())

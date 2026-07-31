@@ -4,8 +4,7 @@ Created on Sat Dec 14 17:23:25 2013
 
 Author: Josef Perktold
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
@@ -16,9 +15,9 @@ from statsmodels.sandbox.nonparametric import kernels
 
 DEBUG = 0
 
-curdir = os.path.dirname(os.path.abspath(__file__))
+curdir = Path(__file__).resolve().parent
 fname = "results/results_kernel_regression.csv"
-results = pd.read_csv(os.path.join(curdir, fname))
+results = pd.read_csv(Path(curdir).joinpath(fname))
 
 y = results["accident"].to_numpy(copy=True)
 x = results["service"].to_numpy(copy=True)

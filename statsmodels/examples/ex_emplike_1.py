@@ -28,7 +28,7 @@ print("Hypothesis test results for the mean:")
 print(eldescriptive.test_mean(0))
 
 
-# The first value is is  -2 *log-likelihood ratio, which is distributed
+# The first value is  -2 *log-likelihood ratio, which is distributed
 # chi2.  The second value is the p-value.
 
 # Let's see what the variance is:

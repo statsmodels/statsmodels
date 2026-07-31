@@ -72,6 +72,7 @@ Descriptive Statistics and Tests
    stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
+   stattools.pccf
    stattools.adfuller
    stattools.kpss
    stattools.leybourne
@@ -326,6 +327,13 @@ Time Series Filters
    :toctree: generated/
 
    cffilter
+
+.. currentmodule:: statsmodels.tsa.filters.hamilton_filter
+.. autosummary::
+   :toctree: generated/
+
+   hamilton_filter
+
 
 .. currentmodule:: statsmodels.tsa.filters.filtertools
 .. autosummary::

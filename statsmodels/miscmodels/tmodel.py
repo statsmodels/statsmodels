@@ -1,11 +1,14 @@
-"""Linear Model with Student-t distributed errors
+"""
+Linear Model with Student-t distributed errors
 
 Because the t distribution has fatter tails than the normal distribution, it
 can be used to model observations with heavier tails and observations that have
 some outliers. For the latter case, the t-distribution provides more robust
 estimators for mean or mean parameters (what about var?).
 
-
+Created on 2010-09-24
+Author: josef-pktd
+License: BSD
 
 References
 ----------
@@ -16,21 +19,16 @@ Vol. 84, No. 408 (Dec., 1989), pp. 881-896
 Published by: American Statistical Association
 Stable URL: http://www.jstor.org/stable/2290063
 
-not read yet
+Notes
+-----
+Reference above not read yet.
 
+TODO:
 
-Created on 2010-09-24
-Author: josef-pktd
-License: BSD
-
-TODO
-----
 * add starting values based on OLS
 * bugs: store_params does not seem to be defined, I think this was a module
-        global for debugging - commented out
+  global for debugging - commented out
 * parameter restriction: check whether version with some fixed parameters works
-
-
 """
 # mostly copied from the examples directory written for trying out generic mle.
 
@@ -47,7 +45,8 @@ sps_gamln = special.gammaln
 
 
 class TLinearModel(GenericLikelihoodModel):
-    """Maximum Likelihood Estimation of Linear Model with t-distributed errors
+    """
+    Maximum Likelihood Estimation of Linear Model with t-distributed errors
 
     This is an example for generic MLE.
 
@@ -55,10 +54,10 @@ class TLinearModel(GenericLikelihoodModel):
     methods and results are generic. Gradients and Hessian
     and all resulting statistics are based on numerical
     differentiation.
-
     """
 
     def initialize(self):
+        """Initialize the model, setting up parameter names and start values"""
         print("running Tmodel initialize")
         # TODO: here or in __init__
         self.k_vars = self.exog.shape[1]
@@ -89,6 +88,20 @@ class TLinearModel(GenericLikelihoodModel):
         self._set_start_params()
 
     def _set_start_params(self, start_params=None, use_kurtosis=False):
+        """
+        Set starting values for the parameters
+
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Starting values to use directly. If None, starting values are
+            constructed from an OLS fit of `endog` on `exog`.
+        use_kurtosis : bool
+            If True and `start_params` is None and `df` is not fixed, use
+            the kurtosis of the OLS residuals to construct a starting
+            value for the degrees of freedom parameter. Otherwise a
+            starting value of 5 is used.
+        """
         if start_params is not None:
             self.start_params = start_params
         else:
@@ -112,11 +125,26 @@ class TLinearModel(GenericLikelihoodModel):
             self.start_params = start_params
 
     def loglike(self, params):
+        """
+        Loglikelihood of the model evaluated at params
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters of the model. The last 2 parameters are degrees
+            of freedom and scale.
+
+        Returns
+        -------
+        float
+            The log likelihood of the model evaluated at `params`, summed
+            over all observations.
+        """
         return -self.nloglikeobs(params).sum(0)
 
     def nloglikeobs(self, params):
         """
-        Loglikelihood of linear model with t distributed errors.
+        Negative loglikelihood of linear model with t distributed errors
 
         Parameters
         ----------
@@ -126,13 +154,15 @@ class TLinearModel(GenericLikelihoodModel):
 
         Returns
         -------
-        loglike : ndarray
-            The log likelihood of the model evaluated at `params` for each
-            observation defined by self.endog and self.exog.
+        ndarray
+            The negative log likelihood of the model evaluated at `params`
+            for each observation defined by self.endog and self.exog.
 
         Notes
         -----
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln f(x)=\\ln\\Gamma\\left(\\frac{df+1}{2}\\right)-\\ln\\Gamma\\left(\\frac{df}{2}\\right)-\\frac{1}{2}\\ln(df\\pi)-\\frac{df+1}{2}\\ln\\left(1+\\frac{x^{2}}{df}\\right)-\\ln(scale)
+
+        where :math:`x=(y-X\\beta)/scale`.
 
         The t distribution is the standard t distribution and not a standardized
         t distribution, which means that the scale parameter is not equal to the
@@ -160,15 +190,33 @@ class TLinearModel(GenericLikelihoodModel):
         return -lPx
 
     def predict(self, params, exog=None):
+        """
+        Return predicted mean values
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters of the model. Only the first `exog.shape[1]`
+            elements (the regression coefficients) are used.
+        exog : array_like, optional
+            Explanatory variables to use for prediction. If None,
+            `self.exog` is used.
+
+        Returns
+        -------
+        ndarray
+            The predicted mean, ``exog @ beta``.
+        """
         if exog is None:
             exog = self.exog
         return np.dot(exog, params[:self.exog.shape[1]])
 
 
 class TArma(Arma):
-    """Univariate Arma Model with t-distributed errors
+    """
+    Univariate Arma Model with t-distributed errors
 
-    This inherit all methods except loglike from tsa.arma_mle.Arma
+    This inherits all methods except loglike from tsa.arma_mle.Arma.
 
     This uses the standard t-distribution, the implied variance of
     the error is not equal to scale, but ::
@@ -179,17 +227,43 @@ class TArma(Arma):
     -----
     This might be replaced by a standardized t-distribution with scale**2
     equal to variance
-
     """
 
     def loglike(self, params):
+        """
+        Loglikelihood of the model evaluated at params
+
+        Parameters
+        ----------
+        params : ndarray
+            The ARMA and t-distribution parameters. The last 2 elements
+            are degrees of freedom and scale.
+
+        Returns
+        -------
+        float
+            The log likelihood of the model evaluated at `params`, summed
+            over all observations.
+        """
         return -self.nloglikeobs(params).sum(0)
 
     # add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
 
     def nloglikeobs(self, params):
         """
-        Loglikelihood for arma model for each observation, t-distribute
+        Negative loglikelihood for arma model for each observation, t-distributed
+
+        Parameters
+        ----------
+        params : ndarray
+            The ARMA and t-distribution parameters. The last 2 elements
+            are degrees of freedom and scale.
+
+        Returns
+        -------
+        ndarray
+            The negative log likelihood evaluated at `params` for each
+            observation.
 
         Notes
         -----
@@ -211,6 +285,32 @@ class TArma(Arma):
     def fit_mle(
         self, order, start_params=None, method="nm", maxiter=5000, tol=1e-08, **kwds
     ):
+        """
+        Estimate the model parameters by maximum likelihood
+
+        Parameters
+        ----------
+        order : tuple
+            The (nar, nma) order of the ARMA model.
+        start_params : array_like, optional
+            Starting values for the optimization. Must have
+            ``nar + nma + 2`` elements. If None, default starting values
+            are constructed.
+        method : str
+            The optimization method passed to the underlying optimizer.
+        maxiter : int
+            The maximum number of iterations to perform.
+        tol : float
+            The convergence tolerance for the optimizer.
+        **kwds
+            Additional keyword arguments passed to the parent
+            `fit_mle` method.
+
+        Returns
+        -------
+        GenericLikelihoodModelResults
+            The fitted model results.
+        """
         nar, nma = order
         if start_params is not None:
             if len(start_params) != nar + nma + 2:

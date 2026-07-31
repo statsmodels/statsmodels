@@ -45,7 +45,7 @@ def _faa_di_bruno_partitions(n):
     ...     assert 4 == sum(m * k for (m, k) in p)
     """
     if n < 1:
-        raise ValueError("Expected a positive integer; got %s instead" % n)
+        raise ValueError(f"Expected a positive integer; got {n} instead")
     try:
         return _faa_di_bruno_cache[n]
     except KeyError as err:
@@ -72,10 +72,10 @@ def cumulant_from_moments(momt, n):
         n-th cumulant.
     """
     if n < 1:
-        raise ValueError("Expected a positive integer. Got %s instead." % n)
+        raise ValueError(f"Expected a positive integer. Got {n} instead.")
     if len(momt) < n:
         raise ValueError(
-            "%s-th cumulant requires %s moments, only got %s." % (n, n, len(momt))
+            f"{n}-th cumulant requires {n} moments, only got {len(momt)}."
         )
     kappa = 0.0
     for p in _faa_di_bruno_partitions(n):
@@ -171,7 +171,7 @@ class ExpandedNormal(rv_continuous):
         r = np.real_if_close(self._herm_pdf.roots())
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():
-            mesg = "PDF has zeros at %s " % r
+            mesg = f"PDF has zeros at {r} "
             warnings.warn(mesg, RuntimeWarning, stacklevel=2)
 
         kwds.update({"name": name, "momtype": 0})  # use pdf, not ppf in self.moment()

@@ -9,7 +9,7 @@ from statsmodels.genmod import families
 from statsmodels.genmod.families import links, varfuncs
 from statsmodels.genmod.generalized_linear_model import GLM
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class QIFCovariance:
@@ -22,7 +22,7 @@ class QIFCovariance:
 
     Subclasses should set the number of basis matrices `num_terms`,
     so that `mat(d, j)` for j=0, ..., num_terms-1 gives the basis
-    of dimension d.`
+    of dimension d.
     """
 
     def mat(self, dim, term):
@@ -117,9 +117,13 @@ class QIF(base.Model):
         Labels indicating which group each observation belongs to.
         Observations in different groups should be independent.
     family : genmod family
-        An instance of a GLM family.
+        An instance of a GLM family.
     cov_struct : QIFCovariance instance
         An instance of a QIFCovariance.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
 
     References
     ----------
@@ -488,8 +492,8 @@ class QIFResults(base.LikelihoodModelResults):
                      ("No. clusters:", [len(NY)]),
                      ("Min. cluster size:", [min(NY)]),
                      ("Max. cluster size:", [max(NY)]),
-                     ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-                     ("Scale:", ["%.3f" % self.scale]),
+                     ("Mean cluster size:", [f"{np.mean(NY):.1f}"]),
+                     ("Scale:", [f"{self.scale:.3f}"]),
                      ]
 
         if title is None:

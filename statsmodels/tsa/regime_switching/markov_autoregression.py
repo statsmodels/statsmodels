@@ -19,7 +19,7 @@ from statsmodels.tsa.tsatools import lagmat
 
 class MarkovAutoregression(markov_regression.MarkovRegression):
     r"""
-    Markov switching regression model
+    Markov switching autoregression model
 
     Parameters
     ----------
@@ -109,7 +109,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Switching options
         if self.switching_ar is True or self.switching_ar is False:
             self.switching_ar = [self.switching_ar] * order
-        elif not len(self.switching_ar) == order:
+        elif len(self.switching_ar) != order:
             raise ValueError("Invalid iterable passed to `switching_ar`.")
 
         # Initialize the base model
@@ -223,10 +223,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return self.endog - self.predict_conditional(params)
 
     def _conditional_loglikelihoods(self, params):
-        """
-        Compute loglikelihoods conditional on the current period's regime and
-        the last `self.order` regimes.
-        """
+        """Compute loglikelihoods conditional on the current period's regime and the last `self.order` regimes"""
         # Get the residuals
         resid = self._resid(params)
 
@@ -246,9 +243,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                         MarkovAutoregressionResultsWrapper)}
 
     def _em_iteration(self, params0):
-        """
-        EM iteration
-        """
+        """EM iteration"""
         # Inherited parameters
         result, params1 = markov_switching.MarkovSwitching._em_iteration(
             self, params0)
@@ -281,9 +276,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return result, params1
 
     def _em_autoregressive(self, result, betas, tmp=None):
-        """
-        EM step for autoregressive coefficients and variances
-        """
+        """EM step for autoregressive coefficients and variances"""
         if tmp is None:
             tmp = np.sqrt(result.smoothed_marginal_probabilities)
 
@@ -323,9 +316,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def start_params(self):
-        """
-        (array) Starting parameters for maximum likelihood estimation.
-        """
+        """(array) Starting parameters for maximum likelihood estimation"""
         # Inherited parameters
         params = markov_switching.MarkovSwitching.start_params.fget(self)
 
@@ -373,10 +364,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def param_names(self):
-        """
-        (list of str) List of human readable parameter names (for parameters
-        actually included in the model).
-        """
+        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
         # Inherited parameters
         param_names = np.array(
             markov_regression.MarkovRegression.param_names.fget(self),
@@ -386,10 +374,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if np.any(self.switching_ar):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "autoregressive"]] = [
-                    "ar.L%d[%d]" % (j+1, i) for j in range(self.order)]
+                    f"ar.L{j+1:d}[{i:d}]" for j in range(self.order)]
         else:
             param_names[self.parameters["autoregressive"]] = [
-                "ar.L%d" % (j+1) for j in range(self.order)]
+                f"ar.L{j+1:d}" for j in range(self.order)]
 
         return param_names.tolist()
 

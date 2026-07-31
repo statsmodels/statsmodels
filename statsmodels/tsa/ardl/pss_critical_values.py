@@ -16,7 +16,7 @@ transformed using pss-process.py.
 
 The format of the keys are (k, case, I1) where
 
-* k is is the number of x variables included in the model (0 is an ADF)
+* k is the number of x variables included in the model (0 is an ADF)
 * case is 1, 2, 3, 4 or 5 and corresponds to the PSS paper
 * I1 is True if X contains I1 variables and False if X is stationary
 
@@ -30,7 +30,7 @@ so that the p-value is
 
 where x = np.log(stat) and Phi() is the normal cdf.
 
-When this the models, the polynomial is evaluated at the natural log of the
+When evaluating the models, the polynomial is evaluated at the natural log of the
 test statistic and then the normal CDF of this value is computed to produce
 the p-value.
 """

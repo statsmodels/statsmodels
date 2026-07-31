@@ -5,14 +5,14 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
 
 import numpy as np
 import pandas as pd
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace.mlemodel import (
     MLEModel,
@@ -42,13 +42,16 @@ class RecursiveLS(MLEModel):
     exog : array_like
         Array of exogenous regressors, shaped nobs x k.
     constraints : array_like, str, or tuple
-            - array : An r x k array where r is the number of restrictions to
-              test and k is the number of regressors. It is assumed that the
-              linear combination is equal to zero.
-            - str : The full hypotheses to test can be given as a string.
-              See the examples.
-            - tuple : A tuple of arrays in the form (R, q), ``q`` can be
-              either a scalar or a length p row vector.
+        - array : An r x k array where r is the number of restrictions to
+          test and k is the number of regressors. It is assumed that the
+          linear combination is equal to zero.
+        - str : The full hypotheses to test can be given as a string.
+        - tuple : A tuple of arrays in the form (R, q), ``q`` can be
+          either a scalar or a length p row vector.
+    **kwargs
+        Keyword arguments may be used to provide default values for state
+        space matrices or for Kalman filtering options. See
+        `Representation`, and `KalmanFilter` for more details.
 
     Notes
     -----
@@ -63,7 +66,9 @@ class RecursiveLS(MLEModel):
     .. [*] Durbin, James, and Siem Jan Koopman. 2012.
        Time Series Analysis by State Space Methods: Second Edition.
        Oxford University Press.
+
     """
+
     def __init__(self, endog, exog, constraints=None, **kwargs):
         # Standardize data
         endog_using_pandas = _is_using_pandas(endog, None)
@@ -161,6 +166,8 @@ class RecursiveLS(MLEModel):
         Returns
         -------
         RecursiveLSResults
+            The fitted results object.
+
         """
         smoother_results = self.smooth(return_ssm=True)
 
@@ -242,18 +249,21 @@ class RecursiveLS(MLEModel):
             Array of new parameters.
         transformed : bool, optional
             Whether or not `params` is already transformed. If set to False,
-            `transform_params` is called. Default is True..
+            `transform_params` is called. Default is True.
+        **kwargs
+            Additional keyword arguments passed to the state space update method.
 
         Returns
         -------
         params : array_like
             Array of parameters.
+
         """
 
 
 class RecursiveLSResults(MLEResults):
     """
-    Class to hold results from fitting a recursive least squares model.
+    Class to hold results from fitting a recursive least squares model
 
     Parameters
     ----------
@@ -270,6 +280,7 @@ class RecursiveLSResults(MLEResults):
     --------
     statsmodels.tsa.statespace.kalman_filter.FilterResults
     statsmodels.tsa.statespace.mlemodel.MLEResults
+
     """
 
     def __init__(self, model, params, filter_results, cov_type="opg",
@@ -303,7 +314,7 @@ class RecursiveLSResults(MLEResults):
 
         Returns
         -------
-        out: Bunch
+        out : Bunch
             Has the following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
@@ -316,6 +327,7 @@ class RecursiveLSResults(MLEResults):
                           the variance/covariance of the component
             - `offset`: an integer giving the offset in the state vector where
                         this component begins
+
         """
         out = None
         spec = self.specification
@@ -345,8 +357,6 @@ class RecursiveLSResults(MLEResults):
             An array of length `nobs` holding the recursive
             residuals.
 
-        Notes
-        -----
         These quantities are defined in, for example, Harvey (1989)
         section 5.4. In fact, there he defines the standardized innovations in
         equation 5.4.1, but in his version they have non-unit variance, whereas
@@ -359,6 +369,7 @@ class RecursiveLSResults(MLEResults):
         variance is not necessarily equal to unity as the mean need not be
         equal to zero", and he defines an alternative version (which are
         not provided here).
+
         """
         return (self.filter_results.standardized_forecasts_error[0] *
                 self.scale**0.5)
@@ -368,14 +379,7 @@ class RecursiveLSResults(MLEResults):
         r"""
         Cumulative sum of standardized recursive residuals statistics
 
-        Returns
-        -------
-        cusum : array_like
-            An array of length `nobs - k_exog` holding the
-            CUSUM statistics.
-
-        Notes
-        -----
+        An array of length `nobs - k_exog` holding the CUSUM statistics.
         The CUSUM statistic takes the form:
 
         .. math::
@@ -401,6 +405,7 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
+
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (np.cumsum(self.resid_recursive[d:]) /
@@ -418,8 +423,6 @@ class RecursiveLSResults(MLEResults):
             An array of length `nobs - k_exog` holding the
             CUSUM of squares statistics.
 
-        Notes
-        -----
         The CUSUM of squares statistic takes the form:
 
         .. math::
@@ -431,9 +434,9 @@ class RecursiveLSResults(MLEResults):
 
         Excludes the first `k_exog` datapoints.
 
-        References
-        ----------
-        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        Based on the work of:
+
+        Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
@@ -446,40 +449,36 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def llf_recursive_obs(self):
-        """
-        (float) Loglikelihood at observation, computed from recursive residuals
-        """
+        """Loglikelihood at each observation, computed from recursive residuals"""
         from scipy.stats import norm
         return np.log(norm.pdf(self.resid_recursive, loc=0,
                                scale=self.scale**0.5))
 
     @cache_readonly
     def llf_recursive(self):
-        """
-        (float) Loglikelihood defined by recursive residuals, equivalent to OLS
-        """
+        """Loglikelihood defined by recursive residuals, equivalent to OLS"""
         return np.sum(self.llf_recursive_obs)
 
     @cache_readonly
     def ssr(self):
-        """ssr"""
+        """Sum of squared recursive residuals"""
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         return (self.nobs - d) * self.filter_results.obs_cov[0, 0, 0]
 
     @cache_readonly
     def centered_tss(self):
-        """Centered tss"""
+        """Centered total sum of squares"""
         return np.sum((self.filter_results.endog[0] -
                        np.mean(self.filter_results.endog))**2)
 
     @cache_readonly
     def uncentered_tss(self):
-        """uncentered tss"""
+        """Uncentered total sum of squares"""
         return np.sum((self.filter_results.endog[0])**2)
 
     @cache_readonly
     def ess(self):
-        """ess"""
+        """Explained sum of squares"""
         if self.k_constant:
             return self.centered_tss - self.ssr
         else:
@@ -487,7 +486,7 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def rsquared(self):
-        """rsquared"""
+        """R-squared"""
         if self.k_constant:
             return 1 - self.ssr / self.centered_tss
         else:
@@ -495,17 +494,17 @@ class RecursiveLSResults(MLEResults):
 
     @cache_readonly
     def mse_model(self):
-        """mse_model"""
+        """Mean squared error of the model"""
         return self.ess / self.df_model
 
     @cache_readonly
     def mse_resid(self):
-        """mse_resid"""
+        """Mean squared error of the residuals"""
         return self.ssr / self.df_resid
 
     @cache_readonly
     def mse_total(self):
-        """mse_total"""
+        """Total mean squared error"""
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:
@@ -573,6 +572,7 @@ class RecursiveLSResults(MLEResults):
         Notes
         -----
         All plots contain (1 - `alpha`) %  confidence intervals.
+
         """
         # Get variables
         if isinstance(variables, (int, str)):
@@ -607,7 +607,7 @@ class RecursiveLSResults(MLEResults):
             # Plot the coefficient
             coef = self.recursive_coefficients
             ax.plot(dates[d:], coef.filtered[variable, d:],
-                    label="Recursive estimates: %s" % exog_names[variable])
+                    label=f"Recursive estimates: {exog_names[variable]}")
 
             # Legend
             handles, labels = ax.get_legend_handles_labels()
@@ -625,8 +625,7 @@ class RecursiveLSResults(MLEResults):
                 ci_poly = ax.fill_between(
                     dates[d:], ci_lower[d:], ci_upper[d:], alpha=0.2
                 )
-                ci_label = ("$%.3g \\%%$ confidence interval"
-                            % ((1 - alpha)*100))
+                ci_label = (f"${(1 - alpha)*100:.3g} \\%$ confidence interval")
 
                 # Only add CI to legend for the first plot
                 if i == 0:
@@ -650,9 +649,11 @@ class RecursiveLSResults(MLEResults):
 
     def _cusum_significance_bounds(self, alpha, ddof=0, points=None):
         """
+        Compute significance bounds for the CUSUM statistic
+
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float
             The significance bound is alpha %.
         ddof : int, optional
             The number of periods additional to `k_exog` to exclude in
@@ -675,6 +676,7 @@ class RecursiveLSResults(MLEResults):
         Brown et al. (1975); it is likely they did that because they needed
         three initial observations to get the initial OLS estimates, whereas
         we do not need to do that.
+
         """
         # Get the constant associated with the significance level
         if alpha == 0.01:
@@ -700,7 +702,7 @@ class RecursiveLSResults(MLEResults):
     def plot_cusum(self, alpha=0.05, legend_loc="upper left",
                    fig=None, figsize=None):
         r"""
-        Plot the CUSUM statistic and significance bounds.
+        Plot the CUSUM statistic and significance bounds
 
         Parameters
         ----------
@@ -728,6 +730,7 @@ class RecursiveLSResults(MLEResults):
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
+
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
@@ -749,7 +752,7 @@ class RecursiveLSResults(MLEResults):
         # Plot significance bounds
         lower_line, upper_line = self._cusum_significance_bounds(alpha)
         ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+                label=f"{int(alpha * 100):d}% significance")
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)
@@ -758,6 +761,16 @@ class RecursiveLSResults(MLEResults):
 
     def _cusum_squares_significance_bounds(self, alpha, points=None):
         """
+        Compute significance bounds for the CUSUM of squares statistic
+
+        Parameters
+        ----------
+        alpha : float
+            The significance level, taken from {0.1, 0.05, 0.025, 0.01, 0.005}.
+        points : iterable, optional
+            The points at which to evaluate the significance bounds. Default is
+            two points, beginning and end of the sample.
+
         Notes
         -----
         Comparing against the cusum6 package for Stata, this does not produce
@@ -770,6 +783,7 @@ class RecursiveLSResults(MLEResults):
         critical values suggested in Edgerton and Wells (1994) which allows
         computing relatively good approximations for any number of
         observations.
+
         """
         # Get the approximate critical value associated with the significance
         # level
@@ -792,7 +806,7 @@ class RecursiveLSResults(MLEResults):
     def plot_cusum_squares(self, alpha=0.05, legend_loc="upper left",
                            fig=None, figsize=None):
         r"""
-        Plot the CUSUM of squares statistic and significance bounds.
+        Plot the CUSUM of squares statistic and significance bounds
 
         Parameters
         ----------
@@ -827,6 +841,7 @@ class RecursiveLSResults(MLEResults):
            "Critical Values for the Cusumsq Statistic
            in Medium and Large Sized Samples."
            Oxford Bulletin of Economics and Statistics 56 (3): 355-65.
+
         """
         # Create the plot
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
@@ -849,7 +864,7 @@ class RecursiveLSResults(MLEResults):
         # Plot significance bounds
         lower_line, upper_line = self._cusum_squares_significance_bounds(alpha)
         ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+                label=f"{int(alpha * 100):d}% significance")
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)

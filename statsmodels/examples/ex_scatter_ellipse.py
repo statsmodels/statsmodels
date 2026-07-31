@@ -44,6 +44,6 @@ print(dcorr)
 # used for checking
 # fig = scatter_ellipse(data, level=[0.5, 0.75, 0.95], add_titles=True, keep_ticks=True)
 # check varnames
-varnames = ["var%d" % i for i in range(nvars)]
+varnames = [f"var{i:d}" for i in range(nvars)]
 fig = scatter_ellipse(data, level=0.9, varnames=varnames)
 plt.show()

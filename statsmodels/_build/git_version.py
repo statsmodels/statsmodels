@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import os
-import setuptools_scm
-from packaging.version import Version
 from pathlib import Path
+
+from packaging.version import Version
+import setuptools_scm
 
 ROOT = Path(__file__).parent.parent.parent.absolute()
 
@@ -56,7 +57,7 @@ __version__ = version = '{version}'
 __version_tuple__ = version_tuple = {version_fields}
     """
 
-    with open(filename, "w") as f:
+    with Path(filename).open("w") as f:
         f.write(template)
 
 
@@ -77,7 +78,7 @@ if __name__ == "__main__":
     if args.write:
         outfile = args.write
         if args.meson_dist:
-            outfile = os.path.join(os.environ.get("MESON_DIST_ROOT", ""), outfile)
+            outfile = Path(os.environ.get("MESON_DIST_ROOT", "")).joinpath(outfile)
 
         # Print human readable output path
         relpath = os.path.relpath(outfile)

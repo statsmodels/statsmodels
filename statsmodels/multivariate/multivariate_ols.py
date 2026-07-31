@@ -14,7 +14,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import RegressionResultsWrapper
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 __docformat__ = "restructuredtext en"
 
@@ -33,7 +33,7 @@ hypotheses : list[tuple]
 
     contrast_L : 2D array or an array of strings
         Left-hand side contrast matrix for hypotheses testing.
-        If 2D array, each row is an hypotheses and each column is an
+        If 2D array, each row is a hypothesis and each column is an
         independent variable. At least 1 row
         (1 by k_exog, the number of independent variables) is required.
         If an array of strings, it will be passed to
@@ -48,14 +48,14 @@ hypotheses : list[tuple]
 
     constant_C : 2D array or None, optional
         Right-hand side constant matrix.
-        if `None` or left out it is set to a matrix of zeros
-        Must has the same number of rows as contrast_L and the same
-        number of columns as transform_M
+        If `None` or left out it is set to a matrix of zeros.
+        Must have the same number of rows as contrast_L and the same
+        number of columns as transform_M.
 
     If `hypotheses` is None: 1) the effect of each independent variable
     on the dependent variables will be tested. Or 2) if model is created
-    using a formula,  `hypotheses` will be created according to
-    `design_info`. 1) and 2) is equivalent if no additional variables
+    using a formula, `hypotheses` will be created according to
+    `design_info`. 1) and 2) are equivalent if no additional variables
     are created by the formula (e.g. dummy variables for categorical
     variables and interaction terms)
 """
@@ -63,37 +63,42 @@ hypotheses : list[tuple]
 
 def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
     """
-    Solve multivariate linear model y = x * params
-    where y is dependent variables, x is independent variables
+    Solve a multivariate linear model y = x * params
 
     Parameters
     ----------
     endog : array_like
-        each column is a dependent variable
+        Each column is a dependent variable.
     exog : array_like
-        each column is a independent variable
-    method : str
-        'svd' - Singular value decomposition
-        'pinv' - Moore-Penrose pseudoinverse
-    tolerance : float, a small positive number
-        Tolerance for eigenvalue. Values smaller than tolerance is considered
-        zero.
+        Each column is an independent variable.
+    method : {"svd", "pinv"}, optional
+        The fitting method. "svd" uses the singular value decomposition and
+        "pinv" uses the Moore-Penrose pseudoinverse.
+    tolerance : float, optional
+        Tolerance for eigenvalue. Values smaller than tolerance are
+        considered zero.
+
     Returns
     -------
-    a tuple of matrices or values necessary for hypotheses testing
+    tuple
+        A tuple of matrices or values necessary for hypotheses testing,
+        (params, df_resid, inv_cov, sscpr).
 
-    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     Notes
     -----
     Status: experimental and incomplete
+
+    References
+    ----------
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     """
     y = endog
     x = exog
     nobs, k_endog = y.shape
     nobs1, k_exog = x.shape
     if nobs != nobs1:
-        raise ValueError("x(n=%d) and y(n=%d) should have the same number of "
-                         "rows!" % (nobs1, nobs))
+        raise ValueError(f"x(n={nobs1:d}) and y(n={nobs:d}) should have the same number of "
+                         "rows!")
 
     # Calculate the matrices necessary for hypotheses testing
     df_resid = nobs - k_exog
@@ -124,38 +129,45 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
     else:
-        raise ValueError("%s is not a supported method!" % method)
+        raise ValueError(f"{method} is not a supported method!")
 
 
 def multivariate_stats(eigenvals,
                        r_err_sscp,
                        r_contrast, df_resid, tolerance=1e-8):
     """
-    For multivariate linear model Y = X * B
-    Testing hypotheses
-        L*B*M = 0
-    where L is contrast matrix, B is the parameters of the
-    multivariate linear model and M is dependent variable transform matrix.
-        T = L*inv(X'X)*L'
-        H = M'B'L'*inv(T)*LBM
-        E =  M'(Y'Y - B'X'XB)M
+    Compute multivariate test statistics for a linear hypothesis
 
     Parameters
     ----------
     eigenvals : ndarray
-        The eigenvalues of inv(E + H)*H
+        The eigenvalues of inv(E + H)*H.
     r_err_sscp : int
-        Rank of E + H
+        Rank of E + H.
     r_contrast : int
-        Rank of T matrix
+        Rank of T matrix.
     df_resid : int
-        Residual degree of freedom (n_samples minus n_variables of X)
+        Residual degree of freedom (n_samples minus n_variables of X).
     tolerance : float
-        smaller than which eigenvalue is considered 0
+        Eigenvalues smaller than tolerance are considered 0.
 
     Returns
     -------
-    A DataFrame
+    DataFrame
+        DataFrame containing the value, numerator and denominator degrees
+        of freedom, F value and p-value for Wilks' lambda, Pillai's trace,
+        the Hotelling-Lawley trace, and Roy's greatest root.
+
+    Notes
+    -----
+    For the multivariate linear model Y = X * B, testing the hypothesis
+    L*B*M = 0, where L is the contrast matrix, B is the parameters of the
+    multivariate linear model and M is the dependent variable transform
+    matrix::
+
+        T = L*inv(X'X)*L'
+        H = M'B'L'*inv(T)*LBM
+        E = M'(Y'Y - B'X'XB)M
 
     References
     ----------
@@ -279,31 +291,40 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
     matrix for hypotheses testing and M is the transformation matrix for
     transforming the dependent variables in y.
 
-    Algorithm:
-        T = L*inv(X'X)*L'
-        H = M'B'L'*inv(T)*LBM
-        E =  M'(Y'Y - B'X'XB)M
-    where H and E correspond to the numerator and denominator of a univariate
-    F-test. Then find the eigenvalues of inv(H + E)*H from which the
-    multivariate test statistics are calculated.
-
-    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML
-           /default/viewer.htm#statug_introreg_sect012.htm
-
     Parameters
     ----------
     %(hypotheses_doc)s
-    k_xvar : int
-        The number of independent variables
-    k_yvar : int
-        The number of dependent variables
-    fn : function
-        a function fn(contrast_L, transform_M) that returns E, H, q, df_resid
-        where q is the rank of T matrix
+    exog_names : list[str]
+        The names of the independent variables.
+    endog_names : list[str]
+        The names of the dependent variables.
+    fn : callable
+        A function fn(contrast_L, transform_M, constant_C) that returns
+        E, H, q, df_resid where q is the rank of T matrix.
 
     Returns
     -------
-    results : MANOVAResults
+    dict
+        A dictionary keyed by hypothesis name. Each value is itself a
+        dictionary containing the test statistics ("stat"), the contrast
+        matrix ("contrast_L"), the transform matrix ("transform_M"), the
+        constant matrix ("constant_C"), and the intermediate "E" and "H"
+        matrices.
+
+    Notes
+    -----
+    T = L*inv(X'X)*L'
+    H = M'B'L'*inv(T)*LBM
+    E = M'(Y'Y - B'X'XB)M
+
+    where H and E correspond to the numerator and denominator of a
+    univariate F-test. Then find the eigenvalues of inv(H + E)*H from which
+    the multivariate test statistics are calculated.
+
+    References
+    ----------
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML
+           /default/viewer.htm#statug_introreg_sect012.htm
     """
 
     k_xvar = len(exog_names)
@@ -321,7 +342,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
             name, L, M, C = hypo
         else:
             raise ValueError("hypotheses must be a tuple of length 2, 3 or 4."
-                             " len(hypotheses)=%d" % len(hypo))
+                             f" len(hypotheses)={len(hypo):d}")
         mgr = FormulaManager()
         if any(isinstance(j, str) for j in L):
             L = mgr.get_linear_constraints(L, variable_names=exog_names).constraint_matrix
@@ -330,8 +351,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
                 raise ValueError("Contrast matrix L must be a 2-d array!")
             if L.shape[1] != k_xvar:
                 raise ValueError("Contrast matrix L should have the same "
-                                 "number of columns as exog! %d != %d" %
-                                 (L.shape[1], k_xvar))
+                                 f"number of columns as exog! {L.shape[1]:d} != {k_xvar:d}")
         if M is None:
             M = np.eye(k_yvar)
         elif any(isinstance(j, str) for j in M):
@@ -342,8 +362,7 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
             if M.shape[0] != k_yvar:
                 raise ValueError("Transform matrix M should have the same "
                                  "number of rows as the number of columns "
-                                 "of endog! %d != %d" %
-                                 (M.shape[0], k_yvar))
+                                 f"of endog! {M.shape[0]:d} != {k_yvar:d}")
         if C is None:
             C = np.zeros([L.shape[0], M.shape[1]])
         elif not isinstance(C, np.ndarray):
@@ -351,12 +370,10 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
 
         if C.shape[0] != L.shape[0]:
             raise ValueError("contrast L and constant C must have the same "
-                             "number of rows! %d!=%d"
-                             % (L.shape[0], C.shape[0]))
+                             f"number of rows! {L.shape[0]:d}!={C.shape[0]:d}")
         if C.shape[1] != M.shape[1]:
             raise ValueError("transform M and constant C must have the same "
-                             "number of columns! %d!=%d"
-                             % (M.shape[1], C.shape[1]))
+                             f"number of columns! {M.shape[1]:d}!={C.shape[1]:d}")
         E, H, q, df_resid = fn(L, M, C)
         EH = np.add(E, H)
         p = matrix_rank(EH)
@@ -374,7 +391,6 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
 class _MultivariateOLS(Model):
     """
     Multivariate linear model via least squares
-
 
     Parameters
     ----------
@@ -411,6 +427,10 @@ class _MultivariateOLS(Model):
         idx = pd.MultiIndex.from_product((self.endog_names, self.exog_names))
         self.data.cov_names = idx
 
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self._fittedmod = None
+
     def fit(self, method="svd"):
         self._fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
@@ -418,9 +438,7 @@ class _MultivariateOLS(Model):
 
 
 class _MultivariateOLSResults(LikelihoodModelResults):
-    """
-    _MultivariateOLS results class
-    """
+    """_MultivariateOLS results class"""
     def __init__(self, fitted_mv_ols):
         if (hasattr(fitted_mv_ols, "data") and
                 hasattr(fitted_mv_ols.data, "model_spec")):
@@ -446,12 +464,13 @@ class _MultivariateOLSResults(LikelihoodModelResults):
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns
         -------
-        results: _MultivariateOLSResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
         Notes
         -----
@@ -482,7 +501,7 @@ class _MultivariateOLSResults(LikelihoodModelResults):
             else:
                 hypotheses = []
                 for i in range(k_xvar):
-                    name = "x%d" % (i)
+                    name = f"x{i:d}"
                     L = np.zeros([1, k_xvar])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])
@@ -514,6 +533,12 @@ class MultivariateLS(_MultivariateOLS):
         default)
     """
 
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self.df_resid = None
+
     def fit(self, method="svd", use_t=True):
         _fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
@@ -530,11 +555,9 @@ class MultivariateLS(_MultivariateOLS):
             # extra kwargs are currently ignored
             )
 
-        res.df_resid = self.df_resid = df_resid
         res._fittedmod = _fittedmod
         res.cov_resid = sscpr / df_resid
         return MultivariateLSResultsWrapper(res)
-        return res
 
     def predict(self, params, exog=None):
         if exog is None:
@@ -545,8 +568,7 @@ class MultivariateLS(_MultivariateOLS):
 
 
 class MultivariateLSResults(LikelihoodModelResults):
-    """Results for multivariate linear regression
-    """
+    """Results for multivariate linear regression"""
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.,
                  **kwargs):
@@ -556,6 +578,13 @@ class MultivariateLSResults(LikelihoodModelResults):
                          **kwargs)
 
         self.method = "Least Squares"
+        # model.df_resid is set by `fit` before this is constructed.
+        self.df_resid = model.df_resid
+        # used in generic part of io summary; computed here (rather than
+        # only when `summary` is called) since they depend only on the
+        # model, not on any argument to `summary`.
+        self.nobs = model.nobs
+        self.df_model = model.k_endog * (model.k_exog - 1)
 
     @cache_readonly
     def bse(self):
@@ -579,12 +608,8 @@ class MultivariateLSResults(LikelihoodModelResults):
 
     @cache_readonly
     def _hat_matrix_diag(self):
-        """Diagonal of the hat_matrix for OLS
-
-        Notes
-        -----
-        temporarily calculated here, this should go to model or influence class
-        """
+        """Diagonal of the hat_matrix for OLS"""
+        # TODO: temporarily calcu here, should go to model or influence class
         # computation base on OLSInfluence method
         exog = self.model.exog
         pinv_wexog = np.linalg.pinv(exog)
@@ -602,12 +627,13 @@ class MultivariateLSResults(LikelihoodModelResults):
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns
         -------
-        results: _MultivariateOLSResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
         Notes
         -----
@@ -679,6 +705,10 @@ class MultivariateLSResults(LikelihoodModelResults):
             default title.
         alpha : float
             The significance level for the confidence intervals.
+        yname_list : list[str], optional
+            Restricted list of endogenous variable names to include when
+            constructing the table of parameter estimates. The default is
+            to include all endogenous variables.
 
         Returns
         -------
@@ -690,10 +720,6 @@ class MultivariateLSResults(LikelihoodModelResults):
         --------
         statsmodels.iolib.summary.Summary : Class that hold summary results.
         """
-        # used in generic part of io summary
-        self.nobs = self.model.nobs
-        self.df_model = self.model.k_endog * (self.model.k_exog - 1)
-
         top_left = [
             ("Dep. Variable:", None),
             ("Model:", [self.model.__class__.__name__]),
@@ -767,7 +793,7 @@ class MultivariateTestResults:
     Attributes
     ----------
     results : dict
-        Each hypothesis is contained in a single`key`. Each test must
+        Each hypothesis is contained in a single `key`. Each test must
         have the following keys:
 
         * 'stat' - contains the multivariate test results
@@ -805,9 +831,7 @@ class MultivariateTestResults:
 
     @property
     def summary_frame(self):
-        """
-        Return results as a multiindex dataframe
-        """
+        """Return results as a multiindex dataframe"""
         df = []
         for key in self.results:
             tmp = self.results[key]["stat"].copy()

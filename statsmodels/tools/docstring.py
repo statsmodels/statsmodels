@@ -1,6 +1,5 @@
-"""
-Substantially copied from NumpyDoc 1.0pre.
-"""
+"""Substantially copied from NumpyDoc 1.0pre"""
+
 from collections.abc import Mapping
 import copy
 import inspect
@@ -12,12 +11,36 @@ from statsmodels.tools.sm_exceptions import ParseError
 
 
 def dedent_lines(lines):
-    """Deindent a list of lines maximally"""
+    """
+    Deindent a list of lines maximally
+
+    Parameters
+    ----------
+    lines : list[str]
+        The lines to dedent.
+
+    Returns
+    -------
+    list[str]
+        The dedented lines.
+    """
     return textwrap.dedent("\n".join(lines)).split("\n")
 
 
 def strip_blank_lines(line):
-    """Remove leading and trailing blank lines from a list of lines"""
+    """
+    Remove leading and trailing blank lines from a list of lines
+
+    Parameters
+    ----------
+    line : list[str]
+        The lines to strip. Modified and returned in place.
+
+    Returns
+    -------
+    list[str]
+        The lines with leading and trailing blank lines removed.
+    """
     while line and not line[0].strip():
         del line[0]
     while line and not line[-1].strip():
@@ -26,16 +49,14 @@ def strip_blank_lines(line):
 
 
 class Reader:
-    """
-    A line-based string reader.
-    """
+    """A line-based string reader"""
 
     def __init__(self, data):
         """
         Parameters
         ----------
-        data : str
-           String with lines separated by '\n'.
+        data : str or list[str]
+           String with lines separated by '\n', or a list of lines.
         """
         if isinstance(data, list):
             self._str = data
@@ -103,44 +124,62 @@ class Reader:
 
 
 class Parameter(NamedTuple):
+    """
+    A single parameter, return value, or attribute entry
+
+    Attributes
+    ----------
+    name : str
+        The name of the parameter.
+    type : str
+        The type description of the parameter, as written in the docstring.
+    desc : list[str]
+        The description lines for the parameter.
+    """
+
     name: str
     type: type
-    desc: str
+    desc: list[str]
 
 
 class NumpyDocString(Mapping):
-    """Parses a numpydoc string to an abstract representation
+    """
+    Parses a numpydoc string to an abstract representation
 
     Instances define a mapping from section title to structured data.
-    """
 
-    sections = {
-        "Signature": "",
-        "Summary": [""],
-        "Extended Summary": [],
-        "Parameters": [],
-        "Returns": [],
-        "Yields": [],
-        "Receives": [],
-        "Raises": [],
-        "Warns": [],
-        "Other Parameters": [],
-        "Attributes": [],
-        "Methods": [],
-        "See Also": [],
-        "Notes": [],
-        "Warnings": [],
-        "References": "",
-        "Examples": "",
-        "index": {},
-    }
+    Parameters
+    ----------
+    docstring : str
+        The numpydoc-formatted docstring to parse.
+    """
 
     def __init__(self, docstring):
         orig_docstring = docstring
         docstring = textwrap.dedent(docstring).split("\n")
 
         self._doc = Reader(docstring)
-        self._parsed_data = copy.deepcopy(self.sections)
+
+        self._parsed_data = {
+            "Signature": "",
+            "Summary": [""],
+            "Extended Summary": [],
+            "Parameters": [],
+            "Returns": [],
+            "Yields": [],
+            "Receives": [],
+            "Raises": [],
+            "Warns": [],
+            "Other Parameters": [],
+            "Attributes": [],
+            "Methods": [],
+            "See Also": [],
+            "Notes": [],
+            "Warnings": [],
+            "References": "",
+            "Examples": "",
+            "index": {},
+        }
 
         try:
             self._parse()
@@ -153,7 +192,7 @@ class NumpyDocString(Mapping):
 
     def __setitem__(self, key, val):
         if key not in self._parsed_data:
-            self._error_location("Unknown section %s" % key)
+            self._error_location(f"Unknown section {key}")
         else:
             self._parsed_data[key] = val
 
@@ -281,11 +320,10 @@ class NumpyDocString(Mapping):
         another_func_name : Descriptive text
         func_name1, func_name2, :meth:`func_name`, func_name3
         """
-
         items = []
 
         def parse_item_name(text):
-            """Match ':role:`name`' or 'name'."""
+            """Match ':role:`name`' or 'name'"""
             m = self._func_rgx.match(text)
             if not m:
                 raise ParseError(f"{text} is not a item name")
@@ -305,8 +343,8 @@ class NumpyDocString(Mapping):
                 if line_match.group("trailing") and description:
                     self._error_location(
                         "Unexpected comma or period after function list at "
-                        "index %d of line "
-                        '"%s"' % (line_match.end("trailing"), line)
+                        "index {:d} of line "
+                        '"{}"'.format(line_match.end("trailing"), line)
                     )
             if not description and line.startswith(" "):
                 rest.append(line.strip())
@@ -321,7 +359,7 @@ class NumpyDocString(Mapping):
                     text = text[match_end:].strip()
                     if text and text[0] == ",":
                         text = text[1:].strip()
-                rest = list(filter(None, [description]))
+                rest = [description] if description else []
                 items.append((funcs, rest))
             else:
                 raise ParseError(f"{line} is not a item name")
@@ -330,7 +368,7 @@ class NumpyDocString(Mapping):
     def _parse_index(self, section, content):
         """
         .. index: default
-           :refguide: something, else, and more
+        :refguide: something, else, and more
         """
 
         def strip_each_in(lst):
@@ -341,9 +379,9 @@ class NumpyDocString(Mapping):
         if len(section) > 1:
             out["default"] = strip_each_in(section[1].split(","))[0]
         for line in content:
-            line = line.split(":")
-            if len(line) > 2:
-                out[line[1]] = strip_each_in(line[2].split(","))
+            line_parts = line.split(":")
+            if len(line_parts) > 2:
+                out[line_parts[1]] = strip_each_in(line_parts[2].split(","))
         return out
 
     def _parse_summary(self):
@@ -385,38 +423,36 @@ class NumpyDocString(Mapping):
             msg = "Docstring contains a Receives section but not Yields."
             raise ValueError(msg)
 
-        for (section, content) in sections:
-            if not section.startswith(".."):
-                section = (s.capitalize() for s in section.split(" "))
-                section = " ".join(section)
-                if self.get(section):
-                    self._error_location(
-                        "The section %s appears twice" % section
-                    )
+        for section, content in sections:
+            section_name = section
+            if not section_name.startswith(".."):
+                section_name = " ".join(s.capitalize() for s in section_name.split(" "))
+                if self.get(section_name):
+                    self._error_location(f"The section {section_name} appears twice")
 
-            if section in (
+            if section_name in (
                 "Parameters",
                 "Other Parameters",
                 "Attributes",
                 "Methods",
             ):
-                self[section] = self._parse_param_list(content)
-            elif section in (
+                self[section_name] = self._parse_param_list(content)
+            elif section_name in (
                 "Returns",
                 "Yields",
                 "Raises",
                 "Warns",
                 "Receives",
             ):
-                self[section] = self._parse_param_list(
+                self[section_name] = self._parse_param_list(
                     content, single_element_is_type=True
                 )
-            elif section.startswith(".. index::"):
-                self["index"] = self._parse_index(section, content)
-            elif section == "See Also":
+            elif section_name.startswith(".. index::"):
+                self["index"] = self._parse_index(section_name, content)
+            elif section_name == "See Also":
                 self["See Also"] = self._parse_see_also(content)
             else:
-                self[section] = content
+                self[section_name] = content
 
     def _error_location(self, msg):
         if hasattr(self, "_obj"):
@@ -425,9 +461,7 @@ class NumpyDocString(Mapping):
                 filename = inspect.getsourcefile(self._obj)
             except TypeError:
                 filename = None
-            msg = msg + (
-                f" in the docstring of {self._obj} in {filename}."
-            )
+            msg = msg + (f" in the docstring of {self._obj} in {filename}.")
 
         raise ValueError(msg)
 
@@ -444,7 +478,7 @@ class NumpyDocString(Mapping):
 
     def _str_signature(self):
         if self["Signature"]:
-            return [self["Signature"].replace("*", r"\*")] + [""]
+            return [self["Signature"].replace("*", r"\*"), ""]
         else:
             return [""]
 
@@ -499,7 +533,7 @@ class NumpyDocString(Mapping):
                 elif func_role:
                     link = f":{func_role}:`{func}`"
                 else:
-                    link = "%s" % func
+                    link = f"{func}"
                 links.append(link)
             link = ", ".join(links)
             out += [link]
@@ -521,7 +555,7 @@ class NumpyDocString(Mapping):
         default_index = idx.get("default", "")
         if default_index:
             output_index = True
-        out += [".. index:: %s" % default_index]
+        out += [f".. index:: {default_index}"]
         for section, references in idx.items():
             if section == "default":
                 continue
@@ -559,7 +593,7 @@ class NumpyDocString(Mapping):
 
 class Docstring:
     """
-    Docstring modification.
+    Docstring modification
 
     Parameters
     ----------
@@ -570,12 +604,15 @@ class Docstring:
     def __init__(self, docstring):
         self._ds = None
         self._docstring = docstring
-        if docstring is None:
+        if docstring is None or not docstring.strip():
+            self._docstring = None
             return
         self._ds = NumpyDocString(docstring)
 
     def remove_parameters(self, parameters):
         """
+        Remove parameters from the Parameters section of the docstring
+
         Parameters
         ----------
         parameters : str, list[str]
@@ -587,9 +624,7 @@ class Docstring:
         if isinstance(parameters, str):
             parameters = [parameters]
         repl = [
-            param
-            for param in self._ds["Parameters"]
-            if param.name not in parameters
+            param for param in self._ds["Parameters"] if param.name not in parameters
         ]
         if len(repl) + len(parameters) != len(self._ds["Parameters"]):
             raise ValueError("One or more parameters were not found.")
@@ -597,13 +632,16 @@ class Docstring:
 
     def insert_parameters(self, after, parameters):
         """
+        Insert parameters into the Parameters section of the docstring
+
         Parameters
         ----------
         after : {None, str}
-            If None, inset the parameters before the first parameter in the
-            docstring.
+            If None, insert the parameters before the first parameter in the
+            docstring. Otherwise, the name of the existing parameter after
+            which the new parameters are inserted.
         parameters : Parameter, list[Parameter]
-            A Parameter of a list of Parameters.
+            A Parameter or a list of Parameters.
         """
         if self._docstring is None:
             # Protection against -oo execution
@@ -626,6 +664,8 @@ class Docstring:
 
     def replace_block(self, block_name, block):
         """
+        Replace a block of the docstring with a new block
+
         Parameters
         ----------
         block_name : str
@@ -637,18 +677,30 @@ class Docstring:
         if self._docstring is None:
             # Protection against -oo execution
             return
-        block_name = " ".join(map(str.capitalize, block_name.split(" ")))
+        block_name = " ".join(word.capitalize() for word in block_name.split(" "))
         if block_name not in self._ds:
-            raise ValueError(
-                "{} is not a block in the docstring".format(block_name)
-            )
-        if not isinstance(block, list) and isinstance(
-            self._ds[block_name], list
-        ):
+            raise ValueError(f"{block_name} is not a block in the docstring")
+        if not isinstance(block, list) and isinstance(self._ds[block_name], list):
             block = [block]
         self._ds[block_name] = block
 
     def extract_parameters(self, parameters, indent=0):
+        """
+        Extract a subset of parameters into a standalone docstring
+
+        Parameters
+        ----------
+        parameters : str, list[str]
+            The names of the parameters to extract.
+        indent : int, optional
+            Number of spaces to indent every line of the output. Default is
+            0, which does not indent the output.
+
+        Returns
+        -------
+        str
+            A docstring fragment containing only the requested parameters.
+        """
         if self._docstring is None:
             # Protection against -oo execution
             return
@@ -658,8 +710,7 @@ class Docstring:
         missing = set(parameters).difference(ds_params.keys())
         if missing:
             raise ValueError(
-                "{} were not found in the "
-                "docstring".format(",".join(missing))
+                "{} were not found in the docstring".format(",".join(missing))
             )
         final = [ds_params[param] for param in parameters]
         ds = copy.deepcopy(self._ds)
@@ -681,6 +732,8 @@ class Docstring:
 
 def remove_parameters(docstring, parameters):
     """
+    Remove parameters from a numpydoc docstring
+
     Parameters
     ----------
     docstring : str
@@ -718,7 +771,8 @@ def indent(text, prefix, predicate=None):
 
     Returns
     -------
-
+    str
+        The indented text, or an empty string if `text` is None.
     """
     if text is None:
         return ""

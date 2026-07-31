@@ -63,7 +63,7 @@ from statsmodels.regression.linear_model import (
     RegressionResultsWrapper,
 )
 import statsmodels.stats.sandwich_covariance as smcov
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.tools import _ensure_2d
 
@@ -190,7 +190,7 @@ class IV2SLS(LikelihoodModel):
 
 class IVRegressionResults(RegressionResults):
     """
-    Results class for for an OLS model.
+    Results class for an OLS model.
 
     Most of the methods and attributes are inherited from RegressionResults.
     The special methods that are only available for OLS are:
@@ -330,27 +330,27 @@ class IVRegressionResults(RegressionResults):
         ]
 
         top_right = [
-            ("R-squared:", ["%#8.3f" % self.rsquared]),
-            ("Adj. R-squared:", ["%#8.3f" % self.rsquared_adj]),
-            ("F-statistic:", ["%#8.4g" % self.fvalue]),
-            ("Prob (F-statistic):", ["%#6.3g" % self.f_pvalue]),
+            ("R-squared:", [f"{self.rsquared:#8.3f}"]),
+            ("Adj. R-squared:", [f"{self.rsquared_adj:#8.3f}"]),
+            ("F-statistic:", [f"{self.fvalue:#8.4g}"]),
+            ("Prob (F-statistic):", [f"{self.f_pvalue:#6.3g}"]),
             # ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
             # ('AIC:', ["%#8.4g" % self.aic]),
             # ('BIC:', ["%#8.4g" % self.bic])
         ]
 
         diagn_left = [
-            ("Omnibus:", ["%#6.3f" % omni]),
-            ("Prob(Omnibus):", ["%#6.3f" % omnipv]),
-            ("Skew:", ["%#6.3f" % skew]),
-            ("Kurtosis:", ["%#6.3f" % kurtosis]),
+            ("Omnibus:", [f"{omni:#6.3f}"]),
+            ("Prob(Omnibus):", [f"{omnipv:#6.3f}"]),
+            ("Skew:", [f"{skew:#6.3f}"]),
+            ("Kurtosis:", [f"{kurtosis:#6.3f}"]),
         ]
 
         diagn_right = [
-            ("Durbin-Watson:", ["%#8.3f" % durbin_watson(self.wresid)]),
-            ("Jarque-Bera (JB):", ["%#8.3f" % jb]),
-            ("Prob(JB):", ["%#8.3g" % jbpv]),
-            ("Cond. No.", ["%#8.3g" % condno]),
+            ("Durbin-Watson:", [f"{durbin_watson(self.wresid):#8.3f}"]),
+            ("Jarque-Bera (JB):", [f"{jb:#8.3f}"]),
+            ("Prob(JB):", [f"{jbpv:#8.3g}"]),
+            ("Cond. No.", [f"{condno:#8.3g}"]),
         ]
 
         if title is None:
@@ -556,7 +556,7 @@ class GMM(Model):
             self.data.xnames = xnames[-len(params) :]
         elif len(params) > len(xnames):
             # use generic names
-            self.data.xnames = ["p%2d" % i for i in range(len(params))]
+            self.data.xnames = [f"p{i:2d}" for i in range(len(params))]
 
     def set_param_names(self, param_names, k_params=None):
         """set the parameter names in the model
@@ -609,7 +609,7 @@ class GMM(Model):
             obtained with maxiter=0 or 1. If maxiter is large, then the
             iteration will stop either at maxiter or on convergence of the
             parameters (TODO: no options for convergence criteria yet.)
-            If `maxiter == 'cue'`, the the continuously updated GMM is
+            If `maxiter == 'cue'`, the continuously updated GMM is
             calculated which updates the weight matrix during the minimization
             of the GMM objective function. The CUE estimation uses the onestep
             parameters as starting values.
@@ -631,7 +631,7 @@ class GMM(Model):
             - `cluster` : not connected yet
             - others from robust_covariance
 
-        wargs` : tuple or dict,
+        wargs : tuple or dict,
             required and optional arguments for weights_method
 
             - `centered` : bool,
@@ -1175,6 +1175,10 @@ class GMMResults(LikelihoodModelResults):
 
         self.nobs = self.model.nobs
         self.df_resid = np.inf
+        # Does not call Results.__init__, so set these directly; needed for
+        # remove_data() to work (it assumes both attributes exist).
+        self._data_attr = []
+        self._data_in_cache = ["fittedvalues", "resid", "wresid"]
 
         self.cov_params_default = self._cov_params()
 
@@ -1374,8 +1378,8 @@ class GMMResults(LikelihoodModelResults):
 
         top_right = [  # ('R-squared:', ["%#8.3f" % self.rsquared]),
             # ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-            ("Hansen J:", ["%#8.4g" % jvalue]),
-            ("Prob (Hansen J):", ["%#6.3g" % jpvalue]),
+            ("Hansen J:", [f"{jvalue:#8.4g}"]),
+            ("Prob (Hansen J):", [f"{jpvalue:#6.3g}"]),
             # ('F-statistic:', ["%#8.4g" % self.fvalue] ),
             # ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
             # ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),

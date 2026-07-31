@@ -346,7 +346,6 @@ to one way ANOVA, but still in development
    CorrelationEffects
    OLSEffects
    ForwardEffects
-   OLSEffects
    RegModelEffects
 
 The following functions are not (yet) public
@@ -500,7 +499,6 @@ proportions that can be used with NormalIndPower.
    proportions_chisquare_allpairs
    proportions_chisquare_pairscontrol
 
-   proportion_effectsize
    power_binom_tost
    power_ztost_prop
    samplesize_confint_proportion

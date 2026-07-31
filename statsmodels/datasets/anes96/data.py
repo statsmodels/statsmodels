@@ -30,7 +30,7 @@ NOTE = """::
                 0 - Strong Democrat
                 1 - Weak Democrat
                 2 - Independent-Democrat
-                3 - Independent-Indpendent
+                3 - Independent-Independent
                 4 - Independent-Republican
                 5 - Weak Republican
                 6 - Strong Republican
@@ -90,7 +90,8 @@ NOTE = """::
 
 
 def load_pandas():
-    """Load the anes96 data and returns a Dataset class.
+    """
+    Load the anes96 data and returns a Dataset class.
 
     Returns
     -------
@@ -102,7 +103,8 @@ def load_pandas():
 
 
 def load():
-    """Load the anes96 data and returns a Dataset class.
+    """
+    Load the anes96 data and returns a Dataset class.
 
     Returns
     -------

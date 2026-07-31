@@ -4,10 +4,9 @@ Tests for the generic MLEModel
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.pandas import MONTH_END
 
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -21,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import nile
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.statespace import (
     kalman_filter,
     kalman_smoother,
@@ -33,7 +33,7 @@ from statsmodels.tsa.statespace.tests.results import (
     results_var_misc,
 )
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 # Basic kwargs
 kwargs = {
@@ -292,6 +292,22 @@ def test_fit_misc():
 
     # 5 digits necessary to accommodate 32-bit numpy/scipy with OpenBLAS 0.2.18
     assert_almost_equal(res_params, [0, 0], 5)
+
+
+@pytest.mark.parametrize("name", ["mlefit", "mle_retvals", "mle_settings"])
+def test_fit_attrs_in_dir(name):
+    # GH#9271: mlefit, mle_retvals and mle_settings were attached to the
+    # results wrapper instead of the underlying results instance, so they
+    # were reachable via attribute access but did not show up in dir(res)
+    # (and therefore not in tab-completion).
+    _, res = get_dummy_mod()
+
+    # Reachable as before (no regression in attribute access)
+    assert hasattr(res, name)
+    # Now discoverable via dir() / tab-completion
+    assert name in dir(res)
+    # Because they now live on the underlying results instance
+    assert name in dir(res._results)
 
 
 @pytest.mark.smoke
@@ -649,6 +665,18 @@ def test_summary():
         res.summary()
 
 
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dates = pd.date_range(start="1980-01-01", end="1984-01-01", freq="YS")
+    endog = pd.Series([1, 2, 3, 4, 5], index=dates)
+    mod = MLEModel(endog, **kwargs)
+    res = mod.filter([])
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
     mod = MLEModel(endog, **kwargs)
@@ -664,8 +692,12 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     assert_equal(mod.ssm.endog.ndim, 2)
     assert_equal(mod.ssm.endog.flags["F_CONTIGUOUS"], True)
     assert_equal(mod.ssm.endog.shape, (k_endog, nobs))
-    assert_equal(mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable, True)
-
+    if mod.ssm.endog.base.ndim > 1:
+        assert mod.ssm.endog.base is mod.endog or not mod.endog.flags.writeable
+    else:
+        # Added to handle changes in numpy where shape cannot be assigned to
+        # Even though array is no copy, the reshaped array is a new object
+        np.testing.assert_equal(mod.ssm.endog.base, mod.endog.ravel())
     return mod
 
 
@@ -886,8 +918,9 @@ def test_diagnostics():
 
     # Override the standardized forecasts errors to get more reasonable values
     # for the tests to run (not necessary, but prevents some annoying warnings)
+    rs = np.random.RandomState(9991615)
     shape = res.filter_results._standardized_forecasts_error.shape
-    res.filter_results._standardized_forecasts_error = np.random.normal(size=shape)
+    res.filter_results._standardized_forecasts_error = rs.normal(size=shape)
 
     # Make sure method=None selects the appropriate test
     actual = res.test_normality(method=None)
@@ -1239,25 +1272,25 @@ def check_states_index(states, ix, predicted_ix, cols):
     smoothed_cov_ix = pd.MultiIndex.from_product([ix, cols]).swaplevel()
 
     # Predicted
-    assert (states.predicted.index.equals(predicted_ix))
-    assert (states.predicted.columns.equals(cols))
+    assert states.predicted.index.equals(predicted_ix)
+    assert states.predicted.columns.equals(cols)
 
-    assert (states.predicted_cov.index.equals(predicted_cov_ix))
-    assert (states.predicted.columns.equals(cols))
+    assert states.predicted_cov.index.equals(predicted_cov_ix)
+    assert states.predicted.columns.equals(cols)
 
     # Filtered
-    assert (states.filtered.index.equals(ix))
-    assert (states.filtered.columns.equals(cols))
+    assert states.filtered.index.equals(ix)
+    assert states.filtered.columns.equals(cols)
 
-    assert (states.filtered_cov.index.equals(filtered_cov_ix))
-    assert (states.filtered.columns.equals(cols))
+    assert states.filtered_cov.index.equals(filtered_cov_ix)
+    assert states.filtered.columns.equals(cols)
 
     # Smoothed
-    assert (states.smoothed.index.equals(ix))
-    assert (states.smoothed.columns.equals(cols))
+    assert states.smoothed.index.equals(ix)
+    assert states.smoothed.columns.equals(cols)
 
-    assert (states.smoothed_cov.index.equals(smoothed_cov_ix))
-    assert (states.smoothed.columns.equals(cols))
+    assert states.smoothed_cov.index.equals(smoothed_cov_ix)
+    assert states.smoothed.columns.equals(cols)
 
 
 def test_states_index_periodindex():
@@ -1335,7 +1368,7 @@ def test_invalid_kwargs():
     # Make sure we can create basic SARIMAX
     sarimax.SARIMAX(endog)
     # Now check that it raises a warning if we add an invalid keyword argument
-    with pytest.warns(FutureWarning):
+    with pytest.raises(TypeError, match="Unknown keyword arguments"):
         sarimax.SARIMAX(endog, invalid_kwarg=True)
     # (Note: once deprectation is completed in v0.15, switch to checking for
     # a TypeError, as below)

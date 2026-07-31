@@ -7,8 +7,6 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-from statsmodels.compat.pandas import Appender
-
 from collections import defaultdict
 import warnings
 
@@ -17,6 +15,8 @@ import pandas as pd
 from scipy import linalg as spl
 
 from statsmodels.stats.correlation_tools import cov_nearest
+from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     NotImplementedWarning,
@@ -396,7 +396,7 @@ class Exchangeable(CovStruct):
     def summary(self):
         return (
             "The correlation between two observations in the "
-            + "same cluster is %.3f" % self.dep_params
+            f"same cluster is {self.dep_params:.3f}"
         )
 
 
@@ -579,7 +579,7 @@ class Nested(CovStruct):
             dep_names.extend(self.model._dep_data_names)
         else:
             dep_names.extend(
-                ["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)]
+                [f"Component {k + 1:d}:" for k in range(len(self.vcomp_coeff) - 1)]
             )
         if hasattr(self.model, "_groups_name"):
             dep_names[0] = self.model._groups_name
@@ -790,6 +790,10 @@ class Autoregressive(CovStruct):
     dist_func : function from R^k x R^k to R^+, optional
         A function that computes the distance between the two
         observations based on their `time` values.
+    grid : bool, optional
+        If True, use the grid-based implementation for equally spaced data.
+        If False, estimate the dependence parameter using all available
+        pairs of observations.
 
     References
     ----------
@@ -1011,7 +1015,7 @@ class Autoregressive(CovStruct):
 
     def summary(self):
 
-        return "Autoregressive(1) dependence parameter: %.3f\n" % self.dep_params
+        return f"Autoregressive(1) dependence parameter: {self.dep_params:.3f}\n"
 
 
 class CategoricalCovStruct(CovStruct):
@@ -1147,7 +1151,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
         wts = [1 / v for v in var]
         wtsum = sum(wts)
         wts = [w / wtsum for w in wts]
-        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio)])
+        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio, strict=True)])
 
         return np.exp(log_pooled_or)
 
@@ -1277,7 +1281,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             )
 
     def summary(self):
-        return "Global odds ratio: %.3f\n" % self.dep_params
+        return f"Global odds ratio: {self.dep_params:.3f}\n"
 
 
 class OrdinalIndependence(CategoricalCovStruct):
@@ -1427,7 +1431,7 @@ class Equivalence(CovStruct):
 
         self.return_cov = return_cov
 
-    def _make_pairs(self, i, j):
+    def _make_pairs(self, i, j, rng):
         """
         Create arrays containing all unique ordered pairs of i, j.
 
@@ -1452,14 +1456,13 @@ class Equivalence(CovStruct):
         except TypeError:
             # workaround for old numpy that cannot call unique with complex
             # dtypes
-            rs = np.random.RandomState(4234)
-            bmat = np.dot(mat, rs.uniform(size=mat.shape[1]))
+            bmat = np.dot(mat, rng.uniform(size=mat.shape[1]))
             _, idx = np.unique(bmat, return_index=True)
         mat = mat[idx, :]
 
         return mat[:, 0], mat[:, 1]
 
-    def _pairs_from_labels(self):
+    def _pairs_from_labels(self, rng):
 
         from collections import defaultdict
 
@@ -1487,7 +1490,7 @@ class Equivalence(CovStruct):
                     except KeyError:
                         continue
 
-                    i1, i2 = self._make_pairs(i1, i2)
+                    i1, i2 = self._make_pairs(i1, i2, rng)
 
                     clabel = str(lb1) + "/" + str(lb2)
 
@@ -1506,8 +1509,22 @@ class Equivalence(CovStruct):
 
         self.pairs = pairs
 
-    def initialize(self, model):
+    def initialize(self, model, rng=None):
+        """
+        Called by GEE, used by implementations that need additional
+        setup prior to running `fit`.
 
+        Parameters
+        ----------
+        model : GEE class
+            A reference to the parent GEE class instance.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        """
         super().initialize(model)
 
         if self.model.weights is not None:
@@ -1519,7 +1536,8 @@ class Equivalence(CovStruct):
             )
 
         if not hasattr(self, "pairs"):
-            self._pairs_from_labels()
+            rng = check_random_state(rng)
+            self._pairs_from_labels(rng)
 
         # Initialize so that any equivalence class containing a
         # variance parameter has value 1.

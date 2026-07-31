@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -17,7 +19,8 @@ from statsmodels.distributions.tools import (
     cdf2prob_grid,
     prob2cdf_grid,
 )
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class BernsteinDistribution:
@@ -44,7 +47,7 @@ class BernsteinDistribution:
         self.cdf_grid = cdf_grid = np.asarray(cdf_grid)
         self.k_dim = cdf_grid.ndim
         self.k_grid = cdf_grid.shape
-        self.k_grid_product = np.prod([i-1 for i in self.k_grid])
+        self.k_grid_product = np.prod([i - 1 for i in self.k_grid])
         self._grid = _Grid(self.k_grid)
 
     @classmethod
@@ -177,15 +180,28 @@ class BernsteinDistribution:
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
-    def rvs(self, nobs):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs, rng=None):
         """Generate random numbers from distribution.
 
         Parameters
         ----------
         nobs : int
             Number of random observations to generate.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         """
-        rvs_mnl = np.random.multinomial(nobs, self.prob_grid.flatten())
+        rng = check_random_state(rng)
+        rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
         rvs_m = []
         for i in range(len(rvs_mnl)):
@@ -197,8 +213,14 @@ class BernsteinDistribution:
                     xgi = self._grid.x_marginal[j][idx[j]]
                     # Note: x_marginal starts at 0
                     #       x_marginal ends with 1 but that is not used by idx
-                    rvsi.append(stats.beta.rvs(n * xgi + 1, n * (1-xgi) + 0,
-                                               size=rvs_mnl[i]))
+                    rvsi.append(
+                        stats.beta.rvs(
+                            n * xgi + 1,
+                            n * (1 - xgi) + 0,
+                            size=rvs_mnl[i],
+                            random_state=rng,
+                        )
+                    )
                 rvs_m.append(np.column_stack(rvsi))
 
         rvsm = np.concatenate(rvs_m)
@@ -226,6 +248,7 @@ class BernsteinDistributionUV(BernsteinDistribution):
 
     def pdf(self, x, method="binom"):
         # TODO: check usage of k_grid_product. Should this go into eval?
-        pdf_ = self.k_grid_product * _eval_bernstein_1d(x, self.prob_grid,
-                                                        method=method)
+        pdf_ = self.k_grid_product * _eval_bernstein_1d(
+            x, self.prob_grid, method=method
+        )
         return pdf_

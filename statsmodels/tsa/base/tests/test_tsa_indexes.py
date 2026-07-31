@@ -434,7 +434,7 @@ def test_instantiation_valid():
         message = (
             "An unsupported index was provided. As a result, forecasts "
             "cannot be generated. To use the model for forecasting, use "
-            "on the the supported classes of index."
+            "on the supported classes of index."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -517,9 +517,7 @@ def test_prediction_increment_unsupported():
     # a. Generated from unsupported index
     endog = dta[2].copy()
     endog.index = unsupported_indexes[-2][0]
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("ignore")
-        mod = tsa_model.TimeSeriesModel(endog)
+    mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
     # out-of-sample indexes.
@@ -555,27 +553,8 @@ def test_prediction_increment_unsupported():
     # a warning will be issued
     start_key = 1
     end_key = nobs
-    message = (
-        "No supported index is available. In the next version, calling this "
-        "method in a model without a supported index will result in an "
-        "exception."
-    )
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        (
-            start,
-            end,
-            out_of_sample,
-            prediction_index,
-        ) = mod._get_prediction_index(start_key, end_key)
-
-        assert_equal(str(w[0].message), message)
-
-    assert_equal(start, 1)
-    assert_equal(end, 4)
-    assert_equal(out_of_sample, 1)
-    assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(start_key, end_key)
 
     # Test getting a location that exists in the (internal) index
     loc, index, index_was_expanded = mod._get_index_loc(2)
@@ -1002,9 +981,10 @@ def test_prediction_increment_pandas_dates_nanosecond():
 
 
 def test_range_index():
+    rs = np.random.RandomState(328389218)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5))
+    endog = pd.Series(rs.normal(size=5))
     assert_equal(isinstance(endog.index, pd.RangeIndex), True)
     # Warning should not be given
     with warnings.catch_warnings(record=True) as w:
@@ -1117,12 +1097,13 @@ def test_prediction_rangeindex_withstep():
 
 
 def test_custom_index():
+    rs = np.random.RandomState(328392810)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5), index=["a", "b", "c", "d", "e"])
+    endog = pd.Series(rs.normal(size=5), index=["a", "b", "c", "d", "e"])
     message = (
         "An unsupported index was provided. As a result, forecasts cannot be "
-        "generated. To use the model for forecasting, use on the the "
+        "generated. To use the model for forecasting, use on the "
         "supported classes of index."
     )
     with warnings.catch_warnings(record=True) as w:
@@ -1171,22 +1152,8 @@ def test_custom_index():
     # Test out-of-sample
     start_key = 4
     end_key = 5
-    message = (
-        "No supported index is available. In the next version, calling this "
-        "method in a model without a supported index will result in an "
-        "exception."
-    )
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        (
-            start,
-            end,
-            out_of_sample,
-            prediction_index,
-        ) = mod._get_prediction_index(start_key, end_key)
-        assert_equal(prediction_index.equals(pd.Index([4, 5])), True)
-        assert_equal(str(w[0].message), message)
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(start_key, end_key)
 
     # Test out-of-sample custom index
     start, end, out_of_sample, prediction_index = mod._get_prediction_index(

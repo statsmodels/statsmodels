@@ -168,7 +168,7 @@ def movmean(x, windowsize=3, lag="lagged"):
     ----------
     x : ndarray
        time series data
-    windsize : int
+    windowsize : int
        window size
     lag : 'lagged', 'centered', or 'leading'
        location of window relative to current position
@@ -196,7 +196,7 @@ def movvar(x, windowsize=3, lag="lagged"):
     ----------
     x : ndarray
        time series data
-    windsize : int
+    windowsize : int
        window size
     lag : 'lagged', 'centered', or 'leading'
        location of window relative to current position
@@ -221,7 +221,9 @@ def movmoment(x, k, windowsize=3, lag="lagged"):
     ----------
     x : ndarray
        time series data
-    windsize : int
+    k : int
+       order of the moment
+    windowsize : int
        window size
     lag : 'lagged', 'centered', or 'leading'
        location of window relative to current position

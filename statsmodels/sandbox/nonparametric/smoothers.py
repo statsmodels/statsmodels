@@ -244,7 +244,7 @@ class PolySmoother:
 #                 for k in range(min(nband, nbasis-i)):
 #                     self.btb[k, i] = (bt[i] * bt[i+k]).sum()
 #
-#             bty.shape = (1, bty.shape[0])
+#             bty = np.reshape(bty, (1, bty.shape[0]), copy=False)
 #             self.chol, self.coef = solveh_banded(self.btb +
 #                                                  pen*self.g,
 #                                                  bty, lower=1)

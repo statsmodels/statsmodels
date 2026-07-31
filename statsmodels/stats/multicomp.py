@@ -11,7 +11,7 @@ __all__ = ["MultiComparison", "tukeyhsd"]
 
 def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
     """
-    Calculate all pairwise comparisons with TukeyHSD or Games-Howell.
+    Calculate all pairwise comparisons with TukeyHSD or Games-Howell
 
     Parameters
     ----------

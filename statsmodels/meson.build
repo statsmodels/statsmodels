@@ -82,7 +82,6 @@ subdirs_list = [
     'graphics',
     'imputation',
     'includes',
-    'interface',
     'iolib',
     'miscmodels',
     'multivariate',

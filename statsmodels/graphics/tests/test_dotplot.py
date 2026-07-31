@@ -19,9 +19,10 @@ def close_or_save(pdf, fig):
     plt.close(fig)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_all(close_figures, reset_randomstate):
-
+def test_all(close_figures):
+    rs = np.random.RandomState(49814031)
     if pdf_output:
         from matplotlib.backends.backend_pdf import PdfPages
 
@@ -116,8 +117,8 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes()
-    lines = ["ABCDEFGH"[np.random.randint(0, 8)] for k in range(20)]
-    points = np.random.normal(size=20)
+    lines = ["ABCDEFGH"[rs.randint(0, 8)] for k in range(20)]
+    points = rs.normal(size=20)
     fig = dot_plot(points, lines=lines, ax=ax)
     ax.set_title("Dotplot with user-supplied labels in the left margin")
     close_or_save(pdf, fig)
@@ -126,8 +127,8 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes()
-    points = np.random.normal(size=20)
-    lines = ["ABCDEFGH"[np.random.randint(0, 8)] + "::" + str(k + 1) for k in range(20)]
+    points = rs.normal(size=20)
+    lines = ["ABCDEFGH"[rs.randint(0, 8)] + "::" + str(k + 1) for k in range(20)]
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::")
     ax.set_title("Dotplot with user-supplied labels in both margins")
     close_or_save(pdf, fig)
@@ -136,8 +137,8 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.88, 0.8])
-    points = np.random.normal(size=20)
-    lines = ["ABCDEFGH"[np.random.randint(0, 8)] + "::" + str(k + 1) for k in range(20)]
+    points = rs.normal(size=20)
+    lines = ["ABCDEFGH"[rs.randint(0, 8)] + "::" + str(k + 1) for k in range(20)]
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::", horizontal=False)
     txt = ax.set_title("Vertical dotplot with user-supplied labels in both margins")
     txt.set_position((0.5, 1.06))
@@ -147,7 +148,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.07, 0.78, 0.85])
-    points = np.random.normal(size=20)
+    points = rs.normal(size=20)
     lines = np.kron(range(5), np.ones(4)).astype(np.int32)
     styles = np.kron(np.ones(5), range(4)).astype(np.int32)
     marker_props = {
@@ -212,7 +213,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    points = 5 * np.random.normal(size=40)
+    points = 5 * rs.normal(size=40)
     lines = np.kron(range(20), (1, 1))
     intervals = [(1, 3) for k in range(40)]
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)
@@ -253,7 +254,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    points = 5 * np.random.normal(size=40)
+    points = 5 * rs.normal(size=40)
     lines = np.kron(range(20), (1, 1))
     intervals = [(1, 3) for k in range(40)]
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)
@@ -291,7 +292,7 @@ def test_all(close_figures, reset_randomstate):
         styles_order=styles_order,
     )
     handles, labels = ax.get_legend_handles_labels()
-    lh = dict(zip(labels, handles))
+    lh = dict(zip(labels, handles, strict=True))
     handles = [lh[idx] for idx in styles_order]
     leg = plt.figlegend(
         handles, styles_order, loc="center right", numpoints=1, handletextpad=0.0001
@@ -304,7 +305,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    points = 5 * np.random.normal(size=40)
+    points = 5 * rs.normal(size=40)
     lines = np.kron(range(20), (1, 1))
     intervals = [(1, 3) for k in range(40)]
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)
@@ -332,7 +333,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    points = 5 * np.random.normal(size=40)
+    points = 5 * rs.normal(size=40)
     lines = np.kron(range(20), (1, 1))
     intervals = [(1, 3) for k in range(40)]
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)
@@ -361,7 +362,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    points = 5 * np.random.normal(size=40)
+    points = 5 * rs.normal(size=40)
     lines = np.kron(range(20), (1, 1))
     intervals = [(1, 3) for k in range(40)]
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)
@@ -451,7 +452,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     points = range(20)
-    lines = ["%d::%d" % (i, 100 + i) for i in range(20)]
+    lines = [f"{i:d}::{100 + i:d}" for i in range(20)]
 
     def fmt_left(x):
         return "lft_" + x
@@ -475,7 +476,7 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     points = range(20)
-    lines = ["%d::%d" % (i, 100 + i) for i in range(20)]
+    lines = [f"{i:d}::{100 + i:d}" for i in range(20)]
     ax = plt.axes()
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::", show_names="right")
     ax.set_title("Show right names only")
@@ -485,11 +486,11 @@ def test_all(close_figures, reset_randomstate):
 
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    points = 5 * np.random.normal(size=40)
+    points = 5 * rs.normal(size=40)
     lines = []
     ii = 0
     while len(lines) < 40:
-        for _ in range(np.random.randint(1, 4)):
+        for _ in range(rs.randint(1, 4)):
             lines.append(ii)
         ii += 1
     styles = np.kron(np.ones(20), (0, 1)).astype(np.int32)

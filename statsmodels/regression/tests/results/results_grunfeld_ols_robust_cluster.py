@@ -1,3 +1,5 @@
+"""Reference results for Grunfeld clustered covariance tests."""
+
 import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch

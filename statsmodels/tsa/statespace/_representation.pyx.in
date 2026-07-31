@@ -30,6 +30,7 @@ np.import_array()
 from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 cimport statsmodels.tsa.statespace._tools as tools
 
 {{for prefix, types in TYPES.items()}}
@@ -448,11 +449,13 @@ cdef class {{prefix}}Statespace(object):
         """
         cdef np.npy_intp dim1[1]
         cdef np.npy_intp dim2[2]
-        cdef int i, info, inc = 1
-        cdef int k_states2 = self.k_states**2
+        cdef int i
+        cdef blas_int info, inc = 1
+        cdef blas_int k_states = self.k_states
+        cdef blas_int k_states2 = self.k_states**2
         cdef np.float64_t asum, tol = 1e-9
         cdef {{cython_type}} scalar
-        cdef int [::1,:] ipiv
+        cdef blas_int [::1,:] ipiv
 
         # Create selected state covariance matrix
         {{prefix}}select_cov(self.k_states, self.k_posdef,
@@ -463,11 +466,11 @@ cdef class {{prefix}}Statespace(object):
 
         # Initial state mean
         {{if combined_prefix == 'd'}}
-        asum = blas.{{prefix}}asum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        asum = blas.{{prefix}}asum(&k_states, &self.state_intercept[0, 0], &inc)
         {{elif prefix == 'c'}}
-        asum = blas.scasum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        asum = blas.scasum(&k_states, &self.state_intercept[0, 0], &inc)
         {{else}}
-        asum = blas.dzasum(&self.k_states, &self.state_intercept[0, 0], &inc)
+        asum = blas.dzasum(&k_states, &self.state_intercept[0, 0], &inc)
         {{endif}}
 
         dim1[0] = self.k_states
@@ -475,7 +478,10 @@ cdef class {{prefix}}Statespace(object):
         if asum > tol:
             dim2[0] = self.k_states
             dim2[1] = self.k_states
-            ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
+            if sizeof(blas_int) == 4:
+                ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT32, FORTRAN)
+            else:
+                ipiv = np.PyArray_ZEROS(2, dim2, np.NPY_INT64, FORTRAN)
 
             # I - T
             blas.{{prefix}}copy(&k_states2, &self.transition[0,0,0], &inc,
@@ -486,14 +492,14 @@ cdef class {{prefix}}Statespace(object):
                 self.tmp[i, i] = self.tmp[i, i] + 1
 
             # c
-            blas.{{prefix}}copy(&self.k_states, &self.state_intercept[0,0], &inc,
+            blas.{{prefix}}copy(&k_states, &self.state_intercept[0,0], &inc,
                                                 &self.initial_state[0], &inc)
 
             # Solve (I - T) x = c
-            lapack.{{prefix}}getrf(&self.k_states, &self.k_states, &self.tmp[0, 0], &self.k_states,
+            lapack.{{prefix}}getrf(&k_states, &k_states, &self.tmp[0, 0], &k_states,
                                    &ipiv[0, 0], &info)
-            lapack.{{prefix}}getrs('N', &self.k_states, &inc, &self.tmp[0, 0], &self.k_states,
-                                   &ipiv[0, 0], &self.initial_state[0], &self.k_states, &info)
+            lapack.{{prefix}}getrs('N', &k_states, &inc, &self.tmp[0, 0], &k_states,
+                                   &ipiv[0, 0], &self.initial_state[0], &k_states, &info)
 
         dim2[0] = self.k_states; dim2[1] = self.k_states;
         self.initial_state_cov = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
@@ -657,10 +663,13 @@ cdef class {{prefix}}Statespace(object):
     cdef void _select_missing_partial_obs(self, unsigned int t):
         cdef:
             int i, j, k, l
-            int inc = 1
+            blas_int inc = 1
             int design_t = 0
             int obs_cov_t = 0
             int k_endog = self.k_endog - self._nmissing
+            blas_int blas_k_states = self.k_states
+            blas_int blas_k_endog = k_endog
+            blas_int blas_k_endog_orig = self.k_endog
 
         k = 0
         for i in range(self.k_endog):
@@ -670,9 +679,9 @@ cdef class {{prefix}}Statespace(object):
                 self.selected_obs_intercept[k] = self._obs_intercept[i]
 
                 # i is rows, k is rows
-                blas.{{prefix}}copy(&self.k_states,
-                      &self._design[i], &self.k_endog,
-                      &self.selected_design[k], &k_endog)
+                blas.{{prefix}}copy(&blas_k_states,
+                      &self._design[i], &blas_k_endog_orig,
+                      &self.selected_design[k], &blas_k_endog)
 
                 # i, k is columns, j, l is rows
                 l = 0
@@ -703,9 +712,14 @@ cdef class {{prefix}}Statespace(object):
         # TODO need unit tests, especially for the missing case
         # TODO need to also transform observation intercept
         cdef:
-            int i, j, inc=1
+            int i, j
+            blas_int inc = 1
+            blas_int info
+            blas_int _k_endog = self._k_endog
+            blas_int _k_endog2 = self._k_endog2
+            blas_int _k_states = self._k_states
+            blas_int _k_endogstates = self._k_endogstates
             int obs_cov_t = 0
-            int info
             int reset_missing
             int diagonal_obs_cov
             {{cython_type}} * _transform_obs_cov = &self.transform_obs_cov[0, 0]
@@ -747,7 +761,7 @@ cdef class {{prefix}}Statespace(object):
         # decomposition of *self._obs_cov
         if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing or reset:
             # LDL decomposition
-            blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, _transform_cholesky, &inc)
+            blas.{{prefix}}copy(&_k_endog2, self._obs_cov, &inc, _transform_cholesky, &inc)
             info = tools._{{prefix}}ldl(_transform_cholesky, self._k_endog)
 
             # Check for errors
@@ -779,10 +793,10 @@ cdef class {{prefix}}Statespace(object):
         if not self._nmissing == self.k_endog:
             # If we have some missing elements, selected_obs is already populated
             if self._nmissing == 0:
-                blas.{{prefix}}copy(&self._k_endog, &self.obs[0,t], &inc, &self.selected_obs[0], &inc)
-            lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &inc,
-                        _transform_cholesky, &self.k_endog,
-                        &self.selected_obs[0], &self._k_endog, &info)
+                blas.{{prefix}}copy(&_k_endog, &self.obs[0,t], &inc, &self.selected_obs[0], &inc)
+            lapack.{{prefix}}trtrs("L", "N", "U", &_k_endog, &inc,
+                        _transform_cholesky, &_k_endog,
+                        &self.selected_obs[0], &_k_endog, &info)
 
             # Check for errors
             if info > 0:
@@ -795,18 +809,18 @@ cdef class {{prefix}}Statespace(object):
 
         # Solve for d_t^*, if necessary
         if t == 0 or self.obs_intercept.shape[1] > 1 or reset_missing or reset:
-            blas.{{prefix}}copy(&self._k_endog, self._obs_intercept, &inc, &self.transform_obs_intercept[0], &inc)
-            lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &inc,
-                        _transform_cholesky, &self.k_endog,
-                        &self.transform_obs_intercept[0], &self._k_endog,
+            blas.{{prefix}}copy(&_k_endog, self._obs_intercept, &inc, &self.transform_obs_intercept[0], &inc)
+            lapack.{{prefix}}trtrs("L", "N", "U", &_k_endog, &inc,
+                        _transform_cholesky, &_k_endog,
+                        &self.transform_obs_intercept[0], &_k_endog,
                         &info)
 
         # Solve for Z_t^*, if necessary
         if t == 0 or self.design.shape[2] > 1 or reset_missing or reset:
-            blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
-            lapack.{{prefix}}trtrs("L", "N", "U", &self._k_endog, &self._k_states,
-                        _transform_cholesky, &self.k_endog,
-                        &self.transform_design[0,0], &self._k_endog,
+            blas.{{prefix}}copy(&_k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
+            lapack.{{prefix}}trtrs("L", "N", "U", &_k_endog, &_k_states,
+                        _transform_cholesky, &_k_endog,
+                        &self.transform_design[0,0], &_k_endog,
                         &info)
 
             # Check for errors
@@ -825,16 +839,20 @@ cdef class {{prefix}}Statespace(object):
         # Note: this assumes that select_missing has *already* been done
         # TODO need unit tests, especially for the missing case
         cdef:
-            int i, j, k, l, inc=1
+            int i, j, k, l
+            blas_int inc = 1
+            blas_int info
             int obs_cov_t, design_t
-            int info
             int reset_missing
             {{cython_type}} alpha = 1.0
             {{cython_type}} beta = 0.0
             {{cython_type}} gamma = -1.0
-            int k_states = self._k_states
-            int k_states2 = self._k_states2
-            int k_endogstates = self._k_endogstates
+            blas_int k_states = self._k_states
+            blas_int k_states2 = self._k_states2
+            blas_int k_endogstates = self._k_endogstates
+            blas_int _k_endog = self._k_endog
+            blas_int _k_endog2 = self._k_endog2
+            blas_int blas_k_endog = self.k_endog
 
         # $y_t^* = \bar A^* y_t = C_t Z_t' H_t^{-1} y_t$
         # $Z_t^* = C_t^{-1}$
@@ -875,8 +893,8 @@ cdef class {{prefix}}Statespace(object):
         # Perform the Cholesky decomposition of H_t, if necessary
         if t == 0 or self.obs_cov.shape[2] > 1 or reset_missing or reset:
             # Cholesky decomposition: $H = L L'$
-            blas.{{prefix}}copy(&self._k_endog2, self._obs_cov, &inc, &self.transform_cholesky[0,0], &inc)
-            lapack.{{prefix}}potrf("L", &self._k_endog, &self.transform_cholesky[0,0], &self._k_endog, &info)
+            blas.{{prefix}}copy(&_k_endog2, self._obs_cov, &inc, &self.transform_cholesky[0,0], &inc)
+            lapack.{{prefix}}potrf("L", &_k_endog, &self.transform_cholesky[0,0], &_k_endog, &info)
 
             # Check for errors
             if info > 0:
@@ -898,10 +916,10 @@ cdef class {{prefix}}Statespace(object):
         # Get $Z_t \equiv C^{-1}$, if necessary
         if t == 0 or self.obs_cov.shape[2] > 1 or self.design.shape[2] > 1 or reset_missing or reset:
             # Calculate $H_t^{-1} Z_t \equiv (Z_t' H_t^{-1})'$ via Cholesky solver
-            blas.{{prefix}}copy(&self._k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
-            lapack.{{prefix}}potrs("L", &self._k_endog, &k_states,
-                            &self.transform_cholesky[0,0], &self._k_endog,
-                            &self.transform_design[0,0], &self._k_endog,
+            blas.{{prefix}}copy(&k_endogstates, self._design, &inc, &self.transform_design[0,0], &inc)
+            lapack.{{prefix}}potrs("L", &_k_endog, &k_states,
+                            &self.transform_cholesky[0,0], &_k_endog,
+                            &self.transform_design[0,0], &_k_endog,
                             &info)
 
             # Check for errors
@@ -910,22 +928,22 @@ cdef class {{prefix}}Statespace(object):
 
             # Calculate $(H_t^{-1} Z_t)' Z_t$
             # $(m \times m) = (m \times p) (p \times p) (p \times m)$
-            blas.{{prefix}}gemm("T", "N", &k_states, &k_states, &self._k_endog,
-                   &alpha, self._design, &self._k_endog,
-                           &self.transform_design[0,0], &self._k_endog,
-                   &beta, &self.collapse_cholesky[0,0], &self._k_states)
+            blas.{{prefix}}gemm("T", "N", &k_states, &k_states, &_k_endog,
+                   &alpha, self._design, &_k_endog,
+                           &self.transform_design[0,0], &_k_endog,
+                   &beta, &self.collapse_cholesky[0,0], &k_states)
 
             # Calculate $(Z_t' H_t^{-1} Z_t)^{-1}$ via Cholesky inversion
-            lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
+            lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
             # Check for errors
             if info > 0:
                 raise np.linalg.LinAlgError('Non-positive-definite ZHZ matrix encountered at period %d' % t)
             elif info < 0:
                 raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)
-            lapack.{{prefix}}potri("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
+            lapack.{{prefix}}potri("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
 
             # Calculate $C_t$ (the upper triangular cholesky decomposition of $(Z_t' H_t^{-1} Z_t)^{-1}$)
-            lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &self.k_states, &info)
+            lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
 
             # Check for errors
             if info > 0:
@@ -936,10 +954,10 @@ cdef class {{prefix}}Statespace(object):
             # Calculate $C_t'^{-1} \equiv Z_t$
             # Do so by solving the system: $C_t' x = I$
             # (Recall that collapse_obs_cov is an identity matrix)
-            blas.{{prefix}}copy(&self._k_states2, &self.collapse_obs_cov[0,0], &inc, &self.collapse_design[0,0], &inc)
+            blas.{{prefix}}copy(&k_states2, &self.collapse_obs_cov[0,0], &inc, &self.collapse_design[0,0], &inc)
             lapack.{{prefix}}trtrs("U", "T", "N", &k_states, &k_states,
-                        &self.collapse_cholesky[0,0], &self._k_states,
-                        &self.collapse_design[0,0], &self._k_states,
+                        &self.collapse_cholesky[0,0], &k_states,
+                        &self.collapse_design[0,0], &k_states,
                         &info)
 
         # Calculate $\bar y_t^* = \bar A_t^* y_t = C_t Z_t' H_t^{-1} y_t$
@@ -948,15 +966,15 @@ cdef class {{prefix}}Statespace(object):
         if not self._nmissing == self.k_endog:
             # If we have some missing elements, selected_obs is already populated
             if self._nmissing == 0:
-                blas.{{prefix}}copy(&self.k_endog, &self.obs[0,t], &inc, &self.selected_obs[0], &inc)
+                blas.{{prefix}}copy(&blas_k_endog, &self.obs[0,t], &inc, &self.selected_obs[0], &inc)
             # $\\# = Z_t' H_t^{-1} y_t$
-            blas.{{prefix}}gemv("T", &self._k_endog, &k_states,
-                  &alpha, &self.transform_design[0,0], &self._k_endog,
+            blas.{{prefix}}gemv("T", &_k_endog, &k_states,
+                  &alpha, &self.transform_design[0,0], &_k_endog,
                           &self.selected_obs[0], &inc,
                   &beta, &self.collapse_obs[0], &inc)
             # $y_t^* = C_t \\#$
             blas.{{prefix}}trmv("U", "N", "N", &k_states,
-                                &self.collapse_cholesky[0,0], &self._k_states,
+                                &self.collapse_cholesky[0,0], &k_states,
                                 &self.collapse_obs[0], &inc)
 
             # Get residuals for loglikelihood calculation
@@ -971,12 +989,12 @@ cdef class {{prefix}}Statespace(object):
             # $ \\# = C_t' y_t^*$
             blas.{{prefix}}copy(&k_states, &self.collapse_obs[0], &inc, &self.collapse_obs_tmp[0], &inc)
             blas.{{prefix}}trmv("U", "T", "N", &k_states,
-                                &self.collapse_cholesky[0,0], &self._k_states,
+                                &self.collapse_cholesky[0,0], &k_states,
                                 &self.collapse_obs_tmp[0], &inc)
 
             # $e_t = - Z_t C_t' y_t^* + y_t$
-            blas.{{prefix}}gemv("N", &self._k_endog, &k_states,
-                  &gamma, self._design, &self._k_endog,
+            blas.{{prefix}}gemv("N", &_k_endog, &k_states,
+                  &gamma, self._design, &_k_endog,
                           &self.collapse_obs_tmp[0], &inc,
                   &alpha, &self.selected_obs[0], &inc)
 
@@ -985,9 +1003,9 @@ cdef class {{prefix}}Statespace(object):
             # So we want $e_t' L^{-1}' L^{-1} e_t = (L^{-1} e_t)' L^{-1} e_t$
             # We have $L$ in `transform_cholesky`, so we want to do a linear
             # solve of $L x = e_t$  where L is lower triangular
-            lapack.{{prefix}}trtrs("L", "N", "N", &self._k_endog, &inc,
-                        &self.transform_cholesky[0,0], &self._k_endog,
-                        &self.selected_obs[0], &self._k_endog,
+            lapack.{{prefix}}trtrs("L", "N", "N", &_k_endog, &inc,
+                        &self.transform_cholesky[0,0], &_k_endog,
+                        &self.selected_obs[0], &_k_endog,
                         &info)
 
             # Calculate loglikelihood contribution of this observation
@@ -1024,6 +1042,8 @@ cdef int {{prefix}}select_cov(int k, int k_posdef,
     cdef:
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
+        blas_int blas_k = k
+        blas_int blas_k_posdef = k_posdef
 
     # Only need to do something if there is a covariance matrix
     # (i.e k_posdof == 0)
@@ -1043,15 +1063,15 @@ cdef int {{prefix}}select_cov(int k, int k_posdef,
 
         # $\\#_0 = 1.0 * R_t Q_t$
         # $(m \times r) = (m \times r) (r \times r)$
-        blas.{{prefix}}gemm("N", "N", &k, &k_posdef, &k_posdef,
-              &alpha, selection, &k,
-                      cov, &k_posdef,
-              &beta, tmp, &k)
+        blas.{{prefix}}gemm("N", "N", &blas_k, &blas_k_posdef, &blas_k_posdef,
+              &alpha, selection, &blas_k,
+                      cov, &blas_k_posdef,
+              &beta, tmp, &blas_k)
         # $Q_t^* = 1.0 * \\#_0 R_t'$
         # $(m \times m) = (m \times r) (m \times r)'$
-        blas.{{prefix}}gemm("N", "T", &k, &k, &k_posdef,
-              &alpha, tmp, &k,
-                      selection, &k,
-              &beta, selected_cov, &k)
+        blas.{{prefix}}gemm("N", "T", &blas_k, &blas_k, &blas_k_posdef,
+              &alpha, tmp, &blas_k,
+                      selection, &blas_k,
+              &beta, selected_cov, &blas_k)
 
 {{endfor}}

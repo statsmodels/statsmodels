@@ -144,10 +144,13 @@ What's currently there?
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import special
 
 from statsmodels.sandbox.distributions.multivariate import mvstdtprob
+from statsmodels.tools.rng_qrng import check_random_state
 
 from .extras import mvnormcdf
 
@@ -842,13 +845,25 @@ class MVNormal(MVElliptical):
 
     __name__ = "Multivariate Normal Distribution"
 
-    def rvs(self, size=1):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, size=1, *, rng=None):
         """random variable
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -862,7 +877,8 @@ class MVNormal(MVElliptical):
         uses numpy.random.multivariate_normal directly
 
         """
-        return np.random.multivariate_normal(self.mean, self.sigma, size=size)
+        rng = check_random_state(rng)
+        return rng.multivariate_normal(self.mean, self.sigma, size=size)
 
     def logpdf(self, x):
         """logarithm of probability density function
@@ -975,7 +991,7 @@ class MVNormal(MVElliptical):
         ----------
         indices : array_like, int
             list of indices of variables in the marginal distribution
-        given : array_like
+        values : array_like
             values of the conditioning variables
 
         Returns
@@ -1038,13 +1054,25 @@ class MVT(MVElliptical):
         self.extra_args = ["df"]  # overwrites extra_args of super
         self.df = df
 
-    def rvs(self, size=1):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, size=1, rng=None):
         """random variables with Student T distribution
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1064,7 +1092,7 @@ class MVT(MVElliptical):
         """
         from .multivariate import multivariate_t_rvs
 
-        return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size)
+        return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size, rng=rng)
 
     def logpdf(self, x):
         """logarithm of probability density function

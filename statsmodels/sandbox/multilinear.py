@@ -19,6 +19,8 @@ import pandas as pd
 from statsmodels.api import OLS, stats
 from statsmodels.formula._manager import FormulaManager
 
+logger = logging.getLogger(__name__)
+
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
@@ -229,12 +231,13 @@ def _test_group(pvalues, group_name, group, exact=True):
     cross_index = [c for c in group if c in pvalues.index]
     missing = [c for c in group if c not in pvalues.index]
     if missing:
-        s = (
+        logger.warning(
             "the test is not well defined if the group "
             "has elements not presents in the significativity "
-            "array. group name: {}, missing elements: {}"
+            "array. group name: %s, missing elements: %s",
+            group_name,
+            missing,
         )
-        logging.warning(s.format(group_name, missing))
     # how many are significant and not in the group
     group_total = 1.0 * len(cross_index)
     group_sign = 1.0 * len([c for c in cross_index if pvalues[c]])

@@ -2,10 +2,9 @@
 
 compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 """
-
 from statsmodels.compat.python import lmap
 
-import os
+from pathlib import Path
 
 import numpy as np
 from scipy import stats
@@ -32,9 +31,9 @@ filenameli = [
 
 
 def getnist(filename):
-    here = os.path.dirname(__file__)
-    fname = os.path.abspath(os.path.join(here, "data", filename))
-    with open(fname, encoding="utf-8") as fd:
+    here = Path(__file__).parent
+    fname = Path(here).joinpath("data", filename).resolve()
+    with Path(fname).open(encoding="utf-8") as fd:
         content = fd.read().split("\n")
 
     [line.split() for line in content[60:]]

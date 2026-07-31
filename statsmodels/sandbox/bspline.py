@@ -14,6 +14,7 @@ General references:
     Hutchison, M. and Hoog, F. "Smoothing noisy data with spline functions."
     Numerische Mathematik, 47(1), 99-106.
 """
+from statsmodels.compat.numpy import inplace_reshape
 
 # Issue warning regarding heavy development status of this module
 import warnings
@@ -294,8 +295,8 @@ class BSpline:
         x = np.asarray(x, np.float64)
         _shape = x.shape
         if _shape == ():
-            x.shape = (1,)
-        x.shape = (np.product(_shape, axis=0),)
+            x = inplace_reshape(x, (1,))
+        x = inplace_reshape(x, (np.product(_shape, axis=0),))
         if i < self.tau.shape[0] - 1:
             # TODO: OWNDATA flags...
             v = _hbspline.evaluate(x, self.tau, self.m, d, i, i + 1)
@@ -304,7 +305,7 @@ class BSpline:
 
         if i == self.tau.shape[0] - self.m:
             v = np.where(np.equal(x, self.tau[-1]), 1, v)
-        v.shape = _shape
+        v = inplace_reshape(v, _shape)
         return v
 
     def basis(self, x, d=0, lower=None, upper=None):
@@ -329,8 +330,8 @@ class BSpline:
         x = np.asarray(x)
         _shape = x.shape
         if _shape == ():
-            x.shape = (1,)
-        x.shape = (np.product(_shape, axis=0),)
+            x = inplace_reshape(x, (1,))
+        x = inplace_reshape(x, (np.product(_shape, axis=0),))
 
         if upper is None:
             upper = self.tau.shape[0] - self.m
@@ -355,7 +356,7 @@ class BSpline:
                     x, self.tau, self.m, d[0, i], lower, upper
                 )
 
-        v.shape = (upper - lower,) + _shape
+        v = inplace_reshape(v, (upper - lower,) + _shape)
         if upper == self.tau.shape[0] - self.m:
             v[-1] = np.where(np.equal(x, self.tau[-1]), 1, v[-1])
         return v
@@ -405,7 +406,7 @@ class BSpline:
                    of derivative, second row coefficient in front."
                 )
             if d.shape == (2,):
-                d.shape = (2, 1)
+                d = inplace_reshape(d, (2, 1))
             self.g = 0
             for i in range(d.shape[1]):
                 for j in range(d.shape[1]):
@@ -520,7 +521,7 @@ class SmoothingSpline(BSpline):
                 for k in range(min(nband, nbasis - i)):
                     self.btb[k, i] = (bt[i] * bt[i + k]).sum()
 
-            bty.shape = (1, bty.shape[0])
+            bty = inplace_reshape(bty, (1, bty.shape[0]))
             self.pen = pen
             self.chol, self.coef = solveh_banded(self.btb + pen * self.g, bty, lower=1)
 

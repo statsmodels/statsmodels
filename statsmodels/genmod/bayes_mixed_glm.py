@@ -57,6 +57,7 @@ import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.iolib import summary2
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 # Gauss-Legendre weights
@@ -244,11 +245,11 @@ class _BayesMixedGLM(base.Model):
             if hasattr(exog, "columns"):
                 fep_names = exog.columns.tolist()
             else:
-                fep_names = ["FE_%d" % (k + 1) for k in range(exog.shape[1])]
+                fep_names = [f"FE_{k + 1:d}" for k in range(exog.shape[1])]
 
         # Get the variance parameter names
         if vcp_names is None:
-            vcp_names = ["VC_%d" % (k + 1) for k in range(int(max(ident)) + 1)]
+            vcp_names = [f"VC_{k + 1:d}" for k in range(int(max(ident)) + 1)]
         elif len(vcp_names) != len(set(ident)):
             msg = "The lengths of vcp_names and ident should be the same"
             raise ValueError(msg)
@@ -400,10 +401,10 @@ class _BayesMixedGLM(base.Model):
 
         return np.concatenate(te)
 
-    def _get_start(self):
+    def _get_start(self, rng):
         start_fep = np.zeros(self.k_fep)
         start_vcp = np.ones(self.k_vcp)
-        start_vc = np.random.normal(size=self.k_vc)
+        start_vc = rng.normal(size=self.k_vc)
         start = np.concatenate((start_fep, start_vcp, start_vc))
         return start
 
@@ -475,7 +476,7 @@ class _BayesMixedGLM(base.Model):
         """
         self.fit_map(method, minim_opts)
 
-    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
+    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False, rng=None):
         """
         Construct the Laplace approximation to the posterior distribution.
 
@@ -490,6 +491,12 @@ class _BayesMixedGLM(base.Model):
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -499,7 +506,7 @@ class _BayesMixedGLM(base.Model):
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog
+            exog_save = self.exog
             self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
@@ -511,13 +518,14 @@ class _BayesMixedGLM(base.Model):
         def grad(params):
             return -self.logposterior_grad(params)
 
-        start = self._get_start()
+        rng = check_random_state(rng)
+        start = self._get_start(rng)
 
         r = minimize(fun, start, method=method, jac=grad, options=minim_opts)
         if not r.success:
-            msg = "Laplace fitting did not converge, |gradient|=%.6f" % np.sqrt(
+            msg = "Laplace fitting did not converge, |gradient|={:.6f}".format(np.sqrt(
                 np.sum(r.jac**2)
-            )
+            ))
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         from statsmodels.tools.numdiff import approx_fprime
@@ -528,8 +536,7 @@ class _BayesMixedGLM(base.Model):
         params = r.x
 
         if scale_fe:
-            self.exog = self._exog_save
-            del self._exog_save
+            self.exog = exog_save
             params[ixs] /= sc[ixs]
             cov[ixs, :][:, ixs] /= np.outer(sc[ixs], sc[ixs])
 
@@ -608,6 +615,20 @@ class _VariationalBayesMixedGLM:
             is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
+        tm : array_like
+            Mean of the linear predictor.
+        fep_mean : array_like
+            Mean of the fixed effects parameters.
+        vcp_mean : array_like
+            Mean of the variance component parameters.
+        vc_mean : array_like
+            Mean of the random effects realizations.
+        fep_sd : array_like
+            Standard deviation of the fixed effects parameters.
+        vcp_sd : array_like
+            Standard deviation of the variance component parameters.
+        vc_sd : array_like
+            Standard deviation of the random effects realizations.
         """
 
         # p(y | vc) contributions
@@ -686,7 +707,7 @@ class _VariationalBayesMixedGLM:
         sd_grad = np.concatenate((fep_sd_grad, vcp_sd_grad, vc_sd_grad))
 
         if self.verbose:
-            print("|G|=%f" % np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)))
+            print(f"|G|={np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)):f}")
 
         return mean_grad, sd_grad
 
@@ -698,6 +719,7 @@ class _VariationalBayesMixedGLM:
         minim_opts=None,
         scale_fe=False,
         verbose=False,
+        rng=None,
     ):
         """
         Fit a model using the variational Bayes mean field approximation.
@@ -720,6 +742,12 @@ class _VariationalBayesMixedGLM:
         verbose : bool
             If True, print the gradient norm to the screen each time
             it is calculated.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used. Only used if sd is None.
 
         Notes
         -----
@@ -745,7 +773,7 @@ class _VariationalBayesMixedGLM:
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog
+            exog_save = self.exog
             self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
@@ -758,14 +786,15 @@ class _VariationalBayesMixedGLM:
         else:
             if len(mean) != ml:
                 raise ValueError(
-                    "mean has incorrect length, %d != %d" % (len(mean), ml)
+                    f"mean has incorrect length, {len(mean):d} != {ml:d}"
                 )
             m = mean.copy()
         if sd is None:
-            s = -0.5 + 0.1 * np.random.normal(size=n)
+            rng = check_random_state(rng)
+            s = -0.5 + 0.1 * rng.normal(size=n)
         else:
             if len(sd) != ml:
-                raise ValueError("sd has incorrect length, %d != %d" % (len(sd), ml))
+                raise ValueError(f"sd has incorrect length, {len(sd):d} != {ml:d}")
 
             # s is parametrized on the log-scale internally when
             # optimizing the ELBO function (this is transparent to the
@@ -803,8 +832,7 @@ class _VariationalBayesMixedGLM:
         va = np.exp(2 * mm.x[n:])
 
         if scale_fe:
-            self.exog = self._exog_save
-            del self._exog_save
+            self.exog = exog_save
             params[ixs] /= sc[ixs]
             va[ixs] /= sc[ixs] ** 2
 
@@ -935,9 +963,9 @@ class BayesMixedGLMResults:
         df["SD"] = np.exp(df["Post. Mean"])
         df["SD (LB)"] = np.exp(df["Post. Mean"] - 2 * df["Post. SD"])
         df["SD (UB)"] = np.exp(df["Post. Mean"] + 2 * df["Post. SD"])
-        df["SD"] = ["%.3f" % x for x in df.SD]
-        df["SD (LB)"] = ["%.3f" % x for x in df["SD (LB)"]]
-        df["SD (UB)"] = ["%.3f" % x for x in df["SD (UB)"]]
+        df["SD"] = [f"{x:.3f}" for x in df.SD]
+        df["SD (LB)"] = [f"{x:.3f}" for x in df["SD (LB)"]]
+        df["SD (UB)"] = [f"{x:.3f}" for x in df["SD (UB)"]]
         df.loc[df.index < self.model.k_fep, "SD"] = ""
         df.loc[df.index < self.model.k_fep, "SD (LB)"] = ""
         df.loc[df.index < self.model.k_fep, "SD (UB)"] = ""

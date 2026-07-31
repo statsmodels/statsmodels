@@ -175,7 +175,7 @@ def shannonentropy(px, logbase=2):
         or a sequence of probabilities.
 
     Returns
-    -----
+    -------
     For log base 2 (bits) given a discrete distribution
         H(p) = sum(px * log2(1/px) = -sum(pk*log2(px)) = E[log2(1/p(X))]
 
@@ -566,15 +566,14 @@ and Synthesis'
     print("H(P_{e}) + P_{e}log(K-1) >= H(X|Y)")
     print("or, a weaker inequality")
     print("P_{e} >= [H(X|Y) - 1]/log(K)")
-    print("P(x) = %s" % px)
+    print(f"P(x) = {px}")
     print("X = 3 has the highest probability, so this is the estimate Xhat")
     pe = 1 - px[2]
-    print("The probability of error Pe is 1 - p(X=3) = %0.4g" % pe)
+    print(f"The probability of error Pe is 1 - p(X=3) = {pe:0.4g}")
     H_pe = shannonentropy([pe, 1 - pe])
-    print("H(Pe) = %0.4g and K=3" % H_pe)
+    print(f"H(Pe) = {H_pe:0.4g} and K=3")
     print(
-        "H(Pe) + Pe*log(K-1) = %0.4g >= H(X|Y) = %0.4g"
-        % (H_pe + pe * np.log2(2), H_XgivenY)
+        f"H(Pe) + Pe*log(K-1) = {H_pe + pe * np.log2(2):0.4g} >= H(X|Y) = {H_XgivenY:0.4g}"
     )
     print("or using the weaker inequality")
     print(f"Pe = {pe:0.4g} >= [H(X) - 1]/log(K) = {(H_X - 1)/np.log2(3):0.4g}")

@@ -1,4 +1,5 @@
-"""Testing OLS robust covariance matrices against STATA
+"""
+Testing OLS robust covariance matrices against STATA
 
 Created on Mon Oct 28 15:25:14 2013
 

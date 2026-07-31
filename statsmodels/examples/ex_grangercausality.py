@@ -24,12 +24,12 @@ assert_almost_equal(r_result, gr[2][0]["ssr_ftest"], decimal=7)
 assert_almost_equal(gr[2][0]["params_ftest"], gr[2][0]["ssr_ftest"], decimal=7)
 
 lag = 2
-print("\nTest Results for %d lags" % lag)
+print(f"\nTest Results for {lag:d} lags")
 print()
 print(
     "\n".join(
         [
-            "%-20s statistic: %f6.4   p-value: %f6.4" % (k, res[0], res[1])
+            f"{k!s:<20} statistic: {res[0]:f}6.4   p-value: {res[1]:f}6.4"
             for k, res in gr[lag][0].items()
         ]
     )

@@ -39,7 +39,7 @@ import numpy as np
 
 from statsmodels.regression.feasible_gls import atleast_2dcols
 from statsmodels.regression.linear_model import GLS, OLS, RegressionResults
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class TheilGLS(GLS):
@@ -325,10 +325,7 @@ class TheilRegressionResults(RegressionResults):
 
         where xpxi = (X'X + sigma2_e * lambd * sigma_prior)^{-1}
 
-        Notes
-        -----
-
-        uses wexog, so this includes weights or sigma - check this case
+        Uses wexog, so this includes weights or sigma - check this case
 
         not clear whether I need to multiply by sigmahalf, i.e.
 

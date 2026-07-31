@@ -43,9 +43,9 @@ if "ex1" in examples:
             [1],
             [1.0, -0.9],
         ),
-        seed=377769,
+        rng=377769,
     )
-    print("seed", dgp.seed)
+    print("rng", dgp.rng)
     y = dgp.generate_panel()
     noise = y - dgp.y_true
     print(np.corrcoef(y.reshape(-1, n_groups, order="F")))

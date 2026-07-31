@@ -25,7 +25,7 @@ Created on 2010-10-20
 import numpy as np
 from scipy import linalg
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class PlainMatrixArray:

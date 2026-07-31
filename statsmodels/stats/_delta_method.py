@@ -9,13 +9,14 @@ from scipy import stats
 
 
 class NonlinearDeltaCov:
-    """Asymptotic covariance by Deltamethod
+    """
+    Asymptotic covariance by Deltamethod
 
     The function is designed for 2d array, with rows equal to
     the number of equations or constraints and columns equal to the number
-    of parameters. 1d params work by chance ?
+    of parameters. 1d params work by chance?
 
-    fun: R^{m*k) -> R^{m}  where m is number of equations and k is
+    fun: R^{m*k} -> R^{m} where m is number of equations and k is
     the number of parameters.
 
     equations follow Greene
@@ -24,9 +25,9 @@ class NonlinearDeltaCov:
     function. Extra methods have been added for convenience but might move
     to calling functions.
 
-    The naming in this class uses params for the original random variable, and
-    cov_params for it's covariance matrix. However, this class is independent
-    of the use cases in support of the models.
+    The naming in this class uses params for the original random variable,
+    and cov_params for its covariance matrix. However, this class is
+    independent of the use cases in support of the models.
 
     Parameters
     ----------
@@ -44,8 +45,6 @@ class NonlinearDeltaCov:
         of the return of func.
     func_args : None
         Not yet implemented.
-
-
     """
     def __init__(self, func, params, cov_params, deriv=None, func_args=None):
         self.fun = func
@@ -57,7 +56,8 @@ class NonlinearDeltaCov:
             raise NotImplementedError("func_args not yet implemented")
 
     def grad(self, params=None, **kwds):
-        """First derivative, jacobian of func evaluated at params.
+        """
+        First derivative, jacobian of func evaluated at params
 
         Parameters
         ----------
@@ -65,15 +65,15 @@ class NonlinearDeltaCov:
             Values at which gradient is evaluated. If params is None, then
             the attached params are used.
             TODO: should we drop this
-        kwds : keyword arguments
-            This keyword arguments are used without changes in the calulation
-            of numerical derivatives. These are only used if a `deriv` function
-            was not provided.
+        **kwds
+            These keyword arguments are used without changes in the
+            calculation of numerical derivatives. These are only used if a
+            `deriv` function was not provided.
 
         Returns
         -------
         grad : ndarray
-            gradient or jacobian of the function
+            Gradient or jacobian of the function.
         """
         if params is None:
             params = self.params
@@ -91,17 +91,17 @@ class NonlinearDeltaCov:
             return jac
 
     def cov(self):
-        """Covariance matrix of the transformed random variable.
-        """
+        """Covariance matrix of the transformed random variable"""
         g = self.grad()
         covar = np.dot(np.dot(g, self.cov_params), g.T)
         return covar
 
     def predicted(self):
-        """Value of the function evaluated at the attached params.
+        """
+        Value of the function evaluated at the attached params
 
-        Note: This is not equal to the expected value if the transformation is
-        nonlinear. If params is the maximum likelihood estimate, then
+        Note: This is not equal to the expected value if the transformation
+        is nonlinear. If params is the maximum likelihood estimate, then
         `predicted` is the maximum likelihood estimate of the value of the
         nonlinear function.
         """
@@ -114,26 +114,28 @@ class NonlinearDeltaCov:
         return predicted
 
     def wald_test(self, value):
-        """Joint hypothesis tests that H0: f(params) = value.
+        """
+        Joint hypothesis tests that H0: f(params) = value
 
         The alternative hypothesis is two-sided H1: f(params) != value.
 
-        Warning: this might be replaced with more general version that returns
-        ContrastResults.
-        currently uses chisquare distribution, use_f option not yet implemented
+        Warning: this might be replaced with more general version that
+        returns ContrastResults.
+        currently uses chisquare distribution, use_f option not yet
+        implemented
 
         Parameters
         ----------
         value : float or ndarray
-            value of f(params) under the Null Hypothesis
+            Value of f(params) under the Null Hypothesis.
 
         Returns
         -------
         statistic : float
             Value of the test statistic.
         pvalue : float
-            The p-value for the hypothesis test, based and chisquare
-            distribution and implies a two-sided hypothesis test
+            The p-value for the hypothesis test, based on chisquare
+            distribution and implies a two-sided hypothesis test.
         """
         # TODO: add use_t option or not?
         m = self.predicted()
@@ -144,9 +146,7 @@ class NonlinearDeltaCov:
         return lmstat, stats.chi2.sf(lmstat, df_constraints)
 
     def var(self):
-        """standard error for each equation (row) treated separately
-
-        """
+        """Standard error for each equation (row) treated separately"""
         g = self.grad()
         var = (np.dot(g, self.cov_params) * g).sum(-1)
 
@@ -155,16 +155,14 @@ class NonlinearDeltaCov:
         return var
 
     def se_vectorized(self):
-        """standard error for each equation (row) treated separately
-
-        """
+        """Standard error for each equation (row) treated separately"""
         var = self.var()
         return np.sqrt(var)
 
     def conf_int(self, alpha=0.05, use_t=False, df=None, var_extra=None,
                  predicted=None, se=None):
         """
-        Confidence interval for predicted based on delta method.
+        Confidence interval for predicted based on delta method
 
         Parameters
         ----------
@@ -180,7 +178,7 @@ class NonlinearDeltaCov:
             use_t is True.
         var_extra : None or array_like float
             Additional variance that is added to the variance based on the
-            delta method. This can be used to obtain confidence intervalls for
+            delta method. This can be used to obtain confidence intervals for
             new observations (prediction interval).
         predicted : ndarray (float)
             Predicted value, can be used to avoid repeated calculations if it
@@ -225,36 +223,37 @@ class NonlinearDeltaCov:
 
     def summary(self, xname=None, alpha=0.05, title=None, use_t=False,
                 df=None):
-        """Summarize the Results of the nonlinear transformation.
+        """
+        Summarize the Results of the nonlinear transformation
 
         This provides a parameter table equivalent to `t_test` and reuses
         `ContrastResults`.
 
         Parameters
-        -----------
+        ----------
         xname : list of strings, optional
-            Default is `c_##` for ## in p the number of regressors
+            Default is `c_##` for ## in p the number of regressors.
         alpha : float
             Significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
         title : string, optional
             Title for the params table. If not None, then this replaces the
-            default title
+            default title.
         use_t : boolean
             If use_t is False (default), then the normal distribution is used
             for the confidence interval, otherwise the t distribution with
             `df` degrees of freedom is used.
         df : int or float
-            degrees of freedom for t distribution. Only used and required if
+            Degrees of freedom for t distribution. Only used and required if
             use_t is True.
 
         Returns
         -------
         smry : string or Summary instance
-            This contains a parameter results table in the case of t or z test
-            in the same form as the parameter results table in the model
-            results summary.
-            For F or Wald test, the return is a string.
+            This contains a parameter results table in the case of t or z
+            test in the same form as the parameter results table in the
+            model results summary. For F or Wald test, the return is a
+            string.
         """
         # this is an experimental reuse of ContrastResults
         from statsmodels.stats.contrast import ContrastResults

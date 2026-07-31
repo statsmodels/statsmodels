@@ -44,10 +44,10 @@ def test_short_panel():
             [1],
             [1.0, -0.9],
         ),
-        seed=377769,
+        rng=377769,
         within=False,
     )
-    # print 'seed', dgp.seed
+    # print 'rng', dgp.rng
     y = dgp.generate_panel()
     noise = y - dgp.y_true
 

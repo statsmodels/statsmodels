@@ -107,7 +107,8 @@ def percentileofscore(data, score):
 
     Return percentiles (0-100).
 
-    Example
+    Examples
+    --------
             r = randn(50)
         x = linspace(-2,2,100)
         percentileofscore(r,x)

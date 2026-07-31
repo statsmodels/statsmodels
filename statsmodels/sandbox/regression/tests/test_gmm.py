@@ -4,17 +4,18 @@ Created on Fri Oct 04 13:19:01 2013
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.python import lmap, lrange
 
 import copy
 import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
 from statsmodels.tools.tools import add_constant
@@ -22,18 +23,18 @@ from statsmodels.tools.tools import add_constant
 
 def get_griliches76_data():
     curdir = os.path.split(__file__)[0]
-    path = os.path.join(curdir, "griliches76.dta")
+    path = Path(curdir).joinpath("griliches76.dta")
     griliches76_data = pd.read_stata(path)
 
     # create year dummies
-    years = griliches76_data["year"].unique()
+    years = griliches76_data["year"].unique().astype(int)
     N = griliches76_data.shape[0]
 
     for yr in years:
-        griliches76_data["D_%i" % yr] = np.zeros(N)
+        griliches76_data[f"D_{yr:d}"] = np.zeros(N)
         for i in range(N):
             if griliches76_data.loc[griliches76_data.index[i], "year"] == yr:
-                griliches76_data.loc[griliches76_data.index[i], "D_%i" % yr] = 1
+                griliches76_data.loc[griliches76_data.index[i], f"D_{yr:d}"] = 1
             else:
                 pass
 
@@ -227,6 +228,35 @@ def test_ivgmm0_r():
 
     score = res.model.score(res.params, w0)
     assert_allclose(score, np.zeros(score.shape), rtol=0, atol=5e-6)  # atol=1e-8) ??
+
+
+def test_iv2sls_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = gmm.IV2SLS(endog, exog, instrument)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_ivgmm_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    nobs, k_instr = instrument.shape
+    w0inv = np.dot(instrument.T, instrument) / nobs
+
+    mod = gmm.IVGMM(endog, exog, instrument)
+    res = mod.fit(
+        np.ones(exog.shape[1], float),
+        maxiter=0,
+        inv_weights=w0inv,
+        optim_method="bfgs",
+        optim_args={"gtol": 1e-8, "disp": 0},
+    )
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 def test_ivgmm1_stata():
@@ -1108,7 +1138,7 @@ def test_gmm_basic():
     )
     summ = res.summary()
     assert_equal(len(summ.tables[1]), len(res.params) + 1)
-    pnames = ["p%2d" % i for i in range(len(res.params))]
+    pnames = [f"p{i:2d}" for i in range(len(res.params))]
     assert_equal(res.model.exog_names, pnames)
 
     # check set_param_names method

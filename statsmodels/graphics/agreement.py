@@ -20,7 +20,7 @@ def mean_diff_plot(
     limit_lines_kwds=None,
 ):
     """
-    Construct a Tukey/Bland-Altman Mean Difference Plot.
+    Construct a Tukey/Bland-Altman Mean Difference Plot
 
     Tukey's Mean Difference Plot (also known as a Bland-Altman plot) is a
     graphical method to analyze the differences between two methods of
@@ -44,18 +44,18 @@ def mean_diff_plot(
         of the differences. If sd_limit = 0, no limits will be plotted, and
         the ylimit of the plot defaults to 3 standard deviations on either
         side of the mean.
-    ax : AxesSubplot
+    ax : AxesSubplot, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, the mean difference plot is drawn on the axis.
-    scatter_kwds : dict
-        Options to to style the scatter plot. Accepts any keywords for the
-        matplotlib Axes.scatter plotting method
-    mean_line_kwds : dict
-        Options to to style the scatter plot. Accepts any keywords for the
-        matplotlib Axes.axhline plotting method
-    limit_lines_kwds : dict
-        Options to to style the scatter plot. Accepts any keywords for the
-        matplotlib Axes.axhline plotting method
+    scatter_kwds : dict, optional
+        Options to style the scatter plot. Accepts any keywords for the
+        matplotlib Axes.scatter plotting method.
+    mean_line_kwds : dict, optional
+        Options to style the mean difference line. Accepts any keywords for
+        the matplotlib Axes.axhline plotting method.
+    limit_lines_kwds : dict, optional
+        Options to style the limit-of-agreement lines. Accepts any keywords
+        for the matplotlib Axes.axhline plotting method.
 
     Returns
     -------
@@ -65,8 +65,8 @@ def mean_diff_plot(
 
     References
     ----------
-    Bland JM, Altman DG (1986). "Statistical methods for assessing agreement
-    between two methods of clinical measurement"
+    .. [1] Bland JM, Altman DG (1986). "Statistical methods for assessing
+           agreement between two methods of clinical measurement"
 
     Examples
     --------

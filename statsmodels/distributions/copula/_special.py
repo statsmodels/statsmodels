@@ -9,7 +9,7 @@ import numpy as np
 from scipy.special import factorial
 
 
-class Sterling1():
+class Sterling1:
     """Stirling numbers of the first kind
     """
     # based on
@@ -42,7 +42,7 @@ class Sterling1():
 sterling1 = Sterling1()
 
 
-class Sterling2():
+class Sterling2:
     """Stirling numbers of the second kind
     """
     # based on

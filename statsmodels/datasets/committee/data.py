@@ -7,7 +7,7 @@ COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
 TITLE = __doc__
 SOURCE = """
-Jeff Gill's `Generalized Linear Models: A Unifited Approach`
+Jeff Gill's *Generalized Linear Models: A Unified Approach*
 
 http://jgill.wustl.edu/research/books.html
 """
@@ -53,7 +53,8 @@ def load_pandas():
 
 
 def load():
-    """Load the committee data and returns a data class.
+    """
+    Load the committee data and returns a data class.
 
     Returns
     -------

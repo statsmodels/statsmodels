@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Quantile regression model
 
@@ -29,22 +27,23 @@ from statsmodels.regression.linear_model import (
     RegressionResults,
     RegressionResultsWrapper,
 )
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
 
 
 class QuantReg(RegressionModel):
-    """Quantile Regression
+    """
+    Quantile Regression
 
     Estimate a quantile regression model using iterative reweighted least
     squares.
 
     Parameters
     ----------
-    endog : array or dataframe
-        endogenous/response variable
-    exog : array or dataframe
-        exogenous/explanatory variable(s)
+    endog : array_like or dataframe
+        Endogenous/response variable.
+    exog : array_like or dataframe
+        Exogenous/explanatory variable(s).
 
     Notes
     -----
@@ -59,10 +58,10 @@ class QuantReg(RegressionModel):
     ----------
     General:
 
-    * Birkes, D. and Y. Dodge(1993). Alternative Methods of Regression, John Wiley and Sons.
-    * Green,W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
+    * Birkes, D. and Y. Dodge (1993). Alternative Methods of Regression, John Wiley and Sons.
+    * Green, W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
-    * LeSage, J. P.(1999). Applied Econometrics Using MATLAB,
+    * LeSage, J. P. (1999). Applied Econometrics Using MATLAB,
 
     Kernels (used by the fit method):
 
@@ -76,6 +75,7 @@ class QuantReg(RegressionModel):
 
     Keywords: Least Absolute Deviation(LAD) Regression, Quantile Regression,
     Regression, Robust Estimation.
+
     """
 
     def __init__(self, endog, exog, **kwargs):
@@ -83,9 +83,7 @@ class QuantReg(RegressionModel):
         super().__init__(endog, exog, **kwargs)
 
     def whiten(self, data):
-        """
-        QuantReg model whitener does nothing: returns data.
-        """
+        """QuantReg model whitener does nothing: returns data"""
         return data
 
     def fit(
@@ -104,37 +102,52 @@ class QuantReg(RegressionModel):
         Parameters
         ----------
         q : float
-            Quantile must be strictly between 0 and 1
-        vcov : str, method used to calculate the variance-covariance matrix
+            Quantile must be strictly between 0 and 1.
+        vcov : str
+            Method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
             - robust : heteroskedasticity robust standard errors (as suggested
               in Greene 6th edition)
             - iid : iid errors (as in Stata 12)
 
-        kernel : str, kernel to use in the kernel density estimation for the
+        kernel : str
+            Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
             - epa: Epanechnikov
             - cos: Cosine
             - gau: Gaussian
-            - par: Parzene
+            - par: Parzen
 
-        bandwidth : str, Bandwidth selection method in kernel density
+        bandwidth : str
+            Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
 
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
-        """
+        max_iter : int
+            Maximum number of iterations.
+        p_tol : float
+            Convergence tolerance for the iterative parameter estimates.
+        **kwargs
+            Additional keyword arguments, accepted for API compatibility.
 
+        Returns
+        -------
+        RegressionResultsWrapper
+            Results instance for the fitted quantile regression, with
+            additional ``q``, ``iterations``, ``sparsity``, ``bandwidth``,
+            and ``history`` attributes.
+        """
         if q <= 0 or q >= 1:
-            raise Exception("q must be strictly between 0 and 1")
+            raise ValueError("q must be strictly between 0 and 1")
 
         kern_names = ["biw", "cos", "epa", "gau", "par"]
         if kernel not in kern_names:
-            raise Exception("kernel must be one of " + ", ".join(kern_names))
+            raise ValueError("kernel must be one of " + ", ".join(kern_names))
         else:
             kernel = kernels[kernel]
 
@@ -145,7 +158,7 @@ class QuantReg(RegressionModel):
         elif bandwidth == "chamberlain":
             bandwidth = chamberlain
         else:
-            raise Exception(
+            raise ValueError(
                 "bandwidth must be in 'hsheather', 'bofinger', 'chamberlain'"
             )
 
@@ -230,7 +243,7 @@ class QuantReg(RegressionModel):
         elif vcov == "iid":
             vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
         else:
-            raise Exception("vcov must be 'robust' or 'iid'")
+            raise ValueError("vcov must be 'robust' or 'iid'")
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
 
@@ -365,34 +378,46 @@ class QuantRegResults(RegressionResults):
         raise NotImplementedError
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
-        """Summarize the Regression Results
+        """
+        Summarize the Regression Results
 
         Parameters
         ----------
         yname : str, optional
-            Default is `y`
+            Default is `y`.
         xname : list[str], optional
             Names for the exogenous variables. Default is `var_##` for ## in
             the number of regressors. Must match the number of parameters
-            in the model
+            in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
-            default title
+            default title.
         alpha : float
-            significance level for the confidence intervals
+            Significance level for the confidence intervals.
 
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
-        eigvals = self.eigenvals
-        condno = self.condition_number
+        # Cache the data-dependent scalars computed below as a plain dict
+        # (not cache_readonly) so that summary() keeps working after
+        # remove_data() has cleared resid/model.exog and the like.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+
+        def cached(key, compute):
+            if key not in cache:
+                cache[key] = compute()
+            return cache[key]
+
+        eigvals = cached("eigvals", lambda: self.eigenvals)
+        condno = cached("condno", lambda: self.condition_number)
+        prsquared = cached("prsquared", lambda: self.prsquared)
 
         top_left = [
             ("Dep. Variable:", None),
@@ -403,9 +428,9 @@ class QuantRegResults(RegressionResults):
         ]
 
         top_right = [
-            ("Pseudo R-squared:", ["%#8.4g" % self.prsquared]),
-            ("Bandwidth:", ["%#8.4g" % self.bandwidth]),
-            ("Sparsity:", ["%#8.4g" % self.sparsity]),
+            ("Pseudo R-squared:", [f"{prsquared:#8.4g}"]),
+            ("Bandwidth:", [f"{self.bandwidth:#8.4g}"]),
+            ("Sparsity:", [f"{self.sparsity:#8.4g}"]),
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),

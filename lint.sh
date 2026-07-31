@@ -5,12 +5,16 @@ echo "inside $0"
 RET=0
 
 echo "Running ruff check"
-ruff check statsmodels
+ruff check statsmodels docs tools
+if [ $? -ne "0" ]; then
+    echo "ruff checks failed in statsmodels"
+    RET=1
+fi
 
 if [ "$LINT" == true ]; then
     echo "Running flake8 linting"
     echo "Linting all files with limited rules"
-    flake8 statsmodels
+    flake8 statsmodels tools docs
     if [ $? -ne "0" ]; then
         echo "Changed files failed linting using the required set of rules."
         echo "Additions and changes must conform to Python code style rules."
@@ -38,8 +42,5 @@ if [ "$LINT" == true ]; then
         echo "No new files to lint"
     fi
 fi
-
-echo "Running isort"
-isort --check-only statsmodels
 
 exit "$RET"

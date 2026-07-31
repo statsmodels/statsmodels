@@ -1,4 +1,5 @@
-"""Parallel utility function using joblib
+"""
+Parallel utility function using joblib
 
 copied from https://github.com/mne-tools/mne-python
 
@@ -17,7 +18,8 @@ from statsmodels.tools.sm_exceptions import (
 
 
 def parallel_func(func, n_jobs, verbose=5):
-    """Return parallel instance with delayed function
+    """
+    Return parallel instance with delayed function
 
     Util function to use joblib only if available
 
@@ -46,6 +48,7 @@ def parallel_func(func, n_jobs, verbose=5):
     >>> parallel, p_func, n_jobs = parallel_func(sqrt, n_jobs=-1, verbose=0)
     >>> print(n_jobs)
     >>> parallel(p_func(i**2) for i in range(10))
+
     """
     try:
         try:

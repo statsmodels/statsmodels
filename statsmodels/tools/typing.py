@@ -1,6 +1,8 @@
+"""Typing aliases used by statsmodels"""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,13 +23,11 @@ if TYPE_CHECKING:
     )
     from pandas import DataFrame, Series
 
-    _ExtendedFloatLike_co = Union[_FloatLike_co, _UIntLike_co]
+    _ExtendedFloatLike_co = _FloatLike_co | _UIntLike_co
     NumericArray = NDArray[Any, np.dtype[_ExtendedFloatLike_co]]
     Float64Array = NDArray[Any, np.double]
-    ArrayLike1D = Union[Sequence[Union[float, int]], NumericArray, Series]
-    ArrayLike2D = Union[
-        Sequence[Sequence[Union[float, int]]], NumericArray, DataFrame
-    ]
+    ArrayLike1D = Sequence[float | int] | NumericArray | Series
+    ArrayLike2D = Sequence[Sequence[float | int]] | NumericArray | DataFrame
 else:
     ArrayLike = Any
     DTypeLike = Any

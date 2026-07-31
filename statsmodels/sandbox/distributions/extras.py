@@ -24,8 +24,8 @@ main changes
 * added separate example and tests (2010-05-09)
 * collect transformation function into classes
 
-Example
--------
+Examples
+--------
 
 >>> logtg = Transf_gen(stats.t, np.exp, np.log,
                 numargs = 1, a=0, name = 'lnnorm',
@@ -1163,8 +1163,8 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     something wrong completion with ERROR > EPS and MAXPTS function values used;
                         increase MAXPTS to decrease ERROR; 1.048330348e-006
     0.166666546218
-    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr, \
-                            maxpts=100000, abseps=1e-8))
+    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr,
+    ...     maxpts=100000, abseps=1e-8))
     0.166666588293
 
     """

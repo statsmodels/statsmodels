@@ -18,8 +18,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
     Chapman & Hall, Boca Rotan.
 """
 
-from statsmodels.compat.pandas import Appender
-
 import warnings
 
 import numpy as np
@@ -37,13 +35,14 @@ from statsmodels.graphics._regressionplots_doc import (
 )
 import statsmodels.regression._tools as reg_tools
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.data import _as_array_with_name
-from statsmodels.tools.decorators import (
+from statsmodels.tools._decorators import (
     cache_readonly,
     cached_data,
     cached_value,
 )
+from statsmodels.tools.data import _as_array_with_name
 from statsmodels.tools.docstring import Docstring
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -83,7 +82,7 @@ SET_USE_BIC_LLF = _use_bic_helper.set_use_bic_llf
 
 
 class GLM(base.LikelihoodModel):
-    __doc__ = """
+    __doc__ = f"""
     Generalized Linear Models
 
     GLM inherits from statsmodels.base.model.LikelihoodModel
@@ -123,7 +122,7 @@ class GLM(base.LikelihoodModel):
         array of 1's with length equal to the endog.
         WARNING: Using weights is not verified yet for all possible options
         and results, see Notes.
-    {extra_params}
+    {base._missing_param_doc}
 
     Attributes
     ----------
@@ -252,8 +251,8 @@ class GLM(base.LikelihoodModel):
     reflect the new weights.
 
     Variance weights (referred to in other packages as analytic weights) are
-    used when ``endog`` represents an an average or mean. This relies on the
-    assumption that that the inverse variance scales proportionally to the
+    used when ``endog`` represents an average or mean. This relies on the
+    assumption that the inverse variance scales proportionally to the
     weight--an observation that is deemed more credible should have less
     variance and therefore have more weight. For the ``Poisson`` family--which
     assumes that occurrences scale proportionally with time--a natural practice
@@ -285,16 +284,14 @@ class GLM(base.LikelihoodModel):
     | Working       | ``n_trials``                     |
     +---------------+----------------------------------+
 
-    WARNING: Loglikelihood and deviance are not valid in models where
+    WARNING: Log-likelihood and deviance are not valid in models where
     scale is equal to 1 (i.e., ``Binomial``, ``NegativeBinomial``, and
     ``Poisson``). If variance weights are specified, then results such as
     ``loglike`` and ``deviance`` are based on a quasi-likelihood
-    interpretation. The loglikelihood is not correctly specified in this case,
+    interpretation. The log-likelihood is not correctly specified in this case,
     and statistics based on it, such AIC or likelihood ratio tests, are not
     appropriate.
-    """.format(
-        extra_params=base._missing_param_doc
-    )
+    """
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
 
@@ -371,10 +368,11 @@ class GLM(base.LikelihoodModel):
             self.freq_weights,
             self.var_weights,
         )
-        if offset is None:
-            del self.offset
-        if exposure is None:
-            del self.exposure
+        # Track whether offset/exposure were actually provided, since
+        # `self.offset`/`self.exposure` are always set (possibly to None)
+        # by the base class's generic kwargs handling.
+        self._has_offset = offset is not None
+        self._has_exposure = exposure is not None
 
         self.nobs = self.endog.shape[0]
 
@@ -388,6 +386,7 @@ class GLM(base.LikelihoodModel):
                 "iweights",
                 "_offset_exposure",
                 "n_trials",
+                "_tmp_like_exog",
             ]
         )
         # register kwds for __init__, offset and exposure are added by super
@@ -401,13 +400,19 @@ class GLM(base.LikelihoodModel):
         # Construct a combined offset/exposure term.  Note that
         # exposure has already been logged if present.
         offset_exposure = 0.0
-        if hasattr(self, "offset"):
+        if self._has_offset:
             offset_exposure = self.offset
-        if hasattr(self, "exposure"):
+        if self._has_exposure:
             offset_exposure = offset_exposure + self.exposure
         self._offset_exposure = offset_exposure
 
         self.scaletype = None
+
+        # Scratch state used by `hessian` when fitting with a gradient-based
+        # optimizer (see `fit`/`_fit_gradient`). Initialized here so that
+        # `fit` never needs to delete them afterwards.
+        self._optim_hessian = None
+        self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
 
     def initialize(self):
         """
@@ -433,9 +438,7 @@ class GLM(base.LikelihoodModel):
 
         if exposure is not None:
             if not isinstance(self.family.link, families.links.Log):
-                raise ValueError(
-                    "exposure can only be used with the log link function"
-                )
+                raise ValueError("exposure can only be used with the log link function")
             elif exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
 
@@ -503,7 +506,8 @@ class GLM(base.LikelihoodModel):
         return llf
 
     def score_obs(self, params, scale=None):
-        """score first derivative of the loglikelihood for each observation.
+        """
+        Score first derivative of the log-likelihood for each observation
 
         Parameters
         ----------
@@ -517,7 +521,7 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         score_obs : ndarray, 2d
-            The first derivative of the loglikelihood function evaluated at
+            The first derivative of the log-likelihood function evaluated at
             params for each observation.
         """
         scale = float_like(scale, "scale", optional=True)
@@ -525,7 +529,8 @@ class GLM(base.LikelihoodModel):
         return score_factor[:, None] * self.exog
 
     def score(self, params, scale=None):
-        """score, first derivative of the loglikelihood function
+        """
+        Score, first derivative of the log-likelihood function
 
         Parameters
         ----------
@@ -539,7 +544,7 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         score : ndarray_1d
-            The first derivative of the loglikelihood function calculated as
+            The first derivative of the log-likelihood function calculated as
             the sum of `score_obs`
         """
         scale = float_like(scale, "scale", optional=True)
@@ -547,7 +552,8 @@ class GLM(base.LikelihoodModel):
         return np.dot(score_factor, self.exog)
 
     def score_factor(self, params, scale=None):
-        """weights for score for each observation
+        """
+        Weights for score for each observation
 
         This can be considered as score residuals.
 
@@ -581,7 +587,8 @@ class GLM(base.LikelihoodModel):
         return score_factor
 
     def hessian_factor(self, params, scale=None, observed=True):
-        """Weights for calculating Hessian
+        """
+        Weights for calculating Hessian
 
         Parameters
         ----------
@@ -638,7 +645,8 @@ class GLM(base.LikelihoodModel):
         return oim_factor
 
     def hessian(self, params, scale=None, observed=None):
-        """Hessian, second derivative of loglikelihood function
+        """
+        Hessian, second derivative of log-likelihood function
 
         Parameters
         ----------
@@ -658,12 +666,12 @@ class GLM(base.LikelihoodModel):
             Hessian, i.e. observed information, or expected information matrix.
         """
         if observed is None:
-            if getattr(self, "_optim_hessian", None) == "eim":
+            if self._optim_hessian == "eim":
                 observed = False
             else:
                 observed = True
         scale = float_like(scale, "scale", optional=True)
-        tmp = getattr(self, "_tmp_like_exog", np.empty_like(self.exog, dtype=float))
+        tmp = self._tmp_like_exog
 
         factor = self.hessian_factor(params, scale=scale, observed=observed)
         np.multiply(self.exog.T, factor, out=tmp.T)
@@ -747,6 +755,8 @@ class GLM(base.LikelihoodModel):
         exog : ndarray or None
             Explanatory variables at which derivative are computed.
             If None, then the estimation exog is used.
+        transform : str
+            The marginal effects transformation.
         offset, exposure : None
             Not yet implemented.
 
@@ -795,7 +805,8 @@ class GLM(base.LikelihoodModel):
         return dmat
 
     def _deriv_score_obs_dendog(self, params, scale=None):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
@@ -830,7 +841,8 @@ class GLM(base.LikelihoodModel):
     def score_test(
         self, params_constrained, k_constraints=None, exog_extra=None, observed=True
     ):
-        """score test for restrictions or for omitted variables
+        """
+        Score test for restrictions or for omitted variables
 
         The covariance matrix for the score is based on the Hessian, i.e.
         observed information matrix or optionally on the expected information
@@ -958,13 +970,11 @@ class GLM(base.LikelihoodModel):
                 ) / (self.df_resid)
             else:
                 raise ValueError(
-                    "Scale %s with type %s not understood"
-                    % (self.scaletype, type(self.scaletype))
+                    f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
                 )
         else:
             raise ValueError(
-                "Scale %s with type %s not understood"
-                % (self.scaletype, type(self.scaletype))
+                f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
             )
 
     def _estimate_x2_scale(self, mu):
@@ -1034,7 +1044,7 @@ class GLM(base.LikelihoodModel):
         offset : array_like, optional
             Offset values.  See notes for details.
         which : 'mean', 'linear', 'var'(optional)
-            Statitistic to predict. Default is 'mean'.
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
               i.e. inverse of the model's link function of linear predictor.
@@ -1043,7 +1053,7 @@ class GLM(base.LikelihoodModel):
               This does not include scale or var_weights.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
+            The ``linear`` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If True, returns the linear predicted values.  If False or None,
             then the statistic specified by ``which`` will be returned.
@@ -1069,7 +1079,7 @@ class GLM(base.LikelihoodModel):
                 which = "linear"
 
         # Use fit offset if appropriate
-        if offset is None and exog is None and hasattr(self, "offset"):
+        if offset is None and exog is None and self._has_offset:
             offset = self.offset
         elif offset is None:
             offset = 0.0
@@ -1080,7 +1090,7 @@ class GLM(base.LikelihoodModel):
             raise ValueError("exposure can only be used with the log link function")
 
         # Use fit exposure if appropriate
-        if exposure is None and exog is None and hasattr(self, "exposure"):
+        if exposure is None and exog is None and self._has_exposure:
             # Already logged
             exposure = self.exposure
         elif exposure is None:
@@ -1200,7 +1210,7 @@ class GLM(base.LikelihoodModel):
         Parameters
         ----------
         start_params : array_like, optional
-            Initial guess of the solution for the loglikelihood maximization.
+            Initial guess of the solution for the log-likelihood maximization.
             The default is family-specific and is given by the
             ``family.starting_mu(endog)``. If start_params is given then the
             initial mean will be calculated as ``np.dot(exog, start_params)``.
@@ -1229,7 +1239,7 @@ class GLM(base.LikelihoodModel):
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-            Not used if methhod is IRLS.
+            Not used if method is IRLS.
         disp : bool, optional
             Set to True to print convergence messages.  Not used if method is
             IRLS.
@@ -1281,7 +1291,9 @@ class GLM(base.LikelihoodModel):
             try:
                 scale = float(scale)
             except Exception as exc:
-                raise type(exc)("scale must be a float if given and no a string.") from exc
+                raise type(exc)(
+                    "scale must be a float if given and not a string."
+                ) from exc
         self.scaletype = scale
 
         if method.lower() == "irls":
@@ -1316,8 +1328,11 @@ class GLM(base.LikelihoodModel):
                 max_start_irls=max_start_irls,
                 **kwargs,
             )
-            del self._optim_hessian
-            del self._tmp_like_exog
+            # NOTE: `_optim_hessian`/`_tmp_like_exog` are reset (not deleted)
+            # to their __init__ defaults so `hessian` behaves consistently
+            # for anyone calling it directly after this fit() call.
+            self._optim_hessian = None
+            self._tmp_like_exog = np.empty_like(self.exog, dtype=float)
             return fit_
 
     def _fit_gradient(
@@ -1372,11 +1387,6 @@ class GLM(base.LikelihoodModel):
         mu = self.predict(rslt.params)
         scale = self.estimate_scale(mu)
 
-        if rslt.normalized_cov_params is None:
-            cov_p = None
-        else:
-            cov_p = rslt.normalized_cov_params / scale
-
         if cov_type.lower() == "eim":
             oim = False
             cov_type = "nonrobust"
@@ -1384,7 +1394,8 @@ class GLM(base.LikelihoodModel):
             oim = True
 
         try:
-            cov_p = np.linalg.inv(-self.hessian(rslt.params, observed=oim)) / scale
+            hessian = -self.hessian(rslt.params, observed=oim)
+            cov_p = np.linalg.inv(hessian) / scale
         except LinAlgError:
             warnings.warn(
                 "Inverting hessian failed, no bse or cov_params available",
@@ -1655,7 +1666,7 @@ class GLM(base.LikelihoodModel):
 
         if not mr.success:
             ngrad = np.sqrt(np.sum(mr.jac**2))
-            msg = "GLM ridge optimization may have failed, |grad|=%f" % ngrad
+            msg = f"GLM ridge optimization may have failed, |grad|={ngrad:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = RegularizedResults(self, params)
@@ -1664,7 +1675,8 @@ class GLM(base.LikelihoodModel):
         return results
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
-        """fit the model subject to linear equality constraints
+        """
+        Fit the model subject to linear equality constraints
 
         The constraints are of the form   `R params = q`
         where R is the constraint_matrix and q is the vector of
@@ -1874,7 +1886,7 @@ class GLMResults(base.LikelihoodModelResults):
             self.cov_type = "nonrobust"
             self.cov_kwds = {
                 "description": "Standard Errors assume that the covariance matrix of "
-                               "the errors is correctly specified."
+                "the errors is correctly specified."
             }
 
         else:
@@ -2032,8 +2044,10 @@ class GLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def null_deviance(self):
-        """The value of the deviance function for the model fit with a constant
-        as the only regressor."""
+        """
+        The value of the deviance function for the model fit with a constant
+        as the only regressor
+        """
         return self.family.deviance(
             self._endog, self.null, self._var_weights, self._freq_weights
         )
@@ -2085,14 +2099,14 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_value
     def llf(self):
         """
-        Value of the loglikelihood function evalued at params.
+        Value of the log-likelihood function evaluated at params.
         See statsmodels.families.family for distribution-specific
-        loglikelihoods.  The result uses the concentrated
+        log-likelihoods.  The result uses the concentrated
         log-likelihood if the family is Gaussian and the link is linear,
         otherwise it uses the non-concentrated log-likelihood evaluated
         at the estimated scale.
         """
-        return self.llf_scaled()
+        return self._summary_cache("llf", self.llf_scaled)
 
     def pseudo_rsquared(self, kind="cs"):
         """
@@ -2146,8 +2160,6 @@ class GLMResults(base.LikelihoodModelResults):
             log-likelihood. This is not consistent with the AIC definition,
             and after 0.13 both will make use of the log-likelihood definition.
 
-        Notes
-        -----
         The log-likelihood version is defined
         -2 * `llf` + (`df_model` + 1)*log(n)
         """
@@ -2193,7 +2205,8 @@ class GLMResults(base.LikelihoodModelResults):
         return self.info_criteria("bic")
 
     def info_criteria(self, crit, scale=None, dk_params=0):
-        """Return an information criterion for the model.
+        """
+        Return an information criterion for the model
 
         Parameters
         ----------
@@ -2284,7 +2297,7 @@ class GLMResults(base.LikelihoodModelResults):
             their original form. Otherwise, you'd need to log the data
             first.
         which : 'mean', 'linear', 'var'(optional)
-            Statitistic to predict. Default is 'mean'.
+            Statistic to predict. Default is 'mean'.
             If which is None, then the deprecated keyword "linear" applies.
             If which is not None, then a generic Prediction results class will
             be returned. Some options are only available if which is not None.
@@ -2297,7 +2310,7 @@ class GLMResults(base.LikelihoodModelResults):
               This does not include scale or var_weights.
 
         linear : bool
-            The ``linear` keyword is deprecated and will be removed,
+            The ``linear`` keyword is deprecated and will be removed,
             use ``which`` keyword instead.
             If which is None, then the linear keyword is used, otherwise it will
             be ignored.
@@ -2315,15 +2328,15 @@ class GLMResults(base.LikelihoodModelResults):
             Keyword is only used if ``which`` is not None.
             Aggregation weights, only used if average is True.
         row_labels : list of str or None
-            If row_lables are provided, then they will replace the generated
+            If row_labels are provided, then they will replace the generated
             labels.
 
         Returns
         -------
         prediction_results : instance of a PredictionResults class.
             The prediction results instance contains prediction and prediction
-            variance and can on demand calculate confidence intervals and summary
-            tables for the prediction of the mean and of new observations.
+            variance and can calculate confidence intervals and summary tables
+            for the prediction of the mean and of new observations on demand.
             The Results class of the return depends on the value of ``which``.
 
         See Also
@@ -2338,10 +2351,10 @@ class GLMResults(base.LikelihoodModelResults):
         versions, and returns the mean and linear prediction results.
         If the ``which`` keyword is not None, then a generic prediction results
         class is returned and is not backwards compatible with the old prediction
-        results class, e.g. column names of summary_frame differs.
+        results class, e.g. column names of summary_frame differ.
         There are more choices for the returned predicted statistic using
         ``which``. More choices will be added in the next release.
-        Two additional keyword, average and agg_weights options are now also
+        Two additional keywords, average and agg_weights, are now also
         available if ``which`` is not None.
         In a future version ``which`` will become not None and the backwards
         compatible prediction results class will be removed.
@@ -2506,12 +2519,10 @@ class GLMResults(base.LikelihoodModelResults):
         self, exog=None, exposure=None, offset=None, var_weights=1.0, n_trials=1.0
     ):
         """
-        Return a instance of the predictive distribution.
+        Return an instance of the predictive distribution
 
         Parameters
         ----------
-        scale : scalar
-            The scale parameter.
         exog : array_like
             The predictor variable matrix.
         offset : array_like or None
@@ -2519,7 +2530,7 @@ class GLMResults(base.LikelihoodModelResults):
         exposure : array_like or None
             Log(exposure) will be added to the linear prediction.
         var_weights : array_like
-            1d array of variance (analytic) weights. The default is None.
+            1d array of variance (analytic) weights. The default is 1.
         n_trials : int
             Number of trials for the binomial distribution. The default is 1
             which corresponds to a Bernoulli random variable.
@@ -2569,7 +2580,8 @@ class GLMResults(base.LikelihoodModelResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Warning: offset, exposure and weights (var_weights and freq_weights)
         are not supported by margeff.
@@ -2600,7 +2612,7 @@ class GLMResults(base.LikelihoodModelResults):
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables. For interpretations of these methods
@@ -2658,7 +2670,7 @@ class GLMResults(base.LikelihoodModelResults):
     def remove_data(self):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr if "_data." not in i])
-        super(self.__class__, self).remove_data()
+        super().remove_data()
 
         # TODO: what are these in results?
         self._endog = None
@@ -2743,23 +2755,30 @@ class GLMResults(base.LikelihoodModelResults):
             ("Method:", [self.method]),
             ("Date:", None),
             ("Time:", None),
-            ("No. Iterations:", ["%d" % self.fit_history["iteration"]]),
+            ("No. Iterations:", ["{:d}".format(self.fit_history["iteration"])]),
         ]
 
-        try:
-            prsquared = self.pseudo_rsquared(kind="cs")
-        except ValueError:
-            prsquared = np.nan
+        def _prsquared():
+            try:
+                return self.pseudo_rsquared(kind="cs")
+            except ValueError:
+                return np.nan
+
+        prsquared = self._summary_cache("prsquared", _prsquared)
+        deviance = self._summary_cache("deviance", lambda: self.deviance)
+        pearson_chi2 = self._summary_cache(
+            "pearson_chi2", lambda: self.pearson_chi2
+        )
 
         top_right = [
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),
-            ("Scale:", ["%#8.5g" % self.scale]),
+            ("Scale:", [f"{self.scale:#8.5g}"]),
             ("Log-Likelihood:", None),
-            ("Deviance:", ["%#8.5g" % self.deviance]),
-            ("Pearson chi2:", ["%#6.3g" % self.pearson_chi2]),
-            ("Pseudo R-squ. (CS):", ["%#6.4g" % prsquared]),
+            ("Deviance:", [f"{deviance:#8.5g}"]),
+            ("Pearson chi2:", [f"{pearson_chi2:#6.3g}"]),
+            ("Pseudo R-squ. (CS):", [f"{prsquared:#6.4g}"]),
         ]
 
         if hasattr(self, "cov_type"):
@@ -2793,7 +2812,8 @@ class GLMResults(base.LikelihoodModelResults):
     def summary2(
         self, yname=None, xname=None, title=None, alpha=0.05, float_format="%.4f"
     ):
-        """Experimental summary for regression Results
+        """
+        Experimental summary for regression Results
 
         Parameters
         ----------
