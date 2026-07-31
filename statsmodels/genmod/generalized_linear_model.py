@@ -2106,13 +2106,7 @@ class GLMResults(base.LikelihoodModelResults):
         otherwise it uses the non-concentrated log-likelihood evaluated
         at the estimated scale.
         """
-        # Plain (non-cached_data) fallback so a value already computed here
-        # survives remove_data(), which clears _endog/mu.
-        llf = self.__dict__.get("_llf_float")
-        if llf is None:
-            llf = self.llf_scaled()
-            self.__dict__["_llf_float"] = llf
-        return llf
+        return self._cache_for_remove_data("llf", self.llf_scaled)
 
     def pseudo_rsquared(self, kind="cs"):
         """
@@ -2764,25 +2758,17 @@ class GLMResults(base.LikelihoodModelResults):
             ("No. Iterations:", ["{:d}".format(self.fit_history["iteration"])]),
         ]
 
-        # Cache the data-dependent scalars computed below as a plain dict
-        # (not cache_readonly) so that summary() keeps working after
-        # remove_data() has cleared _endog/mu.
-        cache = self.__dict__.setdefault("_summary_cache", {})
-
-        def cached(key, compute):
-            if key not in cache:
-                cache[key] = compute()
-            return cache[key]
-
         def _prsquared():
             try:
                 return self.pseudo_rsquared(kind="cs")
             except ValueError:
                 return np.nan
 
-        prsquared = cached("prsquared", _prsquared)
-        deviance = cached("deviance", lambda: self.deviance)
-        pearson_chi2 = cached("pearson_chi2", lambda: self.pearson_chi2)
+        prsquared = self._cache_for_remove_data("prsquared", _prsquared)
+        deviance = self._cache_for_remove_data("deviance", lambda: self.deviance)
+        pearson_chi2 = self._cache_for_remove_data(
+            "pearson_chi2", lambda: self.pearson_chi2
+        )
 
         top_right = [
             ("No. Observations:", None),

@@ -4218,16 +4218,6 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         """
         mod = self.model
 
-         # Cache the small state space matrices used below as plain
-        # attributes (not cache_readonly) so summary() keeps working after
-        # remove_data() has cleared filter_results.
-        cache = self.__dict__.setdefault("_summary_cache", {})
-
-        def cached(key, compute):
-            if key not in cache:
-                cache[key] = compute()
-            return cache[key]
-
         # Default title / model name
         if title is None:
             title = "Dynamic Factor Results"
@@ -4260,7 +4250,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         if not display_params_as_list:
 
             # Observation equation table
-            design = cached(
+            design = self._cache_for_remove_data(
                 "design",
                 lambda: self.filter_results.design[:, mod._s["factors_L1"], 0]
             )
@@ -4317,8 +4307,12 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
             # Both T and Q are looped over and so must be retained
             # to ensure that summary works after remove data
-            T = cached("transition", lambda: self.filter_results.transition)
-            Q = cached("state_cov", lambda: self.filter_results.state_cov)
+            T = self._cache_for_remove_data(
+                "transition", lambda: self.filter_results.transition
+            )
+            Q = self._cache_for_remove_data(
+                "state_cov", lambda: self.filter_results.state_cov
+            )
             for i in range(len(mod._s.factor_blocks)):
                 block = mod._s.factor_blocks[i]
                 ix2 += block.k_factors
