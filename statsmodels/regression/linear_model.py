@@ -1783,7 +1783,13 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def nobs(self):
         """Number of observations n"""
-        return float(self.model.wexog.shape[0])
+        # Plain (non-cached_data) fallback so a value already computed here
+        # survives remove_data(), which clears model.wexog.
+        nobs_int = self.__dict__.get("_nobs_int")
+        if nobs_int is None:
+            nobs_int = float(self.model.wexog.shape[0])
+            self.__dict__["_nobs_int"] = nobs_int
+        return nobs_int
 
     @cache_readonly
     def fittedvalues(self):
@@ -2862,8 +2868,18 @@ class RegressionResults(base.LikelihoodModelResults):
         alpha = float_like(alpha, "alpha", optional=False)
         slim = bool_like(slim, "slim", optional=False, strict=True)
 
-        eigvals = self.eigenvals
-        condno = self.condition_number
+        # Cache the data-dependent scalars computed below as a plain dict
+        # (not cache_readonly) so that summary() keeps working after
+        # remove_data() has cleared wresid/model.exog and the like.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+
+        def cached(key, compute):
+            if key not in cache:
+                cache[key] = compute()
+            return cache[key]
+
+        eigvals = cached("eigvals", lambda: self.eigenvals)
+        condno = cached("condno", lambda: self.condition_number)
 
         # TODO: Avoid adding attributes in non-__init__
         self.diagn = dict(condno=condno, mineigval=eigvals[-1])
@@ -2891,14 +2907,20 @@ class RegressionResults(base.LikelihoodModelResults):
             top_left.append(("Covariance Type:", [self.cov_type]))
 
         rsquared_type = "" if self.k_constant else " (uncentered)"
+        rsquared = cached("rsquared", lambda: self.rsquared)
+        rsquared_adj = cached("rsquared_adj", lambda: self.rsquared_adj)
+        fvalue = cached("fvalue", lambda: self.fvalue)
+        f_pvalue = cached("f_pvalue", lambda: self.f_pvalue)
+        aic = cached("aic", lambda: self.aic)
+        bic = cached("bic", lambda: self.bic)
         top_right = [
-            ("R-squared" + rsquared_type + ":", [f"{self.rsquared:#8.3f}"]),
-            ("Adj. R-squared" + rsquared_type + ":", [f"{self.rsquared_adj:#8.3f}"]),
-            ("F-statistic:", [f"{self.fvalue:#8.4g}"]),
-            ("Prob (F-statistic):", [f"{self.f_pvalue:#6.3g}"]),
+            ("R-squared" + rsquared_type + ":", [f"{rsquared:#8.3f}"]),
+            ("Adj. R-squared" + rsquared_type + ":", [f"{rsquared_adj:#8.3f}"]),
+            ("F-statistic:", [f"{fvalue:#8.4g}"]),
+            ("Prob (F-statistic):", [f"{f_pvalue:#6.3g}"]),
             ("Log-Likelihood:", None),
-            ("AIC:", [f"{self.aic:#8.4g}"]),
-            ("BIC:", [f"{self.bic:#8.4g}"]),
+            ("AIC:", [f"{aic:#8.4g}"]),
+            ("BIC:", [f"{bic:#8.4g}"]),
         ]
 
         if slim:
@@ -2917,8 +2939,11 @@ class RegressionResults(base.LikelihoodModelResults):
             top_right = [elem for elem in top_right if elem[0] in slimlist]
             top_right = top_right + [("", [""])] * (len(top_left) - len(top_right))
         else:
-            jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
-            omni, omnipv = omni_normtest(self.wresid)
+            jb, jbpv, skew, kurtosis = cached(
+                "jarque_bera", lambda: jarque_bera(self.wresid)
+            )
+            omni, omnipv = cached("omni_normtest", lambda: omni_normtest(self.wresid))
+            dw = cached("durbin_watson", lambda: durbin_watson(self.wresid))
 
             self.diagn.update(
                 jb=jb,
@@ -2937,7 +2962,7 @@ class RegressionResults(base.LikelihoodModelResults):
             ]
 
             diagn_right = [
-                ("Durbin-Watson:", [f"{durbin_watson(self.wresid):#8.3f}"]),
+                ("Durbin-Watson:", [f"{dw:#8.3f}"]),
                 ("Jarque-Bera (JB):", [f"{jb:#8.3f}"]),
                 ("Prob(JB):", [f"{jbpv:#8.3g}"]),
                 ("Cond. No.", [f"{condno:#8.3g}"]),
@@ -2980,7 +3005,11 @@ class RegressionResults(base.LikelihoodModelResults):
             )
         if hasattr(self, "cov_type"):
             etext.append(self.cov_kwds["description"])
-        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+        rank_deficient = cached(
+            "rank_deficient",
+            lambda: self.model.exog.shape[0] < self.model.exog.shape[1],
+        )
+        if rank_deficient:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)
         if eigvals[-1] < 1e-10:

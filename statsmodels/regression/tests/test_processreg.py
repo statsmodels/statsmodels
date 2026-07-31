@@ -9,6 +9,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.process_regression import GaussianCovariance, ProcessMLE
 import statsmodels.tools.numdiff as nd
 
@@ -226,3 +227,13 @@ def test_score_numdiff(noise):
         score = preg.score(par)
         score_nd = nd.approx_fprime(par, loglike, epsilon=1e-7)
         assert_allclose(score, score_nd, atol=atol, rtol=1e-4)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    rs = np.random.RandomState(8234)
+    res = run_arrays(50, model1, False, rng=rs)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

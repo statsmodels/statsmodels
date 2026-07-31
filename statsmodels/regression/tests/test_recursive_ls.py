@@ -14,6 +14,7 @@ from scipy.stats import norm
 
 from statsmodels.datasets import macrodata
 from statsmodels.genmod.api import GLM
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
@@ -545,3 +546,13 @@ def test_fix_params():
         ValueError, match=("Linear constraints on coefficients should be given")
     ):
         mod.fit_constrained({"const": 0.1})
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

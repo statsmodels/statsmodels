@@ -405,8 +405,19 @@ class QuantRegResults(RegressionResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
-        eigvals = self.eigenvals
-        condno = self.condition_number
+        # Cache the data-dependent scalars computed below as a plain dict
+        # (not cache_readonly) so that summary() keeps working after
+        # remove_data() has cleared resid/model.exog and the like.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+
+        def cached(key, compute):
+            if key not in cache:
+                cache[key] = compute()
+            return cache[key]
+
+        eigvals = cached("eigvals", lambda: self.eigenvals)
+        condno = cached("condno", lambda: self.condition_number)
+        prsquared = cached("prsquared", lambda: self.prsquared)
 
         top_left = [
             ("Dep. Variable:", None),
@@ -417,7 +428,7 @@ class QuantRegResults(RegressionResults):
         ]
 
         top_right = [
-            ("Pseudo R-squared:", [f"{self.prsquared:#8.4g}"]),
+            ("Pseudo R-squared:", [f"{prsquared:#8.4g}"]),
             ("Bandwidth:", [f"{self.bandwidth:#8.4g}"]),
             ("Sparsity:", [f"{self.sparsity:#8.4g}"]),
             ("No. Observations:", None),

@@ -2904,6 +2904,10 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.endog = model.endog
         self.exog = model.exog
         self.nobs = model.endog.shape[0]
+        # Does not call Results.__init__, so set these directly; needed for
+        # remove_data() to work (it assumes both attributes exist).
+        self._data_attr = ["endog", "exog"]
+        self._data_in_cache = ["fittedvalues", "resid", "wresid"]
 
         # TODO: possibly move to model.fit()
         #       and outsource together with patching names
