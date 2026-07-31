@@ -10,6 +10,7 @@ from statsmodels.genmod.qif import (
     QIFExchangeable,
     QIFIndependence,
 )
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
 
 
@@ -95,6 +96,26 @@ def test_qif_fit(fam, cov_struct):
 
     # Smoke test
     _ = rslt.summary()
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    rs = np.random.RandomState(234234)
+    n = 200
+    q = 4
+    params = np.r_[1, -0.5, 0.2]
+    x = rs.normal(size=(n, len(params)))
+    e = np.kron(rs.normal(size=n // q), np.ones(q))
+    e = np.sqrt(0.5) * e + np.sqrt(1 - 0.5**2) * rs.normal(size=n)
+    y = np.dot(x, params) + e
+    g = np.kron(np.arange(n // q), np.ones(q)).astype(int)
+
+    model = QIF(y, x, groups=g, family=families.Gaussian(), cov_struct=QIFIndependence())
+    res = model.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 @pytest.mark.parametrize(

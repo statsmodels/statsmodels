@@ -2106,7 +2106,7 @@ class GLMResults(base.LikelihoodModelResults):
         otherwise it uses the non-concentrated log-likelihood evaluated
         at the estimated scale.
         """
-        return self.llf_scaled()
+        return self._summary_cache("llf", self.llf_scaled)
 
     def pseudo_rsquared(self, kind="cs"):
         """
@@ -2670,7 +2670,7 @@ class GLMResults(base.LikelihoodModelResults):
     def remove_data(self):
         # GLM has alias/reference in result instance
         self._data_attr.extend([i for i in self.model._data_attr if "_data." not in i])
-        super(self.__class__, self).remove_data()
+        super().remove_data()
 
         # TODO: what are these in results?
         self._endog = None
@@ -2758,10 +2758,17 @@ class GLMResults(base.LikelihoodModelResults):
             ("No. Iterations:", ["{:d}".format(self.fit_history["iteration"])]),
         ]
 
-        try:
-            prsquared = self.pseudo_rsquared(kind="cs")
-        except ValueError:
-            prsquared = np.nan
+        def _prsquared():
+            try:
+                return self.pseudo_rsquared(kind="cs")
+            except ValueError:
+                return np.nan
+
+        prsquared = self._summary_cache("prsquared", _prsquared)
+        deviance = self._summary_cache("deviance", lambda: self.deviance)
+        pearson_chi2 = self._summary_cache(
+            "pearson_chi2", lambda: self.pearson_chi2
+        )
 
         top_right = [
             ("No. Observations:", None),
@@ -2769,8 +2776,8 @@ class GLMResults(base.LikelihoodModelResults):
             ("Df Model:", None),
             ("Scale:", [f"{self.scale:#8.5g}"]),
             ("Log-Likelihood:", None),
-            ("Deviance:", [f"{self.deviance:#8.5g}"]),
-            ("Pearson chi2:", [f"{self.pearson_chi2:#6.3g}"]),
+            ("Deviance:", [f"{deviance:#8.5g}"]),
+            ("Pearson chi2:", [f"{pearson_chi2:#6.3g}"]),
             ("Pseudo R-squ. (CS):", [f"{prsquared:#6.4g}"]),
         ]
 

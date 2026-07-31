@@ -2478,6 +2478,13 @@ class LikelihoodModelResults(Results):
 
         .. warning::
 
+           Any data-dependent statistics needed for displaying a model summary
+           can be calculated and memoized by calling ``summary()`` prior to
+           calling ``remove_data()``. In general, if ``summary()`` is not
+           called before ``remove_data()``, ``summary()`` will fail.
+
+        .. warning::
+
            Since data and some intermediate results have been removed
            calculating new statistics that require them will raise exceptions.
            The exception will occur the first time an attribute is accessed
@@ -2541,6 +2548,35 @@ class LikelihoodModelResults(Results):
                 self._cache[key] = None
             except (AttributeError, KeyError):
                 pass
+
+    def _summary_cache(self, key, compute):
+        """
+        Compute and memoize a value that must survive remove_data().
+
+        ``cache_readonly`` values are unconditionally cleared by
+        ``remove_data()`` (see its docstring), so anything a `summary()`
+        (or similar) implementation needs after `remove_data()` has been
+        called must be memoized some other way. This stores the result of
+        ``compute()`` in a plain dict on the instance, keyed by ``key`` --
+        untouched by ``remove_data()`` -- and only calls ``compute()`` the
+        first time a given ``key`` is requested.
+
+        Parameters
+        ----------
+        key : str
+            Name under which to cache the computed value.
+        compute : callable
+            Zero-argument callable that computes the value; only invoked
+            on the first call for a given ``key``.
+
+        Returns
+        -------
+        The cached (or newly computed) value.
+        """
+        cache = self.__dict__.setdefault("_summary_statistics_cache", {})
+        if key not in cache:
+            cache[key] = compute()
+        return cache[key]
 
 
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
