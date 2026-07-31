@@ -160,7 +160,9 @@ def proportion_confint(
     1 - alpha/2 in the case of "beta".
 
     The confidence intervals are clipped to be in the [0, 1] interval in the
-    case of "normal" and "agresti_coull".
+    case of "normal", "agresti_coull" and "wilson". The "wilson" interval is
+    contained in [0, 1] mathematically, but floating point error could
+    otherwise produce bounds slightly outside of it.
 
     Method "binom_test" directly inverts the binomial test in scipy.stats,
     which has discrete steps.
@@ -302,7 +304,7 @@ def proportion_confint(
         ci_upp = stats.beta.isf(alpha, count_a + 0.5, nobs_a - count_a + 0.5)
     else:
         raise NotImplementedError(f"method {method} is not available")
-    if method in ["normal", "agresti_coull"]:
+    if method in ["normal", "agresti_coull", "wilson"]:
         ci_low = np.clip(ci_low, 0, 1)
         ci_upp = np.clip(ci_upp, 0, 1)
     if is_pandas:

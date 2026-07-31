@@ -106,6 +106,19 @@ def test_confint_proportion_ndim(method):
     assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-4)
 
 
+def test_confint_proportion_wilson_clip():
+    # GH 7386, floating point error could push wilson bounds outside [0, 1]
+    ci_low, ci_upp = proportion_confint(38, 38, alpha=0.05, method="wilson")
+    assert 0 <= ci_low <= ci_upp <= 1
+
+    ci_low, ci_upp = proportion_confint(0, 77, alpha=0.05, method="wilson")
+    assert 0 <= ci_low <= ci_upp <= 1
+
+    # clipping must not alter bounds that are already inside [0, 1]
+    ci = proportion_confint(19, 38, alpha=0.05, method="wilson")
+    assert_allclose(ci, (0.348499283643951, 0.651500716356049), rtol=1e-12)
+
+
 def test_samplesize_confidenceinterval_prop():
     # consistency test for samplesize to achieve confidence_interval
     nobs = 20
