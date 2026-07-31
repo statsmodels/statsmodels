@@ -82,6 +82,7 @@ from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.statespace.exponential_smoothing import ExponentialSmoothing
 
 current_path = Path(__file__).resolve().parent
@@ -1005,3 +1006,13 @@ def test_parameterless_model():
         res = ses.fit()
     assert np.isnan(res.bse).all()
     assert res.fixed_params == ["smoothing_level"]
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = ExponentialSmoothing(oildata, initialization_method="simple")
+    res = mod.filter([results_params["oil_fpp1"]["alpha"]])
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import macrodata
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
@@ -479,3 +480,14 @@ def test_alternative_estimators_seasonal_differencing():
         ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 12)).fit(
             method="hannan_rissanen"
         )
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    endog = dta["infl"].iloc[:50]
+    mod = ARIMA(endog, order=(1, 0, 0), concentrate_scale=True)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

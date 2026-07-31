@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.api import families
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.othermod.betareg import BetaModel
 from statsmodels.tools.sm_exceptions import ValueWarning
 
@@ -413,3 +414,13 @@ class TestBetaIncome:
         frame = influ.summary_frame()
         frame0 = influ0.summary_frame()
         assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    model = "I(food/income) ~ income + persons"
+    res = BetaModel.from_formula(model, income).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

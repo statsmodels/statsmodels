@@ -547,7 +547,10 @@ class RLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.bcov_scaled))
+        # Use cov_params_default (a plain attribute snapshotted once in
+        # __init__) rather than bcov_scaled directly, so bse still works
+        # after remove_data() has cleared model.exog.
+        return np.sqrt(np.diag(self.cov_params_default))
 
     @cache_readonly
     def chisq(self):

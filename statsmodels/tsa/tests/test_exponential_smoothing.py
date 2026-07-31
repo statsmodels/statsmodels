@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 import scipy.stats
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
@@ -1148,3 +1149,13 @@ def test_aicc_0_dof():
     aicc = model.fit().aicc
     assert not np.isfinite(aicc)
     assert aicc > 0
+
+
+def test_summary_after_remove_data(oildata):
+    # summary() must still work after remove_data() has been called
+    model = ETSModel(oildata, error="add", trend="add", damped_trend=True)
+    res = model.fit(disp=False)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

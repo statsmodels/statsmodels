@@ -16,6 +16,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.iolib.summary
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools import add_constant
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import Bunch
@@ -3016,3 +3017,21 @@ def test_sarimax_forecast_exog_trend():
 
     # Test for h=2
     assert_allclose(res.forecast(2, exog=[1.0, 1.0]), 0.2 + 0.4, 0.2 + 0.4 + 0.5)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    true = results_sarimax.wpi1_stationary
+    endog = true["data"]
+    mod = sarimax.SARIMAX(
+        endog,
+        order=(1, 1, 1),
+        trend="c",
+        simple_differencing=True,
+        hamilton_representation=True,
+    )
+    res = mod.fit(disp=-1)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

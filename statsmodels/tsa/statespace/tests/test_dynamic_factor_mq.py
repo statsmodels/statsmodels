@@ -17,6 +17,7 @@ from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
 from statsmodels.tsa.statespace import (
@@ -1839,6 +1840,19 @@ def test_summary():
     res_dfm.summary()
     mod_dfm_ar1.summary()
     res_dfm_ar1.summary()
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    endog, _, _, _, _, _ = gen_dfm_data(k_endog=10, nobs=100)
+    mod_dfm = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factor_orders=1, standardize=False, idiosyncratic_ar1=False
+    )
+    res_dfm = mod_dfm.smooth(mod_dfm.start_params)
+
+    assert isinstance(res_dfm.summary(), Summary)
+    res_dfm.remove_data()
+    assert isinstance(res_dfm.summary(), Summary)
 
 
 def test_append_extend_apply():

@@ -1390,3 +1390,28 @@ def test_param_names_trend():
     mod.update([1.2, 1, -0.5, 1.1] + base_params)
     assert_allclose(mod["state_intercept", 0], 1.2 + np.arange(2, 5) ** 2)
     assert_allclose(mod["state_intercept", 1], -0.5 + 1.1 * np.arange(2, 5) ** 2)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dta = pd.DataFrame(
+        results_varmax.lutkepohl_data,
+        columns=["inv", "inc", "consump"],
+        index=pd.date_range("1960-01-01", "1982-10-01", freq="QS"),
+    )
+    dta["dln_inv"] = np.log(dta["inv"]).diff()
+    dta["dln_inc"] = np.log(dta["inc"]).diff()
+    dta["dln_consump"] = np.log(dta["consump"]).diff()
+    endog = dta.loc[
+        "1960-04-01":"1978-10-01", ["dln_inv", "dln_inc", "dln_consump"]
+    ]
+
+    true = results_varmax.lutkepohl_var1.copy()
+    model = varmax.VARMAX(
+        endog, order=(1, 0), trend="n", error_cov_type="unstructured"
+    )
+    res = model.smooth(true["params"], cov_type="approx")
+
+    assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
