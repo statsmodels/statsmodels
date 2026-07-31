@@ -2549,7 +2549,7 @@ class LikelihoodModelResults(Results):
             except (AttributeError, KeyError):
                 pass
 
-    def _cache_for_remove_data(self, key, compute):
+    def _summary_cache(self, key, compute):
         """
         Compute and memoize a value that must survive remove_data().
 
@@ -2573,7 +2573,7 @@ class LikelihoodModelResults(Results):
         -------
         The cached (or newly computed) value.
         """
-        cache = self.__dict__.setdefault("_data_removal_cache", {})
+        cache = self.__dict__.setdefault("_summary_statistics_cache", {})
         if key not in cache:
             cache[key] = compute()
         return cache[key]

@@ -3434,7 +3434,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def llf(self):
         """(float) The value of the log-likelihood function evaluated at `params`"""
-        return self._cache_for_remove_data("llf", lambda: self.filter_results.llf)
+        return self._summary_cache("llf", lambda: self.filter_results.llf)
 
     @cache_readonly
     def loglikelihood_burn(self):

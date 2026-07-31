@@ -2106,7 +2106,7 @@ class GLMResults(base.LikelihoodModelResults):
         otherwise it uses the non-concentrated log-likelihood evaluated
         at the estimated scale.
         """
-        return self._cache_for_remove_data("llf", self.llf_scaled)
+        return self._summary_cache("llf", self.llf_scaled)
 
     def pseudo_rsquared(self, kind="cs"):
         """
@@ -2764,9 +2764,9 @@ class GLMResults(base.LikelihoodModelResults):
             except ValueError:
                 return np.nan
 
-        prsquared = self._cache_for_remove_data("prsquared", _prsquared)
-        deviance = self._cache_for_remove_data("deviance", lambda: self.deviance)
-        pearson_chi2 = self._cache_for_remove_data(
+        prsquared = self._summary_cache("prsquared", _prsquared)
+        deviance = self._summary_cache("deviance", lambda: self.deviance)
+        pearson_chi2 = self._summary_cache(
             "pearson_chi2", lambda: self.pearson_chi2
         )
 

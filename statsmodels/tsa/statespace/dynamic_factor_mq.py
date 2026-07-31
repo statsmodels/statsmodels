@@ -4250,7 +4250,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         if not display_params_as_list:
 
             # Observation equation table
-            design = self._cache_for_remove_data(
+            design = self._summary_cache(
                 "design",
                 lambda: self.filter_results.design[:, mod._s["factors_L1"], 0]
             )
@@ -4307,10 +4307,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
             # Both T and Q are looped over and so must be retained
             # to ensure that summary works after remove data
-            T = self._cache_for_remove_data(
+            T = self._summary_cache(
                 "transition", lambda: self.filter_results.transition
             )
-            Q = self._cache_for_remove_data(
+            Q = self._summary_cache(
                 "state_cov", lambda: self.filter_results.state_cov
             )
             for i in range(len(mod._s.factor_blocks)):
