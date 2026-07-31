@@ -428,21 +428,14 @@ class HuberT(RobustNorm):
 
         Parameters 
         ----------
-        z: array_like Input residual values.
-
-        Returns
-        -------
-        ndarray Indicator values equal to 1 when '|z| <= t' and 0 otherwise.
-
-        Parameters
-        ----------
         z : array_like
-            1d array
+            Input residual values.
 
         Returns
         -------
         ndarray
-            The value of the derivative of the psi function.
+            The value of the derivative of the psi function. Indicator values
+            equal to 1 when '|z| <= t' and 0 otherwise.
 
         Notes
         -----
