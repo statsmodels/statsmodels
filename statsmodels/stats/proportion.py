@@ -214,15 +214,8 @@ def proportion_confint(
     elif method == "binom_test" and alternative == "two-sided":
 
         def func_factory(count: int, nobs: int) -> Callable[[float], float]:
-            if hasattr(stats, "binomtest"):
-
-                def func(qi):
-                    return stats.binomtest(count, nobs, p=qi).pvalue - alpha
-
-            else:
-                # Remove after min SciPy >= 1.7
-                def func(qi):
-                    return stats.binom_test(count, nobs, p=qi) - alpha
+            def func(qi):
+                return stats.binomtest(count, nobs, p=qi).pvalue - alpha
 
             return func
 
@@ -903,11 +896,7 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
     if alternative in ["2s", "two-sided"]:
-        try:
-            pval = stats.binomtest(count, n=nobs, p=prop).pvalue
-        except AttributeError:
-            # Remove after min SciPy >= 1.7
-            pval = stats.binom_test(count, n=nobs, p=prop)
+        pval = stats.binomtest(count, n=nobs, p=prop).pvalue
     elif alternative in ["l", "larger"]:
         pval = stats.binom.sf(count - 1, nobs, prop)
     elif alternative in ["s", "smaller"]:
