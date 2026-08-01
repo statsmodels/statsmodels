@@ -6,8 +6,6 @@ Notes
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import os
 from pathlib import Path
 import re
@@ -417,7 +415,6 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_analysis(
     endog,
     maxorder=(2, 1),
@@ -712,7 +709,6 @@ def x13_arima_analysis(
     return res
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_select_order(
     endog,
     maxorder=(2, 1),
