@@ -14,8 +14,6 @@ Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
 
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from collections.abc import Hashable, Sequence
 import contextlib
 from typing import Any
@@ -208,7 +206,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         and practice. OTexts, 2014.
     """
 
-    @deprecate_kwarg("damped", "damped_trend")
     def __init__(
         self,
         endog,
@@ -916,9 +913,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         return data
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("initial_slope", "initial_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def fit(
         self,
         smoothing_level=None,
@@ -1173,8 +1167,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         return l0, b0, s0
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def _predict(
         self,
         h=None,
@@ -1619,7 +1611,6 @@ class Holt(ExponentialSmoothing):
         and practice. OTexts, 2014.
     """
 
-    @deprecate_kwarg("damped", "damped_trend")
     def __init__(
         self,
         endog,
@@ -1639,9 +1630,6 @@ class Holt(ExponentialSmoothing):
             initial_trend=initial_trend,
         )
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("initial_slope", "initial_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def fit(
         self,
         smoothing_level=None,
