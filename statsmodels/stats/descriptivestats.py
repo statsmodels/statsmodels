@@ -152,6 +152,12 @@ def sign_test(samp, mu0=0):
     p : float
         The p-value for the test.
 
+    Raises
+    ------
+    ValueError
+        If no observation differs from `mu0`. All values are then discarded
+        as ties and the test is not defined.
+
     Notes
     -----
     The signs test returns
@@ -173,6 +179,12 @@ def sign_test(samp, mu0=0):
     samp = np.asarray(samp)
     pos = np.sum(samp > mu0)
     neg = np.sum(samp < mu0)
+    if pos + neg == 0:
+        raise ValueError(
+            "The sign test is not defined when no observation differs from "
+            "mu0. Every value in samp is equal to mu0 (or samp is empty), and "
+            "tied values are discarded."
+        )
     M = (pos - neg) / 2.0
     try:
         p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue

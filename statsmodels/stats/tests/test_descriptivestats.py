@@ -23,6 +23,19 @@ def df():
     return pd.DataFrame({"a": a, "b": b})
 
 
+def test_sign_test_no_observation_differs_from_mu0():
+    # When every observation ties with mu0 it is discarded, leaving no
+    # observations, so the test is undefined. This used to surface as an
+    # opaque "n must be an integer not less than 1" error raised from
+    # scipy's binomtest rather than explaining the cause.
+    with pytest.raises(ValueError, match="no observation differs from"):
+        sign_test([5.0, 5.0, 5.0], mu0=5.0)
+
+    # an empty sample hits the same degenerate case
+    with pytest.raises(ValueError, match="no observation differs from"):
+        sign_test([], mu0=0.0)
+
+
 def test_sign_test():
     x = [7.8, 6.6, 6.5, 7.4, 7.3, 7.0, 6.4, 7.1, 6.7, 7.6, 6.8]
     M, p = sign_test(x, mu0=6.5)
