@@ -1885,11 +1885,8 @@ class GEE(GLM):
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= 4 * scale
 
-        try:
-            from scipy.integrate import trapezoid
-        except ImportError:
-            # Remove after minimum is SciPy 1.7
-            from scipy.integrate import trapz as trapezoid
+        from scipy.integrate import trapezoid
+
         ql = trapezoid(qv, dx=xv[1] - xv[0])
 
         qicu = -2 * ql + 2 * self.exog.shape[1]
