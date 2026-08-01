@@ -63,24 +63,6 @@ def _check_convergence(criterion, iteration, atol, rtol):
     )
 
 
-# Remove after 0.13 when bic changes to bic llf
-class _ModuleVariable:
-    _value = None
-
-    @property
-    def use_bic_llf(self):
-        return self._value
-
-    def set_use_bic_llf(self, val):
-        if val not in (True, False, None):
-            raise ValueError("Must be True, False or None")
-        self._value = bool(val) if val is not None else val
-
-
-_use_bic_helper = _ModuleVariable()
-SET_USE_BIC_LLF = _use_bic_helper.set_use_bic_llf
-
-
 class GLM(base.LikelihoodModel):
     __doc__ = f"""
     Generalized Linear Models
@@ -2139,35 +2121,15 @@ class GLMResults(base.LikelihoodModelResults):
         """
         Bayes Information Criterion
 
-        `deviance` - `df_resid` * log(`nobs`)
-
-        .. warning::
-
-            The current definition is based on the deviance rather than the
-            log-likelihood. This is not consistent with the AIC definition,
-            and after 0.13 both will make use of the log-likelihood definition.
-
-        The log-likelihood version is defined
+        Based on the log-likelihood,
         -2 * `llf` + (`df_model` + 1)*log(n)
-        """
-        if _use_bic_helper.use_bic_llf not in (True, False):
-            warnings.warn(
-                "The bic value is computed using the deviance formula. After "
-                "0.13 this will change to the log-likelihood based formula. "
-                "This change has no impact on the relative rank of models "
-                "compared using BIC. You can directly access the "
-                "log-likelihood version using the `bic_llf` attribute. You "
-                "can suppress this message by calling "
-                "statsmodels.genmod.generalized_linear_model.SET_USE_BIC_LLF "
-                "with True to get the LLF-based version now or False to retain"
-                "the deviance version.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if bool(_use_bic_helper.use_bic_llf):
-            return self.bic_llf
 
-        return self.bic_deviance
+        See Also
+        --------
+        bic_llf
+        bic_deviance
+        """
+        return self.bic_llf
 
     @cached_value
     def bic_deviance(self):
