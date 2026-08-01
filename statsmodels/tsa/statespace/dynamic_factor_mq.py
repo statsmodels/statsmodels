@@ -1749,12 +1749,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # - Endog / factor map -----------------------------------------------
         data = self.endog_factor_map.replace({True: "X", False: ""})
         data.index = endog_names
-        try:
-            items = data.items()
-        except AttributeError:
-            # Remove after pandas 1.5 is minimum
-            items = data.iteritems()
-        for name, _ in items:
+        for name, _ in data.items():
             data[name] = data[name] + (" " * (len(name) // 2))
         data.index.name = "Dep. variable"
         data = data.reset_index()

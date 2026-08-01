@@ -4,8 +4,6 @@ Durbin-Levinson recursions for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
@@ -14,7 +12,6 @@ from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.stattools import acovf
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
     """
     Estimate AR parameters at multiple orders using Durbin-Levinson recursions

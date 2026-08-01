@@ -698,7 +698,6 @@ def test_poisson_2indep(
     count2,
     exposure2,
     value=None,
-    ratio_null=None,
     method=None,
     compare="ratio",
     alternative="two-sided",
@@ -736,22 +735,9 @@ def test_poisson_2indep(
         Number of events in second sample, control group.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    ratio_null : float
-        Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-        Deprecated, use ``value`` instead.
-
-        .. deprecated:: 0.14.0
-
-            Use ``value`` instead.
-
     value : float
         Value of the ratio or difference of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
-
-        .. versionadded:: 0.14.0
-
-            Replacement for ``ratio_null``.
-
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
@@ -863,11 +849,9 @@ def test_poisson_2indep(
             # default method
             method = "score"
 
-        if ratio_null is not None:
-            raise TypeError("'ratio_null' is no longer valid, use 'value' keyword")
         if value is None:
             # default value
-            value = ratio_null = 1
+            value = 1
 
         r = value
         r_d = r / d  # r1 * n1 / (r2 * n2)
@@ -1052,12 +1036,10 @@ def etest_poisson_2indep(
     exposure1,
     count2,
     exposure2,
-    ratio_null=None,
     value=None,
     method="score",
     compare="ratio",
     alternative="two-sided",
-    ygrid=None,
     y_grid=None,
 ):
     """
@@ -1091,22 +1073,9 @@ def etest_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    ratio_null : float
-        Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-        Deprecated, use ``value`` instead.
-
-        .. deprecated:: 0.14.0
-
-            Use ``value`` instead.
-
     value : float
         Value of the ratio or diff of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
-
-        .. versionadded:: 0.14.0
-
-            Replacement for ``ratio_null``.
-
     method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
     compare : {'diff', 'ratio'}
@@ -1118,22 +1087,14 @@ def etest_poisson_2indep(
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-        - 'larger' :   H1: ratio of rates is larger than ratio_null
-        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio of rates is not equal to value (default)
+        - 'larger' :   H1: ratio of rates is larger than value
+        - 'smaller' :  H1: ratio of rates is smaller than value
 
     y_grid : None or 1-D ndarray
         Grid values for counts of the Poisson distribution used for computing
         the pvalue. By default truncation is based on an upper tail Poisson
         quantiles.
-
-    ygrid : None or 1-D ndarray
-        Same as y_grid. Deprecated. If both y_grid and ygrid are provided,
-        ygrid will be ignored.
-
-        .. deprecated:: 0.14.0
-
-            Use ``y_grid`` instead.
 
     Returns
     -------
@@ -1161,8 +1122,6 @@ def etest_poisson_2indep(
     eps = 1e-20  # avoid zero division in stat_func
 
     if compare == "ratio":
-        if ratio_null is not None:
-            raise TypeError("'ratio_null' is no longer valid, use 'value' keyword")
         if value is None:
             # default value
             value = 1
@@ -1225,8 +1184,6 @@ def etest_poisson_2indep(
 
     stat_sample = stat_func(y1, y2)
 
-    if ygrid is not None:
-        raise TypeError("ygrid is no longer valid, use y_grid")
     # The following uses a fixed truncation for evaluating the probabilities
     # It will currently only work for small counts, so that sf at truncation
     # point is small

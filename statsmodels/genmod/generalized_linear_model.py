@@ -63,24 +63,6 @@ def _check_convergence(criterion, iteration, atol, rtol):
     )
 
 
-# Remove after 0.13 when bic changes to bic llf
-class _ModuleVariable:
-    _value = None
-
-    @property
-    def use_bic_llf(self):
-        return self._value
-
-    def set_use_bic_llf(self, val):
-        if val not in (True, False, None):
-            raise ValueError("Must be True, False or None")
-        self._value = bool(val) if val is not None else val
-
-
-_use_bic_helper = _ModuleVariable()
-SET_USE_BIC_LLF = _use_bic_helper.set_use_bic_llf
-
-
 class GLM(base.LikelihoodModel):
     __doc__ = f"""
     Generalized Linear Models
@@ -1027,7 +1009,7 @@ class GLM(base.LikelihoodModel):
         return power
 
     def predict(
-        self, params, exog=None, exposure=None, offset=None, which="mean", linear=None
+        self, params, exog=None, exposure=None, offset=None, which="mean"
     ):
         """
         Return predicted values for a design matrix
@@ -1052,13 +1034,6 @@ class GLM(base.LikelihoodModel):
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
 
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-
         Returns
         -------
         An array of fitted values
@@ -1072,12 +1047,6 @@ class GLM(base.LikelihoodModel):
 
         Exposure values must be strictly positive.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # Use fit offset if appropriate
         if offset is None and exog is None and self._has_offset:
             offset = self.offset
@@ -2152,35 +2121,15 @@ class GLMResults(base.LikelihoodModelResults):
         """
         Bayes Information Criterion
 
-        `deviance` - `df_resid` * log(`nobs`)
-
-        .. warning::
-
-            The current definition is based on the deviance rather than the
-            log-likelihood. This is not consistent with the AIC definition,
-            and after 0.13 both will make use of the log-likelihood definition.
-
-        The log-likelihood version is defined
+        Based on the log-likelihood,
         -2 * `llf` + (`df_model` + 1)*log(n)
-        """
-        if _use_bic_helper.use_bic_llf not in (True, False):
-            warnings.warn(
-                "The bic value is computed using the deviance formula. After "
-                "0.13 this will change to the log-likelihood based formula. "
-                "This change has no impact on the relative rank of models "
-                "compared using BIC. You can directly access the "
-                "log-likelihood version using the `bic_llf` attribute. You "
-                "can suppress this message by calling "
-                "statsmodels.genmod.generalized_linear_model.SET_USE_BIC_LLF "
-                "with True to get the LLF-based version now or False to retain"
-                "the deviance version.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if bool(_use_bic_helper.use_bic_llf):
-            return self.bic_llf
 
-        return self.bic_deviance
+        See Also
+        --------
+        bic_llf
+        bic_deviance
+        """
+        return self.bic_llf
 
     @cached_value
     def bic_deviance(self):
@@ -2270,7 +2219,6 @@ class GLMResults(base.LikelihoodModelResults):
         offset=None,
         transform=True,
         which=None,
-        linear=None,
         average=False,
         agg_weights=None,
         row_labels=None,
@@ -2298,7 +2246,8 @@ class GLMResults(base.LikelihoodModelResults):
             first.
         which : 'mean', 'linear', 'var'(optional)
             Statistic to predict. Default is 'mean'.
-            If which is None, then the deprecated keyword "linear" applies.
+            If which is None, then the pre-0.14 backwards compatible
+            prediction results class is returned.
             If which is not None, then a generic Prediction results class will
             be returned. Some options are only available if which is not None.
             See notes.
@@ -2309,14 +2258,6 @@ class GLMResults(base.LikelihoodModelResults):
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
 
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If which is None, then the linear keyword is used, otherwise it will
-            be ignored.
-            If True and which is None, the linear predicted values are returned.
-            If False or None, then the statistic specified by ``which`` will be
-            returned.
         average : bool
             Keyword is only used if ``which`` is not None.
             If average is True, then the mean prediction is computed, that is,

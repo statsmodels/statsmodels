@@ -4,15 +4,12 @@ Yule-Walker method for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from statsmodels.regression import linear_model
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     """
     Estimate AR parameters using Yule-Walker equations.

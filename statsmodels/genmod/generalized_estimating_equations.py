@@ -1885,11 +1885,8 @@ class GEE(GLM):
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= 4 * scale
 
-        try:
-            from scipy.integrate import trapezoid
-        except ImportError:
-            # Remove after minimum is SciPy 1.7
-            from scipy.integrate import trapz as trapezoid
+        from scipy.integrate import trapezoid
+
         ql = trapezoid(qv, dx=xv[1] - xv[0])
 
         qicu = -2 * ql + 2 * self.exog.shape[1]
@@ -2134,7 +2131,7 @@ class GEEResults(GLMResults):
             self, focus_exog, frac, cond_means=cond_means, ax=ax
         )
 
-    def conf_int(self, alpha=0.05, cols=None, cov_type=None):
+    def conf_int(self, alpha=0.05, cov_type=None):
         """
         Returns confidence intervals for the fitted parameters.
 
@@ -2143,8 +2140,6 @@ class GEEResults(GLMResults):
         alpha : float, optional
              The `alpha` level for the confidence interval.  i.e., The
              default `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-             `cols` specifies which confidence intervals to return
         cov_type : str
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
@@ -2165,13 +2160,8 @@ class GEEResults(GLMResults):
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
 
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
+        lower = params - q * bse
+        upper = params + q * bse
         return np.asarray(lzip(lower, upper))
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):

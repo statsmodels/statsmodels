@@ -493,7 +493,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         return cov_params
 
-    def predict(self, params, exog=None, which="mean", linear=None):
+    def predict(self, params, exog=None, which="mean"):
         """
         Predict response variable of a model given exogenous variables.
         """
@@ -542,7 +542,7 @@ class BinaryModel(DiscreteModel):
             if not self._continuous_ok and np.any(self.endog != np.round(self.endog)):
                 raise ValueError("endog must be binary, either 0 or 1")
 
-    def predict(self, params, exog=None, which="mean", linear=None, offset=None):
+    def predict(self, params, exog=None, which="mean", offset=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -562,31 +562,11 @@ class BinaryModel(DiscreteModel):
             - 'var' returns the estimated variance of endog implied by the
               model.
 
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
         Returns
         -------
         array
             Fitted values at exog.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, "offset"):
             offset = self.offset
@@ -798,7 +778,7 @@ class MultinomialModel(BinaryModel):
         self.df_model *= self.J - 1  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J - 1)
 
-    def predict(self, params, exog=None, which="mean", linear=None):
+    def predict(self, params, exog=None, which="mean"):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -822,31 +802,11 @@ class MultinomialModel(BinaryModel):
             - 'var' returns the estimated variance of endog implied by the
               model.
 
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
         Notes
         -----
         Column 0 is the base case, the rest conform to the rows of params
         shifted up one for the base case.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         if exog is None:  # do here to accommodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
@@ -1113,7 +1073,7 @@ class CountModel(DiscreteModel):
         return exog, offset, exposure
 
     def predict(
-        self, params, exog=None, exposure=None, offset=None, which="mean", linear=None
+        self, params, exog=None, exposure=None, offset=None, which="mean"
     ):
         """
         Predict response variable of a count model given exogenous variables
@@ -1143,32 +1103,11 @@ class CountModel(DiscreteModel):
             - 'var' variance of endog implied by the likelihood model
             - 'prob' predicted probabilities for counts.
 
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
-
         Notes
         -----
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # the following is copied from GLM predict (without family/link check)
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, "offset"):
@@ -1809,7 +1748,6 @@ class Poisson(CountModel):
         exposure=None,
         offset=None,
         which="mean",
-        linear=None,
         y_values=None,
     ):
         """
@@ -1847,33 +1785,11 @@ class Poisson(CountModel):
             - 'prob' return probabilities for counts from 0 to max(endog) or
               for y_values if those are provided.
 
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
         y_values : array_like
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
         """
         # Note docstring is reused by other count models
-
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
 
         if which.startswith("lin"):
             which = "linear"
@@ -1884,7 +1800,6 @@ class Poisson(CountModel):
                 exposure=exposure,
                 offset=offset,
                 which=which,
-                linear=linear,
             )
         # TODO: add full set of which
         elif which == "var":
@@ -3971,16 +3886,8 @@ class NegativeBinomial(CountModel):
         exposure=None,
         offset=None,
         which="mean",
-        linear=None,
         y_values=None,
     ):
-
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # avoid duplicate computation for get-distribution
         if which == "prob":
             distr = self.get_distribution(
@@ -5221,7 +5128,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         exog=None,
         transform=True,
         which="mean",
-        linear=None,
         row_labels=None,
         average=False,
         agg_weights=None,
@@ -5246,11 +5152,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
             see the model.predict docstring
-        linear : bool
-            Linear has been replaced by the `which` keyword and will be
-            deprecated.
-            If linear is True, then `which` is ignored and the linear
-            prediction is returned.
         row_labels : list of str or None
             If row_labels are provided, then they will replace the generated
             labels.
@@ -5290,11 +5191,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         -----
         Status: new in 0.14, experimental
         """
-
-        if linear is True:
-            # compatibility with old keyword
-            which = "linear"
-
         pred_kwds = kwargs
         # y_values is explicit so we can add it to the docstring
         if y_values is not None:
@@ -6079,8 +5975,8 @@ class MultinomialResults(DiscreteResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + self.model.J - 1)
 
-    def conf_int(self, alpha=0.05, cols=None):
-        confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+    def conf_int(self, alpha=0.05):
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
 
     def get_prediction(self):

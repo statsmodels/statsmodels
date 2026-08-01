@@ -22,8 +22,6 @@ missing:
   - breaks_ap, more recent breaks tests
   - specification tests against nonparametric alternatives
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from collections.abc import Iterable
 
 import numpy as np
@@ -249,7 +247,6 @@ def compare_j(results_x, results_z, store=False):
     return tstat, pval
 
 
-@deprecate_kwarg("cov_kwargs", "cov_kwds")
 def compare_encompassing(results_x, results_z, cov_type="nonrobust",
                          cov_kwds=None):
     r"""
@@ -496,8 +493,6 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
                         index=lags)
 
 
-@deprecate_kwarg("cov_kwargs", "cov_kwds")
-@deprecate_kwarg("maxlag", "nlags")
 def acorr_lm(resid, nlags=None, store=False, *, period=None,
              ddof=0, cov_type="nonrobust", cov_kwds=None):
     """
@@ -602,7 +597,6 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         return lm, lmpval, fval, fpval
 
 
-@deprecate_kwarg("maxlag", "nlags")
 def het_arch(resid, nlags=None, store=False, ddof=0):
     """
     Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
@@ -642,7 +636,6 @@ def het_arch(resid, nlags=None, store=False, ddof=0):
     return acorr_lm(resid ** 2, nlags=nlags, store=store, ddof=ddof)
 
 
-@deprecate_kwarg("results", "res")
 def acorr_breusch_godfrey(res, nlags=None, store=False):
     """
     Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation
@@ -999,8 +992,6 @@ F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
     return fval, fpval, ordering
 
 
-@deprecate_kwarg("cov_kwargs", "cov_kwds")
-@deprecate_kwarg("result", "res")
 def linear_reset(res, power=3, test_type="fitted", use_f=False,
                  cov_type="nonrobust", cov_kwds=None):
     r"""
@@ -1401,7 +1392,6 @@ def spec_white(resid, exog):
     return stat, pval, dof
 
 
-@deprecate_kwarg("olsresults", "res")
 def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
                            order_by=None):
     """

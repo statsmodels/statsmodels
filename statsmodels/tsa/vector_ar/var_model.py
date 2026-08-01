@@ -20,7 +20,7 @@ from scipy import stats
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools._decorators import cache_readonly, deprecated_alias
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import array_like
@@ -561,8 +561,6 @@ class VAR(TimeSeriesModel):
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
-
-    y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
     def __init__(self, endog, exog=None, dates=None, freq=None, missing="none"):
         super().__init__(endog, exog, dates, freq, missing=missing)

@@ -454,13 +454,8 @@ class CheckGLMConstrainedMixin(CheckPoissonConstrainedMixin):
         # see issue GH#1733
         assert_allclose(res1.aic, res2.infocrit[4], rtol=1e-10)
 
-        import warnings
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FutureWarning)
-            # FutureWarning for BIC changes
-            assert_allclose(res1.bic, res2.bic, rtol=1e-10)
         # bic is deviance based
+        assert_allclose(res1.bic_deviance, res2.bic, rtol=1e-10)
         #  assert_allclose(res1.bic, res2.infocrit[5], rtol=1e-10)
         assert_allclose(res1.deviance, res2.deviance, rtol=1e-10)
         # TODO: which chi2 are these

@@ -390,11 +390,8 @@ def get_covder2(smoother, k_points=3, integration_points=None,
         Approximation to the integral of the cross product of the
         `deriv`-th derivative of the smoother basis functions.
     """
-    try:
-        from scipy.integrate import simpson
-    except ImportError:
-        # Remove after SciPy 1.7 is the minimum version
-        from scipy.integrate import simps as simpson
+    from scipy.integrate import simpson
+
     knots = smoother.knots
     if integration_points is None:
         x = _get_integration_points(knots, k_points=k_points)

@@ -1536,17 +1536,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
     # First link here is useful
     # http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
 
-    method = string_like(method, "method", options=("adjusted", "unbiased", "mle"))
-    if method == "unbiased":
-        warnings.warn(
-            "unbiased is deprecated in factor of adjusted to reflect that the "
-            "term is adjusting the sample size used in the autocovariance "
-            "calculation rather than estimating an unbiased autocovariance. "
-            "After release 0.13, using 'unbiased' will raise.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        method = "adjusted"
+    method = string_like(method, "method", options=("adjusted", "mle"))
 
     if method not in ("adjusted", "mle"):
         raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
@@ -1754,7 +1744,7 @@ class RegressionResults(base.LikelihoodModelResults):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05):
         """
         Compute the confidence interval of the fitted parameters.
 
@@ -1763,8 +1753,6 @@ class RegressionResults(base.LikelihoodModelResults):
         alpha : float, optional
             The `alpha` level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-            Columns to include in returned confidence intervals.
 
         Returns
         -------
@@ -1777,7 +1765,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         """
         # keep method for docstring for now
-        ci = super().conf_int(alpha=alpha, cols=cols)
+        ci = super().conf_int(alpha=alpha)
         return ci
 
     @cache_readonly

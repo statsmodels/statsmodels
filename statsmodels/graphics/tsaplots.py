@@ -1,7 +1,5 @@
 """Correlation plot functions"""
 
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import calendar
 from typing import TYPE_CHECKING
 
@@ -148,7 +146,6 @@ def _plot_corr(
         ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25)
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def plot_acf(
     x,
     ax=None,

@@ -23,7 +23,7 @@ import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import (
     approx_fprime,
@@ -217,9 +217,9 @@ class CheckModelResultsMixin:
     decimal_bic = DECIMAL_4
 
     def test_bic(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            assert_almost_equal(self.res1.bic, self.res2.bic_Stata, self.decimal_bic)
+        assert_almost_equal(
+            self.res1.bic_deviance, self.res2.bic_Stata, self.decimal_bic
+        )
 
     def test_degrees(self):
         assert_equal(self.res1.model.df_resid, self.res2.df_resid)
@@ -1112,9 +1112,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         # Check that offset shifts the linear predictor
         mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
         offset = rs.uniform(1, 2, 10)
-        with pytest.warns(FutureWarning):
-            # deprecation warning for linear keyword
-            pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
+        pred1 = mod3.predict(exog=exog1, offset=offset, which="linear")
         pred2 = mod3.predict(exog=exog1, offset=2 * offset, which="linear")
         assert_almost_equal(pred2, pred1 + offset)
 
@@ -3006,29 +3004,15 @@ def test_int_exog(dtype):
     assert isinstance(res.params, np.ndarray)
 
 
-@pytest.mark.thread_unsafe(reason="Sets global use_bic parameter")
 def test_glm_bic(iris):
-    # TODO: Before 0.15 release remove future warning and simplify test
     X = np.c_[np.ones(100), iris[50:, :4]]
     y = np.array(iris)[50:, 4].astype(np.int32)
     y -= 1
-    SET_USE_BIC_LLF(True)
     model = GLM(y, X, family=sm.families.Binomial()).fit()
     # 34.9244 is what glm() of R yields
     assert_almost_equal(model.bic, 34.9244, decimal=3)
     assert_almost_equal(model.bic_llf, 34.9244, decimal=3)
-    SET_USE_BIC_LLF(False)
-    assert_almost_equal(model.bic, model.bic_deviance, decimal=3)
-    SET_USE_BIC_LLF(None)
-
-
-def test_glm_bic_warning(iris):
-    X = np.c_[np.ones(100), iris[50:, :4]]
-    y = np.array(iris)[50:, 4].astype(np.int32)
-    y -= 1
-    model = GLM(y, X, family=sm.families.Binomial()).fit()
-    with pytest.warns(FutureWarning, match="The bic"):
-        assert isinstance(model.bic, float)
+    assert_almost_equal(model.bic, model.bic_llf, decimal=3)
 
 
 def test_output_exposure_null():

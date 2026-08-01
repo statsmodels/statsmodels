@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 
 if PD_LT_2:
     from pandas.core.dtypes.common import is_categorical_dtype
@@ -186,11 +187,7 @@ def sign_test(samp, mu0=0):
             "tied values are discarded."
         )
     M = (pos - neg) / 2.0
-    try:
-        p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
-    except AttributeError:
-        # Remove after min SciPy >= 1.7
-        p = stats.binom_test(min(pos, neg), pos + neg, 0.5)
+    p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
     return M, p
 
 
@@ -462,17 +459,11 @@ class Description:
         mode_freq[loc] = mode_counts[loc] / count.loc[loc]
         # TODO: Workaround for pandas AbstractMethodError in extension
         #  types. Remove when quantile is supported for these
-        _df = df
-        try:
-            from pandas.api.types import is_extension_array_dtype
-
-            _df = df.copy()
-            for col in df:
-                if is_extension_array_dtype(df[col].dtype):
-                    if _df[col].isna().any():
-                        _df[col] = _df[col].fillna(np.nan)
-        except ImportError:
-            pass
+        _df = df.copy()
+        for col in df:
+            if is_extension_array_dtype(df[col].dtype):
+                if _df[col].isna().any():
+                    _df[col] = _df[col].fillna(np.nan)
 
         if df.shape[1] > 0:
             iqr = _df.quantile(0.75) - _df.quantile(0.25)
