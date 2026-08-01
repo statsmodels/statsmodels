@@ -1945,7 +1945,7 @@ class LikelihoodModelResults(Results):
         invcov=None,
         use_f=None,
         df_constraints=None,
-        scalar=None,
+        scalar=True,
     ):
         """
         Compute a Wald-test for a joint linear hypothesis
@@ -1979,12 +1979,8 @@ class LikelihoodModelResults(Results):
             The number of constraints. If not provided the number of
             constraints is determined from r_matrix.
         scalar : bool, optional
-            Flag indicating whether the Wald test statistic should be returned
-            as a scalar float. The current behavior is to return an array.
-            This will switch to a scalar float after 0.14 is released. To
-            get the future behavior now, set scalar to True. To silence
-            the warning and retain the legacy behavior, set scalar to
-            False.
+            Flag indicating whether the Wald test statistic should be
+            returned as a scalar float (the default) or as an array.
 
         Returns
         -------
@@ -2009,7 +2005,7 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
         """
         use_f = bool_like(use_f, "use_f", strict=True, optional=True)
-        scalar = bool_like(scalar, "scalar", strict=True, optional=True)
+        scalar = bool_like(scalar, "scalar", strict=True)
         if use_f is None:
             # switch to use_t false if undefined
             use_f = hasattr(self, "use_t") and self.use_t
@@ -2080,16 +2076,6 @@ class LikelihoodModelResults(Results):
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
         df_resid = getattr(self, "df_resid_inference", self.df_resid)
-        if scalar is None:
-            warnings.warn(
-                "The behavior of wald_test will change after 0.14 to returning "
-                "scalar test statistic values. To get the future behavior now, "
-                "set scalar to True. To silence this message while retaining "
-                "the legacy behavior, set scalar to False.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            scalar = False
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
@@ -2101,7 +2087,7 @@ class LikelihoodModelResults(Results):
             )
 
     def wald_test_terms(
-        self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=None
+        self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=True
     ):
         """
         Compute a sequence of Wald tests for terms over multiple columns
@@ -2124,12 +2110,8 @@ class LikelihoodModelResults(Results):
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
         scalar : bool, optional
-            Flag indicating whether the Wald test statistic should be returned
-            as a scalar float. The current behavior is to return an array.
-            This will switch to a scalar float after 0.14 is released. To
-            get the future behavior now, set scalar to True. To silence
-            the warning and retain the legacy behavior, set scalar to
-            False.
+            Flag indicating whether the Wald test statistic should be
+            returned as a scalar float (the default) or as an array.
 
         Returns
         -------
