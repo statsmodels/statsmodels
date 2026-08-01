@@ -15,13 +15,7 @@ Author: Josef-pktd
 import numpy as np
 from scipy import signal
 import scipy.fftpack as fft
-
-try:
-    from scipy.signal._signaltools import _centered as trim_centered
-except ImportError:
-    # Must be using SciPy <1.8.0 where this function was moved (it's not a
-    # public SciPy function, but we need it here)
-    from scipy.signal.signaltools import _centered as trim_centered
+from scipy.signal._signaltools import _centered as trim_centered
 
 from statsmodels.tools.validation import PandasWrapper, array_like
 
