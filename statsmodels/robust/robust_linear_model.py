@@ -225,7 +225,6 @@ class RLM(base.LikelihoodModel):
         maxiter=50,
         tol=1e-8,
         scale_est="mad",
-        init=None,
         cov="H1",
         update_scale=True,
         conv="dev",
@@ -250,11 +249,6 @@ class RLM(base.LikelihoodModel):
             'H1', 'H2', or 'H3'
             Indicates how the covariance matrix is estimated.  Default is 'H1'.
             See rlm.RLMResults for more information.
-        init : str
-            Specifies method for the initial estimates of the parameters.
-            Default is None, which means that the least squares estimate
-            is used.  Currently it is the only available choice.
-            Deprecated and will be removed. There is no choice here.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
         scale_est : str or HuberScale()
@@ -310,7 +304,7 @@ class RLM(base.LikelihoodModel):
             )
             wls_results = fake_wls.results(start_params)
 
-        if not init and not start_scale:
+        if not start_scale:
             self.scale = self._estimate_scale(wls_results.resid, scale_est)
         elif start_scale:
             self.scale = start_scale
