@@ -294,12 +294,12 @@ def detrend(x, order=1, axis=0):
 
 
 def lagmat(
-        x,
-        maxlag: int | list | NDArray,
-        trim: Literal["forward", "backward", "both", "none"]='forward',
-        original: Literal["ex", "sep", "in"]="ex",
-        use_pandas: bool=False
-)-> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
+    x,
+    maxlag: int | list | NDArray,
+    trim: Literal["forward", "backward", "both", "none"] = "forward",
+    original: Literal["ex", "sep", "in"] = "ex",
+    use_pandas: bool = False,
+) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags
 
@@ -307,11 +307,12 @@ def lagmat(
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : {int, array_like}
+    maxlag : {int, array_like[int]}
         The lags to be applied.
 
         * int : All lags from zero to maxlag are included.
         * array_like : All lags associated to the values in the array.
+            Must contain only positive integers.
     trim : {'forward', 'backward', 'both', 'none', None}
         The trimming method to use.
 
@@ -374,17 +375,22 @@ def lagmat(
         maxlag = int_like(maxlag, "maxlag")
         if maxlag < 0:
             raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
-    elif isinstance(maxlag, list) or isinstance(maxlag, np.ndarray):
-        maxlag_array = array_like(maxlag, "maxlag")
-        if maxlag_array.ndim != 1:
-            raise ValueError(f"`maxlag` must be 1-dimensional. Got shape {maxlag_array.shape}.")
-        if not np.issubdtype(maxlag_array.dtype, np.integer):
-            raise ValueError("All `maxlag` values must be integers.")
-        if not np.all(maxlag_array > 0):
-            raise ValueError(f"All values in `maxlag` must be greater than 0. Got {maxlag_array}.")
-        if len(np.unique(maxlag_array)) != len(maxlag_array):
-            raise ValueError(f"`maxlag` must contain unique values. Got duplicates in {maxlag_array}.")
-        maxlag = [np.int32(lag) for lag in maxlag_array]
+        # Convery to array to simplify and use only array path
+        maxlag = np.arange(1, maxlag, dtype=int)
+    else:
+        maxlag = array_like(maxlag, "maxlag", dtype=int, ndim=1, maxdim=1)
+        if not np.all(maxlag > 0):
+            raise ValueError(
+                f"All values in `maxlag` must be greater than 0. Got {maxlag}."
+            )
+        if len(np.unique(maxlag)) != len(maxlag):
+            from collections import Counter
+
+            bad_lags = [key for key, val in Counter(maxlag).items() if val > 1]
+            raise ValueError(
+                f"`maxlag` must contain unique values. maxlag contains the following "
+                f"duplicate values: {bad_lags}."
+            )
     use_pandas = bool_like(use_pandas, "use_pandas")
     trim = string_like(
         trim,
@@ -408,27 +414,13 @@ def lagmat(
     nobs, nvar = x.shape
     if original in ["ex", "sep"]:
         dropidx = nvar
-    if isinstance(maxlag, int):
-        if maxlag >= nobs:
-            raise ValueError("maxlag should be < nobs")
-        lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
-        for k in range(0, int(maxlag + 1)):
-            lm[
-            maxlag - k: nobs + maxlag - k,
-            nvar * (maxlag - k): nvar * (maxlag - k + 1),
-            ] = x
-    elif isinstance(maxlag, list):
-        laglist = maxlag.copy()
-        len_laglist=len(laglist)
-        maxlag = np.int32(np.amax(maxlag))
-        if maxlag >= nobs:
-            raise ValueError("maximum of maxlag should be < nobs")
-        lm = np.zeros((nobs + maxlag, nvar * (len_laglist + 1)))
-        for i, k in enumerate([0]+laglist):
-            lm[
-            k: nobs + k,
-            nvar * (i): nvar * (i + 1),
-            ] = x
+
+    nlags = maxlag.shape[0]
+    if maxlag.max() >= nobs:
+        raise ValueError("maximum of maxlag should be < nobs")
+    lm = np.zeros((nobs + maxlag.max(), nvar * (nlags + 1)))
+    for i, k in enumerate([0] + maxlag.tolist()):
+        lm[k : nobs + k, nvar * (i) : nvar * (i + 1)] = x
 
     if trim in ("none", "forward"):
         startobs = 0
@@ -454,24 +446,14 @@ def lagmat(
         else:
             x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
-        if isinstance(maxlag, int):
-            for lag in range(maxlag):
-                lag_str = str(lag + 1)
-                columns.extend([str(col) + ".L." + lag_str for col in x_columns])
-            lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
-            lags = lm.iloc[startobs:]
-            if original in ("sep", "ex"):
-                leads = lags[x_columns]
-                lags = lags.drop(x_columns, axis=1)
-        elif isinstance(laglist, list):
-            for lag in laglist:
-                lag_str = str(lag)
-                columns.extend([str(col) + ".L." + lag_str for col in x_columns])
-            lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
-            lags = lm.iloc[startobs:]
-            if original in ("sep", "ex"):
-                leads = lags[x_columns]
-                lags = lags.drop(x_columns, axis=1)
+        for lag in maxlag:
+            lag_str = str(lag)
+            columns.extend([str(col) + ".L." + lag_str for col in x_columns])
+        lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
+        lags = lm.iloc[startobs:]
+        if original in ("sep", "ex"):
+            leads = lags[x_columns]
+            lags = lags.drop(x_columns, axis=1)
     else:
         lags = lm[startobs:stopobs, dropidx:]
         if original == "sep":
