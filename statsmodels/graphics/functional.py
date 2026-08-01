@@ -10,14 +10,8 @@ from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 
-try:
-    from scipy.optimize import brute, differential_evolution, fmin
+from scipy.optimize import brute, differential_evolution, fmin
 
-    have_de_optim = True
-except ImportError:
-    from scipy.optimize import brute, fmin
-
-    have_de_optim = False
 import itertools
 from multiprocessing import Pool
 
@@ -139,7 +133,7 @@ def _min_max_band(args):
         ``(max, min)`` curve values at `idx`
     """
     idx, (band, pca, bounds, ks_gaussian, use_brute, rng) = args
-    if have_de_optim and not use_brute:
+    if not use_brute:
         max_ = differential_evolution(
             _curve_constrained,
             bounds=bounds,
@@ -402,7 +396,7 @@ def hdrboxplot(
         ]
 
     # Find mean, outliers curves
-    if have_de_optim and not use_brute:
+    if not use_brute:
         median = differential_evolution(
             lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=rng
         ).x
