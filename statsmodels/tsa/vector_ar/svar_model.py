@@ -12,7 +12,6 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools._decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
@@ -60,8 +59,6 @@ class SVAR(tsbase.TimeSeriesModel):
     ----------
     Hamilton (1994) Time Series Analysis
     """
-
-    y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
     def __init__(
         self, endog, svar_type, dates=None, freq=None, A=None, B=None, missing="none"
