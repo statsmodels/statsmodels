@@ -53,26 +53,6 @@ if TYPE_CHECKING:
 
 __all__ = ["AR", "AutoReg"]
 
-AR_DEPRECATION_WARN = """
-statsmodels.tsa.AR has been deprecated in favor of statsmodels.tsa.AutoReg and
-statsmodels.tsa.SARIMAX.
-
-AutoReg adds the ability to specify exogenous variables, include time trends,
-and add seasonal dummies. The AutoReg API differs from AR since the model is
-treated as immutable, and so the entire specification including the lag
-length must be specified when creating the model. This change is too
-substantial to incorporate into the existing AR api. The function
-ar_select_order performs lag length selection for AutoReg models.
-
-AutoReg only estimates parameters using conditional MLE (OLS). Use SARIMAX to
-estimate ARX and related models using full MLE via the Kalman Filter.
-
-To silence this warning and continue using AR until it is removed, use:
-
-import warnings
-warnings.filterwarnings('ignore', 'statsmodels.tsa.ar_model.AR', FutureWarning)
-"""
-
 REPEATED_FIT_ERROR = """
 Model has been fit using maxlag={0}, method={1}, ic={2}, trend={3}. These
 cannot be changed in subsequent calls to `fit`. Instead, use a new instance of
