@@ -6,8 +6,6 @@ License: Simplified-BSD
 """
 from statsmodels.compat.pandas import deprecate_kwarg
 
-import warnings
-
 import numpy as np
 
 from statsmodels.tools.rng_qrng import check_random_state
@@ -583,11 +581,9 @@ class SimulationSmoothResults:
     def simulate(
         self,
         simulation_output=-1,
-        disturbance_variates=None,
         measurement_disturbance_variates=None,
         state_disturbance_variates=None,
         initial_state_variates=None,
-        pretransformed=None,
         pretransformed_measurement_disturbance_variates=None,
         pretransformed_state_disturbance_variates=None,
         pretransformed_initial_state_variates=False,
@@ -651,67 +647,7 @@ class SimulationSmoothResults:
 
                random_state has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
-        disturbance_variates : bool, optional
-            Deprecated, please use pretransformed_measurement_shocks and
-            pretransformed_state_shocks instead.
-
-            .. deprecated:: 0.14.0
-
-               Use ``measurement_disturbance_variates`` and
-               ``state_disturbance_variates`` as replacements.
-
-        pretransformed : bool, optional
-            Deprecated, please use pretransformed_measurement_shocks and
-            pretransformed_state_shocks instead.
-
-            .. deprecated:: 0.14.0
-
-               Use ``pretransformed_measurement_disturbance_variates`` and
-               ``pretransformed_state_disturbance_variates`` as replacements.
         """
-        # Handle deprecated arguments
-        if disturbance_variates is not None:
-            msg = (
-                "`disturbance_variates` keyword is deprecated, use"
-                " `measurement_disturbance_variates` and"
-                " `state_disturbance_variates` instead."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if (
-                measurement_disturbance_variates is not None
-                or state_disturbance_variates is not None
-            ):
-                raise ValueError(
-                    "Cannot use `disturbance_variates` in"
-                    " combination with "
-                    " `measurement_disturbance_variates` or"
-                    " `state_disturbance_variates`."
-                )
-            if disturbance_variates is not None:
-                disturbance_variates = disturbance_variates.ravel()
-                n_mds = self.model.nobs * self.model.k_endog
-                measurement_disturbance_variates = disturbance_variates[:n_mds]
-                state_disturbance_variates = disturbance_variates[n_mds:]
-        if pretransformed is not None:
-            msg = (
-                "`pretransformed` keyword is deprecated, use"
-                " `pretransformed_measurement_disturbance_variates` and"
-                " `pretransformed_state_disturbance_variates` instead."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if (
-                pretransformed_measurement_disturbance_variates is not None
-                or pretransformed_state_disturbance_variates is not None
-            ):
-                raise ValueError(
-                    "Cannot use `pretransformed` in combination with "
-                    " `pretransformed_measurement_disturbance_variates` or"
-                    " `pretransformed_state_disturbance_variates`."
-                )
-            if pretransformed is not None:
-                pretransformed_measurement_disturbance_variates = pretransformed
-                pretransformed_state_disturbance_variates = pretransformed
-
         if pretransformed_measurement_disturbance_variates is None:
             pretransformed_measurement_disturbance_variates = False
         if pretransformed_state_disturbance_variates is None:
