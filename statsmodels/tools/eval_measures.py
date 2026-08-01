@@ -13,7 +13,6 @@ import numpy as np
 from statsmodels.tools.validation import array_like
 
 
-
 def _nan_reduction_result(arr, axis):
     """Explicit nan with the shape a reduction of `arr` over `axis` would give.
 
