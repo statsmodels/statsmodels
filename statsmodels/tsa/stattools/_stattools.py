@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
@@ -380,7 +379,6 @@ def adfuller(
         return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     """
     Estimate autocovariances
@@ -825,7 +823,6 @@ def pacf_burg(
     return pacf, sigma2
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def pacf_ols(
     x: ArrayLike1D,
     nlags: int | None = None,
@@ -1064,7 +1061,6 @@ def pacf(
         return ret
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def ccovf(x, y, adjusted=True, demean=True, fft=True):
     """
     Calculate the cross-covariance between two series
@@ -1114,7 +1110,6 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     return correlate(xo, yo, "full", method=method)[m - 1 :] / d
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     """
     The cross-correlation function
