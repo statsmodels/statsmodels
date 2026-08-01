@@ -648,11 +648,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
         if date_index:
-            try:
-                is_monotonic = index.is_monotonic_increasing
-            except AttributeError:
-                # Remove after pandas 1.5 is minimum
-                is_monotonic = index.is_monotonic
+            is_monotonic = index.is_monotonic_increasing
         else:
             is_monotonic = None
 
