@@ -169,15 +169,15 @@ def multipletests(
         pvals = np.take(pvals, sortind)
 
     ntests = len(pvals)
-    if ntests == 0:
-        # Nothing to correct. Skip the division by zero below and let the
+    if ntests > 0:
+        alphacSidak = 1 - np.power((1.0 - alphaf), 1.0 / ntests)
+        alphacBonf = alphaf / float(ntests)
+    else:
+        # Nothing to correct. Skip the division by zero above and let the
         # per-method branches operate on the empty array, which produces empty
         # results. The corrected alphas are undefined without any tests.
         alphacSidak = np.nan
         alphacBonf = np.nan
-    else:
-        alphacSidak = 1 - np.power((1.0 - alphaf), 1.0 / ntests)
-        alphacBonf = alphaf / float(ntests)
     if method.lower() in ["b", "bonf", "bonferroni"]:
         reject = pvals <= alphacBonf
         pvals_corrected = pvals * float(ntests)
