@@ -3,17 +3,16 @@
 from statsmodels.compat.numpy import NP_LT_123
 from statsmodels.compat.pandas import deprecate_kwarg
 
+import itertools
+from multiprocessing import Pool
+
 import numpy as np
+from scipy.optimize import brute, differential_evolution, fmin
 from scipy.special import comb
 
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-from scipy.optimize import brute, differential_evolution, fmin
-
-import itertools
-from multiprocessing import Pool
 
 from . import utils
 

@@ -164,6 +164,7 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
 
+
 class ResultsGeneric:
 
     def __init__(self, **kwds):

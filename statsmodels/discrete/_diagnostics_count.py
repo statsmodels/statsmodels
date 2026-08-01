@@ -249,7 +249,7 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all"):  # noqa: PT019
+def test_poisson_dispersion(results, method="all"):
     """
     Score/LM type tests for Poisson variance assumptions
 
