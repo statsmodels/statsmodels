@@ -138,14 +138,8 @@ class DeterministicTerm(ABC):
             next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
             return pd.date_range(next_obs, freq=index.freq, periods=steps)
         elif isinstance(index, pd.RangeIndex):
-            assert isinstance(index, pd.RangeIndex)
-            try:
-                step = index.step
-                start = index.stop
-            except AttributeError:
-                # TODO: Remove after pandas min ver is 1.0.0+
-                step = index[-1] - index[-2] if len(index) > 1 else 1
-                start = index[-1] + step
+            step = index.step
+            start = index.stop
             stop = start + step * steps
             return pd.RangeIndex(start, stop, step=step)
         elif is_int_index(index) and np.all(np.diff(index) == 1):
