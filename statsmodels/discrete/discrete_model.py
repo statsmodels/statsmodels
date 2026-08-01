@@ -6079,8 +6079,8 @@ class MultinomialResults(DiscreteResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + self.model.J - 1)
 
-    def conf_int(self, alpha=0.05, cols=None):
-        confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+    def conf_int(self, alpha=0.05):
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
 
     def get_prediction(self):

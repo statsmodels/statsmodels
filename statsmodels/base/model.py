@@ -2317,7 +2317,7 @@ class LikelihoodModelResults(Results):
 
         return nl
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05):
         """
         Construct confidence interval for the fitted parameters
 
@@ -2326,15 +2326,6 @@ class LikelihoodModelResults(Results):
         alpha : float, optional
             The significance level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-            Specifies which confidence intervals to return.
-
-        .. deprecated:: 0.13
-
-           cols is deprecated and will be removed after 0.14 is released.
-           cols only works when inputs are NumPy arrays and will fail
-           when using pandas Series or DataFrames as input. You can
-           subset the confidence intervals using slices.
 
         Returns
         -------
@@ -2365,7 +2356,7 @@ class LikelihoodModelResults(Results):
                [      -0.56251721,        0.460309  ],
                [     798.7875153 ,     2859.51541392]])
 
-        >>> results.conf_int(cols=(2,3))
+        >>> results.conf_int()[2:4]
         array([[-0.1115811 ,  0.03994274],
                [-3.12506664, -0.91539297]])
         """
@@ -2382,19 +2373,6 @@ class LikelihoodModelResults(Results):
         params = self.params
         lower = params - q * bse
         upper = params + q * bse
-        if cols is not None:
-            warnings.warn(
-                "cols is deprecated and will be removed after 0.14 is "
-                "released. cols only works when inputs are NumPy arrays and "
-                "will fail when using pandas Series or DataFrames as input. "
-                "Subsets of confidence intervals can be selected using slices "
-                "of the full confidence interval array.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            cols = np.asarray(cols)
-            lower = lower[cols]
-            upper = upper[cols]
         return np.asarray(lzip(lower, upper))
 
     def save(self, fname, remove_data=False):

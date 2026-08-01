@@ -1754,7 +1754,7 @@ class RegressionResults(base.LikelihoodModelResults):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05):
         """
         Compute the confidence interval of the fitted parameters.
 
@@ -1763,8 +1763,6 @@ class RegressionResults(base.LikelihoodModelResults):
         alpha : float, optional
             The `alpha` level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-            Columns to include in returned confidence intervals.
 
         Returns
         -------
@@ -1777,7 +1775,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         """
         # keep method for docstring for now
-        ci = super().conf_int(alpha=alpha, cols=cols)
+        ci = super().conf_int(alpha=alpha)
         return ci
 
     @cache_readonly

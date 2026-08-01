@@ -82,17 +82,6 @@ class CheckRegressionResults:
                 rtol=10**-self.decimal_confidenceintervals,
             )
 
-    decimal_conf_int_subset = DECIMAL_4
-
-    def test_conf_int_subset(self):
-        if len(self.res1.params) > 1:
-            with pytest.warns(FutureWarning, match="cols is"):
-                ci1 = self.res1.conf_int(cols=(1, 2))
-            ci2 = self.res1.conf_int()[1:3]
-            assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
-        else:
-            pass
-
     decimal_scale = DECIMAL_4
 
     def test_scale(self):

@@ -677,8 +677,8 @@ class MultivariateLSResults(LikelihoodModelResults):
             results, self.model.endog_names, self.model.exog_names
         )
 
-    def conf_int(self, alpha=0.05, cols=None):
-        confint = super().conf_int(alpha=alpha, cols=cols)
+    def conf_int(self, alpha=0.05):
+        confint = super().conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
 
     # copied from discrete
