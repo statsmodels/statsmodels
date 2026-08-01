@@ -1027,7 +1027,7 @@ class GLM(base.LikelihoodModel):
         return power
 
     def predict(
-        self, params, exog=None, exposure=None, offset=None, which="mean", linear=None
+        self, params, exog=None, exposure=None, offset=None, which="mean"
     ):
         """
         Return predicted values for a design matrix
@@ -1052,13 +1052,6 @@ class GLM(base.LikelihoodModel):
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
 
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-
         Returns
         -------
         An array of fitted values
@@ -1072,12 +1065,6 @@ class GLM(base.LikelihoodModel):
 
         Exposure values must be strictly positive.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # Use fit offset if appropriate
         if offset is None and exog is None and self._has_offset:
             offset = self.offset
@@ -2270,7 +2257,6 @@ class GLMResults(base.LikelihoodModelResults):
         offset=None,
         transform=True,
         which=None,
-        linear=None,
         average=False,
         agg_weights=None,
         row_labels=None,
@@ -2298,7 +2284,8 @@ class GLMResults(base.LikelihoodModelResults):
             first.
         which : 'mean', 'linear', 'var'(optional)
             Statistic to predict. Default is 'mean'.
-            If which is None, then the deprecated keyword "linear" applies.
+            If which is None, then the pre-0.14 backwards compatible
+            prediction results class is returned.
             If which is not None, then a generic Prediction results class will
             be returned. Some options are only available if which is not None.
             See notes.
@@ -2309,14 +2296,6 @@ class GLMResults(base.LikelihoodModelResults):
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
 
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If which is None, then the linear keyword is used, otherwise it will
-            be ignored.
-            If True and which is None, the linear predicted values are returned.
-            If False or None, then the statistic specified by ``which`` will be
-            returned.
         average : bool
             Keyword is only used if ``which`` is not None.
             If average is True, then the mean prediction is computed, that is,

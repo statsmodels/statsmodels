@@ -708,11 +708,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     def _get_prediction(self):
         # TODO: do we cache this or does it need to be a method
         # we only need unchanging parts, alpha for confint could change
-        with warnings.catch_warnings():
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.filterwarnings("ignore", message=msg, category=FutureWarning)
-            pred = self.results.get_prediction()
-        return pred
+        return self.results.get_prediction()
 
     @cache_readonly
     def d_fittedvalues(self):
