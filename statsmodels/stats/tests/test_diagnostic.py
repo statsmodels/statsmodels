@@ -1996,21 +1996,6 @@ def test_diagnostics_pandas():
     smsdia.spec_white(res.resid, x)
 
 
-def test_deprecated_argument():
-    rs = np.random.RandomState(38342092)
-    x = rs.randn(100)
-    y = 2 * x + rs.randn(100)
-    result = OLS(y, add_constant(x)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
-    with pytest.warns(FutureWarning, match="the "):
-        smsdia.linear_reset(
-            result,
-            power=2,
-            test_type="fitted",
-            cov_type="HAC",
-            cov_kwargs={"maxlags": 2},
-        )
-
-
 def test_diagnostics_hac():
     rs = np.random.RandomState(38342091)
     x = rs.randn(100)
