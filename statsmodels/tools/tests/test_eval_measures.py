@@ -137,3 +137,25 @@ def test_iqr_axis():
     assert_almost_equal(ax_1, np.array(ax_1_direct))
 
     assert any(ax_0 != ax_1)
+
+
+@pytest.mark.parametrize(
+    "measure",
+    [bias, iqr, maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, vare],
+)
+def test_measures_empty_input(measure):
+    # maxabs and iqr used to raise on an empty input, np.max because it has no
+    # identity element and iqr because it indexes into the sorted differences,
+    # while every other measure here returned nan.
+    empty = np.empty(0)
+
+    assert np.isnan(measure(empty, empty))
+
+
+def test_maxabs_empty_keeps_axis_shape():
+    # the reduced axis is dropped and the remaining shape is kept, as it is
+    # for the measures built on np.mean
+    empty = np.empty((0, 3))
+
+    assert_equal(maxabs(empty, empty), np.full(3, np.nan))
+

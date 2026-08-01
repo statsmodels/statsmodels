@@ -131,7 +131,12 @@ def maxabs(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.max(np.abs(x1 - x2), axis=axis)
+    absdiff = np.abs(x1 - x2)
+    if absdiff.size == 0:
+        # np.max has no identity element for an empty input. Return nan, as
+        # the other measures here do via np.mean / np.median.
+        return np.mean(absdiff, axis=axis)
+    return np.max(absdiff, axis=axis)
 
 
 def meanabs(x1, x2, axis=0):
@@ -336,13 +341,16 @@ def iqr(x1, x2, axis=0):
 
     """
     x1 = array_like(x1, "x1", dtype=None, ndim=None)
-    x2 = array_like(x2, "x1", dtype=None, ndim=None)
+    x2 = array_like(x2, "x2", dtype=None, ndim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()
         axis = 0
     xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
+    if nobs == 0:
+        # no observations to take quantiles of; match the other measures
+        return np.mean(xdiff, axis=axis)
     idx = np.round((nobs - 1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
