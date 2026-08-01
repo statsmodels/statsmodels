@@ -152,10 +152,14 @@ def test_measures_empty_input(measure):
     assert np.isnan(measure(empty, empty))
 
 
-def test_maxabs_empty_keeps_axis_shape():
-    # the reduced axis is dropped and the remaining shape is kept, as it is
-    # for the measures built on np.mean
+@pytest.mark.parametrize(
+    "measure",
+    [bias, iqr, maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, vare],
+)
+def test_measures_empty_input_keeps_axis_shape(measure):
+    # reducing over an empty axis drops that axis and keeps the rest, so a
+    # (0, 3) input reduces to three nans rather than a scalar
     empty = np.empty((0, 3))
 
-    assert_equal(maxabs(empty, empty), np.full(3, np.nan))
+    assert_equal(measure(empty, empty), np.full(3, np.nan))
 

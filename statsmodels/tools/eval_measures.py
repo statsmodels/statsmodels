@@ -13,6 +13,20 @@ import numpy as np
 from statsmodels.tools.validation import array_like
 
 
+
+def _nan_reduction_result(arr, axis):
+    """Explicit nan with the shape a reduction of `arr` over `axis` would give.
+
+    Used for empty inputs, where the underlying numpy reduction has no
+    identity element. Returns a scalar when the reduction collapses the whole
+    array, otherwise an array of nan with the remaining shape.
+    """
+    if axis is None or arr.ndim <= 1:
+        return np.nan
+    axis = axis % arr.ndim
+    return np.full(arr.shape[:axis] + arr.shape[axis + 1 :], np.nan)
+
+
 def mse(x1, x2, axis=0):
     """
     Mean squared error
@@ -133,9 +147,8 @@ def maxabs(x1, x2, axis=0):
     x2 = np.asanyarray(x2)
     absdiff = np.abs(x1 - x2)
     if absdiff.size == 0:
-        # np.max has no identity element for an empty input. Return nan, as
-        # the other measures here do via np.mean / np.median.
-        return np.mean(absdiff, axis=axis)
+        # np.max has no identity element for an empty input
+        return _nan_reduction_result(absdiff, axis)
     return np.max(absdiff, axis=axis)
 
 
@@ -349,8 +362,8 @@ def iqr(x1, x2, axis=0):
     xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
     if nobs == 0:
-        # no observations to take quantiles of; match the other measures
-        return np.mean(xdiff, axis=axis)
+        # no observations to take quantiles of
+        return _nan_reduction_result(xdiff, axis)
     idx = np.round((nobs - 1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
