@@ -1536,17 +1536,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
     # First link here is useful
     # http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
 
-    method = string_like(method, "method", options=("adjusted", "unbiased", "mle"))
-    if method == "unbiased":
-        warnings.warn(
-            "unbiased is deprecated in factor of adjusted to reflect that the "
-            "term is adjusting the sample size used in the autocovariance "
-            "calculation rather than estimating an unbiased autocovariance. "
-            "After release 0.13, using 'unbiased' will raise.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        method = "adjusted"
+    method = string_like(method, "method", options=("adjusted", "mle"))
 
     if method not in ("adjusted", "mle"):
         raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
