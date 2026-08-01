@@ -43,7 +43,6 @@ __all__ = [
     "__version__",
     "__version_info__",
     "add_constant",
-    "categorical",
     "cov_struct",
     "datasets",
     "distributions",
@@ -139,7 +138,7 @@ from .regression.recursive_ls import RecursiveLS
 from .robust.robust_linear_model import RLM
 from .stats import api as stats
 from .tools.print_version import show_versions
-from .tools.tools import add_constant, categorical
+from .tools.tools import add_constant
 from .tools.web import webdoc
 from .tsa import api as tsa
 
