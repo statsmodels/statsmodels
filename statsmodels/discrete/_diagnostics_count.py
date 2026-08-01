@@ -249,7 +249,7 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
+def test_poisson_dispersion(results, method="all"):  # noqa: PT019
     """
     Score/LM type tests for Poisson variance assumptions
 
@@ -269,9 +269,6 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
         with family Poisson.
     method : str
         Not used yet. Currently results for all methods are returned.
-    _old : bool
-        Temporary keyword for backwards compatibility, will be removed
-        in future version of statsmodels.
 
     Returns
     -------
@@ -342,18 +339,14 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     description.append(["CT nb1 HC3", "mu (1 + a)"])
 
     results_all = np.array(results_all)
-    if _old:
-        # for backwards compatibility in 0.14, remove in later versions
-        return results_all, description
-    else:
-        res = DispersionResults(
-            statistic=results_all[:, 0],
-            pvalue=results_all[:, 1],
-            method=[i[0] for i in description],
-            alternative=[i[1] for i in description],
-            name="Poisson Dispersion Test",
-        )
-        return res
+    res = DispersionResults(
+        statistic=results_all[:, 0],
+        pvalue=results_all[:, 1],
+        method=[i[0] for i in description],
+        alternative=[i[1] for i in description],
+        name="Poisson Dispersion Test",
+    )
+    return res
 
 
 def _test_poisson_dispersion_generic(
