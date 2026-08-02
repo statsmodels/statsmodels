@@ -460,6 +460,41 @@ class TestLagmat:
         with pytest.raises(ValueError, match="Columns names must be"):
             stattools.lagmat(df, maxlag=2, use_pandas=True)
 
+    def test_lagmat_array_equiv(self):
+        x = np.arange(100, dtype=float)
+        scalar = stattools.lagmat(x, 5)
+        array = stattools.lagmat(x, [1, 2, 3, 4, 5])
+        assert_equal(scalar, array)
+
+    def test_lagmat_array_exception(self):
+        with pytest.raises(ValueError, match="All values in `maxlag` must be >=  0"):
+            stattools.lagmat(np.arange(100, dtype=float), [-1])
+        with pytest.raises(ValueError, match="`maxlag` must contain unique values"):
+            stattools.lagmat(np.arange(100, dtype=float), [1, 2, 3, 3])
+
+    def test_lagmat_array_dropped(self):
+        x = np.arange(100, dtype=float)
+        scalar = stattools.lagmat(x, 5)
+        array = stattools.lagmat(x, [1, 3, 5])
+        assert array.shape[0] == (scalar.shape[0])
+        assert array.shape[1] == 3
+        assert array.shape[1] < scalar.shape[1]
+        assert_equal(scalar[:, [0, 2, 4]], array)
+
+    @pytest.mark.parametrize("original", ["in", "ex", "sep"])
+    def test_lagmat_0(self, original):
+        x = np.arange(100, dtype=float)
+        scalar = stattools.lagmat(x, 0, original=original)
+        array = stattools.lagmat(x, [0], original=original)
+        if original == "sep":
+            scalar, x_scalar = scalar
+            array, x_array = array
+            assert x_scalar.shape == x_array.shape
+            assert x_scalar.shape == (x.shape[0], 1)
+        assert array.shape == scalar.shape
+        expected_shape = (x.shape[0], 1) if original == "in" else (x.shape[0], 0)
+        assert array.shape == expected_shape
+
 
 ANNUAL = "A" if PD_LT_2_2_0 else YEAR_END
 freqs = [
