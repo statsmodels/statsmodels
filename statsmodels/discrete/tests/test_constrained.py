@@ -19,7 +19,6 @@ from statsmodels.discrete.discrete_model import Logit, Poisson
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.tools.tools import add_constant
 
 from .results import (
@@ -31,9 +30,6 @@ spector_data = datasets.spector.load()
 spector_data.endog = np.asarray(spector_data.endog)
 spector_data.exog = np.asarray(spector_data.exog)
 spector_data.exog = add_constant(spector_data.exog, prepend=False)
-
-
-DEBUG = False
 
 ss = """\
 agecat	smokes	deaths	pyears
@@ -117,11 +113,6 @@ class CheckPoissonConstrainedMixin:
 
             if hasattr(res2, "ll_0"):
                 assert_allclose(res1.llnull, res2.ll_0, rtol=1e-6)
-            elif DEBUG:
-                import warnings
-
-                message = f"test: ll_0 not available, llnull={res1.llnull:6.4F}"
-                warnings.warn(message, InvalidTestWarning, stacklevel=2)
 
         else:
             pytest.skip("not available yet")

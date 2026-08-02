@@ -58,7 +58,6 @@ from statsmodels.tools.sm_exceptions import (
     iteration_limit_doc,
 )
 
-DEBUG = False
 GAUSSIAN_FAMILY = families.Gaussian()
 
 
@@ -251,8 +250,6 @@ class AdditiveModel:
             tmp2 = self.smoothers[i].predict()  # fittedvalues of previous smooth/fit
             self.results.offset[i] = -(tmp2 * self.weights).sum() / self.weights.sum()
             # self.offset used in smoothed
-            if DEBUG:
-                print(self.smoothers[i].params)
             mu += tmp2 - tmp
         # change setting offset here: tests still pass, offset equal to constant
         # in component ??? what's the effect of offset
@@ -275,9 +272,6 @@ class AdditiveModel:
 
         """
         self.iter += 1  # moved here to always count, not necessary
-        if DEBUG:
-            print(self.iter, self.results.Y.shape)
-            print(self.results.predict(self.exog).shape, self.weights.shape)
         curdev = (
             ((self.results.Y - self.results.predict(self.exog)) ** 2) * self.weights
         ).sum()
@@ -376,8 +370,6 @@ class Model(GLM, AdditiveModel):
             self.weights = weights
             print("nanweights2")
         self.weights = weights
-        if DEBUG:
-            print("deriv isnan", np.isnan(self.family.link.deriv(_results.mu)).any())
 
         # Z = _results.predict(self.exog) + \
         Z = _results.predict(self.exog) + self.family.link.deriv(_results.mu) * (

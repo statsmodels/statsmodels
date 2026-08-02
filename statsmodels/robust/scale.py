@@ -734,9 +734,6 @@ def scale_tau(
     return mean, np.sqrt(var / cf)
 
 
-debug = 0
-
-
 def _scale_iter(
     data,
     scale0="mad",
@@ -798,8 +795,6 @@ def _scale_iter(
             scale2 = (weights_scale * x**2).sum() / (nobs - ddof)
             scale2 /= scale_bias
             scale = np.sqrt(scale2)
-        if debug:
-            print(scale)
         if np.allclose(scale, scale0, atol=atol, rtol=rtol):
             break
         scale0 = scale
