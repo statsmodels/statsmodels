@@ -5,9 +5,6 @@ import pytest
 import statsmodels.api as sm
 from statsmodels.sandbox.predict_functional import predict_functional
 
-# If true, the output is written to a multi-page pdf file.
-pdf_output = False
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -19,22 +16,6 @@ def pctl(q):
 
 
 class TestPredFunc:
-
-    @classmethod
-    def setup_class(cls):
-        if pdf_output:
-            from matplotlib.backends.backend_pdf import PdfPages
-
-            cls.pdf = PdfPages("predict_functional.pdf")
-
-    @classmethod
-    def teardown_class(cls):
-        if pdf_output:
-            cls.pdf.close()
-
-    def close_or_save(self, fig):
-        if pdf_output:
-            self.pdf.savefig(fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -79,7 +60,6 @@ class TestPredFunc:
         plt.xlabel("Focus variable", size=15)
         plt.ylabel("Fitted mean", size=15)
         plt.title("Linear model prediction")
-        self.close_or_save(fig)
 
         plt.clf()
         fig = plt.figure()
@@ -93,7 +73,6 @@ class TestPredFunc:
         plt.xlabel("Focus variable", size=15)
         plt.ylabel("Fitted mean", size=15)
         plt.title("Linear model prediction")
-        self.close_or_save(fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -130,7 +109,6 @@ class TestPredFunc:
         plt.xlabel("Focus variable", size=15)
         plt.ylabel("Mean contrast", size=15)
         plt.title("Linear model contrast")
-        self.close_or_save(fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -168,7 +146,6 @@ class TestPredFunc:
         plt.xlabel("Focus variable", size=15)
         plt.ylabel("Linear predictor contrast", size=15)
         plt.title("Poisson regression contrast")
-        self.close_or_save(fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -243,8 +220,6 @@ class TestPredFunc:
                     plt.ylabel("Fitted mean", size=15)
                 plt.title(f"{fam_name.capitalize()} family prediction")
 
-                self.close_or_save(fig)
-
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_glm_formula(self, close_figures):
@@ -299,7 +274,6 @@ class TestPredFunc:
             else:
                 plt.ylabel("Fitted probability", size=15)
             plt.title("Binomial GLM prediction")
-            self.close_or_save(fig)
 
             plt.clf()
             fig = plt.figure()
@@ -316,7 +290,6 @@ class TestPredFunc:
             else:
                 plt.ylabel("Fitted probability", size=15)
             plt.title("Binomial GLM prediction")
-            self.close_or_save(fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -352,7 +325,6 @@ class TestPredFunc:
         plt.xlabel("Focus variable", size=15)
         plt.ylabel("Fitted mean", size=15)
         plt.title("Linear model prediction")
-        self.close_or_save(fig)
 
         plt.clf()
         fig = plt.figure()
@@ -366,4 +338,3 @@ class TestPredFunc:
         plt.xlabel("Focus variable", size=15)
         plt.ylabel("Fitted mean", size=15)
         plt.title("Linear model prediction")
-        self.close_or_save(fig)

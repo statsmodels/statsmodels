@@ -24,20 +24,6 @@ try:
 except ImportError:
     pass
 
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_regressionplots.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
 
 class TestPlot:
 
@@ -76,8 +62,6 @@ class TestPlot:
         np.testing.assert_equal(x0, px1)
         np.testing.assert_equal(yf, px2)
 
-        close_or_save(pdf, fig)
-
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
@@ -93,8 +77,6 @@ class TestPlot:
         fig = plot_ccpr_grid(res, exog_idx=[0, 1])
         for ax in fig.axes:
             add_lowess(ax)
-
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -189,7 +171,6 @@ class TestABLine:
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:, 1], self.y)
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -198,7 +179,6 @@ class TestABLine:
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:, 1], self.y)
         fig = abline_plot(model_results=self.mod, ax=ax)
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -206,7 +186,6 @@ class TestABLine:
         mod = self.mod
         intercept, slope = mod.params
         fig = abline_plot(intercept=intercept, slope=slope)
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -217,7 +196,6 @@ class TestABLine:
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:, 1], self.y)
         fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -231,7 +209,6 @@ class TestABLine:
         abline_plot(intercept=intercept, slope=2 * slope, ax=ax)
         lines = ax.get_lines()
         lines.pop(0).remove()
-        close_or_save(pdf, fig)
 
 
 class TestABLinePandas(TestABLine):
@@ -265,7 +242,6 @@ class TestAddedVariablePlot:
         fig = plot_added_variable(results, 0)
         ax = fig.get_axes()[0]
         ax.set_title("Added variable plot (OLS)")
-        close_or_save(pdf, fig)
         close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -321,7 +297,6 @@ class TestAddedVariablePlot:
                         ti += weight_str + "\n"
                         ti += f"Using '{resid_type}' residuals"
                         ax.set_title(ti)
-                        close_or_save(pdf, fig)
                         close_figures()
 
 
@@ -362,7 +337,6 @@ class TestPartialResidualPlot:
                 if j == 1:
                     ti += " (called as method)"
                 ax.set_title(ti + "\nPoisson regression\n" + effect_str)
-                close_or_save(pdf, fig)
 
 
 class TestCERESPlot:
@@ -402,7 +376,6 @@ class TestCERESPlot:
                 if j == 1:
                     ti += " (called as method)"
                 ax.set_title(ti + "\nPoisson regression\n" + effect_str)
-                close_or_save(pdf, fig)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -447,4 +420,3 @@ def test_add_ellipse_and_lowess(close_figures):
     fig_out2 = add_lowess(ax, exog=x, endog=y)
     assert_equal(isinstance(fig_out2, plt.Figure), True)
 
-    close_or_save(pdf, fig)

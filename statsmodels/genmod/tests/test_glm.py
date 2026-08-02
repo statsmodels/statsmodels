@@ -45,25 +45,6 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_glm.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
-
-def teardown_module():
-    if pdf_output:
-        pdf.close()
-
 
 @pytest.fixture(scope="module")
 def iris():
@@ -1275,13 +1256,10 @@ def test_plots(close_figures):
     for j in 0, 1:
         fig = result.plot_added_variable(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_partial_residuals(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_ceres_residuals(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
 
     # formula interface
     data = pd.DataFrame({"y": endog, "x1": exog[:, 0], "x2": exog[:, 1]})
@@ -1291,13 +1269,10 @@ def test_plots(close_figures):
         xname = ["x1", "x2"][j]
         fig = result.plot_added_variable(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_partial_residuals(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_ceres_residuals(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
 
 
 def gen_endog(lin_pred, family_class, link, binom_version=0):

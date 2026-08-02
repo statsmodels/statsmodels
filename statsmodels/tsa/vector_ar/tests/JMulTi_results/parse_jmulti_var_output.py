@@ -6,23 +6,7 @@ import numpy as np
 
 from .parse_jmulti_vecm_output import stringify_var_names, sublists
 
-debug_mode = False
-
 here = Path(os.path.realpath(__file__)).parent
-
-
-def print_debug_output(results, dt):
-    print("\n\n\nDETERMINISTIC TERMS: " + dt)
-    coefs = results["est"]["Lagged endogenous term"]
-    print("coefs:")
-    print(str(type(coefs)) + str(coefs.shape))
-    print(coefs)
-    print("se: ")
-    print(results["se"]["Lagged endogenous term"])
-    print("t: ")
-    print(results["t"]["Lagged endogenous term"])
-    print("p: ")
-    print(results["p"]["Lagged endogenous term"])
 
 
 def dt_s_tup_to_string(dt_s_tup):
@@ -245,8 +229,6 @@ def load_results_jmulti(dataset, dt_s_list):
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
         var_combs = sublists(vn, 1, len(vn)-1)
-        if debug_mode:
-            print("\n\n\n" + dt_string)
         for causing in var_combs:
             caused = tuple(name for name in vn if name not in causing)
             causality_file = dataset.__str__() + "_" + source + "_" \
@@ -406,10 +388,6 @@ def load_results_jmulti(dataset, dt_s_list):
                         float(line[len(p_start):])
                     break
         whiteness_file.close()
-
-        # ---------------------------------------------------------------------
-        if debug_mode:
-            print_debug_output(results, dt_string)
 
         results_dict_per_det_terms[dt_s] = results
 
