@@ -624,6 +624,10 @@ def block_jackknife(x, statistic, n_blocks=-1):
     )
     se = np.sqrt(variance)
 
+    if theta_full.shape == ():
+        theta_jack = float(theta_jack)
+        se = float(se)
+
     return theta_jack, se
 
 
