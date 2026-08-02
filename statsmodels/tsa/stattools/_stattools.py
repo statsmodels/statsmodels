@@ -559,6 +559,12 @@ def block_jackknife(x, statistic, n_blocks=-1):
     boundaries; overlapping/moving-block schemes (Kunsch 1989) would
     reduce this. Both are natural extensions but out of scope here.
 
+    To avoid O(n_blocks * n) cumulative memory allocation, a single
+    internal buffer is allocated once and reused across all delete-block
+    computations. As a result, ``statistic`` must not modify the array
+    it receives in place; doing so will silently corrupt results in
+    later iterations.
+
     References
     ----------
     .. [1] Quenouille, M.H. (1949). "Approximate tests of correlation in
@@ -596,12 +602,19 @@ def block_jackknife(x, statistic, n_blocks=-1):
 
     theta_full = np.asarray(statistic(x))
 
+    max_reduced_len = n - block_sizes.min()
+    buffer = np.empty(max_reduced_len, dtype=float)
+
     theta_delete = np.empty((n_blocks,) + theta_full.shape, dtype=float)
     start = 0
     for b in range(n_blocks):
         end = block_bounds[b]
-        reduced = np.concatenate((x[:start], x[end:]))
-        theta_delete[b] = statistic(reduced)
+        reduced_len = n - (end - start)
+
+        buffer[:start] = x[:start]
+        buffer[start:reduced_len] = x[end:]
+
+        theta_delete[b] = statistic(buffer[:reduced_len])
         start = end
 
     pseudo_values = n_blocks * theta_full - (n_blocks - 1) * theta_delete
