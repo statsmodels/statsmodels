@@ -43,6 +43,7 @@ __all__ = [
     "acovf",
     "adfuller",
     "bds",
+    "block_jackknife",
     "breakvar_heteroskedasticity_test",
     "ccf",
     "ccovf",
@@ -512,6 +513,120 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         # Copy to allow gc of full array rather than view
         return acov[: lag_len + 1].copy()
     return acov
+
+
+def block_jackknife(x, statistic, n_blocks=-1):
+    """
+    Delete-k (block) jackknife estimate of bias and standard error
+
+    Computes the jackknife point estimate and standard error of a statistic
+    by systematically leaving out contiguous blocks of the sample and
+    recomputing the statistic, generalizing the classical delete-1 jackknife
+    to allow for serial dependence in the data.
+
+    Parameters
+    ----------
+    x : array_like
+        The data series, 1-D.
+    statistic : callable
+        Function that takes an array and returns a scalar or array-valued
+        estimate.
+    n_blocks : int
+        The number of blocks to use. If -1 (default), uses ``n_blocks =
+        len(x)``, i.e., the classical delete-1 jackknife.
+
+    Returns
+    -------
+    theta_jack : float or ndarray
+        The bias-corrected jackknife point estimate.
+    se : float or ndarray
+        The jackknife standard error estimate.
+
+    Notes
+    -----
+    For data with serial dependence, ``n_blocks`` should be chosen small
+    enough (equivalently, block size large enough) that observations in
+    different blocks are approximately uncorrelated; this is a modeling
+    choice left to the user and is not verified automatically.
+
+    This implementation performs single-order bias correction only. A
+    known residual bias of order O(1/n^2) remains uncorrected; an iterated
+    jackknife (Schucany, Gray & Owen 1971) would address this at added
+    computational cost. Additionally, non-overlapping block placement
+    introduces some sensitivity to the arbitrary choice of block
+    boundaries; overlapping/moving-block schemes (Kunsch 1989) would
+    reduce this. Both are natural extensions but out of scope here.
+
+    To avoid O(n_blocks * n) cumulative memory allocation, a single
+    internal buffer is allocated once and reused across all delete-block
+    computations. As a result, ``statistic`` must not modify the array
+    it receives in place; doing so will silently corrupt results in
+    later iterations.
+
+    References
+    ----------
+    .. [1] Quenouille, M.H. (1949). "Approximate tests of correlation in
+       time-series." Journal of the Royal Statistical Society, Series B,
+       11: 68-84.
+    .. [2] Tukey, J.W. (1958). "Bias and confidence in not-quite large
+       samples." Annals of Mathematical Statistics, 29: 614.
+    .. [3] Kunsch, H.R. (1989). "The jackknife and the bootstrap for
+       general stationary observations." Annals of Statistics, 17:
+       1217-1241.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.random.normal(size=100)
+    >>> theta_jack, se = block_jackknife(x, np.mean, n_blocks=10)
+    """
+    x = array_like(x, "x", ndim=1)
+    n = x.shape[0]
+
+    if n_blocks == -1:
+        n_blocks = n
+    n_blocks = int_like(n_blocks, "n_blocks")
+
+    if n_blocks <= 1:
+        raise ValueError("n_blocks must be greater than 1.")
+    if n_blocks > n:
+        raise ValueError("n_blocks cannot exceed the number of observations.")
+    if not callable(statistic):
+        raise ValueError("statistic must be callable.")
+
+    block_sizes = np.full(n_blocks, n // n_blocks)
+    block_sizes[: n % n_blocks] += 1
+    block_bounds = np.cumsum(block_sizes)
+
+    theta_full = np.asarray(statistic(x))
+
+    max_reduced_len = n - block_sizes.min()
+    buffer = np.empty(max_reduced_len, dtype=float)
+
+    theta_delete = np.empty((n_blocks,) + theta_full.shape, dtype=float)
+    start = 0
+    for b in range(n_blocks):
+        end = block_bounds[b]
+        reduced_len = n - (end - start)
+
+        buffer[:start] = x[:start]
+        buffer[start:reduced_len] = x[end:]
+
+        theta_delete[b] = statistic(buffer[:reduced_len])
+        start = end
+
+    pseudo_values = n_blocks * theta_full - (n_blocks - 1) * theta_delete
+    theta_jack = np.mean(pseudo_values, axis=0)
+    variance = np.sum((pseudo_values - theta_jack) ** 2, axis=0) / (
+        n_blocks * (n_blocks - 1)
+    )
+    se = np.sqrt(variance)
+
+    if theta_full.shape == ():
+        theta_jack = float(theta_jack)
+        se = float(se)
+
+    return theta_jack, se
 
 
 def q_stat(x, nobs):
