@@ -162,4 +162,3 @@ def test_measures_empty_input_keeps_axis_shape(measure):
     empty = np.empty((0, 3))
 
     assert_equal(measure(empty, empty), np.full(3, np.nan))
-
