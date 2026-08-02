@@ -312,7 +312,7 @@ def lagmat(
 
         * int : All lags from zero to maxlag are included.
         * array_like : All lags associated to the values in the array.
-            Must contain only positive integers.
+            Must contain non-negative integers.
     trim : {'forward', 'backward', 'both', 'none', None}
         The trimming method to use.
 
@@ -377,7 +377,7 @@ def lagmat(
        [ 5.,  6.,  3.,  4.,  1.,  2.]])
 
     """
-    if isinstance(maxlag, int):
+    if np.isscalar(maxlag):
         maxlag = int_like(maxlag, "maxlag")
         if maxlag < 0:
             raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
@@ -385,9 +385,9 @@ def lagmat(
         lag_indices = np.arange(1, maxlag + 1, dtype=int)
     else:
         lag_indices = array_like(maxlag, "maxlag", dtype=int, ndim=1, maxdim=1)
-        if not np.all(lag_indices > 0):
+        if not np.all(lag_indices >= 0):
             raise ValueError(
-                f"All values in `maxlag` must be greater than 0. Found {lag_indices[lag_indices <= 0]}."
+                f"All values in `maxlag` must be >=  0. Found {lag_indices[lag_indices < 0]}."
             )
         if len(np.unique(lag_indices)) != len(lag_indices):
             from collections import Counter
@@ -399,6 +399,8 @@ def lagmat(
                 f"`maxlag` must contain unique values. maxlag contains the following "
                 f"duplicate values: {bad_lags}."
             )
+        # Special case for lag_indices = [0] to empty to match above
+        lag_indices = lag_indices[lag_indices > 0]
     use_pandas = bool_like(use_pandas, "use_pandas")
     trim = string_like(
         trim,
@@ -424,7 +426,7 @@ def lagmat(
         dropidx = nvar
 
     nlags = lag_indices.shape[0]
-    max_lag_value = lag_indices.max()
+    max_lag_value = lag_indices.max() if nlags else 0
     if max_lag_value >= nobs:
         raise ValueError("maximum of maxlag should be < nobs")
     lm = np.zeros((nobs + max_lag_value, nvar * (nlags + 1)))
