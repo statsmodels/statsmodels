@@ -295,7 +295,7 @@ def detrend(x, order=1, axis=0):
 
 def lagmat(
     x,
-    maxlag: int | list | NDArray,
+    maxlag: int | list[int] | NDArray,
     trim: Literal["forward", "backward", "both", "none"] = "forward",
     original: Literal["ex", "sep", "in"] = "ex",
     use_pandas: bool = False,
@@ -307,7 +307,7 @@ def lagmat(
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : {int, array_like[int]}
+    maxlag : {int, list[int], array_like[int]}
         The lags to be applied.
 
         * int : All lags from zero to maxlag are included.
@@ -370,23 +370,31 @@ def lagmat(
        [ 5.,  6.,  3.,  4.,  1.,  2.],
        [ 0.,  0.,  5.,  6.,  3.,  4.],
        [ 0.,  0.,  0.,  0.,  5.,  6.]])
+
+    >>> lagmat(X, maxlag=[1, 3], trim="forward", original='ex')
+    array([[ 1.,  2.,  0.,  0.,  0.,  0.],
+       [ 3.,  4.,  1.,  2.,  0.,  0.],
+       [ 5.,  6.,  3.,  4.,  1.,  2.]])
+
     """
     if isinstance(maxlag, int):
         maxlag = int_like(maxlag, "maxlag")
         if maxlag < 0:
             raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
-        # Convery to array to simplify and use only array path
-        maxlag = np.arange(1, maxlag, dtype=int)
+        # Convert to array to simplify and use only array path
+        lag_indices = np.arange(1, maxlag + 1, dtype=int)
     else:
-        maxlag = array_like(maxlag, "maxlag", dtype=int, ndim=1, maxdim=1)
-        if not np.all(maxlag > 0):
+        lag_indices = array_like(maxlag, "maxlag", dtype=int, ndim=1, maxdim=1)
+        if not np.all(lag_indices > 0):
             raise ValueError(
-                f"All values in `maxlag` must be greater than 0. Got {maxlag}."
+                f"All values in `maxlag` must be greater than 0. Found {lag_indices[lag_indices <= 0]}."
             )
-        if len(np.unique(maxlag)) != len(maxlag):
+        if len(np.unique(lag_indices)) != len(lag_indices):
             from collections import Counter
 
-            bad_lags = [key for key, val in Counter(maxlag).items() if val > 1]
+            bad_lags = [
+                int(key) for key, val in Counter(lag_indices).items() if val > 1
+            ]
             raise ValueError(
                 f"`maxlag` must contain unique values. maxlag contains the following "
                 f"duplicate values: {bad_lags}."
@@ -415,19 +423,18 @@ def lagmat(
     if original in ["ex", "sep"]:
         dropidx = nvar
 
-    nlags = maxlag.shape[0]
-    if maxlag.max() >= nobs:
+    nlags = lag_indices.shape[0]
+    max_lag_value = lag_indices.max()
+    if max_lag_value >= nobs:
         raise ValueError("maximum of maxlag should be < nobs")
-    lm = np.zeros((nobs + maxlag.max(), nvar * (nlags + 1)))
-    for i, k in enumerate([0] + maxlag.tolist()):
+    lm = np.zeros((nobs + max_lag_value, nvar * (nlags + 1)))
+    for i, k in enumerate([0] + lag_indices.tolist()):
         lm[k : nobs + k, nvar * (i) : nvar * (i + 1)] = x
 
     if trim in ("none", "forward"):
         startobs = 0
-    elif trim in ("backward", "both"):
-        startobs = maxlag
-    else:
-        raise ValueError("trim option not valid")
+    else:  # trim in ("backward", "both")
+        startobs = max_lag_value
 
     if trim in ("none", "backward"):
         stopobs = len(lm)
@@ -446,7 +453,7 @@ def lagmat(
         else:
             x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
-        for lag in maxlag:
+        for lag in lag_indices:
             lag_str = str(lag)
             columns.extend([str(col) + ".L." + lag_str for col in x_columns])
         lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
