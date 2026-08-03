@@ -204,7 +204,8 @@ jobs:
       wget https://www2.census.gov/software/x-13arima-seats/x13as/unix-linux/program-archives/x13as_ascii-v1-1-b62.tar.gz -O x13.tar.gz
       tar -xzf x13.tar.gz
       cp x13as/x13* /usr/bin/
-      pytest --durations=25 ${COVERAGE_OPTS} --junitxml=junit/test-results.xml statsmodels/tsa/tests/test_x13.py
+      echo pytest --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels/tsa/tests/test_x13.py
+      pytest --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels/tsa/tests/test_x13.py
     displayName: 'Test x-13'
     condition: eq(variables['test.x13'], 'true')
 
