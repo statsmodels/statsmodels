@@ -86,7 +86,7 @@ def test_x13_arima_plot(dataset, close_figures):
     res.plot()
 
 
-def test_x13_arima_plot_no_pandas(dataset):
+def test_x13_arima_plot_no_pandas(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
 
