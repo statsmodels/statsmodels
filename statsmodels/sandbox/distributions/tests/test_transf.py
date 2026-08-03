@@ -193,9 +193,3 @@ class Test_Transf2:
         assert_almost_equal(
             d1.stats(moments="mvsk"), ch2oddneg, err_msg="stats " + d1.name + d2.name
         )
-
-
-if __name__ == "__main__":
-    tt = Test_Transf2()
-    tt.test_equivalent()
-    tt.test_equivalent_negsq()

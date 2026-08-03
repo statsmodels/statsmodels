@@ -240,9 +240,3 @@ class TestMultivariateTRvs:
         rvs = multivariate_t_rvs([0.0, 0.0], S, df=np.inf, n=300000, rng=0)
         assert_allclose(rvs.mean(0), [0.0, 0.0], atol=0.02)
         assert_allclose(np.cov(rvs, rowvar=False), S, atol=0.02)
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__, "-vvs", "-x", "--pdb"])

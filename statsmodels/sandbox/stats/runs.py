@@ -644,15 +644,3 @@ def symmetry_bowker(table):
     pval = stats.chi2.sf(stat, df)
 
     return stat, pval, df
-
-
-if __name__ == "__main__":
-
-    x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
-
-    print(Runs(x1).runs_test())
-    print(runstest_1samp(x1, cutoff="mean"))
-    print(runstest_2samp(np.arange(16, 0, -1), groups=x1))
-    print(TotalRunsProb(7, 9).cdf(11))
-    print(median_test_ksample(np.random.randn(100), np.random.randint(0, 2, 100)))
-    print(cochrans_q(np.random.randint(0, 2, (100, 8))))

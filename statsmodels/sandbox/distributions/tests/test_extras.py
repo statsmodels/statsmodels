@@ -146,19 +146,3 @@ def test_skewt():
     )
     cdf_st = skewt.cdf(x, 1, 10)  # args = (df, alpha) = (1, 10)
     assert_(np.allclose(cdf_st, cdf_r, rtol=1e-13, atol=1e-25))
-
-
-if __name__ == "__main__":
-    import pytest
-
-    pytest.main([__file__, "-vvs", "-x", "--pdb"])
-    print("Done")
-
-
-"""
->>> skewt.pdf([-2,-1,0,1,2], 10000000, 10)
-array([  2.98557345e-90,   3.68850289e-24,   3.98942271e-01,
-         4.83941426e-01,   1.07981952e-01])
->>> skewt.pdf([-2,-1,0,1,2], np.inf, 10)
-array([ nan,  nan,  nan,  nan,  nan])
-"""
