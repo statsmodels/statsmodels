@@ -30,18 +30,6 @@ def test_bivariate_normal_function_matches_scipy():
     assert_allclose(result, expected, rtol=1e-10)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG: BivariateNormal.__init__ does `self.mean = mu`, but `mu` is "
-        "not a parameter (the parameter is named `mean`) and is not "
-        "defined anywhere in the class. Construction always raises "
-        "NameError. The historical __main__ demo only appeared to work "
-        "because it happened to already have a module-level `mu` variable "
-        "in scope from unrelated code executed earlier in the same script."
-    ),
-    raises=NameError,
-    strict=True,
-)
 def test_bivariate_normal_class_construction():
     BivariateNormal([0.0, 0.0], np.eye(2))
 
