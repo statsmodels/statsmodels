@@ -511,6 +511,9 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     else:
         acov = np.correlate(xo, xo, "full")[n - 1 :] / d[n - 1 :]
 
+    if missing == "conservative" and notmask_int.sum() == 0:
+        acov[:] = np.nan
+
     if nlag is not None:
         # Copy to allow gc of full array rather than view
         return acov[: lag_len + 1].copy()

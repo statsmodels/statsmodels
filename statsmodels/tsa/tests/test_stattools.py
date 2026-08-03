@@ -2093,4 +2093,4 @@ def test_acovf_all_missing():
     with pytest.raises(ValueError, match=r"All observations are missing after dropping."):
         acovf(x, missing="drop")
 
-    assert np.all(acovf(x, missing="conservative") == 0)
+    assert np.all(np.isnan(acovf(x, missing="conservative")))
