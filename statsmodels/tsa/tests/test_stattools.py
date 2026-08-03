@@ -316,6 +316,12 @@ class TestACFMissing(CheckCorrGram):
         centered = self.res_conservative[1] - self.res_conservative[1].mean(1)[:, None]
         assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
 
+    @pytest.mark.parametrize("missing", ["drop", "conservative"])
+    def test_drop_all(self, missing):
+        all_missing = np.full_like(self.x, np.nan)
+        with pytest.raises(ValueError, match="All observations are missing"):
+            acf(all_missing, nlags=40, missing=missing)
+
 
 class TestPACF(CheckCorrGram):
     @classmethod
@@ -2080,3 +2086,11 @@ class TestLeybourneMcCabe:
         y = rg.standard_normal(250)
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
+
+
+def test_acovf_all_missing():
+    x = np.full(100, np.nan)
+    with pytest.raises(ValueError, match=r"All observations are missing after dropping."):
+        acovf(x, missing="drop")
+
+    assert np.all(np.isnan(acovf(x, missing="conservative")))
