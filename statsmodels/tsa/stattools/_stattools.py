@@ -442,6 +442,8 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         if missing == "raise":
             raise MissingDataError("NaNs were encountered in the data")
         notmask_bool = ~np.isnan(x)  # bool
+        if missing == "drop" and notmask_bool.sum() == 0:
+            raise ValueError("All observations are missing after dropping.")
         if missing == "conservative":
             # Must copy for thread safety
             x = x.copy()
@@ -798,7 +800,7 @@ def acf(
         # (see the missing docstring), so nobs must match.
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
-            raise ValueError("All observations are missing.")
+            raise ValueError("All observations are missing after dropping.")
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]

@@ -2086,3 +2086,11 @@ class TestLeybourneMcCabe:
         y = rg.standard_normal(250)
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
+
+
+def test_acovf_all_missing():
+    x = np.full(100, np.nan)
+    with pytest.raises(ValueError, match=r"All observations are missing after dropping."):
+        acovf(x, missing="drop")
+
+    assert np.all(acovf(x, missing="conservative") == 0)
