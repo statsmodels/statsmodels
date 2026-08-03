@@ -797,6 +797,8 @@ def acf(
         # acovf uses the non-missing count as the divisor in both cases
         # (see the missing docstring), so nobs must match.
         nobs = int(np.sum(~np.isnan(x)))
+        if nobs == 0:
+            raise ValueError("All observations are missing.")
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]

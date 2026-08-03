@@ -316,6 +316,12 @@ class TestACFMissing(CheckCorrGram):
         centered = self.res_conservative[1] - self.res_conservative[1].mean(1)[:, None]
         assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
 
+    @pytest.mark.parametrize("missing", ["drop", "conservative"])
+    def test_drop_all(self, missing):
+        all_missing = np.full_like(self.x, np.nan)
+        with pytest.raises(ValueError, match="All observations are missing"):
+            acf(all_missing, nlags=40, missing=missing)
+
 
 class TestPACF(CheckCorrGram):
     @classmethod
