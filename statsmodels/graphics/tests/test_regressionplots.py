@@ -178,14 +178,14 @@ class TestABLine:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:, 1], self.y)
-        fig = abline_plot(model_results=self.mod, ax=ax)
+        abline_plot(model_results=self.mod, ax=ax)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_ab(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
-        fig = abline_plot(intercept=intercept, slope=slope)
+        abline_plot(intercept=intercept, slope=slope)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -195,7 +195,7 @@ class TestABLine:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:, 1], self.y)
-        fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
+        abline_plot(intercept=intercept, slope=slope, ax=ax)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -419,4 +419,3 @@ def test_add_ellipse_and_lowess(close_figures):
     # Test add_lowess with new signature (exog, endog passed explicitly)
     fig_out2 = add_lowess(ax, exog=x, endog=y)
     assert_equal(isinstance(fig_out2, plt.Figure), True)
-

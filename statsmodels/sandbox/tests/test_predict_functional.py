@@ -63,7 +63,7 @@ class TestPredFunc:
 
         plt.clf()
         fig = plt.figure()
-        ax = plt.axes([0.1, 0.1, 0.7, 0.8])
+        ax = fig.add_axes([0.1, 0.1, 0.7, 0.8])
         plt.plot(fvals1, pr1, "-", label="x4=B")
         plt.fill_between(fvals1, ci1[:, 0], ci1[:, 1], color="grey")
         plt.plot(fvals2, pr2, "-", label="x4=C")
@@ -99,7 +99,7 @@ class TestPredFunc:
 
         plt.clf()
         fig = plt.figure()
-        ax = plt.axes([0.1, 0.1, 0.67, 0.8])
+        ax = fig.add_axes([0.1, 0.1, 0.67, 0.8])
         plt.plot(fvals, pr, "-", label="Estimate", color="orange", lw=4)
         plt.plot(fvals, 4 - fvals, "-", label="Truth", color="lime", lw=4)
         plt.fill_between(fvals, cb[:, 0], cb[:, 1], color="grey")
@@ -136,7 +136,7 @@ class TestPredFunc:
 
         plt.clf()
         fig = plt.figure()
-        ax = plt.axes([0.1, 0.1, 0.67, 0.8])
+        ax = fig.add_axes([0.1, 0.1, 0.67, 0.8])
         plt.plot(fvals, pr, "-", label="Estimate", color="orange", lw=4)
         plt.plot(fvals, 0.2 - 0.1 * fvals, "-", label="Truth", color="lime", lw=4)
         plt.fill_between(fvals, cb[:, 0], cb[:, 1], color="grey")
@@ -197,7 +197,7 @@ class TestPredFunc:
 
                 plt.clf()
                 fig = plt.figure()
-                ax = plt.axes([0.1, 0.1, 0.58, 0.8])
+                ax = fig.add_axes([0.1, 0.1, 0.58, 0.8])
                 plt.plot(fvals1, pred1, "-", color="black", label="Estimate")
                 plt.plot(
                     fvals1,
@@ -277,7 +277,7 @@ class TestPredFunc:
 
             plt.clf()
             fig = plt.figure()
-            ax = plt.axes([0.1, 0.1, 0.7, 0.8])
+            ax = fig.add_axes([0.1, 0.1, 0.7, 0.8])
             plt.plot(fvals1, pr1, "-", label="x3=B", color="orange")
             plt.fill_between(fvals1, ci1[:, 0], ci1[:, 1], color="grey")
             plt.plot(fvals2, pr2, "-", label="x3=C", color="lime")
@@ -328,7 +328,7 @@ class TestPredFunc:
 
         plt.clf()
         fig = plt.figure()
-        ax = plt.axes([0.1, 0.1, 0.7, 0.8])
+        ax = fig.add_axes([0.1, 0.1, 0.7, 0.8])
         plt.plot(fvals1, pr1, "-", label="x2=1", lw=4, alpha=0.6, color="orange")
         plt.fill_between(fvals1, ci1[:, 0], ci1[:, 1], color="grey")
         plt.plot(fvals1, pr2, "-", label="x2=1", lw=4, alpha=0.6, color="lime")

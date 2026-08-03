@@ -268,7 +268,7 @@ class TestMICEData:
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
                     plt.clf()
-                    fig = imp_data.plot_missing_pattern(
+                    imp_data.plot_missing_pattern(
                         row_order=row_order,
                         hide_complete_rows=hide_complete_rows,
                         color_row_patterns=color_row_patterns,

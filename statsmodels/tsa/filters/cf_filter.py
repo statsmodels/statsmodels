@@ -102,11 +102,3 @@ def cffilter(x, low=6, high=32, drift=True):
     cycle, trend = y.squeeze(), x.squeeze() - y
 
     return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
-
-
-if __name__ == "__main__":
-    import statsmodels as sm
-    dta = sm.datasets.macrodata.load().data[["infl", "tbilrate"]].view((float, 2))[1:]
-    cycle, trend = cffilter(dta, 6, 32, drift=True)
-    dta = sm.datasets.macrodata.load().data["tbilrate"][1:]
-    cycle2, trend2 = cffilter(dta, 6, 32, drift=True)

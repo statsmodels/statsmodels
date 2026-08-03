@@ -4,7 +4,6 @@ import pytest
 
 from statsmodels.graphics.dotplots import dot_plot
 
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -489,4 +488,3 @@ def test_all(close_figures):
     leg.draw_frame(False)
     ax.set_title("Dotplot with different numbers of points per line")
     plt.close(fig)
-

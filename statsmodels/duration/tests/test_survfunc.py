@@ -12,7 +12,6 @@ from statsmodels.duration.survfunc import (
     survdiff,
 )
 
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
