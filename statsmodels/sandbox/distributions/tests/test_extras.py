@@ -270,9 +270,7 @@ def test_transf_gen_lognormalg_matches_underlying_distribution():
     # Transf_gen does not override _pdf, so scipy falls back to numerical
     # differentiation of the cdf -- compare against the analytical
     # change-of-variables formula with a looser tolerance
-    assert_allclose(
-        lognormalg.pdf(x), stats.norm.pdf(np.log(x)) / x, rtol=1e-6
-    )
+    assert_allclose(lognormalg.pdf(x), stats.norm.pdf(np.log(x)) / x, rtol=1e-6)
 
 
 def test_transf_gen_invdnormalg_cdf_ppf_roundtrip():
@@ -359,8 +357,7 @@ def test_get_u_argskwargs_u_args_is_silently_dropped():
     not SP_LT_116,
     reason=(
         "mvstdnormcdf/mvnormcdf delegate to mvndst, a compiled scipy.stats "
-        "Fortran routine removed in SciPy >= 1.16.0 (same root cause "
-        "documented in sandbox.distributions.tests.test_multivariate)."
+        "Fortran routine removed in SciPy >= 1.16.0"
     ),
 )
 class TestMvstdnormcdf:
@@ -382,12 +379,10 @@ class TestMvstdnormcdf:
         # scaling cov by a constant factor should not change the
         # standardized probability once mu/cov are used consistently
         std = np.array([2.0, 3.0])
-        cov = np.diag(std**2) * np.array([[1.0, 0.3], [0.3, 1.0]])
+        cov = np.diag(std) @ np.array([[1.0, 0.3], [0.3, 1.0]]) @ np.diag(std)
         mu = np.array([1.0, -1.0])
         upper = mu + std  # one std above the mean in each dimension
         result = mvnormcdf(upper, mu, cov, abseps=1e-6)
         corr = np.array([[1.0, 0.3], [0.3, 1.0]])
-        result_std = mvstdnormcdf(
-            [-np.inf, -np.inf], [1.0, 1.0], corr, abseps=1e-6
-        )
+        result_std = mvstdnormcdf([-np.inf, -np.inf], [1.0, 1.0], corr, abseps=1e-6)
         assert_allclose(result, result_std, atol=1e-6)
