@@ -260,6 +260,7 @@ class TestACFMissing(CheckCorrGram):
         cls.x = np.concatenate((np.array([np.nan]), cls.x))
         cls.acf = cls.results["acvar"]  # drop and conservative
         cls.qstat = cls.results["Q1"]
+        cls.confint_res = cls.results[["acvar_lb", "acvar_ub"]].values
         cls.res_drop = acf(
             cls.x, nlags=40, qstat=True, alpha=0.05, missing="drop", fft=False
         )
@@ -301,12 +302,19 @@ class TestACFMissing(CheckCorrGram):
         # todo why is res1/qstat 1 short
         assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
 
+    def test_qstat_drop(self):
+        assert_almost_equal(self.res_drop[2][:40], self.qstat, DECIMAL_3)
 
-# FIXME: enable/xfail/skip or delete
-# how to do this test? the correct q_stat depends on whether nobs=len(x) is
-# used when x contains NaNs or whether nobs<len(x) when x contains NaNs
-#    def test_qstat_drop(self):
-#        assert_almost_equal(self.res_drop[2][:40], self.qstat, DECIMAL_3)
+    def test_qstat_conservative(self):
+        assert_almost_equal(self.res_conservative[2][:40], self.qstat, DECIMAL_3)
+
+    def test_confint_drop(self):
+        centered = self.res_drop[1] - self.res_drop[1].mean(1)[:, None]
+        assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
+
+    def test_confint_conservative(self):
+        centered = self.res_conservative[1] - self.res_conservative[1].mean(1)[:, None]
+        assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
 
 
 class TestPACF(CheckCorrGram):

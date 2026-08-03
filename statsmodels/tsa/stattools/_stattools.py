@@ -789,10 +789,14 @@ def acf(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
     x = array_like(x, "x")
-    # TODO: should this shrink for missing="drop" and NaNs in x?
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(int(10 * np.log10(nobs)), nobs - 1)
+    if missing in ("drop", "conservative"):
+        # "drop" removes the NaNs and "conservative" zeroes them out, and
+        # acovf uses the non-missing count as the divisor in both cases
+        # (see the missing docstring), so nobs must match.
+        nobs = int(np.sum(~np.isnan(x)))
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
@@ -805,7 +809,7 @@ def acf(
         varacf[1] = 1.0 / nobs
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
     else:
-        varacf = 1.0 / len(x)
+        varacf = 1.0 / nobs
     interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
     confint = np.array(lzip(acf - interval, acf + interval))
     if not qstat:
