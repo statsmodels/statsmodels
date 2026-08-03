@@ -1836,7 +1836,7 @@ class StepDown:
         self.get_distance_matrix()
         self.stepdown(lrange(self.n_vals))
 
-        return list(set(self.accepted)), list(set(sd.rejected))
+        return list(set(self.accepted)), list(set(self.rejected))
 
 
 def homogeneous_subsets(vals, dcrit):

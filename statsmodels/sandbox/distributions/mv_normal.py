@@ -347,7 +347,7 @@ class BivariateNormal:
     #      or normalize before integration
 
     def __init__(self, mean, cov):
-        self.mean = mu
+        self.mean = mean
         self.cov = cov
         self.sigmax, self.sigmaxy, tmp, self.sigmay = np.ravel(cov)
         self.nvars = 2

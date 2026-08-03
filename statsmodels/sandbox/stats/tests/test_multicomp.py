@@ -9,7 +9,11 @@ from numpy.testing import assert_almost_equal
 import pytest
 from scipy import stats
 
-from statsmodels.sandbox.stats.multicomp import get_tukeyQcrit, tiecorrect, tukey_pvalues
+from statsmodels.sandbox.stats.multicomp import (
+    get_tukeyQcrit,
+    tiecorrect,
+    tukey_pvalues,
+)
 
 
 @pytest.mark.skipif(not SP_LT_116, reason="mvndst removed in SciPy 1.16")
