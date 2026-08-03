@@ -578,13 +578,13 @@ def x13_arima_analysis(
 
         rawspec_text = None
 
-        try:
-            with Path(rawspec).open() as f:
-                rawspec_text = f.read()
-        except OSError as os_err:
-            if "{" in rawspec:
-                rawspec_text = rawspec
-            else:
+        if "{" in rawspec:
+            rawspec_text = rawspec
+        else:
+            try:
+                with Path(rawspec).open() as f:
+                    rawspec_text = f.read()
+            except Exception as os_err:
                 raise ValueError(
                     "rawspec argument provided but not valid path or spec string"
                 ) from os_err
@@ -663,16 +663,16 @@ def x13_arima_analysis(
         finally:
             try:  # sometimes this gives a permission denied error?
                 #   not sure why. no process should have these open
-                ftempin.unlink()
-                ftempout.unlink()
+                Path(ftempin.name).unlink()
+                Path(ftempout.name).unlink()
             except OSError:
-                if ftempin.exists():
+                if Path(ftempin.name).exists():
                     warn(
                         f"Failed to delete resource {ftempin.name}",
                         IOWarning,
                         stacklevel=2
                     )
-                if ftempout.exists():
+                if Path(ftempout.name).exists():
                     warn(
                         f"Failed to delete resource {ftempout.name}",
                         IOWarning,
