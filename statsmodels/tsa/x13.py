@@ -663,16 +663,16 @@ def x13_arima_analysis(
         finally:
             try:  # sometimes this gives a permission denied error?
                 #   not sure why. no process should have these open
-                ftempin.name.unlink()
-                ftempout.name.unlink()
+                ftempin.unlink()
+                ftempout.unlink()
             except OSError:
-                if ftempin.name.exists():
+                if ftempin.exists():
                     warn(
                         f"Failed to delete resource {ftempin.name}",
                         IOWarning,
                         stacklevel=2
                     )
-                if ftempout.name.exists():
+                if ftempout.exists():
                     warn(
                         f"Failed to delete resource {ftempout.name}",
                         IOWarning,
