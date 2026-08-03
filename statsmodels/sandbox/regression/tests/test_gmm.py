@@ -1147,7 +1147,7 @@ def test_gmm_basic():
     # use arbitrary names
     pnames = ["beta", "gamma", "psi", "phi"]
     mod.set_param_names(pnames)
-    res1 = mod.fit(beta0, optim_args={"disp": 0})
+    mod.fit(beta0, optim_args={"disp": 0})
 
 
 def _linear_ivgmm_fit():
