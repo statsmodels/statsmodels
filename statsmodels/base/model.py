@@ -1305,7 +1305,11 @@ class Results:
         If no formula was used, then the provided exog needs to have the
         same number of columns as the original exog in the model. No
         transformation of the data is performed except converting it to
-        a numpy array.
+        a numpy array. In this case the columns are matched by position and
+        not by name, so a DataFrame must have its columns in the same order
+        as the exog used to fit the model; its column labels are ignored.
+        This differs from the formula case above, where the variables are
+        matched by name and the column order does not matter.
 
         Row indices as in pandas data frames are supported, and added to the
         returned prediction.
