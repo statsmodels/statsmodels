@@ -348,7 +348,3 @@ def show_versions(show_dirs=True):
         print("virtualenv: Not installed")
 
     print("\n")
-
-
-if __name__ == "__main__":
-    show_versions()

@@ -19,7 +19,7 @@ from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
 from numpy import exp as np_exp, log as np_log
-from scipy import integrate, special, stats
+from scipy import integrate, special
 from scipy.special import gamma as sps_gamma, gammaln as sps_gammaln
 from scipy.stats import chi
 
@@ -152,53 +152,3 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1, rng=None):
     return (
         m + z / np.sqrt(x)[:, None]
     )  # same output format as random.multivariate_normal
-
-
-if __name__ == "__main__":
-    corr = np.asarray([[1.0, 0, 0.5], [0, 1, 0], [0.5, 0, 1]])
-    corr_indep = np.asarray([[1.0, 0, 0], [0, 1, 0], [0, 0, 1]])
-    corr_equal = np.asarray([[1.0, 0.5, 0.5], [0.5, 1, 0.5], [0.5, 0.5, 1]])
-    R = corr_equal
-    a = np.array([-np.inf, -np.inf, -100.0])
-    a = np.array([-0.96, -0.96, -0.96])
-    b = np.array([0.0, 0.0, 0.0])
-    b = np.array([0.96, 0.96, 0.96])
-    a[:] = -1
-    b[:] = 3
-    df = 10.0
-    sqrt_df = np.sqrt(df)
-    print(mvstdnormcdf(a, b, corr, abseps=1e-6))
-
-    # print integrate.quad(funbgh, 0, np.inf, args=(a,b,R,df))
-    print((stats.t.cdf(b[0], df) - stats.t.cdf(a[0], df)) ** 3)
-
-    s = 1
-    print(mvstdnormcdf(s * a / sqrt_df, s * b / sqrt_df, R))
-
-    df = 4
-    print(mvstdtprob(a, b, R, df))
-
-    S = np.array([[1.0, 0.5], [0.5, 1.0]])
-    print(multivariate_t_rvs([10.0, 20.0], S, 2, 5))
-
-    nobs = 10000
-    rvst = multivariate_t_rvs([10.0, 20.0], S, 2, nobs)
-    print(np.sum((rvst < [10.0, 20.0]).all(1), 0) * 1.0 / nobs)
-    print(mvstdtprob(-np.inf * np.ones(2), np.zeros(2), R[:2, :2], 2))
-
-    """
-        > lower <- -1
-        > upper <- 3
-        > df <- 4
-        > corr <- diag(3)
-        > delta <- rep(0, 3)
-        > pmvt(lower=lower, upper=upper, delta=delta, df=df, corr=corr)
-        [1] 0.5300413
-        attr(,"error")
-        [1] 4.321136e-05
-        attr(,"msg")
-        [1] "Normal Completion"
-        > (pt(upper, df) - pt(lower, df))**3
-        [1] 0.4988254
-
-    """
