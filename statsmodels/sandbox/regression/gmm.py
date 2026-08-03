@@ -67,8 +67,6 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.tools.tools import _ensure_2d
 
-DEBUG = 0
-
 
 def maxabs(x):
     """just a shortcut to np.abs(x).max()"""
@@ -801,9 +799,6 @@ class GMM(Model):
         else:
             raise ValueError("optimizer method not available")
 
-        if DEBUG:
-            print(np.linalg.det(weights))
-
         # TODO: add other optimization options and results
         return optimizer(self.gmmobjective, start, args=(weights,), **optim_args)
 
@@ -1017,9 +1012,6 @@ class GMM(Model):
         """
         nobs, k_moms = moms.shape
         # TODO: wargs are tuple or dict ?
-        if DEBUG:
-            print(" momcov wargs", wargs)
-
         centered = not ("centered" in wargs and not wargs["centered"])
         if not centered:
             # caller does not want centered moment conditions
@@ -1040,8 +1032,6 @@ class GMM(Model):
                 if wargs["ddof"] == "k_params":
                     w /= nobs - self.k_params
                 else:
-                    if DEBUG:
-                        print(" momcov ddof", wargs["ddof"])
                     w /= nobs - wargs["ddof"]
             else:
                 # default: divide by nobs
@@ -1089,8 +1079,6 @@ class GMM(Model):
                     w /= nobs - self.k_params
                 else:
                     # assume ddof is a number
-                    if DEBUG:
-                        print(" momcov ddof", wargs["ddof"])
                     w /= nobs - wargs["ddof"]
             else:
                 # default: divide by nobs

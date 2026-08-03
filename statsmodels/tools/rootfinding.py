@@ -13,8 +13,6 @@ from scipy import optimize
 
 from statsmodels.tools.testing import Holder
 
-DEBUG = False
-
 
 # based on scipy.stats.distributions._ppf_single_call
 def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,

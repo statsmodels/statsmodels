@@ -105,7 +105,7 @@ def hamilton_filter(x, h=8, p=4):
     >>> ax.set_title("Cycle extracted using Hamilton Filter (h=8, p=4)")
     >>> plt.show()
 
-    .. plot:: plots/hamilton_filter_plot.py
+    .. plot:: plots/graphics-hamilton-filter.py
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x", maxdim=2)

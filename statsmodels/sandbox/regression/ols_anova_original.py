@@ -283,14 +283,6 @@ for name in testdatacont.dtype.names:
 
 # print(form2design('a',testdata))
 
-if 0:
-    xx, n = form2design("F:a", testdata)
-    print(xx)
-    print(form2design("P:a*b", testdata))
-    print(data2proddummy(np.c_[testdata["a"], testdata["b"]]))
-
-    xx, names = form2design("a F:b P:c*d", testdata)
-
 # xx, names = form2design('I a F:b F:c F:d P:c*d',testdata)
 xx, names = form2design("I a F:b P:c*d", testdata)
 xx, names = form2design("I a F:b P:c*d G:a*e f", testdata)

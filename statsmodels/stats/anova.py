@@ -702,32 +702,3 @@ class AnovaResults:
         summ.add_df(self.anova_table)
 
         return summ
-
-
-if __name__ == "__main__":
-    from statsmodels.formula.api import ols
-
-    # in R
-    # library(car)
-    # write.csv(Moore, "moore.csv", row.names=FALSE)
-
-    moore = pd.read_csv(
-        "moore.csv",
-        skiprows=1,
-        names=["partner_status", "conformity", "fcategory", "fscore"],
-    )
-    moore_lm = ols(
-        "conformity ~ C(fcategory, Sum)*C(partner_status, Sum)", data=moore
-    ).fit()
-
-    mooreB = ols("conformity ~ C(partner_status, Sum)", data=moore).fit()
-
-    # for each term you just want to test vs the model without its
-    # higher-order terms
-
-    # using Monette-Fox slides and Marden class notes for linear algebra /
-    # Reference for Orthogonal Projections/complement in ANOVA:
-    # https://people.math.aau.dk/~rw/Undervisning/MM_BI/
-    # Handouts/anova_orthog.pdf
-
-    table = anova_lm(moore_lm, typ=2)
