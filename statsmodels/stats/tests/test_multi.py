@@ -559,4 +559,3 @@ def test_multipletests_empty(method):
     # the corrected alphas are undefined when there is nothing to correct
     assert np.isnan(alphac_sidak)
     assert np.isnan(alphac_bonf)
-
