@@ -15,8 +15,8 @@ import scipy.integrate
 
 from statsmodels.sandbox.nonparametric.kernels import (
     Biweight,
-    CustomKernel,
     Cosine2,
+    CustomKernel,
     Epanechnikov,
     Gaussian,
     NdKernel,
