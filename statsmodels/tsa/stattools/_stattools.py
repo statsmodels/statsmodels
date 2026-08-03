@@ -438,10 +438,10 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         deal_with_masked = False
     else:
         deal_with_masked = has_missing(x)
+    notmask_bool = ~np.isnan(x)
     if deal_with_masked:
         if missing == "raise":
             raise MissingDataError("NaNs were encountered in the data")
-        notmask_bool = ~np.isnan(x)  # bool
         if missing == "drop" and notmask_bool.sum() == 0:
             raise ValueError("All observations are missing after dropping.")
         if missing == "conservative":
@@ -511,7 +511,7 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     else:
         acov = np.correlate(xo, xo, "full")[n - 1 :] / d[n - 1 :]
 
-    if missing == "conservative" and notmask_int.sum() == 0:
+    if deal_with_masked and notmask_bool.sum() == 0:
         acov[:] = np.nan
 
     if nlag is not None:
