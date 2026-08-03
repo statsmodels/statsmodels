@@ -543,3 +543,19 @@ def test_null_constrained(estimate_mean, estimate_scale, estimate_prob):
                     norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean,
                              scale=emp_null.sd),
                     rtol=1e-13)
+
+
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
+def test_multipletests_empty(method):
+    # An empty p-value array used to raise "float division by zero" for every
+    # method, because the corrected alphas are computed from 1 / ntests before
+    # the method is dispatched. fdrcorrection already accepted an empty input.
+    reject, pvals_corrected, alphac_sidak, alphac_bonf = multipletests(
+        [], method=method
+    )
+
+    assert reject.shape == (0,)
+    assert pvals_corrected.shape == (0,)
+    # the corrected alphas are undefined when there is nothing to correct
+    assert np.isnan(alphac_sidak)
+    assert np.isnan(alphac_bonf)
