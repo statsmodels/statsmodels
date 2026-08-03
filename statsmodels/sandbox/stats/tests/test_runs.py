@@ -13,8 +13,8 @@ from statsmodels.sandbox.stats.runs import (
     RunsProb,
     TotalRunsProb,
     cochrans_q,
-    median_test_ksample,
     mcnemar,
+    median_test_ksample,
     runstest_1samp,
     runstest_2samp,
     symmetry_bowker,
@@ -164,7 +164,7 @@ def test_runsprob_pdf_matches_reference_values():
     # are sums of many comb()-based terms and differ slightly at the 1e-6
     # level from the scipy version originally used to compute them
     vals = [
-        np.sum([RunsProb().pdf(xi, k, 16, 10 / 16.0) for xi in range(0, 16)])
+        np.sum([RunsProb().pdf(xi, k, 16, 10 / 16.0) for xi in range(16)])
         for k in range(3)
     ]
     expected = [0.99999332193894064, 0.99999999999999367, 1.0]

@@ -9,7 +9,13 @@ import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
 import pytest
 
-from statsmodels.sandbox.tsa.movstat import expandarr, movmean, movmoment, movorder, movvar
+from statsmodels.sandbox.tsa.movstat import (
+    expandarr,
+    movmean,
+    movmoment,
+    movorder,
+    movvar,
+)
 
 
 def test_expandarr_1d():

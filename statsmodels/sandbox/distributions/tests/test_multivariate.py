@@ -188,26 +188,9 @@ class TestMVDistributions:
         )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG: chi2_pdf(self, x, df) has a stray leftover `self` parameter "
-        "-- it is a plain module-level function, not a method, so it is "
-        "documented/intended to be called as chi2_pdf(x, df) (matching "
-        "chi_pdf(x, df) and chi_logpdf(x, df) right below it in the "
-        "module), but that call always raises TypeError since `df` never "
-        "gets a value. It only works if called with a throwaway first "
-        "argument, e.g. chi2_pdf(None, x, df)."
-    ),
-    raises=TypeError,
-    strict=True,
-)
-def test_chi2_pdf_documented_call_signature():
-    chi2_pdf(2.0, 3)
-
-
 def test_chi2_pdf_matches_scipy_with_workaround_extra_arg():
     # the only way to actually call this function today
-    result = chi2_pdf(None, 2.0, 3)
+    result = chi2_pdf(2.0, 3)
     assert_allclose(result, stats.chi2.pdf(2.0, 3), rtol=1e-10)
 
 
