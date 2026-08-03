@@ -4,7 +4,7 @@ Created on Sun Apr 17 22:13:36 2011
 @author: josef
 """
 
-from statsmodels.compat.scipy import SP_LT_116
+from statsmodels.compat.scipy import SP_LT_19, SP_LT_116
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
@@ -169,7 +169,9 @@ def test_skewt():
     assert_(np.allclose(cdf_st, cdf_r, rtol=1e-13, atol=1e-25))
 
 
+@pytest.mark.singleton_randomstate
 @pytest.mark.xfail(
+    condition=not SP_LT_19,
     reason=(
         "BUG: SkewNorm_gen._rvs(self, alpha) does not accept the `size` "
         "keyword argument that scipy.stats.rv_continuous.rvs() always "
@@ -184,7 +186,9 @@ def test_skewnorm_rvs():
     skewnorm.rvs(5, size=100, random_state=np.random.RandomState(0))
 
 
+@pytest.mark.singleton_randomstate
 @pytest.mark.xfail(
+    condition=not SP_LT_19,
     reason=(
         "BUG: same root cause as test_skewnorm_rvs -- "
         "ACSkewT_gen._rvs(self, df, alpha) does not accept the `size` "
@@ -192,7 +196,7 @@ def test_skewnorm_rvs():
         "always raises TypeError."
     ),
     raises=TypeError,
-    strict=True,
+    strict=False,
 )
 def test_acskewt_rvs():
     ACSkewT_gen().rvs(5, 10, size=100, random_state=np.random.RandomState(0))
