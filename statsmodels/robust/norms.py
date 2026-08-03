@@ -435,11 +435,11 @@ class HuberT(RobustNorm):
         -------
         ndarray
             The value of the derivative of the psi function. Indicator values
-            equal to 1 when '|z| <= t' and 0 otherwise.
+            equal to 1 when ``|z| <= t`` and 0 otherwise.
 
         Notes
         -----
-        Used when computing the robust covariance matrix in robustlinear models.
+        Used when computing the robust covariance matrix in robust linear models.
         """
         return np.less_equal(np.abs(z), self.t).astype(float)
 

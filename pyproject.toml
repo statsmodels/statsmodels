@@ -69,8 +69,8 @@ requires-python = ">=3.10"
 [project.optional-dependencies]
 test = [
     # test
-    "pytest>=8.4.1,<9",
-    # "pytest-randomly", <- Directly affects the global numpy random state
+    "pytest>=8.4.1,<10",
+    "pytest-randomly",
     "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
@@ -408,7 +408,7 @@ compat = ["statsmodels.compat", "setuptools"]
 "**/examples/**" = ["PTH"]
 [tool.pytest.ini_options]
 minversion = "8.4.1"
-addopts = "--strict --durations=30 --junitxml=test-data.xml"
+addopts = "--strict --durations=30 --junitxml=test-data.xml --randomly-dont-reset-seed"
 testpaths = "statsmodels"
 xfail_strict = true
 empty_parameter_set_mark = "fail_at_collect"

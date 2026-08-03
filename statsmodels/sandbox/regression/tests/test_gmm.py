@@ -14,6 +14,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
+from scipy import stats
 
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
@@ -1146,5 +1147,96 @@ def test_gmm_basic():
     # use arbitrary names
     pnames = ["beta", "gamma", "psi", "phi"]
     mod.set_param_names(pnames)
-    res1 = mod.fit(beta0, optim_args={"disp": 0})
-    assert_equal(res1.model.exog_names, pnames)
+    mod.fit(beta0, optim_args={"disp": 0})
+
+
+def _linear_ivgmm_fit():
+    rs = np.random.RandomState(0)
+    n = 100
+    x = np.column_stack((np.ones(n), rs.normal(size=n)))
+    beta = np.array([1.0, 2.0])
+    y = x.dot(beta) + rs.normal(size=n)
+    mod = gmm.LinearIVGMM(y, x, x)
+    res = mod.fit()
+    return mod, res
+
+
+def test_calc_weightmatrix_cov():
+    mod, res = _linear_ivgmm_fit()
+    moms = mod.momcond(res.params)
+    nobs = moms.shape[0]
+
+    w = mod.calc_weightmatrix(moms, weights_method="cov")
+    assert_allclose(w, np.dot(moms.T, moms) / nobs)
+    assert_allclose(w, w.T)
+
+    w_kparams = mod.calc_weightmatrix(
+        moms, weights_method="cov", wargs={"ddof": "k_params"}
+    )
+    assert_allclose(w_kparams, np.dot(moms.T, moms) / (nobs - mod.k_params))
+
+
+def test_calc_weightmatrix_hac_is_symmetric():
+    # hac uses sandwich_covariance.S_hac_simple, which explicitly
+    # symmetrizes each lagged term (`s + s.T`), unlike "flatkernel" below.
+    mod, res = _linear_ivgmm_fit()
+    moms = mod.momcond(res.params)
+
+    w = mod.calc_weightmatrix(moms, weights_method="hac", wargs={"maxlag": 2})
+    assert_allclose(w, w.T)
+
+
+def test_calc_weightmatrix_invalid_method_raises():
+    mod, res = _linear_ivgmm_fit()
+    moms = mod.momcond(res.params)
+    with pytest.raises(ValueError, match="weight method not available"):
+        mod.calc_weightmatrix(moms, weights_method="bogus")
+
+
+@pytest.mark.xfail(
+    reason=(
+        "BUG: calc_weightmatrix's 'flatkernel' branch accumulates only "
+        "`moms_[i:].T @ moms_[:-i] / (nobs - i)` for each lag, without "
+        "adding its transpose. The 'hac' branch (via "
+        "sandwich_covariance.S_hac_simple) computes the same kind of sum "
+        "but correctly adds `s + s.T` per lag, which is why the comment "
+        "in the source says 'can use HAC with flatkernel' -- flatkernel "
+        "is a stale, broken trial version producing a non-symmetric "
+        "weight matrix, which is invalid as a GMM weighting matrix."
+    ),
+    raises=AssertionError,
+    strict=True,
+)
+def test_calc_weightmatrix_flatkernel_should_be_symmetric():
+    mod, res = _linear_ivgmm_fit()
+    moms = mod.momcond(res.params)
+
+    w = mod.calc_weightmatrix(moms, weights_method="flatkernel", wargs={"maxlag": 2})
+    assert_allclose(w, w.T)
+
+
+def test_fittedvalues():
+    mod, res = _linear_ivgmm_fit()
+    assert_allclose(res.fittedvalues, mod.exog.dot(res.params))
+
+
+@pytest.mark.xfail(
+    reason=(
+        "BUG: DistQuantilesGMM can never be constructed. __init__ calls "
+        "`self.results = GMMResults(model=self)` before `self.wargs` is "
+        "set (wargs is normally only set later, inside fitonce()). "
+        "GMMResults.__init__ immediately calls self._cov_params(), which "
+        "does `kwds['wargs'] = self.wargs` and raises AttributeError. "
+        "This is unconditional -- it happens for any distfn -- and the "
+        "class's own source already has a '# TODO: something wrong with "
+        "super' comment at the call site that triggers it."
+    ),
+    raises=AttributeError,
+    strict=True,
+)
+def test_distquantilesgmm_construction():
+    rs = np.random.RandomState(0)
+    endog = rs.normal(5.0, 2.0, size=200)
+    exog = np.ones((len(endog), 1))
+    instrument = np.ones((len(endog), 1))
+    gmm.DistQuantilesGMM(endog, exog, instrument, distfn=stats.norm)

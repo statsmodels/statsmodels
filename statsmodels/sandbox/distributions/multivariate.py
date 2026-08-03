@@ -28,7 +28,7 @@ from statsmodels.tools.rng_qrng import check_random_state
 from .extras import mvstdnormcdf
 
 
-def chi2_pdf(self, x, df):
+def chi2_pdf(x, df):
     """pdf of chi-square distribution"""
     # from scipy.stats.distributions
     Px = x ** (df / 2.0 - 1) * np.exp(-x / 2.0)
