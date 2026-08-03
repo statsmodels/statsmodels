@@ -118,40 +118,6 @@ Distribution Extras
    mvstdnormcdf
    mvnormcdf
 
-Univariate Distributions by non-linear Transformations
-------------------------------------------------------
-
-Univariate distributions can be generated from a non-linear transformation of an
-existing univariate distribution. `Transf_gen` is a class that can generate a new
-distribution from a monotonic transformation, `TransfTwo_gen` can use hump-shaped
-or u-shaped transformation, such as abs or square. The remaining objects are
-special cases.
-
-.. module:: statsmodels.sandbox.distributions.transformed
-   :synopsis: Experimental probability distributions and random number generators
-
-.. currentmodule:: statsmodels.sandbox.distributions.transformed
-
-.. autosummary::
-   :toctree: generated/
-
-   TransfTwo_gen
-   Transf_gen
-
-   ExpTransf_gen
-   LogTransf_gen
-   SquareFunc
-
-   absnormalg
-   invdnormalg
-
-   loggammaexpg
-   lognormalg
-   negsquarenormalg
-
-   squarenormalg
-   squaretg
-
 
 Helper Functions
 ----------------
