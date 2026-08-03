@@ -153,7 +153,7 @@ def corr_clipped(corr, threshold=1e-15):
 
 
 def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
-                return_all=False, min_diag=None):
+                return_all=False, *, min_diag=None):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
@@ -222,8 +222,8 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
         diag = np.diag(cov)
         if np.any(diag < min_diag):
             warnings.warn(
-                "Diagonal elements below min_diag=%r have been raised to "
-                "min_diag; the corresponding variances are changed." % min_diag,
+                f"Diagonal elements below min_diag={min_diag!r} have been "
+                "raised to min_diag; the corresponding variances are changed.",
                 SpecificationWarning,
                 stacklevel=2,
             )
