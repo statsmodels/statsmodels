@@ -1,6 +1,8 @@
 """
 Tests corresponding to sandbox.distributions.mv_normal
 """
+from statsmodels.compat.scipy import SP_LT_116
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_almost_equal
 import pytest
@@ -79,17 +81,15 @@ class TestMVNormal:
         assert_allclose(rvs.mean(0), MEAN3, atol=0.02)
         assert_allclose(np.cov(rvs, rowvar=False), COV3, atol=0.05)
 
-    @pytest.mark.xfail(
+    @pytest.mark.skipif(
+        not SP_LT_116,
         reason=(
-            "BUG (environment/dependency): MVNormal.cdf() delegates to "
-            "sandbox.distributions.extras.mvnormcdf -> mvstdnormcdf -> "
-            "mvndst, a compiled scipy.stats Fortran routine that was "
-            "removed in SciPy >= 1.16.0. On any modern SciPy this always "
-            "raises ImportError, so MVNormal.cdf() is currently unusable "
-            "end to end, not just numerically inaccurate."
+            "MVNormal.cdf() delegates to sandbox.distributions.extras."
+            "mvnormcdf -> mvstdnormcdf -> mvndst, a compiled scipy.stats "
+            "Fortran routine that was removed in SciPy >= 1.16.0 (see "
+            "sandbox.distributions.tests.test_multivariate for the same "
+            "issue against mvstdtprob/mvstdnormcdf directly)."
         ),
-        raises=ImportError,
-        strict=True,
     )
     def test_cdf_matches_scipy(self):
         pt = np.array([0.0, 1.0, 1.5])
