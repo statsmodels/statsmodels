@@ -440,7 +440,7 @@ filterwarnings = [
     "error:After statsmodels 0.15 is released:FutureWarning:",
     "error:Passing `None` as the seed currently:FutureWarning:",
     "error:the 'random_state' keyword is deprecated:FutureWarning:",
-    "error:the 'seed' keyword is deprecated:FutureWarning:"
+    "error:the 'seed' keyword is deprecated:FutureWarning:",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",

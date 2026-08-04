@@ -142,8 +142,8 @@ Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
 
 """
-
 from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.scipy import SP_LT_2
 
 from io import StringIO
 import tokenize
@@ -513,7 +513,10 @@ def _smw_solver(s, A, AtA, Qi, di):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(A):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         def solver(rhs):
             ql = A.T.dot(rhs)
@@ -588,7 +591,10 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(qmat):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         # There are faster but much more difficult ways to do this
         # https://stackoverflow.com/questions/19107617
@@ -1112,7 +1118,7 @@ class MixedLM(base.LikelihoodModel):
                     )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
-                        evc_mats.append(sparse.csr_matrix(mat))
+                        evc_mats.append(sparse.csr_array(mat))
                     else:
                         evc_mats.append(np.asarray(mat))
                 vc_mats.append(evc_mats)
@@ -1569,9 +1575,9 @@ class MixedLM(base.LikelihoodModel):
         if any_sparse:
             for j, x in enumerate(ex):
                 if not sparse.issparse(x):
-                    ex[j] = sparse.csr_matrix(x)
+                    ex[j] = sparse.csr_array(x)
             ex = sparse.hstack(ex)
-            ex = sparse.csr_matrix(ex)
+            ex = sparse.csr_array(ex)
         else:
             ex = np.concatenate(ex, axis=1)
 

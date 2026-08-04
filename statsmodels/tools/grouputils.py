@@ -234,7 +234,7 @@ def dummy_sparse(groups):
 
     indptr = np.arange(len(groups) + 1)
     data = np.ones(len(groups), dtype=np.int8)
-    indi = sparse.csr_matrix((data, groups, indptr))
+    indi = sparse.csr_array((data, groups, indptr))
 
     return indi
 

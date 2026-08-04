@@ -1,3 +1,4 @@
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -111,7 +112,7 @@ def gen_crossed_logit_pandas(nc, cs, s1, s2):
 def test_simple_logit_map():
     rs = np.random.RandomState(327342)
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
     rslt = glmm.fit_map(rng=rs)
@@ -134,7 +135,7 @@ def test_simple_logit_map():
 def test_simple_poisson_map():
     rs = np.random.RandomState(327341)
     y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 0.2)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
     rslt1 = glmm1.fit_map(rng=rs)
@@ -173,7 +174,7 @@ def test_simple_poisson_map():
 def test_crossed_logit_map():
     rs = np.random.RandomState(327345)
     y, exog_fe, exog_vc, ident = gen_crossed_logit(10, 10, 1, 2)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
     rslt = glmm.fit_map(rng=rs)
@@ -192,7 +193,7 @@ def test_crossed_logit_map():
 def test_crossed_poisson_map():
     rs = np.random.RandomState(327347)
     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 1)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     glmm = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
     rslt = glmm.fit_map(rng=rs)
@@ -248,7 +249,7 @@ def test_elbo_grad():
                 else:
                     y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 0.5)
 
-            exog_vc = sparse.csr_matrix(exog_vc)
+            exog_vc = sparse.csr_array(exog_vc)
 
             if f == 0:
                 glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
@@ -289,7 +290,7 @@ def test_elbo_grad():
 def test_simple_logit_vb():
     rs = np.random.RandomState(32831312)
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     glmm1 = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5, fe_p=0.5)
     rslt1 = glmm1.fit_map(rng=rs)
@@ -328,7 +329,7 @@ def test_simple_logit_vb():
 def test_simple_poisson_vb():
     rs = np.random.RandomState(3237821)
     y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 1)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     glmm1 = PoissonBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
     rslt1 = glmm1.fit_map(rng=rs)
@@ -561,7 +562,7 @@ def test_scale_vb():
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_fe -= exog_fe.mean(0)
     exog_fe /= exog_fe.std(0)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     rslts = []
     for scale_fe in False, True:
@@ -577,7 +578,7 @@ def test_scale_map():
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)
     exog_fe -= exog_fe.mean(0)
     exog_fe /= exog_fe.std(0)
-    exog_vc = sparse.csr_matrix(exog_vc)
+    exog_vc = sparse.csr_array(exog_vc)
 
     rslts = []
     for scale_fe in False, True:

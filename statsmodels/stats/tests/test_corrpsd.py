@@ -585,7 +585,7 @@ class Test_Factor:
 
         # Threshold it
         mat.flat[np.abs(mat.flat) < 0.35] = 0.0
-        smat = sparse.csr_matrix(mat)
+        smat = sparse.csr_array(mat)
 
         rs = np.random.RandomState(843631)
         dense_rslt = corr_nearest_factor(mat, dm, maxiter=10000, rng=rs)
@@ -718,7 +718,7 @@ class Test_Factor:
 
         # Fit to sparse
         rs = np.random.RandomState(5681931)
-        smat = sparse.csr_matrix(mat)
+        smat = sparse.csr_array(mat)
         rslt = cov_nearest_factor_homog(smat, dm, rng=rs)
         mat2 = rslt.to_matrix()
 

@@ -1,8 +1,7 @@
 """
 Tests corresponding to sandbox.stats.multicomp
 """
-
-from statsmodels.compat.scipy import SP_LT_116
+from statsmodels.compat.scipy import SP_LT_2, SP_LT_116
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -39,4 +38,9 @@ def test_get_tukeyqcrit_invalid_alpha_raises():
 
 def test_tiecorrect_matches_scipy():
     xranks = stats.rankdata([7.68, 7.69, 7.70, 7.70, 7.72, 7.73, 7.73, 7.76])
-    assert_almost_equal(tiecorrect(xranks), stats.tiecorrect(xranks), decimal=15)
+    if SP_LT_2:
+        expected_result = stats.tiecorrect(xranks)
+    else:
+        # Saved from SciPy's stats.tiecorrect before deprecation
+        expected_result = 0.9761904761904762
+    assert_almost_equal(tiecorrect(xranks), expected_result, decimal=8)
