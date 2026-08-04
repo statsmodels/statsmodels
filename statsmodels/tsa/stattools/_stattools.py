@@ -41,10 +41,17 @@ ArrayLike1D = np.ndarray | pd.Series | list[float]
 __all__ = [
     "ADFullerResult",
     "AcfResult",
+    "BreakvarHeteroskedasticityResult",
     "CcfResult",
+    "CointResult",
+    "JackknifeResult",
     "KpssResult",
+    "LevinsonDurbinPacfResult",
+    "LevinsonDurbinResult",
+    "PacfBurgResult",
     "PacfResult",
     "PccfResult",
+    "QStatResult",
     "RangeUnitRootTestResult",
     "acf",
     "acovf",
@@ -591,6 +598,13 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     return acov
 
 
+class JackknifeResult(NamedTuple):
+    """Result of :func:`block_jackknife`."""
+
+    theta_jack: float | np.ndarray
+    se: float | np.ndarray
+
+
 def block_jackknife(x, statistic, n_blocks=-1):
     """
     Delete-k (block) jackknife estimate of bias and standard error
@@ -613,10 +627,13 @@ def block_jackknife(x, statistic, n_blocks=-1):
 
     Returns
     -------
-    theta_jack : float or ndarray
-        The bias-corrected jackknife point estimate.
-    se : float or ndarray
-        The jackknife standard error estimate.
+    JackknifeResult
+        A NamedTuple with fields:
+
+        theta_jack : float or ndarray
+            The bias-corrected jackknife point estimate.
+        se : float or ndarray
+            The jackknife standard error estimate.
 
     Notes
     -----
@@ -702,7 +719,14 @@ def block_jackknife(x, statistic, n_blocks=-1):
         theta_jack = float(theta_jack)
         se = float(se)
 
-    return theta_jack, se
+    return JackknifeResult(theta_jack, se)
+
+
+class QStatResult(NamedTuple):
+    """Result of :func:`q_stat`."""
+
+    qstat: np.ndarray
+    pvalue: np.ndarray
 
 
 def q_stat(x, nobs):
@@ -719,10 +743,13 @@ def q_stat(x, nobs):
 
     Returns
     -------
-    q-stat : ndarray
-        Ljung-Box Q-statistic for autocorrelation parameters.
-    p-value : ndarray
-        P-value of the Q statistic.
+    QStatResult
+        A NamedTuple with fields:
+
+        qstat : ndarray
+            Ljung-Box Q-statistic for autocorrelation parameters.
+        pvalue : ndarray
+            P-value of the Q statistic.
 
     See Also
     --------
@@ -742,7 +769,7 @@ def q_stat(x, nobs):
         nobs * (nobs + 2) * np.cumsum((1.0 / (nobs - np.arange(1, len(x) + 1))) * x**2)
     )
     chi2 = stats.chi2.sf(ret, np.arange(1, len(x) + 1))
-    return ret, chi2
+    return QStatResult(ret, chi2)
 
 
 # NOTE: Changed unbiased to False
@@ -1007,9 +1034,16 @@ def pacf_yw(
     return np.array(pacf)
 
 
+class PacfBurgResult(NamedTuple):
+    """Result of :func:`pacf_burg`."""
+
+    pacf: np.ndarray
+    sigma2: np.ndarray
+
+
 def pacf_burg(
     x: ArrayLike1D, nlags: int | None = None, demean: bool = True
-) -> tuple[np.ndarray, np.ndarray]:
+) -> PacfBurgResult:
     """
     Calculate Burg's partial autocorrelation estimator
 
@@ -1026,11 +1060,14 @@ def pacf_burg(
 
     Returns
     -------
-    pacf : ndarray
-        Partial autocorrelations for lags 0, 1, ..., nlag.
-    sigma2 : ndarray
-        Residual variance estimates where the value in position m is the
-        residual variance in an AR model that includes m lags.
+    PacfBurgResult
+        A NamedTuple with fields:
+
+        pacf : ndarray
+            Partial autocorrelations for lags 0, 1, ..., nlag.
+        sigma2 : ndarray
+            Residual variance estimates where the value in position m is
+            the residual variance in an AR model that includes m lags.
 
     See Also
     --------
@@ -1073,7 +1110,7 @@ def pacf_burg(
     sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
     pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
-    return pacf, sigma2
+    return PacfBurgResult(pacf, sigma2)
 
 
 def pacf_ols(
@@ -1871,6 +1908,16 @@ def pccf(
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime
 # TODO: check what to return, for testing and trying out returns everything
+class LevinsonDurbinResult(NamedTuple):
+    """Result of :func:`levinson_durbin`."""
+
+    sigma_v: float
+    arcoefs: np.ndarray
+    pacf: np.ndarray
+    sigma: np.ndarray
+    phi: np.ndarray
+
+
 def levinson_durbin(s, nlags=10, isacov=False):
     """
     Levinson-Durbin recursion for autoregressive processes
@@ -1889,18 +1936,22 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
     Returns
     -------
-    sigma_v : float
-        The estimate of the error variance.
-    arcoefs : ndarray
-        The estimate of the autoregressive coefficients for a model including
-        nlags.
-    pacf : ndarray
-        The partial autocorrelation function.
-    sigma : ndarray
-        The entire sigma array from intermediate result, last value is sigma_v.
-    phi : ndarray
-        The entire phi array from intermediate result, last column contains
-        autoregressive coefficients for AR(nlags).
+    LevinsonDurbinResult
+        A NamedTuple with fields:
+
+        sigma_v : float
+            The estimate of the error variance.
+        arcoefs : ndarray
+            The estimate of the autoregressive coefficients for a model
+            including nlags.
+        pacf : ndarray
+            The partial autocorrelation function.
+        sigma : ndarray
+            The entire sigma array from intermediate result, last value is
+            sigma_v.
+        phi : ndarray
+            The entire phi array from intermediate result, last column
+            contains autoregressive coefficients for AR(nlags).
 
     Notes
     -----
@@ -1937,7 +1988,14 @@ def levinson_durbin(s, nlags=10, isacov=False):
     arcoefs = phi[1:, -1]
     pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.0
-    return sigma_v, arcoefs, pacf_, sig, phi  # return everything
+    return LevinsonDurbinResult(sigma_v, arcoefs, pacf_, sig, phi)  # return everything
+
+
+class LevinsonDurbinPacfResult(NamedTuple):
+    """Result of :func:`levinson_durbin_pacf`."""
+
+    arcoefs: np.ndarray
+    acf: np.ndarray
 
 
 def levinson_durbin_pacf(pacf, nlags=None):
@@ -1954,11 +2012,15 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     Returns
     -------
-    arcoefs : ndarray
-        AR coefficients computed from the partial autocorrelations.
-    acf : ndarray
-        The acf computed from the partial autocorrelations. Array returned
-        contains the autocorrelations corresponding to lags 0, 1, ..., p.
+    LevinsonDurbinPacfResult
+        A NamedTuple with fields:
+
+        arcoefs : ndarray
+            AR coefficients computed from the partial autocorrelations.
+        acf : ndarray
+            The acf computed from the partial autocorrelations. Array
+            returned contains the autocorrelations corresponding to lags
+            0, 1, ..., p.
 
     References
     ----------
@@ -1993,7 +2055,14 @@ def levinson_durbin_pacf(pacf, nlags=None):
         arcoefs[: -(n - i)] = prev - arcoefs[i] * prev[::-1]
         acf[i + 1] = arcoefs[i] * nu[i - 1] + prev.dot(acf[1 : -(n - i)][::-1])
     acf[0] = 1
-    return arcoefs, acf
+    return LevinsonDurbinPacfResult(arcoefs, acf)
+
+
+class BreakvarHeteroskedasticityResult(NamedTuple):
+    """Result of :func:`breakvar_heteroskedasticity_test`."""
+
+    test_statistic: float | np.ndarray
+    p_value: float | np.ndarray
 
 
 def breakvar_heteroskedasticity_test(
@@ -2027,10 +2096,13 @@ def breakvar_heteroskedasticity_test(
 
     Returns
     -------
-    test_statistic : {float, ndarray}
-        Test statistic(s) H(h).
-    p_value : {float, ndarray}
-        p-value(s) of test statistic(s).
+    BreakvarHeteroskedasticityResult
+        A NamedTuple with fields:
+
+        test_statistic : {float, ndarray}
+            Test statistic(s) H(h).
+        p_value : {float, ndarray}
+            p-value(s) of test statistic(s).
 
     Notes
     -----
@@ -2141,9 +2213,9 @@ def breakvar_heteroskedasticity_test(
         raise ValueError("Invalid alternative.")
 
     if len(test_statistic) == 1:
-        return test_statistic[0], p_value[0]
+        return BreakvarHeteroskedasticityResult(test_statistic[0], p_value[0])
 
-    return test_statistic, p_value
+    return BreakvarHeteroskedasticityResult(test_statistic, p_value)
 
 
 def grangercausalitytests(x, maxlag, addconst=True):
@@ -2327,6 +2399,14 @@ def grangercausalitytests(x, maxlag, addconst=True):
     return resli
 
 
+class CointResult(NamedTuple):
+    """Result of :func:`coint`."""
+
+    coint_t: float
+    pvalue: float
+    crit_value: np.ndarray
+
+
 def coint(
     y0,
     y1,
@@ -2384,14 +2464,18 @@ def coint(
 
     Returns
     -------
-    coint_t : float
-        The t-statistic of unit-root test on residuals.
-    pvalue : float
-        MacKinnon's approximate, asymptotic p-value based on MacKinnon (1994).
-    crit_value : dict
-        Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels based on regression curve. This depends on the number of
-        observations.
+    CointResult
+        A NamedTuple with fields:
+
+        coint_t : float
+            The t-statistic of unit-root test on residuals.
+        pvalue : float
+            MacKinnon's approximate, asymptotic p-value based on MacKinnon
+            (1994).
+        crit_value : ndarray
+            Critical values for the test statistic at the 1 %, 5 %, and
+            10 % levels based on regression curve. This depends on the
+            number of observations.
 
     Notes
     -----
@@ -2468,7 +2552,7 @@ def coint(
         #  TODO: check nobs or df = nobs - k
 
     pval_asy = mackinnonp(res_adf[0], regression=trend, N=k_vars)
-    return res_adf[0], pval_asy, crit
+    return CointResult(res_adf[0], pval_asy, crit)
 
 
 def has_missing(data):
