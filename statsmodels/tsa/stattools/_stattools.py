@@ -42,6 +42,7 @@ __all__ = [
     "ADFullerResult",
     "AcfResult",
     "CcfResult",
+    "KpssResult",
     "PacfResult",
     "PccfResult",
     "RangeUnitRootTestResult",
@@ -2487,11 +2488,32 @@ def has_missing(data):
     return np.isnan(np.sum(data))
 
 
+class KpssResult(NamedTuple):
+    """Result of :func:`kpss` when ``use_namedtuple=True``."""
+
+    kpss_stat: float
+    p_value: float
+    lags: int
+    crit: dict[str, float]
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+KPSS Statistic: {self.kpss_stat:0.5f}
+P-value: {self.p_value:0.5f}
+Lags: {self.lags}
+Critical Values: {self.crit}
+"""
+
+
 def kpss(
     x,
     regression: Literal["c", "ct"] = "c",
     nlags: Literal["auto", "legacy"] | int = "auto",
     store: bool = False,
+    *,
+    use_namedtuple: bool | None = None,
 ) -> tuple[float, float, int, dict[str, float]]:
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity
@@ -2517,9 +2539,30 @@ def kpss(
     store : bool
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a ``KpssResult``
+        NamedTuple instead of a plain tuple. If ``None`` (the default), the
+        current tuple-returning behavior is used and a ``FutureWarning`` is
+        issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``KpssResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    KpssResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``kpss_stat``,
+        ``p_value``, ``lags``, ``crit``, and ``resstore`` (``resstore`` is
+        ``None`` when not computed). See
+        :class:`~statsmodels.tsa.stattools.KpssResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     kpss_stat : float
         The KPSS test statistic.
     p_value : float
@@ -2529,12 +2572,16 @@ def kpss(
         critical values, that is, if the p-value is outside the
         interval (0.01, 0.1).
     lags : int
-        The truncation lag parameter.
+        The truncation lag parameter. Only returned when ``store=False``;
+        when ``store=True`` the lag is instead available as
+        ``resstore.lags``.
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
-    resstore : (optional) instance of ResultStore
-        An instance of a dummy class with results attached as attributes.
+    resstore : instance of ResultStore
+        Only returned when ``store=True`` (and, in that case, in place of
+        ``lags``). An instance of a dummy class with results attached as
+        attributes.
 
     Notes
     -----
@@ -2573,6 +2620,7 @@ def kpss(
     x = array_like(x, "x")
     regression = string_like(regression, "regression", options=("c", "ct"))
     store = bool_like(store, "store")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     nobs = x.shape[0]
     hypo = regression
@@ -2650,7 +2698,24 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         stationary_type = "level" if hypo == "c" else "trend"
         rstore.H0 = f"The series is {stationary_type} stationary"
         rstore.HA = f"The series is not {stationary_type} stationary"
+    else:
+        rstore = None
 
+    if use_namedtuple is None:
+        warnings.warn(
+            "kpss currently returns a plain tuple whose length and layout "
+            "depends on the store argument (and which silently drops "
+            "`lags` when store=True). In release 0.16 or after July 2028, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a KpssResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return KpssResult(kpss_stat, p_value, nlags, crit_dict, rstore)
+    if store:
         return kpss_stat, p_value, crit_dict, rstore
     else:
         return kpss_stat, p_value, nlags, crit_dict

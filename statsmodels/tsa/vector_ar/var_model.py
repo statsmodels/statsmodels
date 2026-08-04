@@ -33,6 +33,8 @@ from statsmodels.tsa.tsatools import duplication_matrix, unvec, vec
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
+    ErrorBand,
+    ForecastInterval,
     NormalityTestResults,
     WhitenessTestResults,
 )
@@ -315,7 +317,7 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1)
     forc_lower = point_forecast - q * sigma
     forc_upper = point_forecast + q * sigma
 
-    return point_forecast, forc_lower, forc_upper
+    return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
 
 def var_loglike(resid, omega, nobs):
@@ -1279,12 +1281,15 @@ steps ({steps}) observations.
 
         Returns
         -------
-        point : ndarray
-            Mean value of forecast
-        lower : ndarray
-            Lower bound of confidence interval
-        upper : ndarray
-            Upper bound of confidence interval
+        ForecastInterval
+            A NamedTuple with fields:
+
+            point_forecast : ndarray
+                Mean value of forecast
+            forc_lower : ndarray
+                Lower bound of confidence interval
+            forc_upper : ndarray
+                Upper bound of confidence interval
 
         Notes
         -----
@@ -1300,7 +1305,7 @@ steps ({steps}) observations.
         forc_lower = point_forecast - q * sigma
         forc_upper = point_forecast + q * sigma
 
-        return point_forecast, forc_lower, forc_upper
+        return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
     def to_vecm(self):
         """to_vecm"""
@@ -1752,7 +1757,9 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            ma_rep Monte Carlo standard errors.
         """
         ma_coll = self.irf_resim(
             orth=orth, repl=repl, steps=steps, rng=rng, burn=burn, cum=cum
@@ -1764,7 +1771,7 @@ class VARResults(VARProcess):
         upp_idx = int(round((1 - signif / 2) * repl) - 1)
         lower = ma_sort[low_idx, :, :, :]
         upper = ma_sort[upp_idx, :, :, :]
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     @deprecate_kwarg("seed", "rng")
     def irf_resim(self, orth=False, repl=1000, steps=10, rng=None, burn=100, cum=False):

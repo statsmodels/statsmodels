@@ -11,6 +11,7 @@ import numpy as np
 
 from statsmodels.tools.validation import PandasWrapper, array_like, int_like
 from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 
 def hamilton_filter(x, h=8, p=4):
@@ -36,12 +37,16 @@ def hamilton_filter(x, h=8, p=4):
 
     Returns
     -------
-    cycle : ndarray or Series
-        Estimated cyclical component.  The first ``p + h - 1`` values are
-        ``NaN`` because no regression can be formed for those periods.
-    trend : ndarray or Series
-        Estimated trend component.  The first ``p + h - 1`` values are
-        likewise ``NaN``.
+    CycleTrendResult
+        A NamedTuple with fields:
+
+        cycle : ndarray or Series
+            Estimated cyclical component.  The first ``p + h - 1`` values
+            are ``NaN`` because no regression can be formed for those
+            periods.
+        trend : ndarray or Series
+            Estimated trend component.  The first ``p + h - 1`` values are
+            likewise ``NaN``.
 
     See Also
     --------
@@ -134,7 +139,9 @@ def hamilton_filter(x, h=8, p=4):
         cycle = np.column_stack(cycles)
         trend = np.column_stack(trends)
 
-    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    return CycleTrendResult(
+        pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    )
 
 
 def _single_hamilton_filter(x: np.ndarray, h: int, p: int):

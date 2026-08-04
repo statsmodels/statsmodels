@@ -9,6 +9,7 @@ import scipy.linalg as L
 from statsmodels.tools._decorators import cache_readonly
 import statsmodels.tsa.tsatools as tsa
 from statsmodels.tsa.vector_ar import plotting, util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 
 mat = np.array
 
@@ -437,6 +438,11 @@ class IRAnalysis(BaseIRAnalysis):
                rng for passing a random number generator or seed.
         burn : int, default 100
             Number of initial simulated obs to discard
+
+        Returns
+        -------
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``.
         """
         model = self.model
         periods = self.periods
@@ -500,6 +506,11 @@ class IRAnalysis(BaseIRAnalysis):
             Note: period of impulse (t=0) is not included when computing
             principal component
 
+        Returns
+        -------
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``.
+
         References
         ----------
         Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
@@ -539,7 +550,7 @@ class IRAnalysis(BaseIRAnalysis):
                     eigva[i, j, k[i, j]]
                 )
 
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     @deprecate_kwarg("seed", "rng")
     def err_band_sz2(
@@ -580,6 +591,11 @@ class IRAnalysis(BaseIRAnalysis):
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
             principal component
+
+        Returns
+        -------
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -622,7 +638,7 @@ class IRAnalysis(BaseIRAnalysis):
                 lower[:, i, j] = irfs[:, i, j] + gamma_sort[indx[0], :, i, j]
                 upper[:, i, j] = irfs[:, i, j] + gamma_sort[indx[1], :, i, j]
 
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     @deprecate_kwarg("seed", "rng")
     def err_band_sz3(
@@ -662,6 +678,11 @@ class IRAnalysis(BaseIRAnalysis):
             Index of column of eigenvector/value to use for each error band
             Note: period of impulse (t=0) is not included when computing
             principal component
+
+        Returns
+        -------
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -725,7 +746,7 @@ class IRAnalysis(BaseIRAnalysis):
                 lower[:, i, j] = irfs[:, i, j] + gamma_sort[indx[0], :, i, j]
                 upper[:, i, j] = irfs[:, i, j] + gamma_sort[indx[1], :, i, j]
 
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     def _eigval_decomp_SZ(self, irf_resim):
         """
@@ -894,6 +915,11 @@ class IRAnalysis(BaseIRAnalysis):
                rng for passing a random number generator or seed.
         burn : int, default 100
             Number of initial simulated obs to discard
+
+        Returns
+        -------
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``.
         """
         model = self.model
         periods = self.periods

@@ -1,6 +1,7 @@
 import numpy as np
 
 from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 # the data is sampled quarterly, so cut-off frequency of 18
 
@@ -35,10 +36,13 @@ def cffilter(x, low=6, high=32, drift=True):
 
     Returns
     -------
-    cycle : array_like
-        The features of x between the periodicities low and high.
-    trend : array_like
-        The trend in the data with the cycles removed.
+    CycleTrendResult
+        A NamedTuple with fields:
+
+        cycle : array_like
+            The features of x between the periodicities low and high.
+        trend : array_like
+            The trend in the data with the cycles removed.
 
     See Also
     --------
@@ -101,4 +105,6 @@ def cffilter(x, low=6, high=32, drift=True):
 
     cycle, trend = y.squeeze(), x.squeeze() - y
 
-    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    return CycleTrendResult(
+        pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    )

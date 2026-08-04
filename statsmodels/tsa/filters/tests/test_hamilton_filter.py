@@ -13,6 +13,7 @@ from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 from statsmodels.tsa.filters.hamilton_filter import hamilton_filter
 
 # ---------------------------------------------------------------------------
@@ -33,6 +34,14 @@ def test_output_shapes_default():
     cycle, trend = hamilton_filter(x)
     assert cycle.shape == (50,)
     assert trend.shape == (50,)
+
+
+def test_returns_cycletrendresult():
+    x = np.ones(50)
+    res = hamilton_filter(x)
+    assert isinstance(res, CycleTrendResult)
+    assert res[0] is res.cycle
+    assert res[1] is res.trend
 
 
 def test_output_shapes_custom_h_p():

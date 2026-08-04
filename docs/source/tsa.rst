@@ -80,6 +80,7 @@ Descriptive Statistics and Tests
    stattools.adfuller
    stattools.ADFullerResult
    stattools.kpss
+   stattools.KpssResult
    stattools.leybourne
    stattools.range_unit_root_test
    stattools.RangeUnitRootTestResult
@@ -116,6 +117,7 @@ The basic autoregressive model in Statsmodels is:
    ar_model.AutoReg
    ar_model.AutoRegResults
    ar_model.ar_select_order
+   ar_model.InformationCriteria
 
 The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
 and supports exogenous regressors (an AR-X model) and seasonal effects.
@@ -345,6 +347,7 @@ Time Series Filters
 .. autosummary::
    :toctree: generated/
 
+   CycleTrendResult
    convolution_filter
    recursive_filter
    miso_lfilter

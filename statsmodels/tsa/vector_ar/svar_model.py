@@ -15,6 +15,7 @@ from numpy.linalg import slogdet
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
@@ -777,7 +778,9 @@ class SVARResults(SVARProcess, VARResults):
 
         Returns
         -------
-        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            ma_rep Monte Carlo standard errors.
 
         Notes
         -----
@@ -837,4 +840,4 @@ class SVARResults(SVARProcess, VARResults):
         )
         lower = ma_sort[index[0], :, :, :]
         upper = ma_sort[index[1], :, :, :]
-        return lower, upper
+        return ErrorBand(lower, upper)

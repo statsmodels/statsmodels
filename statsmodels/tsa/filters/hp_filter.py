@@ -5,6 +5,7 @@ from scipy import sparse
 from scipy.sparse.linalg import spsolve
 
 from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 
 def hpfilter(x, lamb=1600):
@@ -23,10 +24,13 @@ def hpfilter(x, lamb=1600):
 
     Returns
     -------
-    cycle : ndarray
-        The estimated cycle in the data given lamb.
-    trend : ndarray
-        The estimated trend in the data given lamb.
+    CycleTrendResult
+        A NamedTuple with fields:
+
+        cycle : ndarray
+            The estimated cycle in the data given lamb.
+        trend : ndarray
+            The estimated trend in the data given lamb.
 
     See Also
     --------
@@ -108,4 +112,6 @@ def hpfilter(x, lamb=1600):
     trend = spsolve((eye+lamb*K.T.dot(K)).tocsc(), x, use_umfpack=use_umfpack)
 
     cycle = x - trend
-    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    return CycleTrendResult(
+        pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    )
