@@ -1086,7 +1086,7 @@ def pacf_ols(
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
-        xlags, x0 = lagmat(x, nlags, original="sep")
+        xlags, x0 = lagmat(x, nlags, original="sep", use_namedtuple=False)
         xlags = add_constant(xlags)
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
@@ -1094,7 +1094,9 @@ def pacf_ols(
     else:
         x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
-        xlags, x0 = lagmat(x, nlags, original="sep", trim="both")
+        xlags, x0 = lagmat(
+            x, nlags, original="sep", trim="both", use_namedtuple=False
+        )
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])

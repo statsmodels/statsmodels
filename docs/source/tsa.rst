@@ -372,6 +372,7 @@ TSA Tools
    add_trend
    detrend
    lagmat
+   LagmatResult
    lagmat2ds
 
 VARMA Process

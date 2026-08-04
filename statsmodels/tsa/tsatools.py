@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lrange
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -30,6 +30,7 @@ __all__ = [
     "elimination_matrix",
     "freq_to_period",
     "lagmat",
+    "LagmatResult",
     "lagmat2ds",
     "unvec",
     "unvech",
@@ -293,12 +294,22 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
+class LagmatResult(NamedTuple):
+    """Result of :func:`lagmat` when ``original="sep"`` and
+    ``use_namedtuple=True``."""
+
+    lags: "NDArray | DataFrame"
+    leads: "NDArray | DataFrame"
+
+
 def lagmat(
     x,
     maxlag: int | list[int] | NDArray,
     trim: Literal["forward", "backward", "both", "none"] = "forward",
     original: Literal["ex", "sep", "in"] = "ex",
     use_pandas: bool = False,
+    *,
+    use_namedtuple: bool | None = None,
 ) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags
@@ -332,13 +343,35 @@ def lagmat(
     use_pandas : bool
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
+    use_namedtuple : bool, optional
+        Only relevant when ``original="sep"``, where the return value's
+        arity depends on this flag. Flag indicating whether to return the
+        results as a ``LagmatResult`` NamedTuple instead of a plain tuple.
+        If ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued. Ignored when
+        ``original != "sep"``, since ``lagmat`` always returns a single
+        array in that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``LagmatResult`` when
+            ``original="sep"``. Set ``use_namedtuple=True`` to opt in now,
+            or ``use_namedtuple=False`` to silence the warning and keep
+            the current return type.
 
     Returns
     -------
-    lagmat : ndarray
-        The array with lagged observations.
-    y : ndarray, optional
-        Only returned if original == 'sep'.
+    lags : ndarray
+        The array with lagged observations. Returned directly (not part
+        of a tuple) unless ``original="sep"``.
+    LagmatResult
+        If ``original="sep"`` and ``use_namedtuple=True``, a NamedTuple
+        with fields ``lags`` and ``leads`` instead of the plain tuple
+        below. See :class:`~statsmodels.tsa.tsatools.LagmatResult`.
+    leads : ndarray, optional
+        Only returned (as part of a plain tuple, the deprecated default)
+        if ``original == 'sep'``.
 
     Notes
     -----
@@ -402,6 +435,7 @@ def lagmat(
         # Special case for lag_indices = [0] to empty to match above
         lag_indices = lag_indices[lag_indices > 0]
     use_pandas = bool_like(use_pandas, "use_pandas")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     trim = string_like(
         trim,
         "trim",
@@ -469,6 +503,19 @@ def lagmat(
             leads = lm[startobs:stopobs, :dropidx]
 
     if original == "sep":
+        if use_namedtuple is None:
+            warnings.warn(
+                "lagmat currently returns a plain (lags, leads) tuple when "
+                "original='sep'. In release 0.16 or after July 2028, "
+                "whichever is later, the default behavior will switch to "
+                "always returning a LagmatResult NamedTuple. Set "
+                "use_namedtuple=True to switch now, or use_namedtuple=False "
+                "to keep the current behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple:
+            return LagmatResult(lags, leads)
         return lags, leads
     else:
         return lags

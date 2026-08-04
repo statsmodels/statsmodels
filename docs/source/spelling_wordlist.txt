@@ -2546,3 +2546,4 @@ ppfcond
 reparameterizations
 ADFullerResult
 RangeUnitRootTestResult
+LagmatResult

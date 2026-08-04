@@ -310,7 +310,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         hold_back = self._hold_back
         exog_names = []
         endog_names = self.endog_names
-        x, y = lagmat(self.endog, maxlag, original="sep")
+        x, y = lagmat(self.endog, maxlag, original="sep", use_namedtuple=False)
         exog_names.extend([endog_names + f".L{lag}" for lag in self._lags])
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
