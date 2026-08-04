@@ -74,6 +74,7 @@ Descriptive Statistics and Tests
    stattools.ccf
    stattools.pccf
    stattools.adfuller
+   stattools.ADFullerResult
    stattools.kpss
    stattools.leybourne
    stattools.range_unit_root_test

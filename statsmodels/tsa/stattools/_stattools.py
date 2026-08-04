@@ -5,7 +5,7 @@ from __future__ import annotations
 from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Literal
+from typing import Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -42,6 +42,7 @@ __all__ = [
     "acf",
     "acovf",
     "adfuller",
+    "ADFullerResult",
     "bds",
     "block_jackknife",
     "breakvar_heteroskedasticity_test",
@@ -157,8 +158,28 @@ def _autolag(
         return icbest, bestlag, results
 
 
-# this needs to be converted to a class like HetGoldfeldQuandt,
-# 3 different returns are a mess
+class ADFullerResult(NamedTuple):
+    """Result of :func:`adfuller` when ``use_namedtuple=True``."""
+
+    adf: float
+    pvalue: float
+    usedlag: int
+    nobs: int
+    critical_values: dict[str, float]
+    icbest: float | None
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+ADF Statistic: {self.adf:0.5f}
+P-value: {self.pvalue:0.5f}
+Used Lag: {self.usedlag}
+Nobs: {self.nobs}
+Critical Values: {self.critical_values}
+"""
+
+
 # See:
 # Ng and Perron(2001), Lag length selection and the construction of unit root
 # tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
@@ -172,6 +193,8 @@ def adfuller(
     autolag="AIC",
     store=False,
     regresults=False,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Augmented Dickey-Fuller unit root test
@@ -209,9 +232,31 @@ def adfuller(
         the adf statistic. Default is False.
     regresults : bool, optional
         If True, the full regression results are returned. Default is False.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an
+        ``ADFullerResult`` NamedTuple instead of a plain tuple. If ``None``
+        (the default), the current tuple-returning behavior is used and a
+        ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return an ``ADFullerResult``.
+            Set ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    ADFullerResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``adf``,
+        ``pvalue``, ``usedlag``, ``nobs``, ``critical_values``, ``icbest``,
+        and ``resstore`` (``icbest``/``resstore`` are ``None`` when not
+        computed). See :class:`~statsmodels.tsa.stattools.ADFullerResult`.
+
+    Otherwise (the deprecated default), a plain tuple whose length depends
+    on `store` and `autolag`, made up of a subset of:
+
     adf : float
         The test statistic.
     pvalue : float
@@ -268,6 +313,7 @@ def adfuller(
     )
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     if x.max() == x.min():
         raise ValueError("Invalid input, x is constant")
@@ -373,6 +419,25 @@ def adfuller(
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
+    else:
+        resstore = None
+
+    if use_namedtuple is None:
+        warnings.warn(
+            "adfuller currently returns a plain tuple whose length depends "
+            "on the store and autolag arguments. In release 0.16 or after "
+            "July 2028, whichever is later, the default behavior will "
+            "switch to always returning an ADFullerResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return ADFullerResult(
+            adfstat, pvalue, usedlag, nobs, critvalues, icbest, resstore
+        )
+    if store:
         return adfstat, pvalue, critvalues, resstore
     elif not autolag:
         return adfstat, pvalue, usedlag, nobs, critvalues
@@ -2173,7 +2238,13 @@ def coint(
     res_co = OLS(y0, xx).fit()
 
     if res_co.rsquared < 1 - 100 * SQRTEPS:
-        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=autolag, regression="n")
+        res_adf = adfuller(
+            res_co.resid,
+            maxlag=maxlag,
+            autolag=autolag,
+            regression="n",
+            use_namedtuple=False,
+        )
     else:
         warnings.warn(
             "y0 and y1 are (almost) perfectly colinear."
@@ -2982,7 +3053,13 @@ class ZivotAndrewsUnitRoot:
             raise ValueError("trim value must be a float in range [0, 1/3)")
         nobs = x.shape[0]
         if autolag:
-            adf_res = adfuller(x, maxlag=maxlag, regression="ct", autolag=autolag)
+            adf_res = adfuller(
+                x,
+                maxlag=maxlag,
+                regression="ct",
+                autolag=autolag,
+                use_namedtuple=False,
+            )
             baselags = adf_res[2]
         elif maxlag:
             baselags = maxlag

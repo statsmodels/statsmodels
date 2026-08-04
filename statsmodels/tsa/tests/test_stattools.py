@@ -34,6 +34,7 @@ from statsmodels.tsa.stattools import (
     acf,
     acovf,
     adfuller,
+    ADFullerResult,
     arma_order_select_ic,
     block_jackknife,
     breakvar_heteroskedasticity_test,
@@ -111,7 +112,9 @@ class TestADFConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="c", autolag=None, maxlag=4)
+        cls.res1 = adfuller(
+            cls.x, regression="c", autolag=None, maxlag=4, use_namedtuple=False
+        )
         cls.teststat = 0.97505319
         cls.pvalue = 0.99399563
         cls.critvalues = [-3.476, -2.883, -2.573]
@@ -122,7 +125,9 @@ class TestADFConstantTrend(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="ct", autolag=None, maxlag=4)
+        cls.res1 = adfuller(
+            cls.x, regression="ct", autolag=None, maxlag=4, use_namedtuple=False
+        )
         cls.teststat = -1.8566374
         cls.pvalue = 0.67682968
         cls.critvalues = [-4.007, -3.437, -3.137]
@@ -141,7 +146,9 @@ class TestADFNoConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="n", autolag=None, maxlag=4)
+        cls.res1 = adfuller(
+            cls.x, regression="n", autolag=None, maxlag=4, use_namedtuple=False
+        )
         cls.teststat = 3.5227498
 
         cls.pvalue = 0.99999
@@ -158,7 +165,9 @@ class TestADFNoConstant(CheckADF):
 class TestADFConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="c", autolag=None, maxlag=1)
+        cls.res1 = adfuller(
+            cls.y, regression="c", autolag=None, maxlag=1, use_namedtuple=False
+        )
         cls.teststat = -4.3346988
         cls.pvalue = 0.00038661
         cls.critvalues = [-3.476, -2.883, -2.573]
@@ -167,7 +176,9 @@ class TestADFConstant2(CheckADF):
 class TestADFConstantTrend2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="ct", autolag=None, maxlag=1)
+        cls.res1 = adfuller(
+            cls.y, regression="ct", autolag=None, maxlag=1, use_namedtuple=False
+        )
         cls.teststat = -4.425093
         cls.pvalue = 0.00199633
         cls.critvalues = [-4.006, -3.437, -3.137]
@@ -176,14 +187,21 @@ class TestADFConstantTrend2(CheckADF):
 class TestADFNoConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="n", autolag=None, maxlag=1)
+        cls.res1 = adfuller(
+            cls.y, regression="n", autolag=None, maxlag=1, use_namedtuple=False
+        )
         cls.teststat = -2.4511596
         cls.pvalue = 0.013747
         # Stata does not return a p-value for noconstant
         # this value is just taken from our results
         cls.critvalues = [-2.587, -1.950, -1.617]
         _, _1, _2, cls.store = adfuller(
-            cls.y, regression="n", autolag=None, maxlag=1, store=True
+            cls.y,
+            regression="n",
+            autolag=None,
+            maxlag=1,
+            store=True,
+            use_namedtuple=False,
         )
 
     def test_store_str(self):
@@ -1790,7 +1808,7 @@ def test_innovations_algo_filter_kalman_filter():
 def test_adfuller_short_series():
     rs = np.random.RandomState(9374)
     y = rs.standard_normal(7)
-    res = adfuller(y, store=True)
+    res = adfuller(y, store=True, use_namedtuple=False)
     assert res[-1].maxlag == 1
     y = rs.standard_normal(2)
     with pytest.raises(ValueError, match="sample size is too short"):
@@ -1805,6 +1823,66 @@ def test_adfuller_maxlag_too_large():
     y = rs.standard_normal(100)
     with pytest.raises(ValueError, match="maxlag must be less than"):
         adfuller(y, maxlag=51)
+
+
+@pytest.fixture()
+def adfuller_data():
+    rs = np.random.RandomState(0)
+    return np.cumsum(rs.standard_normal(200))
+
+
+def test_adfuller_use_namedtuple_default_warns(adfuller_data):
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = adfuller(adfuller_data)
+    assert isinstance(res, tuple)
+    assert not isinstance(res, ADFullerResult)
+    assert len(res) == 6
+
+
+def test_adfuller_use_namedtuple_false_silences_warning(adfuller_data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = adfuller(adfuller_data, use_namedtuple=False)
+    assert isinstance(res, tuple)
+    assert not isinstance(res, ADFullerResult)
+    assert len(res) == 6
+
+
+def test_adfuller_use_namedtuple_true_returns_namedtuple(adfuller_data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = adfuller(adfuller_data, use_namedtuple=True)
+    assert isinstance(res, ADFullerResult)
+    # still positionally unpackable/indexable like the legacy tuple
+    assert res[0] == res.adf
+    assert res[1] == res.pvalue
+    assert res.resstore is None
+
+
+def test_adfuller_use_namedtuple_true_with_store(adfuller_data):
+    res = adfuller(adfuller_data, store=True, use_namedtuple=True)
+    assert isinstance(res, ADFullerResult)
+    assert res.resstore is not None
+    assert res.resstore.__str__() == "Augmented Dickey-Fuller Test Results"
+
+
+def test_adfuller_use_namedtuple_true_without_autolag(adfuller_data):
+    res = adfuller(adfuller_data, autolag=None, maxlag=4, use_namedtuple=True)
+    assert isinstance(res, ADFullerResult)
+    assert res.icbest is None
+
+
+def test_adfuller_use_namedtuple_matches_legacy_values(adfuller_data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        legacy = adfuller(adfuller_data)
+        nt = adfuller(adfuller_data, use_namedtuple=True)
+    assert_almost_equal(nt.adf, legacy[0])
+    assert_almost_equal(nt.pvalue, legacy[1])
+    assert nt.usedlag == legacy[2]
+    assert nt.nobs == legacy[3]
+    assert nt.critical_values == legacy[4]
+    assert_almost_equal(nt.icbest, legacy[5])
 
 
 class SetupZivotAndrews:
