@@ -80,6 +80,7 @@ Descriptive Statistics and Tests
    stattools.adfuller
    stattools.ADFullerResult
    stattools.kpss
+   stattools.KpssResult
    stattools.leybourne
    stattools.range_unit_root_test
    stattools.RangeUnitRootTestResult

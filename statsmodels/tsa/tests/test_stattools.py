@@ -34,6 +34,7 @@ from statsmodels.tsa.stattools import (
     AcfResult,
     ADFullerResult,
     CcfResult,
+    KpssResult,
     PacfResult,
     PccfResult,
     RangeUnitRootTestResult,
@@ -1305,7 +1306,7 @@ class TestKPSS:
     def test_fail_nonvector_input(self):
         # should be fine
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, nlags="legacy")
+            kpss(self.x, nlags="legacy", use_namedtuple=False)
 
         x = rs.rand(20, 2)
         with pytest.raises(ValueError):
@@ -1314,38 +1315,38 @@ class TestKPSS:
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "c", nlags="legacy")
+            kpss(self.x, "c", nlags="legacy", use_namedtuple=False)
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "C", nlags="legacy")
+            kpss(self.x, "C", nlags="legacy", use_namedtuple=False)
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "ct", nlags="legacy")
+            kpss(self.x, "ct", nlags="legacy", use_namedtuple=False)
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "CT", nlags="legacy")
+            kpss(self.x, "CT", nlags="legacy", use_namedtuple=False)
 
         with pytest.raises(ValueError):
             kpss(self.x, "unclear hypothesis", nlags="legacy")
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
-            kpss_stat, _, _, _ = kpss(self.x, "c", 3)
+            kpss_stat, _, _, _ = kpss(self.x, "c", 3, use_namedtuple=False)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
         with pytest.warns(InterpolationWarning):
-            kpss_stat, _, _, _ = kpss(self.x, "ct", 3)
+            kpss_stat, _, _, _ = kpss(self.x, "ct", 3, use_namedtuple=False)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
-            _, pval, _, _ = kpss(self.x, "c", 3)
+            _, pval, _, _ = kpss(self.x, "c", 3, use_namedtuple=False)
         assert_equal(pval, 0.01)
 
         with pytest.warns(InterpolationWarning):
-            _, pval, _, _ = kpss(self.x, "ct", 3)
+            _, pval, _, _ = kpss(self.x, "ct", 3, use_namedtuple=False)
         assert_equal(pval, 0.01)
 
     def test_store(self):
         with pytest.warns(InterpolationWarning):
-            _, _, _, store = kpss(self.x, "c", 3, True)
+            _, _, _, store = kpss(self.x, "c", 3, True, use_namedtuple=False)
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
@@ -1355,22 +1356,39 @@ class TestKPSS:
     def test_lags(self):
         # real GDP from macrodata data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, "c", nlags="auto")
+            res = kpss(self.x, "c", nlags="auto", use_namedtuple=False)
         assert_equal(res[2], 9)
         # real interest rates from macrodata data set
-        res = kpss(sunspots.load().data["SUNACTIVITY"], "c", nlags="auto")
+        res = kpss(
+            sunspots.load().data["SUNACTIVITY"],
+            "c",
+            nlags="auto",
+            use_namedtuple=False,
+        )
         assert_equal(res[2], 7)
         # volumes from nile data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(nile.load().data["volume"], "c", nlags="auto")
+            res = kpss(
+                nile.load().data["volume"], "c", nlags="auto", use_namedtuple=False
+            )
         assert_equal(res[2], 5)
         # log-coinsurance from randhie data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(randhie.load().data["lncoins"], "ct", nlags="auto")
+            res = kpss(
+                randhie.load().data["lncoins"],
+                "ct",
+                nlags="auto",
+                use_namedtuple=False,
+            )
         assert_equal(res[2], 75)
         # in-vehicle time from modechoice data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(modechoice.load().data["invt"], "ct", nlags="auto")
+            res = kpss(
+                modechoice.load().data["invt"],
+                "ct",
+                nlags="auto",
+                use_namedtuple=False,
+            )
         assert_equal(res[2], 18)
 
     def test_kpss_fails_on_nobs_check(self):
@@ -1388,12 +1406,12 @@ class TestKPSS:
         # GH5925
         base = np.array([0, 0, 0, 0, 0, 1, 1.0])
         data_which_breaks_autolag = np.r_[np.tile(base, 297 // 7), [0, 0, 0]]
-        kpss(data_which_breaks_autolag, nlags="auto")
+        kpss(data_which_breaks_autolag, nlags="auto", use_namedtuple=False)
 
     def test_legacy_lags(self):
         # Test legacy lags are the same
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, "c", nlags="legacy")
+            res = kpss(self.x, "c", nlags="legacy", use_namedtuple=False)
         assert_equal(res[2], 15)
 
     def test_unknown_lags(self):
@@ -1404,6 +1422,36 @@ class TestKPSS:
     def test_none(self):
         with pytest.raises(ValueError, match="None is not a valid value"):
             kpss(self.x, nlags=None)
+
+    def test_use_namedtuple_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = kpss(self.x, "c", nlags=3)
+        assert not isinstance(res, KpssResult)
+
+    def test_use_namedtuple_false_silences_warning(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = kpss(self.x, "c", nlags=3, use_namedtuple=False)
+        assert not isinstance(res, KpssResult)
+
+    def test_use_namedtuple_true_returns_namedtuple(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = kpss(self.x, "c", nlags=3, use_namedtuple=True)
+        assert isinstance(res, KpssResult)
+        assert res.resstore is None
+        assert res[0] == res.kpss_stat
+        assert res[1] == res.p_value
+        assert res[2] == res.lags == 3
+        assert res[3] == res.crit
+
+    def test_use_namedtuple_true_with_store(self):
+        res = kpss(self.x, "c", nlags=3, store=True, use_namedtuple=True)
+        assert isinstance(res, KpssResult)
+        assert res.lags == 3
+        assert res.resstore is not None
+        assert res.resstore.nobs == len(self.x)
+        assert res.resstore.lags == 3
 
 
 class TestRUR:

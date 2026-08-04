@@ -2552,6 +2552,7 @@ CcfResult
 PccfResult
 AcfResult
 CycleTrendResult
+KpssResult
 InformationCriteria
 ForecastInterval
 ErrorBand

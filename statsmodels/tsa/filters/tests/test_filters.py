@@ -21,8 +21,8 @@ from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.tsa.filters.bk_filter import bkfilter
 from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.filtertools import (
-    convolution_filter,
     CycleTrendResult,
+    convolution_filter,
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter

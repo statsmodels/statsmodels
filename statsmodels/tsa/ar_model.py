@@ -63,6 +63,7 @@ class InformationCriteria(NamedTuple):
     bic: float
     hqic: float
 
+
 REPEATED_FIT_ERROR = """
 Model has been fit using maxlag={0}, method={1}, ic={2}, trend={3}. These
 cannot be changed in subsequent calls to `fit`. Instead, use a new instance of
