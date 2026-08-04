@@ -66,17 +66,23 @@ Descriptive Statistics and Tests
 
    stattools.acovf
    stattools.acf
+   stattools.AcfResult
    stattools.pacf
+   stattools.PacfResult
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
+   stattools.CcfResult
    stattools.pccf
+   stattools.PccfResult
    stattools.adfuller
+   stattools.ADFullerResult
    stattools.kpss
    stattools.leybourne
    stattools.range_unit_root_test
+   stattools.RangeUnitRootTestResult
    stattools.zivot_andrews
    stattools.coint
    stattools.bds
@@ -370,6 +376,7 @@ TSA Tools
    add_trend
    detrend
    lagmat
+   LagmatResult
    lagmat2ds
 
 VARMA Process

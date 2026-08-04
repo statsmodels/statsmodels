@@ -535,7 +535,9 @@ class ARDL(AutoReg):
         """Construct and format model regressors"""
         # TODO: Missing adjustment
         self._maxlag = max(self._lags) if self._lags else 0
-        _endog_reg, _endog = lagmat(self.data.endog, self._maxlag, original="sep")
+        _endog_reg, _endog = lagmat(
+            self.data.endog, self._maxlag, original="sep", use_namedtuple=False
+        )
         assert isinstance(_endog, np.ndarray)
         assert isinstance(_endog_reg, np.ndarray)
         self._endog_reg, self._endog = _endog_reg, _endog
@@ -1812,7 +1814,9 @@ class UECM(ARDL):
         dendog = np.full_like(self.data.endog, np.nan)
         dendog[1:] = np.diff(self.data.endog, axis=0)
         dlag = max(0, self._maxlag - 1)
-        self._endog_reg, self._endog = lagmat(dendog, dlag, original="sep")
+        self._endog_reg, self._endog = lagmat(
+            dendog, dlag, original="sep", use_namedtuple=False
+        )
         # 2. Deterministics
         self._deterministic_reg = self._deterministics.in_sample()
         # 3. Levels

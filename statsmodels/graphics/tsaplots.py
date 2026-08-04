@@ -281,7 +281,6 @@ def plot_acf(
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
     confint = None
-    # acf has different return type based on alpha
     acf_x = acf(
         x,
         nlags=nlags,
@@ -290,9 +289,10 @@ def plot_acf(
         bartlett_confint=bartlett_confint,
         adjusted=adjusted,
         missing=missing,
+        use_namedtuple=True,
     )
     if alpha is not None:
-        acf_x, confint = acf_x[:2]
+        acf_x, confint = acf_x.acf, acf_x.confint
 
     _plot_corr(
         ax,
@@ -421,7 +421,10 @@ def plot_pacf(
     if alpha is None:
         acf_x = pacf(x, nlags=nlags, alpha=alpha, method=method)
     else:
-        acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
+        result = pacf(
+            x, nlags=nlags, alpha=alpha, method=method, use_namedtuple=True
+        )
+        acf_x, confint = result.pacf, result.confint
 
     _plot_corr(
         ax,
@@ -527,9 +530,17 @@ def plot_ccf(
     if negative_lags:
         lags = -lags
 
-    ccf_res = ccf(x, y, adjusted=adjusted, fft=fft, alpha=alpha, nlags=nlags + 1)
+    ccf_res = ccf(
+        x,
+        y,
+        adjusted=adjusted,
+        fft=fft,
+        alpha=alpha,
+        nlags=nlags + 1,
+        use_namedtuple=True,
+    )
     if alpha is not None:
-        ccf_xy, confint = ccf_res
+        ccf_xy, confint = ccf_res.ccf, ccf_res.confint
     else:
         ccf_xy = ccf_res
         confint = None
@@ -650,9 +661,11 @@ def plot_pccf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, True)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
-    pccf_res = pccf(x, y, alpha=alpha, nlags=nlags, method=method)
+    pccf_res = pccf(
+        x, y, alpha=alpha, nlags=nlags, method=method, use_namedtuple=True
+    )
     if alpha is not None:
-        pccf_xy, confint = pccf_res
+        pccf_xy, confint = pccf_res.pccf, pccf_res.confint
     else:
         pccf_xy = pccf_res
         confint = None

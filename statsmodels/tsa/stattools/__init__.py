@@ -1,6 +1,12 @@
 from ._arma_order_selection import arma_order_select_ic
 from ._leybourne import leybourne
 from ._stattools import (
+    AcfResult,
+    ADFullerResult,
+    CcfResult,
+    PacfResult,
+    PccfResult,
+    RangeUnitRootTestResult,
     acf,
     acovf,
     adfuller,
@@ -29,6 +35,12 @@ from ._stattools import (
 )
 
 __all__ = [
+    "ADFullerResult",
+    "AcfResult",
+    "CcfResult",
+    "PacfResult",
+    "PccfResult",
+    "RangeUnitRootTestResult",
     "acf",
     "acovf",
     "adfuller",

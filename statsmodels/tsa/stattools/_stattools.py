@@ -5,7 +5,7 @@ from __future__ import annotations
 from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Literal
+from typing import Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -39,6 +39,12 @@ from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 __all__ = [
+    "ADFullerResult",
+    "AcfResult",
+    "CcfResult",
+    "PacfResult",
+    "PccfResult",
+    "RangeUnitRootTestResult",
     "acf",
     "acovf",
     "adfuller",
@@ -157,8 +163,28 @@ def _autolag(
         return icbest, bestlag, results
 
 
-# this needs to be converted to a class like HetGoldfeldQuandt,
-# 3 different returns are a mess
+class ADFullerResult(NamedTuple):
+    """Result of :func:`adfuller` when ``use_namedtuple=True``."""
+
+    adf: float
+    pvalue: float
+    usedlag: int
+    nobs: int
+    critical_values: dict[str, float]
+    icbest: float | None
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+ADF Statistic: {self.adf:0.5f}
+P-value: {self.pvalue:0.5f}
+Used Lag: {self.usedlag}
+Nobs: {self.nobs}
+Critical Values: {self.critical_values}
+"""
+
+
 # See:
 # Ng and Perron(2001), Lag length selection and the construction of unit root
 # tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
@@ -172,6 +198,8 @@ def adfuller(
     autolag="AIC",
     store=False,
     regresults=False,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Augmented Dickey-Fuller unit root test
@@ -209,9 +237,31 @@ def adfuller(
         the adf statistic. Default is False.
     regresults : bool, optional
         If True, the full regression results are returned. Default is False.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an
+        ``ADFullerResult`` NamedTuple instead of a plain tuple. If ``None``
+        (the default), the current tuple-returning behavior is used and a
+        ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return an ``ADFullerResult``.
+            Set ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    ADFullerResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``adf``,
+        ``pvalue``, ``usedlag``, ``nobs``, ``critical_values``, ``icbest``,
+        and ``resstore`` (``icbest``/``resstore`` are ``None`` when not
+        computed). See :class:`~statsmodels.tsa.stattools.ADFullerResult`.
+
+    Otherwise (the deprecated default), a plain tuple whose length depends
+    on `store` and `autolag`, made up of a subset of:
+
     adf : float
         The test statistic.
     pvalue : float
@@ -268,6 +318,7 @@ def adfuller(
     )
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     if x.max() == x.min():
         raise ValueError("Invalid input, x is constant")
@@ -373,6 +424,25 @@ def adfuller(
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
+    else:
+        resstore = None
+
+    if use_namedtuple is None:
+        warnings.warn(
+            "adfuller currently returns a plain tuple whose length depends "
+            "on the store and autolag arguments. In release 0.16 or after "
+            "July 2028, whichever is later, the default behavior will "
+            "switch to always returning an ADFullerResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return ADFullerResult(
+            adfstat, pvalue, usedlag, nobs, critvalues, icbest, resstore
+        )
+    if store:
         return adfstat, pvalue, critvalues, resstore
     elif not autolag:
         return adfstat, pvalue, usedlag, nobs, critvalues
@@ -677,6 +747,16 @@ def q_stat(x, nobs):
 # NOTE: Changed unbiased to False
 # see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
+class AcfResult(NamedTuple):
+    """Result of :func:`acf` when ``qstat`` or ``alpha`` is set and
+    ``use_namedtuple=True``."""
+
+    acf: np.ndarray
+    confint: np.ndarray | None
+    qstat: np.ndarray | None
+    pvalues: np.ndarray | None
+
+
 def acf(
     x,
     adjusted=False,
@@ -686,6 +766,8 @@ def acf(
     alpha=None,
     bartlett_confint=True,
     missing="none",
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Calculate the autocorrelation function
@@ -738,23 +820,51 @@ def acf(
         and cross-products that are used to estimate the autocovariance.
         When using "conservative", n is set to the number of non-missing
         observations.
+    use_namedtuple : bool, optional
+        Only relevant when ``qstat`` is True or ``alpha`` is not None,
+        where the return value's arity depends on this flag. Flag
+        indicating whether to return the results as an ``AcfResult``
+        NamedTuple instead of a plain tuple. If ``None`` (the default),
+        the current tuple-returning behavior is used and a
+        ``FutureWarning`` is issued. Ignored when ``qstat`` is False and
+        ``alpha`` is None, since ``acf`` always returns a single array in
+        that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return an ``AcfResult`` when
+            ``qstat`` is True or ``alpha`` is not None. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
     acf : ndarray
         The autocorrelation function for lags 0, 1, ..., nlags. Shape
-        (nlags+1,).
+        (nlags+1,). Returned directly (not part of a tuple) unless
+        ``qstat`` is True or ``alpha`` is not None.
+    AcfResult
+        If (``qstat`` is True or ``alpha`` is not None) and
+        ``use_namedtuple=True``, a NamedTuple with fields ``acf``,
+        ``confint``, ``qstat``, and ``pvalues`` instead of the plain
+        tuple below (``confint``/``qstat``/``pvalues`` are ``None`` when
+        not computed). See :class:`~statsmodels.tsa.stattools.AcfResult`.
     confint : ndarray, optional
         Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None. The confidence
+        (nlags + 1, 2). Returned (as part of a plain tuple, the
+        deprecated default) if alpha is not None. The confidence
         intervals are centered on the estimated ACF values. This behavior
         differs from plot_acf which centers the confidence intervals on 0.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
-        zero). Returned if q_stat is True.
+        zero). Returned (as part of a plain tuple, the deprecated
+        default) if q_stat is True.
     pvalues : ndarray, optional
         The p-values associated with the Q-statistics for lags 1, 2, ...,
-        nlags (excludes lag zero). Returned if q_stat is True.
+        nlags (excludes lag zero). Returned (as part of a plain tuple,
+        the deprecated default) if q_stat is True.
 
     Notes
     -----
@@ -790,6 +900,7 @@ def acf(
     qstat = bool_like(qstat, "qstat")
     fft = bool_like(fft, "fft", optional=False)
     alpha = float_like(alpha, "alpha", optional=True)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     missing = string_like(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
@@ -809,6 +920,17 @@ def acf(
     acf = avf[: nlags + 1] / avf[0]
     if not (qstat or alpha):
         return acf
+    if use_namedtuple is None:
+        warnings.warn(
+            "acf currently returns a plain tuple whose length depends on "
+            "the qstat and alpha arguments. In release 0.16 or after "
+            "July 2028, whichever is later, the default behavior will "
+            "switch to always returning an AcfResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     _alpha = alpha if alpha is not None else 0.05
     if bartlett_confint:
         varacf = np.ones_like(acf) / nobs
@@ -820,8 +942,12 @@ def acf(
     interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
     confint = np.array(lzip(acf - interval, acf + interval))
     if not qstat:
+        if use_namedtuple:
+            return AcfResult(acf, confint, None, None)
         return acf, confint
     qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
+    if use_namedtuple:
+        return AcfResult(acf, confint if alpha is not None else None, qstat, pvalue)
     if alpha is not None:
         return acf, confint, qstat, pvalue
     else:
@@ -1020,7 +1146,7 @@ def pacf_ols(
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
-        xlags, x0 = lagmat(x, nlags, original="sep")
+        xlags, x0 = lagmat(x, nlags, original="sep", use_namedtuple=False)
         xlags = add_constant(xlags)
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
@@ -1028,7 +1154,9 @@ def pacf_ols(
     else:
         x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
-        xlags, x0 = lagmat(x, nlags, original="sep", trim="both")
+        xlags, x0 = lagmat(
+            x, nlags, original="sep", trim="both", use_namedtuple=False
+        )
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])
@@ -1036,6 +1164,14 @@ def pacf_ols(
     if adjusted:
         pacf *= nobs / (nobs - np.arange(nlags + 1))
     return pacf
+
+
+class PacfResult(NamedTuple):
+    """Result of :func:`pacf` when ``alpha`` is not None and
+    ``use_namedtuple=True``."""
+
+    pacf: np.ndarray
+    confint: np.ndarray
 
 
 def pacf(
@@ -1056,6 +1192,8 @@ def pacf(
         "burg",
     ] = "ywadjusted",
     alpha: float | None = None,
+    *,
+    use_namedtuple: bool | None = None,
 ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
     Partial autocorrelation estimate
@@ -1090,15 +1228,36 @@ def pacf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x)).
+    use_namedtuple : bool, optional
+        Only relevant when ``alpha`` is not None, where the return value's
+        arity depends on this flag. Flag indicating whether to return the
+        results as a ``PacfResult`` NamedTuple instead of a plain tuple.
+        If ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued. Ignored when ``alpha`` is
+        None, since ``pacf`` always returns a single array in that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``PacfResult`` when
+            ``alpha`` is not None. Set ``use_namedtuple=True`` to opt in
+            now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
     pacf : ndarray
         The partial autocorrelations for lags 0, 1, ..., nlags. Shape
-        (nlags+1,).
+        (nlags+1,). Returned directly (not part of a tuple) unless
+        ``alpha`` is not None.
+    PacfResult
+        If ``alpha`` is not None and ``use_namedtuple=True``, a NamedTuple
+        with fields ``pacf`` and ``confint`` instead of the plain tuple
+        below. See :class:`~statsmodels.tsa.stattools.PacfResult`.
     confint : ndarray, optional
         Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None.
+        (nlags + 1, 2). Returned (as part of a plain tuple, the deprecated
+        default) if alpha is not None.
 
     See Also
     --------
@@ -1123,6 +1282,7 @@ def pacf(
     Yule-Walker (adjusted) and Levinson-Durbin (adjusted) performed
     consistently worse than the other options.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     nlags = int_like(nlags, "nlags", optional=True)
     methods = (
         "ols",
@@ -1182,6 +1342,19 @@ def pacf(
         interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
+        if use_namedtuple is None:
+            warnings.warn(
+                "pacf currently returns a plain (pacf, confint) tuple when "
+                "alpha is not None. In release 0.16 or after July 2028, "
+                "whichever is later, the default behavior will switch to "
+                "always returning a PacfResult NamedTuple. Set "
+                "use_namedtuple=True to switch now, or use_namedtuple=False "
+                "to keep the current behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple:
+            return PacfResult(ret, confint)
         return ret, confint
     else:
         return ret
@@ -1236,7 +1409,24 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     return correlate(xo, yo, "full", method=method)[m - 1 :] / d
 
 
-def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
+class CcfResult(NamedTuple):
+    """Result of :func:`ccf` when ``alpha`` is not None and
+    ``use_namedtuple=True``."""
+
+    ccf: np.ndarray
+    confint: np.ndarray
+
+
+def ccf(
+    x,
+    y,
+    adjusted=True,
+    fft=True,
+    *,
+    nlags=None,
+    alpha=None,
+    use_namedtuple: bool | None = None,
+):
     """
     The cross-correlation function
 
@@ -1257,14 +1447,34 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x)).
+    use_namedtuple : bool, optional
+        Only relevant when ``alpha`` is not None, where the return value's
+        arity depends on this flag. Flag indicating whether to return the
+        results as a ``CcfResult`` NamedTuple instead of a plain tuple. If
+        ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued. Ignored when ``alpha`` is
+        None, since ``ccf`` always returns a single array in that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``CcfResult`` when
+            ``alpha`` is not None. Set ``use_namedtuple=True`` to opt in
+            now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
-    ndarray
+    ccf : ndarray
         The cross-correlation function of x and y: the element at index k
         is the correlation between {x[k], x[k+1], ..., x[n]} and
         {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
-        respectively.
+        respectively. Returned directly (not part of a tuple) unless
+        ``alpha`` is not None.
+    CcfResult
+        If ``alpha`` is not None and ``use_namedtuple=True``, a NamedTuple
+        with fields ``ccf`` and ``confint`` instead of the plain tuple
+        below. See :class:`~statsmodels.tsa.stattools.CcfResult`.
     confint : ndarray, optional
         Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the
         level given by alpha and the standard deviation calculated as
@@ -1294,6 +1504,7 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
     ret = cvf / (np.std(x) * np.std(y))
@@ -1302,6 +1513,19 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
+        if use_namedtuple is None:
+            warnings.warn(
+                "ccf currently returns a plain (ccf, confint) tuple when "
+                "alpha is not None. In release 0.16 or after July 2028, "
+                "whichever is later, the default behavior will switch to "
+                "always returning a CcfResult NamedTuple. Set "
+                "use_namedtuple=True to switch now, or use_namedtuple=False "
+                "to keep the current behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple:
+            return CcfResult(ret, confint)
         return ret, confint
     else:
         return ret
@@ -1416,6 +1640,14 @@ def _pccf_ols(x, y, nlags):
     return np.array(pccf_vals)
 
 
+class PccfResult(NamedTuple):
+    """Result of :func:`pccf` when ``alpha`` is not None and
+    ``use_namedtuple=True``."""
+
+    pccf: np.ndarray
+    confint: np.ndarray
+
+
 def pccf(
     x: ArrayLike1D,
     y: ArrayLike1D,
@@ -1432,6 +1664,7 @@ def pccf(
         "ols",
     ] = "ywm",
     alpha: float | None = None,
+    use_namedtuple: bool | None = None,
 ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
     Partial Cross-Correlation Function
@@ -1466,16 +1699,37 @@ def pccf(
         given level are returned. For instance if alpha=.05,
         95 % confidence intervals are returned where the standard
         deviation is 1/sqrt(n).
+    use_namedtuple : bool, optional
+        Only relevant when ``alpha`` is not None, where the return value's
+        arity depends on this flag. Flag indicating whether to return the
+        results as a ``PccfResult`` NamedTuple instead of a plain tuple.
+        If ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued. Ignored when ``alpha`` is
+        None, since ``pccf`` always returns a single array in that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``PccfResult`` when
+            ``alpha`` is not None. Set ``use_namedtuple=True`` to opt in
+            now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
     pccf : ndarray
         The partial cross-correlation function for lags
-        1, 2, ..., nlags.
+        1, 2, ..., nlags. Returned directly (not part of a tuple) unless
+        ``alpha`` is not None.
+    PccfResult
+        If ``alpha`` is not None and ``use_namedtuple=True``, a NamedTuple
+        with fields ``pccf`` and ``confint`` instead of the plain tuple
+        below. See :class:`~statsmodels.tsa.stattools.PccfResult`.
     confint : ndarray, optional
         Confidence intervals for the PCCF at lags
         1, 2, ..., nlags using the level given by alpha. Shape
-        (nlags, 2). Returned if alpha is not None.
+        (nlags, 2). Returned (as part of a plain tuple, the deprecated
+        default) if alpha is not None.
 
     See Also
     --------
@@ -1546,10 +1800,10 @@ def pccf(
     >>> x = rng.standard_normal(100)
     >>> y = 0.5 * x + rng.standard_normal(100)
     >>> result = pccf(x, y, nlags=5)
-    >>> result_with_ci = pccf(x, y, nlags=5, alpha=0.05)
-    >>> result_with_ci[0].shape
+    >>> result_with_ci = pccf(x, y, nlags=5, alpha=0.05, use_namedtuple=True)
+    >>> result_with_ci.pccf.shape
     (5,)
-    >>> result_with_ci[1].shape
+    >>> result_with_ci.confint.shape
     (5, 2)
     """
     x = array_like(x, "x")
@@ -1567,6 +1821,7 @@ def pccf(
     )
     method = string_like(method, "method", options=methods)
     alpha = float_like(alpha, "alpha", optional=True)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     nobs = len(x)
     if len(y) != nobs:
@@ -1595,6 +1850,19 @@ def pccf(
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
+        if use_namedtuple is None:
+            warnings.warn(
+                "pccf currently returns a plain (pccf, confint) tuple when "
+                "alpha is not None. In release 0.16 or after July 2028, "
+                "whichever is later, the default behavior will switch to "
+                "always returning a PccfResult NamedTuple. Set "
+                "use_namedtuple=True to switch now, or use_namedtuple=False "
+                "to keep the current behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple:
+            return PccfResult(ret, confint)
         return ret, confint
     else:
         return ret
@@ -2173,7 +2441,13 @@ def coint(
     res_co = OLS(y0, xx).fit()
 
     if res_co.rsquared < 1 - 100 * SQRTEPS:
-        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=autolag, regression="n")
+        res_adf = adfuller(
+            res_co.resid,
+            maxlag=maxlag,
+            autolag=autolag,
+            regression="n",
+            use_namedtuple=False,
+        )
     else:
         warnings.warn(
             "y0 and y1 are (almost) perfectly colinear."
@@ -2443,7 +2717,24 @@ def _kpss_autolag(resids, nobs):
     return autolags
 
 
-def range_unit_root_test(x, store=False):
+class RangeUnitRootTestResult(NamedTuple):
+    """Result of :func:`range_unit_root_test` when ``use_namedtuple=True``."""
+
+    rur_stat: float
+    p_value: float
+    crit: dict[str, float]
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+RUR Statistic: {self.rur_stat:0.5f}
+P-value: {self.p_value:0.5f}
+Critical Values: {self.crit}
+"""
+
+
+def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
     """
     Range unit-root test for stationarity
 
@@ -2457,9 +2748,31 @@ def range_unit_root_test(x, store=False):
     store : bool
         If True, then a result instance is returned additionally to
         the RUR statistic (default is False).
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``RangeUnitRootTestResult`` NamedTuple instead of a plain tuple.
+        If ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a
+            ``RangeUnitRootTestResult``. Set ``use_namedtuple=True`` to opt
+            in now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
+    RangeUnitRootTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``rur_stat``,
+        ``p_value``, ``crit``, and ``resstore`` (``resstore`` is ``None``
+        when not computed). See
+        :class:`~statsmodels.tsa.stattools.RangeUnitRootTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple whose length depends
+    on `store`, made up of a subset of:
+
     rur_stat : float
         The RUR test statistic.
     p_value : float
@@ -2491,6 +2804,7 @@ def range_unit_root_test(x, store=False):
     """
     x = array_like(x, "x")
     store = bool_like(store, "store")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     nobs = x.shape[0]
 
@@ -2572,7 +2886,24 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 
         rstore.H0 = "The series is not stationary"
         rstore.HA = "The series is stationary"
+    else:
+        rstore = None
 
+    if use_namedtuple is None:
+        warnings.warn(
+            "range_unit_root_test currently returns a plain tuple whose "
+            "length depends on the store argument. In release 0.16 or "
+            "after July 2028, whichever is later, the default behavior "
+            "will switch to always returning a RangeUnitRootTestResult "
+            "NamedTuple. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return RangeUnitRootTestResult(rur_stat, p_value, crit_dict, rstore)
+    if store:
         return rur_stat, p_value, crit_dict, rstore
     else:
         return rur_stat, p_value, crit_dict
@@ -2982,7 +3313,13 @@ class ZivotAndrewsUnitRoot:
             raise ValueError("trim value must be a float in range [0, 1/3)")
         nobs = x.shape[0]
         if autolag:
-            adf_res = adfuller(x, maxlag=maxlag, regression="ct", autolag=autolag)
+            adf_res = adfuller(
+                x,
+                maxlag=maxlag,
+                regression="ct",
+                autolag=autolag,
+                use_namedtuple=False,
+            )
             baselags = adf_res[2]
         elif maxlag:
             baselags = maxlag

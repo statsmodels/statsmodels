@@ -8,6 +8,8 @@ from statsmodels.compat.pandas import (
     assert_series_equal,
 )
 
+import warnings
+
 import numpy as np
 from numpy.testing import (
     assert_array_almost_equal,
@@ -29,7 +31,7 @@ from statsmodels.tsa.tests.results.datamlw_tls import (
     mlywar,
 )
 import statsmodels.tsa.tsatools as tools
-from statsmodels.tsa.tsatools import vec, vech
+from statsmodels.tsa.tsatools import LagmatResult, vec, vech
 
 xo = savedrvs.rvsdata.xar2
 x100 = xo[-100:] / 1000.0
@@ -200,7 +202,9 @@ class TestLagmat:
     def test_sep_return(self):
         data = self.random_data
         n = data.shape[0]
-        lagmat, leads = stattools.lagmat(data, 3, trim="none", original="sep")
+        lagmat, leads = stattools.lagmat(
+            data, 3, trim="none", original="sep", use_namedtuple=False
+        )
         expected = np.zeros((n + 3, 4))
         for i in range(4):
             expected[i : i + n, i] = data
@@ -208,6 +212,38 @@ class TestLagmat:
         expected_lags = expected[:, 1:]
         assert_equal(expected_lags, lagmat)
         assert_equal(expected_leads, leads)
+
+    def test_sep_return_default_warns(self):
+        data = self.random_data
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = stattools.lagmat(data, 3, trim="none", original="sep")
+        assert isinstance(res, tuple)
+        assert not isinstance(res, LagmatResult)
+        lags, leads = res
+        assert isinstance(lags, np.ndarray)
+
+    def test_sep_return_use_namedtuple_true(self):
+        data = self.random_data
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = stattools.lagmat(
+                data, 3, trim="none", original="sep", use_namedtuple=True
+            )
+        assert isinstance(res, LagmatResult)
+        assert res[0] is res.lags
+        assert res[1] is res.leads
+
+    def test_non_sep_original_ignores_use_namedtuple(self):
+        # use_namedtuple is only relevant when original="sep"; other values
+        # of original always return a single array, never a tuple, and
+        # never warn regardless of use_namedtuple.
+        data = self.random_data
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            lags_ex = stattools.lagmat(data, 3, trim="none", original="ex")
+            lags_in = stattools.lagmat(data, 3, trim="none", original="in")
+        assert isinstance(lags_ex, np.ndarray)
+        assert isinstance(lags_in, np.ndarray)
 
     def test_add_lag1d(self):
         data = self.random_data
@@ -283,9 +319,11 @@ class TestLagmat:
         lags_np = stattools.lagmat(data.values, 3, trim="none", original="ex")
         assert_equal(lags, lags_np)
 
-        lags, lead = stattools.lagmat(data, 3, trim="forward", original="sep")
+        lags, lead = stattools.lagmat(
+            data, 3, trim="forward", original="sep", use_namedtuple=False
+        )
         lags_np, lead_np = stattools.lagmat(
-            data.values, 3, trim="forward", original="sep"
+            data.values, 3, trim="forward", original="sep", use_namedtuple=False
         )
         assert_equal(lags, lags_np)
         assert_equal(lead, lead_np)
@@ -314,7 +352,12 @@ class TestLagmat:
         )
         assert_frame_equal(lags, expected.iloc[:, 4:])
         lags, lead = stattools.lagmat(
-            self.macro_df, 3, trim="both", original="sep", use_pandas=True
+            self.macro_df,
+            3,
+            trim="both",
+            original="sep",
+            use_pandas=True,
+            use_namedtuple=False,
         )
         assert_frame_equal(lags, expected.iloc[:, 4:])
         assert_frame_equal(lead, expected.iloc[:, :4])
@@ -362,7 +405,12 @@ class TestLagmat:
         )
         assert_frame_equal(lags, expected.iloc[:, 4:])
         lags, lead = stattools.lagmat(
-            self.macro_df, 3, trim="forward", original="sep", use_pandas=True
+            self.macro_df,
+            3,
+            trim="forward",
+            original="sep",
+            use_pandas=True,
+            use_namedtuple=False,
         )
         assert_frame_equal(lags, expected.iloc[:, 4:])
         assert_frame_equal(lead, expected.iloc[:, :4])
@@ -416,7 +464,12 @@ class TestLagmat:
         )
         assert_frame_equal(lags, expected.iloc[:, 1:])
         lags, lead = stattools.lagmat(
-            self.series, 3, trim="forward", original="sep", use_pandas=True
+            self.series,
+            3,
+            trim="forward",
+            original="sep",
+            use_pandas=True,
+            use_namedtuple=False,
         )
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
@@ -440,7 +493,12 @@ class TestLagmat:
         )
         assert_frame_equal(lags, expected.iloc[:, 1:])
         lags, lead = stattools.lagmat(
-            self.series, 3, trim="both", original="sep", use_pandas=True
+            self.series,
+            3,
+            trim="both",
+            original="sep",
+            use_pandas=True,
+            use_namedtuple=False,
         )
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
@@ -484,8 +542,8 @@ class TestLagmat:
     @pytest.mark.parametrize("original", ["in", "ex", "sep"])
     def test_lagmat_0(self, original):
         x = np.arange(100, dtype=float)
-        scalar = stattools.lagmat(x, 0, original=original)
-        array = stattools.lagmat(x, [0], original=original)
+        scalar = stattools.lagmat(x, 0, original=original, use_namedtuple=False)
+        array = stattools.lagmat(x, [0], original=original, use_namedtuple=False)
         if original == "sep":
             scalar, x_scalar = scalar
             array, x_array = array
