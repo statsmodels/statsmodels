@@ -33,10 +33,17 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (
     AcfResult,
     ADFullerResult,
+    BreakvarHeteroskedasticityResult,
     CcfResult,
+    CointResult,
+    JackknifeResult,
     KpssResult,
+    LevinsonDurbinPacfResult,
+    LevinsonDurbinResult,
+    PacfBurgResult,
     PacfResult,
     PccfResult,
+    QStatResult,
     RangeUnitRootTestResult,
     acf,
     acovf,
@@ -59,6 +66,7 @@ from statsmodels.tsa.stattools import (
     pacf_ols,
     pacf_yw,
     pccf,
+    q_stat,
     range_unit_root_test,
     zivot_andrews,
 )
@@ -2409,3 +2417,52 @@ def test_acovf_all_missing():
         acovf(x, missing="drop")
 
     assert np.all(np.isnan(acovf(x, missing="conservative")))
+
+
+def test_stattools_fixed_arity_namedtuples():
+    # These functions always return the same number of values, so unlike
+    # the use_namedtuple=True/False/None functions, they unconditionally
+    # return a NamedTuple with no deprecation cycle needed.
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal(200).cumsum()
+
+    res = block_jackknife(rs.standard_normal(100), np.mean, n_blocks=10)
+    assert isinstance(res, JackknifeResult)
+    assert res[0] is res.theta_jack
+    assert res[1] is res.se
+
+    a = acf(x, nlags=10, fft=False)
+    res = q_stat(a[1:], nobs=len(x))
+    assert isinstance(res, QStatResult)
+    assert res[0] is res.qstat
+    assert res[1] is res.pvalue
+
+    res = pacf_burg(x, nlags=5)
+    assert isinstance(res, PacfBurgResult)
+    assert res[0] is res.pacf
+    assert res[1] is res.sigma2
+
+    res = levinson_durbin(x, nlags=5, isacov=False)
+    assert isinstance(res, LevinsonDurbinResult)
+    assert res[0] == res.sigma_v
+    assert res[1] is res.arcoefs
+    assert res[2] is res.pacf
+    assert res[3] is res.sigma
+    assert res[4] is res.phi
+
+    res2 = levinson_durbin_pacf(res.pacf, nlags=3)
+    assert isinstance(res2, LevinsonDurbinPacfResult)
+    assert res2[0] is res2.arcoefs
+    assert res2[1] is res2.acf
+
+    res = breakvar_heteroskedasticity_test(x)
+    assert isinstance(res, BreakvarHeteroskedasticityResult)
+    assert res[0] == res.test_statistic
+    assert res[1] == res.p_value
+
+    y1 = (x + rs.standard_normal(200))[:, None]
+    res = coint(x, y1, trend="c", maxlag=0, autolag=None)
+    assert isinstance(res, CointResult)
+    assert res[0] == res.coint_t
+    assert res[1] == res.pvalue
+    assert res[2] is res.crit_value

@@ -72,6 +72,7 @@ Descriptive Statistics and Tests
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
+   stattools.PacfBurgResult
    stattools.ccovf
    stattools.ccf
    stattools.CcfResult
@@ -86,14 +87,21 @@ Descriptive Statistics and Tests
    stattools.RangeUnitRootTestResult
    stattools.zivot_andrews
    stattools.coint
+   stattools.CointResult
    stattools.bds
+   stattools.block_jackknife
+   stattools.JackknifeResult
    stattools.q_stat
+   stattools.QStatResult
    stattools.breakvar_heteroskedasticity_test
+   stattools.BreakvarHeteroskedasticityResult
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.LevinsonDurbinResult
    stattools.innovations_algo
    stattools.innovations_filter
    stattools.levinson_durbin_pacf
+   stattools.LevinsonDurbinPacfResult
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis

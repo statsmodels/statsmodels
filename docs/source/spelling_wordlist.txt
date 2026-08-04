@@ -2556,3 +2556,10 @@ KpssResult
 InformationCriteria
 ForecastInterval
 ErrorBand
+PacfBurgResult
+CointResult
+JackknifeResult
+QStatResult
+BreakvarHeteroskedasticityResult
+LevinsonDurbinResult
+LevinsonDurbinPacfResult
