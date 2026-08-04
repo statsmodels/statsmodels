@@ -1,7 +1,7 @@
 import numpy as np
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
-from statsmodels.tsa.arima.estimators._base import EstimatorResult
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.durbin_levinson import durbin_levinson
 from statsmodels.tsa.arima.estimators.gls import gls
@@ -15,7 +15,7 @@ from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
 
 
 def _check(result):
-    assert isinstance(result, EstimatorResult)
+    assert isinstance(result, ARMAEstimationResult)
     assert len(result) == 2
     parameters, other_results = result
     assert result.parameters is parameters

@@ -9,7 +9,7 @@ from scipy.signal import lfilter
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.arima.estimators._base import EstimatorResult
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace.tools import diff
@@ -54,7 +54,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
 
     Returns
     -------
-    EstimatorResult
+    ARMAEstimationResult
         A NamedTuple with fields:
 
         parameters : SARIMAXParams object
@@ -327,7 +327,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         "initial_ar_order": initial_ar_order,
         "resid": resid
     })
-    return EstimatorResult(p, other_results)
+    return ARMAEstimationResult(p, other_results)
 
 
 def _validate_fixed_params(fixed_params, spec_param_names):

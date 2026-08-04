@@ -12,7 +12,7 @@ from scipy.optimize import minimize
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.arima.estimators._base import EstimatorResult
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.hannan_rissanen import (
     _validate_fixed_params,
     hannan_rissanen,
@@ -40,7 +40,7 @@ def innovations(endog, ma_order=0, demean=True):
 
     Returns
     -------
-    EstimatorResult
+    ARMAEstimationResult
         A NamedTuple with fields:
 
         parameters : list of SARIMAXParams objects
@@ -97,7 +97,7 @@ def innovations(endog, ma_order=0, demean=True):
         }
     )
 
-    return EstimatorResult(out, other_results)
+    return ARMAEstimationResult(out, other_results)
 
 
 def innovations_mle(
@@ -146,7 +146,7 @@ def innovations_mle(
 
     Returns
     -------
-    EstimatorResult
+    ARMAEstimationResult
         A NamedTuple with fields:
 
         parameters : SARIMAXParams object
@@ -333,4 +333,4 @@ def innovations_mle(
         }
     )
 
-    return EstimatorResult(p, other_results)
+    return ARMAEstimationResult(p, other_results)

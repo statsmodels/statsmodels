@@ -12,7 +12,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch, add_constant
-from statsmodels.tsa.arima.estimators._base import EstimatorResult
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
@@ -88,7 +88,7 @@ def gls(
 
     Returns
     -------
-    EstimatorResult
+    ARMAEstimationResult
         A NamedTuple with fields:
 
         parameters : SARIMAXParams object
@@ -375,4 +375,4 @@ def gls(
         }
     )
 
-    return EstimatorResult(p, other_results)
+    return ARMAEstimationResult(p, other_results)

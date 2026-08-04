@@ -7,7 +7,7 @@ License: BSD-3
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
-from statsmodels.tsa.arima.estimators._base import EstimatorResult
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.stattools import acovf
@@ -33,7 +33,7 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
 
     Returns
     -------
-    EstimatorResult
+    ARMAEstimationResult
         A NamedTuple with fields:
 
         parameters : list of SARIMAXParams objects
@@ -106,4 +106,4 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
         "spec": spec,
     })
 
-    return EstimatorResult(out, other_results)
+    return ARMAEstimationResult(out, other_results)

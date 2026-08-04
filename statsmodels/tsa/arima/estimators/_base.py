@@ -8,7 +8,7 @@ License: BSD-3
 from typing import NamedTuple
 
 
-class EstimatorResult(NamedTuple):
+class ARMAEstimationResult(NamedTuple):
     """Result of an ARIMA parameter estimator.
 
     Common to :func:`~statsmodels.tsa.arima.estimators.burg.burg`,

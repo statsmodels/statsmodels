@@ -7,7 +7,7 @@ License: BSD-3
 import numpy as np
 
 from statsmodels.tools.tools import Bunch, add_constant
-from statsmodels.tsa.arima.estimators._base import EstimatorResult
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -59,7 +59,7 @@ def statespace(endog, exog=None, order=(0, 0, 0),
 
     Returns
     -------
-    EstimatorResult
+    ARMAEstimationResult
         A NamedTuple with fields:
 
         parameters : SARIMAXParams object
@@ -126,4 +126,4 @@ def statespace(endog, exog=None, order=(0, 0, 0),
         "statespace_results": res_ss,
     })
 
-    return EstimatorResult(p, res)
+    return ARMAEstimationResult(p, res)
