@@ -2556,3 +2556,6 @@ KpssResult
 InformationCriteria
 ForecastInterval
 ErrorBand
+NonNestedTestResult
+LMTestResult
+GoldfeldQuandtResult
