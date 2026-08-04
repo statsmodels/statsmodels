@@ -166,7 +166,10 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
     Rinv : ndarray
         inverse of the Toepliz matrix
     """
-    return yule_walker(acov, order=order, method=method, df=df, inv=inv, demean=False)
+    return yule_walker(
+        acov, order=order, method=method, df=df, inv=inv, demean=False,
+        use_namedtuple=False,
+    )
 
 
 class ARCovariance:

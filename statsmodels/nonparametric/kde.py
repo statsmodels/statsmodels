@@ -12,12 +12,17 @@ https://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
 
+from __future__ import annotations
+
+from typing import NamedTuple
+import warnings
+
 import numpy as np
 from scipy import integrate, stats
 
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.validation import array_like, float_like
+from statsmodels.tools.validation import array_like, bool_like, float_like
 
 from . import bandwidths
 from .kdetools import forrt, revrt, silverman_transform
@@ -183,6 +188,7 @@ class KDEUnivariate:
                 gridsize=gridsize,
                 clip=clip,
                 cut=cut,
+                use_namedtuple=False,
             )
         else:
             density, grid, bw = kdensity(
@@ -194,6 +200,7 @@ class KDEUnivariate:
                 gridsize=gridsize,
                 clip=clip,
                 cut=cut,
+                use_namedtuple=False,
             )
         self.density = density
         self.support = grid
@@ -305,6 +312,15 @@ class KDEUnivariate:
 
 
 # Kernel Density Estimator Functions
+class KDEResult(NamedTuple):
+    """Result of :func:`kdensity` and :func:`kdensityfft` when
+    ``use_namedtuple=True``."""
+
+    density: np.ndarray
+    grid: np.ndarray | None
+    bw: float
+
+
 def kdensity(
     x,
     kernel="gau",
@@ -315,6 +331,8 @@ def kdensity(
     clip=(-np.inf, np.inf),
     cut=3,
     retgrid=True,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Rosenblatt-Parzen univariate kernel density estimator
@@ -366,19 +384,44 @@ def kdensity(
         -/+ cut*bw*{min(x) or max(x)}
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a ``KDEResult``
+        NamedTuple instead of a plain tuple. If ``None`` (the default), the
+        current tuple-returning behavior is used and a ``FutureWarning`` is
+        issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``KDEResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    KDEResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
+        ``grid``, and ``bw`` (``grid`` is ``None`` unless
+        ``retgrid=True``). See
+        :class:`~statsmodels.nonparametric.kde.KDEResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     density : ndarray
         The densities estimated at the grid points.
     grid : ndarray, optional
-        The grid points at which the density is estimated.
+        The grid points at which the density is estimated. Only returned
+        if `retgrid` is True.
+    bw : float
+        The bandwidth that was used.
 
     Notes
     -----
     Creates an intermediate (`gridsize` x `nobs`) array. Use FFT for a more
     computationally efficient version.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(x)
     if x.ndim == 1:
         x = x[:, None]
@@ -440,10 +483,22 @@ def kdensity(
 
     dens = np.dot(k, weights) / (q * bw)
 
+    if use_namedtuple is None:
+        warnings.warn(
+            "kdensity currently returns a plain tuple whose length depends "
+            "on the retgrid argument. In release 0.16 or after July 2028, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a KDEResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return KDEResult(dens, grid if retgrid else None, bw)
     if retgrid:
         return dens, grid, bw
-    else:
-        return dens, bw
+    return dens, bw
 
 
 def kdensityfft(
@@ -456,6 +511,8 @@ def kdensityfft(
     clip=(-np.inf, np.inf),
     cut=3,
     retgrid=True,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Rosenblatt-Parzen univariate kernel density estimator
@@ -510,13 +567,37 @@ def kdensityfft(
         -/+ cut*bw*{x.min() or x.max()}
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a ``KDEResult``
+        NamedTuple instead of a plain tuple. If ``None`` (the default), the
+        current tuple-returning behavior is used and a ``FutureWarning`` is
+        issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``KDEResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    KDEResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
+        ``grid``, and ``bw`` (``grid`` is ``None`` unless
+        ``retgrid=True``). See
+        :class:`~statsmodels.nonparametric.kde.KDEResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     density : ndarray
         The densities estimated at the grid points.
     grid : ndarray, optional
-        The grid points at which the density is estimated.
+        The grid points at which the density is estimated. Only returned
+        if `retgrid` is True.
+    bw : float
+        The bandwidth that was used.
 
     Notes
     -----
@@ -539,6 +620,7 @@ def kdensityfft(
         the Fast Fourier Transform*. Journal of the Royal Statistical Society.
         Series C. 31.2, 93-9.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(x)
     # will not work for two columns.
     x = x[np.logical_and(x > clip[0], x < clip[1])]
@@ -600,7 +682,20 @@ def kdensityfft(
     # 3.49 in Silverman
     # 3.50 w Gaussian kernel
     f = revrt(zstar)
+
+    if use_namedtuple is None:
+        warnings.warn(
+            "kdensityfft currently returns a plain tuple whose length "
+            "depends on the retgrid argument. In release 0.16 or after "
+            "July 2028, whichever is later, the default behavior will "
+            "switch to always returning a KDEResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return KDEResult(f, grid if retgrid else None, bw)
     if retgrid:
         return f, grid, bw
-    else:
-        return f, bw
+    return f, bw

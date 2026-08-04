@@ -2556,6 +2556,13 @@ KpssResult
 InformationCriteria
 ForecastInterval
 ErrorBand
+NonNestedTestResult
+LMTestResult
+GoldfeldQuandtResult
+YuleWalkerResult
+CompareLRTestResult
+ELTestResult
+PartRegressPlotResult
 PacfBurgResult
 CointResult
 JackknifeResult

@@ -71,12 +71,12 @@ def test_pacf_ols():
 def test_ywcoef():
     assert_array_almost_equal(
         mlywar.arcoef100[1:],
-        -regression.yule_walker(x100, 10, method="mle")[0],
+        -regression.yule_walker(x100, 10, method="mle", use_namedtuple=False)[0],
         8,
     )
     assert_array_almost_equal(
         mlywar.arcoef1000[1:],
-        -regression.yule_walker(x1000, 20, method="mle")[0],
+        -regression.yule_walker(x1000, 20, method="mle", use_namedtuple=False)[0],
         8,
     )
 
@@ -86,7 +86,7 @@ def test_yule_walker_inter():
     # see 1869
     x = np.array([1, -1, 2, 2, 0, -2, 1, 0, -3, 0, 0])
     # it works
-    regression.yule_walker(x, 3)
+    regression.yule_walker(x, 3, use_namedtuple=False)
 
 
 def test_duplication_matrix():

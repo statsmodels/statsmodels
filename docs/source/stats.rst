@@ -49,6 +49,7 @@ Autocorrelation
    acorr_breusch_godfrey
    acorr_ljungbox
    acorr_lm
+   LMTestResult
 
 Heteroscedasticity
 ~~~~~~~~~~~~~~~~~~
@@ -57,10 +58,11 @@ Heteroscedasticity
 
 .. autosummary::
    :toctree: generated/
-   
+
    het_arch
    het_breuschpagan
    het_goldfeldquandt
+   GoldfeldQuandtResult
    het_white
 
 Kurtosis
@@ -135,6 +137,7 @@ Specification test
    compare_cox
    compare_encompassing
    compare_j
+   NonNestedTestResult
    spec_white
    linear_harvey_collier
    linear_lm

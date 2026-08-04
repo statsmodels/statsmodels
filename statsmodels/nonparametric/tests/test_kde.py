@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -8,7 +9,12 @@ from scipy import stats
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric import bandwidths
-from statsmodels.nonparametric.kde import KDEUnivariate as KDE
+from statsmodels.nonparametric.kde import (
+    KDEResult,
+    KDEUnivariate as KDE,
+    kdensity,
+    kdensityfft,
+)
 from statsmodels.sandbox.nonparametric import kernels
 
 # get results from Stata
@@ -464,3 +470,28 @@ def test_entropy_infinite_domain_kernel():
     kde = KDE(Xi).fit(kernel="gau", fft=False, bw="silverman")
 
     assert np.isfinite(kde.entropy)
+
+
+@pytest.mark.parametrize("func", [kdensity, kdensityfft])
+def test_kdensity_use_namedtuple_default_warns(func):
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = func(Xi)
+    assert not isinstance(res, KDEResult)
+
+
+@pytest.mark.parametrize("func", [kdensity, kdensityfft])
+def test_kdensity_use_namedtuple_true(func):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = func(Xi, use_namedtuple=True)
+    assert isinstance(res, KDEResult)
+    assert res.grid is not None
+    assert res[0] is res.density
+    assert res[1] is res.grid
+    assert res[2] == res.bw
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = func(Xi, retgrid=False, use_namedtuple=True)
+    assert isinstance(res, KDEResult)
+    assert res.grid is None

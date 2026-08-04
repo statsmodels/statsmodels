@@ -10,6 +10,7 @@ currently all tests are against R
 """
 import json
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -80,7 +81,7 @@ def test_gq():
         distr="f",
     )
 
-    gq = smsdia.het_goldfeldquandt(endog, exog, split=0.5)
+    gq = smsdia.het_goldfeldquandt(endog, exog, split=0.5, use_namedtuple=False)
     compare_to_reference(gq, het_gq_greater, decimal=(12, 12))
     assert_equal(gq[-1], "increasing")
 
@@ -204,25 +205,28 @@ class TestDiagnosticG:
 
         endogg, exogg = self.endog, self.exog
         # tests
-        gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5)
+        gq = smsdia.het_goldfeldquandt(
+            endogg, exogg, split=0.5, use_namedtuple=False
+        )
         compare_to_reference(gq, het_gq_greater, decimal=(12, 12))
         assert_equal(gq[-1], "increasing")
 
         gq = smsdia.het_goldfeldquandt(
-            endogg, exogg, split=0.5, alternative="decreasing"
+            endogg, exogg, split=0.5, alternative="decreasing", use_namedtuple=False
         )
         compare_to_reference(gq, het_gq_less, decimal=(12, 12))
         assert_equal(gq[-1], "decreasing")
 
         gq = smsdia.het_goldfeldquandt(
-            endogg, exogg, split=0.5, alternative="two-sided"
+            endogg, exogg, split=0.5, alternative="two-sided", use_namedtuple=False
         )
         compare_to_reference(gq, het_gq_two_sided, decimal=(12, 12))
         assert_equal(gq[-1], "two-sided")
 
         # TODO: forcing the same split as R 202-90-90-1=21
         gq = smsdia.het_goldfeldquandt(
-            endogg, exogg, split=90, drop=21, alternative="two-sided"
+            endogg, exogg, split=90, drop=21, alternative="two-sided",
+            use_namedtuple=False,
         )
         compare_to_reference(gq, het_gq_two_sided_01, decimal=(12, 12))
         assert_equal(gq[-1], "two-sided")
@@ -319,8 +323,8 @@ class TestDiagnosticG:
             distr="chi2",
         )
 
-        at4 = smsdia.het_arch(self.res.resid, nlags=4)
-        at12 = smsdia.het_arch(self.res.resid, nlags=12)
+        at4 = smsdia.het_arch(self.res.resid, nlags=4, use_namedtuple=False)
+        at12 = smsdia.het_arch(self.res.resid, nlags=12, use_namedtuple=False)
         compare_to_reference(at4[:2], archtest_4, decimal=(12, 13))
         compare_to_reference(at12[:2], archtest_12, decimal=(12, 13))
 
@@ -329,16 +333,16 @@ class TestDiagnosticG:
         # unfortunately optimal lag=1 for this data
         resid = self.res.resid
 
-        res1 = smsdia.het_arch(resid, nlags=5, store=True)
+        res1 = smsdia.het_arch(resid, nlags=5, store=True, use_namedtuple=False)
         rs1 = res1[-1]
-        res2 = smsdia.het_arch(resid, nlags=5, store=True)
+        res2 = smsdia.het_arch(resid, nlags=5, store=True, use_namedtuple=False)
         rs2 = res2[-1]
 
         assert_almost_equal(rs2.resols.params, rs1.resols.params, decimal=12)
         assert_almost_equal(res2[:4], res1[:4], decimal=12)
 
         # test that smallest lag, nlags=1 works
-        res3 = smsdia.het_arch(resid, nlags=5)
+        res3 = smsdia.het_arch(resid, nlags=5, use_namedtuple=False)
         assert_almost_equal(res3[:4], res1[:4], decimal=12)
 
     def test_acorr_breusch_godfrey(self):
@@ -364,7 +368,7 @@ class TestDiagnosticG:
             distr="chi2",
         )
 
-        bg = smsdia.acorr_breusch_godfrey(res, nlags=4)
+        bg = smsdia.acorr_breusch_godfrey(res, nlags=4, use_namedtuple=False)
         bg_r = [
             breuschgodfrey_c["statistic"],
             breuschgodfrey_c["pvalue"],
@@ -374,8 +378,8 @@ class TestDiagnosticG:
         assert_almost_equal(bg, bg_r, decimal=11)
 
         # check that lag choice works
-        bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None)
-        bg3 = smsdia.acorr_breusch_godfrey(res, nlags=10)
+        bg2 = smsdia.acorr_breusch_godfrey(res, nlags=None, use_namedtuple=False)
+        bg3 = smsdia.acorr_breusch_godfrey(res, nlags=10, use_namedtuple=False)
         assert_almost_equal(bg2, bg3, decimal=12)
 
     def test_acorr_breusch_godfrey_multidim(self):
@@ -386,7 +390,7 @@ class TestDiagnosticG:
     def test_acorr_breusch_godfrey_exogs(self):
         data = sunspots.load_pandas().data["SUNACTIVITY"]
         res = ARIMA(data, order=(1, 0, 0), trend="n").fit()
-        smsdia.acorr_breusch_godfrey(res, nlags=1)
+        smsdia.acorr_breusch_godfrey(res, nlags=1, use_namedtuple=False)
 
     def test_acorr_ljung_box(self):
 
@@ -595,7 +599,7 @@ class TestDiagnosticG:
             pvalue=0.03073069384028677,
             df=(4, 3, 1),
         )
-        lrt = res.compare_lr_test(res3)
+        lrt = res.compare_lr_test(res3, use_namedtuple=False)
         assert_almost_equal(lrt[0], lrtest["chi2value"], decimal=11)
         assert_almost_equal(lrt[1], lrtest["pvalue"], decimal=11)
 
@@ -633,10 +637,10 @@ class TestDiagnosticG:
             ),
         ]
 
-        jt1 = smsdia.compare_j(res2, res)
+        jt1 = smsdia.compare_j(res2, res, use_namedtuple=False)
         assert_almost_equal(jt1, jtest[0][3:5], decimal=12)
 
-        jt2 = smsdia.compare_j(res, res2)
+        jt2 = smsdia.compare_j(res, res2, use_namedtuple=False)
         assert_almost_equal(jt2, jtest[1][3:5], decimal=12)
 
     @pytest.mark.parametrize("comp", [smsdia.compare_cox, smsdia.compare_j])
@@ -680,13 +684,15 @@ class TestDiagnosticG:
             ),
         ]
 
-        ct1 = smsdia.compare_cox(res, res2)
+        ct1 = smsdia.compare_cox(res, res2, use_namedtuple=False)
         assert_almost_equal(ct1, coxtest[0][3:5], decimal=12)
 
-        ct2 = smsdia.compare_cox(res2, res)
+        ct2 = smsdia.compare_cox(res2, res, use_namedtuple=False)
         assert_almost_equal(ct2, coxtest[1][3:5], decimal=12)
 
-        _, _, store = smsdia.compare_cox(res, res2, store=True)
+        _, _, store = smsdia.compare_cox(
+            res, res2, store=True, use_namedtuple=False
+        )
         assert isinstance(store, smsdia.ResultsStore)
 
     def test_cusum_ols(self):
@@ -1826,15 +1832,17 @@ def test_reset_smoke(power, test_type, use_f, cov):
 def test_acorr_lm_smoke(store, ddof, cov):
     rs = np.random.RandomState(38342099)
     e = rs.standard_normal(250)
-    smsdia.acorr_lm(e, nlags=6, store=store, ddof=ddof, **cov)
+    smsdia.acorr_lm(e, nlags=6, store=store, ddof=ddof, use_namedtuple=False, **cov)
 
-    smsdia.acorr_lm(e, nlags=None, store=store, period=12, ddof=ddof, **cov)
+    smsdia.acorr_lm(
+        e, nlags=None, store=store, period=12, ddof=ddof, use_namedtuple=False, **cov
+    )
 
 
 def test_acorr_lm_smoke_no_autolag():
     rs = np.random.RandomState(38342098)
     e = rs.standard_normal(250)
-    smsdia.acorr_lm(e, nlags=6, store=False, ddof=0)
+    smsdia.acorr_lm(e, nlags=6, store=False, ddof=0, use_namedtuple=False)
 
 
 RS = np.random.RandomState(38342431)
@@ -1976,21 +1984,21 @@ def test_diagnostics_pandas():
     smsdia.linear_reset(res_large, test_type="fitted")
     smsdia.linear_reset(res_large, test_type="exog")
     smsdia.linear_reset(res_large, test_type="princomp")
-    smsdia.het_goldfeldquandt(y, x)
+    smsdia.het_goldfeldquandt(y, x, use_namedtuple=False)
     smsdia.het_breuschpagan(res.resid, x)
     smsdia.het_white(res.resid, x)
-    smsdia.het_arch(res.resid)
-    smsdia.acorr_breusch_godfrey(res)
+    smsdia.het_arch(res.resid, use_namedtuple=False)
+    smsdia.acorr_breusch_godfrey(res, use_namedtuple=False)
     smsdia.acorr_ljungbox(y)
     smsdia.linear_rainbow(res)
     smsdia.linear_lm(res.resid, x)
     smsdia.linear_harvey_collier(res)
-    smsdia.acorr_lm(res.resid)
+    smsdia.acorr_lm(res.resid, use_namedtuple=False)
     smsdia.breaks_cusumolsresid(res.resid)
     smsdia.breaks_hansen(res)
-    smsdia.compare_cox(res, res_other)
+    smsdia.compare_cox(res, res_other, use_namedtuple=False)
     smsdia.compare_encompassing(res, res_other)
-    smsdia.compare_j(res, res_other)
+    smsdia.compare_j(res, res_other, use_namedtuple=False)
     smsdia.recursive_olsresiduals(res)
     smsdia.recursive_olsresiduals(res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1))
     smsdia.spec_white(res.resid, x)
@@ -2010,3 +2018,113 @@ def test_diagnostics_hac():
     )
     assert reset_test.statistic > 0
     assert 0 <= reset_test.pvalue <= 1
+
+
+@pytest.fixture(scope="module")
+def diagnostic_namedtuple_data():
+    rs = np.random.RandomState(93674328)
+    e = rs.standard_normal(200)
+    x1 = rs.standard_normal(200)
+    x2 = rs.standard_normal(200)
+    y = 1 + x1 + e
+    exog = add_constant(np.column_stack([x1, x2]))
+    res = OLS(y, exog[:, :2]).fit()
+    res_other = OLS(y, add_constant(x2)).fit()
+    return Bunch(res=res, res_other=res_other)
+
+
+def test_compare_use_namedtuple_default_warns(diagnostic_namedtuple_data):
+    res = diagnostic_namedtuple_data.res
+    res_other = diagnostic_namedtuple_data.res_other
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        result = smsdia.compare_cox(res, res_other)
+    assert not isinstance(result, smsdia.NonNestedTestResult)
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        result = smsdia.compare_j(res, res_other)
+    assert not isinstance(result, smsdia.NonNestedTestResult)
+
+
+def test_compare_use_namedtuple_true(diagnostic_namedtuple_data):
+    res = diagnostic_namedtuple_data.res
+    res_other = diagnostic_namedtuple_data.res_other
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = smsdia.compare_cox(res, res_other, use_namedtuple=True)
+    assert isinstance(result, smsdia.NonNestedTestResult)
+    assert result.res_store is None
+    assert result[0] == result.tstat
+    assert result[1] == result.pvalue
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = smsdia.compare_cox(
+            res, res_other, store=True, use_namedtuple=True
+        )
+    assert isinstance(result, smsdia.NonNestedTestResult)
+    assert isinstance(result.res_store, smsdia.ResultsStore)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = smsdia.compare_j(res, res_other, use_namedtuple=True)
+    assert isinstance(result, smsdia.NonNestedTestResult)
+    assert result.res_store is None
+
+
+@pytest.mark.parametrize(
+    "func", ["acorr_lm", "acorr_breusch_godfrey", "het_arch"]
+)
+def test_lm_test_use_namedtuple(func, diagnostic_namedtuple_data):
+    res = diagnostic_namedtuple_data.res
+    # acorr_breusch_godfrey takes the results instance directly; the other
+    # two take the residuals array.
+    first_arg = res if func == "acorr_breusch_godfrey" else res.resid
+
+    def call(**kwargs):
+        return getattr(smsdia, func)(first_arg, nlags=4, **kwargs)
+
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        legacy = call()
+    assert not isinstance(legacy, smsdia.LMTestResult)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = call(use_namedtuple=True)
+    assert isinstance(result, smsdia.LMTestResult)
+    assert result.res_store is None
+    assert result[0] == result.lm
+    assert result[1] == result.lmpval
+    assert result[2] == result.fval
+    assert result[3] == result.fpval
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = call(store=True, use_namedtuple=True)
+    assert isinstance(result, smsdia.LMTestResult)
+    assert isinstance(result.res_store, smsdia.ResultsStore)
+
+
+def test_het_goldfeldquandt_use_namedtuple(diagnostic_namedtuple_data):
+    res = diagnostic_namedtuple_data.res
+    y = res.model.endog
+    x = res.model.exog
+
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        legacy = smsdia.het_goldfeldquandt(y, x)
+    assert not isinstance(legacy, smsdia.GoldfeldQuandtResult)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = smsdia.het_goldfeldquandt(y, x, use_namedtuple=True)
+    assert isinstance(result, smsdia.GoldfeldQuandtResult)
+    assert result.res_store is None
+    assert result[0] == result.fval
+    assert result[1] == result.pval
+    assert result[2] == result.ordering
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        result = smsdia.het_goldfeldquandt(
+            y, x, store=True, use_namedtuple=True
+        )
+    assert isinstance(result, smsdia.GoldfeldQuandtResult)
+    assert isinstance(result.res_store, smsdia.ResultsStore)

@@ -82,6 +82,7 @@ Regression Plots
    plot_fit
    plot_regress_exog
    plot_partregress
+   PartRegressPlotResult
    plot_partregress_grid
    plot_ccpr
    plot_ccpr_grid
