@@ -135,11 +135,6 @@ class ParameterConstraint:
         """
         Returns a vector that should be added to the offset vector to
         accommodate the constraint.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogenous data for the model.
         """
 
         return self._offset_increment
@@ -148,11 +143,6 @@ class ParameterConstraint:
         """
         Returns a linearly transformed exog matrix whose columns span
         the constrained model space.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogenous data for the model.
         """
         return self.exog_fulltrans[:, 0 : self.lhs0.shape[1]]
 

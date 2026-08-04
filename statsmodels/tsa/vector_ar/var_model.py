@@ -1780,8 +1780,6 @@ class VARResults(VARProcess):
             number of Monte Carlo replications to perform
         steps : int, default 10
             number of impulse response periods
-        signif : float (0 < signif <1)
-            Significance level for error bars, defaults to 95% CI
         rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
             np.random seed for replications
         seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
@@ -2089,8 +2087,6 @@ class VARResults(VARProcess):
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level
-        verbose : bool
-            If True, print a table with the results.
 
         Returns
         -------
