@@ -6,8 +6,20 @@ from statsmodels.iolib.table import SimpleTable
 
 
 class ForecastInterval(NamedTuple):
-    """Result of the module-level :func:`~statsmodels.tsa.vector_ar.var_model.forecast_interval`
-    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARProcess.forecast_interval`."""
+    """
+    Result of the module-level
+    :func:`~statsmodels.tsa.vector_ar.var_model.forecast_interval` and
+    :meth:`~statsmodels.tsa.vector_ar.var_model.VARProcess.forecast_interval`.
+
+    Parameters
+    ----------
+    point_forecast : ndarray
+        Mean value of forecast.
+    forc_lower : ndarray
+        Lower bound of confidence interval.
+    forc_upper : ndarray
+        Upper bound of confidence interval.
+    """
 
     point_forecast: np.ndarray
     forc_lower: np.ndarray
@@ -15,13 +27,22 @@ class ForecastInterval(NamedTuple):
 
 
 class ErrorBand(NamedTuple):
-    """Impulse-response error band, shared by
+    """
+    Impulse-response error band, shared by
     :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz1`,
     :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz2`,
     :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz3`,
     :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.errband_mc`,
     :meth:`~statsmodels.tsa.vector_ar.svar_model.SVARResults.sirf_errband_mc`,
-    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARResults.irf_errband_mc`."""
+    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARResults.irf_errband_mc`.
+
+    Parameters
+    ----------
+    lower : ndarray
+        Lower error band for the impulse responses.
+    upper : ndarray
+        Upper error band for the impulse responses.
+    """
 
     lower: np.ndarray
     upper: np.ndarray

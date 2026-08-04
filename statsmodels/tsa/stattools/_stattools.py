@@ -172,7 +172,30 @@ def _autolag(
 
 
 class ADFullerResult(NamedTuple):
-    """Result of :func:`adfuller` when ``use_namedtuple=True``."""
+    """
+    Result of :func:`adfuller` when ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    adf : float
+        The test statistic.
+    pvalue : float
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
+    usedlag : int
+        The number of lags used.
+    nobs : int
+        The number of observations used for the ADF regression and
+        calculation of the critical values.
+    critical_values : dict[str, float]
+        Critical values for the test statistic at the 1 %, 5 %, and 10 %
+        levels. Based on MacKinnon (2010).
+    icbest : float or None
+        The maximized information criterion if autolag is not None,
+        otherwise None.
+    resstore : ResultsStore or None
+        A dummy class with results attached as attributes, if ``store`` was
+        True, otherwise None.
+    """
 
     adf: float
     pvalue: float
@@ -599,7 +622,16 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
 
 
 class JackknifeResult(NamedTuple):
-    """Result of :func:`block_jackknife`."""
+    """
+    Result of :func:`block_jackknife`.
+
+    Parameters
+    ----------
+    theta_jack : float or ndarray
+        The bias-corrected jackknife point estimate.
+    se : float or ndarray
+        The jackknife standard error estimate.
+    """
 
     theta_jack: float | np.ndarray
     se: float | np.ndarray
@@ -723,7 +755,16 @@ def block_jackknife(x, statistic, n_blocks=-1):
 
 
 class QStatResult(NamedTuple):
-    """Result of :func:`q_stat`."""
+    """
+    Result of :func:`q_stat`.
+
+    Parameters
+    ----------
+    qstat : ndarray
+        Ljung-Box Q-statistic for autocorrelation parameters.
+    pvalue : ndarray
+        P-value of the Q statistic.
+    """
 
     qstat: np.ndarray
     pvalue: np.ndarray
@@ -776,8 +817,25 @@ def q_stat(x, nobs):
 # see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
 class AcfResult(NamedTuple):
-    """Result of :func:`acf` when ``qstat`` or ``alpha`` is set and
-    ``use_namedtuple=True``."""
+    """
+    Result of :func:`acf` when ``qstat`` or ``alpha`` is set and
+    ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    acf : ndarray
+        The autocorrelation function for lags 0, 1, ..., nlags. Shape
+        (nlags+1,).
+    confint : ndarray or None
+        Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
+        (nlags + 1, 2). ``None`` unless ``alpha`` was not None.
+    qstat : ndarray or None
+        The Ljung-Box Q-statistic for autocorrelation parameters. ``None``
+        unless ``qstat`` was True.
+    pvalues : ndarray or None
+        The p-values associated with the Q-statistics of the Ljung-Box
+        autocorrelation test. ``None`` unless ``qstat`` was True.
+    """
 
     acf: np.ndarray
     confint: np.ndarray | None
@@ -1038,7 +1096,17 @@ def pacf_yw(
 
 
 class PacfBurgResult(NamedTuple):
-    """Result of :func:`pacf_burg`."""
+    """
+    Result of :func:`pacf_burg`.
+
+    Parameters
+    ----------
+    pacf : ndarray
+        Partial autocorrelations for lags 0, 1, ..., nlag.
+    sigma2 : ndarray
+        Residual variance estimates where the value in position m is the
+        residual variance in an AR model that includes m lags.
+    """
 
     pacf: np.ndarray
     sigma2: np.ndarray
@@ -1208,8 +1276,18 @@ def pacf_ols(
 
 
 class PacfResult(NamedTuple):
-    """Result of :func:`pacf` when ``alpha`` is not None and
-    ``use_namedtuple=True``."""
+    """
+    Result of :func:`pacf` when ``alpha`` is not None and
+    ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    pacf : ndarray
+        Partial autocorrelations for lags 0, 1, ..., nlags.
+    confint : ndarray
+        Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
+        (nlags + 1, 2).
+    """
 
     pacf: np.ndarray
     confint: np.ndarray
@@ -1451,8 +1529,21 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
 
 
 class CcfResult(NamedTuple):
-    """Result of :func:`ccf` when ``alpha`` is not None and
-    ``use_namedtuple=True``."""
+    """
+    Result of :func:`ccf` when ``alpha`` is not None and
+    ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    ccf : ndarray
+        The cross-correlation function of x and y: the element at index k
+        is the correlation between {x[k], x[k+1], ..., x[n]} and
+        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and
+        y, respectively.
+    confint : ndarray
+        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1. Shape
+        (nlags, 2).
+    """
 
     ccf: np.ndarray
     confint: np.ndarray
@@ -1682,8 +1773,18 @@ def _pccf_ols(x, y, nlags):
 
 
 class PccfResult(NamedTuple):
-    """Result of :func:`pccf` when ``alpha`` is not None and
-    ``use_namedtuple=True``."""
+    """
+    Result of :func:`pccf` when ``alpha`` is not None and
+    ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    pccf : ndarray
+        The partial cross-correlation function for lags 1, 2, ..., nlags.
+    confint : ndarray
+        Confidence intervals for the PCCF at lags 1, 2, ..., nlags. Shape
+        (nlags, 2).
+    """
 
     pccf: np.ndarray
     confint: np.ndarray
@@ -1912,7 +2013,25 @@ def pccf(
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime
 # TODO: check what to return, for testing and trying out returns everything
 class LevinsonDurbinResult(NamedTuple):
-    """Result of :func:`levinson_durbin`."""
+    """
+    Result of :func:`levinson_durbin`.
+
+    Parameters
+    ----------
+    sigma_v : float
+        The estimate of the error variance.
+    arcoefs : ndarray
+        The estimate of the autoregressive coefficients for a model
+        including nlags.
+    pacf : ndarray
+        The partial autocorrelation function.
+    sigma : ndarray
+        The entire sigma array from intermediate result, last value is
+        sigma_v.
+    phi : ndarray
+        The entire phi array from intermediate result, last column
+        contains autoregressive coefficients for AR(nlags).
+    """
 
     sigma_v: float
     arcoefs: np.ndarray
@@ -1995,7 +2114,17 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
 
 class LevinsonDurbinPacfResult(NamedTuple):
-    """Result of :func:`levinson_durbin_pacf`."""
+    """
+    Result of :func:`levinson_durbin_pacf`.
+
+    Parameters
+    ----------
+    arcoefs : ndarray
+        AR coefficients computed from the partial autocorrelations.
+    acf : ndarray
+        The acf computed from the partial autocorrelations. Contains the
+        autocorrelations corresponding to lags 0, 1, ..., p.
+    """
 
     arcoefs: np.ndarray
     acf: np.ndarray
@@ -2062,7 +2191,16 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
 
 class BreakvarHeteroskedasticityResult(NamedTuple):
-    """Result of :func:`breakvar_heteroskedasticity_test`."""
+    """
+    Result of :func:`breakvar_heteroskedasticity_test`.
+
+    Parameters
+    ----------
+    test_statistic : float or ndarray
+        Test statistic(s) H(h).
+    p_value : float or ndarray
+        p-value(s) of test statistic(s).
+    """
 
     test_statistic: float | np.ndarray
     p_value: float | np.ndarray
@@ -2403,7 +2541,21 @@ def grangercausalitytests(x, maxlag, addconst=True):
 
 
 class CointResult(NamedTuple):
-    """Result of :func:`coint`."""
+    """
+    Result of :func:`coint`.
+
+    Parameters
+    ----------
+    coint_t : float
+        The t-statistic of unit-root test on residuals.
+    pvalue : float
+        MacKinnon's approximate, asymptotic p-value based on MacKinnon
+        (1994).
+    crit_value : ndarray
+        Critical values for the test statistic at the 1 %, 5 %, and 10 %
+        levels based on regression curve. This depends on the number of
+        observations.
+    """
 
     coint_t: float
     pvalue: float
@@ -2576,7 +2728,27 @@ def has_missing(data):
 
 
 class KpssResult(NamedTuple):
-    """Result of :func:`kpss` when ``use_namedtuple=True``."""
+    """
+    Result of :func:`kpss` when ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    kpss_stat : float
+        The KPSS test statistic.
+    p_value : float
+        The p-value of the test. The p-value is interpolated from Table 1
+        in Kwiatkowski et al. (1992), and a boundary point is returned if
+        the test statistic is outside the table of critical values, that
+        is, if the p-value is outside the interval (0.01, 0.1).
+    lags : int
+        The truncation lag parameter.
+    crit : dict[str, float]
+        The critical values at 10%, 5%, 2.5% and 1%. Based on Kwiatkowski
+        et al. (1992).
+    resstore : ResultsStore or None
+        An instance of a dummy class with results attached as attributes,
+        if ``store`` was True, otherwise None.
+    """
 
     kpss_stat: float
     p_value: float
@@ -2870,7 +3042,25 @@ def _kpss_autolag(resids, nobs):
 
 
 class RangeUnitRootTestResult(NamedTuple):
-    """Result of :func:`range_unit_root_test` when ``use_namedtuple=True``."""
+    """
+    Result of :func:`range_unit_root_test` when ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    rur_stat : float
+        The RUR test statistic.
+    p_value : float
+        The p-value of the test. The p-value is interpolated from Table 1
+        in Aparicio et al. (2006), and a boundary point is returned if the
+        test statistic is outside the table of critical values, that is,
+        if the p-value is outside the interval (0.01, 0.1).
+    crit : dict[str, float]
+        The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
+        al. (2006).
+    resstore : ResultsStore or None
+        An instance of a dummy class with results attached as attributes,
+        if ``store`` was True, otherwise None.
+    """
 
     rur_stat: float
     p_value: float

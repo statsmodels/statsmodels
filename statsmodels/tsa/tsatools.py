@@ -295,8 +295,18 @@ def detrend(x, order=1, axis=0):
 
 
 class LagmatResult(NamedTuple):
-    """Result of :func:`lagmat` when ``original="sep"`` and
-    ``use_namedtuple=True``."""
+    """
+    Result of :func:`lagmat` when ``original="sep"`` and
+    ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    lags : ndarray or DataFrame
+        The array with lagged observations.
+    leads : ndarray or DataFrame
+        The original (unlagged) array, truncated to have the same number
+        of rows as ``lags``.
+    """
 
     lags: NDArray | DataFrame
     leads: NDArray | DataFrame
