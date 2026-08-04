@@ -900,8 +900,6 @@ class IRAnalysis(BaseIRAnalysis):
         ----------
         orth : bool, default False
             Compute orthogonalized impulse responses
-        svar : bool, default False
-            Use structural IRFs
         repl : int, default 1000
             Number of MC replications
         signif : float (0 < signif < 1)
