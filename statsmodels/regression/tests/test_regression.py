@@ -28,6 +28,9 @@ from statsmodels.regression.linear_model import (
     GLS,
     OLS,
     WLS,
+    CompareLRTestResult,
+    ELTestResult,
+    YuleWalkerResult,
     burg,
     yule_walker,
 )
@@ -952,7 +955,9 @@ class TestYuleWalker:
         from statsmodels.datasets.sunspots import load
 
         data = load()
-        cls.rho, cls.sigma = yule_walker(data.endog, order=4, method="mle")
+        cls.rho, cls.sigma = yule_walker(
+            data.endog, order=4, method="mle", use_namedtuple=False
+        )
         cls.R_params = [
             1.2831003105694765,
             -0.45240924374091945,
@@ -962,6 +967,120 @@ class TestYuleWalker:
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
+
+
+def test_yule_walker_use_namedtuple_default_warns():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = yule_walker(data.endog, order=2)
+    assert not isinstance(res, YuleWalkerResult)
+
+
+def test_yule_walker_use_namedtuple_true():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, use_namedtuple=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is None
+    assert res[0] is res.rho
+    assert res[1] == res.sigma
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, inv=True, use_namedtuple=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is not None
+
+
+class TestCompareAndElTestNamedTuple:
+    @classmethod
+    def setup_class(cls):
+        rs = np.random.RandomState(12345)
+        nobs = 200
+        x = rs.standard_normal((nobs, 2))
+        y = 1 + x[:, 0] + rs.standard_normal(nobs)
+        exog_full = add_constant(x)
+        cls.res_full = OLS(y, exog_full).fit()
+        cls.res_restr = OLS(y, add_constant(x[:, 0])).fit()
+
+    def test_compare_lr_test_use_namedtuple_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = self.res_full.compare_lr_test(self.res_restr)
+        assert not isinstance(res, CompareLRTestResult)
+
+    def test_compare_lr_test_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.compare_lr_test(
+                self.res_restr, use_namedtuple=True
+            )
+        assert isinstance(res, CompareLRTestResult)
+        assert res[0] == res.lr_stat
+        assert res[1] == res.p_value
+        assert res[2] == res.df_diff
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res_large = self.res_full.compare_lr_test(
+                self.res_restr, large_sample=True, use_namedtuple=True
+            )
+        assert isinstance(res_large, CompareLRTestResult)
+
+    def test_el_test_use_namedtuple_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = self.res_full.el_test(np.array([0.0]), np.array([1]))
+        assert not isinstance(res, ELTestResult)
+
+    def test_el_test_use_namedtuple_true_full(self):
+        # len(param_nums) == len(params): no nuisance parameters
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]), np.array([0, 1]), use_namedtuple=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+        assert res[0] == res.llr
+        assert res[1] == res.pval
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]),
+                np.array([0, 1]),
+                return_weights=True,
+                use_namedtuple=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is None
+
+    def test_el_test_use_namedtuple_true_nuisance(self):
+        # len(param_nums) < len(params): nuisance parameters present
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]), np.array([1]), use_namedtuple=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]),
+                np.array([1]),
+                ret_params=True,
+                use_namedtuple=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is not None
 
 
 class TestDataDimensions(CheckRegressionResults):

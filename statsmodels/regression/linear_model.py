@@ -35,7 +35,7 @@ from __future__ import annotations
 from statsmodels.compat.numpy import inplace_reshape
 from statsmodels.compat.python import lrange, lzip
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -73,8 +73,11 @@ __all__ = [
     "GLSAR",
     "OLS",
     "WLS",
+    "CompareLRTestResult",
+    "ELTestResult",
     "PredictionResults",
     "RegressionResultsWrapper",
+    "YuleWalkerResult",
 ]
 
 dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
@@ -1426,7 +1429,9 @@ class GLSAR(GLS):
                     converged = True
                     break
                 last = results.params
-            self.rho, _ = yule_walker(results.resid, order=self.order, df=None)
+            self.rho, _ = yule_walker(
+                results.resid, order=self.order, df=None, use_namedtuple=False
+            )
             history["rho"].append(self.rho)
 
         # why not another call to self.initialize
@@ -1475,7 +1480,16 @@ class GLSAR(GLS):
         return _x[self.order :]
 
 
-def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
+class YuleWalkerResult(NamedTuple):
+    """Result of :func:`yule_walker` when ``use_namedtuple=True``."""
+
+    rho: np.ndarray
+    sigma: float
+    Rinv: np.ndarray | None
+
+
+def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, *,
+                use_namedtuple: bool | None = None):
     """
     Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
 
@@ -1501,13 +1515,35 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
         False.
     demean : bool
         True, the mean is subtracted from `X` before estimation.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``YuleWalkerResult`` NamedTuple instead of a plain tuple. If
+        ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a ``YuleWalkerResult``.
+            Set ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    YuleWalkerResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``rho``,
+        ``sigma``, and ``Rinv`` (``Rinv`` is ``None`` unless ``inv=True``).
+        See :class:`~statsmodels.regression.linear_model.YuleWalkerResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     rho : ndarray
         AR(p) coefficients computed using the Yule-Walker method.
     sigma : float
         The estimate of the residual standard deviation.
+    Rinv : ndarray, optional
+        The inverse of R. Only returned if `inv` is True.
 
     See Also
     --------
@@ -1536,6 +1572,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
     # First link here is useful
     # http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
 
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     method = string_like(method, "method", options=("adjusted", "mle"))
 
     if method not in ("adjusted", "mle"):
@@ -1575,10 +1612,24 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
         sigma = np.sqrt(sigmasq)
     else:
         sigma = np.nan
+    Rinv = np.linalg.inv(R) if inv else None
+
+    if use_namedtuple is None:
+        warnings.warn(
+            "yule_walker currently returns a plain tuple whose length "
+            "depends on the inv argument. In release 0.16 or after July "
+            "2028, whichever is later, the default behavior will switch "
+            "to always returning a YuleWalkerResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return YuleWalkerResult(rho, sigma, Rinv)
     if inv:
-        return rho, sigma, np.linalg.inv(R)
-    else:
-        return rho, sigma
+        return rho, sigma, Rinv
+    return rho, sigma
 
 
 def burg(endog, order=1, demean=True):
@@ -1642,6 +1693,25 @@ def burg(endog, order=1, demean=True):
     pacf, sigma = pacf_burg(endog, order, demean=demean)
     ar, _ = levinson_durbin_pacf(pacf)
     return ar, sigma[-1]
+
+
+class CompareLRTestResult(NamedTuple):
+    """Result of :meth:`RegressionResults.compare_lr_test` when
+    ``use_namedtuple=True``."""
+
+    lr_stat: float
+    p_value: float
+    df_diff: int
+
+
+class ELTestResult(NamedTuple):
+    """Result of :meth:`RegressionResults.el_test` when
+    ``use_namedtuple=True``."""
+
+    llr: float
+    pval: float
+    weights: np.ndarray | None
+    nuisance_params: np.ndarray | None
 
 
 class RegressionResults(base.LikelihoodModelResults):
@@ -2384,7 +2454,8 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value = stats.f.sf(f_value, df_diff, df_full)
         return f_value, p_value, df_diff
 
-    def compare_lr_test(self, restricted, large_sample=False):
+    def compare_lr_test(self, restricted, large_sample=False, *,
+                        use_namedtuple: bool | None = None):
         """
         Likelihood ratio test to test whether restricted model is correct.
 
@@ -2399,9 +2470,29 @@ class RegressionResults(base.LikelihoodModelResults):
         large_sample : bool
             Flag indicating whether to use a heteroskedasticity robust version
             of the LR test, which is a modified LM test.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as a
+            ``CompareLRTestResult`` NamedTuple instead of a plain tuple. If
+            ``None`` (the default), the current tuple-returning behavior is
+            used and a ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2028, whichever is later,
+                the default will change to always return a
+                ``CompareLRTestResult``. Set ``use_namedtuple=True`` to
+                opt in now, or ``use_namedtuple=False`` to silence the
+                warning and keep the current return type.
 
         Returns
         -------
+        CompareLRTestResult
+            If ``use_namedtuple=True``, a NamedTuple with fields
+            ``lr_stat``, ``p_value``, and ``df_diff``. See
+            :class:`~statsmodels.regression.linear_model.CompareLRTestResult`.
+
+        Otherwise (the deprecated default), a plain tuple made up of:
+
         lr_stat : float
             The likelihood ratio which is chisquare distributed with df_diff
             degrees of freedom.
@@ -2450,30 +2541,47 @@ class RegressionResults(base.LikelihoodModelResults):
         # TODO: put into separate function, needs tests
 
         # See mailing list discussion October 17,
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
         if large_sample:
-            return self.compare_lm_test(restricted, use_lr=True)
+            # compare_lm_test always returns a plain 3-tuple (lm_value,
+            # p_value, df_diff) today; unpack positionally so the result
+            # here is self-consistent regardless of `large_sample`.
+            lrstat, lr_pvalue, lrdf = self.compare_lm_test(restricted, use_lr=True)
+        else:
+            has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
+            has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
 
-        has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
-        has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
+            if has_robust1 or has_robust2:
+                warnings.warn(
+                    "Likelihood Ratio test is likely invalid with robust covariance, "
+                    "proceeding anyway",
+                    InvalidTestWarning,
+                    stacklevel=2,
+                )
 
-        if has_robust1 or has_robust2:
+            llf_full = self.llf
+            llf_restr = restricted.llf
+            df_full = self.df_resid
+            df_restr = restricted.df_resid
+
+            lrdf = df_restr - df_full
+            lrstat = -2 * (llf_restr - llf_full)
+            lr_pvalue = stats.chi2.sf(lrstat, lrdf)
+
+        if use_namedtuple is None:
             warnings.warn(
-                "Likelihood Ratio test is likely invalid with robust covariance, "
-                "proceeding anyway",
-                InvalidTestWarning,
+                "compare_lr_test currently returns a plain tuple. In "
+                "release 0.16 or after July 2028, whichever is later, the "
+                "default behavior will switch to always returning a "
+                "CompareLRTestResult NamedTuple. Set use_namedtuple=True "
+                "to switch now, or use_namedtuple=False to keep the "
+                "current behavior and silence this warning.",
+                FutureWarning,
                 stacklevel=2,
             )
-
-        llf_full = self.llf
-        llf_restr = restricted.llf
-        df_full = self.df_resid
-        df_restr = restricted.df_resid
-
-        lrdf = df_restr - df_full
-        lrstat = -2 * (llf_restr - llf_full)
-        lr_pvalue = stats.chi2.sf(lrstat, lrdf)
-
+        if use_namedtuple:
+            return CompareLRTestResult(lrstat, lr_pvalue, lrdf)
         return lrstat, lr_pvalue, lrdf
 
     def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwargs):
@@ -3260,6 +3368,8 @@ class OLSResults(RegressionResults):
         ret_params=0,
         method="nm",
         stochastic_exog=1,
+        *,
+        use_namedtuple: bool | None = None,
     ):
         """
         Test single or joint hypotheses using Empirical Likelihood.
@@ -3276,6 +3386,8 @@ class OLSResults(RegressionResults):
         ret_params : bool
             If true, returns the parameter vector that maximizes the likelihood
             ratio at b0_vals.  Also returns the weights.  The default is False.
+            Has no effect when ``len(param_nums) == len(params)``, since
+            there are then no nuisance parameters to report.
         method : str
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
@@ -3286,12 +3398,43 @@ class OLSResults(RegressionResults):
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
             regressors. The default is True.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``ELTestResult`` NamedTuple instead of a plain tuple. If
+            ``None`` (the default), the current tuple-returning behavior is
+            used and a ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2028, whichever is later,
+                the default will change to always return an
+                ``ELTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        tuple
-            The p-value and -2 times the log-likelihood ratio for the
-            hypothesized values.
+        ELTestResult
+            If ``use_namedtuple=True``, a NamedTuple with fields ``llr``,
+            ``pval``, ``weights``, and ``nuisance_params`` (``weights`` is
+            ``None`` unless ``return_weights`` or ``ret_params`` is True;
+            ``nuisance_params`` is ``None`` unless ``ret_params`` is True
+            and ``len(param_nums) < len(params)``). See
+            :class:`~statsmodels.regression.linear_model.ELTestResult`.
+
+        Otherwise (the deprecated default), a plain tuple whose length
+        depends on `return_weights` and `ret_params`, made up of a subset
+        of:
+
+        llr : float
+            -2 times the log-likelihood ratio for the hypothesized values.
+        pval : float
+            The p-value of the test.
+        weights : ndarray, optional
+            The weights that optimize the likelihood ratio at b0_vals.
+        nuisance_params : ndarray, optional
+            The parameter vector that maximizes the likelihood ratio at
+            b0_vals.
 
         Examples
         --------
@@ -3310,8 +3453,10 @@ class OLSResults(RegressionResults):
         >>> (27.248146353888796, 1.7894660442330235e-07)
 
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts()  # to store weights
+        nuisance_params = None
         if len(param_nums) == len(params):
             llr = opt_fun_inst._opt_nuis_regress(
                 [],
@@ -3325,43 +3470,63 @@ class OLSResults(RegressionResults):
                 stochastic_exog=stochastic_exog,
             )
             pval = 1 - stats.chi2.cdf(llr, len(param_nums))
-            if return_weights:
-                return llr, pval, opt_fun_inst.new_weights
-            else:
-                return llr, pval
-        x0 = np.delete(params, param_nums)
-        args = (
-            param_nums,
-            self.model.endog,
-            self.model.exog,
-            self.model.nobs,
-            self.model.exog.shape[1],
-            params,
-            b0_vals,
-            stochastic_exog,
-        )
-        if method == "nm":
-            llr = optimize.fmin(
-                opt_fun_inst._opt_nuis_regress,
-                x0,
-                maxfun=10000,
-                maxiter=10000,
-                full_output=1,
-                disp=0,
-                args=args,
-            )[1]
-        if method == "powell":
-            llr = optimize.fmin_powell(
-                opt_fun_inst._opt_nuis_regress, x0, full_output=1, disp=0, args=args
-            )[1]
-
-        pval = 1 - stats.chi2.cdf(llr, len(param_nums))
-        if ret_params:
-            return llr, pval, opt_fun_inst.new_weights, opt_fun_inst.new_params
-        elif return_weights:
-            return llr, pval, opt_fun_inst.new_weights
+            weights = opt_fun_inst.new_weights if return_weights else None
         else:
-            return llr, pval
+            x0 = np.delete(params, param_nums)
+            args = (
+                param_nums,
+                self.model.endog,
+                self.model.exog,
+                self.model.nobs,
+                self.model.exog.shape[1],
+                params,
+                b0_vals,
+                stochastic_exog,
+            )
+            if method == "nm":
+                llr = optimize.fmin(
+                    opt_fun_inst._opt_nuis_regress,
+                    x0,
+                    maxfun=10000,
+                    maxiter=10000,
+                    full_output=1,
+                    disp=0,
+                    args=args,
+                )[1]
+            if method == "powell":
+                llr = optimize.fmin_powell(
+                    opt_fun_inst._opt_nuis_regress, x0, full_output=1, disp=0,
+                    args=args,
+                )[1]
+
+            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
+            if ret_params:
+                weights = opt_fun_inst.new_weights
+                nuisance_params = opt_fun_inst.new_params
+            elif return_weights:
+                weights = opt_fun_inst.new_weights
+            else:
+                weights = None
+
+        if use_namedtuple is None:
+            warnings.warn(
+                "el_test currently returns a plain tuple whose length "
+                "depends on the return_weights and ret_params arguments. "
+                "In release 0.16 or after July 2028, whichever is later, "
+                "the default behavior will switch to always returning an "
+                "ELTestResult NamedTuple. Set use_namedtuple=True to "
+                "switch now, or use_namedtuple=False to keep the current "
+                "behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple:
+            return ELTestResult(llr, pval, weights, nuisance_params)
+        if nuisance_params is not None:
+            return llr, pval, weights, nuisance_params
+        if weights is not None:
+            return llr, pval, weights
+        return llr, pval
 
     def conf_int_el(
         self,
@@ -3447,6 +3612,7 @@ class OLSResults(RegressionResults):
                     np.array([param_num]),
                     method=method,
                     stochastic_exog=stochastic_exog,
+                    use_namedtuple=False,
                 )[0]
                 - r0
             )

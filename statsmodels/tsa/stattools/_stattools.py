@@ -1002,7 +1002,10 @@ def pacf_yw(
     with warnings.catch_warnings():
         warnings.simplefilter("once", ValueWarning)
         pacf.extend(
-            [yule_walker(x, k, method=method)[0][-1] for k in range(1, nlags + 1)]
+            [
+                yule_walker(x, k, method=method, use_namedtuple=False)[0][-1]
+                for k in range(1, nlags + 1)
+            ]
         )
     return np.array(pacf)
 

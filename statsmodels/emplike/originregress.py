@@ -71,7 +71,7 @@ class ELOriginRegress:
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
-            np.array([0]), np.array([0]), ret_params=1
+            np.array([0]), np.array([0]), ret_params=1, use_namedtuple=False
         )
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
@@ -212,6 +212,7 @@ class OriginResults(RegressionResults):
             method=method,
             stochastic_exog=stochastic_exog,
             return_weights=return_weights,
+            use_namedtuple=False,
         )
         llr_test = test_res[0]
         llr_res = llr_test - self.llr

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from numpy.testing import assert_array_less, assert_equal
 from pandas import DataFrame, Series
@@ -5,6 +7,7 @@ import pytest
 
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (
+    PartRegressPlotResult,
     abline_plot,
     add_lowess,
     influence_plot,
@@ -15,6 +18,7 @@ from statsmodels.graphics.regressionplots import (
     plot_fit,
     plot_leverage_resid2,
     plot_partial_residuals,
+    plot_partregress,
     plot_partregress_grid,
     plot_regress_exog,
 )
@@ -396,10 +400,41 @@ def test_partregress_formula_env(close_figures):
         )
     )
     sm.graphics.plot_partregress(
-        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1,
+        use_namedtuple=False,
     )
 
-    sm.graphics.plot_partregress("a", "lg(b)", ["c"], obs_labels=False, data=df)
+    sm.graphics.plot_partregress(
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, use_namedtuple=False
+    )
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_partregress_use_namedtuple(close_figures):
+    rs = np.random.RandomState(98474364)
+    x1 = rs.standard_normal(50)
+    x2 = rs.standard_normal(50)
+    y = 1 + x1 + rs.standard_normal(50)
+
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = plot_partregress(y, x1, x2[:, None])
+    assert not isinstance(res, PartRegressPlotResult)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = plot_partregress(y, x1, x2[:, None], use_namedtuple=True)
+    assert isinstance(res, PartRegressPlotResult)
+    assert res.coords is None
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = plot_partregress(
+            y, x1, x2[:, None], ret_coords=True, use_namedtuple=True
+        )
+    assert isinstance(res, PartRegressPlotResult)
+    assert res.coords is not None
+    assert len(res.coords) == 2
 
 
 @pytest.mark.matplotlib

@@ -2559,3 +2559,7 @@ ErrorBand
 NonNestedTestResult
 LMTestResult
 GoldfeldQuandtResult
+YuleWalkerResult
+CompareLRTestResult
+ELTestResult
+PartRegressPlotResult
