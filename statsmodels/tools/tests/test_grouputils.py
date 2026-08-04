@@ -1,5 +1,4 @@
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
-from statsmodels.compat.scipy import SP_LT_2
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -773,8 +772,7 @@ def test_dummy_sparse():
 
     g = np.array([0, 0, 2, 1, 1, 2, 0])
     indi = dummy_sparse(g)
-    expected_class = sparse.csr_matrix if SP_LT_2 else sparse.csr_array
-    assert isinstance(indi, expected_class)
+    assert isinstance(indi, sparse.csr_array)
     result = indi.toarray()
     expected = np.array(
         [[1, 0, 0], [1, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]],

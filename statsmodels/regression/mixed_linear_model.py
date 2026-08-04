@@ -1118,10 +1118,7 @@ class MixedLM(base.LikelihoodModel):
                     )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
-                        if SP_LT_2:
-                            evc_mats.append(sparse.csr_matrix(mat))
-                        else:
-                            evc_mats.append(sparse.csr_array(mat))
+                        evc_mats.append(sparse.csr_array(mat))
                     else:
                         evc_mats.append(np.asarray(mat))
                 vc_mats.append(evc_mats)
@@ -1578,15 +1575,9 @@ class MixedLM(base.LikelihoodModel):
         if any_sparse:
             for j, x in enumerate(ex):
                 if not sparse.issparse(x):
-                    if SP_LT_2:
-                        ex[j] = sparse.csr_matrix(x)
-                    else:
-                        ex[j] = sparse.csr_array(x)
+                    ex[j] = sparse.csr_array(x)
             ex = sparse.hstack(ex)
-            if SP_LT_2:
-                ex = sparse.csr_matrix(ex)
-            else:
-                ex = sparse.csr_array(ex)
+            ex = sparse.csr_array(ex)
         else:
             ex = np.concatenate(ex, axis=1)
 

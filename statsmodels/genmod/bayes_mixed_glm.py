@@ -46,7 +46,6 @@ within and between values of the `ident` array).  The model
 :math:`p(y | vc, fep)` depends on the specific GLM being fit.
 """
 
-from statsmodels.compat.scipy import SP_LT_2
 
 import warnings
 
@@ -257,10 +256,7 @@ class _BayesMixedGLM(base.Model):
             raise ValueError(msg)
 
         if not sparse.issparse(exog_vc):
-            if SP_LT_2:
-                exog_vc = sparse.csr_matrix(exog_vc)
-            else:
-                exog_vc = sparse.csr_array(exog_vc)
+            exog_vc = sparse.csr_array(exog_vc)
 
         ident = ident.astype(int)
         vcp_p = float(vcp_p)
