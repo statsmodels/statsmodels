@@ -67,12 +67,15 @@ Descriptive Statistics and Tests
    stattools.acovf
    stattools.acf
    stattools.pacf
+   stattools.PacfResult
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
    stattools.ccovf
    stattools.ccf
+   stattools.CcfResult
    stattools.pccf
+   stattools.PccfResult
    stattools.adfuller
    stattools.ADFullerResult
    stattools.kpss

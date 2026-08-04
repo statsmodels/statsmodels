@@ -2547,3 +2547,6 @@ reparameterizations
 ADFullerResult
 RangeUnitRootTestResult
 LagmatResult
+PacfResult
+CcfResult
+PccfResult

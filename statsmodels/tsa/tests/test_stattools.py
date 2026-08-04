@@ -39,6 +39,7 @@ from statsmodels.tsa.stattools import (
     block_jackknife,
     breakvar_heteroskedasticity_test,
     ccf,
+    CcfResult,
     ccovf,
     coint,
     grangercausalitytests,
@@ -49,10 +50,12 @@ from statsmodels.tsa.stattools import (
     levinson_durbin_pacf,
     leybourne,
     pacf,
+    PacfResult,
     pacf_burg,
     pacf_ols,
     pacf_yw,
     pccf,
+    PccfResult,
     range_unit_root_test,
     RangeUnitRootTestResult,
     zivot_andrews,
@@ -349,7 +352,9 @@ class TestPACF(CheckCorrGram):
         cls.pacfyw = cls.results["PACYW"]
 
     def test_ols(self):
-        pacfols, confint = pacf(self.x, nlags=40, alpha=0.05, method="ols")
+        pacfols, confint = pacf(
+            self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=False
+        )
         assert_almost_equal(pacfols[1:], self.pacfols, DECIMAL_6)
         centered = confint - confint.mean(1)[:, None]
         # from edited Stata ado file
@@ -359,6 +364,30 @@ class TestPACF(CheckCorrGram):
         assert_equal(centered[0], [0.0, 0.0])
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
+
+    def test_alpha_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = pacf(self.x, nlags=40, alpha=0.05, method="ols")
+        assert isinstance(res, tuple)
+        assert not isinstance(res, PacfResult)
+
+    def test_alpha_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pacf(
+                self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=True
+            )
+        assert isinstance(res, PacfResult)
+        assert res[0] is res.pacf
+        assert res[1] is res.confint
+
+    def test_no_alpha_never_warns_or_wraps(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pacf(self.x, nlags=40, method="ols")
+            res_nt = pacf(self.x, nlags=40, method="ols", use_namedtuple=True)
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, np.ndarray)
 
     def test_ols_inefficient(self):
         lag_len = 5
@@ -422,12 +451,42 @@ class TestCCF:
     def test_confint(self):
         alpha = 0.05
         res2, confint = ccf(
-            self.x, self.y, nlags=self.nlags, adjusted=False, fft=False, alpha=alpha
+            self.x,
+            self.y,
+            nlags=self.nlags,
+            adjusted=False,
+            fft=False,
+            alpha=alpha,
+            use_namedtuple=False,
         )
         assert_equal(res2, self.res1)
         assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
         alpha1 = stats.norm.cdf(confint[:, 1] - res2, scale=1.0 / np.sqrt(len(self.x)))
         assert_almost_equal(alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8)
+
+    def test_alpha_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = ccf(self.x, self.y, nlags=self.nlags, alpha=0.05)
+        assert isinstance(res, tuple)
+        assert not isinstance(res, CcfResult)
+
+    def test_alpha_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = ccf(
+                self.x, self.y, nlags=self.nlags, alpha=0.05, use_namedtuple=True
+            )
+        assert isinstance(res, CcfResult)
+        assert res[0] is res.ccf
+        assert res[1] is res.confint
+
+    def test_no_alpha_never_warns_or_wraps(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = ccf(self.x, self.y, nlags=self.nlags)
+            res_nt = ccf(self.x, self.y, nlags=self.nlags, use_namedtuple=True)
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, np.ndarray)
 
 
 class TestPCCF:
@@ -466,7 +525,12 @@ class TestPCCF:
     def test_confint(self):
         alpha = 0.05
         res2, confint = pccf(
-            self.x, self.y, nlags=self.nlags, method="ols", alpha=alpha
+            self.x,
+            self.y,
+            nlags=self.nlags,
+            method="ols",
+            alpha=alpha,
+            use_namedtuple=False,
         )
         assert_equal(res2, self.res1)
         assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
@@ -476,11 +540,44 @@ class TestPCCF:
         )
         assert_almost_equal(alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8)
 
+    def test_alpha_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = pccf(self.x, self.y, nlags=self.nlags, method="ols", alpha=0.05)
+        assert isinstance(res, tuple)
+        assert not isinstance(res, PccfResult)
+
+    def test_alpha_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pccf(
+                self.x,
+                self.y,
+                nlags=self.nlags,
+                method="ols",
+                alpha=0.05,
+                use_namedtuple=True,
+            )
+        assert isinstance(res, PccfResult)
+        assert res[0] is res.pccf
+        assert res[1] is res.confint
+
+    def test_no_alpha_never_warns_or_wraps(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pccf(self.x, self.y, nlags=self.nlags, method="ols")
+            res_nt = pccf(
+                self.x, self.y, nlags=self.nlags, method="ols", use_namedtuple=True
+            )
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, np.ndarray)
+
     def test_confint_widths(self):
         alphas = [0.01, 0.05, 0.10]
         widths = {}
         for a in alphas:
-            _, confint = pccf(self.x, self.y, nlags=5, method="ols", alpha=a)
+            _, confint = pccf(
+                self.x, self.y, nlags=5, method="ols", alpha=a, use_namedtuple=False
+            )
             widths[a] = confint[:, 1] - confint[:, 0]
         assert np.all(widths[0.01] > widths[0.05])
         assert np.all(widths[0.05] > widths[0.10])
@@ -530,7 +627,9 @@ class TestPCCF:
 
     def test_return_consistency(self):
         result_no_alpha = pccf(self.x, self.y, nlags=5)
-        result_with_alpha, confint = pccf(self.x, self.y, nlags=5, alpha=0.05)
+        result_with_alpha, confint = pccf(
+            self.x, self.y, nlags=5, alpha=0.05, use_namedtuple=False
+        )
         assert_almost_equal(result_no_alpha, result_with_alpha, DECIMAL_8)
         assert confint.shape == (5, 2)
         assert np.all(confint[:, 0] <= result_with_alpha)
