@@ -7,6 +7,7 @@ from statsmodels.compat.python import lrange
 from statsmodels.compat.scipy import SP_LT_116
 
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -31,6 +32,7 @@ from statsmodels.regression.linear_model import (
     burg,
     yule_walker,
 )
+from statsmodels.tools._no_value import _NoValue
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -1666,3 +1668,47 @@ def test_summary_after_remove_data(fit_func):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_ols_offset_novalue_sentinel():
+    # GH#9880: attributes that are only set on some paths are initialized
+    # to the _NoValue sentinel instead of being left missing
+    rs = np.random.RandomState(3132)
+    x = rs.normal(size=(50, 3))
+    y = x.sum(1) + rs.normal(size=50)
+
+    model = OLS(y, x)
+    assert model.offset is _NoValue
+    assert model._wexog_xprod is _NoValue
+
+    # default behavior is unchanged: loglike/score/hessian without offset
+    params = model.fit().params
+    assert np.isfinite(model.loglike(params))
+    assert_allclose(model.score(params), np.zeros(3), atol=1e-6)
+    assert model._wexog_xprod is not _NoValue
+    assert np.all(np.isfinite(model.hessian(params)))
+
+    # explicit offset still enters loglike/score/hessian
+    shifted = OLS(y, x, offset=1.0)
+    assert shifted.offset == 1.0
+    equiv = OLS(y - 1.0, x)
+    assert_allclose(shifted.loglike(params), equiv.loglike(params))
+    assert_allclose(shifted.score(params), equiv.score(params))
+    assert_allclose(shifted.hessian(params), equiv.hessian(params))
+
+    # the distinction the sentinel exists for: offset=None is a value that
+    # was passed, not a missing attribute
+    assert OLS(y, x, offset=None).offset is None
+
+
+def test_ols_novalue_pickle():
+    # sentinel attributes must survive a pickle round-trip with identity
+    # intact so `is _NoValue` checks still work on unpickled models
+    rs = np.random.RandomState(3132)
+    x = rs.normal(size=(50, 3))
+    y = x.sum(1) + rs.normal(size=50)
+
+    res = OLS(y, x).fit()
+    loaded = pickle.loads(pickle.dumps(res))
+    assert loaded.model.offset is _NoValue
+    assert_allclose(loaded.model.loglike(res.params), res.model.loglike(res.params))

@@ -50,6 +50,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools._decorators import cache_readonly, cache_writable
+from statsmodels.tools._no_value import _NoValue
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     InvalidTestWarning,
@@ -999,6 +1000,13 @@ class OLS(WLS):
 
         if type(self) is OLS:
             self._check_kwargs(kwargs, ["offset"])
+        # offset is attached by Model._handle_data only when passed
+        if "offset" not in kwargs:
+            self.offset = _NoValue
+        # score/hessian intermediates, computed lazily by _setup_score_hess
+        self._wendog_xprod = _NoValue
+        self._wexog_xprod = _NoValue
+        self._wexog_x_wendog = _NoValue
 
     def loglike(self, params, scale=None):
         """
@@ -1022,7 +1030,7 @@ class OLS(WLS):
         nobs2 = self.nobs / 2.0
         nobs = float(self.nobs)
         resid = self.endog - np.dot(self.exog, params)
-        if hasattr(self, "offset"):
+        if self.offset is not _NoValue:
             resid -= self.offset
         ssr = np.sum(resid**2)
         if scale is None:
@@ -1078,7 +1086,7 @@ class OLS(WLS):
             The score vector.
 
         """
-        if not hasattr(self, "_wexog_xprod"):
+        if self._wexog_xprod is _NoValue:
             self._setup_score_hess()
 
         xtxb = np.dot(self._wexog_xprod, params)
@@ -1093,7 +1101,7 @@ class OLS(WLS):
 
     def _setup_score_hess(self):
         y = self.wendog
-        if hasattr(self, "offset"):
+        if self.offset is not _NoValue:
             y = y - self.offset
         self._wendog_xprod = np.sum(y * y)
         self._wexog_xprod = np.dot(self.wexog.T, self.wexog)
@@ -1118,7 +1126,7 @@ class OLS(WLS):
             The Hessian matrix.
 
         """
-        if not hasattr(self, "_wexog_xprod"):
+        if self._wexog_xprod is _NoValue:
             self._setup_score_hess()
 
         xtxb = np.dot(self._wexog_xprod, params)
