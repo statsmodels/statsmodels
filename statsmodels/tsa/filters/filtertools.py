@@ -12,12 +12,27 @@ Author: Josef-pktd
 # not original copied from various experimental scripts
 # version control history is there
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple
+
 import numpy as np
 from scipy import signal
 import scipy.fftpack as fft
 from scipy.signal._signaltools import _centered as trim_centered
 
 from statsmodels.tools.validation import PandasWrapper, array_like
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import ArrayLike1D, ArrayLike2D
+
+
+class CycleTrendResult(NamedTuple):
+    """Result of :func:`cffilter`, :func:`hamilton_filter`, and
+    :func:`hpfilter`: a cycle/trend decomposition."""
+
+    cycle: ArrayLike1D | ArrayLike2D
+    trend: ArrayLike1D | ArrayLike2D
 
 
 def _pad_nans(x, head=None, tail=None):

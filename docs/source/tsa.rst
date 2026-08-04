@@ -345,6 +345,7 @@ Time Series Filters
 .. autosummary::
    :toctree: generated/
 
+   CycleTrendResult
    convolution_filter
    recursive_filter
    miso_lfilter

@@ -2551,3 +2551,4 @@ PacfResult
 CcfResult
 PccfResult
 AcfResult
+CycleTrendResult
