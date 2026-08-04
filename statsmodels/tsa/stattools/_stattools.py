@@ -40,6 +40,7 @@ ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 __all__ = [
     "acf",
+    "AcfResult",
     "acovf",
     "adfuller",
     "ADFullerResult",
@@ -746,6 +747,16 @@ def q_stat(x, nobs):
 # NOTE: Changed unbiased to False
 # see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
+class AcfResult(NamedTuple):
+    """Result of :func:`acf` when ``qstat`` or ``alpha`` is set and
+    ``use_namedtuple=True``."""
+
+    acf: np.ndarray
+    confint: np.ndarray | None
+    qstat: np.ndarray | None
+    pvalues: np.ndarray | None
+
+
 def acf(
     x,
     adjusted=False,
@@ -755,6 +766,8 @@ def acf(
     alpha=None,
     bartlett_confint=True,
     missing="none",
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Calculate the autocorrelation function
@@ -807,23 +820,51 @@ def acf(
         and cross-products that are used to estimate the autocovariance.
         When using "conservative", n is set to the number of non-missing
         observations.
+    use_namedtuple : bool, optional
+        Only relevant when ``qstat`` is True or ``alpha`` is not None,
+        where the return value's arity depends on this flag. Flag
+        indicating whether to return the results as an ``AcfResult``
+        NamedTuple instead of a plain tuple. If ``None`` (the default),
+        the current tuple-returning behavior is used and a
+        ``FutureWarning`` is issued. Ignored when ``qstat`` is False and
+        ``alpha`` is None, since ``acf`` always returns a single array in
+        that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return an ``AcfResult`` when
+            ``qstat`` is True or ``alpha`` is not None. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
     acf : ndarray
         The autocorrelation function for lags 0, 1, ..., nlags. Shape
-        (nlags+1,).
+        (nlags+1,). Returned directly (not part of a tuple) unless
+        ``qstat`` is True or ``alpha`` is not None.
+    AcfResult
+        If (``qstat`` is True or ``alpha`` is not None) and
+        ``use_namedtuple=True``, a NamedTuple with fields ``acf``,
+        ``confint``, ``qstat``, and ``pvalues`` instead of the plain
+        tuple below (``confint``/``qstat``/``pvalues`` are ``None`` when
+        not computed). See :class:`~statsmodels.tsa.stattools.AcfResult`.
     confint : ndarray, optional
         Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None. The confidence
+        (nlags + 1, 2). Returned (as part of a plain tuple, the
+        deprecated default) if alpha is not None. The confidence
         intervals are centered on the estimated ACF values. This behavior
         differs from plot_acf which centers the confidence intervals on 0.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
-        zero). Returned if q_stat is True.
+        zero). Returned (as part of a plain tuple, the deprecated
+        default) if q_stat is True.
     pvalues : ndarray, optional
         The p-values associated with the Q-statistics for lags 1, 2, ...,
-        nlags (excludes lag zero). Returned if q_stat is True.
+        nlags (excludes lag zero). Returned (as part of a plain tuple,
+        the deprecated default) if q_stat is True.
 
     Notes
     -----
@@ -859,6 +900,7 @@ def acf(
     qstat = bool_like(qstat, "qstat")
     fft = bool_like(fft, "fft", optional=False)
     alpha = float_like(alpha, "alpha", optional=True)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     missing = string_like(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
@@ -878,6 +920,17 @@ def acf(
     acf = avf[: nlags + 1] / avf[0]
     if not (qstat or alpha):
         return acf
+    if use_namedtuple is None:
+        warnings.warn(
+            "acf currently returns a plain tuple whose length depends on "
+            "the qstat and alpha arguments. In release 0.16 or after "
+            "July 2028, whichever is later, the default behavior will "
+            "switch to always returning an AcfResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     _alpha = alpha if alpha is not None else 0.05
     if bartlett_confint:
         varacf = np.ones_like(acf) / nobs
@@ -889,8 +942,12 @@ def acf(
     interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
     confint = np.array(lzip(acf - interval, acf + interval))
     if not qstat:
+        if use_namedtuple:
+            return AcfResult(acf, confint, None, None)
         return acf, confint
     qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
+    if use_namedtuple:
+        return AcfResult(acf, confint if alpha is not None else None, qstat, pvalue)
     if alpha is not None:
         return acf, confint, qstat, pvalue
     else:

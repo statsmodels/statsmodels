@@ -281,7 +281,6 @@ def plot_acf(
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
     confint = None
-    # acf has different return type based on alpha
     acf_x = acf(
         x,
         nlags=nlags,
@@ -290,9 +289,10 @@ def plot_acf(
         bartlett_confint=bartlett_confint,
         adjusted=adjusted,
         missing=missing,
+        use_namedtuple=True,
     )
     if alpha is not None:
-        acf_x, confint = acf_x[:2]
+        acf_x, confint = acf_x.acf, acf_x.confint
 
     _plot_corr(
         ax,

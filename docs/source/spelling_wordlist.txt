@@ -2550,3 +2550,4 @@ LagmatResult
 PacfResult
 CcfResult
 PccfResult
+AcfResult

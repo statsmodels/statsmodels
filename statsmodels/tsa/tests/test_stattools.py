@@ -32,6 +32,7 @@ from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (
     acf,
+    AcfResult,
     acovf,
     adfuller,
     ADFullerResult,
@@ -239,7 +240,9 @@ class TestACF(CheckCorrGram):
         cls.acf = cls.results["acvar"]
         # cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results["Q1"]
-        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=0.05, fft=False)
+        cls.res1 = acf(
+            cls.x, nlags=40, qstat=True, alpha=0.05, fft=False, use_namedtuple=False
+        )
         cls.confint_res = cls.results[["acvar_lb", "acvar_ub"]].values
 
     def test_acf(self):
@@ -258,6 +261,58 @@ class TestACF(CheckCorrGram):
     #    pass
     # NOTE: should not need testing if Q stat is correct
 
+    def test_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(
+                self.x, nlags=40, qstat=True, alpha=0.05, fft=False,
+                use_namedtuple=True,
+            )
+        assert isinstance(res, AcfResult)
+        assert res[0] is res.acf
+        assert res[1] is res.confint
+        assert res[2] is res.qstat
+        assert res[3] is res.pvalues
+        assert_almost_equal(res.acf[1:41], self.acf, DECIMAL_8)
+        assert_almost_equal(res.qstat[:40], self.qstat, DECIMAL_3)
+
+    @pytest.mark.parametrize("qstat", [True, False])
+    @pytest.mark.parametrize("alpha", [None, 0.05])
+    def test_use_namedtuple_true_always_four_fields(self, qstat, alpha):
+        # AcfResult always has 4 fields regardless of which of qstat/alpha
+        # were requested; unrequested fields are None rather than omitted.
+        if not (qstat or alpha):
+            pytest.skip("not a variable-arity case; acf always returns bare array")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(
+                self.x,
+                nlags=10,
+                qstat=qstat,
+                alpha=alpha,
+                fft=False,
+                use_namedtuple=True,
+            )
+        assert isinstance(res, AcfResult)
+        assert isinstance(res.acf, np.ndarray)
+        assert (res.confint is None) == (alpha is None)
+        assert (res.qstat is None) == (not qstat)
+        assert (res.pvalues is None) == (not qstat)
+
+    def test_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = acf(self.x, nlags=40, qstat=True, alpha=0.05, fft=False)
+        assert isinstance(res, tuple)
+        assert not isinstance(res, AcfResult)
+
+    def test_no_qstat_no_alpha_never_warns_or_wraps(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(self.x, nlags=40, fft=False)
+            res_nt = acf(self.x, nlags=40, fft=False, use_namedtuple=True)
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, np.ndarray)
+
 
 class TestACF_FFT(CheckCorrGram):
     # Test Autocorrelation Function using FFT
@@ -265,7 +320,9 @@ class TestACF_FFT(CheckCorrGram):
     def setup_class(cls):
         cls.acf = cls.results["acvarfft"]
         cls.qstat = cls.results["Q1"]
-        cls.res1 = acf(cls.x, nlags=40, qstat=True, fft=True)
+        cls.res1 = acf(
+            cls.x, nlags=40, qstat=True, fft=True, use_namedtuple=False
+        )
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:], self.acf, DECIMAL_8)
@@ -284,7 +341,13 @@ class TestACFMissing(CheckCorrGram):
         cls.qstat = cls.results["Q1"]
         cls.confint_res = cls.results[["acvar_lb", "acvar_ub"]].values
         cls.res_drop = acf(
-            cls.x, nlags=40, qstat=True, alpha=0.05, missing="drop", fft=False
+            cls.x,
+            nlags=40,
+            qstat=True,
+            alpha=0.05,
+            missing="drop",
+            fft=False,
+            use_namedtuple=False,
         )
         cls.res_conservative = acf(
             cls.x,
@@ -293,11 +356,18 @@ class TestACFMissing(CheckCorrGram):
             alpha=0.05,
             fft=False,
             missing="conservative",
+            use_namedtuple=False,
         )
         cls.acf_none = np.empty(40) * np.nan  # lags 1 to 40 inclusive
         cls.qstat_none = np.empty(40) * np.nan
         cls.res_none = acf(
-            cls.x, nlags=40, qstat=True, alpha=0.05, missing="none", fft=False
+            cls.x,
+            nlags=40,
+            qstat=True,
+            alpha=0.05,
+            missing="none",
+            fft=False,
+            use_namedtuple=False,
         )
 
     def test_raise(self):

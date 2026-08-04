@@ -66,6 +66,7 @@ Descriptive Statistics and Tests
 
    stattools.acovf
    stattools.acf
+   stattools.AcfResult
    stattools.pacf
    stattools.PacfResult
    stattools.pacf_yw
