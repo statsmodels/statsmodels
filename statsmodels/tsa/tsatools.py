@@ -24,13 +24,13 @@ if TYPE_CHECKING:
     from statsmodels.tools.typing import NDArray
 
 __all__ = [
+    "LagmatResult",
     "add_trend",
     "commutation_matrix",
     "duplication_matrix",
     "elimination_matrix",
     "freq_to_period",
     "lagmat",
-    "LagmatResult",
     "lagmat2ds",
     "unvec",
     "unvech",
@@ -298,8 +298,8 @@ class LagmatResult(NamedTuple):
     """Result of :func:`lagmat` when ``original="sep"`` and
     ``use_namedtuple=True``."""
 
-    lags: "NDArray | DataFrame"
-    leads: "NDArray | DataFrame"
+    lags: NDArray | DataFrame
+    leads: NDArray | DataFrame
 
 
 def lagmat(

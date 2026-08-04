@@ -31,16 +31,19 @@ from statsmodels.tools.validation import array_like, bool_like
 from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (
-    acf,
     AcfResult,
+    ADFullerResult,
+    CcfResult,
+    PacfResult,
+    PccfResult,
+    RangeUnitRootTestResult,
+    acf,
     acovf,
     adfuller,
-    ADFullerResult,
     arma_order_select_ic,
     block_jackknife,
     breakvar_heteroskedasticity_test,
     ccf,
-    CcfResult,
     ccovf,
     coint,
     grangercausalitytests,
@@ -51,14 +54,11 @@ from statsmodels.tsa.stattools import (
     levinson_durbin_pacf,
     leybourne,
     pacf,
-    PacfResult,
     pacf_burg,
     pacf_ols,
     pacf_yw,
     pccf,
-    PccfResult,
     range_unit_root_test,
-    RangeUnitRootTestResult,
     zivot_andrews,
 )
 
@@ -2014,7 +2014,7 @@ def test_adfuller_maxlag_too_large():
         adfuller(y, maxlag=51)
 
 
-@pytest.fixture()
+@pytest.fixture
 def adfuller_data():
     rs = np.random.RandomState(0)
     return np.cumsum(rs.standard_normal(200))
