@@ -226,6 +226,7 @@ method of :class:`VARResults`.
    NormalityTestResults
    WhitenessTestResults
    ForecastInterval
+   ErrorBand
 
 Impulse Response Analysis
 -------------------------

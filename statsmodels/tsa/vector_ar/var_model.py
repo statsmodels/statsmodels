@@ -33,6 +33,7 @@ from statsmodels.tsa.tsatools import duplication_matrix, unvec, vec
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
+    ErrorBand,
     ForecastInterval,
     NormalityTestResults,
     WhitenessTestResults,
@@ -1756,7 +1757,9 @@ class VARResults(VARProcess):
 
         Returns
         -------
-        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            ma_rep Monte Carlo standard errors.
         """
         ma_coll = self.irf_resim(
             orth=orth, repl=repl, steps=steps, rng=rng, burn=burn, cum=cum
@@ -1768,7 +1771,7 @@ class VARResults(VARProcess):
         upp_idx = int(round((1 - signif / 2) * repl) - 1)
         lower = ma_sort[low_idx, :, :, :]
         upper = ma_sort[upp_idx, :, :, :]
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     @deprecate_kwarg("seed", "rng")
     def irf_resim(self, orth=False, repl=1000, steps=10, rng=None, burn=100, cum=False):

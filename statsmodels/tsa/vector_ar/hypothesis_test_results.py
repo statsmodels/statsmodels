@@ -14,6 +14,19 @@ class ForecastInterval(NamedTuple):
     forc_upper: np.ndarray
 
 
+class ErrorBand(NamedTuple):
+    """Impulse-response error band, shared by
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz1`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz2`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz3`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.errband_mc`,
+    :meth:`~statsmodels.tsa.vector_ar.svar_model.SVARResults.sirf_errband_mc`,
+    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARResults.irf_errband_mc`."""
+
+    lower: np.ndarray
+    upper: np.ndarray
+
+
 class HypothesisTestResults:
     """
     Results class for hypothesis tests

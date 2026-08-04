@@ -2554,3 +2554,4 @@ AcfResult
 CycleTrendResult
 InformationCriteria
 ForecastInterval
+ErrorBand
