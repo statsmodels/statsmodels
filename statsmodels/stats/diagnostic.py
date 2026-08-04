@@ -22,6 +22,7 @@ missing:
   - breaks_ap, more recent breaks tests
   - specification tests against nonparametric alternatives
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -135,8 +136,9 @@ class NonNestedTestResult(NamedTuple):
     res_store: ResultsStore | None
 
 
-def compare_cox(results_x, results_z, store=False, *,
-                use_namedtuple: bool | None = None):
+def compare_cox(
+    results_x, results_z, store=False, *, use_namedtuple: bool | None = None
+):
     """
     Compute the Cox test for non-nested models
 
@@ -210,8 +212,8 @@ def compare_cox(results_x, results_z, store=False, *,
     err_xzx = res_xzx.resid
 
     sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx) / nobs
-    c01 = nobs / 2. * (np.log(sigma2_z) - np.log(sigma2_zx))
-    v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx ** 2
+    c01 = nobs / 2.0 * (np.log(sigma2_z) - np.log(sigma2_zx))
+    v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx**2
     q = c01 / np.sqrt(v01)
     pval = 2 * stats.norm.sf(np.abs(q))
 
@@ -246,8 +248,7 @@ def compare_cox(results_x, results_z, store=False, *,
     return q, pval
 
 
-def compare_j(results_x, results_z, store=False, *,
-             use_namedtuple: bool | None = None):
+def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None = None):
     """
     Compute the J-test for non-nested models
 
@@ -343,8 +344,7 @@ def compare_j(results_x, results_z, store=False, *,
     return tstat, pval
 
 
-def compare_encompassing(results_x, results_z, cov_type="nonrobust",
-                         cov_kwds=None):
+def compare_encompassing(results_x, results_z, cov_type="nonrobust", cov_kwds=None):
     r"""
     Davidson-MacKinnon encompassing test for comparing non-nested models
 
@@ -425,13 +425,22 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
 
     x_nested = _test_nested(y, x, z, cov_type, cov_kwds)
     z_nested = _test_nested(y, z, x, cov_type, cov_kwds)
-    return pd.DataFrame([x_nested, z_nested],
-                        index=["x", "z"],
-                        columns=["stat", "pvalue", "df_num", "df_denom"])
+    return pd.DataFrame(
+        [x_nested, z_nested],
+        index=["x", "z"],
+        columns=["stat", "pvalue", "df_num", "df_denom"],
+    )
 
 
-def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
-                   return_df=True, auto_lag=False):
+def acorr_ljungbox(
+    x,
+    lags=None,
+    boxpierce=False,
+    model_df=0,
+    period=None,
+    return_df=True,
+    auto_lag=False,
+):
     """
     Ljung-Box test of autocorrelation in residuals
 
@@ -520,6 +529,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     """
     # Avoid cyclic import
     from statsmodels.tsa.stattools._stattools import acf
+
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)
@@ -535,11 +545,15 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         sacf = acf(x, nlags=maxlag, fft=False)
 
         if not boxpierce:
-            q_sacf = (nobs * (nobs + 2) *
-                      np.cumsum(sacf[1:maxlag + 1] ** 2
-                                / (nobs - np.arange(1, maxlag + 1))))
+            q_sacf = (
+                nobs
+                * (nobs + 2)
+                * np.cumsum(
+                    sacf[1 : maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+                )
+            )
         else:
-            q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
+            q_sacf = nobs * np.cumsum(sacf[1 : maxlag + 1] ** 2)
 
         # obtain thresholds
         q = 2.4
@@ -547,7 +561,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
 
         # compute penalized sum of squared autocorrelations
-        if (threshold_metric <= threshold):
+        if threshold_metric <= threshold:
             q_sacf = q_sacf - (np.arange(1, nobs) * np.log(nobs))
         else:
             q_sacf = q_sacf - (2 * np.arange(1, nobs))
@@ -570,7 +584,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
     sacf = acf(x, nlags=maxlag, fft=False)
-    sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+    sacf2 = sacf[1 : maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
     qljungbox = nobs * (nobs + 2) * np.cumsum(sacf2)[lags - 1]
     adj_lags = lags - model_df
     pval = np.full_like(qljungbox, np.nan)
@@ -578,15 +592,20 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
 
     if not boxpierce:
-        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
-                            index=lags)
+        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval}, index=lags)
 
-    qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
+    qboxpierce = nobs * np.cumsum(sacf[1 : maxlag + 1] ** 2)[lags - 1]
     pvalbp = np.full_like(qljungbox, np.nan)
     pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
-    return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
-                         "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
-                        index=lags)
+    return pd.DataFrame(
+        {
+            "lb_stat": qljungbox,
+            "lb_pvalue": pval,
+            "bp_stat": qboxpierce,
+            "bp_pvalue": pvalbp,
+        },
+        index=lags,
+    )
 
 
 class LMTestResult(NamedTuple):
@@ -600,9 +619,17 @@ class LMTestResult(NamedTuple):
     res_store: ResultsStore | None
 
 
-def acorr_lm(resid, nlags=None, store=False, *, period=None,
-             ddof=0, cov_type="nonrobust", cov_kwds=None,
-             use_namedtuple: bool | None = None):
+def acorr_lm(
+    resid,
+    nlags=None,
+    store=False,
+    *,
+    period=None,
+    ddof=0,
+    cov_type="nonrobust",
+    cov_kwds=None,
+    use_namedtuple: bool | None = None,
+):
     """
     Lagrange Multiplier tests for autocorrelation
 
@@ -705,8 +732,9 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     res_store = ResultsStore()
     usedlag = maxlag
 
-    resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
-                                                     cov_kwds=cov_kwds)
+    resols = OLS(xshort, xdall[:, : usedlag + 1]).fit(
+        cov_type=cov_type, cov_kwds=cov_kwds
+    )
     fval = float(resols.fvalue)
     fpval = float(resols.f_pvalue)
     if cov_type == "nonrobust":
@@ -743,8 +771,9 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     return lm, lmpval, fval, fpval
 
 
-def het_arch(resid, nlags=None, store=False, ddof=0, *,
-            use_namedtuple: bool | None = None):
+def het_arch(
+    resid, nlags=None, store=False, ddof=0, *, use_namedtuple: bool | None = None
+):
     """
     Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
 
@@ -801,12 +830,14 @@ def het_arch(resid, nlags=None, store=False, ddof=0, *,
     -----
     verified against R:FinTS::ArchTest
     """
-    return acorr_lm(resid ** 2, nlags=nlags, store=store, ddof=ddof,
-                    use_namedtuple=use_namedtuple)
+    return acorr_lm(
+        resid**2, nlags=nlags, store=store, ddof=ddof, use_namedtuple=use_namedtuple
+    )
 
 
-def acorr_breusch_godfrey(res, nlags=None, store=False, *,
-                          use_namedtuple: bool | None = None):
+def acorr_breusch_godfrey(
+    res, nlags=None, store=False, *, use_namedtuple: bool | None = None
+):
     """
     Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation
 
@@ -871,8 +902,9 @@ def acorr_breusch_godfrey(res, nlags=None, store=False, *,
     use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(res.resid).squeeze()
     if x.ndim != 1:
-        raise ValueError("Model resid must be a 1d array. Cannot be used on"
-                         " multivariate models.")
+        raise ValueError(
+            "Model resid must be a 1d array. Cannot be used on" " multivariate models."
+        )
     exog_old = res.model.exog
     nobs = x.shape[0]
     if nlags is None:
@@ -938,10 +970,7 @@ def _check_het_test(x: np.ndarray, test_name: str) -> None:
         The test name for the exception
     """
     x_max = x.max(axis=0)
-    if (
-        not np.any(((x_max - x.min(axis=0)) == 0) & (x_max != 0))
-        or x.shape[1] < 2
-    ):
+    if not np.any(((x_max - x.min(axis=0)) == 0) & (x_max != 0)) or x.shape[1] < 2:
         raise ValueError(
             f"{test_name} test requires exog to have at least "
             "two columns where one is a constant."
@@ -1077,7 +1106,7 @@ def het_white(resid, exog, interaction_terms=True):
         i0, i1 = np.triu_indices(nvars0)
         exog = x[:, i0] * x[:, i1]
         nobs, nvars = exog.shape
-    resols = OLS(y ** 2, exog).fit()
+    resols = OLS(y**2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
@@ -1094,9 +1123,17 @@ class GoldfeldQuandtResult(NamedTuple):
     res_store: ResultsStore | None
 
 
-def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
-                       alternative="increasing", store=False, *,
-                       use_namedtuple: bool | None = None):
+def het_goldfeldquandt(
+    y,
+    x,
+    idx=None,
+    split=None,
+    drop=None,
+    alternative="increasing",
+    store=False,
+    *,
+    use_namedtuple: bool | None = None,
+):
     """
     Goldfeld-Quandt homoskedasticity test
 
@@ -1179,12 +1216,12 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
     nobs, nvars = x.shape
     if split is None:
         split = nobs // 2
-    elif (0 < split < 1):
+    elif 0 < split < 1:
         split = int(nobs * split)
 
     if drop is None:
         start2 = split
-    elif (0 < drop < 1):
+    elif 0 < drop < 1:
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
@@ -1202,7 +1239,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = "increasing"
     elif alternative.lower() in ["d", "dec", "decreasing"]:
-        fpval = stats.f.sf(1. / fval, resols2.df_resid, resols1.df_resid)
+        fpval = stats.f.sf(1.0 / fval, resols2.df_resid, resols1.df_resid)
         ordering = "decreasing"
     elif alternative.lower() in ["2", "2-sided", "two-sided"]:
         fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
@@ -1248,8 +1285,9 @@ F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
     return fval, fpval, ordering
 
 
-def linear_reset(res, power=3, test_type="fitted", use_f=False,
-                 cov_type="nonrobust", cov_kwds=None):
+def linear_reset(
+    res, power=3, test_type="fitted", use_f=False, cov_type="nonrobust", cov_kwds=None
+):
     r"""
     Ramsey's RESET test for neglected nonlinearity
 
@@ -1312,11 +1350,14 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     if not isinstance(res, RegressionResultsWrapper):
         raise TypeError("result must come from a linear regression model")
     if bool(res.model.k_constant) and res.model.exog.shape[1] == 1:
-        raise ValueError("exog contains only a constant column. The RESET "
-                         "test requires exog to have at least 1 "
-                         "non-constant column.")
-    test_type = string_like(test_type, "test_type",
-                            options=("fitted", "exog", "princomp"))
+        raise ValueError(
+            "exog contains only a constant column. The RESET "
+            "test requires exog to have at least 1 "
+            "non-constant column."
+        )
+    test_type = string_like(
+        test_type, "test_type", options=("fitted", "exog", "princomp")
+    )
     cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
     if isinstance(power, int):
@@ -1328,8 +1369,7 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
             power = np.array(power, dtype=int)
         except Exception as exc:
             raise ValueError("power must be an integer or list of integers") from exc
-        if power.ndim != 1 or len(set(power)) != power.shape[0] or \
-                (power < 2).any():
+        if power.ndim != 1 or len(set(power)) != power.shape[0] or (power < 2).any():
             raise ValueError("power must contains distinct integers all >= 2")
     exog = res.model.exog
     if test_type == "fitted":
@@ -1337,29 +1377,35 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     elif test_type == "exog":
         # Remove constant and binary
         aug = res.model.exog
-        binary = ((exog == exog.max(axis=0)) | (exog == exog.min(axis=0)))
+        binary = (exog == exog.max(axis=0)) | (exog == exog.min(axis=0))
         binary = binary.all(axis=0)
         if binary.all():
             raise ValueError("Model contains only constant or binary data")
         aug = aug[:, ~binary]
     else:
         from statsmodels.multivariate.pca import PCA
+
         aug = exog
         if res.k_constant:
             retain = np.arange(aug.shape[1]).tolist()
             retain.pop(int(res.model.data.const_idx))
             aug = aug[:, retain]
-        pca = PCA(aug, ncomp=1, standardize=bool(res.k_constant),
-                  demean=bool(res.k_constant), method="nipals")
+        pca = PCA(
+            aug,
+            ncomp=1,
+            standardize=bool(res.k_constant),
+            demean=bool(res.k_constant),
+            method="nipals",
+        )
         aug = pca.factors[:, :1]
-    aug_exog = np.hstack([exog] + [aug ** p for p in power])
+    aug_exog = np.hstack([exog] + [aug**p for p in power])
     mod_class = res.model.__class__
     mod = mod_class(res.model.data.endog, aug_exog)
     cov_kwds = {} if cov_kwds is None else cov_kwds
     res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]
     nparams = aug_exog.shape[1]
-    r_mat = np.eye(nrestr, nparams, k=nparams-nrestr)
+    r_mat = np.eye(nrestr, nparams, k=nparams - nrestr)
     return res.wald_test(r_mat, use_f=use_f, scalar=True)
 
 
@@ -1406,8 +1452,7 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     return stats.ttest_1samp(rr[3][3:], 0)
 
 
-def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
-                   center=None):
+def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None):
     """
     Rainbow test for linearity
 
@@ -1455,8 +1500,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
     endog = res.model.endog
     exog = res.model.exog
     if order_by is not None and use_distance:
-        raise ValueError("order_by and use_distance cannot be simultaneously"
-                         "used.")
+        raise ValueError("order_by and use_distance cannot be simultaneously" "used.")
     if order_by is not None:
         if isinstance(order_by, np.ndarray):
             order_by = array_like(order_by, "order_by", ndim=1, dtype="int")
@@ -1466,9 +1510,11 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
             try:
                 cols = res.model.data.orig_exog[order_by].copy()
             except (IndexError, KeyError) as exc:
-                raise TypeError("order_by must contain valid column names "
-                                "from the exog data used to construct res,"
-                                "and exog must be a pandas DataFrame.") from exc
+                raise TypeError(
+                    "order_by must contain valid column names "
+                    "from the exog data used to construct res,"
+                    "and exog must be a pandas DataFrame."
+                ) from exc
             name = "__index__"
             while name in cols:
                 name += "_"
@@ -1482,13 +1528,14 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
         if isinstance(center, float):
             if not 0.0 <= center <= 1.0:
                 raise ValueError("center must be in (0, 1) when a float.")
-            center = int(center * (nobs-1))
+            center = int(center * (nobs - 1))
         else:
             center = int_like(center, "center")
             if not 0 < center < nobs - 1:
                 raise ValueError("center must be in [0, nobs) when an int.")
-        center_obs = exog[center:center+1]
+        center_obs = exog[center : center + 1]
         from scipy.spatial.distance import cdist
+
         try:
             err = exog - center_obs
             vi = np.linalg.inv(err.T @ err / nobs)
@@ -1503,9 +1550,11 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
     lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
     uppidx = np.floor(lowidx + frac * nobs).astype(int)
     if uppidx - lowidx < exog.shape[1]:
-        raise ValueError("frac is too small to perform test. frac * nobs"
-                         "must be greater than the number of exogenous"
-                         "variables in the model.")
+        raise ValueError(
+            "frac is too small to perform test. frac * nobs"
+            "must be greater than the number of exogenous"
+            "variables in the model."
+        )
     mi_sl = slice(lowidx, uppidx)
     res_mi = OLS(endog[mi_sl], exog[mi_sl]).fit()
     nobs_mi = res_mi.model.endog.shape[0]
@@ -1552,8 +1601,10 @@ def linear_lm(resid, exog, func=None):
     correct.
     """
     if func is None:
+
         def func(x):
             return np.power(x, 2)
+
     exog = np.asarray(exog)
     exog_aux = np.column_stack((exog, func(exog[:, 1:])))
 
@@ -1618,8 +1669,10 @@ def spec_white(resid, exog):
     x = array_like(exog, "exog", ndim=2)
     e = array_like(resid, "resid", ndim=1)
     if x.shape[1] < 2 or not np.any(np.ptp(x, 0) == 0.0):
-        raise ValueError("White's specification test requires at least two"
-                         "columns where one is a constant.")
+        raise ValueError(
+            "White's specification test requires at least two"
+            "columns where one is a constant."
+        )
 
     # add interaction terms
     i0, i1 = np.triu_indices(x.shape[1])
@@ -1648,8 +1701,7 @@ def spec_white(resid, exog):
     return stat, pval, dof
 
 
-def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
-                           order_by=None):
+def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None):
     """
     Calculate recursive ols with residuals and Cusum test statistic
 
@@ -1712,8 +1764,9 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
         raise TypeError("res a regression results instance")
     y = res.model.endog
     x = res.model.exog
-    order_by = array_like(order_by, "order_by", dtype="int", optional=True,
-                          ndim=1, shape=(y.shape[0],))
+    order_by = array_like(
+        order_by, "order_by", dtype="int", optional=True, ndim=1, shape=(y.shape[0],)
+    )
     # intialize with skip observations
     if order_by is not None:
         x = x[order_by]
@@ -1745,7 +1798,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
     rresid[skip - 1] = y[skip - 1] - yipred
     rvarraw[skip - 1] = 1 + np.dot(x[skip - 1], np.dot(xtxi, x[skip - 1]))
     for i in range(skip, nobs):
-        xi = x[i:i + 1, :]
+        xi = x[i : i + 1, :]
         yi = y[i]
 
         # get prediction error with previous beta
@@ -1771,7 +1824,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
     # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
     rresid_standardized = rresid_scaled / np.sqrt(sigma2)  # N(0,1) distributed
-    rcusum = rresid_standardized[skip - 1:].cumsum()
+    rcusum = rresid_standardized[skip - 1 :].cumsum()
     # confidence interval points in Greene p136 looks strange. Cleared up
     # this assumes sum of independent standard normal, which does not take into
     # account that we make many tests at the same time
@@ -1786,10 +1839,18 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
     # following taken from Ploberger,
     # crit = a * np.sqrt(nrr)
-    rcusumci = (a * np.sqrt(nrr) + 2 * a * np.arange(0, nobs - skip) / np.sqrt(
-        nrr)) * np.array([[-1.], [+1.]])
-    return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
-            rcusum, rcusumci)
+    rcusumci = (
+        a * np.sqrt(nrr) + 2 * a * np.arange(0, nobs - skip) / np.sqrt(nrr)
+    ) * np.array([[-1.0], [+1.0]])
+    return (
+        rresid,
+        rparams,
+        rypred,
+        rresid_standardized,
+        rresid_scaled,
+        rcusum,
+        rcusumci,
+    )
 
 
 def breaks_hansen(olsresults):
@@ -1825,14 +1886,16 @@ def breaks_hansen(olsresults):
     x = olsresults.model.exog
     resid = array_like(olsresults.resid, "resid", ndim=1, shape=(x.shape[0],))
     nobs, nvars = x.shape
-    resid2 = resid ** 2
+    resid2 = resid**2
     ft = np.c_[x * resid[:, None], (resid2 - resid2.mean())]
     score = ft.cumsum(0)
     f = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
     s = (score[:, :, None] * score[:, None, :]).sum(0)
     h = np.trace(np.dot(np.linalg.inv(f), s))
-    crit95 = np.array([(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
-                      dtype=[("nobs", int), ("crit", float)])
+    crit95 = np.array(
+        [(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
+        dtype=[("nobs", int), ("crit", float)],
+    )
     # TODO: get critical values from Bruce Hansen's 1992 paper
     return h, crit95
 
@@ -1881,7 +1944,7 @@ def breaks_cusumolsresid(resid, ddof=0):
     """
     resid = np.asarray(resid).ravel()
     nobs = len(resid)
-    nobssigma2 = (resid ** 2).sum()
+    nobssigma2 = (resid**2).sum()
     if ddof > 0:
         nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
     # b is asymptotically a Brownian Bridge
@@ -1895,6 +1958,7 @@ def breaks_cusumolsresid(resid, ddof=0):
     # array([ 1.62762361,  1.35809864,  1.22384787])
     pval = stats.kstwobign.sf(sup_b)
     return sup_b, pval, crit
+
 
 # def breaks_cusum(recolsresid):
 #    """renormalized cusum test for parameter stability based on recursive

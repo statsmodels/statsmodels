@@ -55,9 +55,22 @@ __all__ = ["AR", "AutoReg", "InformationCriteria"]
 
 
 class InformationCriteria(NamedTuple):
-    """Result of order-selection information-criteria computations, shared
+    """
+    Result of order-selection information-criteria computations, shared
     between :func:`ar_select_order` and
-    :func:`~statsmodels.tsa.ardl.model.ardl_select_order`."""
+    :func:`~statsmodels.tsa.ardl.model.ardl_select_order`.
+
+    Parameters
+    ----------
+    aic : float
+        The Akaike information criterion for the candidate model order.
+    bic : float
+        The Bayesian (Schwarz) information criterion for the candidate
+        model order.
+    hqic : float
+        The Hannan-Quinn information criterion for the candidate model
+        order.
+    """
 
     aic: float
     bic: float
