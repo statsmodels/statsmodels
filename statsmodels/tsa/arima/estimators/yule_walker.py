@@ -6,6 +6,7 @@ License: BSD-3
 """
 from statsmodels.regression import linear_model
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators._base import EstimatorResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
@@ -31,11 +32,15 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
 
     Returns
     -------
-    parameters : SARIMAXParams object
-        Contains the parameter estimates from the final iteration.
-    other_results : Bunch
-        Includes one component, `spec`, which is the `SARIMAXSpecification`
-        instance corresponding to the input arguments.
+    EstimatorResult
+        A NamedTuple with fields:
+
+        parameters : SARIMAXParams object
+            Contains the parameter estimates from the final iteration.
+        other_results : Bunch
+            Includes one component, `spec`, which is the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments.
 
     Notes
     -----
@@ -70,4 +75,4 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
         "spec": spec,
     })
 
-    return p, other_results
+    return EstimatorResult(p, other_results)
