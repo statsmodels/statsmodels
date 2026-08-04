@@ -2552,3 +2552,4 @@ CcfResult
 PccfResult
 AcfResult
 CycleTrendResult
+InformationCriteria

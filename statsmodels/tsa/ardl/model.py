@@ -33,6 +33,7 @@ from statsmodels.tsa.ar_model import (
     AROrderSelectionResults,
     AutoReg,
     AutoRegResults,
+    InformationCriteria,
     sumofsq,
 )
 from statsmodels.tsa.ardl import pss_critical_values
@@ -1432,7 +1433,7 @@ def ardl_select_order(
         bic = call_cached_func(ARDLResults.bic, res)
         hqic = call_cached_func(ARDLResults.hqic, res)
 
-        return aic, bic, hqic
+        return InformationCriteria(aic, bic, hqic)
 
     base = ARDL(
         endog,

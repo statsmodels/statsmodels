@@ -116,6 +116,7 @@ The basic autoregressive model in Statsmodels is:
    ar_model.AutoReg
    ar_model.AutoRegResults
    ar_model.ar_select_order
+   ar_model.InformationCriteria
 
 The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
 and supports exogenous regressors (an AR-X model) and seasonal effects.

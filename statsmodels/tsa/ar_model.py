@@ -9,7 +9,7 @@ from collections.abc import Iterable, Sequence
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 import warnings
 
 import numpy as np
@@ -51,7 +51,17 @@ if TYPE_CHECKING:
     )
 
 
-__all__ = ["AR", "AutoReg"]
+__all__ = ["AR", "AutoReg", "InformationCriteria"]
+
+
+class InformationCriteria(NamedTuple):
+    """Result of order-selection information-criteria computations, shared
+    between :func:`ar_select_order` and
+    :func:`~statsmodels.tsa.ardl.model.ardl_select_order`."""
+
+    aic: float
+    bic: float
+    hqic: float
 
 REPEATED_FIT_ERROR = """
 Model has been fit using maxlag={0}, method={1}, ic={2}, trend={3}. These
@@ -2110,7 +2120,7 @@ def ar_select_order(
     y, x = full_mod._y, full_mod._x
     base_col = x.shape[1] - nexog - maxlag
     sel = np.ones(x.shape[1], dtype=bool)
-    ics: list[tuple[int | tuple[int, ...], tuple[float, float, float]]] = []
+    ics: list[tuple[int | tuple[int, ...], InformationCriteria]] = []
 
     def compute_ics(res):
         nobs = res.nobs
@@ -2123,7 +2133,7 @@ def ar_select_order(
         bic = call_cached_func(AutoRegResults.bic, res)
         hqic = call_cached_func(AutoRegResults.hqic, res)
 
-        return aic, bic, hqic
+        return InformationCriteria(aic, bic, hqic)
 
     def ic_no_data():
         """Fake mod and results to handle no regressor case"""
@@ -2189,7 +2199,7 @@ class AROrderSelectionResults:
     def __init__(
         self,
         model: AutoReg,
-        ics: list[tuple[int | tuple[int, ...], tuple[float, float, float]]],
+        ics: list[tuple[int | tuple[int, ...], InformationCriteria]],
         trend: Literal["n", "c", "ct", "ctt"],
         seasonal: bool,
         period: int | None,
