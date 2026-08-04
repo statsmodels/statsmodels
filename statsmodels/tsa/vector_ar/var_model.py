@@ -33,6 +33,7 @@ from statsmodels.tsa.tsatools import duplication_matrix, unvec, vec
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
+    ForecastInterval,
     NormalityTestResults,
     WhitenessTestResults,
 )
@@ -315,7 +316,7 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1)
     forc_lower = point_forecast - q * sigma
     forc_upper = point_forecast + q * sigma
 
-    return point_forecast, forc_lower, forc_upper
+    return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
 
 def var_loglike(resid, omega, nobs):
@@ -1279,12 +1280,15 @@ steps ({steps}) observations.
 
         Returns
         -------
-        point : ndarray
-            Mean value of forecast
-        lower : ndarray
-            Lower bound of confidence interval
-        upper : ndarray
-            Upper bound of confidence interval
+        ForecastInterval
+            A NamedTuple with fields:
+
+            point_forecast : ndarray
+                Mean value of forecast
+            forc_lower : ndarray
+                Lower bound of confidence interval
+            forc_upper : ndarray
+                Upper bound of confidence interval
 
         Notes
         -----
@@ -1300,7 +1304,7 @@ steps ({steps}) observations.
         forc_lower = point_forecast - q * sigma
         forc_upper = point_forecast + q * sigma
 
-        return point_forecast, forc_lower, forc_upper
+        return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
     def to_vecm(self):
         """to_vecm"""

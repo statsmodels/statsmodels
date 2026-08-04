@@ -1,6 +1,17 @@
+from typing import NamedTuple
+
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable
+
+
+class ForecastInterval(NamedTuple):
+    """Result of the module-level :func:`~statsmodels.tsa.vector_ar.var_model.forecast_interval`
+    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARProcess.forecast_interval`."""
+
+    point_forecast: np.ndarray
+    forc_lower: np.ndarray
+    forc_upper: np.ndarray
 
 
 class HypothesisTestResults:
