@@ -28,6 +28,7 @@ GroupSorted.group_iter.
 """
 
 from statsmodels.compat.python import lrange, lzip
+from statsmodels.compat.scipy import SP_LT_2
 
 import numpy as np
 import pandas as pd
@@ -234,7 +235,10 @@ def dummy_sparse(groups):
 
     indptr = np.arange(len(groups) + 1)
     data = np.ones(len(groups), dtype=np.int8)
-    indi = sparse.csr_matrix((data, groups, indptr))
+    if SP_LT_2:
+        indi = sparse.csr_matrix((data, groups, indptr))
+    else:
+        indi = sparse.csr_array((data, groups, indptr))
 
     return indi
 

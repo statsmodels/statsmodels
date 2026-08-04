@@ -5,6 +5,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from statsmodels.compat.scipy import SP_LT_2
+
 import warnings
 
 import numpy as np
@@ -960,8 +962,10 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     ipos = np.concatenate(ipos_all)
     jpos = np.concatenate(jpos_all)
     cor_values = np.concatenate(cor_values)
-
-    cmat = sparse.coo_matrix((cor_values, (ipos, jpos)), (nrow, nrow))
+    if SP_LT_2:
+        cmat = sparse.coo_matrix((cor_values, (ipos, jpos)), (nrow, nrow))
+    else:
+        cmat = sparse.coo_array((cor_values, (ipos, jpos)), (nrow, nrow))
 
     return cmat
 

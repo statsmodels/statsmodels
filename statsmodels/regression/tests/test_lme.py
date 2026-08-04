@@ -1,5 +1,6 @@
 """Tests for linear mixed effects models."""
 from statsmodels.compat.platform import PLATFORM_OSX
+from statsmodels.compat.scipy import SP_LT_2
 
 import csv
 from pathlib import Path
@@ -1232,7 +1233,12 @@ def check_smw_solver(p, q, r, s):
     y1 = f(x)
     assert_allclose(y1, y2)
 
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
+    if SP_LT_2:
+        A_sp, AtA_sp = sparse.csr_matrix(A), sparse.csr_matrix(AtA)
+    else:
+        A_sp, AtA_sp = sparse.csr_array(A), sparse.csr_array(AtA)
+
+    f = _smw_solver(s, A_sp, AtA_sp, Qi, di)
     y1 = f(x)
     assert_allclose(y1, y2)
 
