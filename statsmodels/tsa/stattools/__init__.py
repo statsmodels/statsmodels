@@ -26,6 +26,7 @@ from ._stattools import (
     pccf,
     q_stat,
     range_unit_root_test,
+    RangeUnitRootTestResult,
     zivot_andrews,
 )
 
@@ -57,5 +58,6 @@ __all__ = [
     "pccf",
     "q_stat",
     "range_unit_root_test",
+    "RangeUnitRootTestResult",
     "zivot_andrews",
 ]

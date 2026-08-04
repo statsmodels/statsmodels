@@ -63,6 +63,7 @@ __all__ = [
     "pccf",
     "q_stat",
     "range_unit_root_test",
+    "RangeUnitRootTestResult",
     "zivot_andrews",
 ]
 
@@ -2514,7 +2515,24 @@ def _kpss_autolag(resids, nobs):
     return autolags
 
 
-def range_unit_root_test(x, store=False):
+class RangeUnitRootTestResult(NamedTuple):
+    """Result of :func:`range_unit_root_test` when ``use_namedtuple=True``."""
+
+    rur_stat: float
+    p_value: float
+    crit: dict[str, float]
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+RUR Statistic: {self.rur_stat:0.5f}
+P-value: {self.p_value:0.5f}
+Critical Values: {self.crit}
+"""
+
+
+def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
     """
     Range unit-root test for stationarity
 
@@ -2528,9 +2546,31 @@ def range_unit_root_test(x, store=False):
     store : bool
         If True, then a result instance is returned additionally to
         the RUR statistic (default is False).
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``RangeUnitRootTestResult`` NamedTuple instead of a plain tuple.
+        If ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2028, whichever is later, the
+            default will change to always return a
+            ``RangeUnitRootTestResult``. Set ``use_namedtuple=True`` to opt
+            in now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
+    RangeUnitRootTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``rur_stat``,
+        ``p_value``, ``crit``, and ``resstore`` (``resstore`` is ``None``
+        when not computed). See
+        :class:`~statsmodels.tsa.stattools.RangeUnitRootTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple whose length depends
+    on `store`, made up of a subset of:
+
     rur_stat : float
         The RUR test statistic.
     p_value : float
@@ -2562,6 +2602,7 @@ def range_unit_root_test(x, store=False):
     """
     x = array_like(x, "x")
     store = bool_like(store, "store")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     nobs = x.shape[0]
 
@@ -2643,7 +2684,24 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 
         rstore.H0 = "The series is not stationary"
         rstore.HA = "The series is stationary"
+    else:
+        rstore = None
 
+    if use_namedtuple is None:
+        warnings.warn(
+            "range_unit_root_test currently returns a plain tuple whose "
+            "length depends on the store argument. In release 0.16 or "
+            "after July 2028, whichever is later, the default behavior "
+            "will switch to always returning a RangeUnitRootTestResult "
+            "NamedTuple. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return RangeUnitRootTestResult(rur_stat, p_value, crit_dict, rstore)
+    if store:
         return rur_stat, p_value, crit_dict, rstore
     else:
         return rur_stat, p_value, crit_dict

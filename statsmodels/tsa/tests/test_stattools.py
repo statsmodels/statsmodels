@@ -54,6 +54,7 @@ from statsmodels.tsa.stattools import (
     pacf_yw,
     pccf,
     range_unit_root_test,
+    RangeUnitRootTestResult,
     zivot_andrews,
 )
 
@@ -1350,31 +1351,50 @@ class TestRUR:
 
     def test_fail_nonvector_input(self):
         with pytest.warns(InterpolationWarning):
-            range_unit_root_test(self.x)
+            range_unit_root_test(self.x, use_namedtuple=False)
 
         rs = np.random.RandomState(8474768)
         x = rs.rand(20, 2)
         with pytest.raises(ValueError):
-            range_unit_root_test(x)
+            range_unit_root_test(x, use_namedtuple=False)
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
-            rur_stat, _, _ = range_unit_root_test(self.x)
+            rur_stat, _, _ = range_unit_root_test(self.x, use_namedtuple=False)
         simple_rur_stat, _, _ = self.simple_rur(self.x)
         assert_almost_equal(rur_stat, simple_rur_stat, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
-            _, pval, _ = range_unit_root_test(self.x)
+            _, pval, _ = range_unit_root_test(self.x, use_namedtuple=False)
         _, simple_pval, _ = self.simple_rur(self.x)
         assert_equal(pval, simple_pval)
 
     def test_store(self):
         with pytest.warns(InterpolationWarning):
-            _, _, _, store = range_unit_root_test(self.x, True)
+            _, _, _, store = range_unit_root_test(
+                self.x, True, use_namedtuple=False
+            )
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
+
+    def test_use_namedtuple_true_returns_namedtuple(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            warnings.filterwarnings("ignore", category=InterpolationWarning)
+            res = range_unit_root_test(self.x, use_namedtuple=True)
+        assert isinstance(res, RangeUnitRootTestResult)
+        assert res.resstore is None
+        assert res[0] == res.rur_stat
+        assert res[1] == res.p_value
+        assert res[2] == res.crit
+
+    def test_use_namedtuple_true_with_store(self):
+        res = range_unit_root_test(self.x, store=True, use_namedtuple=True)
+        assert isinstance(res, RangeUnitRootTestResult)
+        assert res.resstore is not None
+        assert res.resstore.nobs == len(self.x)
 
 
 def test_pandasacovf():

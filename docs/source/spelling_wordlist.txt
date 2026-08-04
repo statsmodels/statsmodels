@@ -2545,3 +2545,4 @@ qrng
 ppfcond
 reparameterizations
 ADFullerResult
+RangeUnitRootTestResult

@@ -78,6 +78,7 @@ Descriptive Statistics and Tests
    stattools.kpss
    stattools.leybourne
    stattools.range_unit_root_test
+   stattools.RangeUnitRootTestResult
    stattools.zivot_andrews
    stattools.coint
    stattools.bds
