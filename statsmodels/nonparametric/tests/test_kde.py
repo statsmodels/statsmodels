@@ -494,4 +494,6 @@ def test_kdensity_use_namedtuple_true(func):
         warnings.filterwarnings("error", category=FutureWarning)
         res = func(Xi, retgrid=False, use_namedtuple=True)
     assert isinstance(res, KDEResult)
-    assert res.grid is None
+    # The grid is computed regardless of retgrid, so it is reported rather
+    # than None-filled.
+    assert res.grid is not None

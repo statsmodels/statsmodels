@@ -314,13 +314,20 @@ class TestACF(CheckCorrGram):
         assert isinstance(res, tuple)
         assert not isinstance(res, AcfResult)
 
-    def test_no_qstat_no_alpha_never_warns_or_wraps(self):
+    def test_no_qstat_no_alpha_never_warns(self):
+        # The single-output path is unchanged and must stay silent, but an
+        # explicit use_namedtuple=True still returns the NamedTuple with the
+        # unrequested fields left as None.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = acf(self.x, nlags=40, fft=False)
             res_nt = acf(self.x, nlags=40, fft=False, use_namedtuple=True)
         assert isinstance(res, np.ndarray)
-        assert isinstance(res_nt, np.ndarray)
+        assert isinstance(res_nt, AcfResult)
+        assert_allclose(res_nt.acf, res)
+        assert res_nt.confint is None
+        assert res_nt.qstat is None
+        assert res_nt.pvalues is None
 
 
 class TestACF_FFT(CheckCorrGram):
@@ -460,13 +467,15 @@ class TestPACF(CheckCorrGram):
         assert res[0] is res.pacf
         assert res[1] is res.confint
 
-    def test_no_alpha_never_warns_or_wraps(self):
+    def test_no_alpha_never_warns(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = pacf(self.x, nlags=40, method="ols")
             res_nt = pacf(self.x, nlags=40, method="ols", use_namedtuple=True)
         assert isinstance(res, np.ndarray)
-        assert isinstance(res_nt, np.ndarray)
+        assert isinstance(res_nt, PacfResult)
+        assert_allclose(res_nt.pacf, res)
+        assert res_nt.confint is None
 
     def test_ols_inefficient(self):
         lag_len = 5
@@ -559,13 +568,15 @@ class TestCCF:
         assert res[0] is res.ccf
         assert res[1] is res.confint
 
-    def test_no_alpha_never_warns_or_wraps(self):
+    def test_no_alpha_never_warns(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = ccf(self.x, self.y, nlags=self.nlags)
             res_nt = ccf(self.x, self.y, nlags=self.nlags, use_namedtuple=True)
         assert isinstance(res, np.ndarray)
-        assert isinstance(res_nt, np.ndarray)
+        assert isinstance(res_nt, CcfResult)
+        assert_allclose(res_nt.ccf, res)
+        assert res_nt.confint is None
 
 
 class TestPCCF:
@@ -640,7 +651,7 @@ class TestPCCF:
         assert res[0] is res.pccf
         assert res[1] is res.confint
 
-    def test_no_alpha_never_warns_or_wraps(self):
+    def test_no_alpha_never_warns(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = pccf(self.x, self.y, nlags=self.nlags, method="ols")
@@ -648,7 +659,9 @@ class TestPCCF:
                 self.x, self.y, nlags=self.nlags, method="ols", use_namedtuple=True
             )
         assert isinstance(res, np.ndarray)
-        assert isinstance(res_nt, np.ndarray)
+        assert isinstance(res_nt, PccfResult)
+        assert_allclose(res_nt.pccf, res)
+        assert res_nt.confint is None
 
     def test_confint_widths(self):
         alphas = [0.01, 0.05, 0.10]

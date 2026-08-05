@@ -599,7 +599,7 @@ class TestDiagnosticG:
             pvalue=0.03073069384028677,
             df=(4, 3, 1),
         )
-        lrt = res.compare_lr_test(res3, use_namedtuple=False)
+        lrt = res.compare_lr_test(res3)
         assert_almost_equal(lrt[0], lrtest["chi2value"], decimal=11)
         assert_almost_equal(lrt[1], lrtest["pvalue"], decimal=11)
 

@@ -313,11 +313,23 @@ class KDEUnivariate:
 
 # Kernel Density Estimator Functions
 class KDEResult(NamedTuple):
-    """Result of :func:`kdensity` and :func:`kdensityfft` when
-    ``use_namedtuple=True``."""
+    """
+    Result of :func:`kdensity` and :func:`kdensityfft` when
+    ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    density : ndarray
+        The densities estimated at the grid points.
+    grid : ndarray
+        The grid points at which the density is estimated. Always
+        populated, since the grid is computed regardless of ``retgrid``.
+    bw : float
+        The bandwidth used in the estimation.
+    """
 
     density: np.ndarray
-    grid: np.ndarray | None
+    grid: np.ndarray
     bw: float
 
 
@@ -385,15 +397,17 @@ def kdensity(
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
     use_namedtuple : bool, optional
-        Flag indicating whether to return the results as a ``KDEResult``
-        NamedTuple instead of a plain tuple. If ``None`` (the default), the
-        current tuple-returning behavior is used and a ``FutureWarning`` is
-        issued.
+        Flag controlling whether a ``KDEResult`` NamedTuple is returned.
+        If ``None`` (the default), a ``KDEResult`` is returned when
+        ``retgrid`` is True (the default) and the legacy
+        ``(density, bw)`` tuple otherwise. Set to True to always receive a
+        ``KDEResult``. Set to False to always receive the legacy tuple.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``KDEResult``. Set
+            When ``retgrid=False``, in release 0.16.0 or after July 2028,
+            whichever is later, the default will change to return a
+            ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
             current return type.
@@ -402,8 +416,8 @@ def kdensity(
     -------
     KDEResult
         If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
-        ``grid``, and ``bw`` (``grid`` is ``None`` unless
-        ``retgrid=True``). See
+        ``grid``, and ``bw``. ``grid`` is always populated, including when
+        ``retgrid=False``, because it is computed regardless. See
         :class:`~statsmodels.nonparametric.kde.KDEResult`.
 
     Otherwise (the deprecated default), a plain tuple made up of:
@@ -483,21 +497,28 @@ def kdensity(
 
     dens = np.dot(k, weights) / (q * bw)
 
-    if use_namedtuple is None:
+    # With retgrid=True (the default) KDEResult has exactly the same length
+    # and contents as the legacy (density, grid, bw) tuple, so it is adopted
+    # with no deprecation.  Only retgrid=False changes shape, from a 2-tuple
+    # to the 3-field KDEResult, so that is the only path that warns.
+    if use_namedtuple is None and not retgrid:
         warnings.warn(
-            "kdensity currently returns a plain tuple whose length depends "
-            "on the retgrid argument. In release 0.16 or after July 2028, "
-            "whichever is later, the default behavior will switch to "
-            "always returning a KDEResult NamedTuple. Set "
-            "use_namedtuple=True to switch now, or use_namedtuple=False "
-            "to keep the current behavior and silence this warning.",
+            "kdensity currently returns a plain (density, bw) tuple when "
+            "retgrid=False. In release 0.16 or after July 2028, whichever "
+            "is later, the default behavior will switch to always "
+            "returning a KDEResult NamedTuple, which also carries the "
+            "grid. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
-        return KDEResult(dens, grid if retgrid else None, bw)
-    if retgrid:
-        return dens, grid, bw
+    if use_namedtuple is False:
+        return (dens, grid, bw) if retgrid else (dens, bw)
+    if use_namedtuple or retgrid:
+        # `grid` is always computed, so it is returned even when
+        # retgrid=False rather than being None-filled.
+        return KDEResult(dens, grid, bw)
     return dens, bw
 
 
@@ -568,15 +589,17 @@ def kdensityfft(
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
     use_namedtuple : bool, optional
-        Flag indicating whether to return the results as a ``KDEResult``
-        NamedTuple instead of a plain tuple. If ``None`` (the default), the
-        current tuple-returning behavior is used and a ``FutureWarning`` is
-        issued.
+        Flag controlling whether a ``KDEResult`` NamedTuple is returned.
+        If ``None`` (the default), a ``KDEResult`` is returned when
+        ``retgrid`` is True (the default) and the legacy
+        ``(density, bw)`` tuple otherwise. Set to True to always receive a
+        ``KDEResult``. Set to False to always receive the legacy tuple.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``KDEResult``. Set
+            When ``retgrid=False``, in release 0.16.0 or after July 2028,
+            whichever is later, the default will change to return a
+            ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
             current return type.
@@ -585,8 +608,8 @@ def kdensityfft(
     -------
     KDEResult
         If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
-        ``grid``, and ``bw`` (``grid`` is ``None`` unless
-        ``retgrid=True``). See
+        ``grid``, and ``bw``. ``grid`` is always populated, including when
+        ``retgrid=False``, because it is computed regardless. See
         :class:`~statsmodels.nonparametric.kde.KDEResult`.
 
     Otherwise (the deprecated default), a plain tuple made up of:
@@ -683,19 +706,26 @@ def kdensityfft(
     # 3.50 w Gaussian kernel
     f = revrt(zstar)
 
-    if use_namedtuple is None:
+    # With retgrid=True (the default) KDEResult has exactly the same length
+    # and contents as the legacy (density, grid, bw) tuple, so it is adopted
+    # with no deprecation.  Only retgrid=False changes shape, from a 2-tuple
+    # to the 3-field KDEResult, so that is the only path that warns.
+    if use_namedtuple is None and not retgrid:
         warnings.warn(
-            "kdensityfft currently returns a plain tuple whose length "
-            "depends on the retgrid argument. In release 0.16 or after "
-            "July 2028, whichever is later, the default behavior will "
-            "switch to always returning a KDEResult NamedTuple. Set "
-            "use_namedtuple=True to switch now, or use_namedtuple=False "
-            "to keep the current behavior and silence this warning.",
+            "kdensityfft currently returns a plain (density, bw) tuple "
+            "when retgrid=False. In release 0.16 or after July 2028, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a KDEResult NamedTuple, which also carries "
+            "the grid. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
-        return KDEResult(f, grid if retgrid else None, bw)
-    if retgrid:
-        return f, grid, bw
+    if use_namedtuple is False:
+        return (f, grid, bw) if retgrid else (f, bw)
+    if use_namedtuple or retgrid:
+        # `grid` is always computed, so it is returned even when
+        # retgrid=False rather than being None-filled.
+        return KDEResult(f, grid, bw)
     return f, bw
