@@ -289,11 +289,11 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         r_chi2 = 4.667944083588736
         r_df = 1
         with pytest.warns(InvalidTestWarning):
-            res1.compare_lr_test(res_ols2, use_namedtuple=False)
+            res1.compare_lr_test(res_ols2)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            chi2, pval, df = res1.compare_lr_test(res_ols2, use_namedtuple=False)
+            chi2, pval, df = res1.compare_lr_test(res_ols2)
         assert_allclose(chi2, r_chi2, rtol=1e-11)
         assert_allclose(pval, r_pval, rtol=1e-11)
         assert_equal(df, r_df)

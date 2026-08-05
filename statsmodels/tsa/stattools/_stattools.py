@@ -1004,9 +1004,27 @@ def acf(
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
-    if not (qstat or alpha):
-        return acf
-    if use_namedtuple is None:
+
+    confint = None
+    if alpha is not None:
+        if bartlett_confint:
+            varacf = np.ones_like(acf) / nobs
+            varacf[0] = 0
+            varacf[1] = 1.0 / nobs
+            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        else:
+            varacf = 1.0 / nobs
+        interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
+        confint = np.array(lzip(acf - interval, acf + interval))
+
+    qstat_vals = pvalue = None
+    if qstat:
+        qstat_vals, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
+
+    # Only the qstat/alpha paths return more than one value today, so those
+    # are the only ones whose result shape is at stake.  Warning on the
+    # single-output path would fire for every internal use of acf.
+    if use_namedtuple is None and (qstat or alpha is not None):
         warnings.warn(
             "acf currently returns a plain tuple whose length depends on "
             "the qstat and alpha arguments. In release 0.16 or after "
@@ -1017,27 +1035,16 @@ def acf(
             FutureWarning,
             stacklevel=2,
         )
-    _alpha = alpha if alpha is not None else 0.05
-    if bartlett_confint:
-        varacf = np.ones_like(acf) / nobs
-        varacf[0] = 0
-        varacf[1] = 1.0 / nobs
-        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
-    else:
-        varacf = 1.0 / nobs
-    interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
-    confint = np.array(lzip(acf - interval, acf + interval))
-    if not qstat:
-        if use_namedtuple:
-            return AcfResult(acf, confint, None, None)
-        return acf, confint
-    qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
     if use_namedtuple:
-        return AcfResult(acf, confint if alpha is not None else None, qstat, pvalue)
+        return AcfResult(acf, confint, qstat_vals, pvalue)
+
+    if not (qstat or alpha):
+        return acf
+    if not qstat:
+        return acf, confint
     if alpha is not None:
-        return acf, confint, qstat, pvalue
-    else:
-        return acf, qstat, pvalue
+        return acf, confint, qstat_vals, pvalue
+    return acf, qstat_vals, pvalue
 
 
 def pacf_yw(
@@ -1348,35 +1355,32 @@ def pacf(
         returned where the standard deviation is computed according to
         1/sqrt(len(x)).
     use_namedtuple : bool, optional
-        Only relevant when ``alpha`` is not None, where the return value's
-        arity depends on this flag. Flag indicating whether to return the
-        results as a ``PacfResult`` NamedTuple instead of a plain tuple.
-        If ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued. Ignored when ``alpha`` is
-        None, since ``pacf`` always returns a single array in that case.
-
-        .. deprecated:: 0.15.0
-
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``PacfResult`` when
-            ``alpha`` is not None. Set ``use_namedtuple=True`` to opt in
-            now, or ``use_namedtuple=False`` to silence the warning and
-            keep the current return type.
+        Flag controlling whether a ``PacfResult`` NamedTuple is returned.
+        If ``None`` (the default), a ``PacfResult`` is returned when
+        ``alpha`` is not None and a bare array otherwise. Set to True to
+        always receive a ``PacfResult``, with ``confint`` set to ``None``
+        when ``alpha`` is None. Set to False to always receive the legacy
+        plain tuple or bare array.
 
     Returns
     -------
-    pacf : ndarray
-        The partial autocorrelations for lags 0, 1, ..., nlags. Shape
-        (nlags+1,). Returned directly (not part of a tuple) unless
-        ``alpha`` is not None.
-    PacfResult
-        If ``alpha`` is not None and ``use_namedtuple=True``, a NamedTuple
-        with fields ``pacf`` and ``confint`` instead of the plain tuple
-        below. See :class:`~statsmodels.tsa.stattools.PacfResult`.
-    confint : ndarray, optional
-        Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned (as part of a plain tuple, the deprecated
-        default) if alpha is not None.
+    PacfResult or ndarray
+        When ``alpha`` is not None (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        pacf : ndarray
+            The partial autocorrelations for lags 0, 1, ..., nlags. Shape
+            (nlags+1,).
+        confint : ndarray or None
+            Confidence intervals for the PACF at lags 0, 1, ..., nlags.
+            Shape (nlags + 1, 2). ``None`` when ``alpha`` is None.
+
+        ``PacfResult`` has the same length and contents as the plain
+        ``(pacf, confint)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.stattools.PacfResult`.
+
+        When ``alpha`` is None a bare ndarray of partial autocorrelations
+        is returned instead.
 
     See Also
     --------
@@ -1456,27 +1460,23 @@ def pacf(
         acv = acovf(x, adjusted=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
+    confint = None
     if alpha is not None:
         varacf = 1.0 / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
-        if use_namedtuple is None:
-            warnings.warn(
-                "pacf currently returns a plain (pacf, confint) tuple when "
-                "alpha is not None. In release 0.16 or after July 2028, "
-                "whichever is later, the default behavior will switch to "
-                "always returning a PacfResult NamedTuple. Set "
-                "use_namedtuple=True to switch now, or use_namedtuple=False "
-                "to keep the current behavior and silence this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if use_namedtuple:
-            return PacfResult(ret, confint)
-        return ret, confint
-    else:
-        return ret
+
+    # PacfResult has exactly the same length and contents as the legacy
+    # (pacf, confint) tuple, so it unpacks and indexes identically and can
+    # be adopted with no deprecation.  When alpha is None a bare array is
+    # returned, as before; pass use_namedtuple=True to always get a
+    # PacfResult.
+    if use_namedtuple is False:
+        return (ret, confint) if alpha is not None else ret
+    if use_namedtuple or alpha is not None:
+        return PacfResult(ret, confint)
+    return ret
 
 
 def ccovf(x, y, adjusted=True, demean=True, fft=True):
@@ -1580,37 +1580,36 @@ def ccf(
         returned where the standard deviation is computed according to
         1/sqrt(len(x)).
     use_namedtuple : bool, optional
-        Only relevant when ``alpha`` is not None, where the return value's
-        arity depends on this flag. Flag indicating whether to return the
-        results as a ``CcfResult`` NamedTuple instead of a plain tuple. If
-        ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued. Ignored when ``alpha`` is
-        None, since ``ccf`` always returns a single array in that case.
-
-        .. deprecated:: 0.15.0
-
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``CcfResult`` when
-            ``alpha`` is not None. Set ``use_namedtuple=True`` to opt in
-            now, or ``use_namedtuple=False`` to silence the warning and
-            keep the current return type.
+        Flag controlling whether a ``CcfResult`` NamedTuple is returned.
+        If ``None`` (the default), a ``CcfResult`` is returned when
+        ``alpha`` is not None and a bare array otherwise. Set to True to
+        always receive a ``CcfResult``, with ``confint`` set to ``None``
+        when ``alpha`` is None. Set to False to always receive the legacy
+        plain tuple or bare array.
 
     Returns
     -------
-    ccf : ndarray
-        The cross-correlation function of x and y: the element at index k
-        is the correlation between {x[k], x[k+1], ..., x[n]} and
-        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
-        respectively. Returned directly (not part of a tuple) unless
-        ``alpha`` is not None.
-    CcfResult
-        If ``alpha`` is not None and ``use_namedtuple=True``, a NamedTuple
-        with fields ``ccf`` and ``confint`` instead of the plain tuple
-        below. See :class:`~statsmodels.tsa.stattools.CcfResult`.
-    confint : ndarray, optional
-        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the
-        level given by alpha and the standard deviation calculated as
-        1/sqrt(len(x)) [1]_. Shape (nlags, 2). Returned if alpha is not None.
+    CcfResult or ndarray
+        When ``alpha`` is not None (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        ccf : ndarray
+            The cross-correlation function of x and y: the element at
+            index k is the correlation between {x[k], x[k+1], ..., x[n]}
+            and {y[0], y[1], ..., y[m-k]}, where n and m are the lengths
+            of x and y, respectively.
+        confint : ndarray or None
+            Confidence intervals for the CCF at lags 0, 1, ..., nlags-1
+            using the level given by alpha and the standard deviation
+            calculated as 1/sqrt(len(x)) [1]_. Shape (nlags, 2). ``None``
+            when ``alpha`` is None.
+
+        ``CcfResult`` has the same length and contents as the plain
+        ``(ccf, confint)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.stattools.CcfResult`.
+
+        When ``alpha`` is None a bare ndarray of cross-correlations is
+        returned instead.
 
     See Also
     --------
@@ -1642,25 +1641,21 @@ def ccf(
     ret = cvf / (np.std(x) * np.std(y))
     ret = ret[:nlags]
 
+    confint = None
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
-        if use_namedtuple is None:
-            warnings.warn(
-                "ccf currently returns a plain (ccf, confint) tuple when "
-                "alpha is not None. In release 0.16 or after July 2028, "
-                "whichever is later, the default behavior will switch to "
-                "always returning a CcfResult NamedTuple. Set "
-                "use_namedtuple=True to switch now, or use_namedtuple=False "
-                "to keep the current behavior and silence this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if use_namedtuple:
-            return CcfResult(ret, confint)
-        return ret, confint
-    else:
-        return ret
+
+    # CcfResult has exactly the same length and contents as the legacy
+    # (ccf, confint) tuple, so it unpacks and indexes identically and can be
+    # adopted with no deprecation.  When alpha is None a bare array is
+    # returned, as before; pass use_namedtuple=True to always get a
+    # CcfResult.
+    if use_namedtuple is False:
+        return (ret, confint) if alpha is not None else ret
+    if use_namedtuple or alpha is not None:
+        return CcfResult(ret, confint)
+    return ret
 
 
 def _pccf_yw(x, y, nlags, adjusted=False):
@@ -1842,36 +1837,33 @@ def pccf(
         95 % confidence intervals are returned where the standard
         deviation is 1/sqrt(n).
     use_namedtuple : bool, optional
-        Only relevant when ``alpha`` is not None, where the return value's
-        arity depends on this flag. Flag indicating whether to return the
-        results as a ``PccfResult`` NamedTuple instead of a plain tuple.
-        If ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued. Ignored when ``alpha`` is
-        None, since ``pccf`` always returns a single array in that case.
-
-        .. deprecated:: 0.15.0
-
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``PccfResult`` when
-            ``alpha`` is not None. Set ``use_namedtuple=True`` to opt in
-            now, or ``use_namedtuple=False`` to silence the warning and
-            keep the current return type.
+        Flag controlling whether a ``PccfResult`` NamedTuple is returned.
+        If ``None`` (the default), a ``PccfResult`` is returned when
+        ``alpha`` is not None and a bare array otherwise. Set to True to
+        always receive a ``PccfResult``, with ``confint`` set to ``None``
+        when ``alpha`` is None. Set to False to always receive the legacy
+        plain tuple or bare array.
 
     Returns
     -------
-    pccf : ndarray
-        The partial cross-correlation function for lags
-        1, 2, ..., nlags. Returned directly (not part of a tuple) unless
-        ``alpha`` is not None.
-    PccfResult
-        If ``alpha`` is not None and ``use_namedtuple=True``, a NamedTuple
-        with fields ``pccf`` and ``confint`` instead of the plain tuple
-        below. See :class:`~statsmodels.tsa.stattools.PccfResult`.
-    confint : ndarray, optional
-        Confidence intervals for the PCCF at lags
-        1, 2, ..., nlags using the level given by alpha. Shape
-        (nlags, 2). Returned (as part of a plain tuple, the deprecated
-        default) if alpha is not None.
+    PccfResult or ndarray
+        When ``alpha`` is not None (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        pccf : ndarray
+            The partial cross-correlation function for lags
+            1, 2, ..., nlags.
+        confint : ndarray or None
+            Confidence intervals for the PCCF at lags 1, 2, ..., nlags
+            using the level given by alpha. Shape (nlags, 2). ``None``
+            when ``alpha`` is None.
+
+        ``PccfResult`` has the same length and contents as the plain
+        ``(pccf, confint)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.stattools.PccfResult`.
+
+        When ``alpha`` is None a bare ndarray of partial
+        cross-correlations is returned instead.
 
     See Also
     --------
@@ -1989,25 +1981,21 @@ def pccf(
         adjusted = method in ("yw", "ywa", "ywadjusted", "yw_adjusted")
         ret = _pccf_yw(x, y, nlags, adjusted=adjusted)
 
+    confint = None
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
-        if use_namedtuple is None:
-            warnings.warn(
-                "pccf currently returns a plain (pccf, confint) tuple when "
-                "alpha is not None. In release 0.16 or after July 2028, "
-                "whichever is later, the default behavior will switch to "
-                "always returning a PccfResult NamedTuple. Set "
-                "use_namedtuple=True to switch now, or use_namedtuple=False "
-                "to keep the current behavior and silence this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if use_namedtuple:
-            return PccfResult(ret, confint)
-        return ret, confint
-    else:
-        return ret
+
+    # PccfResult has exactly the same length and contents as the legacy
+    # (pccf, confint) tuple, so it unpacks and indexes identically and can
+    # be adopted with no deprecation.  When alpha is None a bare array is
+    # returned, as before; pass use_namedtuple=True to always get a
+    # PccfResult.
+    if use_namedtuple is False:
+        return (ret, confint) if alpha is not None else ret
+    if use_namedtuple or alpha is not None:
+        return PccfResult(ret, confint)
+    return ret
 
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime

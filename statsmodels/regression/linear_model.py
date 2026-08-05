@@ -2454,8 +2454,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value = stats.f.sf(f_value, df_diff, df_full)
         return f_value, p_value, df_diff
 
-    def compare_lr_test(self, restricted, large_sample=False, *,
-                        use_namedtuple: bool | None = None):
+    def compare_lr_test(self, restricted, large_sample=False):
         """
         Likelihood ratio test to test whether restricted model is correct.
 
@@ -2470,37 +2469,23 @@ class RegressionResults(base.LikelihoodModelResults):
         large_sample : bool
             Flag indicating whether to use a heteroskedasticity robust version
             of the LR test, which is a modified LM test.
-        use_namedtuple : bool, optional
-            Flag indicating whether to return the results as a
-            ``CompareLRTestResult`` NamedTuple instead of a plain tuple. If
-            ``None`` (the default), the current tuple-returning behavior is
-            used and a ``FutureWarning`` is issued.
-
-            .. deprecated:: 0.15.0
-
-                In release 0.16.0 or after July 2028, whichever is later,
-                the default will change to always return a
-                ``CompareLRTestResult``. Set ``use_namedtuple=True`` to
-                opt in now, or ``use_namedtuple=False`` to silence the
-                warning and keep the current return type.
 
         Returns
         -------
         CompareLRTestResult
-            If ``use_namedtuple=True``, a NamedTuple with fields
-            ``lr_stat``, ``p_value``, and ``df_diff``. See
-            :class:`~statsmodels.regression.linear_model.CompareLRTestResult`.
+            A NamedTuple with fields:
 
-        Otherwise (the deprecated default), a plain tuple made up of:
+            lr_stat : float
+                The likelihood ratio which is chisquare distributed with
+                df_diff degrees of freedom.
+            p_value : float
+                The p-value of the test statistic.
+            df_diff : int
+                The degrees of freedom of the restriction, i.e. difference
+                in df between models.
 
-        lr_stat : float
-            The likelihood ratio which is chisquare distributed with df_diff
-            degrees of freedom.
-        p_value : float
-            The p-value of the test statistic.
-        df_diff : int
-            The degrees of freedom of the restriction, i.e. difference in df
-            between models.
+            The result supports tuple unpacking and indexing, so existing
+            code that treats it as a 3-tuple continues to work unchanged.
 
         Notes
         -----
@@ -2541,8 +2526,6 @@ class RegressionResults(base.LikelihoodModelResults):
         # TODO: put into separate function, needs tests
 
         # See mailing list discussion October 17,
-        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
-
         if large_sample:
             # compare_lm_test always returns a plain 3-tuple (lm_value,
             # p_value, df_diff) today; unpack positionally so the result
@@ -2569,20 +2552,7 @@ class RegressionResults(base.LikelihoodModelResults):
             lrstat = -2 * (llf_restr - llf_full)
             lr_pvalue = stats.chi2.sf(lrstat, lrdf)
 
-        if use_namedtuple is None:
-            warnings.warn(
-                "compare_lr_test currently returns a plain tuple. In "
-                "release 0.16 or after July 2028, whichever is later, the "
-                "default behavior will switch to always returning a "
-                "CompareLRTestResult NamedTuple. Set use_namedtuple=True "
-                "to switch now, or use_namedtuple=False to keep the "
-                "current behavior and silence this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if use_namedtuple:
-            return CompareLRTestResult(lrstat, lr_pvalue, lrdf)
-        return lrstat, lr_pvalue, lrdf
+        return CompareLRTestResult(lrstat, lr_pvalue, lrdf)
 
     def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwargs):
         """

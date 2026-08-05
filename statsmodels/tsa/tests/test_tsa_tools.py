@@ -213,14 +213,23 @@ class TestLagmat:
         assert_equal(expected_lags, lagmat)
         assert_equal(expected_leads, leads)
 
-    def test_sep_return_default_warns(self):
+    def test_sep_return_default_is_namedtuple(self):
+        # LagmatResult has the same length and contents as the legacy
+        # (lags, leads) tuple, so it is adopted without a warning.
         data = self.random_data
-        with pytest.warns(FutureWarning, match="use_namedtuple"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             res = stattools.lagmat(data, 3, trim="none", original="sep")
-        assert isinstance(res, tuple)
-        assert not isinstance(res, LagmatResult)
+            legacy = stattools.lagmat(
+                data, 3, trim="none", original="sep", use_namedtuple=False
+            )
+        assert isinstance(res, LagmatResult)
+        assert len(res) == 2
         lags, leads = res
         assert isinstance(lags, np.ndarray)
+        assert type(legacy) is tuple
+        assert_array_almost_equal(res.lags, legacy[0])
+        assert_array_almost_equal(res.leads, legacy[1])
 
     def test_sep_return_use_namedtuple_true(self):
         data = self.random_data
@@ -233,17 +242,28 @@ class TestLagmat:
         assert res[0] is res.lags
         assert res[1] is res.leads
 
-    def test_non_sep_original_ignores_use_namedtuple(self):
-        # use_namedtuple is only relevant when original="sep"; other values
-        # of original always return a single array, never a tuple, and
-        # never warn regardless of use_namedtuple.
+    def test_non_sep_original_never_warns(self):
+        # Only original="sep" returns more than one value, so the other
+        # values must stay silent.  An explicit use_namedtuple=True still
+        # returns the NamedTuple, with leads left as None because the
+        # original was either excluded or folded into lags.
         data = self.random_data
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             lags_ex = stattools.lagmat(data, 3, trim="none", original="ex")
             lags_in = stattools.lagmat(data, 3, trim="none", original="in")
+            nt_ex = stattools.lagmat(
+                data, 3, trim="none", original="ex", use_namedtuple=True
+            )
+            nt_in = stattools.lagmat(
+                data, 3, trim="none", original="in", use_namedtuple=True
+            )
         assert isinstance(lags_ex, np.ndarray)
         assert isinstance(lags_in, np.ndarray)
+        for nt, expected in ((nt_ex, lags_ex), (nt_in, lags_in)):
+            assert isinstance(nt, LagmatResult)
+            assert_array_almost_equal(nt.lags, expected)
+            assert nt.leads is None
 
     def test_add_lag1d(self):
         data = self.random_data

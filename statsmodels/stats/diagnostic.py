@@ -903,7 +903,7 @@ def acorr_breusch_godfrey(
     x = np.asarray(res.resid).squeeze()
     if x.ndim != 1:
         raise ValueError(
-            "Model resid must be a 1d array. Cannot be used on" " multivariate models."
+            "Model resid must be a 1d array. Cannot be used on multivariate models."
         )
     exog_old = res.model.exog
     nobs = x.shape[0]
@@ -1500,7 +1500,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     endog = res.model.endog
     exog = res.model.exog
     if order_by is not None and use_distance:
-        raise ValueError("order_by and use_distance cannot be simultaneously" "used.")
+        raise ValueError("order_by and use_distance cannot be simultaneously used.")
     if order_by is not None:
         if isinstance(order_by, np.ndarray):
             order_by = array_like(order_by, "order_by", ndim=1, dtype="int")

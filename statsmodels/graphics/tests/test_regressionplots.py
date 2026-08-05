@@ -417,6 +417,8 @@ def test_plot_partregress_use_namedtuple(close_figures):
     x2 = rs.standard_normal(50)
     y = 1 + x1 + rs.standard_normal(50)
 
+    # ret_coords=False still returns a bare figure by default, and warns
+    # because that is the path whose shape will change.
     with pytest.warns(FutureWarning, match="use_namedtuple"):
         res = plot_partregress(y, x1, x2[:, None])
     assert not isinstance(res, PartRegressPlotResult)
@@ -425,16 +427,27 @@ def test_plot_partregress_use_namedtuple(close_figures):
         warnings.filterwarnings("error", category=FutureWarning)
         res = plot_partregress(y, x1, x2[:, None], use_namedtuple=True)
     assert isinstance(res, PartRegressPlotResult)
-    assert res.coords is None
+    # The residuals are computed to draw the plot, so they are reported even
+    # though ret_coords was not set.
+    assert res.coords is not None
+    assert len(res.coords) == 2
+
+    # ret_coords=True is a drop-in: same length and contents as the legacy
+    # (fig, coords) tuple, so it returns the NamedTuple without warning.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = plot_partregress(y, x1, x2[:, None], ret_coords=True)
+    assert isinstance(res, PartRegressPlotResult)
+    assert res.coords is not None
+    assert len(res.coords) == 2
 
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
         res = plot_partregress(
-            y, x1, x2[:, None], ret_coords=True, use_namedtuple=True
+            y, x1, x2[:, None], ret_coords=True, use_namedtuple=False
         )
-    assert isinstance(res, PartRegressPlotResult)
-    assert res.coords is not None
-    assert len(res.coords) == 2
+    assert type(res) is tuple
+    assert len(res) == 2
 
 
 @pytest.mark.matplotlib

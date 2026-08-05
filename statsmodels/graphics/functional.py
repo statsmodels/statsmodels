@@ -1,6 +1,5 @@
 """Module for functional boxplots"""
 
-from statsmodels.compat.numpy import NP_LT_123
 from statsmodels.compat.pandas import deprecate_kwarg
 
 import itertools
@@ -383,16 +382,10 @@ def hdrboxplot(
 
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
-    if NP_LT_123:
-        pvalues = [
-            np.percentile(pdf_r, (1 - alpha[i]) * 100, interpolation="linear")
-            for i in range(n_quantiles)
-        ]
-    else:
-        pvalues = [
-            np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
-            for i in range(n_quantiles)
-        ]
+    pvalues = [
+        np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
+        for i in range(n_quantiles)
+    ]
 
     # Find mean, outliers curves
     if not use_brute:

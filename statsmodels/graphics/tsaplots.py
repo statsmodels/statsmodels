@@ -280,8 +280,7 @@ def plot_acf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
-    confint = None
-    acf_x = acf(
+    acf_res = acf(
         x,
         nlags=nlags,
         alpha=alpha,
@@ -291,8 +290,9 @@ def plot_acf(
         missing=missing,
         use_namedtuple=True,
     )
-    if alpha is not None:
-        acf_x, confint = acf_x.acf, acf_x.confint
+    # use_namedtuple=True always yields an AcfResult; confint is None when
+    # alpha is None.
+    acf_x, confint = acf_res.acf, acf_res.confint
 
     _plot_corr(
         ax,
@@ -417,14 +417,12 @@ def plot_pacf(
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
-    confint = None
-    if alpha is None:
-        acf_x = pacf(x, nlags=nlags, alpha=alpha, method=method)
-    else:
-        result = pacf(
-            x, nlags=nlags, alpha=alpha, method=method, use_namedtuple=True
-        )
-        acf_x, confint = result.pacf, result.confint
+    result = pacf(
+        x, nlags=nlags, alpha=alpha, method=method, use_namedtuple=True
+    )
+    # use_namedtuple=True always yields a PacfResult; confint is None when
+    # alpha is None.
+    acf_x, confint = result.pacf, result.confint
 
     _plot_corr(
         ax,
@@ -539,11 +537,9 @@ def plot_ccf(
         nlags=nlags + 1,
         use_namedtuple=True,
     )
-    if alpha is not None:
-        ccf_xy, confint = ccf_res.ccf, ccf_res.confint
-    else:
-        ccf_xy = ccf_res
-        confint = None
+    # use_namedtuple=True always yields a CcfResult; confint is None when
+    # alpha is None.
+    ccf_xy, confint = ccf_res.ccf, ccf_res.confint
 
     _plot_corr(
         ax,
@@ -664,11 +660,9 @@ def plot_pccf(
     pccf_res = pccf(
         x, y, alpha=alpha, nlags=nlags, method=method, use_namedtuple=True
     )
-    if alpha is not None:
-        pccf_xy, confint = pccf_res.pccf, pccf_res.confint
-    else:
-        pccf_xy = pccf_res
-        confint = None
+    # use_namedtuple=True always yields a PccfResult; confint is None when
+    # alpha is None.
+    pccf_xy, confint = pccf_res.pccf, pccf_res.confint
 
     if irregular:
         lags = lags[lags > 0]

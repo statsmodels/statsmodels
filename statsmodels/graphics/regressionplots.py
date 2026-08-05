@@ -370,7 +370,21 @@ def plot_regress_exog(results, exog_idx, fig=None):
 
 
 class PartRegressPlotResult(NamedTuple):
-    """Result of :func:`plot_partregress` when ``use_namedtuple=True``."""
+    """
+    Result of :func:`plot_partregress` when ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    fig : Figure
+        If ``ax`` is None, the created figure. Otherwise the figure to
+        which ``ax`` is connected.
+    coords : tuple of ndarray or None
+        The ``(x_coords, y_coords)`` of the plotted points, i.e. the
+        residuals of ``exog_i`` and ``endog`` after partialling out
+        ``exog_others``. These are computed to draw the plot, so they are
+        always reported. ``None`` only when there were no other regressors
+        to partial out, in which case no residuals exist.
+    """
 
     fig: Figure
     coords: tuple[np.ndarray, np.ndarray] | None
@@ -431,35 +445,45 @@ def plot_partregress(
         Patsy eval environment if user functions and formulas are used in
         defining endog or exog.
     use_namedtuple : bool, optional
-        Flag indicating whether to return the results as a
-        ``PartRegressPlotResult`` NamedTuple instead of a plain ``fig`` or
-        ``(fig, coords)``. If ``None`` (the default), the current behavior
-        is used and a ``FutureWarning`` is issued.
+        Flag controlling whether a ``PartRegressPlotResult`` NamedTuple is
+        returned. If ``None`` (the default), a ``PartRegressPlotResult``
+        is returned when ``ret_coords`` is True and a bare figure
+        otherwise. Set to True to always receive a
+        ``PartRegressPlotResult``. Set to False to always receive the
+        legacy bare figure or ``(fig, coords)`` tuple.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a
-            ``PartRegressPlotResult``. Set ``use_namedtuple=True`` to opt
-            in now, or ``use_namedtuple=False`` to silence the warning and
-            keep the current return type.
+            When ``ret_coords=False``, in release 0.16.0 or after July
+            2028, whichever is later, the default will change to return a
+            ``PartRegressPlotResult`` rather than a bare figure. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
     **kwargs
         The keyword arguments passed to plot for the points.
 
     Returns
     -------
-    PartRegressPlotResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``fig`` and
-        ``coords`` (``coords`` is ``None`` unless ``ret_coords=True``). See
+    PartRegressPlotResult or Figure
+        When ``ret_coords`` is True (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        fig : Figure
+            If `ax` is None, the created figure.  Otherwise the figure to
+            which `ax` is connected.
+        coords : tuple of ndarray or None
+            The ``(x_coords, y_coords)`` of the plotted points. Always
+            populated, including when ``ret_coords=False``, because the
+            residuals are computed to draw the plot; ``None`` only when
+            there were no other regressors to partial out.
+
+        ``PartRegressPlotResult`` has the same length and contents as the
+        plain ``(fig, coords)`` tuple it replaces, so it unpacks and
+        indexes identically. See
         :class:`~statsmodels.graphics.regressionplots.PartRegressPlotResult`.
 
-    Otherwise (the deprecated default):
-
-    fig : Figure
-        If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
-    coords : tuple, optional
-        If ret_coords is True, return a tuple of arrays (x_coords, y_coords).
+        When ``ret_coords`` is False a bare figure is returned instead.
 
     See Also
     --------
@@ -582,24 +606,32 @@ def plot_partregress(
             **label_kwargs,
         )
 
-    coords = (res_xaxis.resid, res_yaxis.resid) if ret_coords else None
+    # The residuals are already computed to draw the plot, so they are
+    # always reported rather than being None-filled.  They only exist when
+    # there were other regressors to partial out.
+    coords = None if RHS_isemtpy else (res_xaxis.resid, res_yaxis.resid)
 
-    if use_namedtuple is None:
+    # With ret_coords=True, PartRegressPlotResult has exactly the same
+    # length and contents as the legacy (fig, coords) tuple, so it unpacks
+    # and indexes identically and is adopted with no deprecation.  Only
+    # ret_coords=False changes shape, from a bare figure to the two-field
+    # NamedTuple, so that is the only path that warns.
+    if use_namedtuple is None and not ret_coords:
         warnings.warn(
-            "plot_partregress currently returns either a bare figure or a "
-            "(figure, coords) tuple depending on the ret_coords argument. "
-            "In release 0.16 or after July 2028, whichever is later, the "
-            "default behavior will switch to always returning a "
-            "PartRegressPlotResult NamedTuple. Set use_namedtuple=True to "
+            "plot_partregress currently returns a bare figure when "
+            "ret_coords=False. In release 0.16 or after July 2028, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a PartRegressPlotResult NamedTuple, which "
+            "also carries the coordinates. Set use_namedtuple=True to "
             "switch now, or use_namedtuple=False to keep the current "
             "behavior and silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple is False:
+        return (fig, coords) if ret_coords else fig
+    if use_namedtuple or ret_coords:
         return PartRegressPlotResult(fig, coords)
-    if ret_coords:
-        return fig, coords
     return fig
 
 

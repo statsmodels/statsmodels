@@ -203,7 +203,7 @@ position the old keyword did.
 Minimum dependency versions raised
 --------------------------------------
 
-- NumPy: 1.18 -> 1.22.3
+- NumPy: 1.18 -> 1.23.5
 - SciPy: 1.4 -> 1.8
 - pandas: 1.0 -> 1.4
 - patsy: 0.5.2 -> 0.5.6

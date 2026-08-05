@@ -111,3 +111,6 @@ statsmodels/LICENSE.txt
 
 # Dataset downloads
 statsmodels/datasets/tests/*.zip
+
+# Pytest data
+test-data.xml

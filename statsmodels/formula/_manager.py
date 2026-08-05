@@ -249,7 +249,6 @@ class FormulaManager:
         ValueError
             If the selected engine is not available.
         """
-        # Patsy for now, to be changed to a user-settable variable before release
         _engine: Literal["patsy", "formulaic"]
 
         if engine is not None:

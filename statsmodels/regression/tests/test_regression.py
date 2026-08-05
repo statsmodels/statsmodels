@@ -1008,17 +1008,12 @@ class TestCompareAndElTestNamedTuple:
         cls.res_full = OLS(y, exog_full).fit()
         cls.res_restr = OLS(y, add_constant(x[:, 0])).fit()
 
-    def test_compare_lr_test_use_namedtuple_default_warns(self):
-        with pytest.warns(FutureWarning, match="use_namedtuple"):
-            res = self.res_full.compare_lr_test(self.res_restr)
-        assert not isinstance(res, CompareLRTestResult)
-
-    def test_compare_lr_test_use_namedtuple_true(self):
+    def test_compare_lr_test_returns_namedtuple(self):
+        # compare_lr_test always returns three values, so it returns the
+        # NamedTuple unconditionally with no deprecation cycle.
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
-            res = self.res_full.compare_lr_test(
-                self.res_restr, use_namedtuple=True
-            )
+            res = self.res_full.compare_lr_test(self.res_restr)
         assert isinstance(res, CompareLRTestResult)
         assert res[0] == res.lr_stat
         assert res[1] == res.p_value
@@ -1027,7 +1022,7 @@ class TestCompareAndElTestNamedTuple:
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
             res_large = self.res_full.compare_lr_test(
-                self.res_restr, large_sample=True, use_namedtuple=True
+                self.res_restr, large_sample=True
             )
         assert isinstance(res_large, CompareLRTestResult)
 

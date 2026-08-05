@@ -354,34 +354,33 @@ def lagmat(
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
     use_namedtuple : bool, optional
-        Only relevant when ``original="sep"``, where the return value's
-        arity depends on this flag. Flag indicating whether to return the
-        results as a ``LagmatResult`` NamedTuple instead of a plain tuple.
-        If ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued. Ignored when
-        ``original != "sep"``, since ``lagmat`` always returns a single
-        array in that case.
-
-        .. deprecated:: 0.15.0
-
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``LagmatResult`` when
-            ``original="sep"``. Set ``use_namedtuple=True`` to opt in now,
-            or ``use_namedtuple=False`` to silence the warning and keep
-            the current return type.
+        Flag controlling whether a ``LagmatResult`` NamedTuple is
+        returned. If ``None`` (the default), a ``LagmatResult`` is
+        returned when ``original="sep"`` and a bare array otherwise. Set
+        to True to always receive a ``LagmatResult``, with ``leads`` set
+        to ``None`` for other values of ``original``. Set to False to
+        always receive the legacy plain tuple or bare array.
 
     Returns
     -------
-    lags : ndarray
-        The array with lagged observations. Returned directly (not part
-        of a tuple) unless ``original="sep"``.
-    LagmatResult
-        If ``original="sep"`` and ``use_namedtuple=True``, a NamedTuple
-        with fields ``lags`` and ``leads`` instead of the plain tuple
-        below. See :class:`~statsmodels.tsa.tsatools.LagmatResult`.
-    leads : ndarray, optional
-        Only returned (as part of a plain tuple, the deprecated default)
-        if ``original == 'sep'``.
+    LagmatResult or ndarray
+        When ``original="sep"`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        lags : ndarray
+            The array with lagged observations.
+        leads : ndarray or None
+            The original (unlagged) array, truncated to have the same
+            number of rows as ``lags``. ``None`` for other values of
+            ``original``, where the original series was either excluded
+            ("ex") or folded into ``lags`` ("in").
+
+        ``LagmatResult`` has the same length and contents as the plain
+        ``(lags, leads)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.tsatools.LagmatResult`.
+
+        For other values of ``original`` a bare array of lagged
+        observations is returned instead.
 
     Notes
     -----
@@ -512,23 +511,17 @@ def lagmat(
         if original == "sep":
             leads = lm[startobs:stopobs, :dropidx]
 
-    if original == "sep":
-        if use_namedtuple is None:
-            warnings.warn(
-                "lagmat currently returns a plain (lags, leads) tuple when "
-                "original='sep'. In release 0.16 or after July 2028, "
-                "whichever is later, the default behavior will switch to "
-                "always returning a LagmatResult NamedTuple. Set "
-                "use_namedtuple=True to switch now, or use_namedtuple=False "
-                "to keep the current behavior and silence this warning.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if use_namedtuple:
-            return LagmatResult(lags, leads)
-        return lags, leads
-    else:
-        return lags
+    # LagmatResult has exactly the same length and contents as the legacy
+    # (lags, leads) tuple, so it unpacks and indexes identically and can be
+    # adopted with no deprecation.  For other values of `original` a bare
+    # array is returned, as before; pass use_namedtuple=True to always get
+    # a LagmatResult.  `leads` is only meaningful for "sep" -- for "ex" the
+    # caller asked for it to be excluded and for "in" it is part of `lags`.
+    if use_namedtuple is False:
+        return (lags, leads) if original == "sep" else lags
+    if use_namedtuple or original == "sep":
+        return LagmatResult(lags, leads if original == "sep" else None)
+    return lags
 
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False):

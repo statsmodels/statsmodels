@@ -473,10 +473,21 @@ def test_entropy_infinite_domain_kernel():
 
 
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
-def test_kdensity_use_namedtuple_default_warns(func):
-    with pytest.warns(FutureWarning, match="use_namedtuple"):
+def test_kdensity_use_namedtuple_default(func):
+    # retgrid=True (the default) yields a KDEResult with the same length and
+    # contents as the legacy (density, grid, bw) tuple, so it is adopted
+    # without a warning.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
         res = func(Xi)
+    assert isinstance(res, KDEResult)
+    assert len(res) == 3
+
+    # retgrid=False does change shape, so that path still warns.
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = func(Xi, retgrid=False)
     assert not isinstance(res, KDEResult)
+    assert len(res) == 2
 
 
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
@@ -494,4 +505,6 @@ def test_kdensity_use_namedtuple_true(func):
         warnings.filterwarnings("error", category=FutureWarning)
         res = func(Xi, retgrid=False, use_namedtuple=True)
     assert isinstance(res, KDEResult)
-    assert res.grid is None
+    # The grid is computed regardless of retgrid, so it is reported rather
+    # than None-filled.
+    assert res.grid is not None
