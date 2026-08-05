@@ -213,14 +213,23 @@ class TestLagmat:
         assert_equal(expected_lags, lagmat)
         assert_equal(expected_leads, leads)
 
-    def test_sep_return_default_warns(self):
+    def test_sep_return_default_is_namedtuple(self):
+        # LagmatResult has the same length and contents as the legacy
+        # (lags, leads) tuple, so it is adopted without a warning.
         data = self.random_data
-        with pytest.warns(FutureWarning, match="use_namedtuple"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             res = stattools.lagmat(data, 3, trim="none", original="sep")
-        assert isinstance(res, tuple)
-        assert not isinstance(res, LagmatResult)
+            legacy = stattools.lagmat(
+                data, 3, trim="none", original="sep", use_namedtuple=False
+            )
+        assert isinstance(res, LagmatResult)
+        assert len(res) == 2
         lags, leads = res
         assert isinstance(lags, np.ndarray)
+        assert type(legacy) is tuple
+        assert_array_almost_equal(res.lags, legacy[0])
+        assert_array_almost_equal(res.leads, legacy[1])
 
     def test_sep_return_use_namedtuple_true(self):
         data = self.random_data
