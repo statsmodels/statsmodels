@@ -310,7 +310,7 @@ class TestACF(CheckCorrGram):
 
     def test_default_warns(self):
         with pytest.warns(FutureWarning, match="use_namedtuple"):
-            res = acf(self.x, nlags=40, qstat=True, alpha=0.05, fft=False)
+            res = acf(self.x, nlags=40, qstat=True, fft=False)
         assert isinstance(res, tuple)
         assert not isinstance(res, AcfResult)
 

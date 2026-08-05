@@ -276,7 +276,7 @@ def adfuller(
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``ADFullerResult``.
             Set ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -918,7 +918,7 @@ def acf(
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``AcfResult`` when
             ``qstat`` is True or ``alpha`` is not None. Set
             ``use_namedtuple=True`` to opt in now, or
@@ -1035,15 +1035,13 @@ def acf(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or alpha is not None:
         return AcfResult(acf, confint, qstat_vals, pvalue)
 
     if not (qstat or alpha):
         return acf
-    if not qstat:
+    elif not qstat:
         return acf, confint
-    if alpha is not None:
-        return acf, confint, qstat_vals, pvalue
     return acf, qstat_vals, pvalue
 
 
@@ -2794,7 +2792,7 @@ def kpss(
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a ``KpssResult``. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -3086,7 +3084,7 @@ def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
             ``RangeUnitRootTestResult``. Set ``use_namedtuple=True`` to opt
             in now, or ``use_namedtuple=False`` to silence the warning and
@@ -3219,7 +3217,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
     else:
         rstore = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "range_unit_root_test currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
@@ -3231,12 +3229,9 @@ look-up table. The actual p-value is {direction} than the p-value returned.
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return RangeUnitRootTestResult(rur_stat, p_value, crit_dict, rstore)
-    if store:
-        return rur_stat, p_value, crit_dict, rstore
-    else:
-        return rur_stat, p_value, crit_dict
+    return rur_stat, p_value, crit_dict
 
 
 class ZivotAndrewsUnitRoot:

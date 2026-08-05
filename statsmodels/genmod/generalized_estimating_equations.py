@@ -746,10 +746,7 @@ class GEE(GLM):
             indicating the depth of the namespace to use. For example, the
             default ``eval_env=0`` uses the calling namespace.
             If you wish to use a "clean" environment set ``eval_env=-1``.
-
-        Optional arguments
-        ------------------
-        dep_data : str or array_like
+        dep_data : str or array_like, optional
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g. Nested) for
             details.  If `dep_data` is a string, it is interpreted as
