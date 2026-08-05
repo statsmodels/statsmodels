@@ -681,8 +681,8 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     Examples
     --------
-    Using the state crime dataset separately plot the effect of the each
-    variable on the on the outcome, murder rate while accounting for the effect
+    Using the state crime dataset separately plot the effect of each
+    variable on the outcome, murder rate, while accounting for the effect
     of all other variables in the model visualized with a grid of partial
     regression plots.
 
@@ -872,8 +872,8 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     Examples
     --------
-    Using the state crime dataset separately plot the effect of the each
-    variable on the on the outcome, murder rate while accounting for the effect
+    Using the state crime dataset separately plot the effect of each
+    variable on the outcome, murder rate, while accounting for the effect
     of all other variables in the model.
 
     >>> import statsmodels.api as sm

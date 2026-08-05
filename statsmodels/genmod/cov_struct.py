@@ -1058,17 +1058,6 @@ class GlobalOddsRatio(CategoricalCovStruct):
     Estimate the global odds ratio for a GEE with ordinal or nominal
     data.
 
-    References
-    ----------
-    PJ Heagerty and S Zeger. "Marginal Regression Models for Clustered
-    Ordinal Measurements". Journal of the American Statistical
-    Association Vol. 91, Issue 435 (1996).
-
-    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
-    A Note on Working Correlation Structures. Biometrics Vol. 52,
-    No. 1 (Mar., 1996), pp. 354-361
-    http://www.jstor.org/stable/2533173
-
     Notes
     -----
     The following data structures are calculated in the class:
@@ -1080,6 +1069,17 @@ class GlobalOddsRatio(CategoricalCovStruct):
     `cpp` is a dictionary where cpp[group] is a map from cut-point
     pairs (c,c') to the indices of all between-subject pairs derived
     from the given cut points.
+
+    References
+    ----------
+    PJ Heagerty and S Zeger. "Marginal Regression Models for Clustered
+    Ordinal Measurements". Journal of the American Statistical
+    Association Vol. 91, Issue 435 (1996).
+
+    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
+    A Note on Working Correlation Structures. Biometrics Vol. 52,
+    No. 1 (Mar., 1996), pp. 354-361
+    http://www.jstor.org/stable/2533173
     """
 
     def __init__(self, endog_type):

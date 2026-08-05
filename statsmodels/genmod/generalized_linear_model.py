@@ -910,7 +910,7 @@ class GLM(base.LikelihoodModel):
         """
         Estimate the dispersion/scale.
 
-        Type of scale can be chose in the fit method.
+        Type of scale can be chosen in the fit method.
 
         Parameters
         ----------
@@ -919,17 +919,18 @@ class GLM(base.LikelihoodModel):
 
         Returns
         -------
-        Estimate of scale
+        float
+            Estimate of scale
+
+        See Also
+        --------
+        statsmodels.genmod.generalized_linear_model.GLM.fit
 
         Notes
         -----
         The default scale for Binomial, Poisson and Negative Binomial
         families is 1.  The default for the other families is Pearson's
         Chi-Square estimate.
-
-        See Also
-        --------
-        statsmodels.genmod.generalized_linear_model.GLM.fit
         """
         if not self.scaletype:
             if isinstance(

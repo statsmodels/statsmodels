@@ -883,6 +883,9 @@ class KalmanFilter(Representation):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
+        complex_step : bool, optional
+            Whether or not to compute the filter using complex-step
+            differentiation. Default is False.
 
         Notes
         -----

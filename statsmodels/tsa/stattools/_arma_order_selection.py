@@ -62,9 +62,9 @@ def arma_order_select_ic(
     trend : str
         The trend to use when fitting the ARMA models.
     model_kw : dict
-        Keyword arguments to be passed to the ``ARMA`` model.
+        Keyword arguments to be passed to the ``ARIMA`` model.
     fit_kw : dict
-        Keyword arguments to be passed to ``ARMA.fit``.
+        Keyword arguments to be passed to ``ARIMA.fit``.
 
     Returns
     -------
@@ -78,8 +78,8 @@ def arma_order_select_ic(
     -----
     This method can be used to tentatively identify the order of an ARMA
     process, provided that the time series is stationary and invertible. This
-    function computes the full exact MLE estimate of each model and can be,
-    therefore a little slow. An implementation using approximate estimates
+    function computes the full exact MLE estimate of each model and can
+    therefore be a little slow. An implementation using approximate estimates
     will be provided in the future. In the meantime, consider passing
     {method : "css"} to fit_kw.
 
@@ -93,7 +93,7 @@ def arma_order_select_ic(
     >>> arparams = np.array([.75, -.25])
     >>> maparams = np.array([.65, .35])
     >>> arparams = np.r_[1, -arparams]
-    >>> maparam = np.r_[1, maparams]
+    >>> maparams = np.r_[1, maparams]
     >>> nobs = 250
     >>> np.random.seed(2014)
     >>> y = arma_generate_sample(arparams, maparams, nobs)

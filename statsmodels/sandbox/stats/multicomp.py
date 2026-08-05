@@ -464,6 +464,9 @@ def randmvn(rho, size=(1, 2), standardize=False):
         correlation coefficient
     size : tuple of int
         size is interpreted (nobs, nvars) where each row
+    standardize : bool
+        If True, then the returned draws are standardized to have unit
+        variance using `scipy.stats.zscore`. Default is False.
 
     Returns
     -------

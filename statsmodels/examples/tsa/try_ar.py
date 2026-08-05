@@ -19,6 +19,8 @@ def armaloop(arcoefs, macoefs, x):
         autoregressive coefficients in right hand side parameterization
     macoefs : array_like
         moving average coefficients, without leading 1
+    x : array_like
+        observed time series values used to seed and drive the recursion
 
     Returns
     -------

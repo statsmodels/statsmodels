@@ -1234,7 +1234,7 @@ def tost_poisson_2indep(
     for compare = 'diff'
 
     - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
-    - H1: low < rate - rate < upp
+    - H1: low < rate1 - rate2 < upp
 
     Parameters
     ----------
@@ -1359,7 +1359,7 @@ def nonequivalence_poisson_2indep(
     for compare = 'diff':
 
     - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
-    - H1: low < rate - rate < upp
+    - H1: low < rate1 - rate2 < upp
 
     Parameters
     ----------

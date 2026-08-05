@@ -28,18 +28,21 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    constraint_matrix R : ndarray
+    constraint_matrix : ndarray
         Linear restriction matrix or Jacobian of nonlinear constraints
-    score_deriv_inv, Ainv : ndarray, symmetric, square
-        inverse of second derivative of objective function
+        (denoted `R` below).
+    score_deriv_inv : ndarray, symmetric, square
+        inverse of second derivative of objective function (denoted `Ainv`
+        below).
         TODO: could be inverse of OPG or any other estimator if information
         matrix equality holds
-    cov_score B :  ndarray, symmetric, square
-        covariance matrix of the score. This is the inner part of a sandwich
-        estimator.
-    cov_params V :  ndarray, symmetric, square
-        covariance of full parameter vector evaluated at constrained parameter
-        estimate. This can be specified instead of cov_score B.
+    cov_score : ndarray, symmetric, square
+        covariance matrix of the score (denoted `B` below). This is the
+        inner part of a sandwich estimator.
+    cov_params : ndarray, symmetric, square, optional
+        covariance of full parameter vector evaluated at constrained
+        parameter estimate (denoted `V` below). This can be specified
+        instead of cov_score.
 
     Returns
     -------
@@ -142,11 +145,20 @@ def score_test(
         tests is used.
         If the cov_type argument is not None, then it will be used instead of
         the Wald cov_type given in fit.
+    cov_kwds : dict or None
+        Keyword arguments for the specified `cov_type`.
     k_constraints : int or None
         Number of constraints that were used in the estimation of params
         restricted relative to the number of exog in the model.
         This must be provided if no exog_extra are given. If exog_extra is
         not None, then k_constraints is assumed to be zero if it is None.
+    r_matrix : array_like or None
+        Restriction matrix for the constraints. If not provided, it is
+        constructed from `self.constraints` or from `exog_extra`.
+    scale : float or None
+        Optional scale to use in the score and Hessian calculation, for
+        example for the results of a fit_constrained estimation with fixed
+        scale.
     observed : bool
         If True, then the observed Hessian is used in calculating the
         covariance matrix of the score. If false then the expected

@@ -308,6 +308,12 @@ def margeff_cov_params(
         Indices of the columns of exog that contain dummy variables
     count_ind : array_like
         Indices of the columns of exog that contain count variables
+    method : str
+        Method to use for the marginal effect, one of 'dydx', 'eyex',
+        'dyex', or 'eydx'. See `get_margeff` for details.
+    J : int
+        The number of response categories of the model. This is 1 except
+        for multinomial models.
 
     Notes
     -----

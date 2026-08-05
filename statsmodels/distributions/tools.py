@@ -91,6 +91,10 @@ def cdf2prob_grid(cdf, prepend=0):
     ----------
     cdf : array_like
         Grid of cumulative probabilities with same shape as probs.
+    prepend : int, float or None
+        Value to prepend to the difference along each axis before taking
+        ``np.diff``. If None, then no value is prepended (i.e. the length
+        along each axis decreases by 1 relative to ``cdf``).
 
     Returns
     -------

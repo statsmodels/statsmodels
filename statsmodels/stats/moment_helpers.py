@@ -398,8 +398,8 @@ def cov2corr(cov, return_std=False, *, use_namedtuple: bool | None = None):
         identically. See
         :class:`~statsmodels.stats.moment_helpers.Cov2CorrResult`.
 
-        When ``return_std=False`` a bare correlation matrix is returned
-        instead.
+        When ``return_std=False`` and ``use_namedtuple`` is not True, a bare
+        correlation matrix is returned instead.
 
     Notes
     -----

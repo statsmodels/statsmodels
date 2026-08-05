@@ -260,13 +260,13 @@ def fit_constrained(model, constraint_matrix, constraint_values,
 
     Parameters
     ----------
-    model: model instance
+    model : model instance
         An instance of a model, see limitations in Notes section.
     constraint_matrix : array_like, 2D
         This is R in the linear equality constraint `R params = q`.
         The number of columns needs to be the same as the number of columns
         in exog.
-    constraint_values :
+    constraint_values : array_like
         This is `q` in the linear equality constraint `R params = q`.
         If it is a tuple, then the constraint needs to be given by two
         arrays (constraint_matrix, constraint_value), i.e. (R, q).
@@ -277,7 +277,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
         Starting values for the optimization. `start_params` needs to be
         given in the original parameter space and are internally
         transformed.
-    **fit_kwds : keyword arguments
+    fit_kwds : dict, optional
         fit_kwds are used in the optimization of the transformed model.
 
     Returns

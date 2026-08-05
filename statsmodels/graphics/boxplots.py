@@ -113,7 +113,7 @@ def violinplot(
     >>> data = sm.datasets.anes96.load_pandas()
     >>> party_ID = np.arange(7)
     >>> labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",
-    ...           "Independent-Indpendent", "Independent-Republican",
+    ...           "Independent-Independent", "Independent-Republican",
     ...           "Weak Republican", "Strong Republican"]
 
     Group age by party ID, and create a violin plot with it:
@@ -341,7 +341,7 @@ def beanplot(
     >>> data = sm.datasets.anes96.load_pandas()
     >>> party_ID = np.arange(7)
     >>> labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",
-    ...           "Independent-Indpendent", "Independent-Republican",
+    ...           "Independent-Independent", "Independent-Republican",
     ...           "Weak Republican", "Strong Republican"]
 
     Group age by party ID, and create a violin plot with it:

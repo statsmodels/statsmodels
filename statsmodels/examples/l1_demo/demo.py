@@ -187,12 +187,12 @@ def run_demo(
     ----------
     mode : str
         either 'logit', 'mnlogit', or 'probit'
-    base_alpha :  Float
+    base_alpha : float
         Size of regularization param (the param actually used will
         automatically scale with data size in this demo)
     N : int
         Number of data points to generate for fit
-    get_l1_slsqp_results : bool,
+    get_l1_slsqp_results : bool
         Do an l1 fit using slsqp.
     get_l1_cvxopt_results : bool
         Do an l1 fit using cvxopt
@@ -213,7 +213,7 @@ def run_demo(
         print the full fit summary.
     save_arrays : bool
         Save exog/endog/true_params to disk for future use.
-    load_old_arrays
+    load_old_arrays : bool
         Load exog/endog/true_params arrays from disk.
     """
     if mode != "mnlogit":

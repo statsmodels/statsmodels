@@ -126,7 +126,7 @@ class IV2SLS(LikelihoodModel):
 
         Notes
         -----
-        This returns a generic RegressioResults instance as defined for the
+        This returns a generic RegressionResults instance as defined for the
         linear models.
 
         Parameter estimates and covariance are correct, but other results
@@ -178,7 +178,7 @@ class IV2SLS(LikelihoodModel):
 
         Notes
         -----
-        If the model as not yet been fit, params is not optional.
+        If the model has not yet been fit, params is not optional.
         """
         if exog is None:
             exog = self.exog
@@ -465,7 +465,7 @@ class GMM(Model):
     Attributes
     ----------
     results : instance of GMMResults
-        currently just a storage class for params and cov_params without it's
+        currently just a storage class for params and cov_params without its
         own methods
     bse : property
         return bse
@@ -600,7 +600,7 @@ class GMM(Model):
         Parameters
         ----------
         start_params : array (optional)
-            starting value for parameters ub minimization. If None then
+            starting value for parameters for minimization. If None then
             fitstart method is called for the starting values.
         maxiter : int or 'cue'
             Number of iterations in iterated GMM. The onestep estimate can be
@@ -751,7 +751,11 @@ class GMM(Model):
         weights : ndarray
             weighting matrix for moment conditions. If weights is None, then
             the identity matrix is used
-
+        optim_method : str, default is 'bfgs'
+            numerical optimization method. Currently not all optimizers that
+            are available in LikelihoodModels are connected.
+        optim_args : dict
+            keyword arguments for the numerical optimizer.
 
         Returns
         -------
@@ -809,6 +813,11 @@ class GMM(Model):
         ----------
         start : array_like
             starting values for minimization
+        optim_method : str, default is 'bfgs'
+            numerical optimization method. Currently not all optimizers that
+            are available in LikelihoodModels are connected.
+        optim_args : dict
+            keyword arguments for the numerical optimizer.
 
         Returns
         -------
@@ -875,6 +884,13 @@ class GMM(Model):
         ----------
         params : ndarray
             parameter values at which objective is evaluated
+        weights_method : str, defines method for robust
+            Options here are similar to :mod:`statsmodels.stats.robust_covariance`
+            default is heteroscedasticity consistent, HC0. See
+            `calc_weightmatrix` for details.
+        wargs : tuple or dict
+            required and optional arguments for weights_method, see
+            `calc_weightmatrix` for details.
 
         Returns
         -------
@@ -911,12 +927,21 @@ class GMM(Model):
             starting value for parameters
         maxiter : int
             maximum number of iterations
-        start_weights : array (nmoms, nmoms)
-            initial weighting matrix; if None, then the identity matrix
-            is used
+        start_invweights : array (nmoms, nmoms)
+            initial inverse weighting matrix; if None, then the identity
+            matrix is used
         weights_method : {'cov', ...}
             method to use to estimate the optimal weighting matrix,
             see calc_weightmatrix for details
+        wargs : tuple or dict
+            required and optional arguments for weights_method, see
+            calc_weightmatrix for details
+        optim_method : str, default is 'bfgs'
+            numerical optimization method used in `fitgmm` for each
+            iteration. Currently not all optimizers that are available in
+            LikelihoodModels are connected.
+        optim_args : dict
+            keyword arguments for the numerical optimizer.
 
         Returns
         -------
@@ -981,11 +1006,15 @@ class GMM(Model):
         weights_method : str 'cov'
             If method='cov' is cov then the matrix is calculated as simple
             covariance of the moment conditions.
-            see fit method for available aoptions for the weight and covariance
+            see fit method for available options for the weight and covariance
             matrix
         wargs : tuple or dict
             parameters that are required by some kernel methods to
             estimate the long-run covariance. Not used yet.
+        params : ndarray, optional
+            parameter values at which the moment conditions were evaluated.
+            Required for `weights_method='iid'` where the error term needs
+            to be recomputed.
 
         Returns
         -------
@@ -1667,7 +1696,7 @@ class IVGMMResults(GMMResults):
 
 
 def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
-    """Hausmans specification test
+    """Hausman's specification test
 
     Parameters
     ----------
@@ -1681,12 +1710,14 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
         covariance matrix of parameter estimates for params_e
     cov_params_i : ndarray, 2d
         covariance matrix of parameter estimates for params_i
-
-    example instrumental variables OLS estimator is `e`, IV estimator is `i`
-
+    dof : int, optional
+        degrees of freedom of the chisquare distribution for the test
+        statistic. If None, then it is set to the rank of ``cov_diff``,
+        the difference of the two covariance matrices.
 
     Notes
     -----
+    example instrumental variables OLS estimator is `e`, IV estimator is `i`
 
     Todos,Issues
     - check dof calculations and verify for linear case
@@ -1814,7 +1845,16 @@ class DistQuantilesGMM(GMM):
 
         Parameters
         ----------
-
+        start : array_like, optional
+            starting values for minimization. If None then fitstart method
+            is called for the starting values.
+        weights : ndarray, optional
+            weighting matrix for moment conditions. If weights is None,
+            then the identity matrix is used.
+        has_optimal_weights : bool
+            If true, then the calculation of the covariance matrix assumes
+            that we have optimal GMM with :math:`W = S^{-1}`. Default is
+            False.
 
         Returns
         -------

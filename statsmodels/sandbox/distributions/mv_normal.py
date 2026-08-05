@@ -739,7 +739,7 @@ class MVNormal0:
 
         Parameters
         ----------
-        X : array_like, 1d or 2d
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -1044,10 +1044,8 @@ class MVT(MVElliptical):
         sigma : array_like, 2d
             dispersion matrix, covariance matrix in normal distribution, but
             only proportional to covariance matrix in t distribution
-        args : list
-            distribution specific arguments, e.g. df for t distribution
-        kwds : dict
-            currently not used
+        df : int or float
+            degrees of freedom of the multivariate t distribution
 
         """
         super().__init__(mean, sigma)

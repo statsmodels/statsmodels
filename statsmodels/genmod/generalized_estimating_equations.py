@@ -3241,6 +3241,10 @@ class _Multinomial(families.Family):
         nlevels : int
             The number of distinct categories for the multinomial
             distribution.
+        check_link : bool
+            If True (default), then an exception is raised if the link is
+            invalid for the family.
+            If False, then the link is not checked.
         """
         self._check_link = check_link
         self.initialize(nlevels)

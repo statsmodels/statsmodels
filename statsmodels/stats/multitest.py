@@ -418,6 +418,10 @@ def fdrcorrection_twostage(
         deprecated ``iter`` keyword.
         maxiter=False is two-stage fdr (maxiter=1)
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
+    iter : bool
+        Removed keyword that is kept only for backwards compatibility.
+        Passing anything other than the default ``None`` raises a
+        ``TypeError``; use ``maxiter`` instead.
     is_sorted : bool
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the

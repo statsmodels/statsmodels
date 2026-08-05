@@ -1229,7 +1229,7 @@ def mvnormcdf(upper, mu, cov, lower=None, **kwds):
        lower and upper integration limits with length equal to the number
        of dimensions of the multivariate normal distribution. It can contain
        -np.inf or np.inf for open integration intervals
-    mu : array_lik, 1d
+    mu : array_like, 1d
        list or array of means
     cov : array_like, 2d
        specifies covariance matrix
