@@ -743,7 +743,7 @@ class TestOLS_GLS_WLS_equivalence:
         params_1 = np.array([self.results[0].params] * len(self.results))
         assert_allclose(params, params_1)
 
-    def test_ss(self):
+    def test_bse(self):
         bse = np.array([r.bse for r in self.results])
         bse_1 = np.array([self.results[0].bse] * len(self.results))
         assert_allclose(bse, bse_1)
