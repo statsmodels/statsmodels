@@ -325,7 +325,7 @@ def test_cochranq():
     ]
     table = np.asarray(table)
 
-    stat, pvalue, df = ctab.cochrans_q(table, return_object=False)
+    stat, pvalue, df = ctab.cochrans_q(table)
     assert_allclose(stat, 4.2)
     assert_allclose(df, 3)
 
@@ -342,20 +342,35 @@ def test_cochranq():
     ]
     table = np.asarray(table)
 
-    stat, pvalue, df = ctab.cochrans_q(table, return_object=False)
+    stat, pvalue, df = ctab.cochrans_q(table)
     assert_allclose(stat, 1.2174, rtol=1e-4)
     assert_allclose(df, 4)
 
     # Cochran's q and Mcnemar are equivalent for 2x2 tables
     data = table[:, 0:2]
     xtab = np.asarray(pd.crosstab(data[:, 0], data[:, 1]))
-    b1 = ctab.cochrans_q(data, return_object=True)
+    b1 = ctab.cochrans_q(data)
     b2 = ctab.mcnemar(xtab, exact=False, correction=False)
     assert_allclose(b1.statistic, b2.statistic)
     assert_allclose(b1.pvalue, b2.pvalue)
 
-    # Test for printing bunch
-    assert_equal(str(b1).startswith("df          1\npvalue      0.65"), True)
+    # The single result supports both attribute access and unpacking
+    assert isinstance(b1, ctab.CochransQResult)
+    assert_equal(len(b1), 3)
+    assert_allclose(tuple(b1), (b1.statistic, b1.pvalue, b1.df))
+    assert_equal(b1.df, 1)
+
+
+def test_cochrans_q_return_object_deprecated():
+    # return_object no longer changes the result, but still warns
+    rs = np.random.RandomState(12345)
+    data = rs.randint(0, 2, size=(30, 4))
+
+    expected = ctab.cochrans_q(data)
+    for value in (True, False):
+        with pytest.warns(FutureWarning, match="return_object"):
+            res = ctab.cochrans_q(data, return_object=value)
+        assert_equal(res, expected)
 
 
 class CheckStratifiedMixin:

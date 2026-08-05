@@ -6,6 +6,7 @@ License: BSD-3
 """
 
 
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -20,6 +21,7 @@ from statsmodels.tools.sm_exceptions import (
     iteration_limit_doc,
 )
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import bool_like
 
 
 def clip_evals(x, value=0):  # threshold=0, value=0):
@@ -153,8 +155,30 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
+class CovNearestResult(NamedTuple):
+    """
+    Result of :func:`cov_nearest` when the intermediate results are
+    returned.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Corrected covariance matrix.
+    corr : ndarray
+        Corrected correlation matrix.
+    std : ndarray
+        Standard deviation taken from the diagonal of the input covariance
+        matrix.
+    """
+
+    cov: np.ndarray
+    corr: np.ndarray
+    std: np.ndarray
+
+
 def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
-                return_all=False, *, min_diag=None):
+                return_all=False, *, min_diag=None,
+                use_namedtuple: bool | None = None):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
@@ -186,15 +210,35 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
         raised to ``min_diag`` before the conversion, and a ``SpecificationWarning``
         is issued. This makes it possible to correct matrices with a zero or
         negative diagonal, at the cost of changing those variances.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``CovNearestResult`` NamedTuple is
+        returned. When ``return_all=True`` a ``CovNearestResult`` is always
+        returned; it holds the same three elements as the legacy tuple, so
+        it unpacks and indexes identically. When ``return_all=False`` a bare
+        covariance matrix is returned unless ``use_namedtuple=True``, which
+        yields a ``CovNearestResult`` carrying the correlation matrix and
+        standard deviations too.
 
     Returns
     -------
-    cov_ : ndarray
-        corrected covariance matrix
-    corr_ : ndarray, (optional)
-        corrected correlation matrix
-    std_ : ndarray, (optional)
-        standard deviation
+    CovNearestResult or ndarray
+        When ``return_all=True`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        cov : ndarray
+            corrected covariance matrix
+        corr : ndarray
+            corrected correlation matrix
+        std : ndarray
+            standard deviation
+
+        ``CovNearestResult`` has the same length and contents as the plain
+        ``(cov_, corr_, std_)`` tuple it replaces, so it unpacks and indexes
+        identically. See
+        :class:`~statsmodels.stats.correlation_tools.CovNearestResult`.
+
+        When ``return_all=False`` a bare corrected covariance matrix is
+        returned instead.
 
     See Also
     --------
@@ -218,6 +262,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
 
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     cov = np.asarray(cov)
     if min_diag is not None:
         diag = np.diag(cov)
@@ -240,10 +285,15 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
 
     cov_ = corr2cov(corr_, std_)
 
-    if return_all:
-        return cov_, corr_, std_
-    else:
-        return cov_
+    # CovNearestResult has exactly the same length and contents as the legacy
+    # (cov_, corr_, std_) tuple, so it unpacks and indexes identically and is
+    # always used when return_all is True.  When return_all is False a bare
+    # covariance matrix is returned, as before; pass use_namedtuple=True to
+    # always get a CovNearestResult.  The correlation matrix and standard
+    # deviations are computed either way, so nothing is None-filled.
+    if use_namedtuple or return_all:
+        return CovNearestResult(cov_, corr_, std_)
+    return cov_
 
 
 def _nmono_linesearch(

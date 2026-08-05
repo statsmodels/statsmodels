@@ -227,6 +227,7 @@ Non-Parametric Tests
    runstest_1samp
    runstest_2samp
    cochrans_q
+   CochransQResult
    Runs
 
 .. currentmodule:: statsmodels.stats.descriptivestats
@@ -690,6 +691,7 @@ inverse covariance or precision matrix.
    corr_nearest_factor
    corr_thresholded
    cov_nearest
+   CovNearestResult
    cov_nearest_factor_homog
    FactoredPSDMatrix
    kernel_covariance
@@ -721,6 +723,7 @@ kurtosis and cummulants.
    mvsk2mc
    mvsk2mnc
    cov2corr
+   Cov2CorrResult
    corr2cov
    se_cov
 

@@ -4,8 +4,12 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import integrate, stats
+
+from statsmodels.tools.validation import bool_like
 
 pi2 = np.pi**2
 pi2i = 1. / pi2
@@ -36,7 +40,26 @@ def _term_integrate(rho):
     return fact
 
 
-def transform_corr_normal(corr, method, return_var=False, possdef=True):
+class TransformCorrNormalResult(NamedTuple):
+    """
+    Result of :func:`transform_corr_normal` when the variance is returned.
+
+    Parameters
+    ----------
+    corr : ndarray
+        Correlation matrix, consistent with the correlation for a
+        multivariate normal distribution.
+    var : ndarray
+        Asymptotic variance of the normalized correlation.
+    """
+
+    corr: np.ndarray
+    var: np.ndarray
+
+
+def transform_corr_normal(
+    corr, method, return_var=False, possdef=True, *, use_namedtuple: bool | None = None
+):
     """
     Transform correlation matrix to be consistent at normal distribution
 
@@ -56,14 +79,35 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
     possdef : not implemented yet
         Check whether resulting correlation matrix for positive semidefinite
         and return a positive semidefinite approximation if not.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``TransformCorrNormalResult`` NamedTuple
+        is returned. When ``return_var=True`` a
+        ``TransformCorrNormalResult`` is always returned; it holds the same
+        two elements as the legacy tuple, so it unpacks and indexes
+        identically. When ``return_var=False`` a bare correlation matrix is
+        returned unless ``use_namedtuple=True``, which yields a
+        ``TransformCorrNormalResult`` with ``var`` set to ``None``.
 
     Returns
     -------
-    corr : ndarray
-        correlation matrix, consistent with correlation for a multivariate
-        normal distribution
-    var : ndarray (optional)
-        asymptotic variance of the correlation if requested by `return_var`.
+    TransformCorrNormalResult or ndarray
+        When ``return_var=True`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        corr : ndarray
+            correlation matrix, consistent with correlation for a
+            multivariate normal distribution
+        var : ndarray or None
+            asymptotic variance of the correlation. ``None`` when
+            ``return_var`` is False, since it is not computed in that case.
+
+        ``TransformCorrNormalResult`` has the same length and contents as
+        the plain ``(corr_n, var)`` tuple it replaces, so it unpacks and
+        indexes identically. See
+        :class:`~statsmodels.stats.covariance.TransformCorrNormalResult`.
+
+        When ``return_var=False`` a bare correlation matrix is returned
+        instead.
 
     Notes
     -----
@@ -88,6 +132,7 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
        https://doi.org/10.1007/s10260-010-0142-z.
 
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     method = method.lower()
     rho = np.asarray(corr)
 
@@ -155,10 +200,15 @@ def transform_corr_normal(corr, method, return_var=False, possdef=True):
     else:
         raise ValueError("method not recognized")
 
-    if return_var:
-        return corr_n, var
-    else:
-        return corr_n
+    # TransformCorrNormalResult has exactly the same length and contents as
+    # the legacy (corr_n, var) tuple, so it unpacks and indexes identically
+    # and is always used when return_var is True.  When return_var is False a
+    # bare correlation matrix is returned, as before; pass
+    # use_namedtuple=True to always get a TransformCorrNormalResult, with
+    # var left as None since it is only computed when requested.
+    if use_namedtuple or return_var:
+        return TransformCorrNormalResult(corr_n, var)
+    return corr_n
 
 
 def corr_rank(data):

@@ -455,7 +455,7 @@ def plot_partregress(
         .. deprecated:: 0.15.0
 
             When ``ret_coords=False``, in release 0.16.0 or after July
-            2028, whichever is later, the default will change to return a
+            2027, whichever is later, the default will change to return a
             ``PartRegressPlotResult`` rather than a bare figure. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -619,7 +619,7 @@ def plot_partregress(
     if use_namedtuple is None and not ret_coords:
         warnings.warn(
             "plot_partregress currently returns a bare figure when "
-            "ret_coords=False. In release 0.16 or after July 2028, "
+            "ret_coords=False. In release 0.16 or after July 2027, "
             "whichever is later, the default behavior will switch to "
             "always returning a PartRegressPlotResult NamedTuple, which "
             "also carries the coordinates. Set use_namedtuple=True to "

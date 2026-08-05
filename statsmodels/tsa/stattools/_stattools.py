@@ -462,7 +462,7 @@ def adfuller(
         warnings.warn(
             "adfuller currently returns a plain tuple whose length depends "
             "on the store and autolag arguments. In release 0.16 or after "
-            "July 2028, whichever is later, the default behavior will "
+            "July 2027, whichever is later, the default behavior will "
             "switch to always returning an ADFullerResult NamedTuple. Set "
             "use_namedtuple=True to switch now, or use_namedtuple=False "
             "to keep the current behavior and silence this warning.",
@@ -1043,7 +1043,7 @@ def acf(
         warnings.warn(
             "acf currently returns a plain tuple whose length depends on "
             "the qstat and alpha arguments. In release 0.16 or after "
-            "July 2028, whichever is later, the default behavior will "
+            "July 2027, whichever is later, the default behavior will "
             "switch to always returning an AcfResult NamedTuple. Set "
             "use_namedtuple=True to switch now, or use_namedtuple=False "
             "to keep the current behavior and silence this warning.",
@@ -2959,7 +2959,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         warnings.warn(
             "kpss currently returns a plain tuple whose length and layout "
             "depends on the store argument (and which silently drops "
-            "`lags` when store=True). In release 0.16 or after July 2028, "
+            "`lags` when store=True). In release 0.16 or after July 2027, "
             "whichever is later, the default behavior will switch to "
             "always returning a KpssResult NamedTuple. Set "
             "use_namedtuple=True to switch now, or use_namedtuple=False "
@@ -3232,7 +3232,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         warnings.warn(
             "range_unit_root_test currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
-            "after July 2028, whichever is later, the default behavior "
+            "after July 2027, whichever is later, the default behavior "
             "will switch to always returning a RangeUnitRootTestResult "
             "NamedTuple. Set use_namedtuple=True to switch now, or "
             "use_namedtuple=False to keep the current behavior and "

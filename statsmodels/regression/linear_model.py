@@ -3498,7 +3498,7 @@ class OLSResults(RegressionResults):
             warnings.warn(
                 "el_test currently returns a plain tuple whose length "
                 "depends on the return_weights and ret_params arguments. "
-                "In release 0.16 or after July 2028, whichever is later, "
+                "In release 0.16 or after July 2027, whichever is later, "
                 "the default behavior will switch to always returning an "
                 "ELTestResult NamedTuple. Set use_namedtuple=True to "
                 "switch now, or use_namedtuple=False to keep the current "

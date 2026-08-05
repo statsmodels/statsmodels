@@ -234,7 +234,7 @@ def compare_cox(
         warnings.warn(
             "compare_cox currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
-            "July 2028, whichever is later, the default behavior will "
+            "July 2027, whichever is later, the default behavior will "
             "switch to always returning a NonNestedTestResult NamedTuple. "
             "Set use_namedtuple=True to switch now, or "
             "use_namedtuple=False to keep the current behavior and "
@@ -329,7 +329,7 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
         warnings.warn(
             "compare_j currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
-            "July 2028, whichever is later, the default behavior will "
+            "July 2027, whichever is later, the default behavior will "
             "switch to always returning a NonNestedTestResult NamedTuple. "
             "Set use_namedtuple=True to switch now, or "
             "use_namedtuple=False to keep the current behavior and "
@@ -757,7 +757,7 @@ def acorr_lm(
         warnings.warn(
             "acorr_lm currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
-            "July 2028, whichever is later, the default behavior will "
+            "July 2027, whichever is later, the default behavior will "
             "switch to always returning an LMTestResult NamedTuple. Set "
             "use_namedtuple=True to switch now, or use_namedtuple=False "
             "to keep the current behavior and silence this warning.",
@@ -945,7 +945,7 @@ def acorr_breusch_godfrey(
         warnings.warn(
             "acorr_breusch_godfrey currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
-            "after July 2028, whichever is later, the default behavior "
+            "after July 2027, whichever is later, the default behavior "
             "will switch to always returning an LMTestResult NamedTuple. "
             "Set use_namedtuple=True to switch now, or "
             "use_namedtuple=False to keep the current behavior and "
@@ -1271,7 +1271,7 @@ F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
         warnings.warn(
             "het_goldfeldquandt currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
-            "after July 2028, whichever is later, the default behavior "
+            "after July 2027, whichever is later, the default behavior "
             "will switch to always returning a GoldfeldQuandtResult "
             "NamedTuple. Set use_namedtuple=True to switch now, or "
             "use_namedtuple=False to keep the current behavior and "

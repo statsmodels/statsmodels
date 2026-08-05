@@ -506,7 +506,7 @@ def kdensity(
     if use_namedtuple is None and not retgrid:
         warnings.warn(
             "kdensity currently returns a plain (density, bw) tuple when "
-            "retgrid=False. In release 0.16 or after July 2028, whichever "
+            "retgrid=False. In release 0.16 or after July 2027, whichever "
             "is later, the default behavior will switch to always "
             "returning a KDEResult NamedTuple, which also carries the "
             "grid. Set use_namedtuple=True to switch now, or "
@@ -715,7 +715,7 @@ def kdensityfft(
     if use_namedtuple is None and not retgrid:
         warnings.warn(
             "kdensityfft currently returns a plain (density, bw) tuple "
-            "when retgrid=False. In release 0.16 or after July 2028, "
+            "when retgrid=False. In release 0.16 or after July 2027, "
             "whichever is later, the default behavior will switch to "
             "always returning a KDEResult NamedTuple, which also carries "
             "the grid. Set use_namedtuple=True to switch now, or "
