@@ -69,3 +69,5 @@ Module Reference
    descriptive.DescStat
    descriptive.DescStatUV
    descriptive.DescStatMV
+   descriptive.EmpLikeTestResult
+   elanova.ANOVAResult
