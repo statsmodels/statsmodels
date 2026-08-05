@@ -569,7 +569,7 @@ class Description:
         for col, single in vc.items():
             if single.shape[0] >= self._ntop:
                 top[col] = single.index[: self._ntop]
-                freq[col] = np.asarray(single.iloc[:5])
+                freq[col] = np.asarray(single.iloc[: self._ntop])
             else:
                 val = list(single.index)
                 val += [None] * (self._ntop - len(val))

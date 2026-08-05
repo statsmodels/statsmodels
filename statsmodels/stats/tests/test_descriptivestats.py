@@ -172,6 +172,19 @@ def test_large_ntop(df):
     assert "top_15" in res.frame.index
 
 
+def test_categorical_ntop_freq_length():
+    # The categorical `freq` rows used a hardcoded 5 instead of `ntop`, so a
+    # categorical column with at least `ntop` distinct values raised a
+    # ValueError ("Length of values (5) does not match length of index") for
+    # any ntop != 5.
+    s = pd.Series(list("aabbccddee")).astype("category")  # 5 distinct values
+    res = Description(pd.DataFrame({"x": s}), ntop=3)
+    for i in range(1, 4):
+        assert f"freq_{i}" in res.frame.index
+    # frequencies are relative; each of the 5 categories occurs 2/10 of the time
+    assert res.frame.loc["freq_1", "x"] == pytest.approx(0.2)
+
+
 def test_use_t(df):
     res = Description(df)
     res_t = Description(df, use_t=True)
