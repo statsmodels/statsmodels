@@ -276,7 +276,7 @@ def adfuller(
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``ADFullerResult``.
             Set ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -907,20 +907,21 @@ def acf(
         When using "conservative", n is set to the number of non-missing
         observations.
     use_namedtuple : bool, optional
-        Only relevant when ``qstat`` is True or ``alpha`` is not None,
-        where the return value's arity depends on this flag. Flag
-        indicating whether to return the results as an ``AcfResult``
-        NamedTuple instead of a plain tuple. If ``None`` (the default),
-        the current tuple-returning behavior is used and a
-        ``FutureWarning`` is issued. Ignored when ``qstat`` is False and
-        ``alpha`` is None, since ``acf`` always returns a single array in
-        that case.
+        Flag indicating whether to return the results as an ``AcfResult``
+        NamedTuple instead of a plain tuple. ``AcfResult`` always carries
+        all four fields, so it unpacks identically to the legacy tuple
+        only when both ``qstat`` is True and ``alpha`` is not None; that
+        combination is always returned, with no warning. Requesting
+        only one of ``qstat`` or ``alpha`` still returns the shorter
+        legacy tuple by default and issues a ``FutureWarning``, because
+        the NamedTuple would change how many values are unpacked. Ignored
+        when ``qstat`` is False and ``alpha`` is None, since ``acf``
+        returns a single array in that case.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return an ``AcfResult`` when
-            ``qstat`` is True or ``alpha`` is not None. Set
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return an ``AcfResult``. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
             current return type.
@@ -932,11 +933,17 @@ def acf(
         (nlags+1,). Returned directly (not part of a tuple) unless
         ``qstat`` is True or ``alpha`` is not None.
     AcfResult
-        If (``qstat`` is True or ``alpha`` is not None) and
-        ``use_namedtuple=True``, a NamedTuple with fields ``acf``,
-        ``confint``, ``qstat``, and ``pvalues`` instead of the plain
-        tuple below (``confint``/``qstat``/``pvalues`` are ``None`` when
-        not computed). See :class:`~statsmodels.tsa.stattools.AcfResult`.
+        A NamedTuple with fields ``acf``, ``confint``, ``qstat`` and
+        ``pvalues`` (each of the latter three is ``None`` when it was not
+        computed). See :class:`~statsmodels.tsa.stattools.AcfResult`.
+
+        This is returned whenever ``use_namedtuple=True``. It is also
+        returned by default when both ``qstat`` is True and ``alpha`` is
+        not None, because the NamedTuple then has exactly the same four
+        elements as the legacy tuple and so unpacks identically; that
+        case is adopted silently. Requesting only one of ``qstat`` or
+        ``alpha`` still returns the shorter legacy tuple below and warns,
+        since the NamedTuple would change how many values are unpacked.
     confint : ndarray, optional
         Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
         (nlags + 1, 2). Returned (as part of a plain tuple, the
@@ -1021,10 +1028,18 @@ def acf(
     if qstat:
         qstat_vals, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
 
-    # Only the qstat/alpha paths return more than one value today, so those
-    # are the only ones whose result shape is at stake.  Warning on the
-    # single-output path would fire for every internal use of acf.
-    if use_namedtuple is None and (qstat or alpha is not None):
+    # AcfResult always carries all four fields, so it unpacks identically to
+    # the legacy tuple only when both qstat and alpha were requested; in that
+    # case it is adopted silently.  Requesting just one of the two still
+    # returns the shorter legacy tuple and warns.  Only the qstat/alpha paths
+    # return more than one value today, so the single-output path stays quiet
+    # -- warning there would fire for every internal use of acf.
+    unpacks_unchanged = qstat and alpha is not None
+    if (
+        use_namedtuple is None
+        and (qstat or alpha is not None)
+        and not unpacks_unchanged
+    ):
         warnings.warn(
             "acf currently returns a plain tuple whose length depends on "
             "the qstat and alpha arguments. In release 0.16 or after "
@@ -1035,15 +1050,13 @@ def acf(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or unpacks_unchanged:
         return AcfResult(acf, confint, qstat_vals, pvalue)
 
     if not (qstat or alpha):
         return acf
-    if not qstat:
+    elif not qstat:
         return acf, confint
-    if alpha is not None:
-        return acf, confint, qstat_vals, pvalue
     return acf, qstat_vals, pvalue
 
 
@@ -1356,11 +1369,11 @@ def pacf(
         1/sqrt(len(x)).
     use_namedtuple : bool, optional
         Flag controlling whether a ``PacfResult`` NamedTuple is returned.
-        If ``None`` (the default), a ``PacfResult`` is returned when
-        ``alpha`` is not None and a bare array otherwise. Set to True to
-        always receive a ``PacfResult``, with ``confint`` set to ``None``
-        when ``alpha`` is None. Set to False to always receive the legacy
-        plain tuple or bare array.
+        When ``alpha`` is not None a ``PacfResult`` is always returned; it
+        holds the same two elements as the legacy tuple, so it unpacks
+        and indexes identically. When ``alpha`` is None a bare array is
+        returned unless ``use_namedtuple=True``, which additionally
+        yields a ``PacfResult`` with ``confint`` set to ``None``.
 
     Returns
     -------
@@ -1468,12 +1481,10 @@ def pacf(
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
 
     # PacfResult has exactly the same length and contents as the legacy
-    # (pacf, confint) tuple, so it unpacks and indexes identically and can
-    # be adopted with no deprecation.  When alpha is None a bare array is
-    # returned, as before; pass use_namedtuple=True to always get a
+    # (pacf, confint) tuple, so it unpacks and indexes identically and is
+    # always used when alpha is not None.  When alpha is None a bare array
+    # is returned, as before; pass use_namedtuple=True to always get a
     # PacfResult.
-    if use_namedtuple is False:
-        return (ret, confint) if alpha is not None else ret
     if use_namedtuple or alpha is not None:
         return PacfResult(ret, confint)
     return ret
@@ -1581,11 +1592,11 @@ def ccf(
         1/sqrt(len(x)).
     use_namedtuple : bool, optional
         Flag controlling whether a ``CcfResult`` NamedTuple is returned.
-        If ``None`` (the default), a ``CcfResult`` is returned when
-        ``alpha`` is not None and a bare array otherwise. Set to True to
-        always receive a ``CcfResult``, with ``confint`` set to ``None``
-        when ``alpha`` is None. Set to False to always receive the legacy
-        plain tuple or bare array.
+        When ``alpha`` is not None a ``CcfResult`` is always returned; it
+        holds the same two elements as the legacy tuple, so it unpacks
+        and indexes identically. When ``alpha`` is None a bare array is
+        returned unless ``use_namedtuple=True``, which additionally
+        yields a ``CcfResult`` with ``confint`` set to ``None``.
 
     Returns
     -------
@@ -1647,12 +1658,10 @@ def ccf(
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
 
     # CcfResult has exactly the same length and contents as the legacy
-    # (ccf, confint) tuple, so it unpacks and indexes identically and can be
-    # adopted with no deprecation.  When alpha is None a bare array is
-    # returned, as before; pass use_namedtuple=True to always get a
+    # (ccf, confint) tuple, so it unpacks and indexes identically and is
+    # always used when alpha is not None.  When alpha is None a bare array
+    # is returned, as before; pass use_namedtuple=True to always get a
     # CcfResult.
-    if use_namedtuple is False:
-        return (ret, confint) if alpha is not None else ret
     if use_namedtuple or alpha is not None:
         return CcfResult(ret, confint)
     return ret
@@ -1838,11 +1847,11 @@ def pccf(
         deviation is 1/sqrt(n).
     use_namedtuple : bool, optional
         Flag controlling whether a ``PccfResult`` NamedTuple is returned.
-        If ``None`` (the default), a ``PccfResult`` is returned when
-        ``alpha`` is not None and a bare array otherwise. Set to True to
-        always receive a ``PccfResult``, with ``confint`` set to ``None``
-        when ``alpha`` is None. Set to False to always receive the legacy
-        plain tuple or bare array.
+        When ``alpha`` is not None a ``PccfResult`` is always returned; it
+        holds the same two elements as the legacy tuple, so it unpacks
+        and indexes identically. When ``alpha`` is None a bare array is
+        returned unless ``use_namedtuple=True``, which additionally
+        yields a ``PccfResult`` with ``confint`` set to ``None``.
 
     Returns
     -------
@@ -1987,12 +1996,10 @@ def pccf(
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
 
     # PccfResult has exactly the same length and contents as the legacy
-    # (pccf, confint) tuple, so it unpacks and indexes identically and can
-    # be adopted with no deprecation.  When alpha is None a bare array is
-    # returned, as before; pass use_namedtuple=True to always get a
+    # (pccf, confint) tuple, so it unpacks and indexes identically and is
+    # always used when alpha is not None.  When alpha is None a bare array
+    # is returned, as before; pass use_namedtuple=True to always get a
     # PccfResult.
-    if use_namedtuple is False:
-        return (ret, confint) if alpha is not None else ret
     if use_namedtuple or alpha is not None:
         return PccfResult(ret, confint)
     return ret
@@ -2794,7 +2801,7 @@ def kpss(
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a ``KpssResult``. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -3081,12 +3088,14 @@ def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as a
         ``RangeUnitRootTestResult`` NamedTuple instead of a plain tuple.
-        If ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued.
+        When ``store=True`` the NamedTuple holds the same four elements as
+        the legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy
+        three-element tuple is returned by default and a ``FutureWarning``
+        is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
             ``RangeUnitRootTestResult``. Set ``use_namedtuple=True`` to opt
             in now, or ``use_namedtuple=False`` to silence the warning and
@@ -3219,7 +3228,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
     else:
         rstore = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "range_unit_root_test currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
@@ -3231,12 +3240,9 @@ look-up table. The actual p-value is {direction} than the p-value returned.
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return RangeUnitRootTestResult(rur_stat, p_value, crit_dict, rstore)
-    if store:
-        return rur_stat, p_value, crit_dict, rstore
-    else:
-        return rur_stat, p_value, crit_dict
+    return rur_stat, p_value, crit_dict
 
 
 class ZivotAndrewsUnitRoot:

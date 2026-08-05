@@ -446,11 +446,11 @@ def plot_partregress(
         defining endog or exog.
     use_namedtuple : bool, optional
         Flag controlling whether a ``PartRegressPlotResult`` NamedTuple is
-        returned. If ``None`` (the default), a ``PartRegressPlotResult``
-        is returned when ``ret_coords`` is True and a bare figure
-        otherwise. Set to True to always receive a
-        ``PartRegressPlotResult``. Set to False to always receive the
-        legacy bare figure or ``(fig, coords)`` tuple.
+        returned. When ``ret_coords`` is True a ``PartRegressPlotResult``
+        is always returned; it holds the same two elements as the legacy
+        ``(fig, coords)`` tuple, so it unpacks and indexes identically.
+        Otherwise a bare figure is returned unless
+        ``use_namedtuple=True``.
 
         .. deprecated:: 0.15.0
 
@@ -628,8 +628,11 @@ def plot_partregress(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple is False:
-        return (fig, coords) if ret_coords else fig
+    # PartRegressPlotResult has exactly the same length and contents as the
+    # legacy (fig, coords) tuple, so it unpacks and indexes identically and
+    # is always used when ret_coords=True.  Otherwise a bare figure is
+    # returned, as before; pass use_namedtuple=True to always get a
+    # PartRegressPlotResult.
     if use_namedtuple or ret_coords:
         return PartRegressPlotResult(fig, coords)
     return fig

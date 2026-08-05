@@ -152,13 +152,14 @@ def compare_cox(
         If true, then the intermediate results are returned.
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as a
-        ``NonNestedTestResult`` NamedTuple instead of a plain tuple. If
-        ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued.
+        ``NonNestedTestResult`` NamedTuple instead of a plain tuple. When
+        ``store=True`` the NamedTuple holds the same three elements as the
+        legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy two-element tuple
+        is returned by default and a ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
             ``NonNestedTestResult``. Set ``use_namedtuple=True`` to opt in
             now, or ``use_namedtuple=False`` to silence the warning and
@@ -229,7 +230,7 @@ def compare_cox(
     else:
         res = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "compare_cox currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
@@ -241,10 +242,8 @@ def compare_cox(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return NonNestedTestResult(q, pval, res)
-    if store:
-        return q, pval, res
     return q, pval
 
 
@@ -262,13 +261,14 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
         If true, then the intermediate results are returned.
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as a
-        ``NonNestedTestResult`` NamedTuple instead of a plain tuple. If
-        ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued.
+        ``NonNestedTestResult`` NamedTuple instead of a plain tuple. When
+        ``store=True`` the NamedTuple holds the same three elements as the
+        legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy two-element tuple
+        is returned by default and a ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
             ``NonNestedTestResult``. Set ``use_namedtuple=True`` to opt in
             now, or ``use_namedtuple=False`` to silence the warning and
@@ -325,7 +325,7 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
     else:
         res = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "compare_j currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
@@ -337,10 +337,8 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return NonNestedTestResult(tstat, pval, res)
-    if store:
-        return tstat, pval, res
     return tstat, pval
 
 
@@ -663,13 +661,15 @@ def acorr_lm(
         more details.
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as an ``LMTestResult``
-        NamedTuple instead of a plain tuple. If ``None`` (the default), the
-        current tuple-returning behavior is used and a ``FutureWarning`` is
-        issued.
+        NamedTuple instead of a plain tuple. When ``store=True`` the
+        NamedTuple holds the same five elements as the legacy tuple, so it
+        unpacks identically and is always returned, with no warning.
+        When ``store=False`` the legacy four-element tuple is returned by
+        default and a ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``LMTestResult``. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -753,7 +753,7 @@ def acorr_lm(
     else:
         res_store = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "acorr_lm currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
@@ -764,10 +764,8 @@ def acorr_lm(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return LMTestResult(lm, lmpval, fval, fpval, res_store)
-    if store:
-        return lm, lmpval, fval, fpval, res_store
     return lm, lmpval, fval, fpval
 
 
@@ -792,13 +790,15 @@ def het_arch(
         ARMA(p,q).
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as an ``LMTestResult``
-        NamedTuple instead of a plain tuple. If ``None`` (the default), the
-        current tuple-returning behavior is used and a ``FutureWarning`` is
-        issued.
+        NamedTuple instead of a plain tuple. When ``store=True`` the
+        NamedTuple holds the same five elements as the legacy tuple, so it
+        unpacks identically and is always returned, with no warning.
+        When ``store=False`` the legacy four-element tuple is returned by
+        default and a ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``LMTestResult``. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -854,13 +854,15 @@ def acorr_breusch_godfrey(
         intermediate results is returned.
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as an ``LMTestResult``
-        NamedTuple instead of a plain tuple. If ``None`` (the default), the
-        current tuple-returning behavior is used and a ``FutureWarning`` is
-        issued.
+        NamedTuple instead of a plain tuple. When ``store=True`` the
+        NamedTuple holds the same five elements as the legacy tuple, so it
+        unpacks identically and is always returned, with no warning.
+        When ``store=False`` the legacy four-element tuple is returned by
+        default and a ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``LMTestResult``. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
@@ -939,7 +941,7 @@ def acorr_breusch_godfrey(
     else:
         res_store = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "acorr_breusch_godfrey currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
@@ -951,10 +953,8 @@ def acorr_breusch_godfrey(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return LMTestResult(lm, lmpval, fval, fpval, res_store)
-    if store:
-        return lm, lmpval, fval, fpval, res_store
     return lm, lmpval, fval, fpval
 
 
@@ -1168,13 +1168,14 @@ def het_goldfeldquandt(
         Flag indicating to return the regression results
     use_namedtuple : bool, optional
         Flag indicating whether to return the results as a
-        ``GoldfeldQuandtResult`` NamedTuple instead of a plain tuple. If
-        ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued.
+        ``GoldfeldQuandtResult`` NamedTuple instead of a plain tuple. When
+        ``store=True`` the NamedTuple holds the same four elements as the
+        legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy three-element
+        tuple is returned by default and a ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
+            In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
             ``GoldfeldQuandtResult``. Set ``use_namedtuple=True`` to opt
             in now, or ``use_namedtuple=False`` to silence the warning and
@@ -1266,7 +1267,7 @@ F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
     else:
         res = None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not store:
         warnings.warn(
             "het_goldfeldquandt currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
@@ -1278,10 +1279,8 @@ F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or store:
         return GoldfeldQuandtResult(fval, fpval, ordering, res)
-    if store:
-        return fval, fpval, ordering, res
     return fval, fpval, ordering
 
 

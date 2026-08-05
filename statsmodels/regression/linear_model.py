@@ -1519,15 +1519,17 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         Flag indicating whether to return the results as a
         ``YuleWalkerResult`` NamedTuple instead of a plain tuple. If
         ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued.
+        used and a ``FutureWarning`` is issued. If ``inv`` is True,
+        a ``YuleWalkerResult`` is always returned.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``YuleWalkerResult``.
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to returning a ``YuleWalkerResult``.
             Set ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
-            current return type.
+            current return type. ``YuleWalkerResult`` will become mandatory
+            in release 0.17.0 or after July 2028, whichever is later.
 
     Returns
     -------
@@ -1543,7 +1545,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     sigma : float
         The estimate of the residual standard deviation.
     Rinv : ndarray, optional
-        The inverse of R. Only returned if `inv` is True.
+        The inverse of R. Only returned if ``inv`` is True, otherwise ``None``.
 
     See Also
     --------
@@ -1614,21 +1616,19 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         sigma = np.nan
     Rinv = np.linalg.inv(R) if inv else None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not inv:
         warnings.warn(
             "yule_walker currently returns a plain tuple whose length "
             "depends on the inv argument. In release 0.16 or after July "
             "2028, whichever is later, the default behavior will switch "
-            "to always returning a YuleWalkerResult NamedTuple. Set "
+            "to returning a YuleWalkerResult NamedTuple. Set "
             "use_namedtuple=True to switch now, or use_namedtuple=False "
             "to keep the current behavior and silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or inv:
         return YuleWalkerResult(rho, sigma, Rinv)
-    if inv:
-        return rho, sigma, Rinv
     return rho, sigma
 
 
@@ -3370,27 +3370,39 @@ class OLSResults(RegressionResults):
             regressors. The default is True.
         use_namedtuple : bool, optional
             Flag indicating whether to return the results as an
-            ``ELTestResult`` NamedTuple instead of a plain tuple. If
-            ``None`` (the default), the current tuple-returning behavior is
-            used and a ``FutureWarning`` is issued.
+            ``ELTestResult`` NamedTuple instead of a plain tuple. When the
+            nuisance parameters are produced -- ``ret_params`` is True and
+            ``len(param_nums) < len(params)`` -- the NamedTuple holds the
+            same four elements as the legacy tuple, so it unpacks
+            identically and is always returned, with no warning. Every
+            other combination returns the shorter legacy tuple by default
+            and issues a ``FutureWarning``.
 
             .. deprecated:: 0.15.0
 
-                In release 0.16.0 or after July 2028, whichever is later,
-                the default will change to always return an
-                ``ELTestResult``. Set ``use_namedtuple=True`` to opt in
-                now, or ``use_namedtuple=False`` to silence the warning and
-                keep the current return type.
+                In release 0.16.0 or after July 2027, whichever is later,
+                the default will change to returning an ``ELTestResult``.
+                Set ``use_namedtuple=True`` to opt in now, or
+                ``use_namedtuple=False`` to silence the warning and keep the
+                current return type.  ``ELTestResult`` will become mandatory
+                in release 0.17.0 or after July 2028, whichever is later.
 
         Returns
         -------
         ELTestResult
-            If ``use_namedtuple=True``, a NamedTuple with fields ``llr``,
-            ``pval``, ``weights``, and ``nuisance_params`` (``weights`` is
-            ``None`` unless ``return_weights`` or ``ret_params`` is True;
+            A NamedTuple with fields ``llr``, ``pval``, ``weights`` and
+            ``nuisance_params`` (``weights`` is ``None`` unless
+            ``return_weights`` or ``ret_params`` is True;
             ``nuisance_params`` is ``None`` unless ``ret_params`` is True
             and ``len(param_nums) < len(params)``). See
             :class:`~statsmodels.regression.linear_model.ELTestResult`.
+
+            This is returned whenever ``use_namedtuple=True``. It is also
+            returned by default when the nuisance parameters were
+            produced -- that is, when ``ret_params`` is True and
+            ``len(param_nums) < len(params)`` -- because the NamedTuple
+            then has exactly the same four elements as the legacy tuple
+            and so unpacks identically; that case is adopted silently.
 
         Otherwise (the deprecated default), a plain tuple whose length
         depends on `return_weights` and `ret_params`, made up of a subset
@@ -3478,7 +3490,11 @@ class OLSResults(RegressionResults):
             else:
                 weights = None
 
-        if use_namedtuple is None:
+        # ELTestResult always carries all four fields, so it unpacks
+        # identically to the legacy tuple only when the nuisance parameters
+        # were produced as well; in that case it is adopted silently.
+        unpacks_unchanged = nuisance_params is not None
+        if use_namedtuple is None and not unpacks_unchanged:
             warnings.warn(
                 "el_test currently returns a plain tuple whose length "
                 "depends on the return_weights and ret_params arguments. "
@@ -3490,10 +3506,8 @@ class OLSResults(RegressionResults):
                 FutureWarning,
                 stacklevel=2,
             )
-        if use_namedtuple:
+        if use_namedtuple or unpacks_unchanged:
             return ELTestResult(llr, pval, weights, nuisance_params)
-        if nuisance_params is not None:
-            return llr, pval, weights, nuisance_params
         if weights is not None:
             return llr, pval, weights
         return llr, pval
