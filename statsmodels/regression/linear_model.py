@@ -1519,15 +1519,17 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         Flag indicating whether to return the results as a
         ``YuleWalkerResult`` NamedTuple instead of a plain tuple. If
         ``None`` (the default), the current tuple-returning behavior is
-        used and a ``FutureWarning`` is issued.
+        used and a ``FutureWarning`` is issued. If ``inv`` is True,
+        a ``YuleWalkerResult`` is always returned.
 
         .. deprecated:: 0.15.0
 
-            In release 0.16.0 or after July 2028, whichever is later, the
-            default will change to always return a ``YuleWalkerResult``.
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to returning a ``YuleWalkerResult``.
             Set ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
-            current return type.
+            current return type. ``YuleWalkerResult`` will become mandatory
+            in release 0.17.0 or after July 2028, whichever is later.
 
     Returns
     -------
@@ -1543,7 +1545,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     sigma : float
         The estimate of the residual standard deviation.
     Rinv : ndarray, optional
-        The inverse of R. Only returned if `inv` is True.
+        The inverse of R. Only returned if ``inv`` is True, otherwise ``None``.
 
     See Also
     --------
@@ -1614,21 +1616,19 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         sigma = np.nan
     Rinv = np.linalg.inv(R) if inv else None
 
-    if use_namedtuple is None:
+    if use_namedtuple is None and not inv:
         warnings.warn(
             "yule_walker currently returns a plain tuple whose length "
             "depends on the inv argument. In release 0.16 or after July "
             "2028, whichever is later, the default behavior will switch "
-            "to always returning a YuleWalkerResult NamedTuple. Set "
+            "to returning a YuleWalkerResult NamedTuple. Set "
             "use_namedtuple=True to switch now, or use_namedtuple=False "
             "to keep the current behavior and silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple:
+    if use_namedtuple or inv:
         return YuleWalkerResult(rho, sigma, Rinv)
-    if inv:
-        return rho, sigma, Rinv
     return rho, sigma
 
 
@@ -3376,11 +3376,12 @@ class OLSResults(RegressionResults):
 
             .. deprecated:: 0.15.0
 
-                In release 0.16.0 or after July 2028, whichever is later,
-                the default will change to always return an
-                ``ELTestResult``. Set ``use_namedtuple=True`` to opt in
-                now, or ``use_namedtuple=False`` to silence the warning and
-                keep the current return type.
+                In release 0.16.0 or after July 2027, whichever is later,
+                the default will change to returning an ``ELTestResult``.
+                Set ``use_namedtuple=True`` to opt in now, or
+                ``use_namedtuple=False`` to silence the warning and keep the
+                current return type.  ``ELTestResult`` will become mandatory
+                in release 0.17.0 or after July 2028, whichever is later.
 
         Returns
         -------

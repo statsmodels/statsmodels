@@ -405,12 +405,13 @@ def kdensity(
 
         .. deprecated:: 0.15.0
 
-            When ``retgrid=False``, in release 0.16.0 or after July 2028,
+            When ``retgrid=False``, in release 0.16.0 or after July 2027,
             whichever is later, the default will change to return a
             ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
-            current return type.
+            current return type. ``KDEResult`` will be manadatory in 0.17
+            or after July 2028, whichever is later.
 
     Returns
     -------
@@ -513,8 +514,6 @@ def kdensity(
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple is False:
-        return (dens, grid, bw) if retgrid else (dens, bw)
     if use_namedtuple or retgrid:
         # `grid` is always computed, so it is returned even when
         # retgrid=False rather than being None-filled.
@@ -597,12 +596,13 @@ def kdensityfft(
 
         .. deprecated:: 0.15.0
 
-            When ``retgrid=False``, in release 0.16.0 or after July 2028,
+            When ``retgrid=False``, in release 0.16.0 or after July 2027,
             whichever is later, the default will change to return a
             ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
             ``use_namedtuple=True`` to opt in now, or
             ``use_namedtuple=False`` to silence the warning and keep the
-            current return type.
+            current return type. ``KDEResult`` will be manadatory in 0.17
+            or after July 2028, whichever is later.
 
     Returns
     -------
