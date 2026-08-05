@@ -441,13 +441,19 @@ def test_plot_partregress_use_namedtuple(close_figures):
     assert res.coords is not None
     assert len(res.coords) == 2
 
+    # The NamedTuple is used whenever it unpacks identically, so
+    # use_namedtuple=False cannot opt out of it here.
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
         res = plot_partregress(
             y, x1, x2[:, None], ret_coords=True, use_namedtuple=False
         )
-    assert type(res) is tuple
+    assert isinstance(res, PartRegressPlotResult)
     assert len(res) == 2
+    # ...and it still unpacks like the legacy (fig, coords) tuple
+    fig, coords = res
+    assert fig is res.fig
+    assert coords is res.coords
 
 
 @pytest.mark.matplotlib

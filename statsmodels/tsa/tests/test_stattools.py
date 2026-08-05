@@ -329,6 +329,44 @@ class TestACF(CheckCorrGram):
         assert res_nt.qstat is None
         assert res_nt.pvalues is None
 
+    @pytest.mark.parametrize(
+        "kwargs, expected",
+        [
+            ({"alpha": 0.05}, 2),
+            ({"qstat": True}, 3),
+            ({"qstat": True, "alpha": 0.05}, 4),
+        ],
+    )
+    def test_legacy_unpacking_preserved(self, kwargs, expected):
+        # AcfResult always carries four fields, so it may only be adopted by
+        # default where that matches the legacy arity.  Returning it for
+        # alpha-only or qstat-only would raise "too many values to unpack"
+        # in existing user code.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = acf(self.x, nlags=40, fft=False, **kwargs)
+            opted_out = acf(
+                self.x, nlags=40, fft=False, use_namedtuple=False, **kwargs
+            )
+        assert len(res) == expected
+        assert len(opted_out) == expected
+        # unpacking with exactly `expected` names must not raise
+        _ = [*res]
+        assert len([*res]) == expected
+
+    def test_only_full_request_adopts_namedtuple_silently(self):
+        # Both qstat and alpha -> the four-field NamedTuple unpacks exactly
+        # like the legacy 4-tuple, so it is adopted with no warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(self.x, nlags=40, fft=False, qstat=True, alpha=0.05)
+        assert isinstance(res, AcfResult)
+        # Requesting only one of them still warns and keeps the short tuple.
+        for kwargs in ({"alpha": 0.05}, {"qstat": True}):
+            with pytest.warns(FutureWarning, match="use_namedtuple"):
+                short = acf(self.x, nlags=40, fft=False, **kwargs)
+            assert not isinstance(short, AcfResult)
+
 
 class TestACF_FFT(CheckCorrGram):
     # Test Autocorrelation Function using FFT
@@ -459,14 +497,18 @@ class TestPACF(CheckCorrGram):
             res = pacf(self.x, nlags=40, alpha=0.05, method="ols")
         assert isinstance(res, PacfResult)
         assert len(res) == 2
+        # The NamedTuple is used whenever it unpacks identically, so
+        # use_namedtuple=False cannot opt out of it here.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            legacy = pacf(
+            opted_out = pacf(
                 self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=False
             )
-        assert type(legacy) is tuple
-        assert_allclose(res.pacf, legacy[0])
-        assert_allclose(res.confint, legacy[1])
+        assert isinstance(opted_out, PacfResult)
+        # ...and it still unpacks like the legacy 2-tuple
+        vals, confint = res
+        assert_allclose(vals, res.pacf)
+        assert_allclose(confint, res.confint)
 
     def test_alpha_use_namedtuple_true(self):
         with warnings.catch_warnings():
@@ -571,14 +613,18 @@ class TestCCF:
             res = ccf(self.x, self.y, nlags=self.nlags, alpha=0.05)
         assert isinstance(res, CcfResult)
         assert len(res) == 2
+        # The NamedTuple is used whenever it unpacks identically, so
+        # use_namedtuple=False cannot opt out of it here.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            legacy = ccf(
+            opted_out = ccf(
                 self.x, self.y, nlags=self.nlags, alpha=0.05, use_namedtuple=False
             )
-        assert type(legacy) is tuple
-        assert_allclose(res.ccf, legacy[0])
-        assert_allclose(res.confint, legacy[1])
+        assert isinstance(opted_out, CcfResult)
+        # ...and it still unpacks like the legacy 2-tuple
+        vals, confint = res
+        assert_allclose(vals, res.ccf)
+        assert_allclose(confint, res.confint)
 
     def test_alpha_use_namedtuple_true(self):
         with warnings.catch_warnings():
@@ -660,9 +706,11 @@ class TestPCCF:
             res = pccf(self.x, self.y, nlags=self.nlags, method="ols", alpha=0.05)
         assert isinstance(res, PccfResult)
         assert len(res) == 2
+        # The NamedTuple is used whenever it unpacks identically, so
+        # use_namedtuple=False cannot opt out of it here.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            legacy = pccf(
+            opted_out = pccf(
                 self.x,
                 self.y,
                 nlags=self.nlags,
@@ -670,9 +718,11 @@ class TestPCCF:
                 alpha=0.05,
                 use_namedtuple=False,
             )
-        assert type(legacy) is tuple
-        assert_allclose(res.pccf, legacy[0])
-        assert_allclose(res.confint, legacy[1])
+        assert isinstance(opted_out, PccfResult)
+        # ...and it still unpacks like the legacy 2-tuple
+        vals, confint = res
+        assert_allclose(vals, res.pccf)
+        assert_allclose(confint, res.confint)
 
     def test_alpha_use_namedtuple_true(self):
         with warnings.catch_warnings():

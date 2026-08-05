@@ -355,11 +355,12 @@ def lagmat(
         Series or DataFrame.  If false, return numpy ndarrays.
     use_namedtuple : bool, optional
         Flag controlling whether a ``LagmatResult`` NamedTuple is
-        returned. If ``None`` (the default), a ``LagmatResult`` is
-        returned when ``original="sep"`` and a bare array otherwise. Set
-        to True to always receive a ``LagmatResult``, with ``leads`` set
-        to ``None`` for other values of ``original``. Set to False to
-        always receive the legacy plain tuple or bare array.
+        returned. When ``original="sep"`` a ``LagmatResult`` is always
+        returned; it holds the same two elements as the legacy tuple, so
+        it unpacks and indexes identically. For other values of
+        ``original`` a bare array is returned unless
+        ``use_namedtuple=True``, which additionally yields a
+        ``LagmatResult`` with ``leads`` set to ``None``.
 
     Returns
     -------
@@ -512,13 +513,12 @@ def lagmat(
             leads = lm[startobs:stopobs, :dropidx]
 
     # LagmatResult has exactly the same length and contents as the legacy
-    # (lags, leads) tuple, so it unpacks and indexes identically and can be
-    # adopted with no deprecation.  For other values of `original` a bare
-    # array is returned, as before; pass use_namedtuple=True to always get
-    # a LagmatResult.  `leads` is only meaningful for "sep" -- for "ex" the
-    # caller asked for it to be excluded and for "in" it is part of `lags`.
-    if use_namedtuple is False:
-        return (lags, leads) if original == "sep" else lags
+    # (lags, leads) tuple, so it unpacks and indexes identically and is
+    # always used when original="sep".  For other values of `original` a
+    # bare array is returned, as before; pass use_namedtuple=True to always
+    # get a LagmatResult.  `leads` is only meaningful for "sep" -- for "ex"
+    # the caller asked for it to be excluded and for "in" it is part of
+    # `lags`.
     if use_namedtuple or original == "sep":
         return LagmatResult(lags, leads if original == "sep" else None)
     return lags

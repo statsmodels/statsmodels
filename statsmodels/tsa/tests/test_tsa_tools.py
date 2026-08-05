@@ -220,16 +220,19 @@ class TestLagmat:
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = stattools.lagmat(data, 3, trim="none", original="sep")
-            legacy = stattools.lagmat(
+            # The NamedTuple is used whenever it unpacks identically, so
+            # use_namedtuple=False cannot opt out of it here.
+            opted_out = stattools.lagmat(
                 data, 3, trim="none", original="sep", use_namedtuple=False
             )
         assert isinstance(res, LagmatResult)
+        assert isinstance(opted_out, LagmatResult)
         assert len(res) == 2
+        # ...and it still unpacks like the legacy 2-tuple
         lags, leads = res
         assert isinstance(lags, np.ndarray)
-        assert type(legacy) is tuple
-        assert_array_almost_equal(res.lags, legacy[0])
-        assert_array_almost_equal(res.leads, legacy[1])
+        assert_array_almost_equal(lags, res.lags)
+        assert_array_almost_equal(leads, res.leads)
 
     def test_sep_return_use_namedtuple_true(self):
         data = self.random_data

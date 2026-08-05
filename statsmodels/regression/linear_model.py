@@ -3370,9 +3370,13 @@ class OLSResults(RegressionResults):
             regressors. The default is True.
         use_namedtuple : bool, optional
             Flag indicating whether to return the results as an
-            ``ELTestResult`` NamedTuple instead of a plain tuple. If
-            ``None`` (the default), the current tuple-returning behavior is
-            used and a ``FutureWarning`` is issued.
+            ``ELTestResult`` NamedTuple instead of a plain tuple. When the
+            nuisance parameters are produced -- ``ret_params`` is True and
+            ``len(param_nums) < len(params)`` -- the NamedTuple holds the
+            same four elements as the legacy tuple, so it unpacks
+            identically and is always returned, with no warning. Every
+            other combination returns the shorter legacy tuple by default
+            and issues a ``FutureWarning``.
 
             .. deprecated:: 0.15.0
 
@@ -3386,12 +3390,19 @@ class OLSResults(RegressionResults):
         Returns
         -------
         ELTestResult
-            If ``use_namedtuple=True``, a NamedTuple with fields ``llr``,
-            ``pval``, ``weights``, and ``nuisance_params`` (``weights`` is
-            ``None`` unless ``return_weights`` or ``ret_params`` is True;
+            A NamedTuple with fields ``llr``, ``pval``, ``weights`` and
+            ``nuisance_params`` (``weights`` is ``None`` unless
+            ``return_weights`` or ``ret_params`` is True;
             ``nuisance_params`` is ``None`` unless ``ret_params`` is True
             and ``len(param_nums) < len(params)``). See
             :class:`~statsmodels.regression.linear_model.ELTestResult`.
+
+            This is returned whenever ``use_namedtuple=True``. It is also
+            returned by default when the nuisance parameters were
+            produced -- that is, when ``ret_params`` is True and
+            ``len(param_nums) < len(params)`` -- because the NamedTuple
+            then has exactly the same four elements as the legacy tuple
+            and so unpacks identically; that case is adopted silently.
 
         Otherwise (the deprecated default), a plain tuple whose length
         depends on `return_weights` and `ret_params`, made up of a subset
@@ -3479,7 +3490,11 @@ class OLSResults(RegressionResults):
             else:
                 weights = None
 
-        if use_namedtuple is None:
+        # ELTestResult always carries all four fields, so it unpacks
+        # identically to the legacy tuple only when the nuisance parameters
+        # were produced as well; in that case it is adopted silently.
+        unpacks_unchanged = nuisance_params is not None
+        if use_namedtuple is None and not unpacks_unchanged:
             warnings.warn(
                 "el_test currently returns a plain tuple whose length "
                 "depends on the return_weights and ret_params arguments. "
@@ -3491,10 +3506,8 @@ class OLSResults(RegressionResults):
                 FutureWarning,
                 stacklevel=2,
             )
-        if use_namedtuple:
+        if use_namedtuple or unpacks_unchanged:
             return ELTestResult(llr, pval, weights, nuisance_params)
-        if nuisance_params is not None:
-            return llr, pval, weights, nuisance_params
         if weights is not None:
             return llr, pval, weights
         return llr, pval
