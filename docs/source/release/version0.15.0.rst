@@ -8,7 +8,7 @@ Release summary
 ===============
 
 This note covers all changes merged into ``main`` between the ``v0.15.0.dev0``
-tag (2023-05-05) and the current development head (2026-07-22). It is a
+tag (2023-05-05) and the current development head (2026-08-05). It is a
 working draft assembled directly from the git history rather than a final,
 polished release announcement, and it does not yet follow the format of
 previous ``versionX.Y.rst`` release notes.
@@ -31,10 +31,10 @@ docstrings.
 Release statistics
 -------------------
 
-- **Pull requests merged**: 355
-- **Non-merge commits**: 953
-- **Contributors** (by git log author, unique names): 122
-- **Time span**: 2023-05-05 through 2026-07-22
+- **Pull requests merged**: 434
+- **Non-merge commits**: 1200
+- **Contributors** (by git log author, unique names): 139
+- **Time span**: 2023-05-05 through 2026-08-05
 
 The Highlights
 ===============
@@ -77,6 +77,42 @@ release and touches, among others:
 
 See *Breaking Changes and Deprecations* below for what this means for
 existing code. :pr:`9737`, :pr:`9615`, :pr:`9831`, :pr:`9947`, :pr:`9950`
+
+NamedTuple return values replace bare tuples
+------------------------------------------------
+
+Many statsmodels functions historically returned a plain tuple whose *length*
+depended on the arguments passed, so that ``adfuller(x)`` and
+``adfuller(x, store=True)`` returned a different number of values. This makes
+results hard to unpack defensively, hard to document, and hard to type.
+
+These functions now return purpose-built ``NamedTuple`` result classes with a
+fixed set of fields; fields that were not requested are ``None``. Because a
+``NamedTuple`` is a ``tuple``, positional unpacking, indexing and comparison
+against plain tuples all continue to work, and field access such as
+``res.pvalue`` becomes available.
+
+The migration follows a single rule:
+
+- Where the ``NamedTuple`` unpacks exactly like the tuple it replaces, it is
+  simply returned now, with no deprecation and no warning. This covers, among
+  others, ``pacf``/``ccf``/``pccf`` with ``alpha`` set, ``lagmat`` with
+  ``original="sep"``, ``kdensity``/``kdensityfft`` with the default
+  ``retgrid=True``, ``plot_partregress`` with ``ret_coords=True``, and the
+  ``store=True`` paths of the ``stats.diagnostic`` tests.
+- Where adopting it would change how many values are unpacked, the legacy
+  tuple is still returned and a ``FutureWarning`` is raised. Pass
+  ``use_namedtuple=True`` to opt in now, or ``use_namedtuple=False`` to keep
+  the current behaviour and silence the warning. The default changes in 0.16.
+
+Functions whose result shape never varied were converted outright, with no
+flag and no warning: ``block_jackknife``, ``q_stat``, ``pacf_burg``,
+``levinson_durbin``, ``levinson_durbin_pacf``,
+``breakvar_heteroskedasticity_test``, ``coint``, ``cffilter``, ``hpfilter``,
+``hamilton_filter``, ``forecast_interval``, the IRF/SIRF error-band methods,
+the ARIMA parameter estimators, and ``RegressionResults.compare_lr_test``.
+
+:pr:`10025`, :pr:`10027`, :pr:`10029`, :pr:`10030`, :pr:`10031`
 
 Formula engine: patsy is no longer the only option
 ----------------------------------------------------
@@ -133,6 +169,13 @@ New models and statistical tests
   unequal-variance case. :pr:`9487`
 - A sample-size calculation for the Wilcoxon/Mann-Whitney test. :pr:`9401`
 - Order validation for the Hannan-Rissanen ARMA estimator. :pr:`9819`
+- :func:`statsmodels.tsa.stattools.pccf`, the partial cross-correlation
+  function, together with a companion
+  :func:`~statsmodels.graphics.tsaplots.plot_pccf`. :pr:`9802`
+- :func:`statsmodels.tsa.filters.hamilton_filter.hamilton_filter`, Hamilton's
+  regression-based alternative to the HP filter. :pr:`9957`, :pr:`9991`
+- :func:`statsmodels.tsa.stattools.block_jackknife`, a delete-k (block)
+  jackknife estimator of bias and standard error. :pr:`10001`
 - ``ARDL`` models can now use a ``"ctt"`` trend. :pr:`9518`
 - ``x13_arima_analysis`` gained seasonality fit diagnostics and an optional
   raw spec parameter. :pr:`9498`, :pr:`9550`
@@ -199,6 +242,45 @@ passes ``seed=`` or ``random_state=`` by keyword to statsmodels functions,
 you should switch to ``rng=`` to avoid the warning (and future breakage).
 Positional usage is unaffected in most cases since ``rng`` occupies the same
 position the old keyword did.
+
+Variable-length tuple returns become NamedTuples
+----------------------------------------------------
+
+As described above, functions that returned a tuple whose length depended on
+their arguments are moving to fixed-shape ``NamedTuple`` results. Where the
+``NamedTuple`` unpacks exactly like the tuple it replaces there is nothing to
+do: existing code keeps working and no warning is raised.
+
+Where adopting it *would* change how many values are unpacked, the affected
+call now emits a ``FutureWarning`` and continues to return the legacy tuple.
+This applies to:
+
+- :func:`~statsmodels.tsa.stattools.adfuller`,
+  :func:`~statsmodels.tsa.stattools.kpss`,
+  :func:`~statsmodels.tsa.stattools.range_unit_root_test` (``store=False``),
+  and :func:`~statsmodels.tsa.stattools.acf` when only one of ``qstat`` or
+  ``alpha`` is given.
+- :func:`~statsmodels.regression.linear_model.yule_walker` (``inv=False``)
+  and ``OLSResults.el_test``.
+- :func:`~statsmodels.stats.diagnostic.acorr_lm`,
+  :func:`~statsmodels.stats.diagnostic.acorr_breusch_godfrey`,
+  :func:`~statsmodels.stats.diagnostic.het_arch`,
+  :func:`~statsmodels.stats.diagnostic.compare_cox`,
+  :func:`~statsmodels.stats.diagnostic.compare_j` and
+  :func:`~statsmodels.stats.diagnostic.het_goldfeldquandt` with
+  ``store=False``.
+- :func:`~statsmodels.nonparametric.kde.kdensity` and
+  :func:`~statsmodels.nonparametric.kde.kdensityfft` with ``retgrid=False``,
+  and :func:`~statsmodels.graphics.regressionplots.plot_partregress` with
+  ``ret_coords=False``.
+
+Pass ``use_namedtuple=True`` to adopt the new result now, or
+``use_namedtuple=False`` to keep the old return type and silence the warning.
+The default becomes the ``NamedTuple`` in 0.16.
+
+``RegressionResults.compare_lr_test`` always returned three values, so it was
+converted directly to a ``CompareLRTestResult`` with no deprecation period; it
+still unpacks as a three-tuple.
 
 Minimum dependency versions raised
 --------------------------------------
@@ -299,10 +381,22 @@ New Features and Enhancements
 - Vendor ``cache_readonly`` and ``deprecate_kwarg`` from pandas' private API. :pr:`9831`
 - Report the last root-finder value in the ``solve_power`` convergence warning. :pr:`9885`
 - Consistently use ``rng`` to move towards SPEC-007. :pr:`9950`
+- Add the partial cross-correlation function ``pccf`` and ``plot_pccf``. :pr:`9802`
+- Add the Hamilton filter. :pr:`9957`
+- Add a delete-k (block) jackknife estimator. :pr:`10001`
+- Allow pre-calculated error bands to be passed to the IRF plots. :pr:`9816`
+- Support ``fixed_params`` in ``innovations_mle``. :pr:`9845`
+- Raise an informative error for impossible one-sided ``solve_power`` cases. :pr:`9895`
+- Add a ``min_diag`` option to ``cov_nearest`` for zero or negative
+  diagonal entries. :pr:`9898`
+- ``acf``/``pacf`` accept a list of lags in addition to ``maxlag``. :pr:`10016`
+- Return ``NamedTuple`` results in place of variable-length tuples. :pr:`10025`,
+  :pr:`10027`, :pr:`10029`, :pr:`10030`
 
 .. rubric:: Performance
 
 - Optimize VECM memory/speed by avoiding an :math:`O(T^2)` projection matrix. :pr:`9720`
+- Improve the performance of ``ConditionalMNLogit``. :pr:`9036`
 
 
 Notable Bug Fixes
@@ -378,6 +472,37 @@ Notable Bug Fixes
 - Correct a test that relied on the removed random-state singleton. :pr:`9924`
 - Fix an import failure when matplotlib is not installed. :pr:`9925`
 - Unify ``group_sums`` orientation and fix ``group_demean``. :pr:`9933`
+- Fix the ``scale`` attribute and ``resid_pearson`` for a fixed-scale
+  ``cov_type``. :pr:`9824`
+- Pass ``ax`` through to ``dot_plot`` in ``CombineResults.plot_forest``. :pr:`9829`
+- Filter unsupported keyword arguments in ``MixedLM.fit`` instead of raising
+  an ``AttributeError``. :pr:`9906`
+- Fix a Sison-Glaz confidence-interval failure for small or sparse
+  counts. :pr:`9909`
+- Fix the removal of the ``compat`` ``lstsq`` shim. :pr:`9958`
+- Raise on non-2x2 tables in ``stats.mcnemar``. :pr:`9974`
+- Respect caller warning filters in the discrete ``fit_regularized`` (l1)
+  path. :pr:`9976`
+- Reject ``None`` in ``string_like`` and ``array_like`` unless
+  ``optional=True``. :pr:`9985`, :pr:`9987`
+- Do not re-validate the specification when extending SARIMAX results, so an
+  ``exog`` constant column no longer blocks ``extend``. :pr:`9992`
+- ``score_test`` returns a ``HolderTuple`` rather than a plain tuple. :pr:`9993`
+- Select the correct axis in ``drop_missing``. :pr:`9994`
+- Ensure ``AutoReg`` (and other) ``summary()`` calls still work after
+  ``remove_data()``. :pr:`10002`, :pr:`10009`
+- Report the correct accepted types in ``dict_like``. :pr:`10005`
+- Clip Wilson ``proportion_confint`` bounds to ``[0, 1]``. :pr:`10010`
+- Give ``sign_test`` a clear error when every observation ties with
+  ``mu0``. :pr:`10012`
+- ``multipletests`` no longer raises ``ZeroDivisionError`` on an empty
+  p-value array. :pr:`10013`
+- ``maxabs`` and ``iqr`` no longer raise on empty input, matching the other
+  ``eval_measures``. :pr:`10014`
+- Use the non-missing sample size for the ``acf`` confidence interval and
+  Q-statistic when NaNs are handled. :pr:`10017`
+- Raise an explicit error rather than dividing by zero in
+  ``acf``/``acovf``. :pr:`10020`
 
 
 Build, Packaging, and Infrastructure
@@ -404,6 +529,9 @@ Build, Packaging, and Infrastructure
   ``pypa/cibuildwheel``, ``r-lib/actions/setup-pandoc``, and
   ``ts-graphviz/setup-graphviz``) across roughly two dozen pull requests
   not individually itemized here.
+- Improve the documentation-build requirements. :pr:`9949`
+- Improve notebook generation. :pr:`9990`
+- Add a CI run for the X-13ARIMA-SEATS tests. :pr:`10021`
 
 
 Documentation
@@ -467,6 +595,25 @@ a pass over example notebooks to fix formatting and broken links.
   (:pr:`9945`), statespace (:pr:`9946`), emplike/duration (:pr:`9943`),
   treatment/gam (:pr:`9944`).
 - Update notebooks for the deprecations introduced in this release. :pr:`9939`
+- Improve the ``robust.norms`` docstrings. :pr:`9766`
+- Add an ARIMA tutorial notebook. :pr:`9792`
+- Add a plot for the Hamilton filter. :pr:`9991`
+- Add this release note. :pr:`9951`
+- Many small documentation fixes, including for the new notebook and the
+  ``STL`` docstring. :pr:`9952`, :pr:`9954`, :pr:`9960`, :pr:`9961`
+- Fix the ``NegativeBinomialP.fit`` docstring, notebook title levels, and a
+  misplaced reference. :pr:`9962`, :pr:`9963`
+- Allow all notebooks to run again. :pr:`9955`
+- Document that ``exog`` is matched by position for non-formula models. :pr:`9967`
+- Remove docstring sections that did not render correctly. :pr:`9969`
+- Use HTTPS for the MixedLM reference, clarify the ``add_constant``
+  ``prepend`` default, fix the ANOVA example link, and list all GEE
+  covariance structures. :pr:`9996`, :pr:`9997`, :pr:`9999`, :pr:`10000`
+- Correct the ``recipr0`` summary line and the discrete results
+  parameters. :pr:`10006`, :pr:`10011`
+- Remove five documented parameters that are not in the signature. :pr:`10028`
+- Add numpydoc ``Parameters`` sections to the new ``NamedTuple`` result
+  classes. :pr:`10031`
 
 
 Testing, Linting, and Maintenance
@@ -490,6 +637,28 @@ items:
 - Improve thread safety of the test suite. :pr:`9742`, :pr:`9904`, :pr:`9910`
 - Add CI coverage for Python 3.13/3.14 and free-threaded CPython. :pr:`9547`,
   :pr:`9656`, :pr:`9709`
+- Move from ``isort`` to ``ruff`` for import sorting. :pr:`9981`
+- Reduce mutation of model state inside ``fit()`` methods. :pr:`9972`
+- Remove long-standing anti-patterns across ``genmod``, ``multivariate``,
+  ``robust``, ``tsa``, ``stats`` and ``tools``, and extend the same
+  conventions to the remaining modules. :pr:`9973`, :pr:`9977`, :pr:`9978`,
+  :pr:`9980`, :pr:`9984`
+- Use ``pathlib`` in place of ``os.path``. :pr:`9988`
+- Remove unproductive ``if __name__ == "__main__"`` blocks, converting the
+  useful ones into tests. :pr:`10023`
+- Archive unused ``statsmodels.sandbox`` files and remove leftover debug
+  code. :pr:`10018`, :pr:`10019`
+- Remove further deprecations and outdated compatibility code. :pr:`10015`,
+  :pr:`10026`
+- Raise the declared Python floor to the actual minimum of 3.10, and improve
+  the formula-engine specification. :pr:`9953`, :pr:`9995`
+- Add tests for the ``summary()``-after-``remove_data()`` pattern across
+  models. :pr:`10003`, :pr:`10007`, :pr:`10008`
+- Add a marker for joblib-dependent tests and fix a test on older
+  SciPy. :pr:`9948`, :pr:`10022`
+- Clean up the examples and assorted lint. :pr:`9959`, :pr:`9989`
+- Update the declared NumPy minimum to reflect the version actually
+  required, and remove the legacy NumPy code it made unreachable. :pr:`10032`
 
 
 Development summary and credits
@@ -501,22 +670,24 @@ generated from ``git log`` between ``v0.15.0.dev0`` and the current
 development head, and may not be complete or fully deduplicated across
 differently-configured git identities:
 
-Aditi Juneja, Adrian Ross, Agriya Khetarpal, Alex Alborghetti, Andrés,
-Andrés López, Anh Trinh, Aniket, Aniket Singh Yadav, Anselm Hahn, Antoine
-Mayerowitz, Anuraag Pandhi, Artem Glebov, Ben, Benjamin Leff, Bortlesboat,
-Caleb Lindgren, Chad Fulton, Christine P. Chai, Clément Fauchereau, Daan
-Knoope, David Ivanov, Deshan, Dhairya Motta, Dhruvil Darji, Eden Rochman,
-Elton Chang, Erich Morisse, Eugen Goebel, Evan Lyall, Evgeni Burovski,
-FuturMix, Hadi Dayekh, Harish Bhavandla, IsaacP, IntegralIndefinida, Illia
-Polovnikov, Iman, Jesse W. Collins, Jim Varanelli, Joey Scanga, Josef
-Perktold, Joshua Markovic, Justin Mahlik, Kaif, Kevin Sheppard, Kevin
-Gregory, Kumar Aditya, Lakshmi786, Luke J, Maciej Skorski, Manlai Amar, Marc
-Bresson, Mathias Hauser, Maxime Gourguechon, Melissa Wu, Michał Górny,
-Michel de Ruiter, Naimish Machchhar, Pranav Achar, Puneet Dixit, Rahul
-Rathnavel K, Ralf Gommers, Rebecca N. Palmer, RoyS, Sebastian Pölsterl,
-Shamus, Solaris-star, Sreekant Baheti, Tartopohm, Vedant Madane, Vikram
-Kumar, Viktor, Vitaliy, Wali Reheman, Will Tirone, YangWu1227, Zbigniew
-Jędrzejewski-Szmek, Zhengbo Wang, and many others.
+Achraf Ez, Aditi Juneja, Adrian Ross, Agriya Khetarpal, Alex Alborghetti,
+Andrés, Andrés López, Anh Trinh, Aniket, Aniket Singh Yadav, Anselm Hahn,
+Antoine Mayerowitz, Anton Karpov, Anuraag Pandhi, Artem Glebov, Ayush Gupta,
+Ben, Benjamin Leff, Bortlesboat, Caleb Lindgren, Chad Fulton, Christine P.
+Chai, Clément Fauchereau, Daan Knoope, David Ivanov, Deshan, Dhairya Motta,
+Dhruvil Darji, Eden Rochman, Elton Chang, Erich Morisse, Eugen Goebel, Evan
+Lyall, Evgeni Burovski, FuturMix, Hadi Dayekh, Harish Bhavandla, IsaacP,
+IntegralIndefinida, Illia Polovnikov, Iman, Jesse W. Collins, Jim Varanelli,
+Joey Scanga, Josef Perktold, Joshua Markovic, Justin Mahlik, Kaif,
+Kakarot35, Kevin Sheppard, Kevin Gregory, Kumar Aditya, Lakshmi786, Loi
+Nguyen, Luke J, Maciej Skorski, Manlai Amar, Marc Bresson, Mathias Hauser,
+Maxime Gourguechon, Melissa Wu, Michał Górny, Michel de Ruiter, Naimish
+Machchhar, Pranav Achar, Puneet Dixit, Rahul Rathnavel K, Ralf Gommers,
+Rebecca N. Palmer, Ritika shrestha, RoyS, Sebastian Pölsterl, Shamus,
+Solaris-star, Sreekant Baheti, Tartopohm, Vedant Madane, Vikram Kumar,
+Viktor, Vitaliy, Vladimir Saraikin, Wali Reheman, Will Tirone, YangWu1227,
+Zbigniew Jędrzejewski-Szmek, Zhengbo Wang, adarshsm, camaramm, hass-nation,
+libokai, whn, and many others.
 
 These lists are automatically generated based on ``git log`` and may not be
 complete.
