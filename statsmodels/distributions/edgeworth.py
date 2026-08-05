@@ -37,8 +37,8 @@ def _faa_di_bruno_partitions(n):
         Each solution is itself a list of the form `[(m, k_m), ...]`
         for non-zero `k_m`. Notice that the index `m` is 1-based.
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> _faa_di_bruno_partitions(2)
     [[(1, 2)], [(2, 1)]]
     >>> for p in _faa_di_bruno_partitions(4):

@@ -128,8 +128,7 @@ def _check_nested_results(results_x, results_z):
 
 
 class NonNestedTestResult(NamedTuple):
-    """Result of :func:`compare_cox` and :func:`compare_j` when
-    ``use_namedtuple=True``."""
+    """Result of :func:`compare_cox` and :func:`compare_j`."""
 
     tstat: float
     pvalue: float
@@ -607,8 +606,9 @@ def acorr_ljungbox(
 
 
 class LMTestResult(NamedTuple):
-    """Result of :func:`acorr_lm`, :func:`het_arch`, and
-    :func:`acorr_breusch_godfrey` when ``use_namedtuple=True``."""
+    """
+    Result of :func:`acorr_lm`, :func:`het_arch`, and  :func:`acorr_breusch_godfrey`.
+    """
 
     lm: float
     lmpval: float
@@ -1078,7 +1078,7 @@ def het_white(resid, exog, interaction_terms=True):
     -------
     lm : float
         The lagrange multiplier statistic.
-    lm_pvalue :float
+    lm_pvalue : float
         The p-value of lagrange multiplier test.
     fvalue : float
         The f-statistic of the hypothesis that the error variance does not
@@ -1115,7 +1115,7 @@ def het_white(resid, exog, interaction_terms=True):
 
 
 class GoldfeldQuandtResult(NamedTuple):
-    """Result of :func:`het_goldfeldquandt` when ``use_namedtuple=True``."""
+    """Result of :func:`het_goldfeldquandt`."""
 
     fval: float
     pval: float

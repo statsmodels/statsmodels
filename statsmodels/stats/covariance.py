@@ -106,8 +106,8 @@ def transform_corr_normal(
         indexes identically. See
         :class:`~statsmodels.stats.covariance.TransformCorrNormalResult`.
 
-        When ``return_var=False`` a bare correlation matrix is returned
-        instead.
+        When ``return_var=False`` and ``use_namedtuple`` is not True, a bare
+        correlation matrix is returned instead.
 
     Notes
     -----

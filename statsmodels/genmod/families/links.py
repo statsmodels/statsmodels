@@ -311,12 +311,12 @@ class Power(Link):
 
         Parameters
         ----------
-        `z` : array_like
+        z : array_like
             Value of the transformed mean parameters at `p`
 
         Returns
         -------
-        `p` : ndarray
+        p : ndarray
             Mean parameters
 
         Notes

@@ -173,7 +173,7 @@ def _autolag(
 
 class ADFullerResult(NamedTuple):
     """
-    Result of :func:`adfuller` when ``use_namedtuple=True``.
+    Result of :func:`adfuller`.
 
     Parameters
     ----------
@@ -307,7 +307,7 @@ def adfuller(
         levels. Based on MacKinnon (2010).
     icbest : float
         The maximized information criterion if autolag is not None.
-    resstore : ResultStore, optional
+    resstore : ResultsStore, optional
         A dummy class with results attached as attributes.
 
     Notes
@@ -818,8 +818,7 @@ def q_stat(x, nobs):
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
 class AcfResult(NamedTuple):
     """
-    Result of :func:`acf` when ``qstat`` or ``alpha`` is set and
-    ``use_namedtuple=True``.
+    Result of :func:`acf`.
 
     Parameters
     ----------
@@ -953,11 +952,11 @@ def acf(
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
         zero). Returned (as part of a plain tuple, the deprecated
-        default) if q_stat is True.
+        default) if qstat is True.
     pvalues : ndarray, optional
         The p-values associated with the Q-statistics for lags 1, 2, ...,
         nlags (excludes lag zero). Returned (as part of a plain tuple,
-        the deprecated default) if q_stat is True.
+        the deprecated default) if qstat is True.
 
     Notes
     -----
@@ -1297,16 +1296,15 @@ def pacf_ols(
 
 class PacfResult(NamedTuple):
     """
-    Result of :func:`pacf` when ``alpha`` is not None and
-    ``use_namedtuple=True``.
+    Result of :func:`pacf`.
 
     Parameters
     ----------
     pacf : ndarray
         Partial autocorrelations for lags 0, 1, ..., nlags.
-    confint : ndarray
+    confint : ndarray or None
         Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2).
+        (nlags + 1, 2). ``None`` when ``alpha`` is None.
     """
 
     pacf: np.ndarray
@@ -1541,8 +1539,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
 
 class CcfResult(NamedTuple):
     """
-    Result of :func:`ccf` when ``alpha`` is not None and
-    ``use_namedtuple=True``.
+    Result of :func:`ccf`.
 
     Parameters
     ----------
@@ -1551,9 +1548,9 @@ class CcfResult(NamedTuple):
         is the correlation between {x[k], x[k+1], ..., x[n]} and
         {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and
         y, respectively.
-    confint : ndarray
+    confint : ndarray or None
         Confidence intervals for the CCF at lags 0, 1, ..., nlags-1. Shape
-        (nlags, 2).
+        (nlags, 2). ``None`` when ``alpha`` is None.
     """
 
     ccf: np.ndarray
@@ -1778,16 +1775,15 @@ def _pccf_ols(x, y, nlags):
 
 class PccfResult(NamedTuple):
     """
-    Result of :func:`pccf` when ``alpha`` is not None and
-    ``use_namedtuple=True``.
+    Result of :func:`pccf`.
 
     Parameters
     ----------
     pccf : ndarray
         The partial cross-correlation function for lags 1, 2, ..., nlags.
-    confint : ndarray
+    confint : ndarray or None
         Confidence intervals for the PCCF at lags 1, 2, ..., nlags. Shape
-        (nlags, 2).
+        (nlags, 2). ``None`` when ``alpha`` is None.
     """
 
     pccf: np.ndarray
@@ -2724,7 +2720,7 @@ def has_missing(data):
 
 class KpssResult(NamedTuple):
     """
-    Result of :func:`kpss` when ``use_namedtuple=True``.
+    Result of :func:`kpss`.
 
     Parameters
     ----------
@@ -2832,7 +2828,7 @@ def kpss(
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
-    resstore : instance of ResultStore
+    resstore : instance of ResultsStore
         Only returned when ``store=True`` (and, in that case, in place of
         ``lags``). An instance of a dummy class with results attached as
         attributes.
@@ -3089,7 +3085,8 @@ def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
         Flag indicating whether to return the results as a
         ``RangeUnitRootTestResult`` NamedTuple instead of a plain tuple.
         When ``store=True`` the NamedTuple holds the same four elements as
-        the legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy
+        the legacy tuple, so it unpacks identically and is always
+        returned, with no warning. When ``store=False`` the legacy
         three-element tuple is returned by default and a ``FutureWarning``
         is issued.
 
@@ -3123,7 +3120,7 @@ def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Aparicio et al. (2006).
-    resstore : (optional) instance of ResultStore
+    resstore : (optional) instance of ResultsStore
         An instance of a dummy class with results attached as attributes.
 
     Notes

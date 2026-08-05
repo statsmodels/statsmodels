@@ -1025,6 +1025,9 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
         created.
     fmt : str, optional
         matplotlib-compatible formatting string for the data markers
+    step : bool, optional
+        If True, plot with `ax.step` instead of `ax.plot`, connecting points
+        with a step function.
     **kwargs
         These are passed to matplotlib.plot
 

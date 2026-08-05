@@ -652,6 +652,8 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     ----------
     prop1, prop2 : float or array_like
         The proportion value(s).
+    method : str
+        Effect size method to use, currently only 'normal' is implemented.
 
     Returns
     -------
@@ -812,6 +814,8 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
         lower and upper limit of equivalence region
     nobs : int
         the number of trials or observations.
+    alpha : float
+        Significance level of the test, default 0.05.
 
     Returns
     -------
@@ -2227,12 +2231,18 @@ def tost_proportions_2indep(
 
     Returns
     -------
-    pvalue : float
-        p-value is the max of the pvalues of the two one-sided tests
-    t1 : test results
-        results instance for one-sided hypothesis at the lower margin
-    t1 : test results
-        results instance for one-sided hypothesis at the upper margin
+    results : results instance
+        The returned results instance has the following main attributes.
+
+        statistic : float
+            test statistic for the equivalence test, the one with the
+            larger of the two one-sided p-values
+        pvalue : float
+            p-value is the max of the pvalues of the two one-sided tests
+        results_larger : test results
+            results instance for one-sided hypothesis at the lower margin
+        results_smaller : test results
+            results instance for one-sided hypothesis at the upper margin
 
     See Also
     --------
@@ -2612,7 +2622,7 @@ def _confint_riskratio_paired_nam(table, alpha=0.05):
 
     The confidence interval is for the ratio p1 / p0 where
     p1 = x1. / n and
-    p0 - x.1 / n
+    p0 = x.1 / n
     Todo: rename p1 to pa and p2 to pb, so we have a, b for treatment and
     0, 1 for success/failure
 

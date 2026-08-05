@@ -453,7 +453,7 @@ class MICEData:
             imputed is observed.
         exog_miss : DataFrame
             Current values of the predictors where the variable to be
-            Imputed is missing.
+            imputed is missing.
         init_kwds : dict-like
             The init keyword arguments for `vname`, processed through Patsy
             as required.

@@ -314,8 +314,7 @@ class KDEUnivariate:
 # Kernel Density Estimator Functions
 class KDEResult(NamedTuple):
     """
-    Result of :func:`kdensity` and :func:`kdensityfft` when
-    ``use_namedtuple=True``.
+    Result of :func:`kdensity` and :func:`kdensityfft`.
 
     Parameters
     ----------

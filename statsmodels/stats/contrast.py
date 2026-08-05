@@ -589,6 +589,20 @@ class MultiCompResult:
     Class to hold return of t_test_pairwise
 
     Currently just a minimal class to hold attributes.
+
+    Attributes
+    ----------
+    result_frame : DataFrame
+        The results of the pairwise t_test and additional columns for
+        multiplicity corrected p-values, as returned by `t_test_multi`.
+    contrasts : ndarray
+        Restriction matrix of constraints used in the pairwise t_test.
+    term : object
+        The model_spec term for which pairwise comparisons were computed.
+    contrast_labels : list[str]
+        Labels for the pairwise comparisons of the levels.
+    term_encoding_matrix : ndarray
+        Contrast matrix for the encoding of the factor as defined by patsy.
     """
 
     def __init__(
@@ -844,7 +858,7 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
-        If joint is True, then an array of noncentrality parameters will be
+        If joint is False, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
         This corresponds to the `t_test` in models and is not a quadratic
         form.
@@ -897,7 +911,7 @@ def wald_test_noncent_generic(
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
-        If joint is True, then an array of noncentrality parameters will be
+        If joint is False, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
         This corresponds to the `t_test` in models and is not a quadratic
         form.

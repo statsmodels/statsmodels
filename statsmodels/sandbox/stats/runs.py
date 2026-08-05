@@ -163,6 +163,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
+        the unique values found in groups are used as the two group labels.
     correction : bool
         Following the SAS manual, for samplesize below 50, the test
         statistic is corrected by 0.5. This can be turned off with

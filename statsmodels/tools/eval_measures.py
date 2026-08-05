@@ -419,14 +419,14 @@ def aicc(llf, nobs, df_modelwc):
     aicc : float
         information criterion
 
-    References
-    ----------
-    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
-
     Notes
     -----
     Returns +inf if the effective degrees of freedom, defined as
     ``nobs - df_modelwc - 1.0``, is <= 0.
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
     """
     dof_eff = nobs - df_modelwc - 1.0

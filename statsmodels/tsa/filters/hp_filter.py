@@ -70,7 +70,7 @@ def hpfilter(x, lamb=1600):
     Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An
         Empirical Investigation." *Carnegie Mellon University discussion
         paper no. 451*.
-    Ravn, M.O and H. Uhlig. 2002. "Notes On Adjusted the Hodrick-Prescott
+    Ravn, M.O and H. Uhlig. 2002. "On Adjusting the Hodrick-Prescott
         Filter for the Frequency of Observations." *The Review of Economics
         and Statistics*, 84(2), 371-80.
 

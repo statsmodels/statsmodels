@@ -279,7 +279,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         Dictionary containing the contingency table.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be represents; if that is not true, will
+        of keys to be represented; if that is not true, will
         automatically consider the missing values as 0
     horizontal : bool, optional
         The starting direction of the split (by default along
@@ -728,7 +728,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be represents; if that is not true, will
+        of keys to be represented; if that is not true, will
         automatically consider the missing values as 0.  The order
         of the keys will be the same as the one of insertion.
         If a dict of a Series (or any other dict like object)
@@ -843,7 +843,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> plt.show()
 
     If you need to modify the labeling and the coloring you can give
-    a function tocreate the labels and one with the graphical properties
+    a function to create the labels and one with the graphical properties
     starting from the key tuple
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}

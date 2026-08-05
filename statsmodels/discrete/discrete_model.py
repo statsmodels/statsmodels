@@ -318,15 +318,9 @@ class DiscreteModel(base.LikelihoodModel):
             See LikelihoodModelResults notes section for more information.
         disp : bool
             Set to True to print convergence messages.
-        fargs : tuple
-            Extra arguments passed to the likelihood function, i.e.,
-            loglike(x,*args).
         callback : callable callback(xk)
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        retall : bool
-            Set to True to return list of solutions at each iteration.
-            Available in Results object's mle_retvals attribute.
         alpha : non-negative scalar or numpy array (same size as parameters)
             The weight multiplying the l1 penalty term.
         trim_mode : 'auto, 'size', or 'off'
@@ -561,6 +555,10 @@ class BinaryModel(DiscreteModel):
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
+        offset : array_like, optional
+            Offset is added to the linear predictor with coefficient equal
+            to 1. If offset is not provided and exog is None, uses the
+            model's offset if present. If not, uses 0 as the default value.
 
         Returns
         -------
@@ -4334,6 +4332,9 @@ class NegativeBinomialP(CountModel):
         ----------
         params : array-like
             The parameters of the model
+        endog : array_like, optional
+            Endogenous variable to use in place of the model's `endog`.
+            If None, the model's `endog` is used.
 
         Returns
         -------
@@ -5337,6 +5338,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             default title.
         alpha : float
             The significance level for the confidence intervals.
+        yname_list : list[str], optional
+            Names for the endogenous variables, used for the parameter
+            table. If None, the names are taken from `yname`.
 
         Returns
         -------
@@ -5581,6 +5585,19 @@ class PoissonResults(CountResults):
             The counts for which you want the probabilities. If n is None
             then the probabilities for each count from 0 to max(y) are
             given.
+        exog : array_like, optional
+            Design / exogenous data. If exog is None, model exog is used.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with
+            coefficient equal to 1. If exposure is not provided and exog
+            is None, uses the model's exposure if present.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog is None, uses
+            the model's offset if present.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True.
 
         Returns
         -------

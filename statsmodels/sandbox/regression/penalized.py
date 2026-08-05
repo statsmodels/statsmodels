@@ -187,6 +187,10 @@ class TheilGLS(GLS):
             The covariance matrix for cov_type='sandwich' treats the stochastic
             restriction (R and q) as fixed and has a sandwich form analogously
             to M-estimators.
+        use_t : bool
+            If use_t is True, then confidence intervals and p-values in the
+            results instance are based on the t distribution. If use_t is
+            False, then they are based on the normal distribution.
 
         Returns
         -------

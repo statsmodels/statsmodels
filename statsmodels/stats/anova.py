@@ -497,7 +497,7 @@ class AnovaRM:
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will
-        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        not perform any aggregation; 'mean' is a shortcut to `numpy.mean`.
         An exception will be raised if aggregation is required, but no
         aggregation function was specified.
 

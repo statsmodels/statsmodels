@@ -135,8 +135,6 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     Parameters
     ----------
-    self : RegressionResults
-        Results instance used to generate predictions.
     exog : array_like, optional
         The values for which you want to predict. If the model was not fit
         using a formula, the columns are matched by position and not by name,

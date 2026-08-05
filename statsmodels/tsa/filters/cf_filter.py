@@ -48,7 +48,7 @@ def cffilter(x, low=6, high=32, drift=True):
     --------
     statsmodels.tsa.filters.bk_filter.bkfilter
         Baxter-King filter.
-    statsmodels.tsa.filters.bk_filter.hpfilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
     statsmodels.tsa.seasonal.seasonal_decompose
         Decompose a time series using moving averages.

@@ -246,6 +246,8 @@ class Initialization:
 
         Parameters
         ----------
+        k_states : int
+            Number of states in the time series process.
         a : array_like, optional
             Vector of constant values describing the mean of the stationary
             component of the initial state.

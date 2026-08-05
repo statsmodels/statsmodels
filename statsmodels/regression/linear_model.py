@@ -1481,7 +1481,7 @@ class GLSAR(GLS):
 
 
 class YuleWalkerResult(NamedTuple):
-    """Result of :func:`yule_walker` when ``use_namedtuple=True``."""
+    """Result of :func:`yule_walker`."""
 
     rho: np.ndarray
     sigma: float
@@ -1696,8 +1696,7 @@ def burg(endog, order=1, demean=True):
 
 
 class CompareLRTestResult(NamedTuple):
-    """Result of :meth:`RegressionResults.compare_lr_test` when
-    ``use_namedtuple=True``."""
+    """Result of :meth:`RegressionResults.compare_lr_test`."""
 
     lr_stat: float
     p_value: float
@@ -1705,9 +1704,7 @@ class CompareLRTestResult(NamedTuple):
 
 
 class ELTestResult(NamedTuple):
-    """Result of :meth:`RegressionResults.el_test` when
-    ``use_namedtuple=True``."""
-
+    """Result of :meth:`RegressionResults.el_test`."""
     llr: float
     pval: float
     weights: np.ndarray | None

@@ -2282,11 +2282,11 @@ class UECMResults(ARDLResults):
             sample-size specific set of critical values. Tables are only
             available for up to 10 components in the cointegrating
             relationship, so if more variables are included then simulation
-            is always used. The simulation computed the test statistic under
-            and assumption that the residuals are homoskedastic.
+            is always used. The simulation computes the test statistic under
+            an assumption that the residuals are homoskedastic.
         nsim : int
             Number of simulations to run when computing exact critical values.
-            Only used if ``asymptotic`` is ``True``.
+            Only used if ``asymptotic`` is ``False``.
         rng : {None, int, sequence[int], RandomState, Generator}, optional
             Random number generator or seed to use when simulating critical
             values. Must be provided if reproducible critical value and

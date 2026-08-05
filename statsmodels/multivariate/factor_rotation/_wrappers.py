@@ -223,10 +223,13 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     >>> A = np.random.randn(8,2)
     >>> L, T = rotate_factors(A,'varimax')
     >>> np.allclose(L,A.dot(T))
+    True
     >>> L, T = rotate_factors(A,'orthomax',0.5)
     >>> np.allclose(L,A.dot(T))
+    True
     >>> L, T = rotate_factors(A,'quartimin',0.5)
     >>> np.allclose(L,A.dot(np.linalg.inv(T.T)))
+    True
     """
     if "algorithm" in algorithm_kwargs:
         algorithm = algorithm_kwargs["algorithm"]

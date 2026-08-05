@@ -56,7 +56,7 @@ class Reader:
         Parameters
         ----------
         data : str or list[str]
-           String with lines separated by '\n', or a list of lines.
+            String with lines separated by '\\n', or a list of lines.
         """
         if isinstance(data, list):
             self._str = data

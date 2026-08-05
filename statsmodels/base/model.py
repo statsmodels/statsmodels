@@ -2777,7 +2777,7 @@ class _LLRMixin:
             value llnull is stored.
         **kwargs
             Additional keyword arguments used as fit keyword arguments for the
-            null model. The override and model default values.
+            null model. These override the model default values.
 
         Notes
         -----
@@ -2963,7 +2963,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         which : str
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
-            see the model.predict docstring
+            See the model.predict docstring.
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
             exog through the formula. Default is True. E.g., if you fit
@@ -2972,7 +2972,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             their original form. Otherwise, you'd need to log the data
             first.
         row_labels : list of str or None
-            If row_lables are provided, then they will replace the generated
+            If row_labels are provided, then they will replace the generated
             labels.
         average : bool
             If average is True, then the mean prediction is computed, that is,

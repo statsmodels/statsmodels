@@ -498,7 +498,7 @@ class SquareTable(Table):
 
             * statistic : float
                 chisquare test statistic
-            * p-value : float
+            * pvalue : float
                 p-value of the test statistic based on chisquare distribution
             * df : int
                 degrees of freedom of the chisquare distribution
@@ -964,10 +964,13 @@ class StratifiedTable:
         Either a list containing several 2x2 contingency tables, or
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
+    shift_zeros : bool
+        If True and any cell count is zero, add 0.5 to all cells of the
+        affected table(s).
 
     Notes
     -----
-    This results are based on a sampling model in which the units are
+    These results are based on a sampling model in which the units are
     independent both within and between strata.
     """
 
@@ -1226,7 +1229,7 @@ class StratifiedTable:
 
         statistic : float
             The chi^2 test statistic.
-        p-value : float
+        pvalue : float
             The p-value for the test.
         """
 

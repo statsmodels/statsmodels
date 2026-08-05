@@ -296,8 +296,7 @@ def detrend(x, order=1, axis=0):
 
 class LagmatResult(NamedTuple):
     """
-    Result of :func:`lagmat` when ``original="sep"`` and
-    ``use_namedtuple=True``.
+    Result of :func:`lagmat`.
 
     Parameters
     ----------

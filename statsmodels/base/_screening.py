@@ -79,6 +79,10 @@ class VariableScreening:
         ignored.
     pen_weight : None or float
         Penalization weight use in SCAD penalized MLE.
+    use_weights : bool
+        If True, penalty weights are used so that `exog_keep` is not
+        penalized (weight 0) while candidate exog have weight 1. If False,
+        all penalty weights are set equally.
     k_add : int
         Number of exog to add during expansion or forward selection.
         See Notes section for tie handling.

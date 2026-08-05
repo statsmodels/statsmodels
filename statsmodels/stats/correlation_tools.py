@@ -868,7 +868,7 @@ def cov_nearest_factor_homog(cov, rank, *, rng=None):
 
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of cov - k*I, which can
-    in turn be easily obtained form the eigen-decomposition of `cov`.
+    in turn be easily obtained from the eigen-decomposition of `cov`.
     Thus the problem can be reduced to a 1-dimensional search for k
     that does not require repeated eigen-decompositions.
 
