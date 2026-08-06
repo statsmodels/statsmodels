@@ -1333,7 +1333,9 @@ class CubicSplines(AdditiveGamSmoother):
                  variable_names=None):
         self.dfs = df
         self.constraints = constraints
-        self.transform = transform
+        # NOTE: cannot use `self.transform` here -- AdditiveGamSmoother
+        # defines a `transform(self, x_new)` method that this would shadow.
+        self.transform_arg = transform
         super().__init__(x, constraints=constraints,
                          variable_names=variable_names)
 
@@ -1343,7 +1345,7 @@ class CubicSplines(AdditiveGamSmoother):
             uv_smoother = UnivariateCubicSplines(
                             self.x[:, v], df=self.dfs[v],
                             constraints=self.constraints,
-                            transform=self.transform,
+                            transform=self.transform_arg,
                             variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
 
