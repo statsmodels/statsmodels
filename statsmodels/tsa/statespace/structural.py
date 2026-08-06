@@ -1057,7 +1057,7 @@ class UnobservedComponents(MLEModel):
 
         # Cycle parameters
         if self.cycle:
-            # Cycle frequency must be between between our bounds
+            # Cycle frequency must be between our bounds
             low, high = self.cycle_frequency_bound
             constrained[offset] = (1 / (1 + np.exp(-unconstrained[offset]))) * (
                 high - low
@@ -1096,7 +1096,7 @@ class UnobservedComponents(MLEModel):
 
         # Cycle parameters
         if self.cycle:
-            # Cycle frequency must be between between our bounds
+            # Cycle frequency must be between our bounds
             low, high = self.cycle_frequency_bound
             x = (constrained[offset] - low) / (high - low)
             unconstrained[offset] = np.log(x / (1 - x))
