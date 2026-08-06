@@ -520,5 +520,8 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs=None):
     return hess
 
 
-approx_hess = approx_hess3
-approx_hess.__doc__ += "\n    This is an alias for approx_hess3"
+def approx_hess(x, f, epsilon=None, args=(), kwargs=None):
+    return approx_hess3(x, f, epsilon=epsilon, args=args, kwargs=kwargs)
+
+
+approx_hess.__doc__ = approx_hess3.__doc__ + "\n    This is an alias for approx_hess3"

@@ -459,7 +459,7 @@ class GroupSorted(Group):
     """
 
     def __init__(self, group, name=""):
-        super(self.__class__, self).__init__(group, name=name)
+        super().__init__(group, name=name)
 
         idx = (np.nonzero(np.diff(group))[0] + 1).tolist()
         self.groupidx = lzip([0, *idx], [*idx, len(group)])
@@ -786,11 +786,11 @@ class Grouping:
             If `is_sorted` is True and the index is not sorted, or if
             `unique` is True and the index has duplicate entries.
         """
-        if not index:
+        if index is None:
             index = self.index
         if is_sorted:
             test = pd.DataFrame(lrange(len(index)), index=index)
-            test_sorted = test.sort()
+            test_sorted = test.sort_index()
             if not test.index.equals(test_sorted.index):
                 raise Exception("Data is not be sorted")
         if unique:

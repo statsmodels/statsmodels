@@ -425,3 +425,22 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_summary_title():
+    # GH: summary()'s `if title is not None:` always overwrote any
+    # explicitly-provided title with the default, since the sentinel
+    # default is 0 (not None), so only an explicit title=None ever
+    # survived -- the exact opposite of the documented behavior.
+    data = load_stackloss()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    res = RLM(data.endog, data.exog, M=norms.HuberT()).fit()
+
+    default_title = "Robust Linear Model Regression Results"
+    assert default_title in str(res.summary())
+    assert default_title in str(res.summary(title=None))
+
+    custom_title = "My Custom Title"
+    smry = res.summary(title=custom_title)
+    assert custom_title in str(smry)
+    assert default_title not in str(smry)

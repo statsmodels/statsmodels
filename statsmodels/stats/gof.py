@@ -20,6 +20,8 @@ changes
 '''
 from statsmodels.compat.python import lrange
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 
@@ -367,6 +369,33 @@ License: BSD-3
 """
 
 
+class ChisquareResult(NamedTuple):
+    """
+    Result of :func:`chisquare` when ``return_basic`` is False.
+
+    Parameters
+    ----------
+    chisq : float
+        The chisquare test statistic.
+    pvalue : float
+        The p-value based on the chisquare distribution if ``value`` is
+        zero, or on the noncentral chisquare distribution otherwise.
+    df : int
+        Degrees of freedom of the (potentially noncentral) chisquare
+        distribution used to compute ``pvalue``, equal to
+        ``n_bins - 1 - ddof``.
+    distr : {"chi2", "ncx2"}
+        The name of the distribution used to compute ``pvalue``: ``"chi2"``
+        when ``value`` is 0, otherwise ``"ncx2"`` (the noncentral chisquare
+        distribution).
+    """
+
+    chisq: float
+    pvalue: float
+    df: int
+    distr: str
+
+
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     '''
     chisquare goodness-of-fit test
@@ -391,7 +420,10 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     ddof : int
         Degrees of freedom correction.
     return_basic : bool
-        If True, return only the chisquare statistic and the p-value.
+        If True, return only the chisquare statistic and the p-value as a
+        plain tuple. If False, return a :class:`ChisquareResult` NamedTuple
+        that additionally reports the degrees of freedom and the name of
+        the distribution used to compute the p-value.
 
     Returns
     -------
@@ -400,6 +432,10 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     pvalue : float
         The p-value based on the chisquare distribution if ``value`` is
         zero, or on the noncentral chisquare distribution otherwise.
+
+    If ``return_basic`` is False, a :class:`ChisquareResult` NamedTuple is
+    returned instead, with fields ``chisq``, ``pvalue``, ``df``, and
+    ``distr``.
 
     Notes
     -----
@@ -431,16 +467,19 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
 
     f_exp = np.asarray(f_exp, float)
 
+    df = n_bins - 1 - ddof
     chisq = ((f_obs - f_exp)**2 / f_exp).sum(0)
     if value == 0:
-        pvalue = stats.chi2.sf(chisq, n_bins - 1 - ddof)
+        pvalue = stats.chi2.sf(chisq, df)
+        distr = "chi2"
     else:
-        pvalue = stats.ncx2.sf(chisq, n_bins - 1 - ddof, value**2 * nobs)
+        pvalue = stats.ncx2.sf(chisq, df, value**2 * nobs)
+        distr = "ncx2"
 
     if return_basic:
         return chisq, pvalue
     else:
-        return chisq, pvalue    # TODO: replace with TestResults
+        return ChisquareResult(chisq=chisq, pvalue=pvalue, df=df, distr=distr)
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):

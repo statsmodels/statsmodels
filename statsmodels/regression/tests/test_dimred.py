@@ -1,5 +1,7 @@
 """Tests for dimension reduction regression models."""
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -219,3 +221,24 @@ def test_covreduce():
             projt = np.zeros((p, 2))
             projt[0:2, 0:2] = np.eye(2)
             assert_allclose(np.trace(np.dot(proj.T, projt)), 2, rtol=1e-3, atol=1e-3)
+
+
+def test_sir_regularized_slice_n():
+    # GH: fit_regularized re-read slice_n from kwargs.get("slice_n", 20),
+    # but slice_n is a named parameter so it never ends up in kwargs -- an
+    # explicitly passed slice_n was silently discarded and 20 always used.
+    rs = np.random.RandomState(93482)
+    n = 300
+    p = 5
+    xmat = rs.normal(size=(n, p))
+    y = xmat.sum(1) + rs.normal(size=n)
+    model = SlicedInverseReg(y, xmat)
+    fmat = np.eye(p)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.fit_regularized(1, fmat, slice_n=30, maxiter=1)
+
+    # n_slice is the *count* of slices, i.e. nobs // slice_n
+    assert model.n_slice == n // 30
+    assert len(model._slice_props) == n // 30

@@ -355,3 +355,13 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_scale_is_a_property():
+    # GH: QuantRegResults.scale had its @cache_readonly commented out, so
+    # it was a plain method: `res.scale` returned a bound method instead
+    # of a float.
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+    res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")
+    assert res.scale == 1.0

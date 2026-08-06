@@ -197,6 +197,8 @@ some tests for goodness of fit for univariate distributions
    gof_chisquare_discrete
    gof_binning_discrete
    chisquare_effectsize
+   chisquare
+   ChisquareResult
 
 .. currentmodule:: statsmodels.stats.diagnostic
 

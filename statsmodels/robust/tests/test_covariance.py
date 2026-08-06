@@ -325,6 +325,31 @@ def test_covdetmm():
     assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
 
 
+def test_cov_tyler_regularized_n_iter():
+    # GH: n_iter was accumulated as `n_iter += i` inside `for i in
+    # range(maxiter)`, giving a triangular-number count instead of the
+    # actual number of completed iterations.
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal((50, 3))
+    res = robcov.cov_tyler_regularized(x, shrinkage_factor=0.1, maxiter=4, eps=0)
+    assert res.n_iter == 4
+
+
+def test_cov_tyler_regularized_corr_uses_scale():
+    # GH: `corr * np.outer(scale_mad, scale_mad)` discarded its result
+    # instead of `corr *= ...`, so the plugin-shrinkage `corr` matrix never
+    # reflected the per-column MAD scale, only the (scale-free) correlation
+    # structure from the std-standardized data.
+    rs = np.random.RandomState(0)
+    nobs = 1000
+    x = rs.standard_normal((nobs, 2))
+    x[:, 0] *= 100  # column 0 has a much larger scale than column 1
+
+    res = robcov.cov_tyler_regularized(x, shrinkage_factor=None)
+    ratio = res.corr[0, 0] / res.corr[1, 1]
+    assert ratio > 100
+
+
 def test_robcov_SMOKE():
     # currently only smoke test or very loose comparisons to dgp
     nobs, k_vars = 100, 3

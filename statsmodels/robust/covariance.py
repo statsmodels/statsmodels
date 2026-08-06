@@ -752,12 +752,11 @@ def cov_tyler_regularized(
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
@@ -766,6 +765,8 @@ def cov_tyler_regularized(
         sf = k * k + (1 - 2.0 / k) * tr
         sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
@@ -775,8 +776,8 @@ def cov_tyler_regularized(
     identity = np.eye(k_vars)
 
     n_iter = 0
-    for i in range(maxiter):
-        n_iter += i
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -879,12 +880,11 @@ def cov_tyler_pairs_regularized(
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
@@ -893,6 +893,8 @@ def cov_tyler_pairs_regularized(
         sf = k * k + (1 - 2.0 / k) * tr
         sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov

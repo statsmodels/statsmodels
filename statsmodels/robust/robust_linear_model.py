@@ -550,7 +550,7 @@ class RLMResults(base.LikelihoodModelResults):
     def chisq(self):
         return (self.params / self.bse) ** 2
 
-    def summary(self, yname=None, xname=None, title=0, alpha=0.05, return_fmt="text"):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05, return_fmt="text"):
         """
         Summarize the fitted model
 
@@ -593,8 +593,8 @@ class RLMResults(base.LikelihoodModelResults):
             ("Df Model:", None),
         ]
 
-        if title is not None:
-            title = "Robust linear Model Regression Results"
+        if title is None:
+            title = "Robust Linear Model Regression Results"
 
         # boiler plate
         from statsmodels.iolib.summary import Summary

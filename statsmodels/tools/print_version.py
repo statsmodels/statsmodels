@@ -45,9 +45,11 @@ def _show_versions_only():
     print("------------------")
     print("Python: {:d}.{:d}.{:d}.{}.{}".format(*sys.version_info[:]))
 
-    import os
-
-    sysname, nodename, release, version, machine = os.uname()
+    uname = platform.uname()
+    sysname = uname.system
+    release = uname.release
+    version = uname.version
+    machine = uname.machine
     print(f"OS: {sysname} {release} {version} {machine}")
     print(f"byteorder: {sys.byteorder}")
     print("LC_ALL: {}".format(os.environ.get("LC_ALL", "None")))
@@ -196,6 +198,7 @@ def show_versions(show_dirs=True):
     """
     if not show_dirs:
         _show_versions_only()
+        return
     print("\nINSTALLED VERSIONS")
     print("------------------")
     print("Python: {:d}.{:d}.{:d}.{}.{}".format(*sys.version_info[:]))
