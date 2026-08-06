@@ -436,9 +436,9 @@ def test_summary_title():
     data.exog = sm.add_constant(data.exog, prepend=False)
     res = RLM(data.endog, data.exog, M=norms.HuberT()).fit()
 
-    default_title = "Robust linear Model Regression Results"
+    default_title = "Robust Linear Model Regression Results"
     assert default_title in str(res.summary())
-    assert default_title in str(res.summary(title=0))
+    assert default_title in str(res.summary(title=None))
 
     custom_title = "My Custom Title"
     smry = res.summary(title=custom_title)
