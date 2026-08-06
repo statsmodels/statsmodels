@@ -1312,8 +1312,14 @@ class GLSAR(GLS):
     Generalized Least Squares with AR covariance structure
 
     {base._model_params_doc}
-    rho : int
-        The order of the autoregressive covariance.
+    rho : int or array_like
+        If an integer is provided, it specifies the order of the
+        autoregressive process. The AR coefficients are initialized
+        to zero and estimated during iterative fitting.
+
+        If an array is provided, it specifies initial values for the
+        autoregressive coefficients. The length of the array determines
+        the AR order.
     {base._missing_param_doc + base._extra_param_doc}
 
     Notes
