@@ -69,11 +69,14 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
 
          - start_bounds : starting bounds for expansion stage
          - brentq_bounds : bounds used with ``brentq``
+         - root : root as returned by ``brentq``, same value as `x`
          - iterations_expand : number of iterations in expansion stage
          - converged : True if brentq converged.
          - flag : return status, 'converged' if brentq converged
          - function_calls : number of function calls by ``brentq``
          - iterations : number of iterations in ``brentq``
+         - increasing : whether the function was treated as
+           monotonically increasing
 
     Notes
     -----

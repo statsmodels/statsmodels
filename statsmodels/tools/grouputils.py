@@ -206,28 +206,28 @@ def dummy_sparse(groups):
     >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
     >>> indi = dummy_sparse(g)
     >>> indi
-    <7x3 sparse matrix of type '<type 'numpy.int8'>'
-        with 7 stored elements in Compressed Sparse Row format>
+    <Compressed Sparse Row sparse array of dtype 'int8'
+        with 7 stored elements and shape (7, 3)>
     >>> indi.todense()
-    matrix([[1, 0, 0],
-            [1, 0, 0],
-            [0, 0, 1],
-            [0, 1, 0],
-            [0, 1, 0],
-            [0, 0, 1],
-            [1, 0, 0]], dtype=int8)
+    array([[1, 0, 0],
+           [1, 0, 0],
+           [0, 0, 1],
+           [0, 1, 0],
+           [0, 1, 0],
+           [0, 0, 1],
+           [1, 0, 0]], dtype=int8)
 
 
     current behavior with missing groups
     >>> g = np.array([0, 0, 2, 0, 2, 0])
     >>> indi = dummy_sparse(g)
     >>> indi.todense()
-    matrix([[1, 0, 0],
-            [1, 0, 0],
-            [0, 0, 1],
-            [1, 0, 0],
-            [0, 0, 1],
-            [1, 0, 0]], dtype=int8)
+    array([[1, 0, 0],
+           [1, 0, 0],
+           [0, 0, 1],
+           [1, 0, 0],
+           [0, 0, 1],
+           [1, 0, 0]], dtype=int8)
 
     """
     from scipy import sparse
@@ -603,6 +603,10 @@ class Grouping:
     slices : list or None
         Cached slices of observations for each group of the first
         index level, set by :meth:`get_slices`.
+    counts : ndarray or None
+        Cached bincount of the integer labels for the level last
+        passed to :meth:`count_categories`, or None if
+        `count_categories` has not been called.
 
     Notes
     -----
@@ -991,46 +995,46 @@ class Grouping:
 
     def dummy_sparse(self, level=0):
         """
-        Create a sparse indicator from a group array with integer labels
+        Set `_dummies` to a sparse indicator from a group array with integer labels
 
         Parameters
         ----------
         level : int
             Grouping level used to form the sparse indicator.
 
-        Returns
-        -------
-        indi : ndarray, int8, 2d (nobs, n_groups)
-            an indicator array with one row per observation, that has 1 in the
-            column of the group level for that observation
+        Notes
+        -----
+        Sets the `_dummies` attribute to an indicator array, int8, 2d
+        (nobs, n_groups), with one row per observation, that has 1 in
+        the column of the group level for that observation.
 
         Examples
         --------
         >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
         >>> indi = dummy_sparse(g)
         >>> indi
-        <7x3 sparse matrix of type '<type 'numpy.int8'>'
-            with 7 stored elements in Compressed Sparse Row format>
+        <Compressed Sparse Row sparse array of dtype 'int8'
+            with 7 stored elements and shape (7, 3)>
         >>> indi.todense()
-        matrix([[1, 0, 0],
-                [1, 0, 0],
-                [0, 0, 1],
-                [0, 1, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-                [1, 0, 0]], dtype=int8)
+        array([[1, 0, 0],
+               [1, 0, 0],
+               [0, 0, 1],
+               [0, 1, 0],
+               [0, 1, 0],
+               [0, 0, 1],
+               [1, 0, 0]], dtype=int8)
 
 
         current behavior with missing groups
         >>> g = np.array([0, 0, 2, 0, 2, 0])
         >>> indi = dummy_sparse(g)
         >>> indi.todense()
-        matrix([[1, 0, 0],
-                [1, 0, 0],
-                [0, 0, 1],
-                [1, 0, 0],
-                [0, 0, 1],
-                [1, 0, 0]], dtype=int8)
+        array([[1, 0, 0],
+               [1, 0, 0],
+               [0, 0, 1],
+               [1, 0, 0],
+               [0, 0, 1],
+               [1, 0, 0]], dtype=int8)
 
         """
         indi = dummy_sparse(self.labels[level])

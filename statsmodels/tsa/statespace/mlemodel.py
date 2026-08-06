@@ -647,6 +647,13 @@ class MLEModel(tsbase.TimeSeriesModel):
             matrix formula from Harvey (1989), and 'approx' uses numerical
             approximation. This keyword is only relevant if the
             optimization method uses the Hessian matrix.
+        flags : dict, optional
+            A dictionary of method flags to pass to the loglikelihood, score,
+            and Hessian functions used during optimization (for example
+            `transformed`, `includes_fixed`, `score_method`, and
+            `approx_complex_step`). These are constructed automatically from
+            the other arguments to `fit`, so this keyword is not typically
+            used directly. Default is None.
         low_memory : bool, optional
             If set to True, techniques are applied to substantially reduce
             memory usage. If used, some features of the results object will
@@ -4950,6 +4957,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Updated Results object, that includes results from both the
             original dataset and the new dataset.
 
+        See Also
+        --------
+        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
+        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
+
         Notes
         -----
         The `endog` and `exog` arguments to this method must be formatted in
@@ -4964,11 +4976,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         as to the new data. To apply filtering only to the new data (which
         can be much faster if the original dataset is large), see the `extend`
         method.
-
-        See Also
-        --------
-        statsmodels.tsa.statespace.mlemodel.MLEResults.extend
-        statsmodels.tsa.statespace.mlemodel.MLEResults.apply
 
         Examples
         --------

@@ -162,6 +162,8 @@ class OriginResults(RegressionResults):
 
     # No covariance matrix so normal inference is not valid
     >>> fitted.conf_int()
+    Traceback (most recent call last):
+     ...
     TypeError: unsupported operand type(s) for *: 'instancemethod' and 'float'
     """
     def __init__(self, model, params, est_llr, llf_el):

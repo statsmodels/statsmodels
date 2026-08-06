@@ -212,6 +212,11 @@ class ThetaModel:
         disp : bool, default False
             Display iterative output from fitting the model.
 
+        Returns
+        -------
+        ThetaModelResults
+            Model results and forecasting
+
         Notes
         -----
         When using MLE, the parameters are estimated from the ARIMA(0,1,1)
@@ -232,11 +237,6 @@ class ThetaModel:
         .. math::
 
            \tilde{X}_{t+1} = \alpha X_{t} + (1-\alpha)\tilde{X}_{t}
-
-        Returns
-        -------
-        ThetaModelResult
-            Model results and forecasting
         """
         if self._deseasonalize and self._use_test:
             self._test_seasonality()

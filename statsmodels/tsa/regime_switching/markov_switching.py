@@ -1854,7 +1854,7 @@ class KimSmootherResults(HamiltonFilterResults):
     model : MarkovSwitchingModel
         The model object.
     result : dict
-        A dictionary containing two keys: 'smoothd_joint_probabilities' and
+        A dictionary containing two keys: 'smoothed_joint_probabilities' and
         'smoothed_marginal_probabilities'.
 
     Attributes
@@ -2210,9 +2210,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
+            Additional arguments may be required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
         Returns

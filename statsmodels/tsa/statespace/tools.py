@@ -325,7 +325,7 @@ def concat(series, axis=0, allow_mix=False):
     series : iterable
         An iterable of series to be concatenated
     axis : int, optional
-        The axis along which to concatenate. Default is 1 (columns).
+        The axis along which to concatenate. Default is 0 (rows).
     allow_mix : bool
         Whether or not to allow a mix of pandas and non-pandas objects. Default
         is False. If true, the returned object is an ndarray, and additional
@@ -527,8 +527,7 @@ def constrain_stationary_univariate(unconstrained):
     -------
     constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
-        component, to be transformed to arbitrary parameters used by the
-        optimizer.
+        component, used in likelihood evaluation.
 
     References
     ----------
@@ -563,9 +562,7 @@ def unconstrain_stationary_univariate(constrained):
     Returns
     -------
     unconstrained : ndarray
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component.
+        Unconstrained parameters used by the optimizer.
 
     References
     ----------
@@ -842,6 +839,10 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         Transformed coefficient matrices leading to a stationary VAR
         representation. Will match the type of the passed `unconstrained`
         variable (so if a list was passed, a list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term, transformed if
+        `transform_variance` is True (otherwise this is the same as the
+        input `error_variance`).
 
     Notes
     -----
@@ -1436,10 +1437,13 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
     Returns
     -------
     unconstrained : ndarray
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component. Will match the type of the passed `constrained`
-        variable (so if a list was passed, a list will be returned).
+        Unconstrained parameters used by the optimizer. Will match the type
+        of the passed `constrained` variable (so if a list was passed, a
+        list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term. This is the same
+        as the input `error_variance`, since this function does not
+        transform the error variance term.
 
     Notes
     -----
@@ -1738,7 +1742,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     Returns
     -------
     copied_vector : array_like
-        The vector b with the non-missing subvector of b copied onto it.
+        The vector b with the non-missing subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
@@ -1839,7 +1843,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     Returns
     -------
     copied_vector : array_like
-        The vector b with the non-index subvector of b copied onto it.
+        The vector b with the non-index subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]

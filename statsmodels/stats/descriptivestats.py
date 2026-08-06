@@ -159,6 +159,10 @@ def sign_test(samp, mu0=0):
         If no observation differs from `mu0`. All values are then discarded
         as ties and the test is not defined.
 
+    See Also
+    --------
+    scipy.stats.wilcoxon
+
     Notes
     -----
     The signs test returns
@@ -172,10 +176,6 @@ def sign_test(samp, mu0=0):
     and can be interpreted the same as for a t-test. The test-statistic
     is distributed Binom(min(N(+), N(-)), n_trials, .5) where n_trials
     equals N(+) + N(-).
-
-    See Also
-    --------
-    scipy.stats.wilcoxon
     """
     samp = np.asarray(samp)
     pos = np.sum(samp > mu0)

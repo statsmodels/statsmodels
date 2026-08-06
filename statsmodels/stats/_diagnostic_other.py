@@ -26,11 +26,11 @@ The following references are collected after my initial implementation and is
 most likely not exactly what I used.
 
 The main articles on which the functions are directly based upon, are Boos 1992,
-Tauchen 1985 and Whitney 1985a. Wooldrige artificial regression is
+Tauchen 1985 and Newey 1985a. Wooldridge artificial regression is
 based on several articles and his text book.
 Background reading are the textbooks by Cameron and Trivedi, Wooldridge and
 Davidson and MacKinnon.
-Newey and MacFadden 1994 provide some of the theoretical background.
+Newey and McFadden 1994 provide some of the theoretical background.
 
 Poisson dispersion tests are based on Dean 1992 and articles and text books by
 Cameron and Trivedi.
@@ -137,14 +137,6 @@ Specification Tests.” Econometric Theory 6 (1): 17-43.
 Wooldridge, Jeffrey M. 1991a. “On the Application of Robust, Regression- Based
 Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
 of Econometrics 47 (1): 5-46. https://doi.org/10.1016/0304-4076(91)90076-P.
-
-Wooldridge, Jeffrey M. 1991b. “On the Application of Robust, Regression- Based
-Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
-of Econometrics 47 (1): 5-46. https://doi.org/10.1016/0304-4076(91)90076-P.
-
-Wooldridge, Jeffrey M. 1991c. “Specification Testing and Quasi-Maximum-
-Likelihood Estimation.” Journal of Econometrics 48 (1-2): 29-55.
-https://doi.org/10.1016/0304-4076(91)90031-8.
 
 Wooldridge, Jeffrey M. 1994. “On the Limits of GLM for Specification Testing: A
 Comment on Gurmu and Trivedi.” Econometric Theory 10 (2): 409-18.
@@ -579,9 +571,10 @@ def lm_robust_subset_parts(
         equality holds
     score_deriv_cu : ndarray
         first cross derivative of moment equation or second cross
-        derivative of objective function between.
+        derivative of objective function between the constrained and
+        unconstrained parts.
     cov_score_cc :  ndarray
-        covariance matrix of the score for the unconstrained part.
+        covariance matrix of the score for the constrained part.
         This is the inner part of a sandwich estimator.
     cov_score_cu :  ndarray
         covariance matrix of the score for the off-diagonal block, i.e.
@@ -598,7 +591,7 @@ def lm_robust_subset_parts(
 
     Notes
     -----
-    TODO: these function should just return the covariance of the score
+    TODO: these functions should just return the covariance of the score
     instead of calculating the score/lm test.
 
     Implementation similar to lm_robust_subset and is based on Boos 1992,
@@ -915,14 +908,14 @@ class CMTNewey:
 
     not used, add as argument to methods or __init__?
     K cov for misspecification
-    or mispecification_deriv
+    or misspecification_deriv
 
     This follows the GMM version in Newey 1985a, not the MLE version in
     Newey 1985b. Newey uses the generalized information matrix equality in the
-    MLE version Newey (1985b).
+    MLE version of Newey (1985b).
 
     Newey 1985b Lemma 1 does not impose correctly specified likelihood, but
-    assumes it in the following. Lemma 1 in both articles are essentially the
+    assumes it in the following. Lemma 1 in both articles is essentially the
     same assuming D = H' W.
 
     References

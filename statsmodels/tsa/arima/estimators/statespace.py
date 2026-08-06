@@ -52,7 +52,7 @@ def statespace(endog, exog=None, order=(0, 0, 0),
     start_params : array_like, optional
         Initial guess of the solution for the loglikelihood maximization. The
         AR polynomial must be stationary. If `enforce_invertibility=True` the
-        MA poylnomial must be invertible. If not provided, default starting
+        MA polynomial must be invertible. If not provided, default starting
         parameters are computed using the Hannan-Rissanen method.
     fit_kwargs : dict, optional
         Arguments to pass to the state space model's `fit` method.

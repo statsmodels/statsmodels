@@ -2357,9 +2357,9 @@ def qsturng(p, r, v):
     v : (scalar, array_like)
         The sample degrees of freedom
         if p >= .9:
-            v >=1 and v >= inf
+            v >=1 and v <= inf
         else:
-            v >=2 and v >= inf
+            v >=2 and v <= inf
 
     Returns
     -------
@@ -2447,9 +2447,9 @@ def psturng(q, r, v):
     v : (scalar, array_like)
         The sample degrees of freedom
         if p >= .9:
-            v >=1 and v >= inf
+            v >=1 and v <= inf
         else:
-            v >=2 and v >= inf
+            v >=2 and v <= inf
 
     Returns
     -------

@@ -124,6 +124,14 @@ def _min_max_band(args):
             bounds : sequence
                 ``(min, max)`` pair for each components
             ks_gaussian : KDEMultivariate instance
+                The kernel density estimate used to compute the PDF of the
+                curve.
+            use_brute : bool
+                Use the brute force optimizer instead of the default
+                differential evolution to find the curves.
+            rng : {None, int, np.random.Generator, np.random.RandomState}
+                Value to pass to scipy.optimize.differential_evolution as
+                its `seed` argument.
 
     Returns
     -------
@@ -196,7 +204,7 @@ def hdrboxplot(
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
     ncomp : int, optional
-        Number of components to use.  If None, returns the as many as the
+        Number of components to use.  If None, returns as many as the
         smaller of the number of rows or columns in data.
     alpha : list of floats between 0 and 1, optional
         Extra quantile values to compute. Default is None

@@ -958,6 +958,24 @@ class DynamicFactorMQ(mlemodel.MLEModel):
       very small) diagonal elements for the observation disturbance covariance
       matrix.
 
+    References
+    ----------
+    .. [1] Bańbura, Marta, and Michele Modugno.
+           "Maximum likelihood estimation of factor models on datasets with
+           arbitrary pattern of missing data."
+           Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
+    .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
+           "Nowcasting."
+           The Oxford Handbook of Economic Forecasting. July 8, 2011.
+    .. [3] Bok, Brandyn, Daniele Caratelli, Domenico Giannone,
+           Argia M. Sbordone, and Andrea Tambalotti. 2018.
+           "Macroeconomic Nowcasting and Forecasting with Big Data."
+           Annual Review of Economics 10 (1): 615-43.
+           https://doi.org/10.1146/annurev-economics-080217-053214.
+    .. [4] Mariano, Roberto S., and Yasutomo Murasawa.
+           "A coincident index, common factors, and monthly real GDP."
+           Oxford Bulletin of Economics and Statistics 72, no. 1 (2010): 27-46.
+
     Examples
     --------
     Constructing and fitting a `DynamicFactorMQ` model.
@@ -1263,24 +1281,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     For other available methods (including in-sample prediction, simulation of
     time series, extending the results to incorporate new data, and the news),
     see the documentation for state space models.
-
-    References
-    ----------
-    .. [1] Bańbura, Marta, and Michele Modugno.
-           "Maximum likelihood estimation of factor models on datasets with
-           arbitrary pattern of missing data."
-           Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
-    .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
-           "Nowcasting."
-           The Oxford Handbook of Economic Forecasting. July 8, 2011.
-    .. [3] Bok, Brandyn, Daniele Caratelli, Domenico Giannone,
-           Argia M. Sbordone, and Andrea Tambalotti. 2018.
-           "Macroeconomic Nowcasting and Forecasting with Big Data."
-           Annual Review of Economics 10 (1): 615-43.
-           https://doi.org/10.1146/annurev-economics-080217-053214.
-    .. [4] Mariano, Roberto S., and Yasutomo Murasawa.
-           "A coincident index, common factors, and monthly real GDP."
-           Oxford Bulletin of Economics and Statistics 72, no. 1 (2010): 27-46.
 
     """
 
@@ -2355,6 +2355,16 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Tolerance to use for convergence checking when using the EM
             algorithm. To set the tolerance for other methods, pass
             the optimizer-specific keyword argument(s).
+        em_initialization : bool, optional
+            Whether or not to also update the Kalman filter initialization
+            using the EM algorithm, if the EM algorithm is used for fitting.
+            Default is True.
+        mstep_method : {None, 'missing', 'nonmissing'}, optional
+            The EM algorithm maximization step, if the EM algorithm is used
+            for fitting. If there are no NaN values in the dataset, this can
+            be set to "nonmissing" (which is slightly faster) or "missing",
+            otherwise it must be "missing". Default is "nonmissing" if there
+            are no NaN values or "missing" if there are.
         full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
@@ -2385,6 +2395,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             matrix formula from Harvey (1989), and 'approx' uses numerical
             approximation. This keyword is only relevant if the
             optimization method uses the Hessian matrix.
+        flags : dict, optional
+            A dictionary of method flags to pass to the loglikelihood, score,
+            and Hessian functions used during optimization (for example
+            `transformed`, `includes_fixed`, `score_method`, and
+            `approx_complex_step`). These are constructed automatically from
+            the other arguments to `fit`, so this keyword is not typically
+            used directly. Default is None.
         low_memory : bool, optional
             If set to True, techniques are applied to substantially reduce
             memory usage. If used, some features of the results object will
@@ -3048,6 +3065,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the smoothed output using complex step
+            differentiation. Default is False.
         return_ssm : bool, optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
@@ -3057,6 +3082,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
+        results_class : type, optional
+            A results class to use for results object. Default is
+            `MLEResults`.
+        results_wrapper_class : type, optional
+            A results wrapper class to use for the results object. Default is
+            `MLEResultsWrapper`.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -3081,6 +3112,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the filtered output using complex step
+            differentiation. Default is False.
         return_ssm : bool, optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
@@ -3090,6 +3129,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         cov_kwds : dict or None, optional
             See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
+        results_class : type, optional
+            A results class to use for results object. Default is
+            `MLEResults`.
+        results_wrapper_class : type, optional
+            A results wrapper class to use for the results object. Default is
+            `MLEResultsWrapper`.
         low_memory : bool, optional
             If set to True, techniques are applied to substantially reduce
             memory usage. If used, some features of the results object will
@@ -3158,6 +3203,15 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate simulating
+            periods outside of the sample. Default is to extend the model if
+            a new `exog` array is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument during extension.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is
             True.
@@ -3262,6 +3316,16 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         exog : array_like, optional
             New observations of exogenous regressors for out-of-sample periods,
             if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate calculating
+            impulse responses in periods outside of the sample. Default is to
+            extend the model if a new `exog` array is provided or if the model
+            is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument during extension.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is
             True.
@@ -3515,14 +3579,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        get_coefficients_of_determination
+
         Notes
         -----
         The endogenous variables are arranged along the x-axis according to
         their position in the model's `endog` array.
-
-        See Also
-        --------
-        get_coefficients_of_determination
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()
@@ -3614,6 +3678,20 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             If the model specification standardized the data, whether or not
             to return predictions in the original scale of the data (i.e.
             before it was standardized by the model). Default is True.
+        index : array_like, optional
+            Optional index to use for the new results object.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate out-of-sample
+            forecasting. Default is to extend the model if a new `exog` array
+            is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3988,6 +4066,11 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             Updated Results object, that includes results from both the
             original dataset and the new dataset.
 
+        See Also
+        --------
+        extend
+        apply
+
         Notes
         -----
         The `endog` and `exog` arguments to this method must be formatted in
@@ -4003,11 +4086,6 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         as to the new data. To apply filtering only to the new data (which
         can be much faster if the original dataset is large), see the `extend`
         method.
-
-        See Also
-        --------
-        extend
-        apply
         """
         # Construct the combined dataset, if necessary
         endog, k_endog_monthly = DynamicFactorMQ.construct_endog(

@@ -1646,7 +1646,7 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def pvalues_endog_lagged(self):
-        """pvalues_endog_laggd"""
+        """pvalues_endog_lagged"""
         start = self.k_exog
         return self.pvalues[start:]
 
@@ -1683,16 +1683,23 @@ class VARResults(VARProcess):
         Parameters
         ----------
         steps : int
+            Number of steps ahead to compute forecast covariances for.
+        method : {"mse", "auto"}, default "mse"
+            If "mse", use the forecast MSE, ignoring parameter uncertainty.
+            If "auto", also take parameter uncertainty into account by adding
+            the forecast error covariance due to parameter uncertainty; this
+            is currently only supported if there is no exogenous data and the
+            trend is one of "n" or "c".
+
+        Returns
+        -------
+        covs : ndarray (steps x k x k)
 
         Notes
         -----
         .. math:: \Sigma_{\hat y}(h) = \Sigma_y(h) + \Omega(h) / T
 
         Ref: Lütkepohl pp. 96-97
-
-        Returns
-        -------
-        covs : ndarray (steps x k x k)
         """
         fc_cov = self.mse(steps)
         if method == "mse":
@@ -1751,15 +1758,15 @@ class VARResults(VARProcess):
         cum : bool, default False
             produce cumulative irf error bands
 
-        Notes
-        -----
-        Lütkepohl (2005) Appendix D
-
         Returns
         -------
         ErrorBand
             A NamedTuple with fields ``lower`` and ``upper``, arrays of
             ma_rep Monte Carlo standard errors.
+
+        Notes
+        -----
+        Lütkepohl (2005) Appendix D
         """
         ma_coll = self.irf_resim(
             orth=orth, repl=repl, steps=steps, rng=rng, burn=burn, cum=cum
@@ -1799,14 +1806,14 @@ class VARResults(VARProcess):
         cum : bool, default False
             produce cumulative irf error bands
 
+        Returns
+        -------
+        Array of simulated impulse response functions
+
         Notes
         -----
         .. [*] Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse
            Response." Econometrica 67: 1113-1155.
-
-        Returns
-        -------
-        Array of simulated impulse response functions
         """
         neqs = self.neqs
         k_ar = self.k_ar
@@ -1977,6 +1984,10 @@ class VARResults(VARProcess):
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level
 
+        Returns
+        -------
+        results : CausalityTestResults
+
         Notes
         -----
         Null hypothesis is that there is no Granger-causality for the indicated
@@ -1989,10 +2000,6 @@ class VARResults(VARProcess):
         Test H0: "`causing` does not Granger-cause the remaining variables of
         the system" against  H1: "`causing` is Granger-causal for the
         remaining variables".
-
-        Returns
-        -------
-        results : CausalityTestResults
 
         References
         ----------
@@ -2086,7 +2093,7 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        causing :
+        causing : int or str or sequence of int or str
             If int or str, test whether the corresponding variable is causing
             the variable(s) specified in caused.
             If sequence of int or str, test whether the corresponding
@@ -2469,6 +2476,11 @@ class FEVD:
         ----------
         periods : int, default None
             Defaults to number originally specified. Can be at most that number
+        figsize : tuple, default (10, 10)
+            Figure size (width, height in inches), passed to
+            `matplotlib.pyplot.subplots`.
+        **plot_kwds
+            Additional keyword arguments to pass to the bar plotting function.
         """
         import matplotlib.pyplot as plt
 

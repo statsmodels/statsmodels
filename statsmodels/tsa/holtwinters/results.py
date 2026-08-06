@@ -201,12 +201,12 @@ class HoltWintersResults(Results):
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
+            Zero-indexed observation number at which to start forecasting, i.e.,
             the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in

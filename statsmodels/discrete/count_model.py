@@ -474,7 +474,7 @@ class GenericZeroInflated(CountModel):
             the method. The user does not need to log it first.
             Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
+        which : str, optional
             Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x). This
@@ -484,7 +484,7 @@ class GenericZeroInflated(CountModel):
               model.
             - 'mean-main' : mean of the main count model
             - 'prob-main' : probability of selecting the main model.
-                The probability of zero inflation is ``1 - prob-main``.
+              The probability of zero inflation is ``1 - prob-main``.
             - 'mean-nonzero' : expected value conditional on having observation
               larger than zero, E(y | X, y>0)
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
@@ -1006,13 +1006,13 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         A reference to the zero-inflated exogenous design.
     p : scalar
         P denotes parameterizations for ZINB regression. p=1 for ZINB-1 and
-    p=2 for ZINB-2. Default is p=2
+        p=2 for ZINB-2. Default is p=2
     """.format(
         params=base._model_params_doc,
         extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the NegativeBinomialP model.  p=1 for
-        ZINB-1 and p=2 for ZINM-2. Default is p=2
+        ZINB-1 and p=2 for ZINB-2. Default is p=2
     """
         + base._missing_param_doc,
     )

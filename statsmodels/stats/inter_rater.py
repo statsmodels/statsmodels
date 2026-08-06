@@ -160,6 +160,8 @@ def to_table(data, bins=None):
     arr : ndarray, (n_cat, n_cat)
         Contingency table that contains counts of category level with rater1
         in rows and rater2 in columns.
+    bins : ndarray
+        The bin edges used to construct the contingency table.
 
     Notes
     -----
@@ -301,7 +303,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
         wt in ['linear', 'ca' or None] : use linear weights, Cicchetti-Allison
             actual weights are linear in the score "weights" difference
-        wt in ['quadratic', 'fc'] : use linear weights, Fleiss-Cohen
+        wt in ['quadratic', 'fc'] : use quadratic weights, Fleiss-Cohen
             actual weights are squared in the score "weights" difference
         wt = 'toeplitz' : weight matrix is constructed as a toeplitz matrix
             from the one dimensional weights.
@@ -334,7 +336,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     weights = '0, 0, 1, 1' and wt = 'linear' means that the first two levels
     are zero distance apart and the same for the last two levels. This is
-    the sample as forming two aggregated levels by merging the first two and
+    the same as forming two aggregated levels by merging the first two and
     the last two levels, respectively.
 
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
@@ -480,8 +482,17 @@ class KappaResults(ResultsBunch):
 
     Attributes
     ----------
+    kind : str
+        "Simple" for the unweighted kappa, or "Weighted" if a weight
+        matrix was used.
     kappa : float
         Cohen's kappa.
+    kappa_max : float
+        Maximum value that kappa can attain given the observed marginal
+        frequencies.
+    weights : ndarray or None
+        The weight matrix used to compute the weighted kappa. ``None``
+        for the simple, unweighted kappa.
     var_kappa : float
         Variance of kappa.
     std_kappa : float

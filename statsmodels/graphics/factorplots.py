@@ -41,7 +41,7 @@ def interaction_plot(
     response : array_like
         The response or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
-    func : str or callable
+    func : str or callable, optional
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
     ax : axes, optional
@@ -60,9 +60,9 @@ def interaction_plot(
         If given, must have length == number of levels in trace
     linestyles : list, optional
         If given, must have length == number of levels in trace.
-    legendloc : {None, str, int}
+    legendloc : {None, str, int}, optional
         Location passed to the legend command.
-    legendtitle : {None, str}
+    legendtitle : {None, str}, optional
         Title of the legend.
     **kwargs
         These will be passed to the plot command used either plot or scatter.

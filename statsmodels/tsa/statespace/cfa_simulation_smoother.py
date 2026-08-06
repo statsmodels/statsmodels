@@ -202,12 +202,12 @@ class CFASimulationSmoother:
           `posterior_mean` attribute.
         - The (lower triangular) Cholesky factor of the inverse posterior
           covariance matrix, :math:`L`, is held in sparse diagonal banded
-          storage in the `posterior_cov_inv_chol` attribute.
+          storage in the `posterior_cov_inv_chol_sparse` attribute.
         - The posterior covariance matrix :math:`Var(\alpha \mid Y_n)` can be
           computed on demand by accessing the `posterior_cov` property. Note
           that this matrix can be extremely large, so care must be taken when
           accessing this property. In most cases, it will be preferred to make
-          use of the `posterior_cov_inv_chol` attribute rather than the
+          use of the `posterior_cov_inv_chol_sparse` attribute rather than the
           `posterior_cov` attribute.
         """
         # (Re) initialize the _statespace representation

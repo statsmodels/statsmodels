@@ -47,7 +47,7 @@ class OrderedModel(GenericLikelihoodModel):
     The observed variable is defined by the interval
 
     y = {0 if y_latent <= cut_0
-         1 of cut_0 < y_latent <= cut_1
+         1 if cut_0 < y_latent <= cut_1
          ...
          K if cut_K < y_latent
 
@@ -193,7 +193,7 @@ class OrderedModel(GenericLikelihoodModel):
         endog : array_like or pandas Series
             If the original endog is a pandas ordered Categorical Series,
             then the returned endog are the ``codes``, i.e. integer
-            representation of ordere categorical variable
+            representation of ordered categorical variable
         labels : None or list
             If original endog is pandas ordered Categorical Series, then the
             categories are returned. Otherwise ``labels`` is None.
@@ -430,7 +430,7 @@ class OrderedModel(GenericLikelihoodModel):
             If which is "prob", then 2-dim predicted probabilities with
             observations in rows and one column for each category or level of
             the categorical dependent variable.
-            If which is "cumprob", then "prob" ar cumulatively added to get the
+            If which is "cumprob", then "prob" are cumulatively added to get the
             cdf at k, i.e. probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is

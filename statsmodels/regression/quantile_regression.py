@@ -115,6 +115,7 @@ class QuantReg(RegressionModel):
             Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
+            - biw: Biweight
             - epa: Epanechnikov
             - cos: Cosine
             - gau: Gaussian
@@ -386,9 +387,9 @@ class QuantRegResults(RegressionResults):
         yname : str, optional
             Default is `y`.
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model.
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.

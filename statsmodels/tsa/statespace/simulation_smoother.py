@@ -266,7 +266,7 @@ class SimulationSmoother(KalmanSmoother):
                rng for passing a random number generator or seed.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
-            See `set_simulation_output` for more details.
+            See `get_simulation_output` for more details.
 
         Returns
         -------

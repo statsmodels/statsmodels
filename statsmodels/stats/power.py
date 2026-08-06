@@ -512,7 +512,9 @@ class Power:
             The value solves the power equation given the remaining
             parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -886,7 +888,9 @@ class TTestPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -895,8 +899,6 @@ class TTestPower(Power):
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
 
-        Notes
-        -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``

@@ -559,9 +559,9 @@ class RLMResults(base.LikelihoodModelResults):
         yname : str, optional
             Name of the dependent variable (optional)
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
@@ -635,9 +635,9 @@ class RLMResults(base.LikelihoodModelResults):
         Parameters
         ----------
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model
         yname : str, optional
             Name of the dependent variable (optional)
         title : str, optional

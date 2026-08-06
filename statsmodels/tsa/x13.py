@@ -516,9 +516,11 @@ def x13_arima_analysis(
 
     Returns
     -------
-    Bunch
-        A bunch object containing the listed attributes.
+    X13ArimaAnalysisResult
+        An object containing the listed attributes.
 
+        - observed : pandas.Series
+          The original ``endog`` series.
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series

@@ -184,7 +184,7 @@ def plot_acf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett's formula. The confidence intervals centered at 0 to simplify
-        detecting which estaimated autocorrelations are significantly
+        detecting which estimated autocorrelations are significantly
         different from 0. If None, no confidence intervals are plotted.
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.

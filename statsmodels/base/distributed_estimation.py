@@ -407,10 +407,6 @@ class DistributedModel:
     init_kwds : dict-like or None
         Keywords needed for initializing the model, in addition to
         endog and exog.
-    init_kwds_generator : generator or None
-        Additional keyword generator that produces model init_kwds
-        that may vary based on data partition.  The current usecase
-        is for WLS and GLS
     estimation_method : function or None
         The method that performs the estimation for each partition.
         If None this defaults to _est_regularized_debiased.
@@ -434,8 +430,6 @@ class DistributedModel:
     model_class : statsmodels model class
         See Parameters.
     init_kwds : dict-like
-        See Parameters.
-    init_kwds_generator : generator or None
         See Parameters.
     estimation_method : function
         See Parameters.
@@ -544,9 +538,10 @@ class DistributedModel:
 
         Returns
         -------
-        ndarray
-            The join_method result.  For the default, _join_debiased, it
-            returns a p length array.
+        Results
+            An instance of results_class (RegularizedResults by
+            default), initialized using the dummy result model and
+            the join_method result as params.
         """
 
         if fit_kwds is None:
@@ -597,9 +592,10 @@ class DistributedModel:
 
         Returns
         -------
-        ndarray
-            The join_method result.  For the default, _join_debiased, it
-            returns a p length array.
+        list
+            A list of the estimation_method result for each partition.
+            For the default, _est_regularized_debiased, a list of
+            tuples.
         """
 
         results_l = []
@@ -647,9 +643,10 @@ class DistributedModel:
 
         Returns
         -------
-        ndarray
-            The join_method result.  For the default, _join_debiased, it
-            returns a p length array.
+        list
+            A list of the estimation_method result for each partition.
+            For the default, _est_regularized_debiased, a list of
+            tuples.
         """
 
         from statsmodels.tools.parallel import parallel_func

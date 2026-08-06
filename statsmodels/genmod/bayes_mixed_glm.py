@@ -117,7 +117,7 @@ _init_doc = r"""
 
     Returns
     -------
-    MixedGLMResults object
+    BayesMixedGLMResults instance.
 
     Notes
     -----
@@ -150,10 +150,6 @@ _init_doc = r"""
     and standard deviation `fe_p`.  It is recommended that quantitative
     covariates be standardized.
 
-    Examples
-    --------{example}
-
-
     References
     ----------
     Introduction to generalized linear mixed models:
@@ -165,6 +161,9 @@ _init_doc = r"""
     An assessment of estimation methods for generalized linear mixed
     models with binary outcomes
     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3866838/
+
+    Examples
+    --------{example}
     """
 
 # The code in the example should be identical to what appears in
@@ -655,7 +654,9 @@ class _VariationalBayesMixedGLM:
         """
         Return the gradient of the ELBO function.
 
-        See vb_elbo_base for parameters.
+        See vb_elbo_base for parameters. In addition, `tv` is the
+        variance of the linear predictor under the given distribution
+        parameters.
         """
 
         fep_mean_grad = 0.0
@@ -1078,6 +1079,32 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):
+        """
+        Fit a BinomialBayesMixedGLM using a formula.
+
+        Parameters
+        ----------
+        formula : str
+            Formula for the endog and fixed effects terms (use ~ to
+            separate dependent and independent expressions).
+        vc_formulas : dictionary
+            vc_formulas[name] is a one-sided formula that creates one
+            collection of random effects with a common variance
+            parameter.  If using categorical (factor) variables to
+            produce variance components, note that generally `0 + ...`
+            should be used so that an intercept is not included.
+        data : data frame
+            The data to which the formulas are applied.
+        vcp_p : float
+            The prior standard deviation for the logarithms of the standard
+            deviations of the random effects.
+        fe_p : float
+            The prior standard deviation for the fixed effects parameters.
+
+        Returns
+        -------
+        BinomialBayesMixedGLM instance.
+        """
 
         fam = families.Binomial()
         x = _BayesMixedGLM.from_formula(
@@ -1175,6 +1202,36 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
     def from_formula(
         cls, formula, vc_formulas, data, vcp_p=1, fe_p=2, vcp_names=None, vc_names=None
     ):
+        """
+        Fit a PoissonBayesMixedGLM using a formula.
+
+        Parameters
+        ----------
+        formula : str
+            Formula for the endog and fixed effects terms (use ~ to
+            separate dependent and independent expressions).
+        vc_formulas : dictionary
+            vc_formulas[name] is a one-sided formula that creates one
+            collection of random effects with a common variance
+            parameter.  If using categorical (factor) variables to
+            produce variance components, note that generally `0 + ...`
+            should be used so that an intercept is not included.
+        data : data frame
+            The data to which the formulas are applied.
+        vcp_p : float
+            The prior standard deviation for the logarithms of the standard
+            deviations of the random effects.
+        fe_p : float
+            The prior standard deviation for the fixed effects parameters.
+        vcp_names : list[str]
+            The names of the variance component parameters.
+        vc_names : list[str]
+            The names of the random effect realizations.
+
+        Returns
+        -------
+        PoissonBayesMixedGLM instance.
+        """
 
         fam = families.Poisson()
         x = _BayesMixedGLM.from_formula(

@@ -250,11 +250,13 @@ class emplikeAFT:
 
     Methods
     -------
-    params
-        Fits model parameters
+    fit
+        Fits the model and returns an AFTResults instance, whose
+        ``params`` and ``test_beta`` methods fit model parameters and
+        test if beta = b0 for any vector b0, respectively.
 
-    test_beta
-        Tests if beta = b0 for any vector b0.
+    predict
+        Returns the linear predictor, params multiplied by endog.
 
     Notes
     -----

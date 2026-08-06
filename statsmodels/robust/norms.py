@@ -1748,7 +1748,7 @@ class MQuantileNorm(RobustNorm):
     in QuantileRegression but replaces the L1 absolute value by a chosen
     base norm.
 
-        rho_q(u) = abs(q - I(q < 0)) * rho_base(u)
+        rho_q(u) = abs(q - I(u < 0)) * rho_base(u)
 
     or, equivalently,
 
@@ -1903,7 +1903,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     """
     Estimate a robust location parameter using an M-estimator.
 
-    This function iteratively computes the location parameterthat satisfies:
+    This function iteratively computes the location parameter that satisfies:
             sum(psi((a-mu)/scale))=0
 
     where 'psi' is the influence function defined by the selected robust norm.

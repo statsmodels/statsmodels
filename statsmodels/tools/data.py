@@ -72,8 +72,12 @@ def interpret_data(data, colnames=None, rownames=None):
 
     Returns
     -------
-    (values, colnames, rownames) : (homogeneous ndarray, list)
-        Converted values, column names, and row names.
+    values : ndarray
+        Converted, homogeneous data values.
+    colnames : list
+        Column names.
+    rownames : sequence or None
+        Row names, if available.
 
     """
     if isinstance(data, np.ndarray):

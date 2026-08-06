@@ -114,7 +114,7 @@ class PCA:
         estimated factors
     rsquare : array or Series
         ncomp array where the element in the ith position is the R-square
-        of including the fist i principal components.  Note: values are
+        of including the first i principal components.  Note: values are
         calculated on the transformed data, not the original data
     ic : array or DataFrame
         ncomp by 3 array containing the Bai and Ng (2002) Information
@@ -146,15 +146,15 @@ class PCA:
     the number of components (ncomp) is the same as the minimum of the number
     of observation or the number of variables.
 
-    .. math:
+    .. math::
 
         X' X = V \\Lambda V'
 
-    .. math:
+    .. math::
 
         F = X V
 
-    .. math:
+    .. math::
 
         X = F V'
 
@@ -165,7 +165,7 @@ class PCA:
     When weights are provided, the principal components are computed from the
     modified data
 
-    .. math:
+    .. math::
 
         \\Omega^{-\\frac{1}{2}} X
 
@@ -173,7 +173,7 @@ class PCA:
     example, when using the GLS version of PCA, the elements of :math:`\\Omega`
     will be the inverse of the variances of the residuals from
 
-    .. math:
+    .. math::
 
         X - F V'
 
@@ -751,7 +751,7 @@ estimates are based on only {eff_series} (effective) series."""
         ----------
         ncomp : int, optional
             Number of components to include in the plot.  If None, will
-            included the same as the number of components computed
+            include the same as the number of components computed
         log_scale : bool, optional
             Flag indicating whether to use a log scale for the y-axis
         cumulative : bool, optional
@@ -893,7 +893,7 @@ def pca(
         estimated factors.
     rsquare : {ndarray, Series}
         Array (ncomp,) where the element in the ith position is the R-square
-        of including the fist i principal components.  The values are
+        of including the first i principal components.  The values are
         calculated on the transformed data, not the original data.
     ic : {ndarray, DataFrame}
         Array (ncomp, 3) containing the Bai and Ng (2002) Information

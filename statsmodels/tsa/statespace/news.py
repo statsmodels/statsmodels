@@ -438,6 +438,12 @@ class NewsResults:
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        details_by_update
+        revision_details_by_update
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -460,12 +466,6 @@ class NewsResults:
         be more convenient for displaying the entire table of detailed updates.
         At the same time, `details_by_update` is less convenient for
         subsetting.
-
-        See Also
-        --------
-        details_by_update
-        revision_details_by_update
-        impacts
         """
         s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
         df = s.rename("weight").to_frame()
@@ -531,6 +531,12 @@ class NewsResults:
             - `impact`: the impact of the `revision` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        revision_details_by_update
+        details_by_impact
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -553,17 +559,11 @@ class NewsResults:
 
         However, since the `observed (prev)` and `revised` columns have a lot
         of duplication, printing the entire table gives a result that is less
-        easy to parse than that produced by the `details_by_revision` property.
-        `details_by_revision` contains the same information but is organized to
-        be more convenient for displaying the entire table of detailed
-        revisions. At the same time, `details_by_revision` is less convenient
-        for subsetting.
-
-        See Also
-        --------
-        details_by_revision
-        details_by_impact
-        impacts
+        easy to parse than that produced by the `revision_details_by_update`
+        property. `revision_details_by_update` contains the same information
+        but is organized to be more convenient for displaying the entire table
+        of detailed revisions. At the same time, `revision_details_by_update`
+        is less convenient for subsetting.
         """
         weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
         df = pd.concat([
@@ -619,6 +619,11 @@ class NewsResults:
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        details_by_impact
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -640,11 +645,6 @@ class NewsResults:
         make slicing by impacted variables / dates easy. This allows, for
         example, viewing the details of data updates on a particular variable
         or date of interest.
-
-        See Also
-        --------
-        details_by_impact
-        impacts
         """
         s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
         df = s.rename("weight").to_frame()
@@ -702,6 +702,11 @@ class NewsResults:
             - `impact`: the impact of the `revision` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        revision_details_by_impact
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -728,11 +733,6 @@ class NewsResults:
         organized to make slicing by impacted variables / dates easy. This
         allows, for example, viewing the details of data revisions on a
         particular variable or date of interest.
-
-        See Also
-        --------
-        details_by_impact
-        impacts
         """
         weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
 
@@ -792,6 +792,11 @@ class NewsResults:
               date / variable of interest after taking into account the effects
               of the revisions and news.
 
+        See Also
+        --------
+        details_by_impact
+        details_by_update
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest into
@@ -799,12 +804,7 @@ class NewsResults:
 
         This table does not break down the detail by the updated
         dates / variables. That information can be found in the
-        `details_by_impact` `details_by_update` tables.
-
-        See Also
-        --------
-        details_by_impact
-        details_by_update
+        `details_by_impact` and `details_by_update` tables.
         """
         # Summary of impacts
         impacts = pd.concat([

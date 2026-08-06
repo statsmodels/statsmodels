@@ -111,7 +111,7 @@ class _OptFuncts:
     observation as a 1 x n array and est_vect is n x k.  Then _modif_Newton is
     called to determine the optimal p by solving for the Lagrange multiplier
     (eta) in the profile likelihood maximization problem.  In the presence
-    of nuisance parameters, _opt_ functions are  optimized over to profile
+    of nuisance parameters, _opt_ functions are optimized over to profile
     out the nuisance parameters.
 
     Any method starting with _ci_limits calculates the log likelihood
@@ -1246,7 +1246,7 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        mu_array  : 1d array
+        mu_array : 1d array
             Hypothesized values for the mean.  Must have same number of
             elements as columns in endog
 

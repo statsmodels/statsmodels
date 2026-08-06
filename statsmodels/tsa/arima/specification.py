@@ -226,13 +226,13 @@ class SARIMAXSpecification:
     Examples
     --------
     >>> SARIMAXSpecification(order=(1, 0, 2))
-    SARIMAXSpecification(endog=y, order=(1, 0, 2))
+    SARIMAXSpecification(order=(1, 0, 2))
 
-    >>> spec = SARIMAXSpecification(ar_order=1, ma_order=2)
-    SARIMAXSpecification(endog=y, order=(1, 0, 2))
+    >>> SARIMAXSpecification(ar_order=1, ma_order=2)
+    SARIMAXSpecification(order=(1, 0, 2))
 
-    >>> spec = SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
-    SARIMAXSpecification(endog=y, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
+    >>> SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
+    SARIMAXSpecification(order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
     """
 
     def __init__(self, endog=None, exog=None, order=None,
@@ -674,7 +674,8 @@ class SARIMAXSpecification:
         ValueError: Burg estimator does not support moving average components.
 
         >>> spec.validate_estimator('innovations')
-        ValueError: Burg estimator does not support autoregressive components.
+        ValueError: Innovations estimator does not support autoregressive
+                    components.
 
         >>> spec.validate_estimator('hannan_rissanen')  # returns None
         >>> spec.validate_estimator('innovations_mle')  # returns None
@@ -891,7 +892,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.validate_params([-0.5, 4.])  # returns None
         >>> spec.validate_params([-0.5, -2])
         ValueError: Non-positive variance term.
@@ -954,7 +955,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.constrain_params([10, -2])
         array([-0.99504,  4.     ])
         """
@@ -1014,7 +1015,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.unconstrain_params([-0.5, 4.])
         array([0.57735, 2.     ])
         """

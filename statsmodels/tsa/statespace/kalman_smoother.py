@@ -326,7 +326,7 @@ class KalmanSmoother(KalmanFilter):
         >>> mod.smooth_method
         17
         >>> mod.set_smooth_method(filter_univariate=False,
-                                  filter_collapsed=True)
+        ...                       filter_collapsed=True)
         >>> mod.smooth_method
         33
         >>> mod.set_smooth_method(smooth_method=1)
@@ -567,9 +567,9 @@ class SmootherResults(FilterResults):
         The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
     smoothed_measurement_disturbance : ndarray
-        The smoothed measurement at each time period.
+        The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
-        The smoothed state at each time period.
+        The smoothed state disturbance at each time period.
     smoothed_measurement_disturbance_cov : ndarray
         The smoothed measurement disturbance covariance matrices at each time
         period.
@@ -932,7 +932,7 @@ class SmootherResults(FilterResults):
               usual.
 
             More generally, the dimension of the last axis will be
-            `start - end`.
+            `end - start`.
 
         Notes
         -----
@@ -1840,9 +1840,9 @@ class SmootherResults(FilterResults):
             time `j` to the `m`-th state at time `t`. If the smoothed signal
             is being decomposed, then `state_intercept_contributions` are
             shaped `(nobs, k_endog, nobs, k_endog)`, where the
-            `(t, k, j, l)`-th element is the contribution of the `p`-th
-            observation at time `j` to the smoothed prediction of the `k`-th
-            observation at time `t`.
+            `(t, k, j, l)`-th element is the contribution of the `l`-th
+            state intercept at time `j` to the smoothed prediction of the
+            `k`-th observation at time `t`.
         prior_contributions : array
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` are

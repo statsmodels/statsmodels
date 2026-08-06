@@ -281,7 +281,7 @@ def test_cov(cov, nobs, cov_null):
         i.e. `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
-    cov_null : nd_array
+    cov_null : ndarray
         covariance under the null hypothesis
 
     Returns

@@ -100,9 +100,6 @@ def array_like(
     >>> a.shape
     (4,)
 
-    >>> type(a.orig)
-    pandas.core.series.Series
-
     Squeezes singleton dimensions when required
     >>> x = np.array(x).reshape((4, 1))
     >>> a = array_like(x, 'x', ndim=1)
@@ -120,7 +117,7 @@ def array_like(
     >>> y = array_like(x, 'x', ndim=3, shape=(4, None, 4))
 
     Check only the first two dimensions
-    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10))
+    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10, None))
 
     Raises ValueError if constraints are not satisfied
     >>> z = array_like(x, 'x', ndim=2)
@@ -128,12 +125,12 @@ def array_like(
      ...
     ValueError: x is required to have ndim 2 but has ndim 3
 
-    >>> z = array_like(x, 'x', shape=(10, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(10, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (10, 4, 4) but has shape (4, 10, 4)
 
-    >>> z = array_like(x, 'x', shape=(None, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(None, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
@@ -219,7 +216,9 @@ class PandasWrapper:
         Returns
         -------
         array_like
-            A pandas Series or DataFrame, depending on the shape of obj.
+            A pandas Series or DataFrame, depending on the shape of obj, if
+            the object used to create the wrapper was pandas. Otherwise,
+            returns `obj` converted to an ndarray, unchanged.
 
         """
         obj = np.asarray(obj)

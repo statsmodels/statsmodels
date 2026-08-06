@@ -160,7 +160,8 @@ class TableDist:
         """
         Find p-values by interpolation, for either cdf(x) or sf(x)
 
-        Returns extreme probabilities, 0.001 and 0.2, for out of range
+        Returns the smallest or largest tabulated probability, alpha[0] or
+        alpha[-1], for x outside of the tabulated range
 
         Parameters
         ----------
