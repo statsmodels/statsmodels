@@ -593,7 +593,7 @@ class RLMResults(base.LikelihoodModelResults):
             ("Df Model:", None),
         ]
 
-        if title is not None:
+        if title == 0:
             title = "Robust linear Model Regression Results"
 
         # boiler plate
