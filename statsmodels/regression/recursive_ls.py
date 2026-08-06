@@ -177,7 +177,7 @@ class RecursiveLS(MLEModel):
         raise ValueError("Linear constraints on coefficients should be given"
                          " using the `constraints` argument in constructing."
                          " the model. Other parameter constraints are not"
-                         " available in the resursive least squares model.")
+                         " available in the recursive least squares model.")
 
     def fit(self):
         """

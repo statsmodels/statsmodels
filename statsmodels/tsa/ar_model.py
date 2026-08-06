@@ -1019,7 +1019,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     def sigma2(self):
         return 1.0 / self.nobs * sumofsq(self.resid)
 
-    @cache_writable()  # for compatability with RegressionResults
+    @cache_writable()  # for compatibility with RegressionResults
     def scale(self):
         return self.sigma2
 

@@ -298,7 +298,7 @@ def gls(
         # Step 3: GLS
         # Compute transformed variables that satisfy OLS assumptions
         # Note: In section 6.1.1 of Brockwell and Davis (2016), these
-        # transformations are developed as computed by left multiplcation
+        # transformations are developed as computed by left multiplication
         # by a matrix T. However, explicitly constructing T and then
         # performing the left-multiplications does not scale well when nobs is
         # large. Instead, we can retrieve the transformed variables as the

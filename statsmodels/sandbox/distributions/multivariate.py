@@ -84,7 +84,7 @@ def bghfactor(df):
     return np.power(2.0, 1 - df * 0.5) / sps_gamma(df * 0.5)
 
 
-def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
+def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None):
     """
     Probability of rectangular area of standard t distribution
 
@@ -105,8 +105,6 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
         chi distribution.
     quadkwds : dict, optional
         Keyword arguments passed to `scipy.integrate.quad`.
-    mvstkwds : dict, optional
-        Additional keyword arguments (currently unused).
 
     Notes
     -----
