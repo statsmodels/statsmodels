@@ -443,6 +443,22 @@ def test_too_many_missing():
     assert max(p.factors.shape) == max(data.shape) - 1
 
 
+def test_prepare_data_all_nan():
+    # GH: _prepare_data's all-NaN branch did
+    # `return np.empty(adj_data.shape[1]).fill(np.nan)`, but ndarray.fill()
+    # mutates in place and returns None, so the branch returned None
+    # instead of a NaN-filled array.
+    rs = np.random.RandomState(0)
+    data = rs.standard_normal((10, 4))
+    p = PCA(data)
+    p._adjusted_data = np.full_like(data, np.nan)
+
+    result = p._prepare_data()
+    assert result is not None
+    assert result.shape == (4,)
+    assert np.all(np.isnan(result))
+
+
 def test_gls_warning():
     rs = np.random.RandomState(83429421)
     data = rs.standard_normal((400, 200))

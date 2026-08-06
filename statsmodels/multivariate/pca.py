@@ -449,7 +449,9 @@ estimates are based on only {eff_series} (effective) series."""
         """
         adj_data = self._adjusted_data
         if np.all(np.isnan(adj_data)):
-            return np.empty(adj_data.shape[1]).fill(np.nan)
+            result = np.empty(adj_data.shape[1])
+            result.fill(np.nan)
+            return result
 
         self._mu = np.nanmean(adj_data, axis=0)
         self._sigma = np.sqrt(np.nanmean((adj_data - self._mu) ** 2.0, axis=0))
