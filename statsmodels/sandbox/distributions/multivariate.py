@@ -90,6 +90,24 @@ def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
 
     assumes mean is zero and R is correlation matrix
 
+    Parameters
+    ----------
+    a : array_like
+        Lower integration limits.
+    b : array_like
+        Upper integration limits.
+    R : array_like
+        Correlation matrix.
+    df : int or float
+        Degrees of freedom.
+    ieps : float
+        Tail probability used to set the integration limits over the
+        chi distribution.
+    quadkwds : dict, optional
+        Keyword arguments passed to `scipy.integrate.quad`.
+    mvstkwds : dict, optional
+        Additional keyword arguments (currently unused).
+
     Notes
     -----
     This function does not calculate the estimate of the combined error
@@ -116,7 +134,7 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1, rng=None):
     m : array_like
         mean of random variable, length determines dimension of random variable
     S : array_like
-        square array of covariance  matrix
+        square array of covariance matrix
     df : int or float
         degrees of freedom
     n : int

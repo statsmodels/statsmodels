@@ -675,9 +675,10 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
     Parameters
     ----------
     mean : float or ndarray
-        Value, for example mean, of the first sample.
+        Point estimate, for example the mean or the difference of means
+        of two samples.
     std_mean : float or ndarray
-        Standard error of the difference value1 - value2
+        Standard error of `mean`.
     dof : int or float
         Degrees of freedom
     alpha : float
@@ -686,9 +687,9 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
     alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
-           * 'larger' :   H1: ``value1 - value2 - diff > 0``
-           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+           * 'two-sided' : H1: ``mean`` not equal to the null value.
+           * 'larger' :   H1: ``mean`` larger than the null value.
+           * 'smaller' :  H1: ``mean`` smaller than the null value.
 
     Returns
     -------
@@ -784,9 +785,9 @@ def _zstat_generic2(value, std, alternative):
     alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
-           * 'larger' :   H1: ``value1 - value2 - diff > 0``
-           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+           * 'two-sided' : H1: ``value`` not equal to 0.
+           * 'larger' :   H1: ``value > 0``
+           * 'smaller' :  H1: ``value < 0``
 
     Returns
     -------
@@ -816,18 +817,19 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
     Parameters
     ----------
     mean : float or ndarray
-        Value, for example mean, of the first sample.
+        Point estimate, for example the mean or the difference of means
+        of two samples.
     std_mean : float or ndarray
-        Standard error of the difference value1 - value2
+        Standard error of `mean`.
     alpha : float
         Significance level for the confidence interval, coverage is
         ``1-alpha``
     alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
-           * 'larger' :   H1: ``value1 - value2 - diff > 0``
-           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+           * 'two-sided' : H1: ``mean`` not equal to the null value.
+           * 'larger' :   H1: ``mean`` larger than the null value.
+           * 'smaller' :  H1: ``mean`` smaller than the null value.
 
     Returns
     -------

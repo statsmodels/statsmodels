@@ -1,19 +1,27 @@
 """
 Inter Rater Agreement
 
-contains
---------
-fleiss_kappa
-cohens_kappa
+Created on Thu Dec 06 22:57:56 2012
+Author: Josef Perktold
+License: BSD-3
+
+Notes
+-----
+Contains fleiss_kappa and cohens_kappa.
 
 aggregate_raters:
     helper function to get data into fleiss_kappa format
 to_table:
     helper function to create contingency table, can be used for cohens_kappa
 
-Created on Thu Dec 06 22:57:56 2012
-Author: Josef Perktold
-License: BSD-3
+TODO:
+standard errors and hypothesis tests for fleiss_kappa
+other statistics and tests,
+   in R package irr, SAS has more
+inconsistent internal naming, changed variable names as I added more
+   functionality
+convenience functions to create required data format from raw data
+   DONE
 
 References
 ----------
@@ -22,16 +30,6 @@ Wikipedia: kappa's initially based on these two pages
     https://en.wikipedia.org/wiki/Cohen's_kappa
 SAS-Manual : formulas for cohens_kappa, especially variances
 see also R package irr
-
-TODO
-----
-standard errors and hypothesis tests for fleiss_kappa
-other statistics and tests,
-   in R package irr, SAS has more
-inconsistent internal naming, changed variable names as I added more
-   functionality
-convenience functions to create required data format from raw data
-   DONE
 """
 
 import numpy as np

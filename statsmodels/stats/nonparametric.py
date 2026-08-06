@@ -840,7 +840,7 @@ def samplesize_rank_compare_onetail(
     Examples
     --------
     The data for the placebo group of a clinical trial published in
-    Thall and Vail [2] is shown below. A relevant effect for the treatment
+    Thall and Vail [2]_ is shown below. A relevant effect for the treatment
     under investigation is considered to be a 50% reduction in the number
     of seizures. To compute the required sample size with a power of 0.8
     and holding the type I error rate at 0.05, we generate synthetic data
