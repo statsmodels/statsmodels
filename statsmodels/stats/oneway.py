@@ -377,8 +377,8 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
 
     Returns
     -------
-    float
-        The end point of the confidence interval.
+    ndarray
+        Lower and upper confidence limits for the noncentrality parameter.
 
     See Also
     --------
@@ -450,8 +450,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     R package ``effectsize`` does not compute the confidence intervals in the
     same way. Their confidence intervals can be replicated with
 
-    >>> ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=0.1)
-    >>> ci_es = smo._fstat2effectsize(ci_nc / df1, df1, df2)
+    >>> ci_nc = confint_noncentrality(f_stat, (df1, df2), alpha=0.1)
+    >>> ci_es = smo._fstat2effectsize(ci_nc / df1, (df1, df2))
     """
 
     df1, df2 = df
@@ -1181,7 +1181,6 @@ def test_scale_oneway(
         "unequal" : Variances are not assumed to be equal across samples.
             Heteroscedasticity is taken into account with Welch Anova and
             Satterthwaite-Welch degrees of freedom.
-            This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
         "bf" : Variances are not assumed to be equal across samples.
@@ -1189,6 +1188,7 @@ def test_scale_oneway(
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
+            This is the default.
 
     center : "median", "mean", "trimmed" or float
         Statistic used for centering observations. If a float, then this
@@ -1291,7 +1291,6 @@ def equivalence_scale_oneway(
         "unequal" : Variances are not assumed to be equal across samples.
             Heteroscedasticity is taken into account with Welch Anova and
             Satterthwaite-Welch degrees of freedom.
-            This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
         "bf" : Variances are not assumed to be equal across samples.
@@ -1299,6 +1298,7 @@ def equivalence_scale_oneway(
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
+            This is the default.
     center : "median", "mean", "trimmed" or float
         Statistic used for centering observations. If a float, then this
         value is used to center. Default is median.

@@ -220,7 +220,7 @@ class GenericKDE:
 
         Notes
         -----
-        The default values for bw is 'normal_reference'.
+        The default value for bw is 'normal_reference'.
         """
         if bw is None:
             bw = "normal_reference"
@@ -545,7 +545,7 @@ class EstimatorSettings:
 
     `EstimatorSettings` has several properties related to how bandwidth
     estimation for the `KDEMultivariate`, `KDEMultivariateConditional`,
-    `KernelReg` and `CensoredKernelReg` classes behaves.
+    `KernelReg` and `KernelCensoredReg` classes behaves.
 
     Parameters
     ----------

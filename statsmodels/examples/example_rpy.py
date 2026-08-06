@@ -4,13 +4,13 @@ These examples are mainly for developers.
 
 # example 1: OLS using LM
 # example 2: GLM with binomial family
-    The second results is not exactly correct since it assumes that each
-    obvervation has the same number of trials see datasets/longley for an R script
+    The second results are not exactly correct since it assumes that each
+    observation has the same number of trials see datasets/longley for an R script
     with the correct syntax.
 
 See rmodelwrap.py in the tests folder for a convenience wrapper
 to make rpy more like statsmodels.  Note, however, that rmodelwrap
-was created in a very ad hoc manner and due to the idiosyncracies in R
+was created in a very ad hoc manner and due to the idiosyncrasies in R
 it does not work for all types of R models.
 
 There are also R scripts included with most of the datasets to run

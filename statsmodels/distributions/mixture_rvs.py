@@ -211,7 +211,7 @@ class MixtureDistribution:
         >>> x = np.arange(-4.0, 4.0, 0.01)
         >>> prob = [.75,.25]
         >>> mixture = MixtureDistribution()
-        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm],
+        >>> Y = mixture.cdf(x, prob, dist=[stats.norm, stats.norm],
         ...                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
         """
         if len(prob) != len(dist):

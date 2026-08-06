@@ -788,7 +788,7 @@ class MultivariateTestResults:
     endog_names : sequence[str]
         A list or other sequence of endogenous variables names
     exog_names : sequence[str]
-        A list of other sequence of exogenous variables names
+        A list or other sequence of exogenous variables names
 
     Attributes
     ----------
