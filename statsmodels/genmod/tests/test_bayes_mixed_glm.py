@@ -557,6 +557,37 @@ def test_poisson_formula():
                 np.linalg.cholesky(cp)
 
 
+def test_poisson_formula_vcp_vc_names():
+    # GH: PoissonBayesMixedGLM.from_formula accepted vcp_names/vc_names but
+    # then built `mod` from `x.vcp_names`/`x.vc_names` (the names
+    # auto-derived by _BayesMixedGLM.from_formula from vc_formulas), so the
+    # caller-supplied override names were always silently discarded.
+    y, exog_fe, exog_vc, ident = gen_crossed_poisson(10, 10, 1, 0.5)
+
+    df = pd.DataFrame({"y": y, "x1": exog_fe[:, 0]})
+    z1 = np.zeros(len(y))
+    for j, k in enumerate(np.flatnonzero(ident == 0)):
+        z1[exog_vc[:, k] == 1] = j
+    df["z1"] = z1
+    z2 = np.zeros(len(y))
+    for j, k in enumerate(np.flatnonzero(ident == 1)):
+        z2[exog_vc[:, k] == 1] = j
+    df["z2"] = z2
+
+    fml = "y ~ 0 + x1"
+    vc_fml = {"z1": "0 + C(z1)", "z2": "0 + C(z2)"}
+
+    custom_vcp_names = ["custom_z1", "custom_z2"]
+    mod = PoissonBayesMixedGLM.from_formula(
+        fml, vc_fml, df, vcp_names=custom_vcp_names
+    )
+    assert mod.vcp_names == custom_vcp_names
+
+    # default (no override) still falls back to the auto-derived names
+    mod_default = PoissonBayesMixedGLM.from_formula(fml, vc_fml, df)
+    assert mod_default.vcp_names == ["z1", "z2"]
+
+
 def test_scale_vb():
     rs = np.random.RandomState(3228171)
     y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 0)

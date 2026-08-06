@@ -1247,8 +1247,8 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             vcp_p=x.vcp_p,
             fe_p=x.fe_p,
             fep_names=x.fep_names,
-            vcp_names=x.vcp_names,
-            vc_names=x.vc_names,
+            vcp_names=vcp_names if vcp_names is not None else x.vcp_names,
+            vc_names=vc_names if vc_names is not None else x.vc_names,
         )
         mod.data = x.data
 
