@@ -92,7 +92,7 @@ def test_chisquare_binning(
 
     observed = np.asarray(counts)
     expected = np.asarray(expected)
-    n_observed = counts.sum()
+    n_observed = observed.sum()
     n_expected = expected.sum()
     if not np.allclose(n_observed, n_expected, atol=1e-13):
         if np.max(expected) < 1 + 1e-13:
