@@ -1112,7 +1112,7 @@ class CMTTauchen:
         TODO: This can use generic ztest/ttest features and return
         ContrastResults
         """
-        diff = self.moments_constraint
+        diff = self.moments
         bse = np.sqrt(np.diag(self.cov_mom_constraints))
 
         # Newey uses a generalized inverse
@@ -1123,7 +1123,7 @@ class CMTTauchen:
     @cache_readonly
     def chisquare(self):
         """statistic, p-value and degrees of freedom of joint moment test"""
-        diff = self.moments  # _constraints
+        diff = self.moments  # moments are already the moment constraints
         cov = self.cov_mom_constraints
 
         # Newey uses a generalized inverse, we use it also here
