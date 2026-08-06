@@ -27,7 +27,7 @@ from statsmodels.regression.linear_model import (
     RegressionResults,
     RegressionResultsWrapper,
 )
-from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
 
 
@@ -318,7 +318,7 @@ class QuantRegResults(RegressionResults):
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
-    # @cache_readonly
+    @cache_writable()
     def scale(self):
         return 1.0
 
