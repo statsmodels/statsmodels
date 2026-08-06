@@ -29,7 +29,6 @@ jobs:
           python.version: '3.14'
           python.architecture: 'x64-freethreaded'
           PANDAS_VERSION: 3
-          test.x13: true
         python_312_latest:
           python.version: '3.12'
           python.architecture: 'x64'
@@ -67,6 +66,8 @@ jobs:
           python.version: '3.13'
           python.architecture: 'x64'
           SM_TEST_COPY_ON_WRITE: 1
+          coverage: true
+          test.x13: true
         python_312_pre:
           python.version: '3.12'
           python.architecture: 'x64'
