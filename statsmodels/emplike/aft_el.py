@@ -437,7 +437,7 @@ class AFTResults(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30, print_weights=1):
+    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30):
         """
         Returns the profile log likelihood for regression parameters
         'param_nums' at 'b0_vals'
@@ -453,9 +453,6 @@ class AFTResults(OptAFT):
         ftol : float, optional
             The function tolerance for the EM optimization.
             Default is ``10**-5``
-        print_weights : bool, optional
-            If true, returns the weights that maximize the profile
-            log likelihood. Default is True
 
         Returns
         -------
