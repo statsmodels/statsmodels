@@ -1356,7 +1356,7 @@ def ardl_select_order(
     *,
     fixed: ArrayLike2D | None = None,
     causal: bool = False,
-    ic: Literal["aic", "bic"] = "bic",
+    ic: Literal["aic", "bic", "hqic"] = "bic",
     glob: bool = False,
     seasonal: bool = False,
     deterministic: DeterministicProcess | None = None,
