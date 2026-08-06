@@ -406,6 +406,7 @@ class SurvfuncRight:
         if entry is not None:
             entry = self.entry = np.asarray(entry)
 
+        self.title = "" if not title else title
         if exog is not None:
             if entry is not None:
                 raise ValueError("exog and entry cannot both be present")
@@ -420,6 +421,10 @@ class SurvfuncRight:
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
+            self.surv_prob_se = np.full_like(x[1], np.nan)
+            self.n_risk = np.full_like(x[1], np.nan)
+            self.n_events = np.full_like(x[1], np.nan)
+
             return
 
         x = _calc_survfunc_right(time, status, weights=freq_weights,
@@ -430,7 +435,7 @@ class SurvfuncRight:
         self.surv_times = x[2]
         self.n_risk = x[4]
         self.n_events = x[5]
-        self.title = "" if not title else title
+
 
     def plot(self, ax=None):
         """
