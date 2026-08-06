@@ -459,7 +459,7 @@ class GroupSorted(Group):
     """
 
     def __init__(self, group, name=""):
-        super(self.__class__, self).__init__(group, name=name)
+        super().__init__(group, name=name)
 
         idx = (np.nonzero(np.diff(group))[0] + 1).tolist()
         self.groupidx = lzip([0, *idx], [*idx, len(group)])

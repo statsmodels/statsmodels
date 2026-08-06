@@ -10,6 +10,7 @@ from statsmodels.datasets import anes96, grunfeld
 from statsmodels.tools.grouputils import (
     Group,
     Grouping,
+    GroupSorted,
     combine_indices,
     dummy_sparse,
     group_sums,
@@ -181,6 +182,18 @@ class TestIndexGrouping(CheckGrouping):
         cls.data = index_data
 
         cls.expected_counts = [20] * 11
+
+
+def test_group_sorted_subclass_no_infinite_recursion():
+    # GH: GroupSorted.__init__ used super(self.__class__, self), which
+    # recurses infinitely for any subclass that doesn't override __init__,
+    # since self.__class__ always resolves to the most-derived runtime type.
+    class MyGroupSorted(GroupSorted):
+        pass
+
+    g = MyGroupSorted(np.array([0, 0, 1, 1, 2]))
+    assert isinstance(g, MyGroupSorted)
+    assert g.groupidx == [(0, 2), (2, 4), (4, 5)]
 
 
 def test_check_index_sorted_detection():
