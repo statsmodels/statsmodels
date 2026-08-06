@@ -752,7 +752,6 @@ def cov_tyler_regularized(
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
@@ -766,6 +765,8 @@ def cov_tyler_regularized(
         sf = k * k + (1 - 2.0 / k) * tr
         sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
@@ -879,7 +880,6 @@ def cov_tyler_pairs_regularized(
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
@@ -893,6 +893,8 @@ def cov_tyler_pairs_regularized(
         sf = k * k + (1 - 2.0 / k) * tr
         sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
