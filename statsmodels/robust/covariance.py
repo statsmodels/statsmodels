@@ -757,7 +757,7 @@ def cov_tyler_regularized(
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
@@ -775,8 +775,8 @@ def cov_tyler_regularized(
     identity = np.eye(k_vars)
 
     n_iter = 0
-    for i in range(maxiter):
-        n_iter += i
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -884,7 +884,7 @@ def cov_tyler_pairs_regularized(
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
