@@ -302,6 +302,7 @@ class CumIncidenceRight:
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
+        self.title = "" if not title else title
 
         if exog is not None:
             from ._kernel_estimates import _kernel_cumincidence
@@ -316,13 +317,13 @@ class CumIncidenceRight:
                                      dimred)
             self.times = x[0]
             self.cinc = x[1]
+            self.cinc_se = np.full_like(x[1], np.nan)
             return
 
         x = _calc_incidence_right(time, status, freq_weights)
         self.cinc = x[0]
         self.cinc_se = x[1]
         self.times = x[2]
-        self.title = "" if not title else title
 
 
 class SurvfuncRight:
