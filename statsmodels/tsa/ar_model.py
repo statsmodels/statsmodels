@@ -195,7 +195,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         self,
         endog: ArrayLike1D,
         lags: int | Sequence[int] | None,
-        trend: Literal["n", "c", "t", "ct"] = "c",
+        trend: Literal["n", "c", "t", "ct", "ctt"] = "c",
         seasonal: bool = False,
         exog: ArrayLike2D | None = None,
         hold_back: int | None = None,
@@ -1019,7 +1019,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     def sigma2(self):
         return 1.0 / self.nobs * sumofsq(self.resid)
 
-    @cache_writable()  # for compatability with RegressionResults
+    @cache_writable()  # for compatibility with RegressionResults
     def scale(self):
         return self.sigma2
 
@@ -2066,7 +2066,7 @@ def ar_select_order(
     maxlag,
     ic="bic",
     glob=False,
-    trend: Literal["n", "c", "ct", "ctt"] = "c",
+    trend: Literal["n", "c", "t", "ct", "ctt"] = "c",
     seasonal=False,
     exog=None,
     hold_back=None,

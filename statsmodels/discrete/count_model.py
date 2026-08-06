@@ -1176,7 +1176,7 @@ class ZeroInflatedResults(CountResults):
         for OLS. This is a measure for exog outliers but does not take
         specific features of the model into account.
         """
-        # same as sumper in DiscreteResults, only added for docstring
+        # same as super in DiscreteResults, only added for docstring
         from statsmodels.stats.outliers_influence import MLEInfluence
         return MLEInfluence(self)
 

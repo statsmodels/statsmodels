@@ -413,7 +413,6 @@ class SimulationSmoothResults:
         self._simulated_state = None
         self._simulated_measurement_disturbance = None
         self._simulated_state_disturbance = None
-        self._simulated_state_disturbance = None
 
     @property
     def simulation_output(self):

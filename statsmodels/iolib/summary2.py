@@ -363,7 +363,7 @@ def summary_model(results):
 
     info = {}
     info["Model:"] = lambda x: x.model.__class__.__name__
-    info["Model Family:"] = lambda x: x.family.__class.__name__
+    info["Model Family:"] = lambda x: x.family.__class__.__name__
     info["Link Function:"] = lambda x: x.family.link.__class__.__name__
     info["Dependent Variable:"] = lambda x: x.model.endog_names
     info["Date:"] = time_now

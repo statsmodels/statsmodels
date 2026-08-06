@@ -198,7 +198,7 @@ class TableDist:
 
             probs = np.nan * np.ones(x.shape)  # mistake if nan left
             probs[cond_low] = alpha[0]
-            probs[cond_low] = alpha[-1]
+            probs[cond_high] = alpha[-1]
             probs[cond_interior] = interp1d(critv, alpha)(x[cond_interior])
 
             return probs

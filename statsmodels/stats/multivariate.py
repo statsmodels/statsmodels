@@ -99,7 +99,7 @@ def test_mvmean_2indep(data1, data2):
     return HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
 
 
-def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
+def confint_mvmean(data, lin_transf=None, alpha=0.05, simult=False):
     """
     Confidence interval for linear transformation of a multivariate mean
 

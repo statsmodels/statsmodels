@@ -84,11 +84,27 @@ def bghfactor(df):
     return np.power(2.0, 1 - df * 0.5) / sps_gamma(df * 0.5)
 
 
-def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None, mvstkwds=None):
+def mvstdtprob(a, b, R, df, ieps=1e-5, quadkwds=None):
     """
     Probability of rectangular area of standard t distribution
 
     assumes mean is zero and R is correlation matrix
+
+    Parameters
+    ----------
+    a : array_like
+        Lower integration limits.
+    b : array_like
+        Upper integration limits.
+    R : array_like
+        Correlation matrix.
+    df : int or float
+        Degrees of freedom.
+    ieps : float
+        Tail probability used to set the integration limits over the
+        chi distribution.
+    quadkwds : dict, optional
+        Keyword arguments passed to `scipy.integrate.quad`.
 
     Notes
     -----
@@ -116,7 +132,7 @@ def multivariate_t_rvs(m, S, df=np.inf, n=1, rng=None):
     m : array_like
         mean of random variable, length determines dimension of random variable
     S : array_like
-        square array of covariance  matrix
+        square array of covariance matrix
     df : int or float
         degrees of freedom
     n : int

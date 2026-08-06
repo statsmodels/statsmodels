@@ -12,6 +12,7 @@ from scipy import stats
 
 from statsmodels.stats.base import HolderTuple
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.validation import float_like
 
 
 class CombineResults:
@@ -482,12 +483,8 @@ def effectsize_2proportions(
     elif zero_correction == "clip":
         clip_bounds = zero_kwds.get("clip_bounds", (1e-6, 1 - 1e-6))
         cc1 = cc2 = 0
-    elif zero_correction:
-        # TODO: check is float_like
-        cc1 = cc2 = zero_correction
     else:
-        msg = "zero_correction not recognized or supported"
-        raise NotImplementedError(msg)
+        cc1 = cc2 = float_like(zero_correction, "zero_correction", optional=False)
 
     zero_mask1 = (count1 == 0) | (count1 == nobs1)
     zero_mask2 = (count2 == 0) | (count2 == nobs2)

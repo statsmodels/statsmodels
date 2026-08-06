@@ -1682,7 +1682,7 @@ class GofChisquarePower(Power):
         """
         from statsmodels.stats.gof import chisquare_power
 
-        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=0)
+        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=ddof)
 
     # method is only added to have explicit keywords and docstring
     def solve_power(

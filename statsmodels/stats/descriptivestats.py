@@ -318,7 +318,7 @@ class Description:
         alpha: float = 0.05,
         use_t: bool = False,
         percentiles: Sequence[int | float] = PERCENTILES,
-        ntop: bool = 5,
+        ntop: int = 5,
     ):
         data_arr = data
         if not isinstance(data, (pd.Series, pd.DataFrame)):

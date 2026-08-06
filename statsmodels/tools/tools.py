@@ -471,7 +471,7 @@ def _ensure_2d(x, ndarray=False):
         else:
             return x, None
     elif x.ndim > 2:
-        raise ValueError("x mst be 1 or 2-dimensional.")
+        raise ValueError("x must be 1 or 2-dimensional.")
 
     name = x.name if is_pandas else None
     if ndarray:

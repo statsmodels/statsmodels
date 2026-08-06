@@ -796,7 +796,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 d = 0
             output = []
             for i in range(self.model.k_endog):
-                if hasattr(self, "fiter_results"):
+                if hasattr(self, "filter_results"):
                     resid = self.filter_results.standardized_forecasts_error[
                         i, d:
                     ]

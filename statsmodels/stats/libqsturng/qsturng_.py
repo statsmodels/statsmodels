@@ -2446,7 +2446,7 @@ def psturng(q, r, v):
         (values over 200 are permitted but not recommended)
     v : (scalar, array_like)
         The sample degrees of freedom
-        if p >= .9:
+        if the corresponding probability is >= .9:
             v >=1 and v <= inf
         else:
             v >=2 and v <= inf
@@ -2457,7 +2457,7 @@ def psturng(q, r, v):
         1. - area from zero to q under the Studentized Range
         distribution. When v == 1, p is bound between .001
         and .1, when v > 1, p is bound between .001 and .9.
-        Values between .5 and .9 are 1st order appoximations.
+        Values between .5 and .9 are 1st order approximations.
     """
     if all(map(_isfloat, [q, r, v])):
         return _psturng(q, r, v)
