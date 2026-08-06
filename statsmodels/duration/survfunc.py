@@ -436,7 +436,6 @@ class SurvfuncRight:
         self.n_risk = x[4]
         self.n_events = x[5]
 
-
     def plot(self, ax=None):
         """
         Plot the survival function
