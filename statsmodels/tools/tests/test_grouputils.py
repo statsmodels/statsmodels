@@ -26,6 +26,15 @@ class CheckGrouping:
         self.grouping.count_categories(level=0)
         np.testing.assert_equal(self.grouping.counts, self.expected_counts)
 
+    def test_check_index(self):
+        # GH: check_index used `if not index:`, which raises for a
+        # multi-element pandas Index/MultiIndex, and called the long-removed
+        # DataFrame.sort() instead of sort_index().
+        self.grouping.check_index(is_sorted=False, unique=False)
+        self.grouping.check_index(
+            is_sorted=False, unique=False, index=self.grouping.index
+        )
+
     def test_sort(self):
         # data frame
         sorted_data, index = self.grouping.sort(self.data)
@@ -172,6 +181,23 @@ class TestIndexGrouping(CheckGrouping):
         cls.data = index_data
 
         cls.expected_counts = [20] * 11
+
+
+def test_check_index_sorted_detection():
+    # GH: check_index used to raise AttributeError (DataFrame has no
+    # attribute "sort") on any call with the default is_sorted=True, and
+    # separately raised ValueError ("truth value ... is ambiguous") when an
+    # explicit multi-element index was passed, instead of correctly
+    # detecting whether the index is sorted.
+    sorted_grouping = Grouping(pd.Index([1, 1, 2, 2, 3]))
+    sorted_grouping.check_index(unique=False)  # default index=None
+    sorted_grouping.check_index(unique=False, index=pd.Index([1, 1, 2, 2, 3]))
+
+    unsorted_grouping = Grouping(pd.Index([2, 1, 3]))
+    with pytest.raises(Exception, match="not be sorted"):
+        unsorted_grouping.check_index(unique=False)
+    with pytest.raises(Exception, match="not be sorted"):
+        unsorted_grouping.check_index(unique=False, index=pd.Index([2, 1, 3]))
 
 
 def test_init_api():
