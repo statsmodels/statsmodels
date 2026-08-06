@@ -620,14 +620,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
         * trace_stat and trace_stat_crit_vals
         * max_eig_stat and max_eig_stat_crit_vals
 
+    See Also
+    --------
+    statsmodels.tsa.vector_ar.vecm.select_coint_rank
+
     Notes
     -----
     The implementation might change to make more use of the existing VECM
     framework.
-
-    See Also
-    --------
-    statsmodels.tsa.vector_ar.vecm.select_coint_rank
 
     References
     ----------
@@ -1269,7 +1269,7 @@ class VECMResults:
     const : ndarray (neqs x 1) or (neqs x 0)
         If a constant deterministic term outside the cointegration is specified
         within the deterministic parameter, then `const` is the first column
-        of `det_coef_coint`. Otherwise it's an ndarray of size zero.
+        of `det_coef`. Otherwise it's an ndarray of size zero.
     seasonal : ndarray (neqs x seasons)
         If the `seasons` parameter is > 0, then seasonal contains the
         estimated coefficients corresponding to the seasonal terms. Otherwise
@@ -1278,7 +1278,7 @@ class VECMResults:
         If a linear deterministic term outside the cointegration is specified
         within the deterministic parameter, then `lin_trend` contains the
         corresponding estimated coefficients. As such it represents the
-        corresponding column of `det_coef_coint`. If there is no linear
+        corresponding column of `det_coef`. If there is no linear
         deterministic term outside the cointegration relation, then
         `lin_trend` is an ndarray of size zero.
     exog_coefs : ndarray (neqs x exog_coefs.shape[1])
@@ -1786,6 +1786,11 @@ class VECMResults:
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps
             rows will be considered.
+        exog_coint_fc : ndarray (steps x self.exog_coint.shape[1])
+            If self.exog_coint is not None, then information about the future
+            values of exog_coint have to be passed via this parameter. The
+            ndarray may be larger in it's first dimension. In this case only
+            the first steps rows will be considered.
 
         Returns
         -------
@@ -2183,7 +2188,7 @@ class VECMResults:
     def test_normality(self, signif=0.05):
         r"""
         Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus :math:`\\chi^2` test.
+        omnibus :math:`\chi^2` test.
 
         Parameters
         ----------

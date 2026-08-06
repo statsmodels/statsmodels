@@ -980,8 +980,8 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
 
         Returns
         -------
-        TimeTrend
-            The TimeTrend instance.
+        CalendarTimeTrend
+            The CalendarTimeTrend instance.
         """
         constant = trend.startswith("c")
         order = 0
@@ -1065,8 +1065,8 @@ class DeterministicProcess:
     constant : bool, default False
         Whether to include a constant.
     order : int, default 0
-        The order of the tim trend to include. For example, 2 will include
-        both linear and quadratic terms. 0 exclude time trend terms.
+        The order of the time trend to include. For example, 2 will include
+        both linear and quadratic terms. 0 excludes time trend terms.
     seasonal : bool = False
         Whether to include seasonal dummies
     fourier : int = 0

@@ -476,8 +476,8 @@ def cov_ogk(
 
     - cov : covariance, either raw OGK or reweighted OGK.
     - loc (and alias mean) : mean, either from raw OGK or reweighted OGK.
-    - cov_ogk_raw : OGK covariance without reweighting optionally rescaled.
-    - loc_ogk_raw : mean or center of OGK without reweighting.
+    - cov_raw : OGK covariance without reweighting optionally rescaled.
+    - loc_raw : mean or center of OGK without reweighting.
 
     and extra attributes from intermediate results.
 
@@ -844,6 +844,8 @@ def cov_tyler_pairs_regularized(
 
     Returns
     -------
+    result instance with the following attributes
+
     cov : ndarray
         Estimate of the scatter matrix.
     n_iter : int
@@ -852,6 +854,9 @@ def cov_tyler_pairs_regularized(
     shrinkage_factor : float
         Shrinkage factor that was used in the estimation. This will be the
         same as the function argument if it was not None.
+    corr : ndarray or None
+        Correlation matrix used in the plugin shrinkage factor estimation,
+        or None if shrinkage_factor was given.
 
     Notes
     -----

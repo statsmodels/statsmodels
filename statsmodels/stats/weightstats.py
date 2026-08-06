@@ -260,7 +260,7 @@ class DescrStatsW:
         weights.  For a probability point p, if pW falls strictly
         between s_j and s_{j+1} then the estimated quantile is
         y_{j+1}.  If pW = s_j then the estimated quantile is (y_j +
-        y_{j+1})/2.  If pW < p_1 then the estimated quantile is y_1.
+        y_{j+1})/2.  If pW < s_1 then the estimated quantile is y_1.
 
         References
         ----------
@@ -1356,7 +1356,7 @@ def ttost_ind(
     where m1, m2 are the means, expected values of the two samples.
 
     If the pvalue is smaller than a threshold, say 0.05, then we reject the
-    hypothesis that the difference between the two samples is larger than the
+    hypothesis that the difference between the two samples is larger than
     the thresholds given by low and upp.
 
     Parameters
@@ -1398,7 +1398,7 @@ def ttost_ind(
     compared with the corresponding column in d2. This is the same as
     comparing each of the corresponding columns separately. Currently no
     multi-comparison correction is used. The raw p-values reported here can
-    be correction with the functions in ``multitest``.
+    be corrected with the functions in ``multitest``.
 
     """
 
@@ -1446,13 +1446,13 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         second of the two independent samples
     low, upp : float
         equivalence interval low < mean of difference < upp
+    transform : None or function
+        If None (default), then the data is not transformed. Given a function
+        sample data and thresholds are transformed. If transform is log, then
+        the equivalence interval is in ratio: low < x1 / x2 < upp
     weights : None or ndarray
         case weights for the two samples. For details on weights see
         ``DescrStatsW``
-    transform : None or function
-        If None (default), then the data is not transformed. Given a function
-        sample data and thresholds are transformed. If transform is log the
-        the equivalence interval is in ratio: low < x1 / x2 < upp
 
     Returns
     -------

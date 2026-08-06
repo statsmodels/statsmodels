@@ -345,7 +345,7 @@ class UnobservedComponents(MLEModel):
 
     **Regression effects**
 
-    Exogenous regressors can be pass to the `exog` argument. The regression
+    Exogenous regressors can be passed to the `exog` argument. The regression
     coefficients will be estimated by maximum likelihood unless
     `mle_regression=False`, in which case the regression coefficients will be
     included in the state vector where they are essentially estimated via

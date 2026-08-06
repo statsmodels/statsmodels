@@ -51,6 +51,7 @@ class ExponentialSmoothing(MLEModel):
 
         * 'estimated'
         * 'concentrated'
+        * 'simple'
         * 'heuristic'
         * 'known'
 

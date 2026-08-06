@@ -114,12 +114,6 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     transformed : ndarray
         The transformed series.
 
-    Examples
-    --------
-    >>> indicator = [50,100,150,100] * 5
-    >>> benchmark = [500,400,300,400,500]
-    >>> benchmarked = dentonm(indicator, benchmark, freq="aq")
-
     Notes
     -----
     Denton's method minimizes the distance given by the penalty function, in
@@ -149,6 +143,12 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     Denton, F.T. 1971. "Adjustment of monthly or quarterly series to annual
         totals: an approach based on quadratic minimization." Journal of the
         American Statistical Association. 99-102.
+
+    Examples
+    --------
+    >>> indicator = [50,100,150,100] * 5
+    >>> benchmark = [500,400,300,400,500]
+    >>> benchmarked = dentonm(indicator, benchmark, freq="aq")
     """
 #    penalty : str
 #        Penalty function.  Can be "D1", "D2", "D3", "D4", "D5".

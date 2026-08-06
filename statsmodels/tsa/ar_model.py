@@ -1028,9 +1028,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         """
         The standard errors of the estimated parameters
 
-        If `method` is 'cmle', then the standard errors that are returned are
-        the OLS standard errors of the coefficients. If the `method` is 'mle'
-        then they are computed using the numerical Hessian.
+        These are the OLS standard errors of the estimated coefficients,
+        computed using the covariance estimator selected in `fit`.
         """
         return np.sqrt(np.diag(self.cov_params()))
 
@@ -1234,17 +1233,17 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
 
+        See Also
+        --------
+        statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
+
         Notes
         -----
         Null hypothesis is no serial correlation.
 
         If the test degree-of-freedom is 0 or negative once accounting for
         model_df, then the test statistic's p-value is missing.
-
-        See Also
-        --------
-        statsmodels.stats.diagnostic.acorr_ljungbox
-            Ljung-Box test for serial correlation.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -1281,14 +1280,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             Series containing four values, the test statistic and its p-value,
             the skewness and the kurtosis.
 
-        Notes
-        -----
-        Null hypothesis is normality.
-
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
             The Jarque-Bera test of normality.
+
+        Notes
+        -----
+        Null hypothesis is normality.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.stattools import jarque_bera
@@ -1608,6 +1607,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        statsmodels.graphics.gofplots.qqplot
+        statsmodels.graphics.tsaplots.plot_acf
+
         Notes
         -----
         Produces a 2x2 plot grid with the following plots (ordered clockwise
@@ -1618,11 +1622,6 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
            with a Normal(0,1) density plotted for reference.
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram
-
-        See Also
-        --------
-        statsmodels.graphics.gofplots.qqplot
-        statsmodels.graphics.tsaplots.plot_acf
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 

@@ -47,8 +47,8 @@ class TruncatedLFGeneric(CountModel):
     exog : array
         A reference to the exogenous design.
     truncation : int, optional
-        Truncation parameter specify truncation point out of the support
-        of the distribution. pmf(k) = 0 for k <= truncation
+        Truncation parameter that specifies the truncation point out of
+        the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
            extra_params="""offset : array_like
@@ -324,7 +324,7 @@ class TruncatedLFGeneric(CountModel):
             the method. The user does not need to log it first.
             Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
+        which : str, optional
             Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x)
@@ -333,9 +333,6 @@ class TruncatedLFGeneric(CountModel):
             - 'linear' : the linear predictor of the truncated count model.
             - 'var' : returns the estimated variance of endog implied by the
               model.
-            - 'prob-trunc' : probability of truncation. This is the probability
-              of observing a zero count implied
-              by the truncation model.
             - 'prob' : probabilities of each count from 0 to max(endog), or
               for y_values if those are provided. This is a multivariate
               return (2-dim when predicting for several observations).
@@ -455,8 +452,8 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
     exog : array
         A reference to the exogenous design.
     truncation : int, optional
-        Truncation parameter specify truncation point out of the support
-        of the distribution. pmf(k) = 0 for k <= truncation
+        Truncation parameter that specifies the truncation point out of
+        the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
            extra_params="""offset : array_like
@@ -506,7 +503,10 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
         Returns
         -------
-        Predicted conditional variance.
+        m : ndarray
+            Predicted mean of the zero-truncated distribution.
+        var_ : ndarray
+            Predicted variance of the zero-truncated distribution.
         """
         w = (1 - np.exp(-mu))  # prob of no truncation, 1 - P(y=0)
         m = mu / w
@@ -530,8 +530,8 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
     exog : array
         A reference to the exogenous design.
     truncation : int, optional
-        Truncation parameter specify truncation point out of the support
-        of the distribution. pmf(k) = 0 for k <= truncation
+        Truncation parameter that specifies the truncation point out of
+        the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
            extra_params="""offset : array_like
@@ -586,7 +586,10 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
         Returns
         -------
-        Predicted conditional variance.
+        m : ndarray
+            Predicted mean of the zero-truncated distribution.
+        var_ : ndarray
+            Predicted variance of the zero-truncated distribution.
         """
         # note: prob_zero and vm are distribution specific, rest is generic
         # when mean of base model is mu
@@ -618,8 +621,8 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
     exog : array
         A reference to the exogenous design.
     truncation : int, optional
-        Truncation parameter specify truncation point out of the support
-        of the distribution. pmf(k) = 0 for k <= truncation
+        Truncation parameter that specifies the truncation point out of
+        the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
            extra_params="""offset : array_like
@@ -1086,13 +1089,6 @@ class HurdleCountModel(CountModel):
     pzero : scalar
         Define parameterization parameter zero hurdle model family.
         Used when zerodist='negbin'.
-    """.format(
-           params=base._model_params_doc,
-           extra_params="""offset : array_like
-        Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
-        Log(exposure) is added to the linear prediction with coefficient
-        equal to 1.
 
     Notes
     -----
@@ -1104,6 +1100,13 @@ class HurdleCountModel(CountModel):
     References
     ----------
     not yet
+    """.format(
+           params=base._model_params_doc,
+           extra_params="""offset : array_like
+        Offset is added to the linear prediction with coefficient equal to 1.
+    exposure : array_like
+        Log(exposure) is added to the linear prediction with coefficient
+        equal to 1.
 
     """ + base._missing_param_doc,
        )
@@ -1256,7 +1259,7 @@ class HurdleCountModel(CountModel):
             the method. The user does not need to log it first.
             Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
+        which : str, optional
             Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x)

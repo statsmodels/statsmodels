@@ -197,7 +197,7 @@ class RankCompareResult(HolderTuple):
         Parameters
         ----------
         low, upp : float
-            equivalence interval low < mean < upp
+            equivalence interval low < p < upp
 
         Returns
         -------

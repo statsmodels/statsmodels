@@ -949,7 +949,7 @@ class ETSModel(base.StateSpaceMLEModel):
             default), additionally, the parameters
 
             * `initial_level` (:math:`l_{-1}`)
-            * `initial_trend` (:math:`l_{-1}`)
+            * `initial_trend` (:math:`b_{-1}`)
             * `initial_seasonal.0` (:math:`s_{-1}`)
             * ...
             * `initial_seasonal.<m-1>` (:math:`s_{-m}`)

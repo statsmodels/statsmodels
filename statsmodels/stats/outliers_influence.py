@@ -960,8 +960,8 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Uses original results, no nobs loop
 
-        Based on:
-
+        References
+        ----------
         Eubank, R. L. (1999). Nonparametric regression and spline
             smoothing. CRC press.
         Cook's distance. (n.d.). In Wikipedia. July 2019, from
@@ -1010,10 +1010,12 @@ class OLSInfluence(_BaseInfluenceMixin):
             The threshold to determine if the influence of an observation is large.
             The threshold is 2 * sqrt(k / n).
 
-        based on resid_studentized_external, uses results from
+        Notes
+        -----
+        Based on resid_studentized_external, uses results from
         leave-one-observation-out loop.
 
-        It is recommended that observations with dffits large than a
+        It is recommended that observations with dffits larger than a
         threshold of 2 sqrt{k / n} where k is the number of parameters, should
         be investigated.
 
@@ -1112,7 +1114,9 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         estimate of standard deviation of the residuals
 
-        See also ``resid_var``.
+        See Also
+        --------
+        resid_var
         """
         return np.sqrt(self.resid_var)
 

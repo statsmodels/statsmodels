@@ -161,7 +161,7 @@ class SVAR(tsbase.TimeSeriesModel):
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
-            "n" - co constant, no trend
+            "n" - no constant, no trend
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}
             Estimation method for structural parameters

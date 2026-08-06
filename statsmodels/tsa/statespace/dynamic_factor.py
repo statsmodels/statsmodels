@@ -1139,16 +1139,16 @@ class DynamicFactorResults(MLEResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        coefficients_of_determination
+
         Notes
         -----
         Produces a `k_factors` x 1 plot grid. The `i`th plot shows a bar plot
         of the coefficients of determination associated with factor `i`. The
         endogenous variables are arranged along the x-axis according to their
         position in the `endog` array.
-
-        See Also
-        --------
-        coefficients_of_determination
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()

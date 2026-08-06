@@ -245,6 +245,13 @@ class Huber:
         axis : int, optional
             Axis along which to estimate location and scale. Default is 0.
 
+        Returns
+        -------
+        mu : ndarray
+            The estimated location.
+        scale : ndarray
+            The estimated scale.
+
         Notes
         -----
         `Huber` minimizes the function
@@ -397,6 +404,23 @@ class HuberScale:
         self.maxiter = maxiter
 
     def __call__(self, df_resid, nobs, resid):
+        """
+        Compute Huber's scale for the given residuals
+
+        Parameters
+        ----------
+        df_resid : float
+            The number of residual degrees of freedom in the model.
+        nobs : float
+            The number of observations.
+        resid : ndarray
+            The residuals from which the scale is estimated.
+
+        Returns
+        -------
+        float
+            The estimated Huber's scale.
+        """
         h = (
             df_resid
             / nobs
@@ -539,8 +563,10 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
 
     Returns
     -------
-    scale : float or array
-        the estimated scale normalized for the reference distribution.
+    Holder
+        Instance with the estimated ``scale`` as the main attribute, and
+        with ``center``, ``center_type``, ``trim_idx``, ``nobs``,
+        ``distr``, and ``scale_correction`` as additional attributes.
 
     Examples
     --------
@@ -548,14 +574,14 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
 
     >>> np.random.seed(1)
     >>> x = 2 * np.random.randn(100)
-    >>> scale_trimmed(x, 0.1)
+    >>> scale_trimmed(x, 0.1).scale
     1.7479516739879672
 
     for t distribution
     >>> alpha = 0.1
     >>> xt = stats.t.rvs(3, size=1000, scale=2)
-    >>> print(scale_trimmed(xt, alpha, distr=stats.t, distargs=(3,)))
-    2.06574778599
+    >>> print(scale_trimmed(xt, alpha, distr=stats.t, distargs=(3,)).scale)
+    2.0542599264671044
 
     compare to standard deviation of sample
     >>> xt.std()

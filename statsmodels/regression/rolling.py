@@ -105,6 +105,7 @@ categories) rather than an explicit constant (e.g., a column of 1s).
 Examples
 --------
 >>> from statsmodels.regression.rolling import Rolling%(model)s
+>>> from statsmodels.tools.tools import add_constant
 >>> from statsmodels.datasets import longley
 >>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
@@ -116,7 +117,8 @@ Use params_only to skip all calculations except parameter estimation
 >>> rolling_params = mod.fit(params_only=True)
 
 Use expanding and min_nobs to fill the initial results using an
-expanding scheme until window observation, and the roll.
+expanding scheme until window observations are available, after which
+rolling is used.
 
 >>> mod = Rolling%(model)s(data.endog, exog, window=60, min_nobs=12,
 ... expanding=True)

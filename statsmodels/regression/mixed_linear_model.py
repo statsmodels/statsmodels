@@ -310,7 +310,7 @@ class MixedLMParams:
         Parameters
         ----------
         params : array_like
-            The mode parameters packed into a single vector.
+            The model parameters packed into a single vector.
         k_fe : int
             The number of covariates with fixed effects
         k_re : int
@@ -2636,7 +2636,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         The standard errors of the fitted fixed effects coefficients
     bse_re : ndarray
         The standard errors of the fitted random effects covariance
-        matrix and variance components.  The first `k_re * (k_re + 1)`
+        matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
         the variance components.
@@ -2698,7 +2698,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
         Return the standard errors of the variance parameters
 
-        The first `k_re x (k_re + 1)` elements of the returned array
+        The first `k_re x (k_re + 1) / 2` elements of the returned array
         are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
         components.

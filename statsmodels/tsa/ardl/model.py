@@ -67,6 +67,26 @@ __all__ = [
 
 
 class BoundsTestResult(NamedTuple):
+    """
+    Result of :meth:`UECMResults.bounds_test`, the PSS cointegration
+    bounds test.
+
+    Parameters
+    ----------
+    stat : float
+        The F-type test statistic favored in PSS.
+    crit_vals : DataFrame
+        The critical values for the test statistic, with columns "lower"
+        and "upper" indexed by percentile.
+    p_values : Series
+        The p-values corresponding to the "lower" and "upper" bounds of
+        the test statistic.
+    null : str
+        The null hypothesis, "No Cointegration".
+    alternative : str
+        The alternative hypothesis, "Possible Cointegration".
+    """
+
     stat: float
     crit_vals: pd.DataFrame
     p_values: pd.Series
@@ -232,6 +252,17 @@ class ARDL(AutoReg):
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+    See Also
+    --------
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregressive model estimation with optional exogenous regressors
+    statsmodels.tsa.ardl.UECM
+        Unconstrained Error Correction Model estimation
+    statsmodels.tsa.statespace.sarimax.SARIMAX
+        Seasonal ARIMA model estimation with optional exogenous regressors
+    statsmodels.tsa.arima.model.ARIMA
+        ARIMA model estimation
+
     Notes
     -----
     The full specification of an ARDL is
@@ -257,17 +288,6 @@ class ARDL(AutoReg):
     See the notebook `Autoregressive Distributed Lag Models
     <../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
     for an overview.
-
-    See Also
-    --------
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive model estimation with optional exogenous regressors
-    statsmodels.tsa.ardl.UECM
-        Unconstrained Error Correction Model estimation
-    statsmodels.tsa.statespace.sarimax.SARIMAX
-        Seasonal ARIMA model estimation with optional exogenous regressors
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA model estimation
 
     Examples
     --------
@@ -875,7 +895,7 @@ class ARDL(AutoReg):
             * 't' - Time trend only.
             * 'ct' - Constant and time trend.
 
-            The default is 'c'.
+            The default is 'n'.
 
         seasonal : bool, optional
             Flag indicating whether to include seasonal dummies in the model.
@@ -1645,6 +1665,17 @@ class UECM(ARDL):
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+    See Also
+    --------
+    statsmodels.tsa.ardl.ARDL
+        Autoregressive distributed lag model estimation
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregressive model estimation with optional exogenous regressors
+    statsmodels.tsa.statespace.sarimax.SARIMAX
+        Seasonal ARIMA model estimation with optional exogenous regressors
+    statsmodels.tsa.arima.model.ARIMA
+        ARIMA model estimation
+
     Notes
     -----
     The full specification of a UECM is
@@ -1668,17 +1699,6 @@ class UECM(ARDL):
     :math:`\epsilon_t` is a white noise shock. If ``causal`` is ``True``,
     then the 0-th lag of the exogenous variables is not included and the
     sum starts at ``m=1``.
-
-    See Also
-    --------
-    statsmodels.tsa.ardl.ARDL
-        Autoregressive distributed lag model estimation
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive model estimation with optional exogenous regressors
-    statsmodels.tsa.statespace.sarimax.SARIMAX
-        Seasonal ARIMA model estimation with optional exogenous regressors
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA model estimation
 
     Examples
     --------

@@ -44,7 +44,7 @@ def drop_missing(y, x=None, axis=1):
         values. If provided, an observation is dropped if it is
         missing in either `y` or `x`.
     axis : int
-        Axis along which to look for missing observations.  Default is 1, ie.,
+        Axis along which to look for missing observations.  Default is 1, i.e.,
         observations in rows.
 
     Returns
