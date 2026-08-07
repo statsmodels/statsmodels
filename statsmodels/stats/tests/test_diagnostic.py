@@ -1974,6 +1974,12 @@ def test_rainbow_exception():
     res = OLS(np.asarray(y), np.asarray(x)).fit()
     with pytest.raises(TypeError, match="order_by must contain"):
         smsdia.linear_rainbow(res, order_by=("x0",))
+    with pytest.raises(ValueError, match="frac is too small to perform t"):
+        smsdia.linear_rainbow(res, frac=0.001)
+    with pytest.raises(TypeError, match="res must be a results instance"):
+        smsdia.linear_rainbow(x)
+    with pytest.raises(ValueError, match="order_by and use_distance"):
+        smsdia.linear_rainbow(res, use_distance=True, order_by=["x0"])
 
 
 def test_small_skip():

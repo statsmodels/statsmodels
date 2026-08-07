@@ -25,6 +25,8 @@ missing:
 
 from __future__ import annotations
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 from collections.abc import Iterable
 from typing import NamedTuple
 import warnings
@@ -1451,6 +1453,7 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     return stats.ttest_1samp(rr[3][3:], 0)
 
 
+@deprecate_kwarg("center", None)
 def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None):
     """
     Rainbow test for linearity
@@ -1465,7 +1468,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         A results instance from a linear regression.
     frac : float, default 0.5
         The fraction of the data to include in the center model.
-    order_by : {ndarray, str, List[str]}, default None
+    order_by : {ndarray, str, list[str]}, optional
         If an ndarray, the values in the array are used to sort the
         observations. If a string or a list of strings, these are interpreted
         as column name(s) which are then used to lexicographically sort the
@@ -1479,6 +1482,12 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         Deprecated and ignored. The center used to order the observations
         when ``use_distance`` is True is always the exog centroid (the
         multivariate mean). Passing a value emits a ``FutureWarning``.
+
+        .. deprecated:: 0.15.0
+
+            ``center`` has no effect. ``center`` previously was a fraction
+            of the sample and so was not well-defined for regression with
+            more than 1 regressor.
 
     Returns
     -------
