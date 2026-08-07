@@ -23,6 +23,7 @@ from numpy.testing import (
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.regression.linear_model import OLS
