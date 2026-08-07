@@ -128,9 +128,9 @@ class TransfClayton(Transforms):
 
 
 class TransfGumbel(Transforms):
-    '''
+    """
     requires theta >=1
-    '''
+    """
 
     def _checkargs(self, theta):
         return theta >= 1

@@ -11,32 +11,33 @@ Generalized Least Squares with AR Errors
 import numpy as np
 import numpy.testing as npt
 from scipy import signal
+
 import statsmodels.api as sm
 from statsmodels.regression.linear_model import GLSAR, yule_walker
 
-examples_all = range(10) + ['test_copy']
+examples_all = range(10) + ["test_copy"]
 
 examples = examples_all  # [5]
 
 if 0 in examples:
-    print('\n Example 0')
+    print("\n Example 0")
     X = np.arange(1, 8)
     X = sm.add_constant(X, prepend=False)
     Y = np.array((1, 3, 4, 5, 8, 10, 9))
     rho = 2
     model = GLSAR(Y, X, 2)
-    for i in range(6):
+    for _ in range(6):
         results = model.fit()
-        print('AR coefficients:', model.rho)
+        print("AR coefficients:", model.rho)
         rho, sigma = yule_walker(results.resid, order=model.order)
         model = GLSAR(Y, X, rho)
 
     par0 = results.params
-    print('params fit', par0)
+    print("params fit", par0)
     model0if = GLSAR(Y, X, 2)
     res = model0if.iterative_fit(6)
-    print('iterativefit beta', res.params)
-    results.tvalues   # TODO: is this correct? it does equal params/bse
+    print("iterativefit beta", res.params)
+    print(results.tvalues)  # TODO: is this correct? it does equal params/bse
     # but is not the same as the AR example (which was wrong)
     print(results.t_test([0, 1]))  # are sd and t correct? vs
     print(results.f_test(np.eye(2)))
@@ -62,7 +63,7 @@ if np.size(rhotrue) == 1:
         arnoise[i] = rhotrue * arnoise[i - 1] + wnoise[i]
     noise = arnoise[1:]
     an = signal.lfilter([1], np.hstack((1, -rhotrue)), wnoise[1:])
-    print('simulate AR(1) difference', np.max(np.abs(noise - an)))
+    print("simulate AR(1) difference", np.max(np.abs(noise - an)))
 else:
     noise = signal.lfilter([1], np.hstack((1, -rhotrue)), wnoise)[nlags:]
 
@@ -70,28 +71,31 @@ else:
 y1 = np.dot(X1, beta) + noise
 
 if 1 in examples:
-    print('\nExample 1: iterative_fit and repeated calls')
+    print("\nExample 1: iterative_fit and repeated calls")
     mod1 = GLSAR(y1, X1, 1)
     res = mod1.iterative_fit()
     print(res.params)
     print(mod1.rho)
     mod1 = GLSAR(y1, X1, 2)
-    for i in range(5):
+    for _ in range(5):
         res1 = mod1.iterative_fit(2)
         print(mod1.rho)
         print(res1.params)
 
 if 2 in examples:
-    print('\nExample 2: iterative fitting of first model')
-    print('with AR(0)', par0)
+    print("\nExample 2: iterative fitting of first model")
+    print("with AR(0)", par0)
     parold = par0
     mod0 = GLSAR(Y, X, 1)
-    for i in range(5):
+    for _ in range(5):
         res0 = mod0.iterative_fit(1)
-        print('rho', mod0.rho)
+        print("rho", mod0.rho)
         parnew = res0.params
-        print('params', parnew,)
-        print('params change in iteration', parnew - parold)
+        print(
+            "params",
+            parnew,
+        )
+        print("params change in iteration", parnew - parold)
         parold = parnew
 
 # generate pure AR(p) process
@@ -101,15 +105,15 @@ Y = noise
 # results now have same estimated rho as yule-walker directly
 
 if 3 in examples:
-    print('\nExample 3: pure AR(2), GLSAR versus Yule_Walker')
+    print("\nExample 3: pure AR(2), GLSAR versus Yule_Walker")
     model3 = GLSAR(Y, rho=2)
-    for i in range(5):
+    for _ in range(5):
         results = model3.fit()
         print("AR coefficients:", model3.rho, results.params)
         rho, sigma = yule_walker(results.resid, order=model3.order)
         model3 = GLSAR(Y, rho=rho)
 
-if 'test_copy' in examples:
+if "test_copy" in examples:
     xx = X.copy()
     rhoyw, sigmayw = yule_walker(xx[:, 0], order=2)
     print(rhoyw, sigmayw)
@@ -122,17 +126,17 @@ if 'test_copy' in examples:
 
 
 if 4 in examples:
-    print('\nExample 4: demeaned pure AR(2), GLSAR versus Yule_Walker')
+    print("\nExample 4: demeaned pure AR(2), GLSAR versus Yule_Walker")
     Ydemeaned = Y - Y.mean()
     model4 = GLSAR(Ydemeaned, rho=2)
-    for i in range(5):
+    for _ in range(5):
         results = model4.fit()
         print("AR coefficients:", model3.rho, results.params)
         rho, sigma = yule_walker(results.resid, order=model4.order)
         model4 = GLSAR(Ydemeaned, rho=rho)
 
 if 5 in examples:
-    print('\nExample 5: pure AR(2), GLSAR iterative_fit versus Yule_Walker')
+    print("\nExample 5: pure AR(2), GLSAR iterative_fit versus Yule_Walker")
     model3a = GLSAR(Y, rho=1)
     res3a = model3a.iterative_fit(5)
     print(res3a.params)
@@ -149,5 +153,5 @@ if 5 in examples:
         print(i, model3b.iterative_fit(2).params, model3b.rho)
 
 
-print(np.array(res.history['params']))
-print(np.array(res.history['rho']))
+print(np.array(res.history["params"]))
+print(np.array(res.history["rho"]))

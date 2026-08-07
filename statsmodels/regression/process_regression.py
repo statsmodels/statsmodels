@@ -13,21 +13,24 @@ The mean structure is specified as a linear model.  The covariance
 parameters depend on covariates via a link function.
 """
 
+import collections
+import warnings
+
 import numpy as np
 import pandas as pd
-import patsy
-import statsmodels.base.model as base
-from statsmodels.regression.linear_model import OLS
-import collections
 from scipy.optimize import minimize
+
+import statsmodels.base.model as base
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.numdiff import approx_fprime
-import warnings
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
 
 
 class ProcessCovariance:
     r"""
-    A covariance model for a process indexed by a real parameter.
+    A covariance model for a process indexed by a real parameter
 
     An implementation of this class is based on a positive definite
     correlation function h that maps real numbers to the interval [0,
@@ -38,7 +41,7 @@ class ProcessCovariance:
 
     def get_cov(self, time, sc, sm):
         """
-        Returns the covariance matrix for given time values.
+        Returns the covariance matrix for given time values
 
         Parameters
         ----------
@@ -50,14 +53,28 @@ class ProcessCovariance:
         sm : array_like
             The smoothness parameters for the observation.  See class
             docstring for details.
+
+        Returns
+        -------
+        ndarray
+            The pxp covariance matrix for the given time values.
         """
         raise NotImplementedError
 
     def jac(self, time, sc, sm):
         """
-        The Jacobian of the covariance with respect to the parameters.
+        The Jacobian of the covariance with respect to the parameters
 
-        See get_cov for parameters.
+        Parameters
+        ----------
+        time : array_like
+            The time points for the observations.  If len(time) = p,
+            a pxp covariance matrix is returned.
+        sc : array_like
+            The scaling parameters for the observations.
+        sm : array_like
+            The smoothness parameters for the observation.  See class
+            docstring for details.
 
         Returns
         -------
@@ -73,7 +90,7 @@ class ProcessCovariance:
 
 class GaussianCovariance(ProcessCovariance):
     r"""
-    An implementation of ProcessCovariance using the Gaussian kernel.
+    An implementation of ProcessCovariance using the Gaussian kernel
 
     This class represents a parametric covariance model for a Gaussian
     process as described in the work of Paciorek et al. cited below.
@@ -103,8 +120,9 @@ class GaussianCovariance(ProcessCovariance):
     ----------
     .. [1] Paciorek, C. J. and Schervish, M. J. (2006). Spatial modeling using
         a new class of nonstationary covariance functions. Environmetrics,
-        17:483–506.
+        17:483-506.
         https://papers.nips.cc/paper/2350-nonstationary-covariance-functions-for-gaussian-process-regression.pdf
+
     """
 
     def get_cov(self, time, sc, sm):
@@ -114,7 +132,7 @@ class GaussianCovariance(ProcessCovariance):
 
         qmat = da * da / ds
         cm = np.exp(-qmat / 2) / np.sqrt(ds)
-        cm *= np.outer(sm, sm)**0.25
+        cm *= np.outer(sm, sm) ** 0.25
         cm *= np.outer(sc, sc)
 
         return cm
@@ -128,7 +146,7 @@ class GaussianCovariance(ProcessCovariance):
         qmat = daa / ds
         p = len(time)
         eqm = np.exp(-qmat / 2)
-        sm4 = np.outer(sm, sm)**0.25
+        sm4 = np.outer(sm, sm) ** 0.25
         cmx = eqm * sm4 / sds
         dq0 = -daa / ds**2
         di = np.zeros((p, p))
@@ -145,18 +163,18 @@ class GaussianCovariance(ProcessCovariance):
             dtop = -0.5 * eqm * dq0 * di
             b = dtop / sds - eqm * dbottom / ds
             c = eqm / sds
-            v = 0.25 * sm**0.25 / sm[i]**0.75
+            v = 0.25 * sm**0.25 / sm[i] ** 0.75
             fi *= 0
             fi[i, :] = v
             fi[:, i] = v
-            fi[i, i] = 0.5 / sm[i]**0.5
+            fi[i, i] = 0.5 / sm[i] ** 0.5
             b = c * fi + b * sm4
             b *= scc
             jsm.append(b)
 
         # Derivatives with respect to the scaling parameters.
         jsc = []
-        for i in range(0, len(sc)):
+        for i in range(len(sc)):
             b = np.zeros((p, p))
             b[i, :] = cmx[i, :] * sc
             b[:, i] += cmx[:, i] * sc
@@ -165,8 +183,7 @@ class GaussianCovariance(ProcessCovariance):
         return jsc, jsm
 
 
-def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time,
-                groups):
+def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time, groups):
 
     v = [
         len(endog),
@@ -174,30 +191,29 @@ def _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time,
         exog_scale.shape[0],
         exog_smooth.shape[0],
         len(time),
-        len(groups)
+        len(groups),
     ]
 
     if exog_noise is not None:
         v.append(exog_noise.shape[0])
 
     if min(v) != max(v):
-        msg = ("The leading dimensions of all array arguments " +
-               "must be equal.")
+        msg = "The leading dimensions of all array arguments " + "must be equal."
         raise ValueError(msg)
 
 
 class ProcessMLE(base.LikelihoodModel):
     """
-    Fit a Gaussian mean/variance regression model.
+    Fit a Gaussian mean/variance regression model
 
     This class fits a one-dimensional Gaussian process model with
     parametrized mean and covariance structures to grouped data.  For
     each group, there is an independent realization of a latent
     Gaussian process indexed by an observed real-valued time
-    variable..  The data consist of the Gaussian process observed at a
+    variable.  The data consist of the Gaussian process observed at a
     finite number of `time` values.
 
-    The process mean and variance can be lined to covariates.  The
+    The process mean and variance can be linked to covariates.  The
     mean structure is linear in the covariates.  The covariance
     structure is non-stationary, and is defined parametrically through
     'scaling', and 'smoothing' parameters.  The covariance of the
@@ -236,18 +252,23 @@ class ProcessMLE(base.LikelihoodModel):
         The group values.
     cov : a ProcessCovariance instance
         Defaults to GaussianCovariance.
+    **kwargs
+        Additional keyword arguments passed to the model constructor.
+
     """
 
-    def __init__(self,
-                 endog,
-                 exog,
-                 exog_scale,
-                 exog_smooth,
-                 exog_noise,
-                 time,
-                 groups,
-                 cov=None,
-                 **kwargs):
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_scale,
+        exog_smooth,
+        exog_noise,
+        time,
+        groups,
+        cov=None,
+        **kwargs,
+    ):
 
         super().__init__(
             endog,
@@ -257,7 +278,8 @@ class ProcessMLE(base.LikelihoodModel):
             exog_noise=exog_noise,
             time=time,
             groups=groups,
-            **kwargs)
+            **kwargs,
+        )
 
         self._has_noise = exog_noise is not None
 
@@ -266,17 +288,17 @@ class ProcessMLE(base.LikelihoodModel):
         if hasattr(exog, "columns"):
             xnames = list(exog.columns)
         else:
-            xnames = ["Mean%d" % j for j in range(exog.shape[1])]
+            xnames = [f"Mean{j:d}" for j in range(exog.shape[1])]
 
         if hasattr(exog_scale, "columns"):
             xnames += list(exog_scale.columns)
         else:
-            xnames += ["Scale%d" % j for j in range(exog_scale.shape[1])]
+            xnames += [f"Scale{j:d}" for j in range(exog_scale.shape[1])]
 
         if hasattr(exog_smooth, "columns"):
             xnames += list(exog_smooth.columns)
         else:
-            xnames += ["Smooth%d" % j for j in range(exog_smooth.shape[1])]
+            xnames += [f"Smooth{j:d}" for j in range(exog_smooth.shape[1])]
 
         if self._has_noise:
             if hasattr(exog_noise, "columns"):
@@ -284,7 +306,7 @@ class ProcessMLE(base.LikelihoodModel):
                 xnames += list(exog_noise.columns)
             else:
                 # If numpy-like, create default names
-                xnames += ["Noise%d" % j for j in range(exog_noise.shape[1])]
+                xnames += [f"Noise{j:d}" for j in range(exog_noise.shape[1])]
 
         self.data.param_names = xnames
 
@@ -292,8 +314,7 @@ class ProcessMLE(base.LikelihoodModel):
             cov = GaussianCovariance()
         self.cov = cov
 
-        _check_args(endog, exog, exog_scale, exog_smooth, exog_noise,
-                    time, groups)
+        _check_args(endog, exog, exog_scale, exog_smooth, exog_noise, time, groups)
 
         groups_ix = collections.defaultdict(list)
         for i, g in enumerate(groups):
@@ -312,28 +333,61 @@ class ProcessMLE(base.LikelihoodModel):
     def _split_param_names(self):
         xnames = self.data.param_names
         q = 0
-        mean_names = xnames[q:q+self.k_exog]
+        mean_names = xnames[q : q + self.k_exog]
         q += self.k_exog
-        scale_names = xnames[q:q+self.k_scale]
+        scale_names = xnames[q : q + self.k_scale]
         q += self.k_scale
-        smooth_names = xnames[q:q+self.k_smooth]
+        smooth_names = xnames[q : q + self.k_smooth]
 
         if self._has_noise:
             q += self.k_noise
-            noise_names = xnames[q:q+self.k_noise]
+            noise_names = xnames[q : q + self.k_noise]
         else:
             noise_names = []
 
         return mean_names, scale_names, smooth_names, noise_names
 
     @classmethod
-    def from_formula(cls,
-                     formula,
-                     data,
-                     subset=None,
-                     drop_cols=None,
-                     *args,
-                     **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
+        """
+        Create a ProcessMLE model instance using a formula.
+
+        Parameters
+        ----------
+        formula : str
+            The formula for the mean structure, used to construct
+            `exog`.
+        data : array_like
+            The data to which the formulas are applied.
+        subset : array_like
+            Not currently supported, must be None if provided.
+        drop_cols : array_like
+            Not currently supported, must be None if provided.
+        scale_formula : str
+            The formula for the scaling structure (required keyword
+            argument).
+        smooth_formula : str
+            The formula for the smoothness structure (required
+            keyword argument).
+        noise_formula : str
+            The formula for the (log) standard deviation of the
+            additive white noise (optional keyword argument). If not
+            provided, the model does not include additive white
+            noise.
+        time : array_like or str
+            The univariate index values used to calculate distances
+            between observations in the same group (required keyword
+            argument). If a string, this is the name of a column in
+            `data`.
+        groups : array_like or str
+            The group values (required keyword argument). If a
+            string, this is the name of a column in `data`.
+
+        Returns
+        -------
+        ProcessMLE
+            The model instance.
+        """
 
         if "scale_formula" in kwargs:
             scale_formula = kwargs["scale_formula"]
@@ -361,35 +415,34 @@ class ProcessMLE(base.LikelihoodModel):
             raise ValueError("groups is a required argument")
 
         if subset is not None:
-            warnings.warn("'subset' is ignored")
+            warnings.warn("'subset' is ignored", ValueWarning, stacklevel=2)
 
         if drop_cols is not None:
-            warnings.warn("'drop_cols' is ignored")
+            warnings.warn("'drop_cols' is ignored", ValueWarning, stacklevel=2)
 
         if isinstance(time, str):
             time = np.asarray(data[time])
 
         if isinstance(groups, str):
             groups = np.asarray(data[groups])
-
-        exog_scale = patsy.dmatrix(scale_formula, data)
-        scale_design_info = exog_scale.design_info
-        scale_names = scale_design_info.column_names
+        mgr = FormulaManager()
+        exog_scale = mgr.get_matrices(scale_formula, data)
+        scale_model_spec = mgr.spec
+        scale_names = list(scale_model_spec.column_names)
         exog_scale = np.asarray(exog_scale)
 
-        exog_smooth = patsy.dmatrix(smooth_formula, data)
-        smooth_design_info = exog_smooth.design_info
-        smooth_names = smooth_design_info.column_names
+        exog_smooth = mgr.get_matrices(smooth_formula, data)
+        smooth_model_spec = mgr.spec
+        smooth_names = list(smooth_model_spec.column_names)
         exog_smooth = np.asarray(exog_smooth)
 
         if noise_formula is not None:
-            exog_noise = patsy.dmatrix(noise_formula, data)
-            noise_design_info = exog_noise.design_info
-            noise_names = noise_design_info.column_names
+            exog_noise = mgr.get_matrices(noise_formula, data)
+            noise_model_spec = mgr.spec
+            noise_names = list(noise_model_spec.column_names)
             exog_noise = np.asarray(exog_noise)
         else:
-            exog_noise, noise_design_info, noise_names, exog_noise =\
-                None, None, [], None
+            exog_noise, noise_model_spec, noise_names = None, None, []
 
         mod = super().from_formula(
             formula,
@@ -399,39 +452,55 @@ class ProcessMLE(base.LikelihoodModel):
             exog_smooth=exog_smooth,
             exog_noise=exog_noise,
             time=time,
-            groups=groups)
+            groups=groups,
+        )
 
-        mod.data.scale_design_info = scale_design_info
-        mod.data.smooth_design_info = smooth_design_info
+        mod.data.scale_model_spec = scale_model_spec
+        mod.data.smooth_model_spec = smooth_model_spec
 
         if mod._has_noise:
-            mod.data.noise_design_info = noise_design_info
+            mod.data.noise_model_spec = noise_model_spec
 
-        mod.data.param_names = (mod.exog_names + scale_names +
-                                smooth_names + noise_names)
+        mod.data.param_names = mod.exog_names + scale_names + smooth_names + noise_names
 
         return mod
 
     def unpack(self, z):
         """
-        Split the packed parameter vector into blocks.
-        """
+        Split the packed parameter vector into blocks
 
+        Parameters
+        ----------
+        z : array_like
+            The packed parameter vector.
+
+        Returns
+        -------
+        mnpar : ndarray
+            The mean parameters.
+        scpar : ndarray
+            The scaling parameters.
+        smpar : ndarray
+            The smoothness parameters.
+        nopar : ndarray
+            The white noise standard deviation parameters. Empty if the
+            model does not include additive white noise.
+        """
         # Mean parameters
         pm = self.exog.shape[1]
         mnpar = z[0:pm]
 
         # Standard deviation parameters
         pv = self.exog_scale.shape[1]
-        scpar = z[pm:pm + pv]
+        scpar = z[pm : pm + pv]
 
         # Smoothness parameters
         ps = self.exog_smooth.shape[1]
-        smpar = z[pm + pv:pm + pv + ps]
+        smpar = z[pm + pv : pm + pv + ps]
 
         # Observation white noise standard deviation.
         # Empty if has_noise = False.
-        nopar = z[pm + pv + ps:]
+        nopar = z[pm + pv + ps :]
 
         return mnpar, scpar, smpar, nopar
 
@@ -450,7 +519,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def loglike(self, params):
         """
-        Calculate the log-likelihood function for the model.
+        Calculate the log-likelihood function for the model
 
         Parameters
         ----------
@@ -459,14 +528,15 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        The log-likelihood value at the given parameter point.
+        float
+            The log-likelihood value at the given parameter point.
 
         Notes
         -----
         The mean, scaling, and smoothing parameters are packed into
         a vector.  Use `unpack` to access the component vectors.
-        """
 
+        """
         mnpar, scpar, smpar, nopar = self.unpack(params)
 
         # Residuals
@@ -483,7 +553,7 @@ class ProcessMLE(base.LikelihoodModel):
             no = np.exp(np.dot(self.exog_noise, nopar))
 
         # Get the log-likelihood
-        ll = 0.
+        ll = 0.0
         for _, ix in self._groups_ix.items():
 
             # Get the covariance matrix for this person.
@@ -491,7 +561,7 @@ class ProcessMLE(base.LikelihoodModel):
 
             # The variance of the additive noise, if present.
             if self._has_noise:
-                cm.flat[::cm.shape[0] + 1] += no[ix]**2
+                cm.flat[:: cm.shape[0] + 1] += no[ix] ** 2
 
             re = resid[ix]
             ll -= 0.5 * np.linalg.slogdet(cm)[1]
@@ -504,7 +574,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def score(self, params):
         """
-        Calculate the score function for the model.
+        Calculate the score function for the model
 
         Parameters
         ----------
@@ -513,14 +583,15 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        The score vector at the given parameter point.
+        ndarray
+            The score vector at the given parameter point.
 
         Notes
         -----
         The mean, scaling, and smoothing parameters are packed into
         a vector.  Use `unpack` to access the component vectors.
-        """
 
+        """
         mnpar, scpar, smpar, nopar = self.unpack(params)
         pm, pv, ps = len(mnpar), len(scpar), len(smpar)
 
@@ -555,7 +626,7 @@ class ProcessMLE(base.LikelihoodModel):
             if self._has_noise:
                 no_i = no[ix]
                 exog_noise_i = self.exog_noise[ix, :]
-                cm.flat[::cm.shape[0] + 1] += no[ix]**2
+                cm.flat[:: cm.shape[0] + 1] += no[ix] ** 2
 
             cmi = np.linalg.inv(cm)
 
@@ -572,24 +643,22 @@ class ProcessMLE(base.LikelihoodModel):
             scx = sc_i[:, None] * exog_scale_i
             for i, _ in enumerate(ix):
                 jq = np.sum(jacv[i] * qm)
-                score[pm:pm + pv] += jq * scx[i, :]
-                score[pm:pm + pv] -= 0.5 * np.sum(jacv[i] * cmi) * scx[i, :]
+                score[pm : pm + pv] += jq * scx[i, :]
+                score[pm : pm + pv] -= 0.5 * np.sum(jacv[i] * cmi) * scx[i, :]
 
             # The derivatives for the smoothness parameters.
             smx = sm_i[:, None] * exog_smooth_i
             for i, _ in enumerate(ix):
                 jq = np.sum(jacs[i] * qm)
-                score[pm + pv:pm + pv + ps] += jq * smx[i, :]
-                score[pm + pv:pm + pv + ps] -= (
-                         0.5 * np.sum(jacs[i] * cmi) * smx[i, :])
+                score[pm + pv : pm + pv + ps] += jq * smx[i, :]
+                score[pm + pv : pm + pv + ps] -= 0.5 * np.sum(jacs[i] * cmi) * smx[i, :]
 
             # The derivatives with respect to the standard deviation parameters
             if self._has_noise:
-                sno = no_i[:, None]**2 * exog_noise_i
-                score[pm + pv + ps:] -= np.dot(cmi.flat[::cm.shape[0] + 1],
-                                               sno)
+                sno = no_i[:, None] ** 2 * exog_noise_i
+                score[pm + pv + ps :] -= np.dot(cmi.flat[:: cm.shape[0] + 1], sno)
                 bm = np.dot(cmi, np.dot(rx, cmi))
-                score[pm + pv + ps:] += np.dot(bm.flat[::bm.shape[0] + 1], sno)
+                score[pm + pv + ps :] += np.dot(bm.flat[:: bm.shape[0] + 1], sno)
 
         if self.verbose:
             print("|G|=", np.sqrt(np.sum(score * score)))
@@ -601,10 +670,9 @@ class ProcessMLE(base.LikelihoodModel):
         hess = approx_fprime(params, self.score)
         return hess
 
-    def fit(self, start_params=None, method=None, maxiter=None,
-            **kwargs):
+    def fit(self, start_params=None, method=None, maxiter=None, **kwargs):
         """
-        Fit a grouped Gaussian process regression using MLE.
+        Fit a grouped Gaussian process regression using MLE
 
         Parameters
         ----------
@@ -614,12 +682,14 @@ class ProcessMLE(base.LikelihoodModel):
             Method or sequence of methods for scipy optimize.
         maxiter : int
             The maximum number of iterations in the optimization.
+        **kwargs
+            Additional keyword arguments passed to the optimizer.
 
         Returns
         -------
-        An instance of ProcessMLEResults.
+        ProcessMLEResults
+            The fitted results instance.
         """
-
         if "verbose" in kwargs:
             self.verbose = kwargs["verbose"]
 
@@ -637,9 +707,11 @@ class ProcessMLE(base.LikelihoodModel):
 
         for j, meth in enumerate(method):
 
-            if meth not in ("powell",):
+            if meth != "powell":
+
                 def jac(x):
                     return -self.score(x)
+
             else:
                 jac = None
 
@@ -654,15 +726,16 @@ class ProcessMLE(base.LikelihoodModel):
                 method=meth,
                 x0=start_params,
                 jac=jac,
-                options=minim_opts)
+                options=minim_opts,
+            )
 
             if not f.success:
                 msg = "Fitting did not converge"
                 if jac is not None:
-                    msg += ", |gradient|=%.6f" % np.sqrt(np.sum(f.jac**2))
+                    msg += f", |gradient|={np.sqrt(np.sum(f.jac**2)):.6f}"
                 if j < len(method) - 1:
-                    msg += ", trying %s next..." % method[j+1]
-                warnings.warn(msg)
+                    msg += f", trying {method[j + 1]} next..."
+                warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
             if np.isfinite(f.x).all():
                 start_params = f.x
@@ -670,7 +743,7 @@ class ProcessMLE(base.LikelihoodModel):
         hess = self.hessian(f.x)
         try:
             cov_params = -np.linalg.inv(hess)
-        except Exception:
+        except np.linalg.LinAlgError:
             cov_params = None
 
         class rslt:
@@ -686,10 +759,9 @@ class ProcessMLE(base.LikelihoodModel):
 
         return rslt
 
-    def covariance(self, time, scale_params, smooth_params, scale_data,
-                   smooth_data):
+    def covariance(self, time, scale_params, smooth_params, scale_data, smooth_data):
         """
-        Returns a Gaussian process covariance matrix.
+        Returns a Gaussian process covariance matrix
 
         Parameters
         ----------
@@ -711,7 +783,8 @@ class ProcessMLE(base.LikelihoodModel):
 
         Returns
         -------
-        A covariance matrix.
+        ndarray
+            The covariance matrix.
 
         Notes
         -----
@@ -723,14 +796,17 @@ class ProcessMLE(base.LikelihoodModel):
 
         The covariance is only for the Gaussian process and does not include
         the white noise variance.
-        """
 
-        if not hasattr(self.data, "scale_design_info"):
+        """
+        if not hasattr(self.data, "scale_model_spec"):
             sca = np.dot(scale_data, scale_params)
             smo = np.dot(smooth_data, smooth_params)
         else:
-            sc = patsy.dmatrix(self.data.scale_design_info, scale_data)
-            sm = patsy.dmatrix(self.data.smooth_design_info, smooth_data)
+            mgr = FormulaManager()
+            sc = mgr.get_matrices(self.data.scale_model_spec, scale_data, pandas=False)
+            sm = mgr.get_matrices(
+                self.data.smooth_model_spec, smooth_data, pandas=False
+            )
             sca = np.exp(np.dot(sc, scale_params))
             smo = np.exp(np.dot(sm, smooth_params))
 
@@ -738,7 +814,7 @@ class ProcessMLE(base.LikelihoodModel):
 
     def predict(self, params, exog=None, *args, **kwargs):
         """
-        Obtain predictions of the mean structure.
+        Obtain predictions of the mean structure
 
         Parameters
         ----------
@@ -748,29 +824,35 @@ class ProcessMLE(base.LikelihoodModel):
         exog : array_like
             The design matrix for the mean structure.  If not provided,
             the model's design matrix is used.
-        """
+        *args
+            Additional positional arguments, accepted for API compatibility.
+        **kwargs
+            Additional keyword arguments, accepted for API compatibility.
 
+        Returns
+        -------
+        ndarray
+            The predicted values of the mean structure.
+        """
         if exog is None:
             exog = self.exog
-        elif hasattr(self.data, "design_info"):
+        elif hasattr(self.data, "model_spec"):
             # Run the provided data through the formula if present
-            exog = patsy.dmatrix(self.data.design_info, exog)
+            mgr = FormulaManager()
+            exog = mgr.get_matrices(self.data.model_spec, exog)
 
         if len(params) > exog.shape[1]:
-            params = params[0:exog.shape[1]]
+            params = params[0 : exog.shape[1]]
 
         return np.dot(exog, params)
 
 
 class ProcessMLEResults(base.GenericLikelihoodModelResults):
-    """
-    Results class for Gaussian process regression models.
-    """
+    """Results class for Gaussian process regression models"""
 
     def __init__(self, model, mlefit):
 
-        super().__init__(
-            model, mlefit)
+        super().__init__(model, mlefit)
 
         pa = model.unpack(mlefit.params)
 
@@ -790,18 +872,44 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
             self.k_noise = self.model.exog_noise.shape[1]
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
+        """
+        Return predicted values for the mean structure.
 
+        Parameters
+        ----------
+        exog : array_like, optional
+            The design matrix for the mean structure. If None, the
+            model's design matrix is used.
+        transform : bool, optional
+            Not used, retained for compatibility with the parent
+            class. A warning is issued if set to False.
+        *args
+            Additional positional arguments, accepted for API
+            compatibility, but ignored.
+        **kwargs
+            Additional keyword arguments, accepted for API
+            compatibility, but ignored.
+
+        Returns
+        -------
+        ndarray
+            The predicted values of the mean structure.
+        """
         if not transform:
-            warnings.warn("'transform=False' is ignored in predict")
+            warnings.warn(
+                "'transform=False' is ignored in predict", ValueWarning, stacklevel=2
+            )
 
         if len(args) > 0 or len(kwargs) > 0:
-            warnings.warn("extra arguments ignored in 'predict'")
+            warnings.warn(
+                "extra arguments ignored in 'predict'", ValueWarning, stacklevel=2
+            )
 
         return self.model.predict(self.params, exog)
 
     def covariance(self, time, scale, smooth):
         """
-        Returns a fitted covariance matrix.
+        Returns a fitted covariance matrix
 
         Parameters
         ----------
@@ -817,7 +925,8 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
         Returns
         -------
-        A covariance matrix.
+        ndarray
+            The covariance matrix.
 
         Notes
         -----
@@ -826,18 +935,39 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         respective scaling and smoothing formulas used to fit the model.
         Otherwise, `scale` and `smooth` should be data arrays whose
         columns align with the fitted scaling and smoothing parameters.
-        """
 
-        return self.model.covariance(time, self.scale_params,
-                                     self.smooth_params, scale, smooth)
+        """
+        return self.model.covariance(
+            time, self.scale_params, self.smooth_params, scale, smooth
+        )
 
     def covariance_group(self, group):
+        """
+        Returns the fitted covariance matrix for a group.
 
+        Parameters
+        ----------
+        group : object
+            The group label, as it appears in the `groups` array or
+            column that was used to fit the model.
+
+        Returns
+        -------
+        ndarray
+            The fitted covariance matrix for the observations
+            belonging to `group`.
+
+        Raises
+        ------
+        ValueError
+            If `group` is not one of the group labels used to fit the
+            model.
+        """
         # Check if the group exists, since _groups_ix is a
         # DefaultDict use len instead of catching a KeyError.
         ix = self.model._groups_ix[group]
         if len(ix) == 0:
-            msg = "Group '%s' does not exist" % str(group)
+            msg = f"Group '{group!s}' does not exist"
             raise ValueError(msg)
 
         scale_data = self.model.exog_scale[ix, :]
@@ -849,18 +979,42 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         smooth_data = pd.DataFrame(smooth_data, columns=smooth_names)
         time = self.model.time[ix]
 
-        return self.model.covariance(time,
-                                     self.scale_params,
-                                     self.smooth_params,
-                                     scale_data,
-                                     smooth_data)
+        return self.model.covariance(
+            time, self.scale_params, self.smooth_params, scale_data, smooth_data
+        )
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
+        """
+        Summarize the fitted Gaussian process regression model.
 
+        Parameters
+        ----------
+        yname : str, optional
+            Not used, retained for compatibility with other summary
+            methods.
+        xname : list[str], optional
+            Not used, retained for compatibility with other summary
+            methods.
+        title : str, optional
+            Title for the summary. If not None, this replaces the
+            default title.
+        alpha : float
+            Significance level for the confidence intervals.
+
+        Returns
+        -------
+        Summary
+            A summary instance that holds the summary tables and
+            text, which can be printed or converted to various output
+            formats.
+        """
         df = pd.DataFrame()
 
-        typ = (["Mean"] * self.k_exog + ["Scale"] * self.k_scale +
-               ["Smooth"] * self.k_smooth)
+        typ = (
+            ["Mean"] * self.k_exog
+            + ["Scale"] * self.k_scale
+            + ["Smooth"] * self.k_smooth
+        )
         if self._has_noise:
             typ += ["SD"] * self.k_noise
         df["Type"] = typ
@@ -869,16 +1023,17 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
 
         try:
             df["std err"] = np.sqrt(np.diag(self.cov_params()))
-        except Exception:
+        except (AttributeError, TypeError, ValueError, np.linalg.LinAlgError):
             df["std err"] = np.nan
 
         from scipy.stats.distributions import norm
+
         df["tvalues"] = df.coef / df["std err"]
         df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues))
 
         f = norm.ppf(1 - alpha / 2)
-        df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
-        df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
+        df[f"[{alpha / 2:.3f}"] = df.coef - f * df["std err"]
+        df[f"{1 - alpha / 2:.3f}]"] = df.coef + f * df["std err"]
 
         df.index = self.model.data.param_names
 

@@ -28,18 +28,15 @@ Residual Diagnostics and Specification Tests
 .. module:: statsmodels.stats.stattools
    :synopsis: Statistical methods and tests that do not fit into other categories
 
+Autocorrelation
+~~~~~~~~~~~~~~~
+
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
    :toctree: generated/
 
    durbin_watson
-   jarque_bera
-   omni_normtest
-   medcouple
-   robust_skewness
-   robust_kurtosis
-   expected_robust_kurtosis
 
 .. module:: statsmodels.stats.diagnostic
    :synopsis: Statistical methods and tests to diagnose model fit problems
@@ -52,29 +49,46 @@ Residual Diagnostics and Specification Tests
    acorr_breusch_godfrey
    acorr_ljungbox
    acorr_lm
+   LMTestResult
 
-   breaks_cusumolsresid
-   breaks_hansen
-   recursive_olsresiduals
+Heteroscedasticity
+~~~~~~~~~~~~~~~~~~
 
-   compare_cox
-   compare_encompassing
-   compare_j
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
 
    het_arch
    het_breuschpagan
    het_goldfeldquandt
+   GoldfeldQuandtResult
    het_white
-   spec_white
 
-   linear_harvey_collier
-   linear_lm
-   linear_rainbow
-   linear_reset
+Kurtosis
+~~~~~~~~
 
+.. currentmodule:: statsmodels.stats.stattools
 
-Outliers and influence measures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autosummary::
+   :toctree: generated/
+
+   robust_kurtosis
+   expected_robust_kurtosis
+
+Normality
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+
+   jarque_bera
+   omni_normtest
+
+Outliers and Influence
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: statsmodels.stats.outliers_influence
    :synopsis: Statistical methods and measures for outliers and influence
@@ -88,6 +102,47 @@ Outliers and influence measures
    GLMInfluence
    MLEInfluence
    variance_inflation_factor
+
+Skewness
+~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+   
+   medcouple
+   robust_skewness
+
+Stability
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   breaks_cusumolsresid
+   breaks_hansen
+   recursive_olsresiduals
+
+Specification test
+~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   compare_cox
+   compare_encompassing
+   compare_j
+   NonNestedTestResult
+   spec_white
+   linear_harvey_collier
+   linear_lm
+   linear_rainbow
+   linear_reset
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
@@ -142,6 +197,8 @@ some tests for goodness of fit for univariate distributions
    gof_chisquare_discrete
    gof_binning_discrete
    chisquare_effectsize
+   chisquare
+   ChisquareResult
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
@@ -172,6 +229,7 @@ Non-Parametric Tests
    runstest_1samp
    runstest_2samp
    cochrans_q
+   CochransQResult
    Runs
 
 .. currentmodule:: statsmodels.stats.descriptivestats
@@ -188,6 +246,7 @@ Non-Parametric Tests
 
    rank_compare_2indep
    rank_compare_2ordinal
+   samplesize_rank_compare_onetail
    RankCompareResult
    cohensd2problarger
    prob_larger_continuous
@@ -259,6 +318,7 @@ to one way ANOVA, but still in development
    GroupsStats
    MultiComparison
    TukeyHSDResults
+   tukeyhsd
 
 .. module:: statsmodels.stats.multicomp
    :synopsis: Methods for controlling size while performing multiple comparisons
@@ -294,7 +354,6 @@ to one way ANOVA, but still in development
    CorrelationEffects
    OLSEffects
    ForwardEffects
-   OLSEffects
    RegModelEffects
 
 The following functions are not (yet) public
@@ -314,7 +373,6 @@ The following functions are not (yet) public
    ccols
    compare_ordered
    distance_st_range
-   ecdf
    get_tukeyQcrit
    homogeneous_subsets
    maxzero
@@ -327,6 +385,15 @@ The following functions are not (yet) public
    set_partition
    set_remove_subs
    tiecorrect
+
+
+.. currentmodule:: statsmodels.stats.multitest
+
+.. autosummary::
+   :toctree: generated/
+
+   _ecdf
+
 
 .. _tost:
 
@@ -440,7 +507,6 @@ proportions that can be used with NormalIndPower.
    proportions_chisquare_allpairs
    proportions_chisquare_pairscontrol
 
-   proportion_effectsize
    power_binom_tost
    power_ztost_prop
    samplesize_confint_proportion
@@ -629,6 +695,7 @@ inverse covariance or precision matrix.
    corr_nearest_factor
    corr_thresholded
    cov_nearest
+   CovNearestResult
    cov_nearest_factor_homog
    FactoredPSDMatrix
    kernel_covariance
@@ -660,6 +727,7 @@ kurtosis and cummulants.
    mvsk2mc
    mvsk2mnc
    cov2corr
+   Cov2CorrResult
    corr2cov
    se_cov
 

@@ -1,34 +1,78 @@
 """
 Compatibility tools for differences between Python 2 and 3
 """
+
+import platform
 import sys
-from typing import Literal
 
-PY37 = sys.version_info[:2] == (3, 7)
+PYTHON_IMPL_WASM = sys.platform == "emscripten" or platform.machine() in [
+    "wasm32",
+    "wasm64",
+]
 
-asunicode = lambda x, _: str(x)  # noqa:E731
+
+def asunicode(x, _):
+    """
+    Convert an object to a unicode string
+
+    Parameters
+    ----------
+    x : object
+        The object to convert.
+    _ : str
+        Unused, retained for signature compatibility.
+
+    Returns
+    -------
+    str
+        The unicode string representation of `x`.
+    """
+    return str(x)
 
 
 __all__ = [
-    "asunicode",
-    "asstr",
+    "PYTHON_IMPL_WASM",
     "asbytes",
-    "Literal",
     "lmap",
-    "lzip",
     "lrange",
-    "lfilter",
+    "lzip",
     "with_metaclass",
 ]
 
 
 def asbytes(s):
+    """
+    Convert a string to bytes using latin1 encoding
+
+    Parameters
+    ----------
+    s : bytes or str
+        The value to convert.
+
+    Returns
+    -------
+    bytes
+        The bytes representation of `s`.
+    """
     if isinstance(s, bytes):
         return s
     return s.encode("latin1")
 
 
 def asstr(s):
+    """
+    Convert bytes to a string using latin1 encoding
+
+    Parameters
+    ----------
+    s : bytes or str
+        The value to convert.
+
+    Returns
+    -------
+    str
+        The string representation of `s`.
+    """
     if isinstance(s, str):
         return s
     return s.decode("latin1")
@@ -36,23 +80,79 @@ def asstr(s):
 
 # list-producing versions of the major Python iterating functions
 def lrange(*args, **kwargs):
+    """
+    A list-producing version of range
+
+    Parameters
+    ----------
+    *args
+        Positional arguments passed to ``range``.
+    **kwargs
+        Keyword arguments passed to ``range``.
+
+    Returns
+    -------
+    list
+        The values produced by ``range``.
+    """
     return list(range(*args, **kwargs))
 
 
 def lzip(*args, **kwargs):
-    return list(zip(*args, **kwargs))
+    """
+    A list-producing version of zip
+
+    Parameters
+    ----------
+    *args
+        Positional arguments passed to ``zip``.
+    **kwargs
+        Keyword arguments passed to ``zip``.
+
+    Returns
+    -------
+    list
+        The values produced by ``zip``.
+    """
+    return list(zip(*args, strict=True, **kwargs))
 
 
 def lmap(*args, **kwargs):
+    """
+    A list-producing version of map
+
+    Parameters
+    ----------
+    *args
+        Positional arguments passed to ``map``.
+    **kwargs
+        Keyword arguments passed to ``map``.
+
+    Returns
+    -------
+    list
+        The values produced by ``map``.
+    """
     return list(map(*args, **kwargs))
 
 
-def lfilter(*args, **kwargs):
-    return list(filter(*args, **kwargs))
-
-
 def with_metaclass(meta, *bases):
-    """Create a base class with a metaclass."""
+    """
+    Create a base class with a metaclass
+
+    Parameters
+    ----------
+    meta : type
+        The metaclass to use.
+    *bases : type
+        The base classes for the new class.
+
+    Returns
+    -------
+    type
+        A temporary base class using the given metaclass.
+    """
+
     # This requires a bit of explanation: the basic idea is to make a dummy
     # metaclass for one level of class instantiation that replaces itself with
     # the actual metaclass.

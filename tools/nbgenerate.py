@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+from concurrent import futures
 from functools import partial
 import hashlib
 import json
 import os
+from pathlib import Path
 import shutil
 import sys
 
@@ -13,28 +15,19 @@ from nbconvert import HTMLExporter, RSTExporter
 from nbconvert.preprocessors import ExecutePreprocessor
 import nbformat
 
-try:
-    from concurrent import futures
-
-    has_futures = True
-except ImportError:
-    has_futures = False
-
-if sys.platform == "win32":
+if sys.platform == "win32" and sys.version_info < (3, 14):
     # Set the policy to prevent "Event loop is closed" error on Windows
     # https://github.com/encode/httpx/issues/914
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 init()
 
-here = os.path.dirname(__file__)
+here = Path(__file__).parent
 pkgdir = os.path.split(here)[0]
-EXAMPLE_DIR = os.path.abspath(os.path.join(pkgdir, "examples"))
-SOURCE_DIR = os.path.join(EXAMPLE_DIR, "notebooks")
-DOC_SRC_DIR = os.path.join(pkgdir, "docs", "source")
-DST_DIR = os.path.abspath(
-    os.path.join(DOC_SRC_DIR, "examples", "notebooks", "generated")
-)
+EXAMPLE_DIR = Path(pkgdir).joinpath("examples").resolve()
+SOURCE_DIR = Path(EXAMPLE_DIR).joinpath("notebooks")
+DOC_SRC_DIR = Path(pkgdir).joinpath("docs", "source")
+DST_DIR = Path(DOC_SRC_DIR).joinpath("examples", "notebooks", "generated").resolve()
 EXECUTED_DIR = DST_DIR
 
 error_message = """
@@ -45,8 +38,8 @@ ERROR: Error occurred when running {notebook}
 ******************************************************************************
 """
 for dname in [EXECUTED_DIR, DST_DIR]:
-    if not os.path.exists(dname):
-        os.makedirs(dname)
+    if not Path(dname).exists():
+        Path(dname).mkdir(parents=True)
 
 
 def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
@@ -66,15 +59,15 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     -------
     dst: str
     """
-    with open(src, encoding="utf-8") as f:
+    with Path(src).open(encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
     ep = ExecutePreprocessor(
-        allow_errors=False, timeout=timeout, kernel_name=kernel_name
+        allow_errors=False, timeout=timeout, kernel_name=kernel_name, transport='ipc'
     )
     ep.preprocess(nb, {"metadata": {"path": SOURCE_DIR}})
 
-    with open(dst, "w", encoding="utf-8") as f:
+    with Path(dst).open("w", encoding="utf-8") as f:
         nbformat.write(nb, f)
     return dst
 
@@ -93,8 +86,8 @@ def convert(src, dst, to="rst"):
     dispatch = {"rst": RSTExporter, "html": HTMLExporter}
     exporter = dispatch[to.lower()]()
 
-    (body, resources) = exporter.from_filename(src)
-    with open(dst, "w", encoding="utf-8") as f:
+    body, resources = exporter.from_filename(src)
+    with Path(dst).open("w", encoding="utf-8") as f:
         f.write(body)
     return dst
 
@@ -102,11 +95,7 @@ def convert(src, dst, to="rst"):
 def find_notebooks(directory=None):
     if directory is None:
         directory = SOURCE_DIR
-    nbs = (
-        os.path.join(directory, x)
-        for x in os.listdir(directory)
-        if x.endswith(".ipynb")
-    )
+    nbs = (p for p in Path(directory).iterdir() if p.suffix == ".ipynb")
     return nbs
 
 
@@ -125,24 +114,24 @@ def do_one(
     from traitlets.traitlets import TraitError
 
     os.chdir(SOURCE_DIR)
-    name = os.path.basename(nb)
-    dst = os.path.join(EXECUTED_DIR, name)
-    hash_file = f"{os.path.splitext(dst)[0]}.json"
+    name = Path(nb).name
+    dst = Path(EXECUTED_DIR).joinpath(name)
+    hash_file = dst.with_suffix(".json")
     existing_hash = ""
-    if os.path.exists(hash_file):
-        with open(hash_file, encoding="utf-8") as hf:
+    if Path(hash_file).exists():
+        with Path(hash_file).open(encoding="utf-8") as hf:
             existing_hash = json.load(hf)
-    with open(nb, mode="rb") as f:
+    with Path(nb).open(mode="rb") as f:
         current_hash = hashlib.sha512(f.read()).hexdigest()
     update_needed = existing_hash != current_hash
     # Update if dst missing
-    update_needed = update_needed or not os.path.exists(dst)
+    update_needed = update_needed or not Path(dst).exists()
     update_needed = update_needed or not skip_existing
     if not update_needed:
         print(f"Skipping {nb}")
 
     if execute and update_needed:
-        print("Executing {} to {}".format(nb, dst))
+        print(f"Executing {nb} to {dst}")
         try:
             nb = execute_nb(nb, dst, timeout=timeout, kernel_name=kernel_name)
         except Exception as e:
@@ -157,28 +146,24 @@ def do_one(
             if error_fail:
                 raise
     elif not execute:
-        print("Copying (without executing) {} to {}".format(nb, dst))
+        print(f"Copying (without executing) {nb} to {dst}")
         shutil.copy(nb, dst)
 
     if execute_only:
-        with open(hash_file, encoding="utf-8", mode="w") as hf:
+        with Path(hash_file).open(encoding="utf-8", mode="w") as hf:
             json.dump(current_hash, hf)
         return dst
 
-    dst = os.path.splitext(os.path.join(DST_DIR, name))[0] + "." + to
-    print("Converting {} to {}".format(nb, dst))
+    dst = str(Path(DST_DIR).joinpath(name).with_suffix("." + to))
+    print(f"Converting {nb} to {dst}")
     try:
         convert(nb, dst, to=to)
-        with open(hash_file, encoding="utf-8", mode="w") as hf:
+        with Path(hash_file).open(encoding="utf-8", mode="w") as hf:
             json.dump(current_hash, hf)
-    except TraitError:
+    except TraitError as exc:
         kernels = jupyter_client.kernelspec.find_kernel_specs()
-        msg = (
-            "Could not find kernel named `%s`, Available kernels:\n %s"
-            % kernel_name,
-            kernels,
-        )
-        raise ValueError(msg)
+        msg = f"Could not find kernel named `{kernel_name}`, Available kernels:\n {kernels}"
+        raise ValueError(msg) from exc
 
     return dst
 
@@ -225,14 +210,14 @@ def do(
         execute_only=execute_only,
     )
 
-    if parallel and has_futures:
+    if parallel:
         with futures.ProcessPoolExecutor() as pool:
             for dst in pool.map(func, nbs):
-                print("Finished %s" % dst)
+                print(f"Finished {dst}")
     else:
         for nb in nbs:
             func(nb)
-            print("Finished %s" % nb)
+            print(f"Finished {nb}")
 
     skip_func = partial(
         do_one,
@@ -247,14 +232,14 @@ def do(
     )
     for nb in skip:
         skip_func(nb)
-        print("Finished (without execution) %s" % nb)
+        print(f"Finished (without execution) {nb}")
 
 
 def find_kernel_name():
     import jupyter_client
 
     kernels = jupyter_client.kernelspec.find_kernel_specs()
-    kernel_name = "python%s" % sys.version_info.major
+    kernel_name = f"python{sys.version_info.major}"
     if kernel_name not in kernels:
         return ""
     return kernel_name
@@ -320,14 +305,13 @@ parser.add_argument(
     "--fail-on-error",
     dest="error_fail",
     action="store_true",
-    help="Fail when an error occurs when executing a cell " "in a notebook.",
+    help="Fail when an error occurs when executing a cell in a notebook.",
 )
 parser.add_argument(
     "--skip-existing",
     dest="skip_existing",
     action="store_true",
-    help="Skip execution of an executed file exists and "
-    "is newer than the notebook.",
+    help="Skip execution of an executed file exists and is newer than the notebook.",
 )
 parser.add_argument(
     "--execution-blacklist",

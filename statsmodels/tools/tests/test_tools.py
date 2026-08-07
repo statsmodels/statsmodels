@@ -1,13 +1,13 @@
 """
 Test functions for models.tools
 """
+
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 from statsmodels.compat.python import lrange
 
 import string
 
 import numpy as np
-from numpy.random import standard_normal
 from numpy.testing import (
     assert_almost_equal,
     assert_array_equal,
@@ -58,9 +58,7 @@ class TestTools:
         with pytest.raises(ValueError):
             tools.add_constant(x, has_constant="raise")
 
-        assert_equal(
-            tools.add_constant(x, has_constant="add"), np.ones((5, 2))
-        )
+        assert_equal(tools.add_constant(x, has_constant="add"), np.ones((5, 2)))
 
     def test_add_constant_has_constant2d(self):
         x = np.asarray([[1, 1, 1, 1], [1, 2, 3, 4.0]]).T
@@ -112,6 +110,36 @@ class TestTools:
         dfc.insert(0, "const", np.ones(3))
         assert_frame_equal(dfc, output)
 
+    def test_drop_missing(self):
+        _y = np.array([[1.0, 2.0, np.nan], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+        # axis=1 looks for missing values across the columns of each row, so
+        # the row holding the nan is dropped
+        assert_almost_equal(
+            tools.drop_missing(_y, axis=1),
+            np.array([[4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]),
+        )
+        # axis=0 looks across the rows of each column, so the column holding
+        # the nan is dropped instead
+        assert_almost_equal(
+            tools.drop_missing(_y, axis=0),
+            np.array([[1.0, 2.0], [4.0, 5.0], [7.0, 8.0]]),
+        )
+
+    def test_drop_missing_x(self):
+        _y = np.array([[1.0, 2.0], [3.0, np.nan], [5.0, 6.0]])
+        _x = np.array([[1.0, np.nan], [1.0, 1.0], [1.0, 1.0]])
+        y, x = tools.drop_missing(_y, _x, axis=0)
+        assert_almost_equal(y, np.array([[1.0], [3.0], [5.0]]))
+        assert_almost_equal(x, np.array([[1.0], [1.0], [1.0]]))
+
+        # axis=1 with two variables: a row is dropped if either _y or _x
+        # is missing anywhere in that row
+        _y = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        _x = np.array([[1.0, 1.0], [1.0, np.nan], [1.0, 1.0]])
+        y, x = tools.drop_missing(_y, _x, axis=1)
+        assert_almost_equal(y, np.array([[1.0, 2.0], [5.0, 6.0]]))
+        assert_almost_equal(x, np.array([[1.0, 1.0], [1.0, 1.0]]))
+
     def test_recipr(self):
         X = np.array([[2, 1], [-1, 0]])
         Y = tools.recipr(X)
@@ -123,7 +151,8 @@ class TestTools:
         assert_almost_equal(Y, np.array([[0.5, 1], [-0.25, 0]]))
 
     def test_extendedpinv(self):
-        X = standard_normal((40, 10))
+        rs = np.random.RandomState(4783891)
+        X = rs.standard_normal((40, 10))
         np_inv = np.linalg.pinv(X)
         np_sing_vals = np.linalg.svd(X, 0, 0)
         sm_inv, sing_vals = pinv_extended(X)
@@ -131,7 +160,8 @@ class TestTools:
         assert_almost_equal(np_sing_vals, sing_vals)
 
     def test_extendedpinv_singular(self):
-        X = standard_normal((40, 10))
+        rs = np.random.RandomState(4783893)
+        X = rs.standard_normal((40, 10))
         X[:, 5] = X[:, 1] + X[:, 3]
         np_inv = np.linalg.pinv(X)
         np_sing_vals = np.linalg.svd(X, 0, 0)
@@ -142,9 +172,10 @@ class TestTools:
     def test_fullrank(self):
         import warnings
 
+        rs = np.random.RandomState(4783895)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            X = standard_normal((40, 10))
+            X = rs.standard_normal((40, 10))
             X[:, 0] = X[:, 1] + X[:, 2]
 
             Y = tools.fullrank(X)
@@ -243,7 +274,6 @@ class TestNanDot:
         assert_array_equal(test_res, expected_res)
 
     def test_13(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_1, self.mx_3)
         expected_res = np.array([[0.0, 0.0], [0.0, 0.0]])
         assert_array_equal(test_res, expected_res)
@@ -261,13 +291,11 @@ class TestNanDot:
         assert_array_equal(test_res, expected_res)
 
     def test_23(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_2, self.mx_3)
         expected_res = np.array([[0.0, 0.0], [0.0, 0.0]])
         assert_array_equal(test_res, expected_res)
 
     def test_32(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_3, self.mx_2)
         expected_res = np.array([[0.0, 0.0], [0.0, 0.0]])
         assert_array_equal(test_res, expected_res)
@@ -285,7 +313,6 @@ class TestNanDot:
         assert_array_equal(test_res, expected_res)
 
     def test_66(self):
-        nan = np.nan
         test_res = tools.nan_dot(self.mx_6, self.mx_6)
         expected_res = np.array([[7.0, 10.0], [15.0, 22.0]])
         assert_array_equal(test_res, expected_res)

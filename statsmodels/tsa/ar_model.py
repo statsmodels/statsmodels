@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
-    Appender,
-    Substitution,
     call_cached_func,
     to_numpy,
 )
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import Any, Literal, cast
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 import warnings
 
 import numpy as np
@@ -23,16 +20,10 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import eval_measures
-from statsmodels.tools.decorators import cache_readonly, cache_writable
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
-from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tools.typing import (
-    ArrayLike,
-    ArrayLike1D,
-    ArrayLike2D,
-    Float64Array,
-    NDArray,
-)
+from statsmodels.tools.docstring_helpers import Appender, Substitution
+from statsmodels.tools.sm_exceptions import EstimationWarning, SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -50,27 +41,41 @@ from statsmodels.tsa.deterministic import (
 )
 from statsmodels.tsa.tsatools import freq_to_period, lagmat
 
-__all__ = ["AR", "AutoReg"]
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import (
+        ArrayLike,
+        ArrayLike1D,
+        ArrayLike2D,
+        Float64Array,
+        NDArray,
+    )
 
-AR_DEPRECATION_WARN = """
-statsmodels.tsa.AR has been deprecated in favor of statsmodels.tsa.AutoReg and
-statsmodels.tsa.SARIMAX.
 
-AutoReg adds the ability to specify exogenous variables, include time trends,
-and add seasonal dummies. The AutoReg API differs from AR since the model is
-treated as immutable, and so the entire specification including the lag
-length must be specified when creating the model. This change is too
-substantial to incorporate into the existing AR api. The function
-ar_select_order performs lag length selection for AutoReg models.
+__all__ = ["AR", "AutoReg", "InformationCriteria"]
 
-AutoReg only estimates parameters using conditional MLE (OLS). Use SARIMAX to
-estimate ARX and related models using full MLE via the Kalman Filter.
 
-To silence this warning and continue using AR until it is removed, use:
+class InformationCriteria(NamedTuple):
+    """
+    Result of order-selection information-criteria computations, shared
+    between :func:`ar_select_order` and
+    :func:`~statsmodels.tsa.ardl.model.ardl_select_order`.
 
-import warnings
-warnings.filterwarnings('ignore', 'statsmodels.tsa.ar_model.AR', FutureWarning)
-"""
+    Parameters
+    ----------
+    aic : float
+        The Akaike information criterion for the candidate model order.
+    bic : float
+        The Bayesian (Schwarz) information criterion for the candidate
+        model order.
+    hqic : float
+        The Hannan-Quinn information criterion for the candidate model
+        order.
+    """
+
+    aic: float
+    bic: float
+    hqic: float
+
 
 REPEATED_FIT_ERROR = """
 Model has been fit using maxlag={0}, method={1}, ic={2}, trend={3}. These
@@ -85,7 +90,7 @@ def sumofsq(x: np.ndarray, axis: int = 0) -> float | np.ndarray:
 
 
 def _get_period(data: pd.DatetimeIndex | pd.PeriodIndex, index_freq) -> int:
-    """Shared helper to get period from frequenc or raise"""
+    """Shared helper to get period from frequency or raise"""
     if data.freq:
         return freq_to_period(index_freq)
     raise ValueError(
@@ -110,13 +115,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
         None excludes all AR lags, and behave identically to 0.
-    trend : {'n', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct', 'ctt'}
         The trend to include in the model:
 
         * 'n' - No trend.
         * 'c' - Constant only.
         * 't' - Time trend only.
-        * 'ct' - Constant and time trend.
+        * 'ct' - Constant and linear time trend.
+        * 'ctt' - Constant and linear and quadratic time trends.
 
     seasonal : bool
         Flag indicating whether to include seasonal dummies in the model. If
@@ -145,14 +151,6 @@ class AutoReg(tsa_model.TimeSeriesModel):
     deterministic : DeterministicProcess
         A deterministic process.  If provided, trend and seasonal are ignored.
         A warning is raised if trend is not "n" or seasonal is not False.
-    old_names : bool
-        Flag indicating whether to use the v0.11 names or the v0.12+ names.
-
-        .. deprecated:: 0.13.0
-
-           old_names is deprecated and will be removed after 0.14 is
-           released. You must update any code reliant on the old variable
-           names to use the new names.
 
     See Also
     --------
@@ -197,7 +195,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         self,
         endog: ArrayLike1D,
         lags: int | Sequence[int] | None,
-        trend: Literal["n", "c", "t", "ct"] = "c",
+        trend: Literal["n", "c", "t", "ct", "ctt"] = "c",
         seasonal: bool = False,
         exog: ArrayLike2D | None = None,
         hold_back: int | None = None,
@@ -205,13 +203,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
         missing: str = "none",
         *,
         deterministic: DeterministicProcess | None = None,
-        old_names: bool = False,
     ):
         super().__init__(endog, exog, None, None, missing=missing)
         self._trend = cast(
-            Literal["n", "c", "t", "ct"],
+            "Literal['n', 'c', 't', 'ct', 'ctt']",
             string_like(
-                trend, "trend", options=("n", "c", "t", "ct"), optional=False
+                trend, "trend", options=("n", "c", "t", "ct", "ctt"), optional=False
             ),
         )
         self._seasonal = bool_like(seasonal, "seasonal")
@@ -233,26 +230,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
             self._deterministics = deterministic
             self._user_deterministic = True
         else:
-            self._deterministics = DeterministicProcess(
-                index, additional_terms=terms
-            )
+            self._deterministics = DeterministicProcess(index, additional_terms=terms)
         self._exog_names: list[str] = []
         self._k_ar = 0
-        self._old_names = bool_like(old_names, "old_names", optional=False)
-        if deterministic is not None and (
-            self._trend != "n" or self._seasonal
-        ):
+        if deterministic is not None and (self._trend != "n" or self._seasonal):
             warnings.warn(
                 'When using deterministic, trend must be "n" and '
                 "seasonal must be False.",
                 SpecificationWarning,
-                stacklevel=2,
-            )
-        if self._old_names:
-            warnings.warn(
-                "old_names will be removed after the 0.14 release. You should "
-                "stop setting this parameter and use the new names.",
-                FutureWarning,
                 stacklevel=2,
             )
         self._lags, self._hold_back = self._check_lags(
@@ -266,21 +251,21 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def ar_lags(self) -> list[int] | None:
         """The autoregressive lags included in the model"""
         lags = list(self._lags)
-        return None if not lags else lags
+        return lags or None
 
     @property
     def hold_back(self) -> int | None:
-        """The number of initial obs. excluded from the estimation sample."""
+        """The number of initial obs. excluded from the estimation sample"""
         return self._hold_back
 
     @property
     def trend(self) -> Literal["n", "c", "ct", "ctt"]:
-        """The trend used in the model."""
+        """The trend used in the model"""
         return self._trend
 
     @property
     def seasonal(self) -> bool:
-        """Flag indicating that the model contains a seasonal component."""
+        """Flag indicating that the model contains a seasonal component"""
         return self._seasonal
 
     @property
@@ -290,12 +275,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     @property
     def period(self) -> int | None:
-        """The period of the seasonal component."""
+        """The period of the seasonal component"""
         return self._period
 
     @property
     def df_model(self) -> int:
-        """The model degrees of freedom."""
+        """The model degrees of freedom"""
         return self._x.shape[1]
 
     @property
@@ -304,8 +289,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return self._exog_names
 
     def initialize(self) -> None:
-        """Initialize the model (no-op)."""
-        pass
+        """Initialize the model (no-op)"""
 
     def _check_lags(
         self, lags: int | Sequence[int] | None, hold_back: int | None
@@ -324,9 +308,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 np.any(_lags_arr < 1)
                 or np.unique(_lags_arr).shape[0] != _lags_arr.shape[0]
             ):
-                raise ValueError(
-                    "All values in lags must be positive and distinct."
-                )
+                raise ValueError("All values in lags must be positive and distinct.")
             self._maxlag = np.max(_lags_arr)
             _lags = [int(v) for v in _lags_arr]
         else:
@@ -352,31 +334,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
         hold_back = self._hold_back
         exog_names = []
         endog_names = self.endog_names
-        x, y = lagmat(self.endog, maxlag, original="sep")
-        exog_names.extend(
-            [endog_names + f".L{lag}" for lag in self._lags]
-        )
+        x, y = lagmat(self.endog, maxlag, original="sep", use_namedtuple=False)
+        exog_names.extend([endog_names + f".L{lag}" for lag in self._lags])
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
         self._k_ar = x.shape[1]
         deterministic = self._deterministics.in_sample()
         if deterministic.shape[1]:
             x = np.c_[to_numpy(deterministic), x]
-            if self._old_names:
-                deterministic_names = []
-                if "c" in self._trend:
-                    deterministic_names.append("intercept")
-                if "t" in self._trend:
-                    deterministic_names.append("trend")
-                if self._seasonal:
-                    period = self._period
-                    assert isinstance(period, int)
-                    names = [f"seasonal.{i}" for i in range(period)]
-                    if "c" in self._trend:
-                        names = names[1:]
-                    deterministic_names.extend(names)
-            else:
-                deterministic_names = list(deterministic.columns)
+            deterministic_names = list(deterministic.columns)
             exog_names = deterministic_names + exog_names
         if self.exog is not None:
             x = np.c_[x, self.exog]
@@ -403,6 +369,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 "parameters."
             )
         self._y, self._x = y, x
+        if "c" in self._trend:
+            self.k_constant = 1
+        elif self._x.shape[1]:
+            aug_x = np.hstack((self._x, np.ones((x.shape[0], 1))))
+            rank = np.linalg.matrix_rank(aug_x)
+            self.k_constant = int(rank == self._x.shape[1])
+        else:
+            self.k_constant = 0
+
         self._exog_names = exog_names
 
     def fit(
@@ -412,7 +387,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         use_t: bool = False,
     ) -> AutoRegResultsWrapper:
         """
-        Estimate the model parameters.
+        Estimate the model parameters
 
         Parameters
         ----------
@@ -473,16 +448,24 @@ class AutoReg(tsa_model.TimeSeriesModel):
             )
 
         ols_mod = OLS(self._y, self._x)
-        ols_res = ols_mod.fit(
-            cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
-        )
+        ols_res = ols_mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         cov_params = ols_res.cov_params()
         use_t = ols_res.use_t
         if cov_type == "nonrobust" and not use_t:
             nobs = self._y.shape[0]
             k = self._x.shape[1]
-            scale = nobs / (nobs - k)
-            cov_params /= scale
+            if (nobs - k) > 0:
+                scale = nobs / (nobs - k)
+                cov_params /= scale
+            else:
+                warnings.warn(
+                    f"The adjusted number of observations (nobs - k) is "
+                    f"{nobs - k}, which is non-positive, where k is the "
+                    f"number of parameters in the model. Covariance matrix "
+                    f"has not been adjusted for the sample size.",
+                    EstimationWarning,
+                    stacklevel=2,
+                )
         res = AutoRegResults(
             self,
             ols_res.params,
@@ -499,7 +482,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def loglike(self, params: ArrayLike) -> float:
         """
-        Log-likelihood of model.
+        Log-likelihood of model
 
         Parameters
         ----------
@@ -519,14 +502,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def score(self, params: ArrayLike) -> np.ndarray:
         """
-        Score vector of model.
+        Score vector of model
 
         The gradient of logL with respect to each parameter.
 
         Parameters
         ----------
         params : ndarray
-            The parameters to use when evaluating the Hessian.
+            The parameters to use when evaluating the score.
 
         Returns
         -------
@@ -538,7 +521,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def information(self, params: ArrayLike) -> np.ndarray:
         """
-        Fisher information matrix of model.
+        Fisher information matrix of model
 
         Returns -1 * Hessian of the log-likelihood evaluated at params.
 
@@ -558,7 +541,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
     def hessian(self, params: ArrayLike) -> np.ndarray:
         """
-        The Hessian matrix of the model.
+        The Hessian matrix of the model
 
         Parameters
         ----------
@@ -618,15 +601,29 @@ class AutoReg(tsa_model.TimeSeriesModel):
         exog_oos: Float64Array | None,
     ) -> pd.Series:
         """
+        Dynamic in- and out-of-sample prediction path
 
-        :param params:
-        :param start:
-        :param end:
-        :param dynamic:
-        :param num_oos:
-        :param exog:
-        :param exog_oos:
-        :return:
+        Parameters
+        ----------
+        params : ndarray
+            The model parameters.
+        start : int
+            Index of first observation.
+        end : int
+            Index of last in-sample observation.
+        dynamic : int
+            Offset relative to start at which to begin dynamic prediction.
+        num_oos : int
+            Number of out-of-sample observations to forecast.
+        exog : ndarray
+            Array containing replacement exog values.
+        exog_oos : ndarray
+            Array containing out-of-sample exog values.
+
+        Returns
+        -------
+        Series
+            The predicted values.
         """
         reg = []
         hold_back = self._hold_back
@@ -712,7 +709,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             num_oos + (end - start + 1).
         exog : {ndarray, DataFrame}
             Array containing replacement exog values
-        exog_oos :  {ndarray, DataFrame}
+        exog_oos : {ndarray, DataFrame}
             Containing forecast exog values
         """
         hold_back = self._hold_back
@@ -771,9 +768,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         return params, _exog, _exog_oos, start, end, num_oos
 
     def _parse_dynamic(self, dynamic, start):
-        if isinstance(
-            dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)
-        ):
+        if isinstance(dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)):
             dynamic_loc, _, _ = self._get_index_loc(dynamic)
             # Adjust since relative to start
             dynamic_loc -= start
@@ -801,7 +796,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         exog_oos: ArrayLike2D | None = None,
     ) -> pd.Series:
         """
-        In-sample prediction and out-of-sample forecasting.
+        In-sample prediction and out-of-sample forecasting
 
         Parameters
         ----------
@@ -810,7 +805,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -827,13 +822,13 @@ class AutoReg(tsa_model.TimeSeriesModel):
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
+            location of `dynamic` which is then used to compute the offset.
         exog : array_like
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
         exog_oos : array_like
             An array containing out-of-sample values of the exogenous variable.
-            Must has the same number of columns as the exog used when the
+            Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
             out-of-sample forecasts.
 
@@ -859,18 +854,13 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     "exog variable used to create the model {1}."
                 )
                 raise ValueError(msg.format(exog.shape, self.exog.shape))
-            if (
-                exog_oos is not None
-                and exog_oos.shape[1] != self.exog.shape[1]
-            ):
+            if exog_oos is not None and exog_oos.shape[1] != self.exog.shape[1]:
                 msg = (
                     "The number of columns in exog_oos ({0}) must match "
-                    "the number of columns  in the exog variable used to "
+                    "the number of columns in the exog variable used to "
                     "create the model ({1})."
                 )
-                raise ValueError(
-                    msg.format(exog_oos.shape[1], self.exog.shape[1])
-                )
+                raise ValueError(msg.format(exog_oos.shape[1], self.exog.shape[1]))
             if num_oos > 0 and exog_oos is None:
                 raise ValueError(
                     "exog_oos must be provided when producing "
@@ -886,9 +876,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         if (isinstance(dynamic, bool) and not dynamic) or self._maxlag == 0:
             # If model has no lags, static and dynamic are identical
-            return self._static_predict(
-                params, start, end, num_oos, exog, exog_oos
-            )
+            return self._static_predict(params, start, end, num_oos, exog, exog_oos)
         dynamic = self._parse_dynamic(dynamic, start)
 
         return self._dynamic_predict(
@@ -915,7 +903,7 @@ class AR:
 
 class ARResults:
     """
-    Removed and replaced by AutoRegResults.
+    Removed and replaced by AutoRegResults
 
     See Also
     --------
@@ -937,7 +925,7 @@ _predict_params = doc.extract_parameters(
 
 class AutoRegResults(tsa_model.TimeSeriesModelResults):
     """
-    Class to hold results from fitting an AutoReg model.
+    Class to hold results from fitting an AutoReg model
 
     Parameters
     ----------
@@ -988,7 +976,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     def initialize(self, model, params, **kwargs):
         """
-        Initialize (possibly re-initialize) a Results instance.
+        Initialize (possibly re-initialize) a Results instance
 
         Parameters
         ----------
@@ -1009,49 +997,46 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     @property
     def params(self):
-        """The estimated parameters."""
+        """The estimated parameters"""
         return self._params
 
     @property
     def df_model(self):
-        """The degrees of freedom consumed by the model."""
+        """The degrees of freedom consumed by the model"""
         return self._df_model
 
     @property
     def df_resid(self):
-        """The remaining degrees of freedom in the residuals."""
+        """The remaining degrees of freedom in the residuals"""
         return self.nobs - self._df_model
 
     @property
     def nobs(self):
-        """
-        The number of observations after adjusting for losses due to lags.
-        """
+        """The number of observations after adjusting for losses due to lags"""
         return self._nobs
 
     @cache_writable()
     def sigma2(self):
         return 1.0 / self.nobs * sumofsq(self.resid)
 
-    @cache_writable()  # for compatability with RegressionResults
+    @cache_writable()  # for compatibility with RegressionResults
     def scale(self):
         return self.sigma2
 
     @cache_readonly
     def bse(self):  # allow user to specify?
         """
-        The standard errors of the estimated parameters.
+        The standard errors of the estimated parameters
 
-        If `method` is 'cmle', then the standard errors that are returned are
-        the OLS standard errors of the coefficients. If the `method` is 'mle'
-        then they are computed using the numerical Hessian.
+        These are the OLS standard errors of the estimated coefficients,
+        computed using the covariance estimator selected in `fit`.
         """
         return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
     def aic(self):
         r"""
-        Akaike Information Criterion using Lutkepohl's definition.
+        Akaike Information Criterion using Lutkepohl's definition
 
         :math:`-2 llf + \ln(nobs) (1 + df_{model})`
         """
@@ -1067,7 +1052,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def hqic(self):
         r"""
-        Hannan-Quinn Information Criterion using Lutkepohl's definition.
+        Hannan-Quinn Information Criterion using Lutkepohl's definition
 
         :math:`-2 llf + 2 \ln(\ln(nobs)) (1 + df_{model})`
         """
@@ -1083,7 +1068,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def fpe(self):
         r"""
-        Final prediction error using Lütkepohl's definition.
+        Final prediction error using Lütkepohl's definition
 
         :math:`((nobs+df_{model})/(nobs-df_{model})) \sigma^2`
         """
@@ -1117,11 +1102,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     @cache_readonly
     def resid(self):
-        """
-        The residuals of the model.
-        """
-        model = self.model
-        endog = model.endog.squeeze()
+        """The residuals of the model"""
+        endog = self.model.endog.squeeze()
         return endog[self._hold_back :] - self.fittedvalues
 
     def _lag_repr(self):
@@ -1141,7 +1123,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def roots(self):
         """
-        The roots of the AR process.
+        The roots of the AR process
 
         The roots are the solution to
         (1 - arparams[0]*z - arparams[1]*z**2 -...- arparams[p-1]*z**k_ar) = 0.
@@ -1158,7 +1140,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def arfreq(self):
         r"""
-        Returns the frequency of the AR roots.
+        Returns the frequency of the AR roots
 
         This is the solution, x, to z = abs(z)*exp(2j*np.pi*x) where z are the
         roots.
@@ -1170,12 +1152,65 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     @cache_readonly
     def fittedvalues(self):
         """
-        The in-sample predicted values of the fitted AR model.
+        The in-sample predicted values of the fitted AR model
 
         The `k_ar` initial values are computed via the Kalman Filter if the
         model is fit by `mle`.
         """
         return self.model.predict(self.params)[self._hold_back :]
+
+    @cache_readonly
+    def rsquared(self):
+        """
+        R-squared of the model
+
+        This is defined here as 1 - `ssr`/`centered_tss` if the constant is
+        included in the model and 1 - `ssr`/`uncentered_tss` if the constant is
+        omitted.
+        """
+        if self.model.k_constant:
+            return 1 - self.ssr / self.centered_tss
+        else:
+            return 1 - self.ssr / self.uncentered_tss
+
+    @cache_readonly
+    def ssr(self):
+        """Sum of squared (whitened) residuals"""
+        resid = self.resid
+        return np.dot(resid, resid)
+
+    @cache_readonly
+    def centered_tss(self):
+        """The total (weighted) sum of squares centered about the mean"""
+        y = np.squeeze(self.model._y)
+        centered_y = y - y.mean()
+        return float(np.dot(centered_y, centered_y))
+
+    @cache_readonly
+    def uncentered_tss(self):
+        """
+        Uncentered sum of squares
+
+        The sum of the squared values of the (whitened) endogenous response
+        variable.
+        """
+        y = np.squeeze(self.model._y)
+        return float(np.dot(y, y))
+
+    @cache_readonly
+    def ess(self):
+        """
+        The explained sum of squares
+
+        If a constant is present, the centered total sum of squares minus the
+        sum of squared residuals. If there is no constant, the uncentered total
+        sum of squares is used.
+        """
+
+        if self.model.k_constant:
+            return self.centered_tss - self.ssr
+        else:
+            return self.uncentered_tss - self.ssr
 
     def test_serial_correlation(self, lags=None, model_df=None):
         """
@@ -1198,17 +1233,17 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
 
-        Notes
-        -----
-        Null hypothesis is no serial correlation.
-
-        The the test degree-of-freedom is 0 or negative once accounting for
-        model_df, then the test statistic's p-value is missing.
-
         See Also
         --------
         statsmodels.stats.diagnostic.acorr_ljungbox
             Ljung-Box test for serial correlation.
+
+        Notes
+        -----
+        Null hypothesis is no serial correlation.
+
+        If the test degree-of-freedom is 0 or negative once accounting for
+        model_df, then the test statistic's p-value is missing.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -1237,7 +1272,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
     def test_normality(self):
         """
-        Test for normality of standardized residuals.
+        Test for normality of standardized residuals
 
         Returns
         -------
@@ -1245,14 +1280,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             Series containing four values, the test statistic and its p-value,
             the skewness and the kurtosis.
 
-        Notes
-        -----
-        Null hypothesis is normality.
-
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
             The Jarque-Bera test of normality.
+
+        Notes
+        -----
+        Null hypothesis is normality.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.stattools import jarque_bera
@@ -1291,7 +1326,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags = min(nobs_effective // 5, 10)
         out = []
         for lag in range(1, lags + 1):
-            res = het_arch(self.resid, nlags=lag)
+            res = het_arch(self.resid, nlags=lag, use_namedtuple=False)
             out.append([res[0], res[1], lag])
         index = pd.RangeIndex(1, lags + 1, name="Lag")
         cols = ["ARCH-LM", "P-value", "DF"]
@@ -1346,9 +1381,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         smry.tables.append(tab)
         smry.tables.append(spacer)
         arch_lm = self.test_heteroskedasticity()
-        values = [
-            [i + 1] + row for i, row in enumerate(arch_lm.values.tolist())
-        ]
+        values = [[i + 1] + row for i, row in enumerate(arch_lm.values.tolist())]
         data_fmts = ("%10d", "%10.3f", "%10.3f", "%10d")
         tab = SimpleTable(
             values,
@@ -1361,9 +1394,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         return smry
 
     @Appender(remove_parameters(AutoReg.predict.__doc__, "params"))
-    def predict(
-        self, start=None, end=None, dynamic=False, exog=None, exog_oos=None
-    ):
+    def predict(self, start=None, end=None, dynamic=False, exog=None, exog_oos=None):
         return self.model.predict(
             self._params,
             start=start,
@@ -1384,7 +1415,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1401,13 +1432,13 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
+            location of `dynamic` which is then used to compute the offset.
         exog : array_like
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
         exog_oos : array_like
             An array containing out-of-sample values of the exogenous variable.
-            Must has the same number of columns as the exog used when the
+            Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
             out-of-sample forecasts.
 
@@ -1494,8 +1525,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 mean = mean.iloc[-oos:]
         elif not in_sample:
             raise ValueError(
-                "in_sample is False but there are no"
-                "out-of-sample forecasts to plot."
+                "in_sample is False but there are no out-of-sample forecasts to plot."
             )
         ax.plot(mean, zorder=2, label="Forecast")
 
@@ -1577,6 +1607,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        statsmodels.graphics.gofplots.qqplot
+        statsmodels.graphics.tsaplots.plot_acf
+
         Notes
         -----
         Produces a 2x2 plot grid with the following plots (ordered clockwise
@@ -1587,11 +1622,6 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
            with a Normal(0,1) density plotted for reference.
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram
-
-        See Also
-        --------
-        statsmodels.graphics.gofplots.qqplot
-        statsmodels.graphics.tsaplots.plot_acf
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
@@ -1679,7 +1709,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample = [dates[start].strftime("%m-%d-%Y")]
             sample += ["- " + dates[-1].strftime("%m-%d-%Y")]
         else:
-            sample = [str(start), str(len(self.data.orig_endog))]
+            sample = [str(start), str(self._n_totobs)]
         model = model.__class__.__name__
         if self.model.seasonal:
             model = "Seas. " + model
@@ -1699,27 +1729,24 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             ("Sample:", [sample[0]]),
             ("", [sample[1]]),
         ]
-
         top_right = [
-            ("No. Observations:", [str(len(self.model.endog))]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
-            ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("No. Observations:", [str(self._nobs)]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
+            ("S.D. of innovations", [f"{self.sigma2**0.5:#5.3f}"]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         smry = Summary()
-        smry.add_table_2cols(
-            self, gleft=top_left, gright=top_right, title=title
-        )
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
         smry.add_table_params(self, alpha=alpha, use_t=False)
 
         # Make the roots table
         from statsmodels.iolib.table import SimpleTable
 
         if self._max_lag:
-            arstubs = ["AR.%d" % i for i in range(1, self._max_lag + 1)]
+            arstubs = [f"AR.{i:d}" for i in range(1, self._max_lag + 1)]
             stubs = arstubs
             roots = self.roots
             freq = self.arfreq
@@ -1728,10 +1755,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             roots_table = SimpleTable(
                 [
                     (
-                        "%17.4f" % row[0],
-                        "%+17.4fj" % row[1],
-                        "%17.4f" % row[2],
-                        "%17.4f" % row[3],
+                        f"{row[0]:17.4f}",
+                        f"{row[1]:+17.4f}j",
+                        f"{row[2]:17.4f}",
+                        f"{row[3]:17.4f}",
                     )
                     for row in data
                 ],
@@ -1846,17 +1873,16 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 hold_back=existing.hold_back,
                 period=existing.period,
                 deterministic=deterministic,
-                old_names=False,
             )
         except Exception as exc:
             error = (
-                "An exception occured during the creation of the cloned "
+                "An exception occurred during the creation of the cloned "
                 "AutoReg instance when applying the existing model "
                 "specification to the new data. The original traceback "
                 "appears below."
             )
             exc.args = (error,) + exc.args
-            raise exc.with_traceback(exc.__traceback__)
+            raise exc.with_traceback(exc.__traceback__) from exc
 
         if (mod.exog is None) != (existing.exog is None):
             if existing.exog is not None:
@@ -1868,10 +1894,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
                 "exog must be None when the original model did not contain "
                 "exog variables"
             )
-        if (
-            existing.exog is not None
-            and existing.exog.shape[1] != mod.exog.shape[1]
-        ):
+        if existing.exog is not None and existing.exog.shape[1] != mod.exog.shape[1]:
             raise ValueError(
                 "The number of exog variables passed must match the original "
                 f"number of exog values ({existing.exog.shape[1]})"
@@ -1995,25 +2018,18 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         no_exog = existing.exog is None
         if no_exog != (exog is None):
             if no_exog:
-                err = (
-                    "Original model does not contain exog data but exog data "
-                    "passed"
-                )
+                err = "Original model does not contain exog data but exog data passed"
             else:
                 err = "Original model has exog data but not exog data passed"
             raise ValueError(err)
         if isinstance(existing.data.orig_endog, (pd.Series, pd.DataFrame)):
             endog = _check(existing.data.orig_endog, endog, "endog")
         else:
-            endog = _check(
-                existing.endog, np.asarray(endog), "endog", use_pandas=False
-            )
+            endog = _check(existing.endog, np.asarray(endog), "endog", use_pandas=False)
         if isinstance(existing.data.orig_exog, (pd.Series, pd.DataFrame)):
             exog = _check(existing.data.orig_exog, exog, "exog")
         elif exog is not None:
-            exog = _check(
-                existing.exog, np.asarray(exog), "endog", use_pandas=False
-            )
+            exog = _check(existing.exog, np.asarray(exog), "endog", use_pandas=False)
         return self.apply(endog, exog, refit=refit, fit_kwargs=fit_kwargs)
 
 
@@ -2039,7 +2055,6 @@ _auto_reg_params = doc.extract_parameters(
         "hold_back",
         "period",
         "missing",
-        "old_names",
     ],
     4,
 )
@@ -2051,28 +2066,27 @@ def ar_select_order(
     maxlag,
     ic="bic",
     glob=False,
-    trend: Literal["n", "c", "ct", "ctt"] = "c",
+    trend: Literal["n", "c", "t", "ct", "ctt"] = "c",
     seasonal=False,
     exog=None,
     hold_back=None,
     period=None,
     missing="none",
-    old_names=False,
 ):
     """
-    Autoregressive AR-X(p) model order selection.
+    Autoregressive AR-X(p) model order selection
 
     Parameters
     ----------
     endog : array_like
-         A 1-d endogenous response variable. The independent variable.
+        A 1-d endogenous response variable. The dependent variable.
     maxlag : int
         The maximum lag to consider.
     ic : {'aic', 'hqic', 'bic'}
         The information criterion to use in the selection.
     glob : bool
-        Flag indicating where to use a global search  across all combinations
-        of lags.  In practice, this option is not computational feasible when
+        Flag indicating whether to use a global search across all combinations
+        of lags.  In practice, this option is not computationally feasible when
         maxlag is larger than 15 (or perhaps 20) since the global search
         requires fitting 2**maxlag models.\n%(auto_reg_params)s
 
@@ -2114,34 +2128,29 @@ def ar_select_order(
         hold_back=hold_back,
         period=period,
         missing=missing,
-        old_names=old_names,
     )
     nexog = full_mod.exog.shape[1] if full_mod.exog is not None else 0
     y, x = full_mod._y, full_mod._x
     base_col = x.shape[1] - nexog - maxlag
     sel = np.ones(x.shape[1], dtype=bool)
-    ics: list[tuple[int | tuple[int, ...], tuple[float, float, float]]] = []
+    ics: list[tuple[int | tuple[int, ...], InformationCriteria]] = []
 
     def compute_ics(res):
         nobs = res.nobs
         df_model = res.df_model
         sigma2 = 1.0 / nobs * sumofsq(res.resid)
         llf = -nobs * (np.log(2 * np.pi * sigma2) + 1) / 2
-        res = SimpleNamespace(
-            nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf
-        )
+        res = SimpleNamespace(nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf)
 
         aic = call_cached_func(AutoRegResults.aic, res)
         bic = call_cached_func(AutoRegResults.bic, res)
         hqic = call_cached_func(AutoRegResults.hqic, res)
 
-        return aic, bic, hqic
+        return InformationCriteria(aic, bic, hqic)
 
     def ic_no_data():
         """Fake mod and results to handle no regressor case"""
-        mod = SimpleNamespace(
-            nobs=y.shape[0], endog=y, exog=np.empty((y.shape[0], 0))
-        )
+        mod = SimpleNamespace(nobs=y.shape[0], endog=y, exog=np.empty((y.shape[0], 0)))
         llf = OLS.loglike(mod, np.empty(0))
         res = SimpleNamespace(
             resid=y, nobs=y.shape[0], llf=llf, df_model=0, k_constant=0
@@ -2158,16 +2167,14 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(j for j in range(1, i + 1))
-            lags = 0 if not lags else lags
+            lags = lags or 0
             ics.append((lags, compute_ics(res)))
     else:
         bits = np.arange(2**maxlag, dtype=np.int32)[:, None]
         bits = bits.view(np.uint8)
         bits = np.unpackbits(bits).reshape(-1, 32)
         for i in range(4):
-            bits[:, 8 * i : 8 * (i + 1)] = bits[:, 8 * i : 8 * (i + 1)][
-                :, ::-1
-            ]
+            bits[:, 8 * i : 8 * (i + 1)] = bits[:, 8 * i : 8 * (i + 1)][:, ::-1]
         masks = bits[:, :maxlag]
         for mask in masks:
             sel[base_col : base_col + maxlag] = mask
@@ -2176,7 +2183,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(np.where(mask)[0] + 1)
-            lags = 0 if not lags else lags
+            lags = lags or 0
             ics.append((lags, compute_ics(res)))
 
     key_loc = {"aic": 0, "bic": 1, "hqic": 2}[ic]
@@ -2191,7 +2198,6 @@ def ar_select_order(
         hold_back=hold_back,
         period=period,
         missing=missing,
-        old_names=old_names,
     )
     return AROrderSelectionResults(mod, ics, trend, seasonal, period)
 
@@ -2206,7 +2212,7 @@ class AROrderSelectionResults:
     def __init__(
         self,
         model: AutoReg,
-        ics: list[tuple[int | tuple[int, ...], tuple[float, float, float]]],
+        ics: list[tuple[int | tuple[int, ...], InformationCriteria]],
         trend: Literal["n", "c", "ct", "ctt"],
         seasonal: bool,
         period: int | None,
@@ -2225,28 +2231,28 @@ class AROrderSelectionResults:
 
     @property
     def model(self) -> AutoReg:
-        """The model selected using the chosen information criterion."""
+        """The model selected using the chosen information criterion"""
         return self._model
 
     @property
     def seasonal(self) -> bool:
-        """Flag indicating if a seasonal component is included."""
+        """Flag indicating if a seasonal component is included"""
         return self._seasonal
 
     @property
     def trend(self) -> Literal["n", "c", "ct", "ctt"]:
-        """The trend included in the model selection."""
+        """The trend included in the model selection"""
         return self._trend
 
     @property
     def period(self) -> int | None:
-        """The period of the seasonal component."""
+        """The period of the seasonal component"""
         return self._period
 
     @property
     def aic(self) -> dict[int | tuple[int, ...], float]:
         """
-        The Akaike information criterion for the models fit.
+        The Akaike information criterion for the models fit
 
         Returns
         -------
@@ -2257,7 +2263,7 @@ class AROrderSelectionResults:
     @property
     def bic(self) -> dict[int | tuple[int, ...], float]:
         """
-        The Bayesian (Schwarz) information criteria for the models fit.
+        The Bayesian (Schwarz) information criteria for the models fit
 
         Returns
         -------
@@ -2268,7 +2274,7 @@ class AROrderSelectionResults:
     @property
     def hqic(self) -> dict[int | tuple[int, ...], float]:
         """
-        The Hannan-Quinn information criteria for the models fit.
+        The Hannan-Quinn information criteria for the models fit
 
         Returns
         -------
@@ -2278,5 +2284,5 @@ class AROrderSelectionResults:
 
     @property
     def ar_lags(self) -> list[int] | None:
-        """The lags included in the selected model."""
+        """The lags included in the selected model"""
         return self._model.ar_lags

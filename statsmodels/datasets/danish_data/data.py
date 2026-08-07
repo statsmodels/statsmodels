@@ -8,8 +8,8 @@ __docformat__ = "restructuredtext"
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
 SOURCE = """
-Danish data used in S. Johansen and K. Juselius.  For estimating
-estimating a money demand function::
+Danish data used in S. Johansen and K. Juselius for estimating
+a money demand function::
 
     [1] Johansen, S. and Juselius, K. (1990), Maximum Likelihood Estimation
         and Inference on Cointegration - with Applications to the Demand
@@ -44,7 +44,7 @@ def load_pandas():
 
 def load():
     """
-    Load the US macro data and return a Dataset class.
+    Load the Danish money demand data and return a Dataset class.
 
     Returns
     -------

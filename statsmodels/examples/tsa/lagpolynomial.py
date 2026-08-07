@@ -11,29 +11,26 @@ from numpy import polynomial as npp
 
 class LagPolynomial(npp.Polynomial):
 
-    #def __init__(self, maxlag):
+    # def __init__(self, maxlag):
 
     def pad(self, maxlag):
-        return LagPolynomial(np.r_[self.coef, np.zeros(maxlag-len(self.coef))])
+        return LagPolynomial(np.r_[self.coef, np.zeros(maxlag - len(self.coef))])
 
     def padflip(self, maxlag):
-        return LagPolynomial(np.r_[self.coef, np.zeros(maxlag-len(self.coef))][::-1])
+        return LagPolynomial(np.r_[self.coef, np.zeros(maxlag - len(self.coef))][::-1])
 
     def flip(self):
-        '''reverse polynomial coefficients
-        '''
+        """reverse polynomial coefficients"""
         return LagPolynomial(self.coef[::-1])
 
     def div(self, other, maxlag=None):
-        '''padded division, pads numerator with zeros to maxlag
-        '''
+        """padded division, pads numerator with zeros to maxlag"""
         if maxlag is None:
             maxlag = max(len(self.coef), len(other.coef)) + 1
         return (self.padflip(maxlag) / other.flip()).flip()
 
     def filter(self, arr):
-        return (self * arr).coef[:-len(self.coef)]  #trim to end
-
+        return (self * arr).coef[: -len(self.coef)]  # trim to end
 
 
 ar = LagPolynomial([1, -0.8])
