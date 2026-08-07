@@ -328,7 +328,7 @@ class DiscreteModel(base.LikelihoodModel):
             zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
             If 'size', trim params if they have very small absolute value.
-        size_trim_tol : float or 'auto' (default = 'auto')
+        size_trim_tol : float (default = 1e-4)
             Tolerance used when trim_mode == 'size'.
         auto_trim_tol : float
             Tolerance used when trim_mode == 'auto'.
