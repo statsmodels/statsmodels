@@ -45,7 +45,7 @@ def fit_l1_cvxopt_cp(
             been zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
             If 'size', trim params if they have very small absolute value.
-        size_trim_tol : float (default = 1e-4)
+        size_trim_tol : float
             Threshold below which a parameter is trimmed. Used when
             trim_mode == 'size'.
         auto_trim_tol : float
