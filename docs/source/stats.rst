@@ -317,6 +317,7 @@ to one way ANOVA, but still in development
    GroupsStats
    MultiComparison
    TukeyHSDResults
+   tukeyhsd
 
 .. module:: statsmodels.stats.multicomp
    :synopsis: Methods for controlling size while performing multiple comparisons

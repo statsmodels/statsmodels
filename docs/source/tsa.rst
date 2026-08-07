@@ -162,6 +162,22 @@ See the notebooks `ARMA: Sunspots Data
 `ARMA: Artificial Data <examples/notebooks/generated/tsa_arma_1.ipynb>`_
 for an overview.
 
+The innovations algorithm provides a way to compute the likelihood, score, and
+related quantities for a given ARMA process without constructing a full state
+space representation; it is used internally by some of the Hannan-Rissanen and
+innovations-based ARMA parameter estimators.
+
+.. currentmodule:: statsmodels.tsa.innovations
+
+.. autosummary::
+   :toctree: generated/
+
+   arma_innovations.arma_innovations
+   arma_innovations.arma_loglike
+   arma_innovations.arma_loglikeobs
+   arma_innovations.arma_score
+   arma_innovations.arma_scoreobs
+
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~

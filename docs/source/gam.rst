@@ -112,7 +112,18 @@ Currently there is verified support for two spline bases
 `statsmodels.gam.smooth_basis` includes additional splines and a (global)
 polynomial smoother basis but those have not been verified yet.
 
+Cross-Validation
+^^^^^^^^^^^^^^^^
 
+.. module:: statsmodels.gam.gam_cross_validation.gam_cross_validation
+   :synopsis: K-fold cross-validation for GAM smoothing parameters
+
+.. currentmodule:: statsmodels.gam.gam_cross_validation.gam_cross_validation
+
+.. autosummary::
+   :toctree: generated/
+
+   MultivariateGAMCVPath
 
 Families and Link Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
