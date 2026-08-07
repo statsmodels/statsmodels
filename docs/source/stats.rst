@@ -51,6 +51,17 @@ Autocorrelation
    acorr_lm
    LMTestResult
 
+Forecast Evaluation
+~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   pesaran_timmermann
+   PesaranTimmermannResult
+
 Heteroscedasticity
 ~~~~~~~~~~~~~~~~~~
 

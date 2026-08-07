@@ -58,13 +58,13 @@ __all__ = [
     "GoldfeldQuandtResult",
     "LMTestResult",
     "NonNestedTestResult",
+    "PesaranTimmermannResult",
     "acorr_breusch_godfrey",
     "acorr_ljungbox",
     "acorr_lm",
     "anderson_statistic",
     "compare_cox",
     "compare_j",
-    "pesaran_timmermann",
     "het_arch",
     "het_breuschpagan",
     "het_goldfeldquandt",
@@ -77,6 +77,7 @@ __all__ = [
     "linear_lm",
     "linear_rainbow",
     "normal_ad",
+    "pesaran_timmermann",
     "spec_white",
 ]
 
@@ -344,7 +345,27 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
     return tstat, pval
 
 
-def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
+class PesaranTimmermannResult(NamedTuple):
+    """
+    Result of :func:`pesaran_timmermann`.
+
+    Parameters
+    ----------
+    statistic : float
+        Normal test statistic.
+    pvalue : float
+        P-value for the chosen alternative.
+    res_store : ResultsStore or None
+        An instance of a dummy class with intermediate results attached as
+        attributes, if ``store`` was True, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    res_store: ResultsStore | None
+
+
+def pesaran_timmermann(actual, predicted, alternative="two-sided"):
     r"""
     Pesaran-Timmermann test of directional predictive accuracy.
 
@@ -357,17 +378,18 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
         ``predicted > 0``.
     alternative : {"two-sided", "larger", "smaller"}
         Alternative hypothesis for the directional accuracy statistic.
-    store : bool, default False
-        If true, then the intermediate results are returned.
 
     Returns
     -------
-    statistic : float
-        Normal test statistic.
-    pvalue : float
-        P-value for the chosen alternative.
-    res_store : ResultsStore, optional
-        Intermediate results. Returned if ``store`` is True.
+    PesaranTimmermannResult
+        A NamedTuple with fields:
+
+        statistic : float
+            Normal test statistic.
+        pvalue : float
+            P-value for the chosen alternative.
+        res_store : ResultsStore or None
+            Intermediate results.
 
     Notes
     -----
@@ -383,8 +405,7 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
 
     .. math::
 
-       \hat{p}_* = \hat{p}_y \hat{p}_z +
-       (1 - \hat{p}_y)(1 - \hat{p}_z)
+       \hat{p}_* = \hat{p}_y \hat{p}_z + (1 - \hat{p}_y)(1 - \hat{p}_z)
 
     denote the success rate implied by independence, where
     :math:`\hat{p}_y` and :math:`\hat{p}_z` are the sample proportions of
@@ -392,8 +413,7 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
 
     .. math::
 
-       S_n = \frac{\hat{p} - \hat{p}_*}
-       {\sqrt{\hat{v} - \hat{w}}},
+       S_n = \frac{\hat{p} - \hat{p}_*} {\sqrt{\hat{v} - \hat{w}}},
 
     where
 
@@ -424,7 +444,6 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
         "alternative",
         options=("two-sided", "larger", "smaller"),
     )
-    store = bool_like(store, "store")
 
     if actual.shape[0] != predicted.shape[0]:
         raise ValueError("actual and predicted must have the same length")
@@ -443,9 +462,16 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
     p_ind = p_y * p_z + (1 - p_y) * (1 - p_z)
 
     v_hat = p_ind * (1 - p_ind) / nobs
-    w_hat = (((2 * p_y - 1) ** 2) * p_z * (1 - p_z) +
-             ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)) / nobs
+    w_hat = (
+        ((2 * p_y - 1) ** 2) * p_z * (1 - p_z) + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    ) / nobs
     variance = v_hat - w_hat
+    # An alternative exact estimator that includes terms of order n^2.
+    # Retailed but not what was used in P-T
+    # w_hat = (
+    #     ((2 * p_y - 1) ** 2) * p_z * (1 - p_z)
+    #     + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    # ) / nobs + 4 * p_y * (1 - p_y) * p_z * (1 - p_z) / nobs**2
 
     if variance <= 0:
         raise ValueError(
@@ -461,23 +487,21 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided", store=False):
     else:
         pvalue = stats.norm.cdf(statistic)
 
-    if store:
-        res = ResultsStore()
-        res.statistic = statistic
-        res.pvalue = pvalue
-        res.dist = stats.norm
-        res.alternative = alternative
-        res.nobs = nobs
-        res.p_hat = p_hat
-        res.p_ind = p_ind
-        res.p_y = p_y
-        res.p_z = p_z
-        res.v_hat = v_hat
-        res.w_hat = w_hat
-        res.variance = variance
-        return statistic, pvalue, res
+    res_store = ResultsStore()
+    res_store.statistic = statistic
+    res_store.pvalue = pvalue
+    res_store.dist = stats.norm
+    res_store.alternative = alternative
+    res_store.nobs = nobs
+    res_store.p_hat = p_hat
+    res_store.p_ind = p_ind
+    res_store.p_y = p_y
+    res_store.p_z = p_z
+    res_store.v_hat = v_hat
+    res_store.w_hat = w_hat
+    res_store.variance = variance
 
-    return statistic, pvalue
+    return PesaranTimmermannResult(statistic, pvalue, res_store)
 
 
 @deprecate_kwarg("cov_kwargs", "cov_kwds")
@@ -1703,6 +1727,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
                 stacklevel=2,
             )
         from scipy.spatial.distance import cdist
+
         center_obs = exog.mean(0, keepdims=True)
         err = exog - center_obs
         vi = np.linalg.pinv(err.T @ err / nobs)
