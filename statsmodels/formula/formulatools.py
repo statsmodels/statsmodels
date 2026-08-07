@@ -1,9 +1,12 @@
 import numpy as np
+import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 
 # if users want to pass in a different formula framework, they can
 # add their handler here. how to do it interactively?
+
+__all__ = ["advance_eval_env", "formula_handler", "handle_formula_data"]
 
 # this is a mutable object, so editing it should show up in the below
 formula_handler = {}
@@ -25,13 +28,23 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
         You can pass a handler by import formula_handler and adding a
         key-value pair where the key is the formula object class and
         the value is a function that returns endog, exog, formula object.
+    depth : int
+        The number of stack frames to go up when evaluating variables that
+        are not found in Y or X.
+    missing : str
+        The action to take on missing values, e.g. "drop" or "raise".
 
     Returns
     -------
-    endog : array_like
-        Should preserve the input type of Y,X.
-    exog : array_like
-        Should preserve the input type of Y,X. Could be None.
+    result : array_like or tuple of array_like
+        endog and exog (or just endog if X is None), preserving the input
+        type of Y, X.
+    missing_mask : ndarray or None
+        Boolean mask indicating observations dropped due to missing values,
+        or None if no values were dropped.
+    model_spec : ModelSpec or DesignInfo or None
+        The right-hand-side model specification, or None if there is no
+        RHS design.
     """
     # half ass attempt to handle other formula objects
     if isinstance(formula, tuple(formula_handler.keys())):
@@ -49,6 +62,11 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
             attach_spec=True,
         )
     else:
+        # Objects that support the dataframe API should be converted to a
+        # dataframe to avoid problems with patsy. (This also works for
+        # dataframes themselves.)
+        if isinstance(Y, pd.DataFrame) or hasattr(Y, "__dataframe__"):
+            Y = pd.DataFrame(Y)
         result = mgr.get_matrices(
             formula,
             Y,
@@ -69,7 +87,21 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
 
 
 def make_hypotheses_matrices(model_results, test_formula):
-    """ """
+    """
+    Get the linear constraint matrices for a hypothesis test formula.
+
+    Parameters
+    ----------
+    model_results : Results
+        A results instance with an attached model that defines exog_names.
+    test_formula : str
+        The hypothesis test formula, e.g. "x1 = x2 = 0".
+
+    Returns
+    -------
+    LinearConstraintValues
+        The constraint matrix, constraint values, and variable names.
+    """
     from statsmodels.formula._manager import FormulaManager
 
     mgr = FormulaManager()
@@ -77,3 +109,22 @@ def make_hypotheses_matrices(model_results, test_formula):
     exog_names = model_results.model.exog_names
     lc = mgr.get_linear_constraints(test_formula, exog_names)
     return lc
+
+
+def advance_eval_env(kwargs):
+    """
+    Adjusts the keyword arguments for from_formula to account for the patsy
+    eval environment being passed down once on the stack. Adjustments are
+    made in place.
+
+    Parameters
+    ----------
+    kwargs : dict
+        The dictionary of keyword arguments passed to `from_formula`.
+    """
+
+    eval_env = kwargs.get("eval_env", None)
+    if eval_env is None:
+        kwargs["eval_env"] = 2
+    elif eval_env == -1:
+        kwargs["eval_env"] = FormulaManager().get_empty_eval_env()

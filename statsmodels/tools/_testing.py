@@ -1,4 +1,5 @@
-"""Testing helper functions
+"""
+Testing helper functions
 
 Warning: current status experimental, mostly copy paste
 
@@ -10,12 +11,24 @@ The first group of functions provide consistency checks
 """
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_
-
+from numpy.testing import assert_, assert_allclose
 import pandas as pd
 
 
 def check_ttest_tvalues(results):
+    """
+    Check that `t_test` gives the same results as params, bse, tvalues, ...
+
+    Parameters
+    ----------
+    results : Results instance
+        Results object to check.
+
+    Raises
+    ------
+    AssertionError
+        If any of the checks fail.
+    """
     # test that t_test has same results a params, bse, tvalues, ...
     res = results
     mat = np.eye(len(res.params))
@@ -47,19 +60,22 @@ def check_ttest_tvalues(results):
 
 def check_ftest_pvalues(results):
     """
-    Check that the outputs of `res.wald_test` produces pvalues that
-    match res.pvalues.
+    Check that the outputs of `res.wald_test` match `res.pvalues`
 
-    Check that the string representations of `res.summary()` and (possibly)
-    `res.summary2()` correctly label either the t or z-statistic.
+    Also check that the string representations of `res.summary()` and
+    (possibly) `res.summary2()` correctly label either the t or
+    z-statistic.
 
     Parameters
     ----------
-    results : Results
+    results : Results instance
+        Results object to check.
 
     Raises
     ------
     AssertionError
+        If any of the checks fail.
+
     """
     res = results
     use_t = res.use_t
@@ -94,11 +110,25 @@ def check_ftest_pvalues(results):
 
 
 def check_fitted(results):
+    """
+    Check that fitted values are consistent with resid and predict
+
+    Parameters
+    ----------
+    results : Results instance
+        Results object to check.
+
+    Raises
+    ------
+    AssertionError
+        If any of the checks fail.
+    """
     import pytest
+
+    from statsmodels.discrete.discrete_model import DiscreteResults
 
     # ignore wrapper for isinstance check
     from statsmodels.genmod.generalized_linear_model import GLMResults
-    from statsmodels.discrete.discrete_model import DiscreteResults
 
     # possibly unwrap -- GEE has no wrapper
     results = getattr(results, "_results", results)
@@ -114,28 +144,31 @@ def check_fitted(results):
 
 def check_predict_types(results):
     """
-    Check that the `predict` method of the given results object produces the
-    correct output type.
+    Check the output type produced by a results object's predict method
 
     Parameters
     ----------
-    results : Results
+    results : Results instance
+        Results object to check.
 
     Raises
     ------
     AssertionError
+        If any prediction result has an unexpected type or value.
+
     """
     res = results
     # squeeze to make 1d for single regressor test case
     p_exog = np.squeeze(np.asarray(res.model.exog[:2]))
 
     # ignore wrapper for isinstance check
-    from statsmodels.genmod.generalized_linear_model import GLMResults
-    from statsmodels.discrete.discrete_model import DiscreteResults
     from statsmodels.compat.pandas import (
         assert_frame_equal,
         assert_series_equal,
     )
+
+    from statsmodels.discrete.discrete_model import DiscreteResults
+    from statsmodels.genmod.generalized_linear_model import GLMResults
 
     # possibly unwrap -- GEE has no wrapper
     results = getattr(results, "_results", results)

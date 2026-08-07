@@ -1,8 +1,8 @@
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pandas as pd
-import scipy.stats
 import pytest
+import scipy.stats
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.descriptivestats import (
@@ -16,11 +16,24 @@ pytestmark = pytest.mark.filterwarnings(
 )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def df():
     a = np.random.RandomState(0).standard_normal(100)
     b = pd.Series(np.arange(100) % 10, dtype="category")
     return pd.DataFrame({"a": a, "b": b})
+
+
+def test_sign_test_no_observation_differs_from_mu0():
+    # When every observation ties with mu0 it is discarded, leaving no
+    # observations, so the test is undefined. This used to surface as an
+    # opaque "n must be an integer not less than 1" error raised from
+    # scipy's binomtest rather than explaining the cause.
+    with pytest.raises(ValueError, match="no observation differs from"):
+        sign_test([5.0, 5.0, 5.0], mu0=5.0)
+
+    # an empty sample hits the same degenerate case
+    with pytest.raises(ValueError, match="no observation differs from"):
+        sign_test([], mu0=0.0)
 
 
 def test_sign_test():
@@ -48,9 +61,7 @@ data1 = np.array(
         ("delta", "|S2"),
     ],
 )
-data2 = np.array(
-    [(1, 2), (2, 3), (2, 4)], dtype=[("alpha", float), ("beta", float)]
-)
+data2 = np.array([(1, 2), (2, 3), (2, 4)], dtype=[("alpha", float), ("beta", float)])
 
 data3 = np.array([[1, 2, 4, 4], [2, 3, 3, 3], [2, 4, 4, 3]], dtype=float)
 
@@ -106,19 +117,72 @@ def test_odd_percentiles(df):
     percentiles = np.linspace(7.0, 93.0, 13)
     res = Description(df, percentiles=percentiles)
     stats = [
-        'nobs', 'missing', 'mean', 'std_err', 'upper_ci', 'lower_ci', 'std',
-        'iqr', 'iqr_normal', 'mad', 'mad_normal', 'coef_var', 'range', 'max',
-        'min', 'skew', 'kurtosis', 'jarque_bera', 'jarque_bera_pval', 'mode',
-        'mode_freq', 'median', 'distinct', 'top_1', 'top_2', 'top_3', 'top_4',
-        'top_5', 'freq_1', 'freq_2', 'freq_3', 'freq_4', 'freq_5', '7.0%',
-        '14.1%', '21.3%', '28.5%', '35.6%', '42.8%', '50.0%', '57.1%', '64.3%',
-        '71.5%', '78.6%', '85.8%', '93.0%']
+        "nobs",
+        "missing",
+        "mean",
+        "std_err",
+        "upper_ci",
+        "lower_ci",
+        "std",
+        "iqr",
+        "iqr_normal",
+        "mad",
+        "mad_normal",
+        "coef_var",
+        "range",
+        "max",
+        "min",
+        "skew",
+        "kurtosis",
+        "jarque_bera",
+        "jarque_bera_pval",
+        "mode",
+        "mode_freq",
+        "median",
+        "distinct",
+        "top_1",
+        "top_2",
+        "top_3",
+        "top_4",
+        "top_5",
+        "freq_1",
+        "freq_2",
+        "freq_3",
+        "freq_4",
+        "freq_5",
+        "7.0%",
+        "14.1%",
+        "21.3%",
+        "28.5%",
+        "35.6%",
+        "42.8%",
+        "50.0%",
+        "57.1%",
+        "64.3%",
+        "71.5%",
+        "78.6%",
+        "85.8%",
+        "93.0%",
+    ]
     assert_equal(res.frame.index.tolist(), stats)
 
 
 def test_large_ntop(df):
     res = Description(df, ntop=15)
     assert "top_15" in res.frame.index
+
+
+def test_categorical_ntop_freq_length():
+    # The categorical `freq` rows used a hardcoded 5 instead of `ntop`, so a
+    # categorical column with at least `ntop` distinct values raised a
+    # ValueError ("Length of values (5) does not match length of index") for
+    # any ntop != 5.
+    s = pd.Series(list("aabbccddee")).astype("category")  # 5 distinct values
+    res = Description(pd.DataFrame({"x": s}), ntop=3)
+    for i in range(1, 4):
+        assert f"freq_{i}" in res.frame.index
+    # frequencies are relative; each of the 5 categories occurs 2/10 of the time
+    assert res.frame.loc["freq_1", "x"] == pytest.approx(0.2)
 
 
 def test_use_t(df):
@@ -139,7 +203,7 @@ SPECIAL = (
 
 @pytest.mark.parametrize("stat", SPECIAL, ids=[s[0] for s in SPECIAL])
 def test_special_stats(df, stat):
-    all_stats = [st for st in Description.default_statistics]
+    all_stats = list(Description.default_statistics)
     all_stats.remove(stat[0])
     res = Description(df, stats=all_stats)
     for val in stat[1]:
@@ -147,6 +211,9 @@ def test_special_stats(df, stat):
 
 
 def test_empty_columns(df):
+    # Do not modify original df
+    df_orig = df.copy()
+    df = df_orig.copy()
     df["c"] = np.nan
     res = Description(df)
     dropped = res.frame.c.dropna()
@@ -154,14 +221,49 @@ def test_empty_columns(df):
     assert "missing" in dropped
     assert "nobs" in dropped
 
+    df = df_orig.copy()
     df["c"] = np.nan
     res = Description(df.c)
     dropped = res.frame.dropna()
     assert dropped.shape[0] == 2
 
 
+@pytest.mark.parametrize(
+    "data",
+    [
+        pd.DataFrame({"a": pd.Series([], dtype="float64")}),
+        pd.DataFrame({"a": pd.Series([], dtype="category")}),
+        pd.DataFrame(
+            {
+                "a": pd.Series([], dtype="float64"),
+                "b": pd.Series([], dtype="category"),
+            }
+        ),
+    ],
+    ids=["numeric", "categorical", "mixed"],
+)
+def test_empty_rows(data):
+    # GH#9891: describe on a 0-row input used to raise an unhelpful error
+    # from deep inside pandas/numpy (ValueError for numeric columns, KeyError
+    # for categorical ones) instead of returning an empty/NaN summary.
+    res = describe(data)
+    assert isinstance(res, pd.DataFrame)
+    assert list(res.columns) == list(data.columns)
+    # No observations in any column
+    assert (res.loc["nobs"] == 0).all()
+    assert (res.loc["missing"] == 0).all()
+    # Undefined numeric statistics are NaN rather than raising
+    if "a" in data.select_dtypes("number").columns:
+        assert np.isnan(res.loc["mean", "a"])
+        assert np.isnan(res.loc["std", "a"])
+    # Description.frame agrees with the describe convenience wrapper
+    pd.testing.assert_frame_equal(res, Description(data).frame)
+
+
 @pytest.mark.skipif(not hasattr(pd, "NA"), reason="Must support NA")
 def test_extension_types(df):
+    # Do not modify original df
+    df = df.copy()
     df["c"] = pd.Series(np.arange(100.0))
     df["d"] = pd.Series(np.arange(100), dtype=pd.Int64Dtype())
     df.loc[df.index[::2], "c"] = np.nan
@@ -175,8 +277,7 @@ def test_std_err(df):
     Test the standard error of the mean matches result from scipy.stats.sem
     """
     np.testing.assert_allclose(
-        Description(df["a"]).frame.loc["std_err"],
-        scipy.stats.sem(df["a"])
+        Description(df["a"]).frame.loc["std_err"], scipy.stats.sem(df["a"])
     )
 
 

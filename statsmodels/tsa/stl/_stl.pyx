@@ -81,12 +81,17 @@ work    workspace of (n+2*np)*5 locations.
 """
 from typing import Dict, Union
 
-import pandas as pd
 import numpy as np
-from libc.math cimport fabs, sqrt, isnan, NAN
+import pandas as pd
 
-from statsmodels.tsa.tsatools import freq_to_period
+from libc.math cimport NAN, fabs, isnan, sqrt
+
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from statsmodels.tools.validation import array_like
+from statsmodels.tsa.seasonal._seasonal import DecomposeResult
+from statsmodels.tsa.tsatools import freq_to_period
+
 
 def _is_pos_int(x, odd):
     valid = (isinstance(x, (int, np.integer))
@@ -103,9 +108,7 @@ def _is_pos_int(x, odd):
 
 cdef class STL(object):
     """
-    STL(endog, period=None, seasonal=7, trend=None, low_pass=None,
-        seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False,
-        seasonal_jump=1, trend_jump=1, low_pass_jump=1)
+    STL(endog, period=None, seasonal=7, trend=None, low_pass=None, seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1)
 
     Season-Trend decomposition using LOESS.
 
@@ -156,7 +159,9 @@ cdef class STL(object):
     See Also
     --------
     statsmodels.tsa.seasonal.DecomposeResult
+        Container class for all seasonal decomposition results
     statsmodels.tsa.seasonal.seasonal_decompose
+        Seasonal decomposition using moving averages
 
     Notes
     -----
@@ -171,8 +176,8 @@ cdef class STL(object):
     References
     ----------
     .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning
-        (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
-        Journal of Official Statistics, 6, 3-73.
+       (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
+       Journal of Official Statistics, 6, 3-73.
 
     Examples
     --------
@@ -215,7 +220,8 @@ cdef class STL(object):
         if period is None:
             freq = None
             if isinstance(endog, (pd.Series, pd.DataFrame)):
-                freq = getattr(endog.index, 'inferred_freq', None)
+                with _infer_freq_returns_offset():
+                    freq = getattr(endog.index, 'inferred_freq', None)
             if freq is None:
                 raise ValueError('Unable to determine period from endog')
             period = freq_to_period(freq)
@@ -358,9 +364,6 @@ cdef class STL(object):
             season = pd.Series(season, index=index, name='season')
             trend = pd.Series(trend, index=index, name='trend')
             rw = pd.Series(rw, index=index, name='robust_weight')
-
-        # Avoid circular imports
-        from statsmodels.tsa.seasonal import DecomposeResult
 
         return DecomposeResult(self.endog, season, trend, resid, rw)
 

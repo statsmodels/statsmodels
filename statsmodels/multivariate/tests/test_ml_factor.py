@@ -1,15 +1,18 @@
+import warnings
+
 import numpy as np
-from statsmodels.multivariate.factor import Factor
 from numpy.testing import assert_allclose, assert_equal
 from scipy.optimize import approx_fprime
-import warnings
+
+from statsmodels.multivariate.factor import Factor
+
 
 # A small model for basic testing
 def _toy():
     uniq = np.r_[4, 9, 16]
     load = np.asarray([[3, 1, 2], [2, 5, 8]]).T
     par = np.r_[2, 3, 4, 3, 1, 2, 2, 5, 8]
-    corr = np.asarray([[1, .5, .25], [.5, 1, .5], [.25, .5, 1]])
+    corr = np.asarray([[1, 0.5, 0.25], [0.5, 1, 0.5], [0.25, 0.5, 1]])
     return uniq, load, corr, par
 
 
@@ -45,19 +48,19 @@ def test_exact():
     # Test if we can recover exact factor-structured matrices with
     # default starting values.
 
-    np.random.seed(23324)
+    rs = np.random.RandomState(3427)
 
     # Works for larger k_var but slow for routine testing.
     for k_var in 5, 10, 25:
         for n_factor in 1, 2, 3:
-            load = np.random.normal(size=(k_var, n_factor))
+            load = rs.normal(size=(k_var, n_factor))
             uniq = np.linspace(1, 2, k_var)
             c = np.dot(load, load.T)
-            c.flat[::c.shape[0]+1] += uniq
+            c.flat[:: c.shape[0] + 1] += uniq
             s = np.sqrt(np.diag(c))
             c /= np.outer(s, s)
-            fa = Factor(corr=c, n_factor=n_factor, method='ml')
-            rslt = fa.fit()
+            fa = Factor(corr=c, n_factor=n_factor, method="ml")
+            rslt = fa.fit(rng=np.random.RandomState(3427))
             assert_allclose(rslt.fitted_cov, c, rtol=1e-4, atol=1e-4)
             rslt.summary()  # smoke test
 
@@ -66,21 +69,21 @@ def test_exact_em():
     # Test if we can recover exact factor-structured matrices with
     # default starting values using the EM algorithm.
 
-    np.random.seed(23324)
+    rs = np.random.RandomState(23324)
 
     # Works for larger k_var but slow for routine testing.
     for k_var in 5, 10, 25:
         for n_factor in 1, 2, 3:
-            load = np.random.normal(size=(k_var, n_factor))
+            load = rs.normal(size=(k_var, n_factor))
             uniq = np.linspace(1, 2, k_var)
             c = np.dot(load, load.T)
-            c.flat[::c.shape[0]+1] += uniq
+            c.flat[:: c.shape[0] + 1] += uniq
             s = np.sqrt(np.diag(c))
             c /= np.outer(s, s)
-            fa = Factor(corr=c, n_factor=n_factor, method='ml')
-            load_e, uniq_e = fa._fit_ml_em(2000)
+            fa = Factor(corr=c, n_factor=n_factor, method="ml")
+            load_e, uniq_e = fa._fit_ml_em(2000, rng=np.random.RandomState(3427))
             c_e = np.dot(load_e, load_e.T)
-            c_e.flat[::c_e.shape[0]+1] += uniq_e
+            c_e.flat[:: c_e.shape[0] + 1] += uniq_e
             assert_allclose(c_e, c, rtol=1e-4, atol=1e-4)
 
 
@@ -89,11 +92,13 @@ def test_fit_ml_em_random_state():
     # see #7357
 
     T = 10
-    epsilon = np.random.multivariate_normal(np.zeros(3), np.eye(3), size=T).T
+    rs = np.random.RandomState(3427)
+    epsilon = rs.multivariate_normal(np.zeros(3), np.eye(3), size=T).T
     initial = np.random.get_state()
+    rs = np.random.RandomState(3427)
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message='Fitting did not converge')
-        Factor(endog=epsilon, n_factor=2, method='ml').fit()
+        warnings.filterwarnings("ignore", message="Fitting did not converge")
+        Factor(endog=epsilon, n_factor=2, method="ml").fit(rng=rs)
     final = np.random.get_state()
 
     assert initial[0] == final[0]
@@ -102,18 +107,19 @@ def test_fit_ml_em_random_state():
 
 
 def test_em():
-
+    rs = np.random.RandomState(3427)
     n_factor = 1
     cor = np.asarray([[1, 0.5, 0.3], [0.5, 1, 0], [0.3, 0, 1]])
 
-    fa = Factor(corr=cor, n_factor=n_factor, method='ml')
-    rslt = fa.fit(opt={'gtol': 1e-3})
-    load_opt = rslt.loadings
-    uniq_opt = rslt.uniqueness
+    fa = Factor(corr=cor, n_factor=n_factor, method="ml")
+    rslt = fa.fit(opt={"gtol": 1e-3}, rng=rs)
+    # Should add tests for these
+    # load_opt = rslt.loadings
+    # uniq_opt = rslt.uniqueness
 
-    load_em, uniq_em = fa._fit_ml_em(1000)
+    load_em, uniq_em = fa._fit_ml_em(1000, rng=np.random.RandomState(3427))
     cc = np.dot(load_em, load_em.T)
-    cc.flat[::cc.shape[0]+1] += uniq_em
+    cc.flat[:: cc.shape[0] + 1] += uniq_em
 
     assert_allclose(cc, rslt.fitted_cov, rtol=1e-2, atol=1e-2)
 
@@ -130,14 +136,14 @@ def test_1factor():
     fa = factanal(covmat=cm, factors=1)
     print(fa, digits=10)
     """
-
     r = 0.4
     p = 4
     ii = np.arange(p)
     cm = r ** np.abs(np.subtract.outer(ii, ii))
 
-    fa = Factor(corr=cm, n_factor=1, method='ml')
-    rslt = fa.fit()
+    fa = Factor(corr=cm, n_factor=1, method="ml")
+    rs = np.random.RandomState(3427)
+    rslt = fa.fit(rng=rs)
 
     if rslt.loadings[0, 0] < 0:
         rslt.loadings[:, 0] *= -1
@@ -150,9 +156,8 @@ def test_1factor():
     # l2 = fa.loglike(fa._pack(rslt.loadings, rslt.uniqueness))
 
     # So use a smoke test
-    uniq = np.r_[0.85290232,  0.60916033,  0.55382266,  0.82610666]
-    load = np.asarray([[0.38353316], [0.62517171], [0.66796508],
-                       [0.4170052]])
+    uniq = np.r_[0.85290232, 0.60916033, 0.55382266, 0.82610666]
+    load = np.asarray([[0.38353316], [0.62517171], [0.66796508], [0.4170052]])
 
     assert_allclose(load, rslt.loadings, rtol=1e-3, atol=1e-3)
     assert_allclose(uniq, rslt.uniqueness, rtol=1e-3, atol=1e-3)
@@ -171,14 +176,14 @@ def test_2factor():
     cm = r^ii
     factanal(covmat=cm, factors=2)
     """
-
+    rs = np.random.RandomState(328921)
     r = 0.4
     p = 6
     ii = np.arange(p)
     cm = r ** np.abs(np.subtract.outer(ii, ii))
 
-    fa = Factor(corr=cm, n_factor=2, nobs=100, method='ml')
-    rslt = fa.fit()
+    fa = Factor(corr=cm, n_factor=2, nobs=100, method="ml")
+    rslt = fa.fit(rng=rs)
 
     for j in 0, 1:
         if rslt.loadings[0, j] < 0:
@@ -187,8 +192,10 @@ def test_2factor():
     uniq = np.r_[0.782, 0.367, 0.696, 0.696, 0.367, 0.782]
     assert_allclose(uniq, rslt.uniqueness, rtol=1e-3, atol=1e-3)
 
-    loads = [np.r_[0.323, 0.586, 0.519, 0.519, 0.586, 0.323],
-             np.r_[0.337, 0.538, 0.187, -0.187, -0.538, -0.337]]
+    loads = [
+        np.r_[0.323, 0.586, 0.519, 0.519, 0.586, 0.323],
+        np.r_[0.337, 0.538, 0.187, -0.187, -0.538, -0.337],
+    ]
     for k in 0, 1:
         if np.dot(loads[k], rslt.loadings[:, k]) < 0:
             loads[k] *= -1
@@ -197,10 +204,18 @@ def test_2factor():
     assert_equal(rslt.df, 4)
 
     # Smoke test for standard errors
-    e = np.asarray([0.11056836, 0.05191071, 0.09836349,
-                    0.09836349, 0.05191071, 0.11056836])
+    e = np.asarray(
+        [0.11056836, 0.05191071, 0.09836349, 0.09836349, 0.05191071, 0.11056836]
+    )
     assert_allclose(rslt.uniq_stderr, e, atol=1e-4)
-    e = np.asarray([[0.08842151, 0.08842151], [0.06058582, 0.06058582],
-                    [0.08339874, 0.08339874], [0.08339874, 0.08339874],
-                    [0.06058582, 0.06058582], [0.08842151, 0.08842151]])
+    e = np.asarray(
+        [
+            [0.08842151, 0.08842151],
+            [0.06058582, 0.06058582],
+            [0.08339874, 0.08339874],
+            [0.08339874, 0.08339874],
+            [0.06058582, 0.06058582],
+            [0.08842151, 0.08842151],
+        ]
+    )
     assert_allclose(rslt.load_stderr, e, atol=1e-4)

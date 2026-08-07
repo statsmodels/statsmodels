@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.patsy import ensure_patsy_compat
+
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 import os
-from typing import Any, Literal, Mapping, NamedTuple, Sequence
+from typing import Any, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -11,15 +15,11 @@ import pandas as pd
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
-DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
-if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
-    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
+ensure_patsy_compat()
 
 try:
     import patsy
     import patsy.missing
-
-    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "patsy"
 
     class NAAction(patsy.missing.NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
@@ -29,13 +29,11 @@ try:
                 total_mask |= is_NA
             good_mask = ~total_mask
             self.missing_mask = total_mask
-            # "..." to handle 1- versus 2-dim indexing
-            return [v[good_mask, ...] for v in values]
+            return [v[good_mask, ...] if v.ndim > 1 else v[good_mask] for v in values]
 
     HAVE_PATSY = True
 
 except ImportError:
-    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "formulaic"
 
     class NAAction:
         def __init__(self, on_na="", na_types=("",)):
@@ -43,7 +41,7 @@ except ImportError:
 
 
 try:
-    import formulaic  # noqa: F401
+    import formulaic
     import formulaic.parser
     import formulaic.utils.constraints
 
@@ -51,6 +49,30 @@ try:
 except ImportError:
     # Nothing to do if formulaic is not available
     pass
+
+
+DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
+if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
+    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
+if DEFAULT_FORMULA_ENGINE is None:
+    if HAVE_PATSY:
+        DEFAULT_FORMULA_ENGINE = "patsy"
+    elif HAVE_FORMULAIC:
+        DEFAULT_FORMULA_ENGINE = "formulaic"
+    else:
+        raise ImportError("One of patsy or formulaic must be installed to use statsmodels")
+elif DEFAULT_FORMULA_ENGINE == "patsy" and not HAVE_PATSY:
+    raise RuntimeError(
+        "The DEFAULT_FORMULA_ENGINE is set to 'patsy', but patsy is not installed. "
+        "Please install patsy or change the environment variable SM_FORMULA_ENGINE "
+        "to 'formulaic'."
+    )
+elif DEFAULT_FORMULA_ENGINE == "formulaic" and not HAVE_FORMULAIC:
+    raise RuntimeError(
+        "The DEFAULT_FORMULA_ENGINE is set to 'formulaic', but formulaic is not "
+        "installed. Please install formulaic or change the environment variable "
+        "SM_FORMULA_ENGINE to 'patsy'."
+    )
 
 
 EVAL_ENV_WARNING = """\
@@ -79,7 +101,22 @@ def _check_data(data):
             "deprecated and will be removed in a future version of statsmodels. "
             "DataFrames are the only supported data structure.",
             DeprecationWarning,
+            stacklevel=2,
         )
+
+
+def _maybe_convert_data(data):
+    if (
+        not isinstance(data, pd.DataFrame)
+        or PD_LT_3
+        or not any(isinstance(dt, pd.StringDtype) for dt in data.dtypes)
+    ):
+        return data
+    data = data.copy()
+    for col in data:
+        if isinstance(data[col].dtype, pd.StringDtype):
+            data[col] = data[col].astype(object)
+    return data
 
 
 class _FormulaOption:
@@ -212,7 +249,6 @@ class FormulaManager:
         ValueError
             If the selected engine is not available.
         """
-        # Patsy for now, to be changed to a user-settable variable before release
         _engine: Literal["patsy", "formulaic"]
 
         if engine is not None:
@@ -329,7 +365,7 @@ class FormulaManager:
             The string formula. If not a string, it is returned as is.
         data : DataFrame
             The data used to materialize the formula.
-        context
+        context : int or Mapping[str, Any]
             The context used to evaluate the formula.
 
         Returns
@@ -354,7 +390,7 @@ class FormulaManager:
             rhs_formula = _formula
             lhs_formula = None
         include_intercept = any(
-            [(term.degree == 0 and str(term) == "1") for term in rhs_formula]
+            (term.degree == 0 and str(term) == "1") for term in rhs_formula
         )
         parser = formulaic.parser.DefaultFormulaParser(
             feature_flags=feature_flags, include_intercept=include_intercept
@@ -363,7 +399,7 @@ class FormulaManager:
         categorical_variables = list(rhs.model_spec.factor_contrasts.keys())
 
         def all_cat(term):
-            return all([f in categorical_variables for f in term.factors])
+            return all(f in categorical_variables for f in term.factors)
 
         def drop_terms(term_list, terms):
             for term in terms:
@@ -382,7 +418,7 @@ class FormulaManager:
             ]
             conts[tuple(sorted(cont))].append((term, term.degree))
         final_conts = []
-        for key, value in conts.items():
+        for _, value in conts.items():
             tmp = sorted(value, key=lambda term_degree: term_degree[1])
             final_conts.extend([value[0] for value in tmp])
         if lhs_formula is not None:
@@ -408,7 +444,7 @@ class FormulaManager:
         | pd.DataFrame
         | tuple[pd.DataFrame, pd.DataFrame]
     ):
-        f"""
+        """
         Get the model matrices or design matrices from a formula and data.
 
         Parameters
@@ -434,6 +470,7 @@ class FormulaManager:
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
         _check_data(data)
+        data = _maybe_convert_data(data)
         if isinstance(eval_env, (int, np.integer)):
             eval_env = int(eval_env) + 1
         if self._using_patsy:
@@ -448,7 +485,7 @@ class FormulaManager:
             else:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
-                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
@@ -457,11 +494,11 @@ class FormulaManager:
                 or formula.strip().startswith("~")
             ):
                 output = patsy.dmatrix(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             else:  # "~" in formula:
                 output = patsy.dmatrices(
-                    formula, data, eval_env=eval_env, return_type=return_type, **kwargs
+                    formula, data, eval_env=_eval_env, return_type=return_type, **kwargs
                 )
             if isinstance(output, tuple):
                 self._spec = output[1].design_info
@@ -499,7 +536,7 @@ class FormulaManager:
                 from patsy.eval import EvalEnvironment
 
                 if isinstance(eval_env, EvalEnvironment):
-                    warnings.warn(EVAL_ENV_WARNING, FutureWarning)
+                    warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
 
                     ns = eval_env._namespaces
                     _eval_env = {}
@@ -674,7 +711,8 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec
+        spec : {ModelSpec, DesignInfo}
+            The model specification to check for an intercept term.
 
         Returns
         -------
@@ -690,7 +728,8 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec
+        spec : {ModelSpec, DesignInfo}
+            The model specification whose terms are searched for the intercept.
 
         Returns
         -------
@@ -708,8 +747,11 @@ class FormulaManager:
 
         Parameters
         ----------
-        action
-        types
+        action : str
+            The action to take on missing values, e.g. "drop" or "raise".
+        types : Sequence[Any]
+            The types of missing values to consider, e.g. "None" or "NaN".
+            Only used when using patsy.
 
         Returns
         -------
@@ -762,11 +804,14 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+            The DataFrame with a model specification attached, or the model
+            specification itself.
 
         Returns
         -------
-
+        list[str]
+            The list of term names.
         """
         spec = self._ensure_spec(spec_or_frame)
         if self._using_patsy:
@@ -780,7 +825,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
 
         Returns
         -------
@@ -813,6 +858,7 @@ class FormulaManager:
 
     def get_model_spec(self, frame, optional=False):
         """
+        Get the model specification attached to a DataFrame.
 
         Parameters
         ----------
@@ -837,6 +883,7 @@ class FormulaManager:
 
     def get_slice(self, model_spec, term):
         """
+        Get the slice of columns associated with a model term.
 
         Parameters
         ----------
@@ -879,12 +926,12 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
 
         Returns
         -------
         str
-            The human-readable description of the model specification.,
+            The human-readable description of the model specification.
         """
         spec = self._ensure_spec(spec_or_frame)
         if self._using_patsy:

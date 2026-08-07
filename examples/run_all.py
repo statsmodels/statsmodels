@@ -14,6 +14,7 @@ def no_show(*args):
 if __name__ == '__main__':
     import glob
     import sys
+
     import matplotlib.pyplot as plt
 
     if not SHOW_PLOT:
@@ -27,13 +28,13 @@ if __name__ == '__main__':
 
     EXAMPLE_FILES = glob.glob('python/*.py')
     for example in EXAMPLE_FILES:
-        KNOWN_BAD_FILE = any([bf in example for bf in BAD_FILES])
+        KNOWN_BAD_FILE = any(bf in example for bf in BAD_FILES)
         with open(example, encoding="utf-8") as pyfile:
             code = pyfile.read()
             try:
                 sys.stdout = REDIRECT_STDOUT
                 sys.stderr = REDIRECT_STDERR
-                exec(code)
+                exec(code)  # noqa: S102
             except Exception as e:
                 sys.stderr = SAVE_STDERR
                 print(f'FAIL: {example}', file=sys.stderr)

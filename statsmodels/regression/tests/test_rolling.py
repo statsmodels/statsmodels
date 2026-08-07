@@ -1,15 +1,17 @@
+"""Tests for rolling regression models."""
+
 from io import BytesIO
 from itertools import product
 import warnings
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_array_equal
 import pandas as pd
 import pytest
-from numpy.testing import assert_allclose, assert_array_equal
 
 from statsmodels import tools
 from statsmodels.regression.linear_model import WLS
-from statsmodels.regression.rolling import RollingWLS, RollingOLS
+from statsmodels.regression.rolling import RollingOLS, RollingWLS
 
 
 def gen_data(nobs, nvar, const, pandas=False, missing=0.0, weights=False):
@@ -86,9 +88,7 @@ def test_has_nan(data):
     for i in range(100, y.shape[0] + 1):
         _y = get_sub(y, i, 100)
         _x = get_sub(x, i, 100)
-        has_nan[i - 1] = np.squeeze(
-            np.any(np.isnan(_y)) or np.any(np.isnan(_x))
-        )
+        has_nan[i - 1] = np.squeeze(np.any(np.isnan(_y)) or np.any(np.isnan(_x)))
     assert_array_equal(mod._has_nan, has_nan)
 
 
@@ -120,15 +120,11 @@ def test_weighted_against_wls(weighted_data):
         assert_allclose(get_single(res.mse_model, i - 1), wls.mse_model)
         assert_allclose(get_single(res.mse_resid, i - 1), wls.mse_resid)
         assert_allclose(get_single(res.mse_total, i - 1), wls.mse_total)
-        assert_allclose(
-            get_single(res.rsquared, i - 1), wls.rsquared, atol=1e-8
-        )
+        assert_allclose(get_single(res.rsquared, i - 1), wls.rsquared, atol=1e-8)
         assert_allclose(
             get_single(res.rsquared_adj, i - 1), wls.rsquared_adj, atol=1e-8
         )
-        assert_allclose(
-            get_single(res.uncentered_tss, i - 1), wls.uncentered_tss
-        )
+        assert_allclose(get_single(res.uncentered_tss, i - 1), wls.uncentered_tss)
 
 
 @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
@@ -152,9 +148,7 @@ def test_against_wls_inference(data, use_t, cov_type):
         assert_allclose(get_single(res.pvalues, i - 1), wls.pvalues, atol=1e-8)
         assert_allclose(get_single(res.fvalue, i - 1), wls.fvalue)
         with np.errstate(invalid="ignore"):
-            assert_allclose(
-                get_single(res.f_pvalue, i - 1), wls.f_pvalue, atol=1e-8
-            )
+            assert_allclose(get_single(res.f_pvalue, i - 1), wls.f_pvalue, atol=1e-8)
         assert res.cov_type == wls.cov_type
         assert res.use_t == wls.use_t
         wls_ci = wls.conf_int()
@@ -185,7 +179,10 @@ def test_raise(data):
 def test_error():
     y, x, _ = gen_data(250, 2, True)
     with pytest.raises(ValueError, match="reset must be a positive integer"):
-        RollingWLS(y, x,).fit(reset=-1)
+        RollingWLS(
+            y,
+            x,
+        ).fit(reset=-1)
     with pytest.raises(ValueError):
         RollingWLS(y, x).fit(method="unknown")
     with pytest.raises(ValueError, match="min_nobs must be larger"):
@@ -202,14 +199,14 @@ def test_save_load(data):
     res.save(fh)
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
-    assert type(res_unpickled) is type(res)  # noqa: E721
+    assert type(res_unpickled) is type(res)
 
     fh = BytesIO()
     # test wrapped results load save pickle
     res.save(fh, remove_data=True)
     fh.seek(0, 0)
     res_unpickled = res.__class__.load(fh)
-    assert type(res_unpickled) is type(res)  # noqa: E721
+    assert type(res_unpickled) is type(res)
 
 
 def test_formula():
@@ -225,8 +222,9 @@ def test_formula():
     ols_mod.fit()
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
-def test_plot():
+def test_plot(close_figures):
     import matplotlib.pyplot as plt
 
     y, x, w = gen_data(250, 3, True, pandas=True)
@@ -238,15 +236,13 @@ def test_plot():
     assert isinstance(fig, plt.Figure)
     res.plot_recursive_coefficient(variables=2, alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(variables="x0", alpha=None, figsize=(30, 7))
-    res.plot_recursive_coefficient(
-        variables=[0, 2], alpha=None, figsize=(30, 7)
-    )
-    res.plot_recursive_coefficient(
-        variables=["x0"], alpha=None, figsize=(30, 7)
-    )
+    res.plot_recursive_coefficient(variables=[0, 2], alpha=None, figsize=(30, 7))
+    plt.close("all")
+    res.plot_recursive_coefficient(variables=["x0"], alpha=None, figsize=(30, 7))
     res.plot_recursive_coefficient(
         variables=["x0", "x1", "x2"], alpha=None, figsize=(30, 7)
     )
+    plt.close("all")
     with pytest.raises(ValueError, match="variable x4 is not an integer"):
         res.plot_recursive_coefficient(variables="x4")
 

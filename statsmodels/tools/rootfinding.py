@@ -1,9 +1,8 @@
 """
-
 Created on Mon Mar 18 15:48:23 2013
 Author: Josef Perktold
 
-TODO:
+Todo:
   - test behavior if nans or infs are encountered during the evaluation.
     now partially robust to nans, if increasing can be determined or is given.
   - rewrite core loop to use for...except instead of while.
@@ -14,15 +13,14 @@ from scipy import optimize
 
 from statsmodels.tools.testing import Holder
 
-DEBUG = False
-
 
 # based on scipy.stats.distributions._ppf_single_call
 def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                      start_low=None, start_upp=None, increasing=None,
                      max_it=100, maxiter_bq=100, factor=10,
                      full_output=False):
-    '''find the root of a function in one variable by expanding and brentq
+    """
+    Find the root of a function in one variable by expanding and brentq
 
     Assumes function ``func`` is monotonic.
 
@@ -46,7 +44,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         negative. If None, then it is set to -1.
     increasing : bool or None
         If None, then the function is evaluated at the initial bounds to
-        determine wether the function is increasing or not. If increasing is
+        determine whether the function is increasing or not. If increasing is
         True (False), then it is assumed that the function is monotonically
         increasing (decreasing).
     max_it : int
@@ -59,25 +57,26 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     full_output : bool, optional
         If full_output is False, the root is returned. If full_output is True,
         the return value is (x, r), where x is the root, and r is a
-        RootResults object.
-
+        ``Holder`` object.
 
     Returns
     -------
     x : float
         root of the function, value at which ``func(x) = 0``.
-    info : RootResult (optional)
+    info : Holder (optional)
         returned if ``full_output`` is True.
         attributes:
 
          - start_bounds : starting bounds for expansion stage
          - brentq_bounds : bounds used with ``brentq``
+         - root : root as returned by ``brentq``, same value as `x`
          - iterations_expand : number of iterations in expansion stage
          - converged : True if brentq converged.
          - flag : return status, 'converged' if brentq converged
          - function_calls : number of function calls by ``brentq``
          - iterations : number of iterations in ``brentq``
-
+         - increasing : whether the function was treated as
+           monotonically increasing
 
     Notes
     -----
@@ -88,9 +87,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     directly specifying ``increasing`` can make it possible to move the
     expansion in the right direction.
 
-    If
-
-    '''
+    """
     # TODO: rtol is missing, what does it do?
     left, right = low, upp  # alias
 
@@ -99,7 +96,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         su = upp
     elif start_upp is not None:
         if start_upp < 0:
-            raise ValueError('start_upp needs to be positive')
+            raise ValueError("start_upp needs to be positive")
         su = start_upp
     else:
         su = 1.
@@ -108,7 +105,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         sl = low
     elif start_low is not None:
         if start_low > 0:
-            raise ValueError('start_low needs to be negative')
+            raise ValueError("start_low needs to be negative")
         sl = start_low
     else:
         sl = min(-1., su - 1.)
@@ -143,10 +140,10 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                 if not np.isnan(f_low):
                     break
             else:
-                raise ValueError('could not determine whether function is ' +
-                                 'increasing based on starting interval.' +
-                                 '\nspecify increasing or change starting ' +
-                                 'bounds')
+                raise ValueError("could not determine whether function is "
+                                 "increasing based on starting interval."
+                                 "\nspecify increasing or change starting "
+                                 "bounds")
         if np.isnan(f_upp):
             for fraction in [0.25, 0.5, 0.75]:
                 su_ = su + fraction * delta
@@ -154,10 +151,10 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                 if not np.isnan(f_upp):
                     break
             else:
-                raise ValueError('could not determine whether function is' +
-                                 'increasing based on starting interval.' +
-                                 '\nspecify increasing or change starting ' +
-                                 'bounds')
+                raise ValueError("could not determine whether function is"
+                                 "increasing based on starting interval."
+                                 "\nspecify increasing or change starting "
+                                 "bounds")
 
         increasing = (f_low < f_upp)
 
@@ -193,10 +190,10 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         f_upp = func(su, *args)
         if np.isnan(f_low) and np.isnan(f_upp):
             # can we still get here?
-            raise ValueError('max_it reached' +
-                             '\nthe function values at boths bounds are NaN' +
-                             '\nchange the starting bounds, set bounds' +
-                             'or increase max_it')
+            raise ValueError("max_it reached"
+                             "\nthe function values at both bounds are NaN"
+                             "\nchange the starting bounds, set bounds"
+                             "or increase max_it")
 
     res = optimize.brentq(func, left, right, args=args,
                           xtol=xtol, maxiter=maxiter_bq,

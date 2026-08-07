@@ -1,6 +1,6 @@
 from statsmodels.compat.pandas import MONTH_END
 
-import os
+from pathlib import Path
 import pickle
 
 import numpy as np
@@ -11,8 +11,8 @@ import pytest
 from statsmodels.datasets import co2
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(cur_dir, "results", "stl_test_results.csv")
+cur_dir = Path(__file__).resolve().parent
+file_path = Path(cur_dir).joinpath("results", "stl_test_results.csv")
 results = pd.read_csv(file_path)
 results.columns = [c.strip() for c in results.columns]
 results.scenario = results.scenario.apply(str.strip)
@@ -25,7 +25,7 @@ def robust(request):
 
 
 def default_kwargs_base():
-    file_path = os.path.join(cur_dir, "results", "stl_co2.csv")
+    file_path = Path(cur_dir).joinpath("results", "stl_co2.csv")
     co2 = np.asarray(pd.read_csv(file_path, header=None).iloc[:, 0])
     y = co2
     nobs = y.shape[0]
@@ -56,12 +56,12 @@ def default_kwargs_base():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def default_kwargs():
     return default_kwargs_base()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def default_kwargs_short():
     kwargs = default_kwargs_base()
     y = kwargs["y"][:-1]
@@ -70,9 +70,7 @@ def default_kwargs_short():
     rw = np.ones(nobs)
     trend = np.zeros(nobs)
     season = np.zeros(nobs)
-    kwargs.update(
-        dict(y=y, n=nobs, rw=rw, trend=trend, season=season, work=work)
-    )
+    kwargs.update(dict(y=y, n=nobs, rw=rw, trend=trend, season=season, work=work))
     return kwargs
 
 
@@ -217,10 +215,7 @@ def test_parameter_checks_low_pass(default_kwargs):
     endog = class_kwargs["endog"]
     period = class_kwargs["period"]
 
-    match = (
-        "low_pass must be an odd positive integer >= 3 where"
-        " low_pass > period"
-    )
+    match = "low_pass must be an odd positive integer >= 3 where low_pass > period"
     with pytest.raises(ValueError, match=match):
         STL(endog=endog, period=period, low_pass=14)
     with pytest.raises(ValueError, match=match):
@@ -292,6 +287,7 @@ def test_no_period(default_kwargs):
         STL(**class_kwargs)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(default_kwargs, close_figures):
     class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)

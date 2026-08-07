@@ -25,7 +25,8 @@ class BaseProbplotMixin:
             self.fig, self.ax = plt.subplots()
         except ImportError:
             pass
-        self.other_array = np.random.normal(size=self.prbplt.data.shape)
+        rs = np.random.RandomState(988745672)
+        self.other_array = rs.normal(size=self.prbplt.data.shape)
         self.other_prbplot = ProbPlot(self.other_array)
         self.plot_options = dict(
             marker="d",
@@ -34,24 +35,29 @@ class BaseProbplotMixin:
             alpha=0.5,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
         self.prbplt.qqplot(ax=self.ax, line=self.line, **self.plot_options)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ppplot(self, close_figures):
         self.prbplt.ppplot(ax=self.ax, line=self.line)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_probplot(self, close_figures):
         self.prbplt.probplot(ax=self.ax, line=self.line, **self.plot_options)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_probplot_exceed(self, close_figures):
         self.prbplt.probplot(
             ax=self.ax, exceed=True, line=self.line, **self.plot_options
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_other_array(self, close_figures):
         self.prbplt.qqplot(
@@ -61,6 +67,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ppplot_other_array(self, close_figures):
         self.prbplt.ppplot(
@@ -70,7 +77,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
-    @pytest.mark.xfail(strict=True)
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     @pytest.mark.skipif(
         PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM/Pyodide"
@@ -79,10 +86,10 @@ class BaseProbplotMixin:
         self.prbplt.probplot(
             ax=self.ax,
             line=self.line,
-            other=self.other_array,
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_other_prbplt(self, close_figures):
         self.prbplt.qqplot(
@@ -92,6 +99,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ppplot_other_prbplt(self, close_figures):
         self.prbplt.ppplot(
@@ -101,7 +109,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
-    @pytest.mark.xfail(strict=True)
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     @pytest.mark.skipif(
         PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM/Pyodide"
@@ -110,10 +118,10 @@ class BaseProbplotMixin:
         self.prbplt.probplot(
             ax=self.ax,
             line=self.line,
-            other=self.other_prbplot,
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_custom_labels(self, close_figures):
         self.prbplt.qqplot(
@@ -124,6 +132,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ppplot_custom_labels(self, close_figures):
         self.prbplt.ppplot(
@@ -134,6 +143,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_probplot_custom_labels(self, close_figures):
         self.prbplt.probplot(
@@ -144,6 +154,7 @@ class BaseProbplotMixin:
             **self.plot_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_pltkwargs(self, close_figures):
         self.prbplt.qqplot(
@@ -155,6 +166,7 @@ class BaseProbplotMixin:
             alpha=0.5,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ppplot_pltkwargs(self, close_figures):
         self.prbplt.ppplot(
@@ -166,6 +178,7 @@ class BaseProbplotMixin:
             alpha=0.5,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_probplot_pltkwargs(self, close_figures):
         self.prbplt.probplot(
@@ -177,7 +190,7 @@ class BaseProbplotMixin:
             alpha=0.5,
         )
 
-    def test_fit_params(self):
+    def test_fit_params(self, close_figures):
         assert self.prbplt.fit_params[-2] == self.prbplt.loc
         assert self.prbplt.fit_params[-1] == self.prbplt.scale
 
@@ -187,7 +200,6 @@ class BaseProbplotMixin:
 )
 class TestProbPlotLongelyNoFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
@@ -200,7 +212,6 @@ class TestProbPlotLongelyNoFit(BaseProbplotMixin):
 
 class TestProbPlotLongelyWithFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
@@ -213,8 +224,8 @@ class TestProbPlotLongelyWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data)
         self.line = None
         super().setup_method()
@@ -222,8 +233,8 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, fit=True)
         self.line = "q"
         super().setup_method()
@@ -231,19 +242,19 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0))
         self.line = "45"
         super().setup_method()
 
-    def test_loc_set(self):
+    def test_loc_set(self, close_figures):
         assert self.prbplt.loc == 8.5
 
-    def test_scale_set(self):
+    def test_scale_set(self, close_figures):
         assert self.prbplt.scale == 3.0
 
-    def test_exceptions(self):
+    def test_exceptions(self, close_figures):
         with pytest.raises(ValueError):
             ProbPlot(self.data, dist=stats.norm(loc=8.5, scale=3.0), fit=True)
         with pytest.raises(ValueError):
@@ -260,16 +271,18 @@ class TestProbPlotRandomNormalFullDist(BaseProbplotMixin):
 
 class TestCompareSamplesDifferentSize:
     def setup_method(self):
-        np.random.seed(5)
-        self.data1 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=37))
-        self.data2 = ProbPlot(np.random.normal(loc=8.25, scale=3.25, size=55))
+        rs = np.random.RandomState(973771)
+        self.data1 = ProbPlot(rs.normal(loc=8.25, scale=3.25, size=37))
+        self.data2 = ProbPlot(rs.normal(loc=8.25, scale=3.25, size=55))
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
         self.data1.qqplot(other=self.data2)
         with pytest.raises(ValueError):
             self.data2.qqplot(other=self.data1)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_ppplot(self, close_figures):
         self.data1.ppplot(other=self.data2)
@@ -278,39 +291,42 @@ class TestCompareSamplesDifferentSize:
 
 class TestProbPlotRandomNormalLocScaleDist(BaseProbplotMixin):
     def setup_method(self):
-        np.random.seed(5)
-        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        rs = np.random.RandomState(5)
+        self.data = rs.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = ProbPlot(self.data, loc=8, scale=3)
         self.line = "45"
         super().setup_method()
 
-    def test_loc_set(self):
+    def test_loc_set(self, close_figures):
         assert self.prbplt.loc == 8
 
-    def test_scale_set(self):
+    def test_scale_set(self, close_figures):
         assert self.prbplt.scale == 3
 
-    def test_loc_set_in_dist(self):
+    def test_loc_set_in_dist(self, close_figures):
         assert self.prbplt.dist.mean() == 8.0
 
-    def test_scale_set_in_dist(self):
+    def test_scale_set_in_dist(self, close_figures):
         assert self.prbplt.dist.var() == 9.0
 
 
 class TestTopLevel:
     def setup_method(self):
+        rs = np.random.RandomState(5885739)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
         self.res = self.mod_fit.resid
         self.prbplt = ProbPlot(self.mod_fit.resid, dist=stats.t, distargs=(4,))
-        self.other_array = np.random.normal(size=self.prbplt.data.shape)
+        self.other_array = rs.normal(size=self.prbplt.data.shape)
         self.other_prbplot = ProbPlot(self.other_array)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
         qqplot(self.res, line="r")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_pltkwargs(self, close_figures):
         qqplot(
@@ -322,6 +338,7 @@ class TestTopLevel:
             alpha=0.5,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_2samples_prob_plot_objects(self, close_figures):
         # also tests all valuesg for line
@@ -329,6 +346,7 @@ class TestTopLevel:
             # test with `ProbPlot` instances
             qqplot_2samples(self.prbplt, self.other_prbplot, line=line)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_2samples_arrays(self, close_figures):
         # also tests all values for line
@@ -339,7 +357,6 @@ class TestTopLevel:
 
 def test_invalid_dist_config(close_figures):
     # GH 4226
-    np.random.seed(5)
     data = sm.datasets.longley.load()
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod_fit = sm.OLS(data.endog, data.exog).fit()
@@ -347,8 +364,9 @@ def test_invalid_dist_config(close_figures):
         ProbPlot(mod_fit.resid, stats.t, distargs=(0, 1, 4))
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_qqplot_unequal():
+def test_qqplot_unequal(close_figures):
     rs = np.random.RandomState(0)
     data1 = rs.standard_normal(100)
     data2 = rs.standard_normal(200)
@@ -362,10 +380,12 @@ def test_qqplot_unequal():
     numobj2 = len(fig2.get_axes()[0].get_children())
     assert numobj1 == numobj2
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot(self, close_figures):
         qqplot(self.res, line="r")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_2samples_prob_plot_obj(self, close_figures):
         # also tests all values for line
@@ -373,6 +393,7 @@ def test_qqplot_unequal():
             # test with `ProbPlot` instances
             qqplot_2samples(self.prbplt, self.other_prbplot, line=line)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_qqplot_2samples_arrays(self, close_figures):
         # also tests all values for line
@@ -413,6 +434,7 @@ class TestDoPlot:
         }
         self.step_options = {"linestyle": "-", "where": "mid"}
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_baseline(self, close_figures):
         plt = _import_mpl()
@@ -422,6 +444,7 @@ class TestDoPlot:
         assert self.fig is not fig
         assert self.ax is not ax
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_with_ax(self, close_figures):
         plt = _import_mpl()
@@ -431,6 +454,7 @@ class TestDoPlot:
         assert self.fig is fig
         assert self.ax is ax
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_full_options(self, close_figures):
         gofplots._do_plot(
@@ -441,6 +465,7 @@ class TestDoPlot:
             **self.full_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_step_baseline(self, close_figures):
         gofplots._do_plot(
@@ -451,6 +476,7 @@ class TestDoPlot:
             **self.step_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_step_full_options(self, close_figures):
         gofplots._do_plot(
@@ -461,10 +487,12 @@ class TestDoPlot:
             **self.full_options,
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_qq_line(self, close_figures):
         gofplots._do_plot(self.x, self.y, ax=self.ax, line="r")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_step_qq_line(self, close_figures):
         gofplots._do_plot(self.x, self.y, ax=self.ax, step=True, line="r")
@@ -472,9 +500,9 @@ class TestDoPlot:
 
 class TestQQLine:
     def setup_method(self):
-        np.random.seed(0)
-        self.x = np.sort(np.random.normal(loc=2.9, scale=1.2, size=37))
-        self.y = np.sort(np.random.normal(loc=3.0, scale=1.1, size=37))
+        rs = np.random.RandomState(0)
+        self.x = np.sort(rs.normal(loc=2.9, scale=1.2, size=37))
+        self.y = np.sort(rs.normal(loc=3.0, scale=1.1, size=37))
         try:
             import matplotlib.pyplot as plt
 
@@ -490,78 +518,94 @@ class TestQQLine:
         }
         self.fmt = "bo-"
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
-    def test_badline(self):
+    def test_badline(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "junk")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_non45_no_x(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "s", y=self.y)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_non45_no_y(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "s", x=self.x)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_non45_no_x_no_y(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "s")
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_45(self, close_figures):
         nchildren = len(self.ax.get_children())
         qqline(self.ax, "45")
         assert len(self.ax.get_children()) > nchildren
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_45_fmt(self, close_figures):
         qqline(self.ax, "45", fmt=self.fmt)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_45_fmt_lineoptions(self, close_figures):
         qqline(self.ax, "45", fmt=self.fmt, **self.lineoptions)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_r(self, close_figures):
         nchildren = len(self.ax.get_children())
         qqline(self.ax, "r", x=self.x, y=self.y)
         assert len(self.ax.get_children()) > nchildren
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_r_fmt(self, close_figures):
         qqline(self.ax, "r", x=self.x, y=self.y, fmt=self.fmt)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_r_fmt_lineoptions(self, close_figures):
         qqline(self.ax, "r", x=self.x, y=self.y, fmt=self.fmt, **self.lineoptions)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_s(self, close_figures):
         nchildren = len(self.ax.get_children())
         qqline(self.ax, "s", x=self.x, y=self.y)
         assert len(self.ax.get_children()) > nchildren
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_s_fmt(self, close_figures):
         qqline(self.ax, "s", x=self.x, y=self.y, fmt=self.fmt)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_s_fmt_lineoptions(self, close_figures):
         qqline(self.ax, "s", x=self.x, y=self.y, fmt=self.fmt, **self.lineoptions)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_q(self, close_figures):
         nchildren = len(self.ax.get_children())
         qqline(self.ax, "q", dist=stats.norm, x=self.x, y=self.y)
         assert len(self.ax.get_children()) > nchildren
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_q_fmt(self, close_figures):
         qqline(self.ax, "q", dist=stats.norm, x=self.x, y=self.y, fmt=self.fmt)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_q_fmt_lineoptions(self, close_figures):
         qqline(
@@ -586,22 +630,27 @@ class TestPlottingPosition:
 
         nptest.assert_array_almost_equal(smpp, sppp, decimal=5)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_weibull(self, close_figures):
         self.do_test(0, 0)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_lininterp(self, close_figures):
         self.do_test(0, 1)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_piecewise(self, close_figures):
         self.do_test(0.5, 0.5)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_approx_med_unbiased(self, close_figures):
         self.do_test(1.0 / 3.0, 1.0 / 3.0)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_cunnane(self, close_figures):
         self.do_test(0.4, 0.4)
@@ -635,12 +684,13 @@ def test_param_unpacking():
     assert_equal(pp.fit_params, expected)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("labels", [{}, {"xlabel": "X", "ylabel": "Y"}])
 @pytest.mark.parametrize("x_size", [30, 50])
 @pytest.mark.parametrize("y_size", [30, 50])
 @pytest.mark.parametrize("line", [None, "45", "s", "r", "q"])
-def test_correct_labels(close_figures, reset_randomstate, line, x_size, y_size, labels):
+def test_correct_labels(close_figures, line, x_size, y_size, labels):
     rs = np.random.RandomState(9876554)
     x = rs.normal(loc=0, scale=0.1, size=x_size)
     y = rs.standard_t(3, size=y_size)
@@ -657,33 +707,34 @@ def test_correct_labels(close_figures, reset_randomstate, line, x_size, y_size, 
         else:
             assert "X" in x_label
             assert "Y" in y_label
+    elif not labels:
+        assert "1st" in x_label
+        assert "2nd" in y_label
     else:
-        if not labels:
-            assert "1st" in x_label
-            assert "2nd" in y_label
-        else:
-            assert "X" in x_label
-            assert "Y" in y_label
+        assert "X" in x_label
+        assert "Y" in y_label
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_axis_order(close_figures):
-    xx = np.random.normal(10, 1, (100,))
-    xy = np.random.normal(1, 0.01, (100,))
+    rs = np.random.RandomState(9876553)
+    xx = rs.normal(10, 1, (100,))
+    xy = rs.normal(1, 0.01, (100,))
     fig = qqplot_2samples(xx, xy, "x", "y")
     ax = fig.get_axes()[0]
     y_range = np.diff(ax.get_ylim())[0]
     x_range = np.diff(ax.get_xlim())[0]
     assert y_range < x_range
 
-    xx_long = np.random.normal(10, 1, (1000,))
+    xx_long = rs.normal(10, 1, (1000,))
     fig = qqplot_2samples(xx_long, xy, "x", "y")
     ax = fig.get_axes()[0]
     y_range = np.diff(ax.get_ylim())[0]
     x_range = np.diff(ax.get_xlim())[0]
     assert y_range < x_range
 
-    xy_long = np.random.normal(1, 0.01, (1000,))
+    xy_long = rs.normal(1, 0.01, (1000,))
     fig = qqplot_2samples(xx, xy_long, "x", "y")
     ax = fig.get_axes()[0]
     y_range = np.diff(ax.get_ylim())[0]
@@ -691,16 +742,34 @@ def test_axis_order(close_figures):
     assert x_range < y_range
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_qqplot_2samples_labels():
     try:
         import matplotlib.pyplot as plt
     except ImportError:
         pass
-    data1 = np.random.normal(0, 1, 100)
-    data2 = np.random.normal(0, 1, 100)
+    rs = np.random.RandomState(973772)
+    data1 = rs.normal(0, 1, 100)
+    data2 = rs.normal(0, 1, 100)
     fig = qqplot_2samples(data1, data2, xlabel="Sample 1", ylabel="Sample 2")
     ax = fig.get_axes()[0]
     assert ax.get_xlabel() == "Sample 1"
     assert ax.get_ylabel() == "Sample 2"
     plt.close(ax.figure)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_qqplot_2samples_kwargs(close_figures):
+    rs = np.random.RandomState(97377)
+    data1 = rs.normal(0, 1, 100)
+    data2 = rs.normal(0, 1, 100)
+    fig_with_kwarg = qqplot_2samples(data1, data2, color="cyan")
+    ax = fig_with_kwarg.get_axes()[0]
+    scatter = ax.get_children()[0]
+    assert scatter.get_color() == "cyan"
+    fig_without_kwarg = qqplot_2samples(data1, data2)
+    ax_default = fig_without_kwarg.get_axes()[0]
+    scatter_default = ax_default.get_children()[0]
+    assert scatter_default.get_color() != "cyan"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-
 from itertools import product
 import os
+from pathlib import Path
 
 import numpy as np
 
@@ -12,8 +12,8 @@ def pss_block(
     seed, k, case, i1, block_id, m=2_000_000, t=1_000, save=True, path="./"
 ):
     file_name = f"pss-k-{k}-case-{case}-i1-{i1}-block-{block_id}.npz"
-    file_name = os.path.join(path, file_name)
-    if save and os.path.exists(file_name):
+    file_name = Path(path).joinpath(file_name)
+    if save and Path(file_name).exists():
         return
     rs = np.random.default_rng(seed)
     const = np.ones(t - 1)
@@ -52,7 +52,7 @@ def pss_block(
     percentiles = [0.05]
     percentiles += [i / 10 for i in range(1, 10)]
     percentiles += [1 + i / 2 for i in range(18)]
-    percentiles += [i for i in range(10, 51)]
+    percentiles += list(range(10, 51))
     percentiles += [100 - v for v in percentiles]
     percentiles = sorted(set(percentiles))
     percentiles = np.asarray(percentiles)
@@ -80,7 +80,7 @@ block_id = list(range(32))
 params = list(product(k, case, i1, block_id))
 seeds = ss.generate_state(8 * len(params)).reshape((-1, 8)).tolist()
 configs = []
-for _s, (_k, _case, _i1, _block_id) in zip(seeds, params):
+for _s, (_k, _case, _i1, _block_id) in zip(seeds, params, strict=True):
     configs.append(
         {
             "seed": _s,
