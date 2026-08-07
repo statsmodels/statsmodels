@@ -24,9 +24,10 @@ from statsmodels.tools.sm_exceptions import ModelWarning
 
 
 class CountDiagnostic:
-    """Diagnostic and specification tests and plots for Count model
+    """
+    Diagnostic and specification tests and plots for count models
 
-    status: experimental
+    Status: experimental.
 
     Parameters
     ----------
@@ -50,7 +51,8 @@ class CountDiagnostic:
         return self.results.predict(which="prob", **kwds)
 
     def test_chisquare_prob(self, bin_edges=None, method=None):
-        """Moment test for binned probabilities using OPG.
+        """
+        Moment test for binned probabilities using OPG
 
         Parameters
         ----------
@@ -110,7 +112,7 @@ class CountDiagnostic:
         return res
 
     def plot_probs(self, label="predicted", upp_xlim=None, fig=None):
-        """Plot observed versus predicted frequencies for entire sample."""
+        """Plot observed versus predicted frequencies for entire sample"""
         probs_predicted = self.probs_predicted.sum(0)
         k_probs = len(probs_predicted)
         freq = np.bincount(self.results.model.endog.astype(int), minlength=k_probs)[
@@ -121,9 +123,10 @@ class CountDiagnostic:
 
 
 class PoissonDiagnostic(CountDiagnostic):
-    """Diagnostic and specification tests and plots for Poisson model
+    """
+    Diagnostic and specification tests and plots for Poisson models
 
-    status: experimental
+    Status: experimental.
 
     Parameters
     ----------
@@ -135,7 +138,8 @@ class PoissonDiagnostic(CountDiagnostic):
         self.results = results
 
     def test_dispersion(self):
-        """Test for excess (over or under) dispersion in Poisson.
+        """
+        Test for excess (over or under) dispersion in Poisson
 
         Returns
         -------
@@ -145,12 +149,13 @@ class PoissonDiagnostic(CountDiagnostic):
         return res
 
     def test_poisson_zeroinflation(self, method="prob", exog_infl=None):
-        """Test for excess zeros, zero inflation or deflation.
+        """
+        Test for excess zeros, zero inflation or deflation
 
         Parameters
         ----------
         method : str
-            Three methods ara available for the test:
+            Three methods are available for the test:
 
              - "prob" : moment test for the probability of zeros
              - "broek" : score test against zero inflation with or without
@@ -170,7 +175,7 @@ class PoissonDiagnostic(CountDiagnostic):
         on the explicit formula in Tang and Tang 2_.
 
         If method = "broek" and exog_infl is None, then the test by Van den
-        Broek 3_ is used. This is a score test against and alternative of
+        Broek 3_ is used. This is a score test against an alternative of
         constant zero inflation or deflation.
 
         If method = "broek" and exog_infl is provided, then the extension of
@@ -211,7 +216,8 @@ class PoissonDiagnostic(CountDiagnostic):
         frac_upp=0.1,
         alpha_nc=0.05,
     ):
-        """Hosmer-Lemeshow style test for count data.
+        """
+        Hosmer-Lemeshow style test for count data
 
         Note, this does not take into account that parameters are estimated.
         The distribution of the test statistic is only an approximation.
@@ -220,7 +226,7 @@ class PoissonDiagnostic(CountDiagnostic):
         response variable. The outcome space y = k is partitioned into bins
         and treated as ordinal variable.
         The observations are split into approximately equal sized groups
-        of observations sorted according the ``sort_var``.
+        of observations sorted according to ``sort_var``.
 
         """
 

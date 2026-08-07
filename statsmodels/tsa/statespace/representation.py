@@ -6,8 +6,6 @@ License: Simplified-BSD
 """
 from statsmodels.compat.numpy import inplace_reshape
 
-import warnings
-
 import numpy as np
 
 from . import tools
@@ -215,17 +213,11 @@ class Representation:
     """
 
     endog = None
-    r"""
-    (array) The observation vector, alias for `obs`.
-    """
+    r"""(array) The observation vector, alias for `obs`"""
     design = MatrixWrapper("design", "design")
-    r"""
-    (array) Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`
-    """
+    r"""(array) Design matrix: :math:`Z~(k\_endog \times k\_states \times nobs)`"""
     obs_intercept = MatrixWrapper("observation intercept", "obs_intercept")
-    r"""
-    (array) Observation intercept: :math:`d~(k\_endog \times nobs)`
-    """
+    r"""(array) Observation intercept: :math:`d~(k\_endog \times nobs)`"""
     obs_cov = MatrixWrapper("observation covariance matrix", "obs_cov")
     r"""
     (array) Observation covariance matrix:
@@ -237,9 +229,7 @@ class Representation:
     :math:`T~(k\_states \times k\_states \times nobs)`
     """
     state_intercept = MatrixWrapper("state intercept", "state_intercept")
-    r"""
-    (array) State intercept: :math:`c~(k\_states \times nobs)`
-    """
+    r"""(array) State intercept: :math:`c~(k\_states \times nobs)`"""
     selection = MatrixWrapper("selection", "selection")
     r"""
     (array) Selection matrix:
@@ -388,12 +378,7 @@ class Representation:
         if kwargs:
             # raise TypeError(f'{__class__} constructor got unexpected keyword'
             #                 f' argument(s): {kwargs}.')
-            msg = (
-                f"Unknown keyword arguments: {kwargs.keys()}."
-                "Passing unknown keyword arguments will raise a TypeError"
-                " beginning in version 0.15."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
+            raise TypeError(f"Unknown keyword arguments: {list(kwargs.keys())}.")
 
         # Matrix representations storage
         self._representations = {}
@@ -409,7 +394,7 @@ class Representation:
         # If only a string is given then we must be getting an entire matrix
         if _type is str:
             if key not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key)
+                raise IndexError(f'"{key}" is an invalid state space matrix name')
             matrix = getattr(self, "_" + key)
 
             # See note on time-varying arrays, below
@@ -421,7 +406,7 @@ class Representation:
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % name)
+                raise IndexError(f'"{name}" is an invalid state space matrix name')
 
             matrix = getattr(self, "_" + name)
 
@@ -446,20 +431,20 @@ class Representation:
         # If only a string is given then we must be setting an entire matrix
         if _type is str:
             if key not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key)
+                raise IndexError(f'"{key}" is an invalid state space matrix name')
             setattr(self, key, value)
         # If it's a tuple (with a string as the first element) then we must be
         # setting a slice of a matrix
         elif _type is tuple:
             name, slice_ = key[0], key[1:]
             if name not in self.shapes:
-                raise IndexError('"%s" is an invalid state space matrix name' % key[0])
+                raise IndexError(f'"{key[0]}" is an invalid state space matrix name')
 
             # Change the dtype of the corresponding matrix
             dtype = np.array(value).dtype
             matrix = getattr(self, "_" + name)
             valid_types = ["f", "d", "F", "D"]
-            if not matrix.dtype == dtype and dtype.char in valid_types:
+            if matrix.dtype != dtype and dtype.char in valid_types:
                 matrix = getattr(self, "_" + name).real.astype(dtype)
 
             # Since the model can support time-varying arrays, but often we
@@ -506,13 +491,13 @@ class Representation:
                 kwargs[key] = val
             if kwargs[key] != val:
                 raise ValueError(
-                    "Cannot change the dimension of %s when cloning." % key
+                    f"Cannot change the dimension of {key} when cloning."
                 )
 
         # Get defaults for time-invariant system matrices, if not otherwise
         # provided
         # Time-varying matrices must be replaced.
-        for name in self.shapes.keys():
+        for name in self.shapes:
             if name == "obs":
                 continue
 
@@ -520,9 +505,9 @@ class Representation:
                 mat = getattr(self, name)
                 if mat.shape[-1] != 1:
                     raise ValueError(
-                        "The `%s` matrix is time-varying. Cloning"
+                        f"The `{name}` matrix is time-varying. Cloning"
                         " this model requires specifying an"
-                        " updated matrix." % name
+                        " updated matrix."
                     )
                 kwargs[name] = mat
 
@@ -703,12 +688,35 @@ class Representation:
         return self.clone(endog, **kwargs)
 
     def diff_endog(self, new_endog, tolerance=1e-10):
+        """
+        Compute indices of revised and newly added observations
+
+        Parameters
+        ----------
+        new_endog : array_like
+            New observation data to compare against the currently bound
+            endogenous data.
+        tolerance : float, optional
+            Tolerance used when comparing values to determine whether a
+            change represents a revision. Default is 1e-10.
+
+        Returns
+        -------
+        revision_ix : list of tuple
+            List of (row, column) indices indicating which values in
+            `new_endog` represent a revision to a previously observed
+            (non-missing) value.
+        new_ix : list of tuple
+            List of (row, column) indices indicating which values in
+            `new_endog` represent a newly observed value (i.e. one that
+            was previously missing).
+        """
         # TODO: move this function to tools?
         endog = self.endog.T
         if len(new_endog) < len(endog):
             raise ValueError(
-                "Given data (length %d) is too short to diff"
-                " against model data (length %d)." % (len(new_endog), len(endog))
+                f"Given data (length {len(new_endog):d}) is too short to diff"
+                f" against model data (length {len(endog):d})."
             )
         if len(new_endog) > len(endog):
             nobs_append = len(new_endog) - len(endog)
@@ -724,16 +732,14 @@ class Representation:
         is_new = existing_nan & ~new_nan
         is_revision[is_new] = False
 
-        revision_ix = list(zip(*np.where(is_revision)))
-        new_ix = list(zip(*np.where(is_new)))
+        revision_ix = list(zip(*np.where(is_revision), strict=True))
+        new_ix = list(zip(*np.where(is_new), strict=True))
 
         return revision_ix, new_ix
 
     @property
     def prefix(self):
-        """
-        (str) BLAS prefix of currently active representation matrices
-        """
+        """(str) BLAS prefix of currently active representation matrices"""
         arrays = (
             self._design,
             self._obs_intercept,
@@ -749,9 +755,7 @@ class Representation:
 
     @property
     def dtype(self):
-        """
-        (dtype) Datatype of currently active representation matrices
-        """
+        """(dtype) Datatype of currently active representation matrices"""
         return tools.prefix_dtype_map[self.prefix]
 
     @property
@@ -782,9 +786,7 @@ class Representation:
 
     @property
     def obs(self):
-        r"""
-        (array) Observation vector: :math:`y~(k\_endog \times nobs)`
-        """
+        r"""(array) Observation vector: :math:`y~(k\_endog \times nobs)`"""
         return self.endog
 
     def bind(self, endog):
@@ -887,7 +889,44 @@ class Representation:
         R0=None,
         Q0=None,
     ):
-        """Create an Initialization object if necessary"""
+        """
+        Create an Initialization object if necessary
+
+        Parameters
+        ----------
+        initialization : str or Initialization
+            Initialization method for the initial state. If a string, must
+            be one of {'known', 'components', 'approximate_diffuse',
+            'stationary', 'diffuse'}. Otherwise, may be an already-created
+            Initialization object, which is used directly.
+        approximate_diffuse_variance : float, optional
+            Initial variance used when `initialization='approximate_diffuse'`
+            is specified. Default is `self.initial_variance`.
+        constant : array_like, optional
+            Known mean of the initial state vector, used when
+            `initialization='known'`.
+        stationary_cov : array_like, optional
+            Known covariance matrix of the initial state vector, used when
+            `initialization='known'`.
+        a : array_like, optional
+            Vector of constant values describing the mean of the stationary
+            component of the initial state, used when
+            `initialization='components'`.
+        Pstar : array_like, optional
+            Stationary component of the initial state covariance matrix,
+            used when `initialization='components'`.
+        Pinf : array_like, optional
+            Diffuse component of the initial state covariance matrix, used
+            when `initialization='components'`.
+        A : array_like, optional
+            Diffuse selection matrix, used when `initialization='components'`.
+        R0 : array_like, optional
+            Stationary selection matrix, used when
+            `initialization='components'`.
+        Q0 : array_like, optional
+            Covariance matrix associated with stationary initial states,
+            used when `initialization='components'`.
+        """
         if initialization == "known":
             initialization = Initialization(
                 self.k_states, "known", constant=constant, stationary_cov=stationary_cov
@@ -917,8 +956,8 @@ class Representation:
 
     def initialize_known(self, constant, stationary_cov):
         """
-        Initialize the statespace model with known distribution for initial
-        state.
+        Initialize the statespace model with a known distribution for the
+        initial state
 
         These values are assumed to be known with certainty or else
         filled with parameters during, for example, maximum likelihood
@@ -937,20 +976,19 @@ class Representation:
         if not constant.shape == (self.k_states,):
             raise ValueError(
                 "Invalid dimensions for constant state vector."
-                " Requires shape (%d,), got %s" % (self.k_states, str(constant.shape))
+                f" Requires shape ({self.k_states:d},), got {constant.shape!s}"
             )
         if not stationary_cov.shape == (self.k_states, self.k_states):
             raise ValueError(
                 "Invalid dimensions for stationary covariance"
-                " matrix. Requires shape (%d,%d), got %s"
-                % (self.k_states, self.k_states, str(stationary_cov.shape))
+                f" matrix. Requires shape ({self.k_states:d},{self.k_states:d}), got {stationary_cov.shape!s}"
             )
 
         self.initialize("known", constant=constant, stationary_cov=stationary_cov)
 
     def initialize_approximate_diffuse(self, variance=None):
         """
-        Initialize the statespace model with approximate diffuse values.
+        Initialize the statespace model with approximate diffuse values
 
         Rather than following the exact diffuse treatment (which is developed
         for the case that the variance becomes infinitely large), this assigns
@@ -1029,15 +1067,11 @@ class Representation:
         self.initialize("components", a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0)
 
     def initialize_stationary(self):
-        """
-        Initialize the statespace model as stationary.
-        """
+        """Initialize the statespace model as stationary"""
         self.initialize("stationary")
 
     def initialize_diffuse(self):
-        """
-        Initialize the statespace model as diffuse.
-        """
+        """Initialize the statespace model as diffuse"""
         self.initialize("diffuse")
 
     def _initialize_representation(self, prefix=None):
@@ -1050,7 +1084,7 @@ class Representation:
         if prefix not in self._representations:
             # Copy the statespace representation matrices
             self._representations[prefix] = {}
-            for matrix in self.shapes.keys():
+            for matrix in self.shapes:
                 if matrix == "obs":
                     self._representations[prefix][matrix] = self.obs.astype(dtype)
                 else:
@@ -1060,7 +1094,7 @@ class Representation:
                     ).astype(dtype)
         # If they do exist, update them
         else:
-            for matrix in self.shapes.keys():
+            for matrix in self.shapes:
                 existing = self._representations[prefix][matrix]
                 if matrix == "obs":
                     # existing[:] = self.obs.astype(dtype)
@@ -1077,14 +1111,14 @@ class Representation:
         if prefix in self._statespaces:
             ss = self._statespaces[prefix]
             create = (
-                not ss.obs.shape[1] == self.endog.shape[1]
-                or not ss.design.shape[2] == self.design.shape[2]
-                or not ss.obs_intercept.shape[1] == self.obs_intercept.shape[1]
-                or not ss.obs_cov.shape[2] == self.obs_cov.shape[2]
-                or not ss.transition.shape[2] == self.transition.shape[2]
-                or not (ss.state_intercept.shape[1] == self.state_intercept.shape[1])
-                or not ss.selection.shape[2] == self.selection.shape[2]
-                or not ss.state_cov.shape[2] == self.state_cov.shape[2]
+                ss.obs.shape[1] != self.endog.shape[1]
+                or ss.design.shape[2] != self.design.shape[2]
+                or ss.obs_intercept.shape[1] != self.obs_intercept.shape[1]
+                or ss.obs_cov.shape[2] != self.obs_cov.shape[2]
+                or ss.transition.shape[2] != self.transition.shape[2]
+                or ss.state_intercept.shape[1] != self.state_intercept.shape[1]
+                or ss.selection.shape[2] != self.selection.shape[2]
+                or ss.state_cov.shape[2] != self.state_cov.shape[2]
             )
         else:
             create = True
@@ -1187,9 +1221,17 @@ class FrozenRepresentation:
     initialization : Initialization object
         Kalman filter initialization method.
     initial_state : array_like
-        The state vector used to initialize the Kalamn filter.
+        The state vector used to initialize the Kalman filter.
     initial_state_cov : array_like
-        The state covariance matrix used to initialize the Kalamn filter.
+        The state covariance matrix used to initialize the Kalman filter.
+    initial_diffuse_state_cov : array_like
+        The diffuse part of the state covariance matrix used to initialize
+        the Kalman filter.
+    initial_variance : float
+        Initial variance used for approximate diffuse initialization.
+    model : Representation
+        The Statespace representation model from which this snapshot was
+        taken.
     """
 
     _model_attributes = [
@@ -1228,7 +1270,14 @@ class FrozenRepresentation:
         self.update_representation(model)
 
     def update_representation(self, model):
-        """Update model Representation"""
+        """
+        Update the snapshot to reflect the current state of the model
+
+        Parameters
+        ----------
+        model : Representation
+            A Statespace representation
+        """
         # Model
         self.model = model
 
@@ -1258,7 +1307,7 @@ class FrozenRepresentation:
 
         # Save the final shapes of the matrices
         self.shapes = dict(model.shapes)
-        for name in self.shapes.keys():
+        for name in self.shapes:
             if name == "obs":
                 continue
             self.shapes[name] = getattr(self, name).shape

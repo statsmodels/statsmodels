@@ -54,6 +54,7 @@ class CheckFormulaOLS:
     def test_endog(self):
         npt.assert_equal(self.model.endog, self.data.endog)
 
+    @pytest.mark.thread_unsafe("fit method mutates the model object")
     @pytest.mark.smoke
     def test_summary(self):
         with warnings.catch_warnings():

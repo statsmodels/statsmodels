@@ -8,45 +8,45 @@ from statsmodels.iolib import SimpleTable
 
 mat = np.array
 
-_default_table_fmt = dict(
-    empty_cell="",
-    colsep="  ",
-    row_pre="",
-    row_post="",
-    table_dec_above="=",
-    table_dec_below="=",
-    header_dec_below="-",
-    header_fmt="%s",
-    stub_fmt="%s",
-    title_align="c",
-    header_align="r",
-    data_aligns="r",
-    stubs_align="l",
-    fmt="txt"
-)
+_default_table_fmt = {
+    "empty_cell": "",
+    "colsep": "  ",
+    "row_pre": "",
+    "row_post": "",
+    "table_dec_above": "=",
+    "table_dec_below": "=",
+    "header_dec_below": "-",
+    "header_fmt": "%s",
+    "stub_fmt": "%s",
+    "title_align": "c",
+    "header_align": "r",
+    "data_aligns": "r",
+    "stubs_align": "l",
+    "fmt": "txt"
+}
 
 
 class VARSummary:
-    default_fmt = dict(
+    default_fmt = {
         # data_fmts=["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
         # data_fmts=["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-        data_fmts=["%#15.6F", "%#15.6F", "%#15.3F", "%#14.3F"],
-        empty_cell="",
+        "data_fmts": ["%#15.6F", "%#15.6F", "%#15.3F", "%#14.3F"],
+        "empty_cell": "",
         # colwidths=10,
-        colsep="  ",
-        row_pre="",
-        row_post="",
-        table_dec_above="=",
-        table_dec_below="=",
-        header_dec_below="-",
-        header_fmt="%s",
-        stub_fmt="%s",
-        title_align="c",
-        header_align="r",
-        data_aligns="r",
-        stubs_align="l",
-        fmt="txt"
-    )
+        "colsep": "  ",
+        "row_pre": "",
+        "row_post": "",
+        "table_dec_above": "=",
+        "table_dec_below": "=",
+        "header_dec_below": "-",
+        "header_fmt": "%s",
+        "stub_fmt": "%s",
+        "title_align": "c",
+        "header_align": "r",
+        "data_aligns": "r",
+        "stubs_align": "l",
+        "fmt": "txt"
+    }
 
     part1_fmt = dict(
         default_fmt,
@@ -74,9 +74,7 @@ class VARSummary:
         return self.summary
 
     def make(self, endog_names=None, exog_names=None):
-        """
-        Summary of VAR model
-        """
+        """Summary of VAR model"""
         buf = StringIO()
 
         buf.write(self._header_table() + "\n")
@@ -154,7 +152,7 @@ class VARSummary:
         buf = StringIO()
         dim = k * model.k_ar + model.k_trend + model.k_exog_user
         for i in range(k):
-            section = "Results for equation %s" % model.names[i]
+            section = f"Results for equation {model.names[i]}"
             buf.write(section + "\n")
 
             table = SimpleTable(data[dim * i : dim * (i + 1)], header,
@@ -199,7 +197,7 @@ def hypothesis_test_table(results, title, null_hyp):
 
     buf.write(null_hyp + "\n")
 
-    buf.write("Conclusion: %s H_0" % results["conclusion"])
+    buf.write("Conclusion: {} H_0".format(results["conclusion"]))
     buf.write(" at %.2f%% significance level" % (results["signif"] * 100))
 
     return buf.getvalue()
@@ -226,7 +224,7 @@ def pprint_matrix(values, rlabels, clabels, col_space=None):
     buf.write(head + "\n")
 
     for i, rlab in enumerate(rlabels):
-        line = ("%s" % rlab).ljust(row_space)
+        line = (f"{rlab}").ljust(row_space)
 
         for j in range(K):
             line += _pfixed(values[i, j], col_space[j])
@@ -241,8 +239,8 @@ def _pfixed(s, space, nanRep=None, float_format=None):
         if float_format:
             formatted = float_format(s)
         else:
-            formatted = "%#8.6F" % s
+            formatted = f"{s:#8.6F}"
 
         return formatted.rjust(space)
     else:
-        return ("%s" % s)[:space].rjust(space)
+        return (f"{s}")[:space].rjust(space)

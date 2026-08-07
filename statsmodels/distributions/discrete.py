@@ -1,3 +1,4 @@
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.scipy import apply_where
 
 import numpy as np
@@ -339,12 +340,40 @@ class DiscretizedCount(rv_discrete):
             scale = 1
         return args, scale
 
-    def _rvs(self, *args, size=None, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def _rvs(self, *args, size=None, rng=None):
+        """Generate random variates.
+
+        Parameters
+        ----------
+        *args
+            Shape parameters and scale forwarded to the underlying
+            continuous distribution.
+        size : int or tuple of ints, optional
+            Number of random variates to generate.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state`` argument. If `rng` is None, the global NumPy
+            singleton random state is used. If `rng` is an int or array of
+            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        rv : ndarray
+            Random variates from the discretized distribution.
+        """
         args, scale = self._unpack_args(args)
         if size is None:
             size = getattr(self, "_size", 1)
         rv = np.trunc(
-            self.distr.rvs(*args, scale=scale, size=size, random_state=random_state)
+            self.distr.rvs(*args, scale=scale, size=size, random_state=rng)
             + self.d_offset
         )
         return rv

@@ -11,6 +11,7 @@ import pytest
 from scipy import stats
 
 from statsmodels.discrete.discrete_model import Logit
+from statsmodels.iolib.summary import Summary
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
 from statsmodels.tools.tools import add_constant
@@ -571,3 +572,18 @@ def test_nan_endog_exceptions():
         msg = "missing values in categorical endog"
         with pytest.raises(ValueError, match=msg):
             OrderedModel(df["endog"], df[["exog"]])
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    data = ds.df
+    mod = OrderedModel(
+        data["apply"].values.codes,
+        np.asarray(data[["pared", "public", "gpa"]], float),
+        distr="logit",
+    )
+    res = mod.fit(method="bfgs", disp=False)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

@@ -13,26 +13,6 @@ try:
 except ImportError:
     pass
 
-pdf_output = False
-
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_mice.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
-
-def teardown_module():
-    if pdf_output:
-        pdf.close()
-
 
 def gendat():
     """
@@ -52,7 +32,7 @@ def gendat():
     endog = exog.sum(1) + gen.normal(size=n)
 
     df = pd.DataFrame(exog)
-    df.columns = ["x%d" % k for k in range(1, p + 1)]
+    df.columns = [f"x{k:d}" for k in range(1, p + 1)]
 
     df["y"] = endog
 
@@ -74,7 +54,7 @@ class TestMICEData:
         rs = np.random.RandomState(821443)
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         imp_data = mice.MICEData(df, rng=rs)
         nrow, ncol = df.shape
 
@@ -160,7 +140,7 @@ class TestMICEData:
         rs = np.random.RandomState(80223)
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         nrow, ncol = df.shape
 
         for pert_meth in "gaussian", "boot":
@@ -234,7 +214,7 @@ class TestMICEData:
 
         df = gendat()
         orig = df.copy()
-        mx = pd.notnull(df)
+        mx = pd.notna(df)
         nrow, ncol = df.shape
 
         imp_data = mice.MICEData(df, rng=rs)
@@ -258,9 +238,9 @@ class TestMICEData:
                     isinstance(imp_data.results["x3"], GLMResultsWrapper), True
                 )
             else:
-                assert_equal(isinstance(imp_data.models["x%d" % j], sm.OLS), True)
+                assert_equal(isinstance(imp_data.models[f"x{j:d}"], sm.OLS), True)
                 assert_equal(
-                    isinstance(imp_data.results["x%d" % j], RegressionResultsWrapper),
+                    isinstance(imp_data.results[f"x{j:d}"], RegressionResultsWrapper),
                     True,
                 )
 
@@ -277,6 +257,7 @@ class TestMICEData:
             ("x5", "x4", "x3", "y", "x2", "x1"),
         )
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_missing_pattern(self, close_figures):
         rs = np.random.RandomState(410223)
@@ -287,14 +268,14 @@ class TestMICEData:
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
                     plt.clf()
-                    fig = imp_data.plot_missing_pattern(
+                    imp_data.plot_missing_pattern(
                         row_order=row_order,
                         hide_complete_rows=hide_complete_rows,
                         color_row_patterns=color_row_patterns,
                     )
-                    close_or_save(pdf, fig)
                     close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_bivariate(self, close_figures):
         rs = np.random.RandomState(810223)
@@ -306,9 +287,9 @@ class TestMICEData:
         for plot_points in False, True:
             fig = imp_data.plot_bivariate("x2", "x4", plot_points=plot_points)
             fig.get_axes()[0].set_title("plot_bivariate")
-            close_or_save(pdf, fig)
             close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_fit_obs(self, close_figures):
         rs = np.random.RandomState(82144123)
@@ -320,9 +301,9 @@ class TestMICEData:
         for plot_points in False, True:
             fig = imp_data.plot_fit_obs("x4", plot_points=plot_points)
             fig.get_axes()[0].set_title("plot_fit_scatterplot")
-            close_or_save(pdf, fig)
             close_figures()
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_imputed_hist(self, close_figures):
         rs = np.random.RandomState(821423)
@@ -334,7 +315,6 @@ class TestMICEData:
         for _ in False, True:
             fig = imp_data.plot_imputed_hist("x4")
             fig.get_axes()[0].set_title("plot_imputed_hist")
-            close_or_save(pdf, fig)
             close_figures()
 
 
@@ -430,7 +410,7 @@ def test_micedata_miss1():
     data_imp = mice.MICEData(data, rng=gen)
     data_imp.update_all()
 
-    assert_equal(data_imp.data.isnull().values.sum(), 0)
+    assert_equal(data_imp.data.isna().values.sum(), 0)
 
     ix_miss = {
         "var1": np.array([], dtype=np.int64),

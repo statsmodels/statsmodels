@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -12,18 +12,10 @@ from statsmodels.duration.survfunc import (
     survdiff,
 )
 
-# If true, the output is written to a multi-page pdf file.
-pdf_output = False
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
 
 
 """
@@ -55,8 +47,8 @@ surv_prob_se2 = np.r_[0.1047566, 0.2518034, 0.2444320, np.nan]
 n_risk2 = np.r_[9, 3, 2, 1]
 n_events2 = np.r_[1.0, 1.0, 1.0, 1.0]
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-fp = os.path.join(cur_dir, "results", "bmt.csv")
+cur_dir = Path(__file__).resolve().parent
+fp = Path(cur_dir).joinpath("results", "bmt.csv")
 bmt = pd.read_csv(fp)
 
 
@@ -130,8 +122,8 @@ def test_bmt():
 
     dfa = bmt[bmt.Group == "ALL"]
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    fp = os.path.join(cur_dir, "results", "bmt_results.csv")
+    cur_dir = Path(__file__).resolve().parent
+    fp = Path(cur_dir).joinpath("results", "bmt_results.csv")
     rslt = pd.read_csv(fp)
 
     sf = SurvfuncRight(dfa["T"].values, dfa.Status.values)
@@ -212,27 +204,18 @@ def test_survdiff():
     assert_allclose(stat, 13.35259, atol=1e-4, rtol=1e-4)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_km(close_figures):
-
-    if pdf_output:
-        from matplotlib.backends.backend_pdf import PdfPages
-
-        pdf = PdfPages("test_survfunc.pdf")
-    else:
-        pdf = None
 
     sr1 = SurvfuncRight(ti1, st1)
     sr2 = SurvfuncRight(ti2, st2)
 
     fig = plot_survfunc(sr1)
-    close_or_save(pdf, fig)
 
     fig = plot_survfunc(sr2)
-    close_or_save(pdf, fig)
 
     fig = plot_survfunc([sr1, sr2])
-    close_or_save(pdf, fig)
 
     # Plot the SAS BMT data
     gb = bmt.groupby("Group")
@@ -247,7 +230,6 @@ def test_plot_km(close_figures):
     fig.legend(
         [ha[k] for k in (0, 2, 4)], [lb[k] for k in (0, 2, 4)], loc="center right"
     )
-    close_or_save(pdf, fig)
 
     # Simultaneous CB for BMT data
     ii = bmt.Group == "ALL"
@@ -264,10 +246,6 @@ def test_plot_km(close_figures):
     plt.plot(sf.surv_times, sf.surv_prob - 2 * sf.surv_prob_se, color="red")
     plt.plot(sf.surv_times, sf.surv_prob + 2 * sf.surv_prob_se, color="red")
     plt.xlim(100, 600)
-    close_or_save(pdf, fig)
-
-    if pdf_output:
-        pdf.close()
 
 
 def test_weights1():

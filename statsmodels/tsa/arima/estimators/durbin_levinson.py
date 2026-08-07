@@ -4,20 +4,18 @@ Durbin-Levinson recursions for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.stattools import acovf
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
     """
-    Estimate AR parameters at multiple orders using Durbin-Levinson recursions.
+    Estimate AR parameters at multiple orders using Durbin-Levinson recursions
 
     Parameters
     ----------
@@ -35,13 +33,17 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
 
     Returns
     -------
-    parameters : list of SARIMAXParams objects
-        List elements correspond to estimates at different `ar_order`. For
-        example, parameters[0] is an `SARIMAXParams` instance corresponding to
-        `ar_order=0`.
-    other_results : Bunch
-        Includes one component, `spec`, containing the `SARIMAXSpecification`
-        instance corresponding to the input arguments.
+    ARMAEstimationResult
+        A NamedTuple with fields:
+
+        parameters : list of SARIMAXParams objects
+            List elements correspond to estimates at different `ar_order`.
+            For example, parameters[0] is an `SARIMAXParams` instance
+            corresponding to `ar_order=0`.
+        other_results : Bunch
+            Includes one component, `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments.
 
     Notes
     -----
@@ -104,4 +106,4 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
         "spec": spec,
     })
 
-    return out, other_results
+    return ARMAEstimationResult(out, other_results)

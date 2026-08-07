@@ -6,6 +6,7 @@ License: BSD-3
 """
 
 
+from itertools import pairwise
 import warnings
 
 import numpy as np
@@ -30,7 +31,8 @@ from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 
 class OrderedModel(GenericLikelihoodModel):
-    """Ordinal Model based on logistic or normal distribution
+    """
+    Ordinal Model based on logistic or normal distribution
 
     The parameterization corresponds to the proportional odds model in the
     logistic case.
@@ -45,7 +47,7 @@ class OrderedModel(GenericLikelihoodModel):
     The observed variable is defined by the interval
 
     y = {0 if y_latent <= cut_0
-         1 of cut_0 < y_latent <= cut_1
+         1 if cut_0 < y_latent <= cut_1
          ...
          K if cut_K < y_latent
 
@@ -75,7 +77,7 @@ class OrderedModel(GenericLikelihoodModel):
         Exogenous, explanatory variables. This should not include an intercept.
         pd.DataFrame are also accepted.
         see Notes about constant when using formulas
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
     distr : string 'probit' or 'logit', or a distribution instance
         The default is currently 'probit' which uses the normal distribution
@@ -83,6 +85,9 @@ class OrderedModel(GenericLikelihoodModel):
         assumed to have the main methods of scipy.stats distributions, mainly
         cdf, pdf and ppf. The inverse cdf, ppf, is only use to calculate
         starting values.
+    **kwds
+        Extra keyword arguments passed to the model, for example
+        ``missing``.
 
     Notes
     -----
@@ -169,7 +174,8 @@ class OrderedModel(GenericLikelihoodModel):
         self.results_class = OrderedResults
 
     def _check_inputs(self, endog, exog):
-        """Handle endog that is pandas Categorical.
+        """
+        Handle endog that is pandas Categorical
 
         Checks if self.distrib is legal and provides Pandas ordered Categorical
         support for endog.
@@ -187,14 +193,13 @@ class OrderedModel(GenericLikelihoodModel):
         endog : array_like or pandas Series
             If the original endog is a pandas ordered Categorical Series,
             then the returned endog are the ``codes``, i.e. integer
-            representation of ordere categorical variable
+            representation of ordered categorical variable
         labels : None or list
             If original endog is pandas ordered Categorical Series, then the
             categories are returned. Otherwise ``labels`` is None.
         is_pandas : bool
             This is True if original endog is a pandas ordered Categorical
             Series and False otherwise.
-
         """
 
         if not isinstance(self.distr, stats.rv_continuous):
@@ -227,6 +232,17 @@ class OrderedModel(GenericLikelihoodModel):
         return endog, labels, is_pandas
 
     def _initialize_labels(self, labels, k_levels=None):
+        """
+        Set up category labels, level count, and threshold names
+
+        Parameters
+        ----------
+        labels : array_like
+            The category labels of the ordered endogenous variable.
+        k_levels : int, optional
+            The number of levels/categories. If None, it is inferred from
+            the length of `labels`.
+        """
         self.labels = labels
         if k_levels is None:
             self.k_levels = len(labels)
@@ -238,9 +254,7 @@ class OrderedModel(GenericLikelihoodModel):
         else:  # no exog in model
             self.nobs, self.k_vars = self.endog.shape[0], 0
 
-        threshold_names = [
-            str(x) + "/" + str(y) for x, y in zip(labels[:-1], labels[1:])
-        ]
+        threshold_names = [str(x) + "/" + str(y) for x, y in pairwise(labels)]
 
         # from GenericLikelihoodModel.fit
         if self.exog is not None:
@@ -285,7 +299,8 @@ class OrderedModel(GenericLikelihoodModel):
     from_formula.__func__.__doc__ = Model.from_formula.__doc__
 
     def cdf(self, x):
-        """Cdf evaluated at x.
+        """
+        Cdf evaluated at x
 
         Parameters
         ----------
@@ -295,13 +310,15 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        Value of the cumulative distribution function of the underlying latent
-        variable evaluated at x.
+        ndarray
+            Value of the cumulative distribution function of the underlying
+            latent variable evaluated at x.
         """
         return self.distr.cdf(x)
 
     def pdf(self, x):
-        """Pdf evaluated at x
+        """
+        Pdf evaluated at x
 
         Parameters
         ----------
@@ -311,13 +328,15 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        Value of the probability density function of the underlying latent
-        variable evaluated at x.
+        ndarray
+            Value of the probability density function of the underlying
+            latent variable evaluated at x.
         """
         return self.distr.pdf(x)
 
     def prob(self, low, upp):
-        """Interval probability.
+        """
+        Interval probability
 
         Probability that value is in interval (low, upp], computed as
 
@@ -326,24 +345,24 @@ class OrderedModel(GenericLikelihoodModel):
         Parameters
         ----------
         low : array_like
-            lower bound for interval
+            Lower bound for interval
         upp : array_like
-            upper bound for interval
+            Upper bound for interval
 
         Returns
         -------
         float or ndarray
             Probability that value falls in interval (low, upp]
-
         """
         return np.maximum(self.cdf(upp) - self.cdf(low), 0)
 
     def transform_threshold_params(self, params):
-        """transformation of the parameters in the optimization
+        """
+        Transformation of the parameters in the optimization
 
         Parameters
         ----------
-        params : nd_array
+        params : ndarray
             Contains (exog_coef, transformed_thresholds) where exog_coef are
             the coefficient for the explanatory variables in the linear term,
             transformed threshold or cutoff points. The first, lowest threshold
@@ -352,9 +371,8 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        thresh : nd_array
+        thresh : ndarray
             Thresh are the thresholds or cutoff constants for the intervals.
-
         """
         th_params = params[-(self.k_levels - 1) :]
         thresh = np.concatenate((th_params[:1], np.exp(th_params[1:]))).cumsum()
@@ -362,7 +380,8 @@ class OrderedModel(GenericLikelihoodModel):
         return thresh
 
     def transform_reverse_threshold_params(self, params):
-        """obtain transformed thresholds from original thresholds or cutoffs
+        """
+        Obtain transformed thresholds from original thresholds or cutoffs
 
         Parameters
         ----------
@@ -372,19 +391,18 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        thresh_params : ndarrray
+        thresh_params : ndarray
             Transformed threshold parameter.
             The first, lowest threshold is unchanged, all other thresholds are
             in terms of exponentiated increments.
             Transformed parameters can be any real number without restrictions.
-
         """
         thresh_params = np.concatenate((params[:1], np.log(np.diff(params[:-1]))))
         return thresh_params
 
     def predict(self, params, exog=None, offset=None, which="prob"):
         """
-        Predicted probabilities for each level of the ordinal endog.
+        Predicted probabilities for each level of the ordinal endog
 
         Parameters
         ----------
@@ -397,14 +415,14 @@ class OrderedModel(GenericLikelihoodModel):
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
-        which : {"prob", "linpred", "cumprob"}
+        which : {"prob", "linpred", "cum", "cumprob"}
             Determines which statistic is predicted.
 
             - prob : predicted probabilities to be in each choice. 2-dim.
-            - linear : 1-dim linear prediction of the latent variable
+            - linpred : 1-dim linear prediction of the latent variable
               ``x b + offset``
-            - cumprob : predicted cumulative probability to be in choice k or
-              lower
+            - cum or cumprob : predicted cumulative probability to be in
+              choice k or lower
 
         Returns
         -------
@@ -412,7 +430,7 @@ class OrderedModel(GenericLikelihoodModel):
             If which is "prob", then 2-dim predicted probabilities with
             observations in rows and one column for each category or level of
             the categorical dependent variable.
-            If which is "cumprob", then "prob" ar cumulatively added to get the
+            If which is "cumprob", then "prob" are cumulatively added to get the
             cdf at k, i.e. probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is
@@ -437,14 +455,15 @@ class OrderedModel(GenericLikelihoodModel):
             raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
-        """Linear prediction of latent variable `x b + offset`.
+        """
+        Linear prediction of latent variable `x b + offset`
 
         Parameters
         ----------
         params : ndarray
             Parameters for the model, (exog_coef, transformed_thresholds)
         exog : array_like, optional
-            Design / exogenous data. Is exog is None, model exog is used.
+            Design / exogenous data. If exog is None, model exog is used.
         offset : array_like, optional
             Offset is added to the linear prediction with coefficient
             equal to 1. If offset is not provided and exog
@@ -457,7 +476,6 @@ class OrderedModel(GenericLikelihoodModel):
             1-dim linear prediction given by exog times linear params plus
             offset. This is the prediction for the underlying latent variable.
             If exog and offset are None, then the predicted values are zero.
-
         """
         if exog is None:
             exog = self.exog
@@ -480,7 +498,8 @@ class OrderedModel(GenericLikelihoodModel):
         return linpred
 
     def _bounds(self, params):
-        """Integration bounds for the observation specific interval.
+        """
+        Integration bounds for the observation specific interval
 
         This defines the lower and upper bounds for the intervals of the
         choices of all observations.
@@ -499,15 +518,14 @@ class OrderedModel(GenericLikelihoodModel):
         params : ndarray
             Parameters for the model, (exog_coef, transformed_thresholds)
 
-        Return
-        ------
+        Returns
+        -------
         low : ndarray
             Lower bounds for choice intervals of each observation,
             1-dim with length nobs
         upp : ndarray
             Upper bounds for choice intervals of each observation,
             1-dim with length nobs.
-
         """
         thresh = self.transform_threshold_params(params)
 
@@ -525,7 +543,7 @@ class OrderedModel(GenericLikelihoodModel):
 
     def loglikeobs(self, params):
         """
-        Log-likelihood of OrderdModel for all observations.
+        Log-likelihood of OrderedModel for all observations
 
         Parameters
         ----------
@@ -543,11 +561,23 @@ class OrderedModel(GenericLikelihoodModel):
         return np.log(prob + 1e-20)
 
     def score_obs_(self, params):
-        """score, first derivative of loglike for each observations
+        """
+        Score, first derivative of loglike for each observation
 
         This currently only implements the derivative with respect to the
         exog parameters, but not with respect to threshold parameters.
 
+        Parameters
+        ----------
+        params : ndarray
+            Parameters for the model, (exog_coef, transformed_thresholds)
+
+        Returns
+        -------
+        ndarray
+            The score for each observation with respect to the exog
+            parameters and the transformed threshold parameters, 2-dim
+            with shape (nobs, k_vars + k_levels - 1).
         """
         low, upp = self._bounds(params)
 
@@ -575,11 +605,17 @@ class OrderedModel(GenericLikelihoodModel):
 
     @property
     def start_params(self):
-        """Start parameters for the optimization corresponding to null model.
+        """
+        Start parameters for the optimization corresponding to null model
 
         The threshold are computed from the observed frequencies and
         transformed to the exponential increments parameterization.
         The parameters for explanatory variables are set to zero.
+
+        Returns
+        -------
+        ndarray
+            Starting values for the parameters, (exog_coef, threshold).
         """
         # start params based on model without exog
         freq = np.bincount(self.endog) / len(self.endog)
@@ -623,17 +659,22 @@ class OrderedModel(GenericLikelihoodModel):
 
 
 class OrderedResults(GenericLikelihoodModelResults):
-    """Results class for OrderedModel
+    """
+    Results class for OrderedModel
 
     This class inherits from GenericLikelihoodModelResults and not all
     inherited methods might be appropriate in this case.
     """
 
     def pred_table(self):
-        """prediction table
+        """
+        Prediction table
 
-        returns pandas DataFrame
-
+        Returns
+        -------
+        DataFrame
+            Table with observed and predicted counts, cross-tabulated by
+            category, with margins.
         """
         # todo: add category labels
         categories = np.arange(self.model.k_levels)
@@ -681,14 +722,15 @@ class OrderedResults(GenericLikelihoodModelResults):
 
     @cache_readonly
     def resid_prob(self):
-        """probability residual
+        """
+        Probability residual
 
         Probability-scale residual is ``P(Y < y) − P(Y > y)`` where `Y` is the
         observed choice and ``y`` is a random variable corresponding to the
         predicted distribution.
 
-        References
-        ----------
+        Calculations based on work by:
+
         Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
         continuous, discrete, and censored data.
         The Canadian Journal of Statistics. 44:463-476.

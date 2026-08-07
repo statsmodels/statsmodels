@@ -1,6 +1,7 @@
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+import warnings
 
-from numpy.testing import assert_, assert_almost_equal
+import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pytest
 
 from statsmodels.base.optimizer import (
@@ -95,11 +96,7 @@ def test_full_output_false(method):
             disp=0,
         )
     assert_(retvals is None)
-    if method == "powell" and SP_LT_15:
-        # Fixed in SP 1.5
-        assert_(xopt.shape == () and xopt.size == 1)
-    else:
-        assert_(len(xopt) == 1)
+    assert_(len(xopt) == 1)
 
 
 @pytest.mark.parametrize("method", fit_funcs.keys())
@@ -131,12 +128,7 @@ def test_full_output(method):
 
     assert_(retvals is not None)
     assert_("converged" in retvals)
-
-    if method == "powell" and SP_LT_15:
-        # Fixed in SP 1.5
-        assert_(xopt.shape == () and xopt.size == 1)
-    else:
-        assert_(len(xopt) == 1)
+    assert_(len(xopt) == 1)
 
 
 def test_minimize_scipy_slsqp():
@@ -158,7 +150,6 @@ def test_minimize_scipy_slsqp():
     assert_almost_equal(xopt, [1.4, 1.7], 4)
 
 
-@pytest.mark.skipif(SP_LT_15, reason="Powell bounds support added in SP 1.5")
 def test_minimize_scipy_powell():
     func = fit_funcs["minimize"]
     xopt, _ = func(
@@ -177,7 +168,6 @@ def test_minimize_scipy_powell():
     assert_almost_equal(xopt, [2, 3.5], 4)
 
 
-@pytest.mark.skipif(SP_LT_17, reason="NM bounds support added in SP 1.7")
 def test_minimize_scipy_nm():
     func = fit_funcs["minimize"]
     xopt, _ = func(
@@ -194,6 +184,30 @@ def test_minimize_scipy_nm():
         disp=0,
     )
     assert_almost_equal(xopt, [2, 3.5], 4)
+
+
+@pytest.mark.parametrize("min_method", ["L-BFGS-B", "TNC"])
+def test_minimize_no_hess_method(min_method):
+    # GH#9140: L-BFGS-B and TNC do not accept a Hessian, so `hess` must not
+    # be forwarded to scipy.optimize.minimize (warning or error depending
+    # on the scipy version).
+    from statsmodels.discrete.discrete_model import Poisson
+
+    exog = np.column_stack((np.ones(10), np.arange(10) / 10.0))
+    endog = np.array([1, 2, 1, 3, 2, 4, 3, 5, 4, 6])
+    res_default = Poisson(endog, exog).fit(disp=0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        res = Poisson(endog, exog).fit(
+            method="minimize", min_method=min_method, disp=0
+        )
+    hess_warnings = [
+        wrn for wrn in w if "hess" in str(wrn.message).lower()
+    ]
+    assert hess_warnings == []
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, res_default.params, rtol=1e-4)
 
 
 def test_lbfgs_disp_false_no_output(capsys):

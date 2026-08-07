@@ -75,21 +75,21 @@ TODO: may want to add a parameter allowing specification of the variance
 Author: Chad Fulton
 License: BSD-3
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.statespace.exponential_smoothing import ExponentialSmoothing
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-results_path = os.path.join(current_path, "results")
-params_path = os.path.join(results_path, "exponential_smoothing_params.csv")
-predict_path = os.path.join(results_path, "exponential_smoothing_predict.csv")
-states_path = os.path.join(results_path, "exponential_smoothing_states.csv")
+current_path = Path(__file__).resolve().parent
+results_path = Path(current_path).joinpath("results")
+params_path = Path(results_path).joinpath("exponential_smoothing_params.csv")
+predict_path = Path(results_path).joinpath("exponential_smoothing_predict.csv")
+states_path = Path(results_path).joinpath("exponential_smoothing_states.csv")
 results_params = pd.read_csv(params_path, index_col=[0])
 results_predict = pd.read_csv(predict_path, index_col=[0])
 results_states = pd.read_csv(states_path, index_col=[0])
@@ -173,11 +173,11 @@ class CheckExponentialSmoothing:
         cls.name = name
         cls.res = res
         cls.nobs = res.nobs
-        cls.nforecast = len(results_predict["%s_mean" % cls.name]) - cls.nobs
+        cls.nforecast = len(results_predict[f"{cls.name}_mean"]) - cls.nobs
         cls.forecast = res.get_forecast(cls.nforecast)
 
     def test_fitted(self):
-        predicted = results_predict["%s_mean" % self.name]
+        predicted = results_predict[f"{self.name}_mean"]
         assert_allclose(self.res.fittedvalues, predicted.iloc[: self.nobs])
 
     def test_output(self):
@@ -199,14 +199,14 @@ class CheckExponentialSmoothing:
 
     def test_forecasts(self):
         # Forecast mean
-        predicted = results_predict["%s_mean" % self.name]
+        predicted = results_predict[f"{self.name}_mean"]
         assert_allclose(self.forecast.predicted_mean, predicted.iloc[self.nobs :])
 
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        lower = results_predict["%s_lower" % self.name]
-        upper = results_predict["%s_upper" % self.name]
+        lower = results_predict[f"{self.name}_lower"]
+        upper = results_predict[f"{self.name}_upper"]
 
         assert_allclose(ci_95["lower y"], lower.iloc[self.nobs :])
         assert_allclose(ci_95["upper y"], upper.iloc[self.nobs :])
@@ -289,6 +289,7 @@ class TestSESETSEstimated(CheckExponentialSmoothing):
 
         super().setup_class("oil_ets", res)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
@@ -374,6 +375,7 @@ class TestHoltDampedETSEstimated(CheckExponentialSmoothing):
 
         super().setup_class("air_ets", res)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
@@ -456,6 +458,7 @@ class TestHoltWintersDampedETSEstimated(CheckExponentialSmoothing):
 
         super().setup_class("aust_ets2", res)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
@@ -500,6 +503,7 @@ class TestHoltWintersNoTrendETSEstimated(CheckExponentialSmoothing):
         se = (sigma2 * (1 + np.cumsum(c**2))) ** 0.5
         assert_allclose(self.forecast.se_mean, se)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_mle_estimates(self):
         # Test that our fitted coefficients are at least as good as those from
         # `ets`
@@ -525,7 +529,7 @@ class CheckKnownInitialization:
         cls.initial_seasonal = None
         if cls.mod.seasonal:
             cls.initial_seasonal = [cls.res.params["initial_seasonal"]] + [
-                cls.res.params["initial_seasonal.L%d" % i]
+                cls.res.params[f"initial_seasonal.L{i:d}"]
                 for i in range(1, cls.mod.seasonal_periods - 1)
             ]
 
@@ -542,6 +546,7 @@ class CheckKnownInitialization:
             initial_seasonal=cls.initial_seasonal,
         )
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_given_params(self):
         # Test fixed initialization with given parameters
         # And filter with the given other parameters
@@ -552,6 +557,7 @@ class CheckKnownInitialization:
         assert_allclose(known_res.predicted_state_cov, self.res.predicted_state_cov)
         assert_allclose(known_res.filtered_state, self.res.filtered_state)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_estimated_params(self):
         # Now fit the original model with a fixed initial_level and make sure
         # that it gives the same result as the fitted second model
@@ -812,6 +818,7 @@ class CheckConcentratedInitialization:
             drop += ["smoothing_seasonal"]
         cls.params.drop(drop, inplace=True)
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_given_params(self):
         # First, fix the other parameters at a particular value
         # (for the non-concentrated model, we need to fit the inital values
@@ -824,6 +831,7 @@ class CheckConcentratedInitialization:
             conc_res.initial_state, res.initial_state, atol=self.atol, rtol=self.rtol
         )
 
+    @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_estimated_params(self):
         # Alternatively, estimate the remaining parameters
         res = self.mod.fit(self.start_params, disp=0, maxiter=100)
@@ -904,8 +912,8 @@ class TestMultiIndex(CheckExponentialSmoothing):
     def test_conf_int(self):
         # Forecast confidence intervals
         ci_95 = self.forecast.conf_int(alpha=0.05)
-        lower = results_predict["%s_lower" % self.name]
-        upper = results_predict["%s_upper" % self.name]
+        lower = results_predict[f"{self.name}_lower"]
+        upper = results_predict[f"{self.name}_upper"]
         assert_allclose(ci_95["lower ('oil', 'data')"], lower.iloc[self.nobs :])
         assert_allclose(ci_95["upper ('oil', 'data')"], upper.iloc[self.nobs :])
 
@@ -913,7 +921,7 @@ class TestMultiIndex(CheckExponentialSmoothing):
 def test_invalid():
     # Tests for invalid model specifications that raise ValueErrors
     with pytest.raises(ValueError, match=r"Cannot have a seasonal period of 1."):
-        mod = ExponentialSmoothing(aust, seasonal=1)
+        ExponentialSmoothing(aust, seasonal=1)
 
     with pytest.raises(
         TypeError,
@@ -922,10 +930,10 @@ def test_invalid():
             r" \(int or np.integer, but not bool or timedelta64\) or None"
         ),
     ):
-        mod = ExponentialSmoothing(aust, seasonal=True)
+        ExponentialSmoothing(aust, seasonal=True)
 
     with pytest.raises(ValueError, match=r'Invalid initialization method "invalid".'):
-        mod = ExponentialSmoothing(aust, initialization_method="invalid")
+        ExponentialSmoothing(aust, initialization_method="invalid")
 
     with pytest.raises(
         ValueError,
@@ -935,7 +943,7 @@ def test_invalid():
             r' "known".'
         ),
     ):
-        mod = ExponentialSmoothing(aust, initialization_method="known")
+        ExponentialSmoothing(aust, initialization_method="known")
 
     with pytest.raises(
         ValueError,
@@ -945,7 +953,7 @@ def test_invalid():
             r' initialization method is set to "known".'
         ),
     ):
-        mod = ExponentialSmoothing(
+        ExponentialSmoothing(
             aust, trend=True, initialization_method="known", initial_level=0
         )
 
@@ -957,12 +965,12 @@ def test_invalid():
             r' initialization method is set to "known".'
         ),
     ):
-        mod = ExponentialSmoothing(
+        ExponentialSmoothing(
             aust, seasonal=4, initialization_method="known", initial_level=0
         )
 
     for arg in ["initial_level", "initial_trend", "initial_seasonal"]:
-        msg = 'Cannot give `%s` argument when initialization is "estimated"' % arg
+        msg = f'Cannot give `{arg}` argument when initialization is "estimated"'
         with pytest.raises(ValueError, match=msg):
             mod = ExponentialSmoothing(aust, **{arg: 0})
 
@@ -974,7 +982,7 @@ def test_invalid():
             r" periods."
         ),
     ):
-        mod = ExponentialSmoothing(
+        ExponentialSmoothing(
             aust,
             seasonal=4,
             initialization_method="known",
@@ -998,3 +1006,13 @@ def test_parameterless_model():
         res = ses.fit()
     assert np.isnan(res.bse).all()
     assert res.fixed_params == ["smoothing_level"]
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = ExponentialSmoothing(oildata, initialization_method="simple")
+    res = mod.filter([results_params["oil_fpp1"]["alpha"]])
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

@@ -1,5 +1,5 @@
 """
-Multivariate Conditional and Unconditional Kernel Density Estimation
+Multivariate Conditional and Unconditional Kernel Regression
 with Mixed Data Types
 
 References
@@ -28,6 +28,8 @@ References
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 # TODO: make default behavior efficient=True above a certain n_obs
 import copy
 import warnings
@@ -53,7 +55,7 @@ __all__ = ["KernelCensoredReg", "KernelReg"]
 
 class KernelReg(GenericKDE):
     """
-    Nonparametric kernel regression class.
+    Nonparametric kernel regression class
 
     Calculates the conditional mean ``E[y|X]`` where ``y = g(X) + e``.
     Note that the "local constant" type of regression provided here is also
@@ -93,7 +95,7 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    seed : {int, np.random.Generator, np.random.RandomState}, optional
+    rng : {int, np.random.Generator, np.random.RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -108,6 +110,7 @@ class KernelReg(GenericKDE):
         The bandwidth parameters.
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         endog,
@@ -120,7 +123,7 @@ class KernelReg(GenericKDE):
         ukertype="aitchisonaitken",
         defaults=None,
         *,
-        seed=None,
+        rng=None,
     ):
         self.var_type = var_type
         self.data_type = var_type
@@ -146,8 +149,9 @@ class KernelReg(GenericKDE):
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
-        self.seed = seed
-        self._generator = initialize_generator(seed)
+        self.seed = rng
+        self.rng = rng
+        self._generator = initialize_generator(rng)
         if not isinstance(bw, str):
             bw = np.asarray(bw)
             if len(bw) != self.k_vars:
@@ -182,7 +186,7 @@ class KernelReg(GenericKDE):
 
     def _est_loc_linear(self, bw, endog, exog, data_predict):
         """
-        Local linear estimator of g(x) in the regression ``y = g(x) + e``.
+        Local linear estimator of g(x) in the regression ``y = g(x) + e``
 
         Parameters
         ----------
@@ -193,12 +197,14 @@ class KernelReg(GenericKDE):
         exog : 1D or 2D array_like
             The independent variable(s).
         data_predict : 1D array_like of length K, where K is the number of variables.
-            The point at which the density is estimated.
+            The point at which the conditional mean is estimated.
 
         Returns
         -------
-        D_x : array_like
+        mean : ndarray
             The value of the conditional mean at `data_predict`.
+        mfx : ndarray
+            The marginal effects.
 
         Notes
         -----
@@ -258,7 +264,7 @@ class KernelReg(GenericKDE):
         exog : 1D or 2D array_like
             The independent variable(s).
         data_predict : 1D or 2D array_like
-            The point(s) at which the density is estimated.
+            The point(s) at which the conditional mean is estimated.
 
         Returns
         -------
@@ -303,19 +309,19 @@ class KernelReg(GenericKDE):
 
     def aic_hurvich(self, bw, func=None):
         """
-        Computes the AIC Hurvich criteria for the estimation of the bandwidth.
+        Computes the AIC Hurvich criteria for the estimation of the bandwidth
 
         Parameters
         ----------
         bw : str or array_like
             See the ``bw`` parameter of `KernelReg` for details.
+        func : None, optional
+            Unused here, needed in signature because it's used in `cv_loo`.
 
         Returns
         -------
         aic : ndarray
             The AIC Hurvich criteria, one element for each variable.
-        func : None
-            Unused here, needed in signature because it's used in `cv_loo`.
 
         References
         ----------
@@ -358,7 +364,7 @@ class KernelReg(GenericKDE):
 
     def cv_loo(self, bw, func):
         r"""
-        The cross-validation function with leave-one-out estimator.
+        The cross-validation function with leave-one-out estimator
 
         Parameters
         ----------
@@ -398,7 +404,12 @@ class KernelReg(GenericKDE):
 
     def r_squared(self):
         r"""
-        Returns the R-Squared for the nonparametric regression.
+        Returns the R-Squared for the nonparametric regression
+
+        Returns
+        -------
+        r2 : float
+            The R-Squared statistic computed from the fitted mean.
 
         Notes
         -----
@@ -421,7 +432,7 @@ class KernelReg(GenericKDE):
 
     def fit(self, data_predict=None):
         """
-        Returns the mean and marginal effects at the `data_predict` points.
+        Returns the mean and marginal effects at the `data_predict` points
 
         Parameters
         ----------
@@ -457,12 +468,22 @@ class KernelReg(GenericKDE):
 
     def sig_test(self, var_pos, nboot=50, nested_res=25, pivot=False):
         """
-        Significance test for the variables in the regression.
+        Significance test for the variables in the regression
 
         Parameters
         ----------
         var_pos : sequence
             The position of the variable in exog to be tested.
+        nboot : int, optional
+            Number of bootstrap samples used to determine the distribution
+            of the test statistic in a finite sample. Default is 50.
+        nested_res : int, optional
+            Number of nested resamples used to calculate lambda when
+            `pivot` is True. Default is 25.
+        pivot : bool, optional
+            Pivot the test statistic by dividing by its standard error.
+            Significantly increases computational time, but pivot
+            statistics have more desirable properties. Default is False.
 
         Returns
         -------
@@ -471,7 +492,7 @@ class KernelReg(GenericKDE):
 
                 - `*` : at 90% confidence level
                 - `**` : at 95% confidence level
-                - `***` : at 99* confidence level
+                - `***` : at 99% confidence level
                 - "Not Significant" : if not significant
         """
         var_pos = np.asarray(var_pos)
@@ -480,14 +501,14 @@ class KernelReg(GenericKDE):
             if np.any(ix_ord[var_pos]) or np.any(ix_unord[var_pos]):
                 raise ValueError("Discrete variable in hypothesis. Must be continuous")
 
-            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, seed=self.seed)
+            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, rng=self.rng)
         else:
-            Sig = TestRegCoefD(self, var_pos, nboot, seed=self.seed)
+            Sig = TestRegCoefD(self, var_pos, nboot, rng=self.rng)
 
         return Sig.sig
 
     def __repr__(self):
-        """Provide something sane to print."""
+        """Provide something sane to print"""
         rpr = "KernelReg instance\n"
         rpr += "Number of variables: k_vars = " + str(self.k_vars) + "\n"
         rpr += "Number of samples:   N = " + str(self.nobs) + "\n"
@@ -497,16 +518,28 @@ class KernelReg(GenericKDE):
         return rpr
 
     def _get_class_vars_type(self):
-        """Helper method to be able to pass needed vars to _compute_subset."""
+        """Helper method to be able to pass needed vars to _compute_subset"""
         class_type = "KernelReg"
         class_vars = (self.var_type, self.k_vars, self.reg_type)
         return class_type, class_vars
 
     def _compute_dispersion(self, data):
         """
-        Computes the measure of dispersion.
+        Computes the measure of dispersion
 
         The minimum of the standard deviation and interquartile range / 1.349
+
+        Parameters
+        ----------
+        data : ndarray
+            The data array, with the dependent variable in the first column
+            and the independent variables in the remaining columns.
+
+        Returns
+        -------
+        ndarray
+            The minimum of the standard deviation and IQR / 1.349 for each
+            independent variable.
 
         References
         ----------
@@ -520,7 +553,7 @@ class KernelReg(GenericKDE):
 
 class KernelCensoredReg(KernelReg):
     """
-    Nonparametric censored regression.
+    Nonparametric censored regression
 
     Calculates the conditional mean ``E[y|X]`` where ``y = g(X) + e``,
     where y is left-censored.  Left censored variable Y is defined as
@@ -534,31 +567,37 @@ class KernelCensoredReg(KernelReg):
     exog : list
         The training data for the independent variable(s)
         Each element in the list is a separate variable
-    dep_type : str
-        The type of the dependent variable(s)
-        c: Continuous
-        u: Unordered (Discrete)
-        o: Ordered (Discrete)
+    var_type : str
+        The type of the variables, one character per variable:
+
+            - c: Continuous
+            - u: Unordered (Discrete)
+            - o: Ordered (Discrete)
+
     reg_type : str
         Type of regression estimator
-        lc: Local Constant Estimator
-        ll: Local Linear Estimator
-    bw : array_like
+
+            - lc: Local Constant Estimator
+            - ll: Local Linear Estimator
+
+    bw : str or array_like, optional
         Either a user-specified bandwidth or
         the method for bandwidth selection.
-        cv_ls: cross-validation least squares
-        aic: AIC Hurvich Estimator
+
+            - cv_ls: cross-validation least squares
+            - aic: AIC Hurvich Estimator
+
     ckertype : str, optional
         The kernel used for the continuous variables.
     okertype : str, optional
         The kernel used for the ordered discrete variables.
     ukertype : str, optional
         The kernel used for the unordered discrete variables.
-    censor_val : float
-        Value at which the dependent variable is censored
+    censor_val : float, optional
+        Value at which the dependent variable is censored. Default is 0.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -573,6 +612,7 @@ class KernelCensoredReg(KernelReg):
         The bandwidth parameters
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         endog,
@@ -586,7 +626,7 @@ class KernelCensoredReg(KernelReg):
         censor_val=0,
         defaults=None,
         *,
-        seed=None,
+        rng=None,
     ):
         self.var_type = var_type
         self.data_type = var_type
@@ -610,7 +650,7 @@ class KernelCensoredReg(KernelReg):
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         self.censor_val = censor_val
@@ -643,7 +683,7 @@ class KernelCensoredReg(KernelReg):
             self.W_in[i - 1, 0] = P * self.d[i - 1] / (float(self.nobs) - i + 1)
 
     def __repr__(self):
-        """Provide something sane to print."""
+        """Provide something sane to print"""
         rpr = "KernelCensoredReg instance\n"
         rpr += "Number of variables: k_vars = " + str(self.k_vars) + "\n"
         rpr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
@@ -654,7 +694,7 @@ class KernelCensoredReg(KernelReg):
 
     def _est_loc_linear(self, bw, endog, exog, data_predict, W):
         """
-        Local linear estimator of g(x) in the regression ``y = g(x) + e``.
+        Local linear estimator of g(x) in the regression ``y = g(x) + e``
 
         Parameters
         ----------
@@ -666,12 +706,17 @@ class KernelCensoredReg(KernelReg):
             The independent variable(s)
         data_predict : 1D array_like of length K, where K is
             the number of variables. The point at which
-            the density is estimated
+            the conditional mean is estimated
+        W : array_like
+            The weights used to account for the censoring, as computed by
+            `censored`.
 
         Returns
         -------
-        D_x : array_like
+        mean : array_like
             The value of the conditional mean at data_predict
+        mfx : array_like
+            The marginal effects.
 
         Notes
         -----
@@ -761,7 +806,20 @@ class KernelCensoredReg(KernelReg):
 
     def fit(self, data_predict=None):
         """
-        Returns the marginal effects at the data_predict points.
+        Returns the mean and marginal effects at the `data_predict` points
+
+        Parameters
+        ----------
+        data_predict : array_like, optional
+            Points at which to return the mean and marginal effects.  If not
+            given, ``data_predict == exog``.
+
+        Returns
+        -------
+        mean : ndarray
+            The regression result for the mean (i.e. the actual curve).
+        mfx : ndarray
+            The marginal effects, i.e. the partial derivatives of the mean.
         """
         func = self.est[self.reg_type]
         if data_predict is None:
@@ -789,7 +847,7 @@ class KernelCensoredReg(KernelReg):
 
 class TestRegCoefC:
     """
-    Significance test for continuous variables in a nonparametric regression.
+    Significance test for continuous variables in a nonparametric regression
 
     The null hypothesis is ``dE(Y|X)/dX_not_i = 0``, the alternative hypothesis
     is ``dE(Y|X)/dX_not_i != 0``.
@@ -803,18 +861,18 @@ class TestRegCoefC:
         index of position of the continuous variables to be tested
         for significance. E.g. (1,3,5) jointly tests variables at
         position 1,3 and 5 for significance.
-    nboot : int
+    nboot : int, optional
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
-    nested_res : int
-        Number of nested resamples used to calculate lambda.
+    nested_res : int, optional
+        Number of nested resamples used to calculate lambda. Default is 400.
         Must enable the pivot option
-    pivot : bool
+    pivot : bool, optional
         Pivot the test statistic by dividing by its standard error
         Significantly increases computational time. But pivot statistics
         have more desirable properties
-        (See references)
-    seed : {int, Generator, RandomState}, optional
+        (See references). Default is False.
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -849,8 +907,9 @@ class TestRegCoefC:
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
+    @deprecate_kwarg("seed", "rng")
     def __init__(
-        self, model, test_vars, nboot=400, nested_res=400, pivot=False, seed=None
+        self, model, test_vars, nboot=400, nested_res=400, pivot=False, rng=None
     ):
         self.nboot = nboot
         self.nres = nested_res
@@ -864,7 +923,7 @@ class TestRegCoefC:
         self.gx = model.est[model.reg_type]
         self.test_vars = test_vars
         self.pivot = pivot
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         self.run()
 
     def run(self):
@@ -873,7 +932,9 @@ class TestRegCoefC:
 
     def _compute_test_stat(self, Y, X):
         """
-        Computes the test statistic.  See p.371 in [8].
+        Computes the test statistic
+
+        See p.371 in [8].
         """
         lam = self._compute_lambda(Y, X)
         t = lam
@@ -929,7 +990,7 @@ class TestRegCoefC:
 
     def _compute_sig(self):
         """
-        Computes the significance value for the variable(s) tested.
+        Computes the significance value for the variable(s) tested
 
         The empirical distribution of the test statistic is obtained through
         bootstrapping the sample.  The null hypothesis is rejected if the test
@@ -992,7 +1053,7 @@ class TestRegCoefC:
 class TestRegCoefD(TestRegCoefC):
     """
     Significance test for the categorical variables in a nonparametric
-    regression.
+    regression
 
     Parameters
     ----------
@@ -1003,9 +1064,17 @@ class TestRegCoefD(TestRegCoefC):
         index of position of the discrete variable to be tested
         for significance. E.g. (3) tests variable at
         position 3 for significance.
-    nboot : int
+    nboot : int, optional
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
+    rng : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------
@@ -1040,7 +1109,7 @@ class TestRegCoefD(TestRegCoefC):
             self.model.reg_type,
             self.bw,
             defaults=EstimatorSettings(efficient=False),
-            seed=self._generator,
+            rng=self._generator,
         )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0

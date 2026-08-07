@@ -273,6 +273,7 @@ class TestKDEUnivariate(KDETestBase):
         kde = nparam.KDEUnivariate(self.noise)
         weights = self.weights_orig.copy()
         kde.fit(weights=weights, fft=False, bw="scott")
+        npt.assert_allclose(weights, self.weights_orig)
 
         grid = kde.support
         testx = np.array([grid[10 * i] for i in range(6)])
@@ -411,6 +412,7 @@ class TestKDEMultivariate(KDETestBase):
         R_result = [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 400
@@ -431,6 +433,7 @@ class TestKDEMultivariate(KDETestBase):
         bw = np.array([0.3404, 0.1666])
         npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 400
@@ -452,6 +455,7 @@ class TestKDEMultivariate(KDETestBase):
         bw = np.array([0.4471, 0.2861])
         npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_efficient_notrandom(self):
         nobs = 400
@@ -628,6 +632,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         expected = [0.83378885, 0.97684477, 0.90655143, 0.79393161, 0.43629083]
         npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvml_efficient(self):
         nobs = 500
@@ -647,7 +652,7 @@ class TestKDEMultivariateConditional(KDETestBase):
             indep_type="c",
             bw="cv_ml",
             defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
-            seed=12345,
+            rng=12345,
         )
 
         # dens = nparam.KDEMultivariateConditional(endog=[Y], exog=[C1],

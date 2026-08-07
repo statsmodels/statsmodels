@@ -937,6 +937,7 @@ def test_seasonal_decompose_multiple():
     assert_allclose(res.resid[:, 0], res.resid[:, 1])
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("model", ["additive", "multiplicative"])
 @pytest.mark.parametrize("freq", [4, 12])

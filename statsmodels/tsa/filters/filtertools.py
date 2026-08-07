@@ -1,4 +1,5 @@
-"""Linear Filters for time series analysis and testing
+"""
+Linear Filters for time series analysis and testing
 
 
 TODO:
@@ -11,18 +12,39 @@ Author: Josef-pktd
 # not original copied from various experimental scripts
 # version control history is there
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple
+
 import numpy as np
 from scipy import signal
 import scipy.fftpack as fft
-
-try:
-    from scipy.signal._signaltools import _centered as trim_centered
-except ImportError:
-    # Must be using SciPy <1.8.0 where this function was moved (it's not a
-    # public SciPy function, but we need it here)
-    from scipy.signal.signaltools import _centered as trim_centered
+from scipy.signal._signaltools import _centered as trim_centered
 
 from statsmodels.tools.validation import PandasWrapper, array_like
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import ArrayLike1D, ArrayLike2D
+
+
+class CycleTrendResult(NamedTuple):
+    """
+    Result of :func:`cffilter`, :func:`hamilton_filter`, and
+    :func:`hpfilter`: a cycle/trend decomposition.
+
+    Parameters
+    ----------
+    cycle : array_like
+        The estimated cyclical component. See the docstring of the
+        function that produced this result for the precise definition
+        (e.g. :func:`hamilton_filter` leaves the first ``p + h - 1``
+        values as ``NaN``).
+    trend : array_like
+        The estimated trend component, matching ``cycle`` in shape.
+    """
+
+    cycle: ArrayLike1D | ArrayLike2D
+    trend: ArrayLike1D | ArrayLike2D
 
 
 def _pad_nans(x, head=None, tail=None):
@@ -60,8 +82,24 @@ def _pad_nans(x, head=None, tail=None):
 # previous location in sandbox.tsa.try_var_convolve
 def fftconvolveinv(in1, in2, mode="full"):
     """
-    Convolve two N-dimensional arrays using FFT. See convolve.
+    Convolve two N-dimensional arrays using FFT. See convolve
 
+    Parameters
+    ----------
+    in1 : array_like
+        First input array.
+    in2 : array_like
+        Second input array, used as the inverse filter.
+    mode : str, optional
+        Convolution mode, one of 'full', 'same', or 'valid'.
+
+    Returns
+    -------
+    ndarray
+        The convolved array.
+
+    Notes
+    -----
     copied from scipy.signal.signaltools, but here used to try out inverse
     filter. does not work or I cannot get it to work
 
@@ -104,9 +142,27 @@ def fftconvolveinv(in1, in2, mode="full"):
 # code duplication with fftconvolveinv
 def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """
-    Convolve two N-dimensional arrays using FFT. See convolve.
+    Convolve two N-dimensional arrays using FFT. See convolve
 
-    For use with arma  (old version: in1=num in2=den in3=data
+    Parameters
+    ----------
+    in1 : array_like
+        First input array.
+    in2 : array_like, optional
+        Second input array. At least one of `in2` and `in3` must be given.
+    in3 : array_like, optional
+        Third input array. At least one of `in2` and `in3` must be given.
+    mode : str, optional
+        Convolution mode, one of 'full', 'same', or 'valid'.
+
+    Returns
+    -------
+    ndarray
+        The convolved array.
+
+    Notes
+    -----
+    For use with arma  (old version: in1=num in2=den in3=data)
 
     * better for consistency with other functions in1=data in2=num in3=den
     * note in2 and in3 need to have consistent dimension/shape
@@ -177,7 +233,7 @@ def recursive_filter(x, ar_coeff, init=None):
         Time-series data. Should be 1d or n x 1.
     ar_coeff : array_like
         AR coefficients in reverse time order. See Notes for details.
-    init : array_like
+    init : array_like, optional
         Initial values of the time-series prior to the first value of y.
         The default is zero.
 
@@ -194,7 +250,7 @@ def recursive_filter(x, ar_coeff, init=None):
         y[n] = ar_coeff[0] * y[n-1] + ...
                 + ar_coeff[n_coeff - 1] * y[n - n_coeff] + x[n]
 
-    where n_coeff = len(n_coeff).
+    where n_coeff = len(ar_coeff).
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x")
@@ -321,7 +377,7 @@ def miso_lfilter(ar, ma, x, useic=False):
         ma(L)x_t.
     x : array_like
         The 2-d input data series, time in rows, variables in columns.
-    useic : bool
+    useic : bool, optional
         Flag indicating whether to use initial conditions.
 
     Returns
@@ -338,7 +394,7 @@ def miso_lfilter(ar, ma, x, useic=False):
     floating point numbers
     does not cut off invalid starting and final values
 
-    miso_lfilter find array y such that:
+    miso_lfilter finds array y such that:
 
             ar(L)y_t = ma(L)x_t
 

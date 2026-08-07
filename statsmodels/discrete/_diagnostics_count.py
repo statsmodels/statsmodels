@@ -15,20 +15,22 @@ from statsmodels.tools.sm_exceptions import InvalidTestWarning, SingularMatrixWa
 
 
 def _combine_bins(edge_index, x):
-    """group columns into bins using sum
+    """
+    Group columns into bins using sums
 
     This is mainly a helper function for combining probabilities into cells.
-    It similar to `np.add.reduceat(x, edge_index, axis=-1)` except for the
+    It is similar to `np.add.reduceat(x, edge_index, axis=-1)` except for the
     treatment of the last index and last cell.
 
     Parameters
     ----------
     edge_index : array_like
-         This defines the (zero-based) indices for the columns that are be
+         This defines the (zero-based) indices for the columns that are to be
          combined. Each index in `edge_index` except the last is the starting
-         index for a bin. The largest index in a bin is the next edge_index-1.
+         index for a bin. The largest index in a bin is the next
+         ``edge_index - 1``.
     x : 1d or 2d array
-        array for which columns are combined. If x is 1-dimensional that it
+        Array for which columns are combined. If x is 1-dimensional, then it
         will be treated as a 2-d row vector.
 
     Returns
@@ -40,10 +42,10 @@ def _combine_bins(edge_index, x):
 
     Examples
     --------
-    >>> dia.combine_bins([0,1,5], np.arange(4))
+    >>> dia._combine_bins([0,1,5], np.arange(4))
     (array([0, 6]), array([1, 4]))
 
-    this aggregates to two bins with the sum of 1 and 4 elements
+    This aggregates to two bins with the sum of 1 and 4 elements.
     >>> np.arange(4)[0].sum()
     0
     >>> np.arange(4)[1:5].sum()
@@ -52,7 +54,7 @@ def _combine_bins(edge_index, x):
     If the rightmost index is smaller than len(x)+1, then the remaining
     columns will not be included.
 
-    >>> dia.combine_bins([0,1,3], np.arange(4))
+    >>> dia._combine_bins([0,1,3], np.arange(4))
     (array([0, 3]), array([1, 2]))
     """
     x = np.asarray(x)
@@ -75,32 +77,32 @@ def _combine_bins(edge_index, x):
 
 
 def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None):
-    """diagnostic plots for comparing two lists of discrete probabilities
+    """
+    Diagnostic plots for comparing two lists of discrete probabilities
 
     Parameters
     ----------
-    freq, probs_predicted : nd_arrays
-        two arrays of probabilities, this can be any probabilities for
+    freq, probs_predicted : ndarrays
+        Two arrays of probabilities, this can be any probabilities for
         the same events, default is designed for comparing predicted
-        and observed probabilities
+        and observed probabilities.
     label : str or tuple
         If string, then it will be used as the label for probs_predicted and
         "freq" is used for the other probabilities.
-        If label is a tuple of strings, then the first is they are used as
-        label for both probabilities
-
+        If label is a tuple of strings, then its two elements are used as
+        labels for both probabilities.
     upp_xlim : None or int
         If it is not None, then the xlim of the first two plots are set to
-        (0, upp_xlim), otherwise the matplotlib default is used
+        (0, upp_xlim), otherwise the matplotlib default is used.
     fig : None or matplotlib figure instance
         If fig is provided, then the axes will be added to it in a (3,1)
-        subplots, otherwise a matplotlib figure instance is created
+        subplot grid, otherwise a matplotlib figure instance is created.
 
     Returns
     -------
     Figure
-        The figure contains 3 subplot with probabilities, cumulative
-        probabilities and a PP-plot
+        The figure contains 3 subplots with probabilities, cumulative
+        probabilities and a PP-plot.
     """
 
     if isinstance(label, list):
@@ -139,7 +141,7 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
 
 def test_chisquare_prob(results, probs, bin_edges=None):
     """
-    chisquare test for predicted probabilities using cmt-opg
+    Chi-square test for predicted probabilities using cmt-opg.
 
     Parameters
     ----------
@@ -150,20 +152,16 @@ def test_chisquare_prob(results, probs, bin_edges=None):
         in rows and event counts in columns
     bin_edges : None or array
         intervals to combine several counts into cells
-        see combine_bins
+        see _combine_bins
 
     Returns
     -------
-    (api not stable, replace by test-results class)
-    statistic : float
-        chisquare statistic for tes
-    p-value : float
-        p-value of test
-    df : int
-        degrees of freedom for chisquare distribution
-    extras : ???
-        currently returns a tuple with some intermediate results
-        (diff, res_aux)
+    HolderTuple
+        Instance with test statistic, p-value, and degrees of freedom as
+        main attributes (``statistic``, ``pvalue``, ``df``), and with
+        intermediate results ``diff1`` and ``res_aux`` as additional
+        attributes.  The api is not stable and might be replaced by a
+        test-results class.
 
     Notes
     -----
@@ -247,8 +245,9 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
-    """Score/LM type tests for Poisson variance assumptions
+def test_poisson_dispersion(results, method="all"):
+    """
+    Score/LM type tests for Poisson variance assumptions
 
     Null Hypothesis is
 
@@ -266,9 +265,6 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
         with family Poisson.
     method : str
         Not used yet. Currently results for all methods are returned.
-    _old : bool
-        Temporary keyword for backwards compatibility, will be removed
-        in future version of statsmodels.
 
     Returns
     -------
@@ -279,7 +275,7 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
 
     """
 
-    if method not in ["all"]:
+    if method != "all":
         raise ValueError(f'unknown method "{method}"')
 
     if hasattr(results, "_results"):
@@ -339,18 +335,14 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     description.append(["CT nb1 HC3", "mu (1 + a)"])
 
     results_all = np.array(results_all)
-    if _old:
-        # for backwards compatibility in 0.14, remove in later versions
-        return results_all, description
-    else:
-        res = DispersionResults(
-            statistic=results_all[:, 0],
-            pvalue=results_all[:, 1],
-            method=[i[0] for i in description],
-            alternative=[i[1] for i in description],
-            name="Poisson Dispersion Test",
-        )
-        return res
+    res = DispersionResults(
+        statistic=results_all[:, 0],
+        pvalue=results_all[:, 1],
+        method=[i[0] for i in description],
+        alternative=[i[1] for i in description],
+        name="Poisson Dispersion Test",
+    )
+    return res
 
 
 def _test_poisson_dispersion_generic(
@@ -363,7 +355,8 @@ def _test_poisson_dispersion_generic(
     cov_kwds=None,
     use_t=False,
 ):
-    """A variable addition test for the variance function
+    """
+    A variable addition test for the variance function
 
     This uses an artificial regression to calculate a variant of an LM or
     generalized score test for the specification of the variance assumption
@@ -371,6 +364,41 @@ def _test_poisson_dispersion_generic(
     of the `exog_new_test`.
 
     Warning: insufficiently tested, especially for options
+
+    Parameters
+    ----------
+    results : results instance
+        Results instance for a fitted Poisson model.
+    exog_new_test : ndarray
+        Additional exog variables that are added to the variance function
+        and whose coefficients are tested by a Wald test.
+    exog_new_control : ndarray, optional
+        Additional control variables that are added to the variance
+        function together with `exog_new_test`, but whose coefficients
+        are not tested.
+    include_score : bool
+        If True, then the score of the mean model is added as an
+        additional control variable.
+    use_endog : bool
+        If True, then the variance function is specified in terms of the
+        squared residuals based on `endog`. If False, then it is based on
+        the fitted mean instead of `endog`.
+    cov_type : str
+        Covariance type for the auxiliary OLS regression used in the
+        test. Default is "HC3".
+    cov_kwds : dict, optional
+        Keywords for the specified covariance type of the auxiliary OLS
+        regression.
+    use_t : bool
+        If True, then the t-distribution is used for the auxiliary OLS
+        regression.
+
+    Returns
+    -------
+    stat_ols : float
+        Test statistic.
+    pval_ols : float
+        p-value of the test.
     """
 
     if hasattr(results, "_results"):
@@ -425,7 +453,8 @@ def _test_poisson_dispersion_generic(
 
 
 def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
-    """score test for zero inflation or deflation in Poisson
+    """
+    Score test for zero inflation or deflation in Poisson.
 
     This implements Jansakul and Hinde 2009 score test
     for excess zeros against a zero modified Poisson
@@ -434,12 +463,12 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
 
     Parameters
     ----------
-    results_poisson: results instance
+    results_poisson : results instance
         The test is only valid if the results instance is a Poisson
         model.
     exog_infl : ndarray
-        Explanatory variables for the zero inflated or zero modified
-        alternative. I exog_infl is None, then the inflation
+        Explanatory variables for the zero-inflated or zero-modified
+        alternative. If exog_infl is None, then the inflation
         probability is assumed to be constant.
 
     Returns
@@ -517,7 +546,8 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
 
 
 def test_poisson_zeroinflation_broek(results_poisson):
-    """score test for zero modification in Poisson, special case
+    """
+    Score test for zero modification in Poisson, special case.
 
     This assumes that the Poisson model has a constant and that
     the zero modification probability is constant.
@@ -527,6 +557,19 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
     The test reports two sided and one sided alternatives based on
     the normal distribution of the test statistic.
+
+    Parameters
+    ----------
+    results_poisson : Poisson results instance
+        The results instance for a fitted Poisson model. The test
+        assumes that the model includes a constant.
+
+    Returns
+    -------
+    HolderTuple
+        Test statistic and p-values for the two-sided and one-sided
+        alternatives, together with the corresponding chi-square
+        statistic and p-value.
 
     References
     ----------
@@ -563,10 +606,21 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
 
 def test_poisson_zeros(results):
-    """Test for excess zeros in Poisson regression model.
+    """
+    Test for excess zeros in Poisson regression model.
 
     The test is implemented following Tang and Tang [1]_ equ. (12) which is
     based on the test derived in He et al 2019 [2]_.
+
+    Parameters
+    ----------
+    results : Poisson results instance
+        The results instance for the fitted Poisson model.
+
+    Returns
+    -------
+    HolderTuple
+        Test statistic, p-values and distribution information.
 
     References
     ----------

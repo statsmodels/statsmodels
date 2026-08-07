@@ -87,9 +87,7 @@ ejcp2 = np.array(ss_ejcp2.split(), float).reshape(-1, 3)
 
 
 def c_sja(n, p):
-    if ((p > 1) or (p < -1)):
-        jc = np.full(3, np.nan)
-    elif ((n > 12) or (n < 1)):
+    if ((p > 1) or (p < -1)) or ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
         jc = ejcp0[n-1, :]
@@ -201,9 +199,7 @@ tjcp2 = np.array(ss_tjcp2.split(), float).reshape(-1, 3)
 
 
 def c_sjt(n, p):
-    if ((p > 1) or (p < -1)):
-        jc = np.full(3, np.nan)
-    elif ((n > 12) or (n < 1)):
+    if ((p > 1) or (p < -1)) or ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
         jc = tjcp0[n-1, :]
@@ -215,11 +211,3 @@ def c_sjt(n, p):
         raise ValueError("invalid p")
 
     return jc
-
-
-if __name__ == "__main__":
-    for p in range(-2, 3, 1):
-        for n in range(12):
-            print(n, p)
-            print(c_sja(n, p))
-            print(c_sjt(n, p))

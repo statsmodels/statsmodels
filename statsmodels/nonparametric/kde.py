@@ -12,12 +12,17 @@ https://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
 
+from __future__ import annotations
+
+from typing import NamedTuple
+import warnings
+
 import numpy as np
 from scipy import integrate, stats
 
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.validation import array_like, float_like
+from statsmodels.tools.validation import array_like, bool_like, float_like
 
 from . import bandwidths
 from .kdetools import forrt, revrt, silverman_transform
@@ -69,7 +74,8 @@ class KDEUnivariate:
     --------
     KDEMultivariate : Multivariate Kernel Density Estimator.
     kdensity : Kernel density estimator using direct evaluation.
-    kdensityfft : Kernel density estimator using FFT, faster than kdensity for large nobs.
+    kdensityfft : Kernel density estimator using FFT, faster than kdensity
+        for large nobs.
 
     Examples
     --------
@@ -99,7 +105,7 @@ class KDEUnivariate:
         clip=(-np.inf, np.inf),
     ):
         """
-        Attach the density estimate to the KDEUnivariate class.
+        Attach the density estimate to the KDEUnivariate class
 
         Parameters
         ----------
@@ -125,7 +131,7 @@ class KDEUnivariate:
               calculated from the kernel. Equivalent (up to 2 dp) to the
               "scott" bandwidth for gaussian kernels. See bandwidths.py
             - If a float is given, its value is used as the bandwidth.
-            - If a callable is given, it's return value is used.
+            - If a callable is given, its return value is used.
               The callable should take exactly two parameters, i.e.,
               fn(x, kern), and return a float, where:
 
@@ -137,19 +143,25 @@ class KDEUnivariate:
             computationally efficient. However, only the Gaussian kernel
             is implemented. If FFT is False, then a 'nobs' x 'gridsize'
             intermediate array is created.
+        weights : array_like, optional
+            Optional weights. Only used if `fft` is False.
         gridsize : int
             If gridsize is None, max(len(x), 50) is used.
+        adjust : float
+            An adjustment factor for the bw. Bandwidth becomes bw * adjust.
         cut : float
             Defines the length of the grid past the lowest and highest values
             of x so that the kernel goes to zero. The end points are
             ``min(x) - cut * adjust * bw`` and ``max(x) + cut * adjust * bw``.
-        adjust : float
-            An adjustment factor for the bw. Bandwidth becomes bw * adjust.
+        clip : tuple
+            Observations in `endog` that are outside of the range given by
+            clip are dropped. The number of observations in the `endog`
+            array used in the fit is then shortened.
 
         Returns
         -------
         KDEUnivariate
-            The instance fit,
+            The instance that was fit.
         """
         if isinstance(bw, str):
             self.bw_method = bw
@@ -176,6 +188,7 @@ class KDEUnivariate:
                 gridsize=gridsize,
                 clip=clip,
                 cut=cut,
+                use_namedtuple=False,
             )
         else:
             density, grid, bw = kdensity(
@@ -187,6 +200,7 @@ class KDEUnivariate:
                 gridsize=gridsize,
                 clip=clip,
                 cut=cut,
+                use_namedtuple=False,
             )
         self.density = density
         self.support = grid
@@ -194,20 +208,19 @@ class KDEUnivariate:
         self.kernel = kernel_switch[kernel](h=bw)  # we instantiate twice,
         # should this passed to funcs?
         # put here to ensure empty cache after re-fit with new options
-        self.kernel.weights = weights
         if weights is not None:
-            self.kernel.weights /= weights.sum()
+            weights = np.asarray(weights)
+            weights = weights / weights.sum()
+        self.kernel.weights = weights
         self._cache = {}
         return self
 
     @cache_readonly
     def cdf(self):
         """
-        Returns the cumulative distribution function evaluated at the support.
+        Returns the cumulative distribution function evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called.
+        Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
         kern = self.kernel
@@ -232,11 +245,9 @@ class KDEUnivariate:
     @cache_readonly
     def cumhazard(self):
         """
-        Returns the hazard function evaluated at the support.
+        Returns the cumulative hazard function evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called.
+        Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
         return -np.log(self.sf)
@@ -244,11 +255,9 @@ class KDEUnivariate:
     @cache_readonly
     def sf(self):
         """
-        Returns the survival function evaluated at the support.
+        Returns the survival function evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called.
+        Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
         return 1 - self.cdf
@@ -258,10 +267,8 @@ class KDEUnivariate:
         """
         Returns the differential entropy evaluated at the support
 
-        Notes
-        -----
-        Will not work if fit has not been called. 1e-12 is added to each
-        probability to ensure that log(0) is not called.
+        Note: Will not work if fit has not been called. 1e-12 is added
+        to each probability to ensure that log(0) is not called.
         """
         _checkisfit(self)
 
@@ -272,7 +279,7 @@ class KDEUnivariate:
         kern = self.kernel
 
         if kern.domain is not None:
-            a, b = self.domain
+            a, b = kern.domain
         else:
             a, b = -np.inf, np.inf
         endog = self.endog
@@ -284,9 +291,7 @@ class KDEUnivariate:
         """
         Inverse Cumulative Distribution (Quantile) Function
 
-        Notes
-        -----
-        Will not work if fit has not been called. Uses
+        Note: Will not work if fit has not been called. Uses
         `scipy.stats.mstats.mquantiles`.
         """
         _checkisfit(self)
@@ -295,7 +300,7 @@ class KDEUnivariate:
 
     def evaluate(self, point):
         """
-        Evaluate density at a point or points.
+        Evaluate density at a point or points
 
         Parameters
         ----------
@@ -307,6 +312,26 @@ class KDEUnivariate:
 
 
 # Kernel Density Estimator Functions
+class KDEResult(NamedTuple):
+    """
+    Result of :func:`kdensity` and :func:`kdensityfft`.
+
+    Parameters
+    ----------
+    density : ndarray
+        The densities estimated at the grid points.
+    grid : ndarray
+        The grid points at which the density is estimated. Always
+        populated, since the grid is computed regardless of ``retgrid``.
+    bw : float
+        The bandwidth used in the estimation.
+    """
+
+    density: np.ndarray
+    grid: np.ndarray
+    bw: float
+
+
 def kdensity(
     x,
     kernel="gau",
@@ -317,9 +342,11 @@ def kdensity(
     clip=(-np.inf, np.inf),
     cut=3,
     retgrid=True,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
-    Rosenblatt-Parzen univariate kernel density estimator.
+    Rosenblatt-Parzen univariate kernel density estimator
 
     Parameters
     ----------
@@ -345,7 +372,7 @@ def kdensity(
           calculated from the kernel. Equivalent (up to 2 dp) to the
           "scott" bandwidth for gaussian kernels. See bandwidths.py
         - If a float is given, its value is used as the bandwidth.
-        - If a callable is given, it's return value is used.
+        - If a callable is given, its return value is used.
           The callable should take exactly two parameters, i.e.,
           fn(x, kern), and return a float, where:
 
@@ -368,19 +395,48 @@ def kdensity(
         -/+ cut*bw*{min(x) or max(x)}
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``KDEResult`` NamedTuple is returned.
+        When ``retgrid`` is True (the default) a ``KDEResult`` is always
+        returned; it holds the same three elements as the legacy
+        ``(density, grid, bw)`` tuple, so it unpacks and indexes
+        identically. When ``retgrid=False`` the legacy ``(density, bw)``
+        tuple is returned unless ``use_namedtuple=True``.
+
+        .. deprecated:: 0.15.0
+
+            When ``retgrid=False``, in release 0.16.0 or after July 2027,
+            whichever is later, the default will change to return a
+            ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type. ``KDEResult`` will be mandatory in 0.17
+            or after July 2028, whichever is later.
 
     Returns
     -------
+    KDEResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
+        ``grid``, and ``bw``. ``grid`` is always populated, including when
+        ``retgrid=False``, because it is computed regardless. See
+        :class:`~statsmodels.nonparametric.kde.KDEResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     density : ndarray
         The densities estimated at the grid points.
     grid : ndarray, optional
-        The grid points at which the density is estimated.
+        The grid points at which the density is estimated. Only returned
+        if `retgrid` is True.
+    bw : float
+        The bandwidth that was used.
 
     Notes
     -----
     Creates an intermediate (`gridsize` x `nobs`) array. Use FFT for a more
     computationally efficient version.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(x)
     if x.ndim == 1:
         x = x[:, None]
@@ -442,10 +498,27 @@ def kdensity(
 
     dens = np.dot(k, weights) / (q * bw)
 
-    if retgrid:
-        return dens, grid, bw
-    else:
-        return dens, bw
+    # With retgrid=True (the default) KDEResult has exactly the same length
+    # and contents as the legacy (density, grid, bw) tuple, so it is adopted
+    # with no deprecation.  Only retgrid=False changes shape, from a 2-tuple
+    # to the 3-field KDEResult, so that is the only path that warns.
+    if use_namedtuple is None and not retgrid:
+        warnings.warn(
+            "kdensity currently returns a plain (density, bw) tuple when "
+            "retgrid=False. In release 0.16 or after July 2027, whichever "
+            "is later, the default behavior will switch to always "
+            "returning a KDEResult NamedTuple, which also carries the "
+            "grid. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or retgrid:
+        # `grid` is always computed, so it is returned even when
+        # retgrid=False rather than being None-filled.
+        return KDEResult(dens, grid, bw)
+    return dens, bw
 
 
 def kdensityfft(
@@ -458,6 +531,8 @@ def kdensityfft(
     clip=(-np.inf, np.inf),
     cut=3,
     retgrid=True,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Rosenblatt-Parzen univariate kernel density estimator
@@ -487,7 +562,7 @@ def kdensityfft(
           calculated from the kernel. Equivalent (up to 2 dp) to the
           "scott" bandwidth for gaussian kernels. See bandwidths.py
         - If a float is given, its value is used as the bandwidth.
-        - If a callable is given, it's return value is used.
+        - If a callable is given, its return value is used.
           The callable should take exactly two parameters, i.e.,
           fn(x, kern), and return a float, where:
 
@@ -503,7 +578,7 @@ def kdensityfft(
         number is rounded up to the next highest power of 2.
     adjust : float
         An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-        clip : tuple
+    clip : tuple
         Observations in x that are outside of the range given by clip are
         dropped. The number of observations in x is then shortened.
     cut : float
@@ -512,13 +587,41 @@ def kdensityfft(
         -/+ cut*bw*{x.min() or x.max()}
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``KDEResult`` NamedTuple is returned.
+        When ``retgrid`` is True (the default) a ``KDEResult`` is always
+        returned; it holds the same three elements as the legacy
+        ``(density, grid, bw)`` tuple, so it unpacks and indexes
+        identically. When ``retgrid=False`` the legacy ``(density, bw)``
+        tuple is returned unless ``use_namedtuple=True``.
+
+        .. deprecated:: 0.15.0
+
+            When ``retgrid=False``, in release 0.16.0 or after July 2027,
+            whichever is later, the default will change to return a
+            ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type. ``KDEResult`` will be mandatory in 0.17
+            or after July 2028, whichever is later.
 
     Returns
     -------
+    KDEResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
+        ``grid``, and ``bw``. ``grid`` is always populated, including when
+        ``retgrid=False``, because it is computed regardless. See
+        :class:`~statsmodels.nonparametric.kde.KDEResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     density : ndarray
         The densities estimated at the grid points.
     grid : ndarray, optional
-        The grid points at which the density is estimated.
+        The grid points at which the density is estimated. Only returned
+        if `retgrid` is True.
+    bw : float
+        The bandwidth that was used.
 
     Notes
     -----
@@ -531,16 +634,17 @@ def kdensityfft(
 
     References
     ----------
-    Fan, J. and J.S. Marron. (1994) `Fast implementations of nonparametric
-        curve estimators`. Journal of Computational and Graphical Statistics.
+    Fan, J. and J.S. Marron. (1994) *Fast implementations of nonparametric
+        curve estimators*. Journal of Computational and Graphical Statistics.
         3.1, 35-56.
-    Jones, M.C. and H.W. Lotwick. (1984) `Remark AS R50: A Remark on Algorithm
-        AS 176. Kernel Density Estimation Using the Fast Fourier Transform`.
+    Jones, M.C. and H.W. Lotwick. (1984) *Remark AS R50: A Remark on Algorithm
+        AS 176. Kernel Density Estimation Using the Fast Fourier Transform*.
         Journal of the Royal Statistical Society. Series C. 33.1, 120-2.
-    Silverman, B.W. (1982) `Algorithm AS 176. Kernel density estimation using
-        the Fast Fourier Transform. Journal of the Royal Statistical Society.
+    Silverman, B.W. (1982) *Algorithm AS 176. Kernel density estimation using
+        the Fast Fourier Transform*. Journal of the Royal Statistical Society.
         Series C. 31.2, 93-9.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(x)
     # will not work for two columns.
     x = x[np.logical_and(x > clip[0], x < clip[1])]
@@ -602,7 +706,25 @@ def kdensityfft(
     # 3.49 in Silverman
     # 3.50 w Gaussian kernel
     f = revrt(zstar)
-    if retgrid:
-        return f, grid, bw
-    else:
-        return f, bw
+
+    # With retgrid=True (the default) KDEResult has exactly the same length
+    # and contents as the legacy (density, grid, bw) tuple, so it is adopted
+    # with no deprecation.  Only retgrid=False changes shape, from a 2-tuple
+    # to the 3-field KDEResult, so that is the only path that warns.
+    if use_namedtuple is None and not retgrid:
+        warnings.warn(
+            "kdensityfft currently returns a plain (density, bw) tuple "
+            "when retgrid=False. In release 0.16 or after July 2027, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a KDEResult NamedTuple, which also carries "
+            "the grid. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or retgrid:
+        # `grid` is always computed, so it is returned even when
+        # retgrid=False rather than being None-filled.
+        return KDEResult(f, grid, bw)
+    return f, bw

@@ -1,5 +1,5 @@
 """
-Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters.
+Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters
 
 Author: Chad Fulton
 License: BSD-3
@@ -9,6 +9,7 @@ from scipy.signal import lfilter
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace.tools import diff
@@ -20,7 +21,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
     """
-    Estimate ARMA parameters using Hannan-Rissanen procedure.
+    Estimate ARMA parameters using Hannan-Rissanen procedure
 
     Parameters
     ----------
@@ -30,6 +31,12 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         Autoregressive order
     ma_order : int or list of int
         Moving average order
+    seasonal_order : tuple, optional
+        The (P,D,Q,s) order of the seasonal component of the model for the
+        AR parameters, differences, and MA parameters. `D` and `s` are used
+        to seasonally difference the data prior to estimation; nonzero
+        seasonal AR or MA orders (`P` or `Q`) are not supported and raise a
+        ``ValueError``. Default is (0, 0, 0, 0).
     demean : bool, optional
         Whether to estimate and remove the mean from the process prior to
         fitting the ARMA coefficients. Default is True.
@@ -47,13 +54,16 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
 
     Returns
     -------
-    parameters : SARIMAXParams object
-    other_results : Bunch
-        Includes three components: `spec`, containing the
-        `SARIMAXSpecification` instance corresponding to the input arguments;
-        `initial_ar_order`, containing the autoregressive lag order used in the
-        first step; and `resid`, which contains the computed residuals from the
-        last step.
+    ARMAEstimationResult
+        A NamedTuple with fields:
+
+        parameters : SARIMAXParams object
+        other_results : Bunch
+            Includes three components: `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments; `initial_ar_order`, containing the autoregressive lag
+            order used in the first step; and `resid`, which contains the
+            computed residuals from the last step.
 
     Notes
     -----
@@ -180,7 +190,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
         initial_ar_params, _ = yule_walker(
-            endog, order=initial_ar_order, method="mle")
+            endog, order=initial_ar_order, method="mle", use_namedtuple=False)
         X = lagmat(endog, initial_ar_order, trim="both")
         y = endog[initial_ar_order:]
         resid = y - X.dot(initial_ar_params)
@@ -317,17 +327,18 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         "initial_ar_order": initial_ar_order,
         "resid": resid
     })
-    return p, other_results
+    return ARMAEstimationResult(p, other_results)
 
 
 def _validate_fixed_params(fixed_params, spec_param_names):
     """
-    Check that keys in fixed_params are a subset of spec.param_names except
-    "sigma2"
+    Check that keys in fixed_params are a subset of spec_param_names except sigma2
 
     Parameters
     ----------
     fixed_params : dict
+        Dictionary of fixed parameter values keyed by parameter name, or
+        None.
     spec_param_names : list of string
         SARIMAXSpecification.param_names
     """
@@ -352,7 +363,7 @@ def _validate_fixed_params(fixed_params, spec_param_names):
 
 def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
     """
-    Validate order parameters for Hannan-Rissanen estimation.
+    Validate order parameters for Hannan-Rissanen estimation
 
     Parameters
     ----------
@@ -397,9 +408,13 @@ def _validate_order_params(nobs, max_ar_order, max_ma_order, initial_ar_order):
 def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
                                         spec_ma_lags):
     """
+    Unpack fixed and free ar/ma lags, ix, and params (fixed only)
+
     Parameters
     ----------
     fixed_params : dict
+        Dictionary of fixed parameter values keyed by parameter name, or
+        None.
     spec_ar_lags : list of int
         SARIMAXSpecification.ar_lags
     spec_ma_lags : list of int
@@ -410,7 +425,7 @@ def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
     Bunch with
     (lags) fixed_ar_lags, fixed_ma_lags, free_ar_lags, free_ma_lags;
     (ix) fixed_ar_ix, fixed_ma_ix, free_ar_ix, free_ma_ix;
-    (params) fixed_ar_params, free_ma_params
+    (params) fixed_ar_params, fixed_ma_params
     """
     # unpack fixed lags and params
     fixed_ar_lags_and_params = []
@@ -485,7 +500,7 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
     all_params = np.r_[fixed_ar_or_ma_params, free_ar_or_ma_params]
     assert set(all_lags) == set(spec_ar_or_ma_lags)
 
-    lag_to_param_map = dict(zip(all_lags, all_params))
+    lag_to_param_map = dict(zip(all_lags, all_params, strict=True))
 
     # Sort params by the order of their corresponding lags in
     # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or

@@ -1,9 +1,8 @@
 """Tests for linear mixed effects models."""
-
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -18,6 +17,7 @@ import pytest
 from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
+from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
@@ -51,7 +51,7 @@ class R_Results:
 
     def __init__(self, meth, irfs, ds_ix):
 
-        bname = "_%s_%s_%d" % (meth, irfs, ds_ix)
+        bname = f"_{meth}_{irfs}_{ds_ix:d}"
 
         self.coef = getattr(lme_r_results, "coef" + bname)
         self.vcov_r = getattr(lme_r_results, "vcov" + bname)
@@ -65,10 +65,10 @@ class R_Results:
             self.ranef_condvar = np.atleast_2d(self.ranef_condvar)
 
         # Load the data file
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        with open(fname, encoding="utf-8") as fid:
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath(f"lme{ds_ix:02d}.csv")
+        with Path(fname).open(encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]
@@ -379,9 +379,9 @@ class TestMixedLM:
 
     def test_sparse(self):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
 
         # Dense
         data = pd.read_csv(fname)
@@ -417,9 +417,9 @@ class TestMixedLM:
         # Comments below are R code used to extract the numbers used
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -473,9 +473,9 @@ class TestMixedLM:
         # Comments below are the R code used to extract the constants
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -538,9 +538,9 @@ class TestMixedLM:
         # r = lmer(strength ~ (1|batch) + (1|batch:cask), data=data,
         #          reml=FALSE)
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
         data = pd.read_csv(fname)
         vcf = {"cask": "0 + cask"}
 
@@ -677,7 +677,7 @@ class TestMixedLM:
         # Fit with a formula, passing groups as the actual values.
         df = pd.DataFrame({"endog": endog})
         for k in range(exog.shape[1]):
-            df["exog%d" % k] = exog[:, k]
+            df[f"exog{k:d}"] = exog[:, k]
         df["exog_re"] = exog_re
         fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
         re_fml = "0 + exog_re"
@@ -886,9 +886,9 @@ def do1(reml, irf, ds_ix):
 # ------------------------------------------------------------------
 
 # Run all the tests against R
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, "results")
-fnames = os.listdir(rdir)
+cur_dir = Path(__file__).resolve().parent
+rdir = Path(cur_dir).joinpath("results")
+fnames = [p.name for p in rdir.iterdir()]
 fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
 
@@ -916,7 +916,7 @@ def test_mixed_lm_wrapper():
     # Fit with a formula, passing groups as the actual values.
     df = pd.DataFrame({"endog": endog})
     for k in range(exog.shape[1]):
-        df["exog%d" % k] = exog[:, k]
+        df[f"exog{k:d}"] = exog[:, k]
     df["exog_re"] = exog_re
     fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
     re_fml = "~ exog_re"
@@ -1156,7 +1156,7 @@ def test_random_effects_getters():
         y.append(yy)
         x.append(xx)
         z.append(zz)
-        g.append(["g%d" % i] * m)
+        g.append([f"g{i:d}"] * m)
 
     y = np.concatenate(y)
     x = np.concatenate(x)
@@ -1192,12 +1192,12 @@ def test_random_effects_getters():
     result = model.fit()
 
     ref = result.random_effects
-    b0 = [ref["g%d" % k][0:2] for k in range(ng)]
+    b0 = [ref[f"g{k:d}"][0:2] for k in range(ng)]
     b0 = np.asarray(b0)
     assert np.corrcoef(b0[:, 0], b[:, 0])[0, 1] > 0.8
     assert np.corrcoef(b0[:, 1], b[:, 1])[0, 1] > 0.8
 
-    cf0 = [ref["g%d" % k][2:6] for k in range(ng)]
+    cf0 = [ref[f"g{k:d}"][2:6] for k in range(ng)]
     cf0 = np.asarray(cf0)
     for k in range(4):
         assert np.corrcoef(cf0[:, k], cc[:, k])[0, 1] > 0.8
@@ -1232,7 +1232,10 @@ def check_smw_solver(p, q, r, s):
     y1 = f(x)
     assert_allclose(y1, y2)
 
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
+    A_sp = sparse.csr_array(A)
+    AtA_sp = sparse.csr_array(AtA)
+
+    f = _smw_solver(s, A_sp, AtA_sp, Qi, di)
     y1 = f(x)
     assert_allclose(y1, y2)
 
@@ -1360,7 +1363,7 @@ def test_get_distribution():
 
     # Get a realization
     dist = m.get_distribution(pa, scale, None)
-    yr = dist.rvs(0, random_state=rs)
+    yr = dist.rvs(0, rng=rs)
 
     # Check the overall variance
     v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()
@@ -1368,3 +1371,61 @@ def test_get_distribution():
     v += vcomp[1] * (exog_vcb**2).sum(1).mean()
     v += scale
     assert_allclose(np.var(yr - ey), v, rtol=1e-2, atol=1e-4)
+
+
+def test_fit_unsupported_kwargs_ignored():
+    # GH#9677 - passing cov_type to MixedLM.fit should warn but not crash
+    rs = np.random.RandomState(123)
+    n = 100
+    groups = np.repeat(np.arange(10), 10)
+    x = rs.normal(size=n)
+    y = x + rs.normal(size=n)
+    df = pd.DataFrame({"y": y, "x": x, "g": groups})
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        result = model.fit(cov_type="hc1")
+
+    # Should complete without AttributeError and return valid results
+    assert result.fe_params is not None
+    assert len(result.fe_params) == 2
+
+
+def test_fit_unsupported_kwargs_warns():
+    # GH#9677 - unsupported kwargs should emit RuntimeWarning
+    rs = np.random.RandomState(456)
+    n = 50
+    groups = np.repeat(np.arange(5), 10)
+    x = rs.normal(size=n)
+    y = x + rs.normal(size=n)
+    df = pd.DataFrame({"y": y, "x": x, "g": groups})
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        model.fit(cov_type="hc1")
+
+    runtime_warnings = [x for x in w if issubclass(x.category, RuntimeWarning)]
+    assert len(runtime_warnings) == 1
+    assert "not used by MixedLM.fit" in str(runtime_warnings[0].message)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    pid = np.repeat([0, 1], 5)
+    x0 = np.repeat([1], 10)
+    x1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]
+    x2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]
+    y = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    df = pd.DataFrame({"y": y, "pid": pid, "x0": x0, "x1": x1, "x2": x2})
+    endog = df["y"].values
+    exog = df[["x0", "x1", "x2"]].values
+    groups = df["pid"].values
+    res = MixedLM(endog, exog, groups=groups).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

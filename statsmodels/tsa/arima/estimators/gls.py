@@ -12,6 +12,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
@@ -36,7 +37,7 @@ def gls(
     arma_estimator_kwargs=None,
 ):
     """
-    Estimate ARMAX parameters by GLS.
+    Estimate ARMAX parameters by GLS
 
     Parameters
     ----------
@@ -87,24 +88,27 @@ def gls(
 
     Returns
     -------
-    parameters : SARIMAXParams object
-        Contains the parameter estimates from the final iteration.
-    other_results : Bunch
-        Additional estimation results with the following components:
+    ARMAEstimationResult
+        A NamedTuple with fields:
 
-        * `spec` - SARIMAXSpecification instance for the input arguments.
-        * `params` - SARIMAXParams estimates from each GLS iteration,
-          including the initial OLS estimates.
-        * `converged` - whether the feasible GLS iterations converged. This is
-          None when `n_iter` is specified.
-        * `differences` - absolute changes in the exogenous coefficient
-          estimates at each iteration.
-        * `iterations` - number of feasible GLS iterations performed.
-        * `arma_estimator` - estimator used for the ARMA error process.
-        * `arma_estimator_kwargs` - keyword arguments passed to the ARMA
-          estimator.
-        * `arma_results` - ancillary result objects returned by the ARMA
-          estimator at each iteration.
+        parameters : SARIMAXParams object
+            Contains the parameter estimates from the final iteration.
+        other_results : Bunch
+            Additional estimation results with the following components:
+
+            * `spec` - SARIMAXSpecification instance for the input arguments.
+            * `params` - SARIMAXParams estimates from each GLS iteration,
+              including the initial OLS estimates.
+            * `converged` - whether the feasible GLS iterations converged.
+              This is None when `n_iter` is specified.
+            * `differences` - absolute changes in the exogenous coefficient
+              estimates at each iteration.
+            * `iterations` - number of feasible GLS iterations performed.
+            * `arma_estimator` - estimator used for the ARMA error process.
+            * `arma_estimator_kwargs` - keyword arguments passed to the ARMA
+              estimator.
+            * `arma_results` - ancillary result objects returned by the ARMA
+              estimator at each iteration.
 
     Notes
     -----
@@ -294,7 +298,7 @@ def gls(
         # Step 3: GLS
         # Compute transformed variables that satisfy OLS assumptions
         # Note: In section 6.1.1 of Brockwell and Davis (2016), these
-        # transformations are developed as computed by left multiplcation
+        # transformations are developed as computed by left multiplication
         # by a matrix T. However, explicitly constructing T and then
         # performing the left-multiplications does not scale well when nobs is
         # large. Instead, we can retrieve the transformed variables as the
@@ -371,4 +375,4 @@ def gls(
         }
     )
 
-    return p, other_results
+    return ARMAEstimationResult(p, other_results)

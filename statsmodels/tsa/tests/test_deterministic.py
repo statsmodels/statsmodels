@@ -1,6 +1,5 @@
 from statsmodels.compat.pandas import (
     MONTH_END,
-    PD_LT_1_0_0,
     QUARTER_END,
     YEAR_END,
     is_int_index,
@@ -338,7 +337,6 @@ def test_fourier(index):
     assert list(terms.columns) == cols
 
 
-@pytest.mark.skipif(PD_LT_1_0_0, reason="bug in old pandas")
 def test_index_like():
     idx = np.empty((100, 2))
     with pytest.raises(TypeError, match="index must be a pandas"):
@@ -495,6 +493,20 @@ def test_deterministic_process(
     pd.testing.assert_index_equal(terms.index, time_index)
     terms = dp.out_of_sample(23)
     assert isinstance(terms, pd.DataFrame)
+
+
+@pytest.mark.parametrize("drop", [True, False])
+def test_out_of_sample_without_in_sample(drop):
+    # GH: out_of_sample()/range() on a fresh DeterministicProcess used to raise
+    # a bare ``AssertionError`` when drop=False, because the lazy in_sample()
+    # call that populates _retain_cols was gated on self._drop.
+    idx = pd.RangeIndex(0, 10)
+    fresh = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed.in_sample()
+    pd.testing.assert_frame_equal(fresh.out_of_sample(5), primed.out_of_sample(5))
+    fresh2 = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
 
 
 def test_deterministic_process_errors(time_index):

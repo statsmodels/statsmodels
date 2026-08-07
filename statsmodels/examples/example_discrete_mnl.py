@@ -27,7 +27,7 @@ mlogit_res = mlogit_mod.fit(method="bfgs", maxiter=100)
 
 exog_names = [anes_data.exog_name[i] for i in [0, 2] + lrange(5, 8)] + ["const"]
 endog_names = [
-    anes_data.endog_name + "_%d" % i for i in np.unique(mlogit_res.model.endog)[1:]
+    anes_data.endog_name + f"_{i:d}" for i in np.unique(mlogit_res.model.endog)[1:]
 ]
 print("\n\nMultinomial")
 print(
@@ -59,7 +59,7 @@ print(mlogit_res.summary(yname="PID"))
 # mlogit_res.summary(yname=['PID'])
 
 endog_names = [
-    anes_data.endog_name + "=%d" % i for i in np.unique(mlogit_res.model.endog)[1:]
+    anes_data.endog_name + f"={i:d}" for i in np.unique(mlogit_res.model.endog)[1:]
 ]
 print(mlogit_res.summary(yname="PID", yname_list=endog_names, xname=exog_names))
 

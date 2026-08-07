@@ -41,16 +41,16 @@ _doc_zi_params = """
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
     inflation : {'logit', 'probit'}
-        The model for the zero inflation, either Logit (default) or Probit
+        The model for zero inflation, either Logit (default) or Probit.
     """
 
 
 class GenericZeroInflated(CountModel):
-    __doc__ = """
-    Generic Zero Inflated Model
+    __doc__ = f"""
+    Generic Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -60,10 +60,7 @@ class GenericZeroInflated(CountModel):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params + base._missing_param_doc,
-    }
+    """
 
     def __init__(
         self,
@@ -100,7 +97,7 @@ class GenericZeroInflated(CountModel):
             self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]), self.exog_infl)
             self._hessian_inflate = self._hessian_probit
         else:
-            raise ValueError("inflation == %s, which is not handled" % inflation)
+            raise ValueError(f"inflation == {inflation}, which is not handled")
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
@@ -109,7 +106,7 @@ class GenericZeroInflated(CountModel):
             raise ValueError("exog and exog_infl have different number of"
                              "observation. `missing` handling is not supported")
 
-        infl_names = ["inflate_%s" % i for i in self.model_infl.data.param_names]
+        infl_names = [f"inflate_{i}" for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
@@ -117,13 +114,12 @@ class GenericZeroInflated(CountModel):
         self._null_drop_keys = ["exog_infl"]
 
     def _get_exogs(self):
-        """list of exogs, for internal use in post-estimation
-        """
+        """list of exogs, for internal use in post-estimation"""
         return (self.exog, self.exog_infl)
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Zero Inflated model.
+        Log-likelihood of Generic Zero-Inflated model.
 
         Parameters
         ----------
@@ -146,7 +142,7 @@ class GenericZeroInflated(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Zero Inflated model.
+        Log-likelihood for observations of Generic Zero-Inflated model.
 
         Parameters
         ----------
@@ -298,7 +294,7 @@ class GenericZeroInflated(CountModel):
 
     def score_obs(self, params):
         """
-        Generic Zero Inflated model score (gradient) vector of the log-likelihood
+        Generic Zero-Inflated model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -309,7 +305,7 @@ class GenericZeroInflated(CountModel):
         -------
         score : ndarray, 1-D
             The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            log-likelihood function, evaluated at `params`
         """
         params_infl = params[: self.k_inflate]
         params_main = params[self.k_inflate :]
@@ -417,7 +413,7 @@ class GenericZeroInflated(CountModel):
 
     def hessian(self, params):
         """
-        Generic Zero Inflated model Hessian matrix of the loglikelihood
+        Generic Zero-Inflated model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -427,7 +423,7 @@ class GenericZeroInflated(CountModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
 
         Notes
@@ -476,10 +472,10 @@ class GenericZeroInflated(CountModel):
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
-            Statitistic to predict. Default is 'mean'.
+        which : str, optional
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x). This
               takes inflated zeros into account.
@@ -488,7 +484,7 @@ class GenericZeroInflated(CountModel):
               model.
             - 'mean-main' : mean of the main count model
             - 'prob-main' : probability of selecting the main model.
-                The probability of zero inflation is ``1 - prob-main``.
+              The probability of zero inflation is ``1 - prob-main``.
             - 'mean-nonzero' : expected value conditional on having observation
               larger than zero, E(y | X, y>0)
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
@@ -584,17 +580,15 @@ class GenericZeroInflated(CountModel):
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
     def _derivative_predict(self, params, exog=None, transform="dydx"):
-        """NotImplemented
-        """
+        """NotImplemented"""
         raise NotImplementedError
 
     def _derivative_exog(self, params, exog=None, transform="dydx",
                          dummy_idx=None, count_idx=None):
-        """NotImplemented
-        """
+        """NotImplemented"""
         raise NotImplementedError
 
     def _deriv_mean_dparams(self, params):
@@ -628,7 +622,8 @@ class GenericZeroInflated(CountModel):
         return dmat
 
     def _deriv_score_obs_dendog(self, params):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
@@ -663,11 +658,11 @@ class GenericZeroInflated(CountModel):
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
-    __doc__ = """
-    Poisson Zero Inflated Model
+    __doc__ = f"""
+    Poisson Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -677,10 +672,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params + base._missing_param_doc,
-    }
+    """
 
     def __init__(
         self,
@@ -773,7 +765,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         return result[0] if transform else result
 
     def _predict_var(self, params, mu, prob_infl):
-        """predict values for conditional variance V(endog | exog)
+        """
+        Predict values for conditional variance V(endog | exog)
 
         Parameters
         ----------
@@ -803,7 +796,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
     def get_distribution(
         self, params, exog=None, exog_infl=None, exposure=None, offset=None
     ):
-        """Get frozen instance of distribution based on predicted parameters.
+        """
+        Get a frozen instance of distribution based on predicted parameters
 
         Parameters
         ----------
@@ -822,11 +816,11 @@ class ZeroInflatedPoisson(GenericZeroInflated):
             Default is zero if exog is not None, and the model offset if exog
             is None.
         exposure : ndarray, optional
-            Log(exposure) is added to the linear predictor  of the mean
+            Log(exposure) is added to the linear predictor of the mean
             function with coefficient equal to 1. If exposure is specified,
             then it will be logged by the method. The user does not need to
             log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
 
         Returns
@@ -857,10 +851,10 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Poisson Model
+    Zero-Inflated Generalized Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -871,16 +865,16 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
     p : scalar
-        P denotes parametrizations for ZIGP regression.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params
+        P denotes parameterizations for ZIGP regression.
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the GeneralizedPoisson model.  p=1 for
         ZIGP-1 and p=2 for ZIGP-2. Default is p=2
     """
         + base._missing_param_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -947,7 +941,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         return result[0] if transform else result
 
     def _predict_var(self, params, mu, prob_infl):
-        """predict values for conditional variance V(endog | exog)
+        """
+        Predict values for conditional variance V(endog | exog)
 
         Parameters
         ----------
@@ -996,10 +991,10 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Negative Binomial Model
+    Zero-Inflated Generalized Negative Binomial Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1010,17 +1005,17 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
     p : scalar
-        P denotes parametrizations for ZINB regression. p=1 for ZINB-1 and
-    p=2 for ZINB-2. Default is p=2
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params
+        P denotes parameterizations for ZINB regression. p=1 for ZINB-1 and
+        p=2 for ZINB-2. Default is p=2
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the NegativeBinomialP model.  p=1 for
-        ZINB-1 and p=2 for ZINM-2. Default is p=2
+        ZINB-1 and p=2 for ZINB-2. Default is p=2
     """
         + base._missing_param_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -1084,7 +1079,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         return result[0] if transform else result
 
     def _predict_var(self, params, mu, prob_infl):
-        """predict values for conditional variance V(endog | exog)
+        """
+        Predict values for conditional variance V(endog | exog)
 
         Parameters
         ----------
@@ -1155,7 +1151,7 @@ class ZeroInflatedResults(CountResults):
         Influence and outlier measures
 
         See notes section for influence measures that do not apply for
-        zero inflated models.
+        zero-inflated models.
 
         Returns
         -------
@@ -1174,20 +1170,20 @@ class ZeroInflatedResults(CountResults):
         leverage cannot be computed in the usual definition.
 
         Currently, both the generalized leverage, in `hat_matrix_diag`
-        attribute and studetized residuals are not available. In the influence
+        attribute and studentized residuals are not available. In the influence
         plot generalized leverage is replaced by a hat matrix diagonal that
         only takes combined exog into account, computed in the same way as
         for OLS. This is a measure for exog outliers but does not take
         specific features of the model into account.
         """
-        # same as sumper in DiscreteResults, only added for docstring
+        # same as super in DiscreteResults, only added for docstring
         from statsmodels.stats.outliers_influence import MLEInfluence
         return MLEInfluence(self)
 
 
 class ZeroInflatedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Poisson",
+        "one_line_description": "A results class for Zero-Inflated Poisson",
         "extra_attr": ""
     }
 
@@ -1199,9 +1195,10 @@ class ZeroInflatedPoissonResults(ZeroInflatedResults):
 
     def get_margeff(self, at="overall", method="dydx", atexog=None,
                     dummy=False, count=False):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
-        Not yet implemented for Zero Inflated Models
+        Not yet implemented for Zero-Inflated Models
         """
         raise NotImplementedError("not yet implemented for zero inflation")
 
@@ -1226,7 +1223,7 @@ wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper, L1ZeroInflatedPoisson
 
 class ZeroInflatedGeneralizedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Generalized Poisson",
+        "one_line_description": "A results class for Zero-Inflated Generalized Poisson",
         "extra_attr": "",
     }
 
@@ -1241,9 +1238,10 @@ class ZeroInflatedGeneralizedPoissonResults(ZeroInflatedResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
-        Not yet implemented for Zero Inflated Models
+        Not yet implemented for Zero-Inflated Models
         """
         raise NotImplementedError("not yet implemented for zero inflation")
 
@@ -1275,7 +1273,7 @@ wrap.populate_wrapper(
 
 class ZeroInflatedNegativeBinomialResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
+        "one_line_description": "A results class for Zero-Inflated Generalized Negative Binomial",
         "extra_attr": "",
     }
 
@@ -1290,9 +1288,10 @@ class ZeroInflatedNegativeBinomialResults(ZeroInflatedResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
-        Not yet implemented for Zero Inflated Models
+        Not yet implemented for Zero-Inflated Models
         """
         raise NotImplementedError("not yet implemented for zero inflation")
 

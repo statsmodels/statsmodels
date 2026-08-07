@@ -66,26 +66,42 @@ Descriptive Statistics and Tests
 
    stattools.acovf
    stattools.acf
+   stattools.AcfResult
    stattools.pacf
+   stattools.PacfResult
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
+   stattools.PacfBurgResult
    stattools.ccovf
    stattools.ccf
+   stattools.CcfResult
+   stattools.pccf
+   stattools.PccfResult
    stattools.adfuller
+   stattools.ADFullerResult
    stattools.kpss
+   stattools.KpssResult
    stattools.leybourne
    stattools.range_unit_root_test
+   stattools.RangeUnitRootTestResult
    stattools.zivot_andrews
    stattools.coint
+   stattools.CointResult
    stattools.bds
+   stattools.block_jackknife
+   stattools.JackknifeResult
    stattools.q_stat
+   stattools.QStatResult
    stattools.breakvar_heteroskedasticity_test
+   stattools.BreakvarHeteroskedasticityResult
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.LevinsonDurbinResult
    stattools.innovations_algo
    stattools.innovations_filter
    stattools.levinson_durbin_pacf
+   stattools.LevinsonDurbinPacfResult
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis
@@ -109,6 +125,7 @@ The basic autoregressive model in Statsmodels is:
    ar_model.AutoReg
    ar_model.AutoRegResults
    ar_model.ar_select_order
+   ar_model.InformationCriteria
 
 The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
 and supports exogenous regressors (an AR-X model) and seasonal effects.
@@ -327,10 +344,18 @@ Time Series Filters
 
    cffilter
 
+.. currentmodule:: statsmodels.tsa.filters.hamilton_filter
+.. autosummary::
+   :toctree: generated/
+
+   hamilton_filter
+
+
 .. currentmodule:: statsmodels.tsa.filters.filtertools
 .. autosummary::
    :toctree: generated/
 
+   CycleTrendResult
    convolution_filter
    recursive_filter
    miso_lfilter
@@ -362,6 +387,7 @@ TSA Tools
    add_trend
    detrend
    lagmat
+   LagmatResult
    lagmat2ds
 
 VARMA Process

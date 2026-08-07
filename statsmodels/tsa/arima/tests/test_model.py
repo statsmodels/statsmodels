@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import macrodata
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
@@ -199,17 +200,17 @@ def test_low_memory():
     assert_equal(mod.ssm.memory_conserve, 0)
 
     # Check that low memory was actually used (just check a couple)
-    assert (res2.llf_obs is None)
-    assert (res2.predicted_state is None)
-    assert (res2.filtered_state is None)
-    assert (res2.smoothed_state is None)
+    assert res2.llf_obs is None
+    assert res2.predicted_state is None
+    assert res2.filtered_state is None
+    assert res2.smoothed_state is None
 
 
 def check_cloned(mod, endog, exog=None):
     mod_c = mod.clone(endog, exog=exog)
 
     assert_allclose(mod.nobs, mod_c.nobs)
-    assert (mod._index.equals(mod_c._index))
+    assert mod._index.equals(mod_c._index)
     assert_equal(mod.k_params, mod_c.k_params)
     assert_allclose(mod.start_params, mod_c.start_params)
     p = mod.start_params
@@ -351,6 +352,24 @@ def test_append_with_exog_pandas():
     assert_allclose(res2.llf, res_e.llf)
 
 
+def test_extend_with_exog_constant_over_window():
+    # GH 8991: extending with `exog` that is constant over the extension window
+    # (but not over the full sample) must not raise, since `extend` reuses the
+    # already-validated specification of the original model.
+    endog = dta["infl"].iloc[:100].values
+    exog = np.r_[np.arange(50.0), np.ones(50) * 3.0]
+    mod = ARIMA(endog[:50], exog=exog[:50], trend="c")
+    res = mod.fit()
+
+    # Raised ValueError before GH 8991 was fixed
+    res_e = res.extend(endog[50:], exog=exog[50:])
+
+    mod2 = ARIMA(endog, exog=exog, trend="c")
+    res2 = mod2.filter(res.params)
+
+    assert_allclose(res_e.llf_obs, res2.llf_obs[50:])
+
+
 def test_cov_type_none():
     endog = dta["infl"].iloc[:100].values
     mod = ARIMA(endog[:50], trend="c")
@@ -361,8 +380,7 @@ def test_cov_type_none():
 def test_nonstationary_gls_error():
     # GH-6540
     endog = pd.read_csv(
-        io.StringIO(
-            """\
+        io.StringIO("""\
 data\n
 9.112\n9.102\n9.103\n9.099\n9.094\n9.090\n9.108\n9.088\n9.091\n9.083\n9.095\n
 9.090\n9.098\n9.093\n9.087\n9.088\n9.083\n9.095\n9.077\n9.082\n9.082\n9.081\n
@@ -382,8 +400,7 @@ data\n
 9.058\n9.074\n9.063\n9.057\n9.062\n9.058\n9.049\n9.047\n9.062\n9.052\n9.052\n
 9.044\n9.060\n9.062\n9.055\n9.058\n9.054\n9.044\n9.047\n9.050\n9.048\n9.041\n
 9.055\n9.051\n9.028\n9.030\n9.029\n9.027\n9.016\n9.023\n9.031\n9.042\n9.035\n
-"""
-        ),
+"""),
         index_col=None,
     )
     mod = ARIMA(
@@ -444,10 +461,10 @@ def test_reproducible_simulation(random_state_type):
             return 7
         return random_state_type(7)
 
-    random_state = get_random_state(random_state_type)
-    sim1 = res.simulate(1, random_state=random_state)
-    random_state = get_random_state(random_state_type)
-    sim2 = res.simulate(1, random_state=random_state)
+    rng = get_random_state(random_state_type)
+    sim1 = res.simulate(1, rng=rng)
+    rng = get_random_state(random_state_type)
+    sim2 = res.simulate(1, rng=rng)
     assert_allclose(sim1, sim2)
 
 
@@ -466,8 +483,7 @@ def test_alternative_estimators_seasonal_differencing():
         mod_hr.fit(method="hannan_rissanen")
     except Exception as exc:
         pytest.fail(
-            f"hannan_rissanen failed on seasonal-differencing-only model:"
-            f" {exc}"
+            f"hannan_rissanen failed on seasonal-differencing-only model: {exc}"
         )
 
     # yule_walker: AR-only model with seasonal differencing
@@ -475,11 +491,21 @@ def test_alternative_estimators_seasonal_differencing():
     try:
         mod_yw.fit(method="yule_walker")
     except Exception as exc:
-        pytest.fail(
-            f"yule_walker failed on seasonal-differencing-only model: {exc}"
-        )
+        pytest.fail(f"yule_walker failed on seasonal-differencing-only model: {exc}")
 
     # Seasonal AR term (P=1) should still be rejected by hannan_rissanen
     with pytest.raises(ValueError, match="seasonal"):
-        ARIMA(endog, order=(1, 0, 0),
-              seasonal_order=(1, 0, 0, 12)).fit(method="hannan_rissanen")
+        ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 12)).fit(
+            method="hannan_rissanen"
+        )
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    endog = dta["infl"].iloc[:50]
+    mod = ARIMA(endog, order=(1, 0, 0), concentrate_scale=True)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

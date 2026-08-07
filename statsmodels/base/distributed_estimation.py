@@ -66,7 +66,7 @@ debiasing procedure.
     approx_inv_cov
 
     This is the estimate of the approximate inverse covariance
-    matrix.  This is used to debiase the coefficient average
+    matrix.  This is used to debias the coefficient average
     along with the average gradient.  For the OLS case,
     approx_inv_cov is an approximation for
 
@@ -77,7 +77,8 @@ debiasing procedure.
 
 
 def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
-    """estimates the regularized fitted parameters.
+    """
+    Estimate the regularized fitted parameters
 
     Parameters
     ----------
@@ -92,7 +93,8 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the parameters for the regularized fit
+    ndarray
+        An array of the parameters for the regularized fit.
     """
 
     if fit_kwds is None:
@@ -104,7 +106,8 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
 
 
 def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
-    """estimates the unregularized fitted parameters.
+    """
+    Estimate the unregularized fitted parameters
 
     Parameters
     ----------
@@ -119,7 +122,8 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the parameters for the fit
+    ndarray
+        An array of the parameters for the fit.
     """
 
     if fit_kwds is None:
@@ -131,8 +135,9 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
 
 
 def _join_naive(params_l, threshold=0):
-    """joins the results from each run of _est_<type>_naive
-    and returns the mean estimate of the coefficients
+    """
+    Join the results from each run of _est_<type>_naive and return
+    the mean estimate of the coefficients
 
     Parameters
     ----------
@@ -140,6 +145,11 @@ def _join_naive(params_l, threshold=0):
         A list of arrays of coefficients.
     threshold : scalar
         The threshold at which the coefficients will be cut.
+
+    Returns
+    -------
+    ndarray
+        The mean estimate of the coefficients.
     """
 
     p = len(params_l[0])
@@ -156,7 +166,8 @@ def _join_naive(params_l, threshold=0):
 
 
 def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
-    """calculates the log-likelihood gradient for the debiasing
+    """
+    Calculate the log-likelihood gradient for the debiasing
 
     Parameters
     ----------
@@ -178,7 +189,8 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
 
     Returns
     -------
-    An array-like object of the same dimension as params
+    array_like
+        An array-like object of the same dimension as params.
 
     Notes
     -----
@@ -199,7 +211,8 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
 
 
 def _calc_wdesign_mat(mod, params, hess_kwds):
-    """calculates the weighted design matrix necessary to generate
+    """
+    Calculate the weighted design matrix necessary to generate
     the approximate inverse covariance matrix
 
     Parameters
@@ -213,8 +226,9 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
 
     Returns
     -------
-    An array-like object, updated design matrix, same dimension
-    as mod.exog
+    array_like
+        An array-like object, updated design matrix, same dimension
+        as mod.exog.
     """
 
     rhess = np.sqrt(mod.hessian_factor(np.asarray(params), **hess_kwds))
@@ -224,8 +238,9 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
 def _est_regularized_debiased(
     mod, mnum, partitions, fit_kwds=None, score_kwds=None, hess_kwds=None
 ):
-    """estimates the regularized fitted parameters, is the default
-    estimation_method for class DistributedModel.
+    """
+    Estimate the regularized fitted parameters, the default
+    estimation_method for class DistributedModel
 
     Parameters
     ----------
@@ -244,11 +259,12 @@ def _est_regularized_debiased(
 
     Returns
     -------
-    A tuple of parameters for regularized fit
-        An array-like object of the fitted parameters, params
-        An array-like object for the gradient
-        A list of array like objects for nodewise_row
-        A list of array like objects for nodewise_weight
+    tuple
+        A tuple of parameters for regularized fit containing an
+        array-like object of the fitted parameters (params), an
+        array-like object for the gradient, a list of array-like
+        objects for nodewise_row, and a list of array-like objects
+        for nodewise_weight.
     """
 
     score_kwds = {} if score_kwds is None else score_kwds
@@ -288,8 +304,9 @@ def _est_regularized_debiased(
 
 
 def _join_debiased(results_l, threshold=0):
-    """joins the results from each run of _est_regularized_debiased
-    and returns the debiased estimate of the coefficients
+    """
+    Join the results from each run of _est_regularized_debiased and
+    return the debiased estimate of the coefficients
 
     Parameters
     ----------
@@ -298,6 +315,11 @@ def _join_debiased(results_l, threshold=0):
         nodewise_row and nodewise_weight values for each partition.
     threshold : scalar
         The threshold at which the coefficients will be cut.
+
+    Returns
+    -------
+    ndarray
+        The debiased estimate of the coefficients.
     """
 
     p = len(results_l[0][0])
@@ -333,9 +355,11 @@ def _join_debiased(results_l, threshold=0):
 
 
 def _helper_fit_partition(self, pnum, endog, exog, fit_kwds, init_kwds_e=None):
-    """handles the model fitting for each machine. NOTE: this
-    is primarily handled outside of DistributedModel because
-    joblib cannot handle class methods.
+    """
+    Handle the model fitting for each machine
+
+    NOTE: this is primarily handled outside of DistributedModel
+    because joblib cannot handle class methods.
 
     Parameters
     ----------
@@ -354,8 +378,9 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds, init_kwds_e=None):
 
     Returns
     -------
-    estimation_method result.  For the default,
-    _est_regularized_debiased, a tuple.
+    object
+        The estimation_method result.  For the default,
+        _est_regularized_debiased, a tuple.
     """
     init_kwds_e = {} if init_kwds_e is None else init_kwds_e
     temp_init_kwds = self.init_kwds.copy()
@@ -382,10 +407,6 @@ class DistributedModel:
     init_kwds : dict-like or None
         Keywords needed for initializing the model, in addition to
         endog and exog.
-    init_kwds_generator : generator or None
-        Additional keyword generator that produces model init_kwds
-        that may vary based on data partition.  The current usecase
-        is for WLS and GLS
     estimation_method : function or None
         The method that performs the estimation for each partition.
         If None this defaults to _est_regularized_debiased.
@@ -409,8 +430,6 @@ class DistributedModel:
     model_class : statsmodels model class
         See Parameters.
     init_kwds : dict-like
-        See Parameters.
-    init_kwds_generator : generator or None
         See Parameters.
     estimation_method : function
         See Parameters.
@@ -519,8 +538,10 @@ class DistributedModel:
 
         Returns
         -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
+        Results
+            An instance of results_class (RegularizedResults by
+            default), initialized using the dummy result model and
+            the join_method result as params.
         """
 
         if fit_kwds is None:
@@ -538,7 +559,7 @@ class DistributedModel:
 
         else:
             raise ValueError(
-                "parallel_method: %s is currently not supported" % parallel_method
+                f"parallel_method: {parallel_method} is currently not supported"
             )
 
         params = self.join_method(results_l, **self.join_kwds)
@@ -571,8 +592,10 @@ class DistributedModel:
 
         Returns
         -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
+        list
+            A list of the estimation_method result for each partition.
+            For the default, _est_regularized_debiased, a list of
+            tuples.
         """
 
         results_l = []
@@ -586,7 +609,7 @@ class DistributedModel:
 
         else:
 
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
 
             for pnum, ((endog, exog), init_kwds_e) in tup_gen:
 
@@ -620,8 +643,10 @@ class DistributedModel:
 
         Returns
         -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
+        list
+            A list of the estimation_method result for each partition.
+            For the default, _est_regularized_debiased, a list of
+            tuples.
         """
 
         from statsmodels.tools.parallel import parallel_func
@@ -642,14 +667,14 @@ class DistributedModel:
                 )
 
         elif parallel_backend is None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
             results_l = par(
                 f(self, pnum, endog, exog, fit_kwds, init_kwds)
                 for pnum, ((endog, exog), init_kwds) in tup_gen
             )
 
         elif parallel_backend is not None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
             with parallel_backend:
                 results_l = par(
                     f(self, pnum, endog, exog, fit_kwds, init_kwds)
@@ -677,8 +702,10 @@ class DistributedResults(LikelihoodModelResults):
         super().__init__(model, params)
 
     def predict(self, exog, *args, **kwargs):
-        """Calls self.model.predict for the provided exog.  See
-        Results.predict.
+        """
+        Call self.model.predict for the provided exog
+
+        See Results.predict.
 
         Parameters
         ----------
@@ -695,8 +722,8 @@ class DistributedResults(LikelihoodModelResults):
 
         Returns
         -------
-            prediction : ndarray, pandas.Series or pandas.DataFrame
-            See self.model.predict
+        ndarray, pandas.Series or pandas.DataFrame
+            See self.model.predict.
         """
 
         return self.model.predict(self.params, exog, *args, **kwargs)

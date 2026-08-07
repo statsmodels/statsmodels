@@ -2,12 +2,12 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
-
 from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
 import os
+from pathlib import Path
 import re
 import warnings
 
@@ -35,9 +35,9 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_unrestricted,
 )
 
-base, _ = os.path.split(os.path.abspath(__file__))
+base, _ = os.path.split(Path(__file__).resolve())
 housing_data = pd.read_csv(
-    os.path.join(base, "results", "housing-data.csv"),
+    Path(base).joinpath("results", "housing-data.csv"),
     index_col="DATE",
     parse_dates=True,
 )
@@ -812,6 +812,7 @@ def test_2d_data():
         ExponentialSmoothing(pd.concat([housing_data, housing_data], axis=1)).fit()
 
 
+@pytest.mark.thread_unsafe(reason="Issues and checks warnings")
 def test_infer_freq():
     hd2 = housing_data.copy()
     hd2.index = list(hd2.index)
@@ -1587,28 +1588,36 @@ def test_simulate_keywords(austourists):
 
     # test anchor
     rs = np.random.RandomState(1232131)
-    assert_almost_equal(
-        fit.simulate(4, anchor=0, rng=0).values,
-        fit.simulate(4, anchor="start", rng=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor=-1, rng=0).values,
-        fit.simulate(4, anchor="2015-12-01", rng=0).values,
-    )
-    assert_almost_equal(
-        fit.simulate(4, anchor="end", rng=0).values,
-        fit.simulate(4, anchor="2016-03-01", rng=0).values,
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_0 = fit.simulate(4, anchor=0, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_1 = fit.simulate(4, anchor="start", rng=0).values
+    assert_almost_equal(sim_0, sim_1)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_2 = fit.simulate(4, anchor=-1, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_3 = fit.simulate(4, anchor="2015-12-01", rng=0).values
+
+    assert_almost_equal(sim_2, sim_3)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_4 = fit.simulate(4, anchor="end", rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim_5 = fit.simulate(4, anchor="2016-03-01", rng=0).values
+    assert_almost_equal(sim_4, sim_5)
 
     # test different random error options
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
-    fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm, rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors=scipy.stats.norm(), rng=0)
 
-    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10), rng=0)
-    fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
+    fit.simulate(4, repetitions=10, random_errors=rs.randn(4, 10))
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        fit.simulate(4, repetitions=10, random_errors="bootstrap", rng=0)
 
     # test seeding
-    res = fit.simulate(4, repetitions=10, rng=10).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=10).values
     res2 = fit.simulate(4, repetitions=10, rng=np.random.RandomState(10)).values
     assert np.all(res == res2)
 
@@ -1627,8 +1636,8 @@ def test_simulate_boxcox(austourists):
         use_boxcox=True,
     ).fit()
     expected = fit.forecast(4).values
-
-    res = fit.simulate(4, repetitions=10, rng=0).values
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res = fit.simulate(4, repetitions=10, rng=0).values
     mean = np.mean(res, axis=1)
 
     assert np.all(np.abs(mean - expected) < 5)
@@ -1664,7 +1673,7 @@ def test_error_boxcox():
     mod = ExponentialSmoothing(
         y**2, use_boxcox=True, initialization_method="legacy-heuristic"
     )
-    with pytest.raises(ValueError, match="use_boxcox was set"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'use_boxcox'"):
         mod.fit(use_boxcox=False)
 
 
@@ -1708,9 +1717,11 @@ def test_error_initialization(ses):
             initial_trend=2.0,
         )
     mod = ExponentialSmoothing(ses, initialization_method="known", initial_level=1.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'initial_level'"):
         mod.fit(initial_level=2.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        TypeError, match="unexpected keyword argument 'use_basinhopping'"
+    ):
         mod.fit(use_basinhopping=True, method="least_squares")
 
 
@@ -1948,7 +1959,7 @@ def test_summary_boxcox(ses):
     mod = ExponentialSmoothing(
         ses**2, use_boxcox=True, initialization_method="heuristic"
     )
-    with pytest.raises(ValueError, match="use_boxcox was set at model"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'use_boxcox'"):
         mod.fit(use_boxcox=True)
     res = mod.fit()
     summ = str(res.summary())
@@ -1964,20 +1975,24 @@ def test_simulate(ses):
         res.simulate(10, error="unknown", rng=0)
     with pytest.raises(ValueError, match="If random"):
         res.simulate(10, error="additive", random_errors=np.empty((20, 20)), rng=0)
-    res.simulate(10, error="additive", anchor=100, rng=0)
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        res.simulate(10, error="additive", anchor=100, rng=0)
     with pytest.raises(ValueError, match="Cannot anchor"):
         res.simulate(10, error="additive", anchor=2000, rng=0)
-    with pytest.raises(TypeError, match="seed must be an int or array-like of int"):
+    with pytest.raises(
+        TypeError, match="When creating a random number generator from a"
+    ):
         res.simulate(10, error="additive", anchor=100, rng="bad_value")
     with pytest.raises(ValueError, match="Argument random_errors has unexpected value"):
-        res.simulate(10, error="additive", random_errors="bad_values", rng=0)
+        with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+            res.simulate(10, error="additive", random_errors="bad_values", rng=0)
 
 
-@pytest.mark.parametrize("index_typ", ["date_range", "period", "range", "irregular"])
+@pytest.mark.parametrize("index_typ", ["date_range", "period", "range"])
 def test_forecast_index_types(ses, index_typ):
     nobs = ses.shape[0]
     kwargs = {}
-    model_warning = forecast_warning = None
+    model_warning = None
     fcast_index = None
     if index_typ == "period":
         index = pd.period_range("2000-1-1", periods=nobs + 36, freq="M")
@@ -1986,13 +2001,6 @@ def test_forecast_index_types(ses, index_typ):
     elif index_typ == "range":
         index = pd.RangeIndex(nobs + 36)
         kwargs["seasonal_periods"] = 12
-    elif index_typ == "irregular":
-        rs = np.random.RandomState(0)
-        index = pd.Index(np.cumsum(rs.randint(0, 4, size=nobs + 36)))
-        model_warning = ValueWarning
-        forecast_warning = FutureWarning
-        kwargs["seasonal_periods"] = 12
-        fcast_index = pd.RangeIndex(start=1000, stop=1036, step=1)
     if fcast_index is None:
         fcast_index = index[-36:]
     ses = ses.copy()
@@ -2006,8 +2014,7 @@ def test_forecast_index_types(ses, index_typ):
             initialization_method="heuristic",
             **kwargs,
         ).fit()
-    with pytest_warns(forecast_warning):
-        fcast = res.forecast(36)
+    fcast = res.forecast(36)
     assert isinstance(fcast, pd.Series)
     pd.testing.assert_index_equal(fcast.index, fcast_index)
 
@@ -2039,14 +2046,16 @@ def test_forecast_1_simulation(austourists, random_errors, repetitions):
         initialization_method="estimated",
     ).fit()
 
-    sim = fit.simulate(
-        1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim = fit.simulate(
+            1, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
+        )
     expected_shape = (1,) if repetitions == 1 else (1, repetitions)
     assert sim.shape == expected_shape
-    sim = fit.simulate(
-        10, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
-    )
+    with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
+        sim = fit.simulate(
+            10, anchor=0, random_errors=random_errors, repetitions=repetitions, rng=0
+        )
     expected_shape = (10,) if repetitions == 1 else (10, repetitions)
     assert sim.shape == expected_shape
 
@@ -2101,7 +2110,7 @@ def test_invalid_index():
             initialization_method="heuristic",
         )
     fitted = model.fit(optimized=True, use_brute=True)
-    with pytest.warns(FutureWarning, match="No supported"):
+    with pytest.raises(ValueError, match="No supported index is available"):
         fitted.forecast(steps=157200)
 
 

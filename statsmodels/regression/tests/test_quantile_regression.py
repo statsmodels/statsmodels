@@ -6,6 +6,7 @@ import scipy.stats
 
 import statsmodels.api as sm
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.quantile_regression import QuantReg
 
 from .results.results_quantile_regression import (
@@ -342,3 +343,25 @@ def test_nontrivial_singular_matrix():
     # prediction is correct even with singular exog
     res_ns = QuantReg(y, X[:, :-1]).fit(0.5)
     assert_allclose(res_singular.predict(X), res_ns.predict(X[:, :-1]), rtol=0.01)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    data = sm.datasets.engel.load_pandas().data
+    mgr = FormulaManager()
+    y, X = mgr.get_matrices("foodexp ~ income", data)
+    res = QuantReg(y, X).fit(q=0.75, vcov="iid", kernel="epa", bandwidth="hsheather")
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_scale_is_a_property():
+    # GH: QuantRegResults.scale had its @cache_readonly commented out, so
+    # it was a plain method: `res.scale` returned a bound method instead
+    # of a float.
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+    res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")
+    assert res.scale == 1.0

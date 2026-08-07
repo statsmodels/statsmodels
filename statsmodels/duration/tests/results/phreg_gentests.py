@@ -56,5 +56,5 @@ for n, p in (20, 1), (50, 1), (50, 2), (100, 5), (1000, 10):
         (time[:, None], status[:, None], entry_time[:, None], exog), axis=1
     )
 
-    fname = "results/survival_data_%d_%d.csv" % (n, p)
+    fname = f"results/survival_data_{n:d}_{p:d}.csv"
     np.savetxt(fname, data, fmt="%.5f")

@@ -1,5 +1,5 @@
 import io
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.api import families
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.othermod.betareg import BetaModel
 from statsmodels.tools.sm_exceptions import ValueWarning
 
@@ -15,8 +16,8 @@ from .results import results_betareg as resultsb
 
 links = families.links
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-res_dir = os.path.join(cur_dir, "results")
+cur_dir = Path(__file__).resolve().parent
+res_dir = Path(cur_dir).joinpath("results")
 
 
 # betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
@@ -54,8 +55,8 @@ expected_methylation_mean = pd.read_table(
 expected_methylation_precision = pd.read_table(
     io.StringIO(_methylation_estimates_precision), sep=r"\s+")
 
-income = pd.read_csv(os.path.join(res_dir, "foodexpenditure.csv"))
-methylation = pd.read_csv(os.path.join(res_dir, "methylation-test.csv"))
+income = pd.read_csv(Path(res_dir).joinpath("foodexpenditure.csv"))
+methylation = pd.read_csv(Path(res_dir).joinpath("methylation-test.csv"))
 
 
 def check_same(a, b, eps, name):
@@ -177,7 +178,7 @@ class TestBetaModel:
         )
 
 
-class TestBetaMeth():
+class TestBetaMeth:
 
     @classmethod
     def setup_class(cls):
@@ -351,7 +352,7 @@ class TestBetaMeth():
         assert_allclose(dfmw, dfm6, rtol=1e-13)
 
 
-class TestBetaIncome():
+class TestBetaIncome:
 
     @classmethod
     def setup_class(cls):
@@ -413,3 +414,13 @@ class TestBetaIncome():
         frame = influ.summary_frame()
         frame0 = influ0.summary_frame()
         assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    model = "I(food/income) ~ income + persons"
+    res = BetaModel.from_formula(model, income).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

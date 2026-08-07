@@ -163,6 +163,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
+        the unique values found in groups are used as the two group labels.
     correction : bool
         Following the SAS manual, for samplesize below 50, the test
         statistic is corrected by 0.5. This can be turned off with
@@ -182,7 +183,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     -----
     Wald-Wolfowitz runs test.
 
-    If there are ties, then then the test statistic and p-value that is
+    If there are ties, then the test statistic and p-value that is
     reported, is based on the higher p-value between sorting all tied
     observations of the same group
 
@@ -644,15 +645,3 @@ def symmetry_bowker(table):
     pval = stats.chi2.sf(stat, df)
 
     return stat, pval, df
-
-
-if __name__ == "__main__":
-
-    x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
-
-    print(Runs(x1).runs_test())
-    print(runstest_1samp(x1, cutoff="mean"))
-    print(runstest_2samp(np.arange(16, 0, -1), groups=x1))
-    print(TotalRunsProb(7, 9).cdf(11))
-    print(median_test_ksample(np.random.randn(100), np.random.randint(0, 2, 100)))
-    print(cochrans_q(np.random.randint(0, 2, (100, 8))))

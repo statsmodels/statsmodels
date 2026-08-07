@@ -435,13 +435,13 @@ def test_simulation_smoothing(missing):
     sim_uv = mod_uv.simulation_smoother()
 
     # Test for basic simulationg of a new observed series
-    simulate_switch = mod_switch.simulate([], 10, random_state=1234)
-    simulate_uv = mod_uv.simulate([], 10, random_state=1234)
+    simulate_switch = mod_switch.simulate([], 10, rng=1234)
+    simulate_uv = mod_uv.simulate([], 10, rng=1234)
     assert_allclose(simulate_switch, simulate_uv)
 
     # Perform simulation smoothing
-    sim_switch.simulate(random_state=1234)
-    sim_uv.simulate(random_state=1234)
+    sim_switch.simulate(rng=1234)
+    sim_uv.simulate(rng=1234)
 
     # Make sure that switching happened in the first model but not the second
     kfilter = sim_switch._simulation_smoother.simulated_kfilter

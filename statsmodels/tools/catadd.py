@@ -1,11 +1,11 @@
-"""Utilities for adding independent columns to design matrices."""
+"""Utilities for adding independent columns to design matrices"""
 
 import numpy as np
 
 
 def add_indep(x, varnames, dtype=None):
     """
-    Construct an array with independent columns.
+    Construct an array with independent columns
 
     Parameters
     ----------
@@ -25,9 +25,11 @@ def add_indep(x, varnames, dtype=None):
     varnames_new : list[str]
         Names of the retained columns.
 
-    x is either iterable (list, tuple) or instance of ndarray or a subclass
-    of it.  If x is an ndarray, then each column is assumed to represent a
-    variable with observations in rows.
+    Notes
+    -----
+    `x` is either iterable (list, tuple) or instance of ndarray or a
+    subclass of it.  If `x` is an ndarray, then each column is assumed to
+    represent a variable with observations in rows.
 
     """
     # TODO: this needs tests for subclasses
@@ -44,7 +46,7 @@ def add_indep(x, varnames, dtype=None):
     rank_old = 0
     varnames_new = []
     varnames_dropped = []
-    for (xi, ni) in zip(x, varnames):
+    for (xi, ni) in zip(x, varnames, strict=True):
         xout[:, count] = xi
         rank_new = np.linalg.matrix_rank(xout)
         if rank_new > rank_old:

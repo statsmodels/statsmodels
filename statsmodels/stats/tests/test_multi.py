@@ -275,8 +275,7 @@ def test_pvalcorrection_reject(alpha, method, ii):
     reject, pvalscorr = multipletests(pval1, alpha=alpha,
                                       method=method)[:2]
 
-    msg = "case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r" % (
-                     method, alpha, reject.sum(), pval1, pvalscorr)
+    msg = f"case {method} {alpha:3.2f} rejected:{reject.sum():d}\npval_raw={pval1!r}\npvalscorr={pvalscorr!r}"
     assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
 
 
@@ -325,8 +324,7 @@ def test_fdr_bky():
     # also alpha_star is the same as theirs for TST
 
     # alpha_star for stage 2
-    with pytest.warns(FutureWarning, match="iter keyword"):
-        res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
+    res_tst = fdrcorrection_twostage(pvals, alpha=0.05)
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2], 3)
     assert_equal(8, res_tst[0].sum())
 
@@ -545,3 +543,19 @@ def test_null_constrained(estimate_mean, estimate_scale, estimate_prob):
                     norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean,
                              scale=emp_null.sd),
                     rtol=1e-13)
+
+
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
+def test_multipletests_empty(method):
+    # An empty p-value array used to raise "float division by zero" for every
+    # method, because the corrected alphas are computed from 1 / ntests before
+    # the method is dispatched. fdrcorrection already accepted an empty input.
+    reject, pvals_corrected, alphac_sidak, alphac_bonf = multipletests(
+        [], method=method
+    )
+
+    assert reject.shape == (0,)
+    assert pvals_corrected.shape == (0,)
+    # the corrected alphas are undefined when there is nothing to correct
+    assert np.isnan(alphac_sidak)
+    assert np.isnan(alphac_bonf)

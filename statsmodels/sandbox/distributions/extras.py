@@ -24,8 +24,8 @@ main changes
 * added separate example and tests (2010-05-09)
 * collect transformation function into classes
 
-Example
--------
+Examples
+--------
 
 >>> logtg = Transf_gen(stats.t, np.exp, np.log,
                 numargs = 1, a=0, name = 'lnnorm',
@@ -61,14 +61,9 @@ from statsmodels.stats.moment_helpers import mc2mvsk, mvsk2mc
 try:
     from scipy.stats._mvn import mvndst
 except ImportError:
-    try:
-        # Must be using SciPy <1.8.0 where this function was moved (it's not a
-        # public SciPy function, but we need it here)
-        from scipy.stats.mvn import mvndst
-    except ImportError:
 
-        def mvndst(*args, **kwargs):
-            raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
+    def mvndst(*args, **kwargs):
+        raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
 
 
 # note copied from distr_skewnorm_0.py
@@ -1234,7 +1229,7 @@ def mvnormcdf(upper, mu, cov, lower=None, **kwds):
        lower and upper integration limits with length equal to the number
        of dimensions of the multivariate normal distribution. It can contain
        -np.inf or np.inf for open integration intervals
-    mu : array_lik, 1d
+    mu : array_like, 1d
        list or array of means
     cov : array_like, 2d
        specifies covariance matrix

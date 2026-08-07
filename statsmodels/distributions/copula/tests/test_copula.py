@@ -7,7 +7,6 @@ License: BSD-3
 """
 
 from statsmodels.compat.pytest import pytest_warns
-from statsmodels.compat.scipy import SP_LT_15
 
 import warnings
 
@@ -265,7 +264,7 @@ gev_list = [
 
 def check_cop_rvs(cop, rvs=None, nobs=2000, k=10, use_pdf=True, rng=None):
     if rvs is None:
-        rvs = cop.rvs(nobs, random_state=rng)
+        rvs = cop.rvs(nobs, rng=rng)
     else:
         nobs = rvs.shape[0]
     freq = frequencies_fromdata(rvs, k, use_ranks=True)
@@ -561,7 +560,7 @@ class CheckCopula:
     def test_rvs(self):
         nobs = 2000
         rng = np.random.RandomState(27658622)
-        self.rvs = rvs = self.copula.rvs(nobs, random_state=rng)
+        self.rvs = rvs = self.copula.rvs(nobs, rng=rng)
         assert rvs.shape == (nobs, 2)
         assert_array_almost_equal(
             np.mean(rvs, axis=0), np.repeat(0.5, self.dim), decimal=2
@@ -589,23 +588,26 @@ class CheckCopula:
 
 class CheckModernCopula(CheckCopula):
 
-    @pytest.mark.singleton_randomstate
-    def test_seed_legacy(self):
-        seed1 = None
-        singleton = np.random.mtrand._rand
-        seed2 = np.random.RandomState()
-        seed2.set_state(singleton.get_state())
+    def test_seed_default_rng(self):
+        seed1 = np.random.default_rng()
+        seed2 = np.random.default_rng()
+        seed2.bit_generator.state = seed1.bit_generator.state
         nobs = 2000
-        expected_warn = None if seed1 is not None else FutureWarning
-        with pytest_warns(expected_warn):
-            rvs1 = self.copula.rvs(nobs, random_state=seed1)
-        rvs2 = self.copula.rvs(nobs, random_state=seed2)
+        rvs1 = self.copula.rvs(nobs, rng=seed1)
+        rvs2 = self.copula.rvs(nobs, rng=seed2)
         assert_allclose(rvs1, rvs2)
+
+    @pytest.mark.parametrize(
+        "rng", [None, 0, np.random.RandomState(0), np.random.default_rng(0)]
+    )
+    def test_rng_types(self, rng):
+        nobs = 2000
+        rvs = self.copula.rvs(nobs, rng=rng)
+        assert isinstance(rvs, np.ndarray)
+        assert np.issubdtype(rvs.dtype, np.float64)
 
     @pytest.mark.parametrize("seed", ["random_state", "generator", "qmc", 0])
     def test_seed(self, seed):
-        if SP_LT_15 and seed in ("generator", 0):
-            pytest.xfail(reason="Generator not supported for SciPy <= 1.3")
         if seed == "random_state":
             seed1 = np.random.RandomState(0)
             seed2 = np.random.RandomState(0)
@@ -626,8 +628,9 @@ class CheckModernCopula(CheckCopula):
         nobs = 2000
         expected_warn = None if seed1 is not None else FutureWarning
         with pytest_warns(expected_warn):
-            rvs1 = self.copula.rvs(nobs, random_state=seed1)
-        rvs2 = self.copula.rvs(nobs, random_state=seed2)
+            rvs1 = self.copula.rvs(nobs, rng=seed1)
+        with pytest_warns(FutureWarning):
+            rvs2 = self.copula.rvs(nobs, random_state=seed2)
         assert_allclose(rvs1, rvs2)
 
 
@@ -645,7 +648,7 @@ class CheckRvsDim:
         use_pdf = getattr(self, "use_pdf", False)
         # seed adjusted to avoid test failures with rvs numbers
         rng = np.random.RandomState(97651629)  # 27658622)
-        rvs = self.copula.rvs(nobs, random_state=rng)
+        rvs = self.copula.rvs(nobs, rng=rng)
         chi2t, rvs = check_cop_rvs(
             self.copula, rvs=rvs, nobs=nobs, k=10, use_pdf=use_pdf, rng=rng
         )
@@ -677,6 +680,18 @@ class CheckRvsDim:
         theta_est = self.copula.fit_corr_param(rvs)
         # specific to archimedean
         assert_allclose(theta_est, self.copula.args[0], rtol=0.1, atol=atol)
+
+    @pytest.mark.parametrize(
+        "rng", [0, np.random.RandomState(0), np.random.default_rng(0)]
+    )
+    def test_rng_types(self, rng):
+        nobs = 2000
+        rvs = self.copula.rvs(nobs, rng=rng)
+        assert isinstance(rvs, np.ndarray)
+        assert np.issubdtype(rvs.dtype, np.float64)
+
+        with pytest_warns(FutureWarning):
+            self.copula.rvs(nobs, random_state=rng)
 
 
 class TestGaussianCopula(CheckCopula):

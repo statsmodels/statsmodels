@@ -6,8 +6,6 @@ License: BSD-3
 
 """
 
-import warnings
-
 import numpy as np
 from scipy import optimize, stats
 
@@ -49,13 +47,14 @@ method_names_poisson_1samp = {
 def test_poisson(
     count, nobs, value, method=None, alternative="two-sided", dispersion=1
 ):
-    """Test for one sample poisson mean or rate
+    """
+    Test for one sample poisson mean or rate
 
     Parameters
     ----------
     count : array_like
         Observed count, number of events.
-    nobs : arrat_like
+    nobs : array_like
         Currently this is total exposure time of the count variable.
         This will likely change.
     value : float, array_like
@@ -65,23 +64,24 @@ def test_poisson(
         This is required, there is currently no default method.
         See Notes for available methods.
     alternative : {'two-sided', 'smaller', 'larger'}
-        alternative hypothesis, which can be two-sided or either one of the
+        Alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
     dispersion : float
         Dispersion scale coefficient for Poisson QMLE. Default is that the
         data follows a Poisson distribution. Dispersion different from 1
-        correspond to excess-dispersion in Poisson quasi-likelihood (GLM).
-        Dispersion coeffficient different from one is currently only used in
+        corresponds to excess-dispersion in Poisson quasi-likelihood (GLM).
+        Dispersion coefficient different from one is currently only used in
         wald and score method.
 
     Returns
     -------
-    HolderTuple instance with test statistic, pvalue and other attributes.
+    HolderTuple
+        Instance with test statistic, pvalue and other attributes.
 
     Notes
     -----
-    The implementatio of the hypothesis test is mainly based on the references
-    for the confidence interval, see confint_poisson.
+    The implementation of the hypothesis test is mainly based on the
+    references for the confidence interval, see confint_poisson.
 
     Available methods are:
 
@@ -99,7 +99,6 @@ def test_poisson(
     See Also
     --------
     confint_poisson
-
     """
 
     n = nobs  # short hand
@@ -173,7 +172,7 @@ def test_poisson(
         ) / std
 
     else:
-        raise ValueError("unknown method %s" % method)
+        raise ValueError(f"unknown method {method}")
 
     if dist == "normal":
         statistic, pvalue = _zstat_generic2(statistic, 1, alternative)
@@ -191,7 +190,8 @@ def test_poisson(
 
 
 def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-sided"):
-    """Confidence interval for a Poisson mean or rate
+    """
+    Confidence interval for a Poisson mean or rate
 
     The function is vectorized for all methods except "midp-c", which uses
     an iterative method to invert the hypothesis test function.
@@ -203,23 +203,24 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     ----------
     count : array_like
         Observed count, number of events.
-    exposure : arrat_like
+    exposure : array_like
         Currently this is total exposure time of the count variable.
         This will likely change.
     method : str
-        Method to use for confidence interval
-        This is required, there is currently no default method
+        Method to use for confidence interval.
+        This is required, there is currently no default method.
     alpha : float in (0, 1)
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
-    alternative : {"two-sider", "larger", "smaller")
-        default: "two-sided"
+    alternative : {"two-sided", "larger", "smaller"}
+        Default: "two-sided".
         Specifies whether to calculate a two-sided or one-sided confidence
         interval.
 
     Returns
     -------
-    tuple (low, upp) : confidence limits.
+    tuple (low, upp)
+        Confidence limits.
         When alternative is not "two-sided", lower or upper bound is set to
         0 or inf respectively.
 
@@ -383,7 +384,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
         )
 
     else:
-        raise ValueError("unknown method %s" % method)
+        raise ValueError(f"unknown method {method}")
 
     if alternative == "larger":
         ci = (0, ci[1])
@@ -403,13 +404,14 @@ def tolerance_int_poisson(
     alpha=0.05,
     alternative="two-sided",
 ):
-    """tolerance interval for a poisson observation
+    """
+    Tolerance interval for a poisson observation
 
     Parameters
     ----------
     count : array_like
         Observed count, number of events.
-    exposure : arrat_like
+    exposure : array_like
         Currently this is total exposure time of the count variable.
     prob : float in (0, 1)
         Probability of poisson interval, often called "content".
@@ -425,20 +427,21 @@ def tolerance_int_poisson(
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
-    alternative : {"two-sider", "larger", "smaller")
+    alternative : {"two-sided", "larger", "smaller"}
         The tolerance interval can be two-sided or one-sided.
         Alternative "larger" provides the upper bound of the confidence
         interval, larger counts are outside the interval.
 
     Returns
     -------
-    tuple (low, upp) of limits of tolerance interval.
+    tuple (low, upp)
+        Limits of tolerance interval.
         The tolerance interval is a closed interval, that is both ``low`` and
         ``upp`` are in the interval.
 
     Notes
     -----
-    verified against R package tolerance `poistol.int`
+    Verified against R package tolerance `poistol.int`.
 
     See Also
     --------
@@ -453,7 +456,6 @@ def tolerance_int_poisson(
     .. [2] Hahn, Gerald J., and Ramesh Chandra. 1981. “Tolerance Intervals for
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
        100-110. https://doi.org/10.1080/00224065.1981.11980998.
-
     """
     prob_tail = 1 - prob
     alpha_ = alpha
@@ -490,13 +492,14 @@ def confint_quantile_poisson(
     alpha=0.05,
     alternative="two-sided",
 ):
-    """confidence interval for quantile of poisson random variable
+    """
+    Confidence interval for quantile of poisson random variable
 
     Parameters
     ----------
     count : array_like
         Observed count, number of events.
-    exposure : arrat_like
+    exposure : array_like
         Currently this is total exposure time of the count variable.
     prob : float in (0, 1)
         Probability for the quantile, e.g. 0.95 to get the upper 95% quantile.
@@ -511,16 +514,17 @@ def confint_quantile_poisson(
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
-    alternative : {"two-sider", "larger", "smaller")
+    alternative : {"two-sided", "larger", "smaller"}
         The tolerance interval can be two-sided or one-sided.
         Alternative "larger" provides the upper bound of the confidence
         interval, larger counts are outside the interval.
 
     Returns
     -------
-    tuple (low, upp) of limits of tolerance interval.
-    The confidence interval is a closed interval, that is both ``low`` and
-    ``upp`` are in the interval.
+    tuple (low, upp)
+        Limits of tolerance interval.
+        The confidence interval is a closed interval, that is both ``low``
+        and ``upp`` are in the interval.
 
     See Also
     --------
@@ -559,7 +563,29 @@ def confint_quantile_poisson(
 def _invert_test_confint(
     count, nobs, alpha=0.05, method="midp-c", method_start="exact-c"
 ):
-    """invert hypothesis test to get confidence interval"""
+    """
+    Invert hypothesis test to get confidence interval
+
+    Parameters
+    ----------
+    count : array_like
+        Observed count, number of events.
+    nobs : array_like
+        Total exposure time of the count variable.
+    alpha : float in (0, 1)
+        Significance level, nominal coverage of the confidence interval is
+        1 - alpha.
+    method : str
+        Method to use for the p-value in the inverted hypothesis test.
+    method_start : str
+        Method used to compute the starting confidence interval for the
+        numerical inversion.
+
+    Returns
+    -------
+    tuple
+        Lower and upper confidence limits.
+    """
 
     def func(r):
         v = (test_poisson(count, nobs, value=r, method=method)[1] - alpha) ** 2
@@ -582,7 +608,36 @@ def _invert_test_confint_2indep(
     compare="diff",
     method_start="wald",
 ):
-    """invert hypothesis test to get confidence interval for 2indep"""
+    """
+    Invert hypothesis test to get confidence interval for 2indep
+
+    Parameters
+    ----------
+    count1 : int
+        Number of events in first sample, treatment group.
+    exposure1 : float
+        Total exposure (time * subjects) in first sample.
+    count2 : int
+        Number of events in second sample, control group.
+    exposure2 : float
+        Total exposure (time * subjects) in second sample.
+    alpha : float in (0, 1)
+        Significance level, nominal coverage of the confidence interval is
+        1 - alpha.
+    method : str
+        Method to use for the p-value in the inverted hypothesis test.
+    compare : {'diff', 'ratio'}
+        Whether the confidence interval is for the difference or the ratio
+        of the two rates.
+    method_start : str
+        Method used to compute the starting confidence interval for the
+        numerical inversion.
+
+    Returns
+    -------
+    tuple
+        Lower and upper confidence limits.
+    """
 
     def func(r):
         v = (
@@ -643,13 +698,13 @@ def test_poisson_2indep(
     count2,
     exposure2,
     value=None,
-    ratio_null=None,
     method=None,
     compare="ratio",
     alternative="two-sided",
     etest_kwds=None,
 ):
-    """Test for comparing two sample Poisson intensity rates.
+    """
+    Test for comparing two sample Poisson intensity rates
 
     Rates are defined as expected count divided by exposure.
 
@@ -680,22 +735,9 @@ def test_poisson_2indep(
         Number of events in second sample, control group.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    ratio_null: float
-        Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-        Deprecated, use ``value`` instead.
-
-        .. deprecated:: 0.14.0
-
-            Use ``value`` instead.
-
     value : float
         Value of the ratio or difference of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
-
-        .. versionadded:: 0.14.0
-
-            Replacement for ``ratio_null``.
-
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
@@ -706,13 +748,13 @@ def test_poisson_2indep(
         - 'score': method W2A, score test, variance based on estimate under
           the Null hypothesis
         - 'wald-log': W3A, uses log-ratio, variance based on observed rates
-        - 'score-log' W4A, uses log-ratio, variance based on estimate under
+        - 'score-log': W4A, uses log-ratio, variance based on estimate under
           the Null hypothesis
         - 'sqrt': W5A, based on variance stabilizing square root transformation
         - 'exact-cond': exact conditional test based on binomial distribution
            This uses ``binom_test`` which is minlike in the two-sided case.
         - 'cond-midp': midpoint-pvalue of exact conditional test
-        - 'etest' or 'etest-score: etest with score test statistic
+        - 'etest' or 'etest-score': etest with score test statistic
         - 'etest-wald': etest with wald test statistic
 
         diff:
@@ -729,13 +771,13 @@ def test_poisson_2indep(
         rate ratio defined by ratio = rate1 / rate2.
         If compare is `diff`, then the hypothesis test is for
         diff = rate1 - rate2.
-    alternative : {"two-sided" (default), "larger", smaller}
+    alternative : {"two-sided" (default), "larger", "smaller"}
         The alternative hypothesis, H1, has to be one of the following
 
         - 'two-sided': H1: ratio, or diff, of rates is not equal to value
         - 'larger' :   H1: ratio, or diff, of rates is larger than value
         - 'smaller' :  H1: ratio, or diff, of rates is smaller than value
-    etest_kwds: dictionary
+    etest_kwds : dictionary
         Additional optional parameters to be passed to the etest_poisson_2indep
         function, namely y_grid.
 
@@ -758,7 +800,7 @@ def test_poisson_2indep(
     - 'wald': method W1A, wald test, variance based on separate estimates
     - 'score': method W2A, score test, variance based on estimate under Null
     - 'wald-log': W3A, wald test for log transformed ratio
-    - 'score-log' W4A, score test for log transformed ratio
+    - 'score-log': W4A, score test for log transformed ratio
     - 'sqrt': W5A, based on variance stabilizing square root transformation
     - 'exact-cond': exact conditional test based on binomial distribution
     - 'cond-midp': midpoint-pvalue of exact conditional test
@@ -792,7 +834,12 @@ def test_poisson_2indep(
     """
 
     # shortcut names
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -802,37 +849,27 @@ def test_poisson_2indep(
             # default method
             method = "score"
 
-        if ratio_null is not None:
-            warnings.warn(
-                "'ratio_null' is deprecated, use 'value' keyword",
-                FutureWarning,
-                stacklevel=2,
-            )
-            value = ratio_null
-        if ratio_null is None and value is None:
+        if value is None:
             # default value
-            value = ratio_null = 1
-        else:
-            # for results holder instance, it still contains ratio_null
-            ratio_null = value
+            value = 1
 
         r = value
         r_d = r / d  # r1 * n1 / (r2 * n2)
 
-        if method in ["score"]:
+        if method == "score":
             stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
             dist = "normal"
-        elif method in ["wald"]:
+        elif method == "wald":
             stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
             dist = "normal"
-        elif method in ["score-log"]:
+        elif method == "score-log":
             stat = np.log(y1 / y2) - np.log(r_d)
             stat /= np.sqrt((2 + 1 / r_d + r_d) / (y1 + y2))
             dist = "normal"
-        elif method in ["wald-log"]:
+        elif method == "wald-log":
             stat = (np.log(y1 / y2) - np.log(r_d)) / np.sqrt(1 / y1 + 1 / y2)
             dist = "normal"
-        elif method in ["sqrt"]:
+        elif method == "sqrt":
             stat = 2 * (np.sqrt(y1 + 3 / 8.0) - np.sqrt((y2 + 3 / 8.0) * r_d))
             stat /= np.sqrt(1 + r_d)
             dist = "normal"
@@ -846,7 +883,7 @@ def test_poisson_2indep(
             pvalue = proportion.binom_test(
                 y1, y_total, prop=bp, alternative=alternative
             )
-            if method in ["cond-midp"]:
+            if method == "cond-midp":
                 # not inplace in case we still want binom pvalue
                 pvalue = pvalue - 0.5 * stats.binom.pmf(y1, y_total, bp)
 
@@ -877,15 +914,15 @@ def test_poisson_2indep(
     elif compare == "diff":
         if value is None:
             value = 0
-        if method in ["wald"]:
+        if method == "wald":
             stat = (rate1 - rate2 - value) / np.sqrt(rate1 / n1 + rate2 / n2)
             dist = "normal"
             "waldccv"
-        elif method in ["waldccv"]:
+        elif method == "waldccv":
             stat = rate1 - rate2 - value
             stat /= np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
             dist = "normal"
-        elif method in ["score"]:
+        elif method == "score":
             # estimate rates with constraint MLE
             count_pooled = y1 + y2
             rate_pooled = count_pooled / (n1 + n2)
@@ -943,13 +980,41 @@ def test_poisson_2indep(
         diff=diff,
         value=value,
         rates_cmle=rates_cmle,
-        ratio_null=ratio_null,
     )
     return res
 
 
 def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
-    """score test and cmle for difference of 2 independent poisson rates"""
+    """
+    Score test and cmle for difference of 2 independent poisson rates
+
+    Parameters
+    ----------
+    y1 : array_like
+        Number of events in first sample.
+    n1 : array_like
+        Total exposure in first sample.
+    y2 : array_like
+        Number of events in second sample.
+    n2 : array_like
+        Total exposure in second sample.
+    value : float
+        Value of the difference of the two rates under the null hypothesis.
+    return_cmle : bool
+        If True, also return the constrained maximum likelihood estimates of
+        the two rates.
+
+    Returns
+    -------
+    stat : float
+        Score test statistic.
+    r1_cmle : float
+        Constrained maximum likelihood estimate of the first rate. Only
+        returned if ``return_cmle`` is True.
+    r2_cmle : float
+        Constrained maximum likelihood estimate of the second rate. Only
+        returned if ``return_cmle`` is True.
+    """
     count_pooled = y1 + y2
     rate1, rate2 = y1 / n1, y2 / n2
     rate_pooled = count_pooled / (n1 + n2)
@@ -971,16 +1036,14 @@ def etest_poisson_2indep(
     exposure1,
     count2,
     exposure2,
-    ratio_null=None,
     value=None,
     method="score",
     compare="ratio",
     alternative="two-sided",
-    ygrid=None,
     y_grid=None,
 ):
     """
-    E-test for ratio of two sample Poisson rates.
+    E-test for ratio of two sample Poisson rates
 
     Rates are defined as expected count divided by exposure. The Null and
     alternative hypothesis for the rates, rate1 and rate2, of two independent
@@ -1003,56 +1066,42 @@ def etest_poisson_2indep(
     Parameters
     ----------
     count1 : int
-        Number of events in first sample
+        Number of events in first sample.
     exposure1 : float
-        Total exposure (time * subjects) in first sample
+        Total exposure (time * subjects) in first sample.
     count2 : int
-        Number of events in first sample
+        Number of events in second sample.
     exposure2 : float
-        Total exposure (time * subjects) in first sample
-    ratio_null: float
-        Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-        Deprecated, use ``value`` instead.
-
-        .. deprecated:: 0.14.0
-
-            Use ``value`` instead.
-
+        Total exposure (time * subjects) in second sample.
     value : float
         Value of the ratio or diff of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
-
-        .. versionadded:: 0.14.0
-
-            Replacement for ``ratio_null``.
-
     method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
+    compare : {'diff', 'ratio'}
+        Default is "ratio".
+        If compare is `ratio`, then the hypothesis test is for the
+        rate ratio defined by ratio = rate1 / rate2.
+        If compare is `diff`, then the hypothesis test is for
+        diff = rate1 - rate2.
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-        - 'larger' :   H1: ratio of rates is larger than ratio_null
-        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio of rates is not equal to value (default)
+        - 'larger' :   H1: ratio of rates is larger than value
+        - 'smaller' :  H1: ratio of rates is smaller than value
 
     y_grid : None or 1-D ndarray
         Grid values for counts of the Poisson distribution used for computing
         the pvalue. By default truncation is based on an upper tail Poisson
         quantiles.
 
-    ygrid : None or 1-D ndarray
-        Same as y_grid. Deprecated. If both y_grid and ygrid are provided,
-        ygrid will be ignored.
-
-        .. deprecated:: 0.14.0
-
-            Use ``y_grid`` instead.
-
     Returns
     -------
     stat_sample : float
-        test statistic for the sample
+        Test statistic for the sample.
     pvalue : float
+        P-value of the e-test.
 
     References
     ----------
@@ -1061,31 +1110,28 @@ def etest_poisson_2indep(
     Ng, H. K. T., K. Gu, and M. L. Tang. 2007. “A Comparative Study of Tests
     for the Difference of Two Poisson Means.” Computational Statistics & Data
     Analysis 51 (6): 3085-99. https://doi.org/10.1016/j.csda.2006.02.004.
-
     """
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
 
     if compare == "ratio":
-        if ratio_null is None and value is None:
+        if value is None:
             # default value
             value = 1
-        elif ratio_null is not None:
-            warnings.warn(
-                "'ratio_null' is deprecated, use 'value' keyword",
-                FutureWarning,
-                stacklevel=2,
-            )
-            value = ratio_null
 
         r = value  # rate1 / rate2
         r_d = r / d
         rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
         rate1_cmle = rate2_cmle * r
 
-        if method in ["score"]:
+        if method == "score":
 
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
@@ -1095,7 +1141,7 @@ def etest_poisson_2indep(
             # rate1_cmle = rate2_cmle * r
             # rate1 = rate1_cmle
             # rate2 = rate2_cmle
-        elif method in ["wald"]:
+        elif method == "wald":
 
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
@@ -1113,12 +1159,12 @@ def etest_poisson_2indep(
         tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
         _, rate1_cmle, rate2_cmle = tmp
 
-        if method in ["score"]:
+        if method == "score":
 
             def stat_func(x1, x2):
                 return _score_diff(x1, n1, x2, n2, value=value)
 
-        elif method in ["wald"]:
+        elif method == "wald":
 
             def stat_func(x1, x2):
                 rate1, rate2 = x1 / n1, x2 / n2
@@ -1137,10 +1183,6 @@ def etest_poisson_2indep(
     mean2 = n2 * rate2
 
     stat_sample = stat_func(y1, y2)
-
-    if ygrid is not None:
-        warnings.warn("ygrid is deprecated, use y_grid", FutureWarning, stacklevel=2)
-    y_grid = y_grid if y_grid is not None else ygrid
 
     # The following uses a fixed truncation for evaluating the probabilities
     # It will currently only work for small counts, so that sf at truncation
@@ -1177,7 +1219,8 @@ def etest_poisson_2indep(
 def tost_poisson_2indep(
     count1, exposure1, count2, exposure2, low, upp, method="score", compare="ratio"
 ):
-    """Equivalence test based on two one-sided `test_proportions_2indep`
+    """
+    Equivalence test based on two one-sided `test_poisson_2indep`
 
     This assumes that we have two independent poisson samples.
 
@@ -1191,21 +1234,21 @@ def tost_poisson_2indep(
     for compare = 'diff'
 
     - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
-    - H1: low < rate - rate < upp
+    - H1: low < rate1 - rate2 < upp
 
     Parameters
     ----------
     count1 : int
-        Number of events in first sample
+        Number of events in first sample.
     exposure1 : float
-        Total exposure (time * subjects) in first sample
+        Total exposure (time * subjects) in first sample.
     count2 : int
-        Number of events in second sample
+        Number of events in second sample.
     exposure2 : float
-        Total exposure (time * subjects) in second sample
-    low, upp :
-        equivalence margin for the ratio or difference of Poisson rates
-    method: string
+        Total exposure (time * subjects) in second sample.
+    low, upp : float
+        Equivalence margin for the ratio or difference of Poisson rates.
+    method : string
         TOST uses ``test_poisson_2indep`` and has the same methods.
 
         ratio:
@@ -1214,13 +1257,13 @@ def tost_poisson_2indep(
         - 'score': method W2A, score test, variance based on estimate under
           the Null hypothesis
         - 'wald-log': W3A, uses log-ratio, variance based on observed rates
-        - 'score-log' W4A, uses log-ratio, variance based on estimate under
+        - 'score-log': W4A, uses log-ratio, variance based on estimate under
           the Null hypothesis
         - 'sqrt': W5A, based on variance stabilizing square root transformation
         - 'exact-cond': exact conditional test based on binomial distribution
            This uses ``binom_test`` which is minlike in the two-sided case.
         - 'cond-midp': midpoint-pvalue of exact conditional test
-        - 'etest' or 'etest-score: etest with score test statistic
+        - 'etest' or 'etest-score': etest with score test statistic
         - 'etest-wald': etest with wald test statistic
 
         diff:
@@ -1228,8 +1271,15 @@ def tost_poisson_2indep(
         - 'wald',
         - 'waldccv'
         - 'score'
-        - 'etest-score' or 'etest: etest with score test statistic
+        - 'etest-score' or 'etest': etest with score test statistic
         - 'etest-wald': etest with wald test statistic
+
+    compare : {'diff', 'ratio'}
+        Default is "ratio".
+        If compare is `ratio`, then the equivalence test is for the
+        rate ratio defined by ratio = rate1 / rate2.
+        If compare is `diff`, then the equivalence test is for
+        diff = rate1 - rate2.
 
     Returns
     -------
@@ -1291,7 +1341,8 @@ def tost_poisson_2indep(
 def nonequivalence_poisson_2indep(
     count1, exposure1, count2, exposure2, low, upp, method="score", compare="ratio"
 ):
-    """Test for non-equivalence, minimum effect for poisson.
+    """
+    Test for non-equivalence, minimum effect for poisson
 
     This reverses null and alternative hypothesis compared to equivalence
     testing. The null hypothesis is that the effect, ratio (or diff), is in
@@ -1308,8 +1359,33 @@ def nonequivalence_poisson_2indep(
     for compare = 'diff':
 
     - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
-    - H1: low < rate - rate < upp
+    - H1: low < rate1 - rate2 < upp
 
+    Parameters
+    ----------
+    count1 : int
+        Number of events in first sample.
+    exposure1 : float
+        Total exposure (time * subjects) in first sample.
+    count2 : int
+        Number of events in second sample.
+    exposure2 : float
+        Total exposure (time * subjects) in second sample.
+    low, upp : float
+        Equivalence margin for the ratio or difference of Poisson rates.
+    method : string
+        TOST uses ``test_poisson_2indep`` and has the same methods.
+    compare : {'diff', 'ratio'}
+        Default is "ratio".
+        If compare is `ratio`, then the test is for the rate ratio defined
+        by ratio = rate1 / rate2.
+        If compare is `diff`, then the test is for diff = rate1 - rate2.
+
+    Returns
+    -------
+    results : instance of HolderTuple class
+        The two main attributes are test statistic `statistic` and p-value
+        `pvalue`.
 
     Notes
     -----
@@ -1383,7 +1459,8 @@ def confint_poisson_2indep(
     alpha=0.05,
     method_mover="score",
 ):
-    """Confidence interval for ratio or difference of 2 indep poisson rates.
+    """
+    Confidence interval for ratio or difference of 2 indep poisson rates
 
     Parameters
     ----------
@@ -1407,7 +1484,7 @@ def confint_poisson_2indep(
         - 'score': method W2A, score test, variance based on estimate under
           the Null hypothesis
         - 'wald-log': W3A, uses log-ratio, variance based on observed rates
-        - 'score-log' W4A, uses log-ratio, variance based on estimate under
+        - 'score-log': W4A, uses log-ratio, variance based on estimate under
           the Null hypothesis
         - 'sqrt': W5A, based on variance stabilizing square root transformation
         - 'sqrtcc' :
@@ -1430,25 +1507,26 @@ def confint_poisson_2indep(
         diff = rate1 - rate2.
         If compare is `ratio`, then the hypothesis test is for the
         rate ratio defined by ratio = rate1 / rate2.
-    alternative : string
-        The alternative hypothesis, H1, has to be one of the following
-
-        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-        - 'larger' :   H1: ratio of rates is larger than ratio_null
-        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
-
     alpha : float in (0, 1)
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
+    method_mover : str
+        Method to used for the score confidence interval of the individual
+        rates in the 'mover' method.
 
     Returns
     -------
-    tuple (low, upp) : confidence limits.
-
+    tuple (low, upp)
+        Confidence limits.
     """
 
     # shortcut names
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
@@ -1521,13 +1599,13 @@ def confint_poisson_2indep(
 
     elif compare == "diff":
 
-        if method in ["wald"]:
+        if method == "wald":
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             half = crit * np.sqrt(rate1 / n1 + rate2 / n2)
             ci = center - half, center + half
 
-        elif method in ["waldccv"]:
+        elif method == "waldccv":
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             std = np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
@@ -1574,7 +1652,8 @@ def power_poisson_ratio_2indep(
     method_var="alt",
     return_results=True,
 ):
-    """Power of test of ratio of 2 independent poisson rates.
+    """
+    Power of test of ratio of 2 independent poisson rates
 
     This is based on Zhu and Zhu and Lakkis. It does not directly correspond
     to `test_poisson_2indep`.
@@ -1594,24 +1673,23 @@ def power_poisson_ratio_2indep(
     exposure : float
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
+    value : float
+        Rate ratio, rate1 / rate2, under the null hypothesis.
     alpha : float in interval (0,1)
         Significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    value : float
-        Rate ratio, rate1 / rate2, under the null hypothesis.
     dispersion : float
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
+    alternative : {'smaller', 'two-sided', 'larger'}
+        Alternative hypothesis whether the power is calculated for a
+        one-sided or two-sided test. Default is 'smaller'.
     method_var : {"score", "alt"}
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative can be either equal to the rates under the
         alternative ``method_var="alt"``, or estimated under the constrained
         of the null hypothesis, ``method_var="score"``.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
-        Alternative hypothesis whether the power is calculated for a
-        two-sided (default) or one sided test. The one-sided test can be
-        either 'larger', 'smaller'.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
@@ -1651,7 +1729,7 @@ def power_poisson_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -1709,7 +1787,8 @@ def power_equivalence_poisson_2indep(
     method_var="alt",
     return_results=False,
 ):
-    """Power of equivalence test of ratio of 2 independent poisson rates.
+    """
+    Power of equivalence test of ratio of 2 independent poisson rates
 
     Parameters
     ----------
@@ -1733,17 +1812,15 @@ def power_equivalence_poisson_2indep(
     alpha : float in interval (0,1)
         Significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    value : float
-        Difference between rates 1 and 2 under the null hypothesis.
+    dispersion : float
+        Dispersion coefficient for quasi-Poisson. Dispersion different from
+        one can capture over or under dispersion relative to Poisson
+        distribution.
     method_var : {"score", "alt"}
         The variance of the test statistic for the null hypothesis given the
-        rates uder the alternative, can be either equal to the rates under the
-        alternative ``method_var="alt"``, or estimated under the constrained
-        of the null hypothesis, ``method_var="score"``.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
-        Alternative hypothesis whether the power is calculated for a
-        two-sided (default) or one sided test. The one-sided test can be
-        either 'larger', 'smaller'.
+        rates under the alternative, can be either equal to the rates under
+        the alternative ``method_var="alt"``, or estimated under the
+        constrained of the null hypothesis, ``method_var="score"``.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
@@ -1780,7 +1857,7 @@ def power_equivalence_poisson_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -1838,7 +1915,31 @@ def _power_equivalence_het_v0(
     std_null_upp=None,
     std_alternative=None,
 ):
-    """power for equivalence test"""
+    """
+    Power for equivalence test
+
+    Parameters
+    ----------
+    es_low : float
+        Effect size relative to the lower equivalence margin.
+    es_upp : float
+        Effect size relative to the upper equivalence margin.
+    nobs : float or int
+        Number of observations.
+    alpha : float in interval (0, 1)
+        Significance level of the test.
+    std_null_low : float
+        Standard deviation under the null hypothesis at the lower margin.
+    std_null_upp : float
+        Standard deviation under the null hypothesis at the upper margin.
+    std_alternative : float
+        Standard deviation under the alternative hypothesis.
+
+    Returns
+    -------
+    float
+        Power of the equivalence test.
+    """
 
     s0_low = std_null_low
     s0_upp = std_null_upp
@@ -1862,7 +1963,35 @@ def _power_equivalence_het(
     std_null_upp=None,
     std_alternative=None,
 ):
-    """power for equivalence test"""
+    """
+    Power for equivalence test
+
+    Parameters
+    ----------
+    es_low : float
+        Effect size relative to the lower equivalence margin.
+    es_upp : float
+        Effect size relative to the upper equivalence margin.
+    nobs : float or int
+        Number of observations.
+    alpha : float in interval (0, 1)
+        Significance level of the test.
+    std_null_low : float
+        Standard deviation under the null hypothesis at the lower margin.
+    std_null_upp : float
+        Standard deviation under the null hypothesis at the upper margin.
+    std_alternative : float
+        Standard deviation under the alternative hypothesis.
+
+    Returns
+    -------
+    pow_ : float
+        Power of the equivalence test.
+    p1 : float
+        Tail probability corresponding to the lower margin.
+    p2 : float
+        Tail probability corresponding to the upper margin.
+    """
 
     s0_low = std_null_low
     s0_upp = std_null_upp
@@ -1913,7 +2042,8 @@ def power_poisson_diff_2indep(
     alternative="two-sided",
     return_results=True,
 ):
-    """Power of ztest for the difference between two independent poisson rates.
+    """
+    Power of ztest for the difference between two independent poisson rates
 
     Parameters
     ----------
@@ -1934,10 +2064,10 @@ def power_poisson_diff_2indep(
         Difference between rates 1 and 2 under the null hypothesis.
     method_var : {"score", "alt"}
         The variance of the test statistic for the null hypothesis given the
-        rates uder the alternative, can be either equal to the rates under the
-        alternative ``method_var="alt"``, or estimated under the constrained
-        of the null hypothesis, ``method_var="score"``.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        rates under the alternative, can be either equal to the rates under
+        the alternative ``method_var="alt"``, or estimated under the
+        constrained of the null hypothesis, ``method_var="score"``.
+    alternative : {'two-sided', 'larger', 'smaller'}
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
@@ -1978,7 +2108,7 @@ def power_poisson_diff_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     diff = rate1 - rate2
     _, std_null, std_alt = _std_2poisson_power(
@@ -2018,11 +2148,35 @@ def power_poisson_diff_2indep(
 
 def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0):
     """
-    variance based on constrained cmle, for score test version
+    Variance based on constrained cmle, for score test version
 
-    for ratio comparison of two negative binomial samples
+    For ratio comparison of two negative binomial samples.
 
-    value = rate1 / rate2 under the null
+    value = rate1 / rate2 under the null.
+
+    Parameters
+    ----------
+    rate1 : float
+        Poisson or negative binomial rate for the first sample.
+    rate2 : float
+        Poisson or negative binomial rate for the second sample.
+    nobs_ratio : float
+        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+    exposure : float
+        Exposure for each observation.
+    value : float
+        Rate ratio, rate1 / rate2, under the null hypothesis.
+    dispersion : float
+        Dispersion parameter for the Negative Binomial distribution.
+
+    Returns
+    -------
+    v : float
+        Constrained variance, scaled by nobs_ratio.
+    r1 : float
+        Constrained maximum likelihood estimate of the first rate.
+    r2 : float
+        Constrained maximum likelihood estimate of the second rate.
     """
     # definitions in Zhu
     # nobs_ratio = n1 / n0
@@ -2063,7 +2217,7 @@ def power_negbin_ratio_2indep(
     return_results=True,
 ):
     """
-    Power of test of ratio of 2 independent negative binomial rates.
+    Power of test of ratio of 2 independent negative binomial rates
 
     Parameters
     ----------
@@ -2075,10 +2229,6 @@ def power_negbin_ratio_2indep(
         alternative hypothesis.
     nobs1 : float or int
         Number of observations in sample 1.
-    low : float
-        Lower equivalence margin for the rate ratio, rate1 / rate2.
-    upp : float
-        Upper equivalence margin for the rate ratio, rate1 / rate2.
     nobs_ratio : float
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
     exposure : float
@@ -2092,16 +2242,16 @@ def power_negbin_ratio_2indep(
     dispersion : float >= 0.
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
-    method_var : {"score", "alt"}
+    alternative : {'two-sided', 'larger', 'smaller'}
+        Alternative hypothesis whether the power is calculated for a
+        two-sided (default) or one sided test. The one-sided test can be
+        either 'larger', 'smaller'.
+    method_var : {"score", "alt", "ftotal"}
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative, can be either equal to the rates under the
         alternative ``method_var="alt"``, or estimated under the constrained
         of the null hypothesis, ``method_var="score"``, or based on a moment
         constrained estimate, ``method_var="ftotal"``. see references.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
-        Alternative hypothesis whether the power is calculated for a
-        two-sided (default) or one sided test. The one-sided test can be
-        either 'larger', 'smaller'.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
@@ -2141,7 +2291,7 @@ def power_negbin_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
@@ -2209,7 +2359,7 @@ def power_equivalence_neginb_2indep(
     return_results=False,
 ):
     """
-    Power of equivalence test of ratio of 2 indep. negative binomial rates.
+    Power of equivalence test of ratio of 2 indep. negative binomial rates
 
     Parameters
     ----------
@@ -2227,22 +2377,21 @@ def power_equivalence_neginb_2indep(
         Upper equivalence margin for the rate ratio, rate1 / rate2.
     nobs_ratio : float
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
+    exposure : float
+        Exposure for each observation. Total exposure is nobs1 * exposure
+        and nobs2 * exposure.
     alpha : float in interval (0,1)
         Significance level, e.g. 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     dispersion : float >= 0.
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
-    method_var : {"score", "alt"}
+    method_var : {"score", "alt", "ftotal"}
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative, can be either equal to the rates under the
         alternative ``method_var="alt"``, or estimated under the constrained
         of the null hypothesis, ``method_var="score"``, or based on a moment
         constrained estimate, ``method_var="ftotal"``. see references.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
-        Alternative hypothesis whether the power is calculated for a
-        two-sided (default) or one sided test. The one-sided test can be
-        either 'larger', 'smaller'.
     return_results : bool
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
@@ -2268,7 +2417,6 @@ def power_equivalence_neginb_2indep(
             standard error of difference under the alternative hypothesis
             (without sqrt(nobs1))
 
-
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2280,7 +2428,7 @@ def power_equivalence_neginb_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
 

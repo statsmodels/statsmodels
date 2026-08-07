@@ -4,6 +4,25 @@ import numpy as np
 
 
 def tukeyplot(results, dim=None, yticklabels=None):
+    """
+    Plot a Tukey HSD pairwise mean-comparison confidence interval chart
+
+    Parameters
+    ----------
+    results : ndarray
+        A 2d array with one row per pair being compared and two columns
+        giving the lower and upper bounds of the simultaneous confidence
+        interval for the difference in means of that pair.
+    dim : int, optional
+        Unused.
+    yticklabels : array_like, optional
+        Unused; the pair labels are currently hard-coded on the y-axis.
+
+    Notes
+    -----
+    There is no return value.  A new matplotlib figure and axis are created
+    and the confidence intervals are drawn on it.
+    """
     npairs = len(results)
 
     fig = plt.figure()

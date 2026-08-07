@@ -16,8 +16,10 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class BaseCrossValidator(with_metaclass(ABCMeta)):
     """
-    The BaseCrossValidator class is a base class for all the iterators that
-    split the data in train and test as for example KFolds or LeavePOut
+    Base class for cross-validation iterators
+
+    Subclasses split the data into train and test sets, for example
+    ``KFold`` or ``LeavePOut``.
     """
 
     def __init__(self):
@@ -30,21 +32,23 @@ class BaseCrossValidator(with_metaclass(ABCMeta)):
 
 class KFold(BaseCrossValidator):
     """
-    K-Folds cross validation iterator:
-    Provides train/test indexes to split data in train test sets
+    K-Folds cross validation iterator
+
+    Provides train/test indexes to split data in train and test sets.
 
     Parameters
     ----------
-    k: int
-        number of folds
+    k_folds : int
+        Number of folds.
     shuffle : bool
         If true, then the index is shuffled before splitting into train and
         test indices.
-    rng : int, np.random.RandomState or np.random.Generator, optional
-        The rng to use during KFold cross-validation if shuffling. If None, uses
-        the singleton RandomState provided by NumPy. If an int, uses the
-        ``default_rng``. If a RandomState instance or a Generator instance,
-        uses this instance.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -59,7 +63,25 @@ class KFold(BaseCrossValidator):
         self.rng = check_random_state(rng)
 
     def split(self, X, y=None, label=None):
-        """yield index split into train and test sets"""
+        """
+        Yield index splits into train and test sets
+
+        Parameters
+        ----------
+        X : array_like
+            Data used only to determine the number of observations.
+        y : array_like, optional
+            Unused, present for signature compatibility.
+        label : array_like, optional
+            Unused, present for signature compatibility.
+
+        Yields
+        ------
+        train_index : ndarray
+            Boolean index array selecting the training observations.
+        test_index : ndarray
+            Boolean index array selecting the test observations.
+        """
         # TODO: X and y are redundant, we only need nobs
 
         nobs = X.shape[0]

@@ -193,20 +193,3 @@ class Test_Transf2:
         assert_almost_equal(
             d1.stats(moments="mvsk"), ch2oddneg, err_msg="stats " + d1.name + d2.name
         )
-
-
-if __name__ == "__main__":
-    tt = Test_Transf2()
-    tt.test_equivalent()
-    tt.test_equivalent_negsq()
-
-    debug = 0
-    if debug:
-        print(negsquarenormalg.ppf([0.1, 0.5, 0.9]))
-        print(stats.chi2.ppf([0.1, 0.5, 0.9], 1))
-        print(negsquarenormalg.a)
-        print(negsquarenormalg.b)
-
-        print(absnormalg.stats(moments="mvsk"))
-        print(stats.foldnorm(1e-10).stats(moments="mvsk"))
-        print(stats.halfnorm.stats(moments="mvsk"))

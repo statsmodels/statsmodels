@@ -49,7 +49,7 @@ Standard errors in parentheses.
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
         actual = summary_col([reg1, reg2]).as_latex()
-        actual = "\n%s\n" % actual
+        actual = f"\n{actual}\n"
         assert_equal(desired, actual)
 
     def test_summarycol_float_format(self):
@@ -75,7 +75,7 @@ parentheses.
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
         actual = summary_col([reg1, reg2], float_format="%0.1f").as_text()
-        actual = "%s\n" % actual
+        actual = f"{actual}\n"
 
         starred = summary_col([reg1, reg2], stars=True, float_format="%0.1f")
         assert "7.7***" in str(starred)
@@ -160,7 +160,7 @@ Standard errors in parentheses.
         reg2 = OLS(y2, x).fit()
 
         actual = summary_col([reg1, reg2])._repr_latex_()
-        actual = "\n%s\n" % actual
+        actual = f"\n{actual}\n"
         assert_equal(actual, desired)
 
     def test_OLSsummary(self):

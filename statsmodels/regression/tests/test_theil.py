@@ -3,10 +3,9 @@ Created on Mon May 05 17:29:56 2014
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.scipy import SP_LT_116
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -22,8 +21,8 @@ class TestTheilTextile:
     @classmethod
     def setup_class(cls):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(cur_dir, "results", "theil_textile_predict.csv")
+        cur_dir = Path(__file__).resolve().parent
+        filepath = Path(cur_dir).joinpath("results", "theil_textile_predict.csv")
         cls.res_predict = pd.read_csv(filepath, sep=",")
 
         # Data col names:
@@ -289,10 +288,13 @@ class TestTheilPanel:
 
         from statsmodels.sandbox.panel.random_panel import PanelSample
 
-        dgp = PanelSample(nobs, k_vars, n_groups, seed=303305)
+        dgp = PanelSample(nobs, k_vars, n_groups, rng=303305)
         # add random intercept, using same RandomState
-        dgp.group_means = 2 + dgp.random_state.randn(n_groups)
-        print("seed", dgp.seed)
+        if isinstance(dgp.random_state, np.random.RandomState):
+            dgp.group_means = 2 + dgp.random_state.randn(n_groups)
+        else:
+            dgp.group_means = 2 + dgp.random_state.uniform(n_groups)
+        print("rng", dgp.rng)
         y = dgp.generate_panel()
         x = np.column_stack(
             (dgp.exog[:, 1:], dgp.groups[:, None] == np.arange(n_groups))

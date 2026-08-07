@@ -17,7 +17,7 @@ http://www.cpc.ncep.noaa.gov/data/indices/
 DESCRSHORT = """Averaged monthly sea surface temperature - Pacific Ocean."""
 
 DESCRLONG = """This data contains the averaged monthly sea surface
-temperature in degrees Celcius of the Pacific Ocean, between 0-10 degrees South
+temperature in degrees Celsius of the Pacific Ocean, between 0-10 degrees South
 and 90-80 degrees West, from 1950 to 2010.  This dataset was obtained from
 NOAA.
 """
@@ -30,7 +30,7 @@ NOTE = """::
 
     Variable name definitions::
 
-        TEMPERATURE - average sea surface temperature in degrees Celcius
+        TEMPERATURE - average sea surface temperature in degrees Celsius
                       (12 columns, one per month).
 """
 

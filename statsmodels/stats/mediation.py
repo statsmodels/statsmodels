@@ -13,7 +13,7 @@ The algorithms are described on page 317 of the paper.
 
 In the case of linear models with no interactions involving the
 mediator, the results should be similar or identical to the earlier
-Barron-Kenny approach.
+Baron-Kenny approach.
 """
 
 import numpy as np
@@ -25,7 +25,7 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 class Mediation:
     """
-    Conduct a mediation analysis.
+    Conduct a mediation analysis
 
     Parameters
     ----------
@@ -63,8 +63,6 @@ class Mediation:
         Keyword arguments to use when calling predict on the outcome
         model.
 
-    Returns a ``MediationResults`` object.
-
     Notes
     -----
     The mediator model class must implement ``get_distribution``.
@@ -93,8 +91,8 @@ class Mediation:
     >>> outcome = np.asarray(data["cong_mesg"])
     >>> outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
     ...                              return_type='dataframe')
-    >>> probit = sm.families.links.probit
-    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=Probit()))
+    >>> probit = sm.families.links.probit()
+    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit))
     >>> mediator = np.asarray(data["emo"])
     >>> mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
     ...                               return_type='dataframe')
@@ -108,7 +106,7 @@ class Mediation:
     A moderated mediation analysis.  The mediation effect is computed
     for people of age 20.
 
-    >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
+    >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income"
     >>> outcome_model = sm.GLM.from_formula(fml, data,
     ...                                      family=sm.families.Binomial())
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)
@@ -172,6 +170,11 @@ class Mediation:
         # Position of the mediator variable in the outcome model.
         self._med_pos_outcome = self._variable_pos("mediator", "outcome")
 
+        # Populated by `fit`; declared here so they exist (as None) even
+        # before `fit` has been called.
+        self.indirect_effects = None
+        self.direct_effects = None
+
     def _variable_pos(self, var, model):
         if model == "mediator":
             mod = self.mediator_model
@@ -196,11 +199,26 @@ class Mediation:
         if hasattr(model, "formula"):
             return model.formula.split("~")[0].strip()
         else:
-            raise ValueError("cannot infer %s name without formula" % typ)
+            raise ValueError(f"cannot infer {typ} name without formula")
 
     def _simulate_params(self, result, rng):
         """
-        Simulate model parameters from fitted sampling distribution.
+        Simulate model parameters from fitted sampling distribution
+
+        Parameters
+        ----------
+        result : Results
+            The fitted model results instance whose parameter sampling
+            distribution is used.
+        rng : RandomState or Generator
+            Random number generator used to draw the simulated
+            parameters.
+
+        Returns
+        -------
+        ndarray
+            A draw of model parameters from the multivariate normal
+            approximation to the sampling distribution.
         """
         mn = result.params
         cov = result.cov_params()
@@ -210,6 +228,18 @@ class Mediation:
         """
         Return the mediator exog matrix with exposure set to the given
         value.  Set values of moderated variables as needed.
+
+        Parameters
+        ----------
+        exposure : array_like
+            The value of the exposure variable to substitute into the
+            mediator model's exog matrix.
+
+        Returns
+        -------
+        ndarray
+            The mediator model exog matrix with the exposure column set
+            to `exposure` and moderator values fixed.
         """
         mediator_exog = self._mediator_exog
         if not hasattr(self.mediator_model, "formula"):
@@ -233,9 +263,25 @@ class Mediation:
 
     def _get_outcome_exog(self, exposure, mediator):
         """
-        Retun the exog design matrix with mediator and exposure set to
+        Return the exog design matrix with mediator and exposure set to
         the given values.  Set values of moderated variables as
         needed.
+
+        Parameters
+        ----------
+        exposure : array_like
+            The value of the exposure variable to substitute into the
+            outcome model's exog matrix.
+        mediator : array_like
+            The value of the mediator variable to substitute into the
+            outcome model's exog matrix.
+
+        Returns
+        -------
+        ndarray
+            The outcome model exog matrix with the exposure and
+            mediator columns set to the given values and moderator
+            values fixed.
         """
         outcome_exog = self._outcome_exog
         if not hasattr(self.outcome_model, "formula"):
@@ -265,7 +311,10 @@ class Mediation:
         endog = model.endog
         exog = model.exog
         if boot:
-            ii = rng.randint(0, len(endog), len(endog))
+            if isinstance(rng, np.random.RandomState):
+                ii = rng.randint(0, len(endog), len(endog))
+            else:
+                ii = rng.integers(0, len(endog), len(endog))
             endog = endog[ii]
             exog = exog[ii, :]
         outcome_model = klass(endog, exog, **init_kwargs)
@@ -273,7 +322,7 @@ class Mediation:
 
     def fit(self, method="parametric", n_rep=1000, *, rng=None):
         """
-        Fit a regression model to assess mediation.
+        Fit a regression model to assess mediation
 
         Parameters
         ----------
@@ -281,13 +330,17 @@ class Mediation:
             Either 'parametric' or 'bootstrap'.
         n_rep : int
             The number of simulation replications.
-        rng : int, np.random.RandomState or np.random.Generator, optional
-            The rng to use during parameter simulation. If None, uses
-            the singleton RandomState provided by NumPy. If an int, uses the
-            ``default_rng``. If a RandomState instance or a Generator instance,
-            uses this instance.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
-        Returns a MediationResults object.
+        Returns
+        -------
+        MediationResults
+            Results of the mediation analysis.
         """
 
         if method.startswith("para"):
@@ -334,7 +387,10 @@ class Mediation:
                 if hasattr(mediator_result, "scale"):
                     kwargs["scale"] = mediator_result.scale
                 gen = self.mediator_model.get_distribution(mediation_params, **kwargs)
-                potential_mediator = gen.rvs(mex.shape[0], random_state=rng)
+                try:
+                    potential_mediator = gen.rvs(mex.shape[0], rng=rng)
+                except TypeError:
+                    potential_mediator = gen.rvs(mex.shape[0], random_state=rng)
 
                 for te in 0, 1:
                     oex = self._get_outcome_exog(te, potential_mediator)
@@ -369,12 +425,21 @@ def _pvalue(vec):
 
 class MediationResults:
     """
-    A class for holding the results of a mediation analysis.
+    A class for holding the results of a mediation analysis
 
     The following terms are used in the summary output:
 
     ACME : average causal mediated effect
     ADE : average direct effect
+
+    Parameters
+    ----------
+    indirect_effects : list of ndarray
+        Indirect (mediated) effect estimates for the control and
+        treatment conditions, as produced by `Mediation.fit`.
+    direct_effects : list of ndarray
+        Direct effect estimates for the control and treatment
+        conditions, as produced by `Mediation.fit`.
     """
 
     def __init__(self, indirect_effects, direct_effects):
@@ -405,7 +470,20 @@ class MediationResults:
 
     def summary(self, alpha=0.05):
         """
-        Provide a summary of a mediation analysis.
+        Provide a summary of a mediation analysis
+
+        Parameters
+        ----------
+        alpha : float
+            Significance level for the confidence intervals in the
+            summary table. The default produces (1 - alpha) confidence
+            intervals.
+
+        Returns
+        -------
+        DataFrame
+            Summary table containing point estimates, confidence
+            intervals, and p-values for each mediation effect measure.
         """
 
         columns = ["Estimate", "Lower CI bound", "Upper CI bound", "P-value"]

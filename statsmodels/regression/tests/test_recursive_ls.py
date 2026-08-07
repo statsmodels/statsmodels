@@ -4,8 +4,7 @@ Tests for recursive least squares models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -15,19 +14,20 @@ from scipy.stats import norm
 
 from statsmodels.datasets import macrodata
 from statsmodels.genmod.api import GLM
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-results_R_path = "results" + os.sep + "results_rls_R.csv"
-results_R = pd.read_csv(current_path + os.sep + results_R_path)
+results_R_path = Path("results") / "results_rls_R.csv"
+results_R = pd.read_csv(current_path / results_R_path)
 
-results_stata_path = "results" + os.sep + "results_rls_stata.csv"
-results_stata = pd.read_csv(current_path + os.sep + results_stata_path)
+results_stata_path = Path("results") / "results_rls_stata.csv"
+results_stata = pd.read_csv(current_path / results_stata_path)
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
@@ -283,17 +283,13 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
     import matplotlib.pyplot as plt
+    from pandas.plotting import register_matplotlib_converters
 
-    # Basic plot
-    try:
-        from pandas.plotting import register_matplotlib_converters
-
-        register_matplotlib_converters()
-    except ImportError:
-        pass
+    register_matplotlib_converters()
 
     exog = add_constant(dta[["m1", "pop"]])
     mod = RecursiveLS(endog, exog)
@@ -550,3 +546,13 @@ def test_fix_params():
         ValueError, match=("Linear constraints on coefficients should be given")
     ):
         mod.fit_constrained({"const": 0.1})
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

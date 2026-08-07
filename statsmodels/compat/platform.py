@@ -1,3 +1,5 @@
+"""Platform detection flags used across statsmodels"""
+
 import os
 import platform
 import sys

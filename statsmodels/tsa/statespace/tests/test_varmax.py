@@ -4,8 +4,7 @@ Tests for VARMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -20,13 +19,13 @@ from statsmodels.tsa.statespace import sarimax, varmax
 
 from .results import results_varmax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-var_path = os.path.join("results", "results_var_stata.csv")
-var_results = pd.read_csv(os.path.join(current_path, var_path))
+var_path = Path("results").joinpath("results_var_stata.csv")
+var_results = pd.read_csv(Path(current_path).joinpath(var_path))
 
-varmax_path = os.path.join("results", "results_varmax_stata.csv")
-varmax_results = pd.read_csv(os.path.join(current_path, varmax_path))
+varmax_path = Path("results").joinpath("results_varmax_stata.csv")
+varmax_results = pd.read_csv(Path(current_path).joinpath(varmax_path))
 
 
 class CheckVARMAX:
@@ -36,6 +35,7 @@ class CheckVARMAX:
     equivalent log-likelihoods)
     """
 
+    @pytest.mark.thread_unsafe
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
@@ -53,6 +53,7 @@ class CheckVARMAX:
             assert_allclose(results.llf, self.results.llf, rtol=1e-5)
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe
     def test_params(self):
         # Smoke test to make sure the start_params are well-defined and
         # lead to a well-defined model
@@ -196,10 +197,12 @@ class TestVAR(CheckLutkepohl):
             true, order=(1, 0), trend="n", error_cov_type="unstructured"
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -219,15 +222,15 @@ class TestVAR(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 8
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -252,10 +255,12 @@ class TestVAR_diagonal(CheckLutkepohl):
         ]
         super().setup_class(true, order=(1, 0), trend="n", error_cov_type="diagonal")
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
@@ -275,15 +280,15 @@ class TestVAR_diagonal(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 8
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -389,16 +394,16 @@ class TestVAR_measurement_error(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
-            assert re.search("measurement_variance +%.4g" % params[-(i + 1)], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
+            assert re.search(f"measurement_variance +{params[-(i + 1)]:.4g}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -429,21 +434,23 @@ class TestVAR_obs_intercept(CheckLutkepohl):
             obs_intercept=true["obs_intercept"],
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-4)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         bse = self.results._cov_params_oim().diagonal() ** 0.5
         assert_allclose(bse**2, self.true["var_oim"], atol=1e-2)
 
     def test_aic(self):
-        # Since the obs_intercept is added in in an ad-hoc way here, the number
+        # Since the obs_intercept is added in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
 
     def test_bic(self):
-        # Since the obs_intercept is added in in an ad-hoc way here, the number
+        # Since the obs_intercept is added in an ad-hoc way here, the number
         # of parameters, and hence the aic and bic, will be off
         pass
 
@@ -483,11 +490,13 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var calculates BIC differently
         pass
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse[:-6] ** 2, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
@@ -500,6 +509,7 @@ class TestVAR_exog(CheckLutkepohl):
         # Stata's var cannot subsequently use dynamic
         pass
 
+    @pytest.mark.thread_unsafe
     def test_forecast(self):
         # Tests forecast
         exog = (np.arange(75, 75 + 16) + 2)[:, np.newaxis]
@@ -533,15 +543,15 @@ class TestVAR_exog(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L1.dln_consump +%.4f" % params[offset + 2], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L1.dln_consump +{params[offset + 2]:.4f}", table)
             assert re.search(
                 "beta.x1 +" + forg(params[self.model._params_regression][i], prec=4),
                 table,
@@ -606,6 +616,7 @@ class TestVAR_exog2(CheckLutkepohl):
         # Stata's var cannot subsequently use dynamic
         pass
 
+    @pytest.mark.thread_unsafe
     def test_forecast(self):
         # Tests forecast
         exog = np.c_[np.ones((16, 1)), (np.arange(75, 75 + 16) + 2)[:, np.newaxis]]
@@ -630,11 +641,13 @@ class TestVAR2(CheckLutkepohl):
             included_vars=["dln_inv", "dln_inc"],
         )
 
+    @pytest.mark.thread_unsafe
     def test_bse_approx(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_approx().diagonal() ** 0.5
         assert_allclose(bse[:-3] ** 2, self.true["var_oim"][:-3], atol=1e-5)
 
+    @pytest.mark.thread_unsafe
     def test_bse_oim(self):
         # Exclude the covariance cholesky terms
         bse = self.results._cov_params_oim().diagonal() ** 0.5
@@ -655,16 +668,16 @@ class TestVAR2(CheckLutkepohl):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
 
             # -> Check that we have the right coefficients
-            assert re.search("L1.dln_inv +%.4f" % params[offset + 0], table)
-            assert re.search("L1.dln_inc +%.4f" % params[offset + 1], table)
-            assert re.search("L2.dln_inv +%.4f" % params[offset + 2], table)
-            assert re.search("L2.dln_inc +%.4f" % params[offset + 3], table)
+            assert re.search(f"L1.dln_inv +{params[offset + 0]:.4f}", table)
+            assert re.search(f"L1.dln_inc +{params[offset + 1]:.4f}", table)
+            assert re.search(f"L2.dln_inv +{params[offset + 2]:.4f}", table)
+            assert re.search(f"L2.dln_inc +{params[offset + 3]:.4f}", table)
 
         # Test the error covariance matrix table
         table = tables[-1]
@@ -684,8 +697,8 @@ class CheckFREDManufacturing(CheckVARMAX):
     ):
         cls.true = true
         # 1960:Q1 - 1982:Q4
-        path = os.path.join(current_path, "results", "manufac.dta")
-        with open(path, "rb") as test_data:
+        path = Path(current_path).joinpath("results", "manufac.dta")
+        with Path(path).open("rb") as test_data:
             dta = pd.read_stata(test_data)
         dta.index = pd.DatetimeIndex(dta.month, freq="MS")
         dta["dlncaputil"] = dta["lncaputil"].diff()
@@ -769,7 +782,7 @@ class TestVARMA(CheckFREDManufacturing):
 
             # -> Make sure we have the right table / table name
             name = self.model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert len(table.split("\n")) == 9
@@ -1062,7 +1075,7 @@ def test_recreate_model():
         enforce_stationarities,
         enforce_invertibilities,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
 
         with warnings.catch_warnings(record=False):
             warnings.simplefilter("ignore")
@@ -1377,3 +1390,28 @@ def test_param_names_trend():
     mod.update([1.2, 1, -0.5, 1.1] + base_params)
     assert_allclose(mod["state_intercept", 0], 1.2 + np.arange(2, 5) ** 2)
     assert_allclose(mod["state_intercept", 1], -0.5 + 1.1 * np.arange(2, 5) ** 2)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dta = pd.DataFrame(
+        results_varmax.lutkepohl_data,
+        columns=["inv", "inc", "consump"],
+        index=pd.date_range("1960-01-01", "1982-10-01", freq="QS"),
+    )
+    dta["dln_inv"] = np.log(dta["inv"]).diff()
+    dta["dln_inc"] = np.log(dta["inc"]).diff()
+    dta["dln_consump"] = np.log(dta["consump"]).diff()
+    endog = dta.loc[
+        "1960-04-01":"1978-10-01", ["dln_inv", "dln_inc", "dln_consump"]
+    ]
+
+    true = results_varmax.lutkepohl_var1.copy()
+    model = varmax.VARMAX(
+        endog, order=(1, 0), trend="n", error_cov_type="unstructured"
+    )
+    res = model.smooth(true["params"], cov_type="approx")
+
+    assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)

@@ -160,7 +160,7 @@ class TestDataFramesWithMultiIndex(TestDataFrames):
         mi = pd.MultiIndex.from_product([["x"], ["1", "2"]])
         exog = pd.DataFrame(rs.random((10, 2)), columns=mi)
         exog_flattened_idx = pd.Index(["const", "x_1", "x_2"])
-        exog.insert(0, "const", 1)
+        exog.insert(0, ("", "const"), 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
@@ -760,7 +760,7 @@ class TestHandleMissing:
 class CheckHasConstant:
 
     def test_hasconst(self):
-        for x, result in zip(self.exogs, self.results):
+        for x, result in zip(self.exogs, self.results, strict=True):
             mod = self.mod(self.y, x)
             assert_equal(mod.k_constant, result[0])
             assert_equal(mod.data.k_constant, result[0])

@@ -1,11 +1,14 @@
-"""Linear Model with Student-t distributed errors
+"""
+Linear Model with Student-t distributed errors
 
 Because the t distribution has fatter tails than the normal distribution, it
 can be used to model observations with heavier tails and observations that have
 some outliers. For the latter case, the t-distribution provides more robust
 estimators for mean or mean parameters (what about var?).
 
-
+Created on 2010-09-24
+Author: josef-pktd
+License: BSD
 
 References
 ----------
@@ -16,21 +19,16 @@ Vol. 84, No. 408 (Dec., 1989), pp. 881-896
 Published by: American Statistical Association
 Stable URL: http://www.jstor.org/stable/2290063
 
-not read yet
+Notes
+-----
+Reference above not read yet.
 
+TODO:
 
-Created on 2010-09-24
-Author: josef-pktd
-License: BSD
-
-TODO
-----
 * add starting values based on OLS
 * bugs: store_params does not seem to be defined, I think this was a module
-        global for debugging - commented out
+  global for debugging - commented out
 * parameter restriction: check whether version with some fixed parameters works
-
-
 """
 # mostly copied from the examples directory written for trying out generic mle.
 
@@ -38,7 +36,6 @@ import numpy as np
 from scipy import special, stats
 
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.tsa.arma_mle import Arma
 
 # redefine some shortcuts
 np_log = np.log
@@ -47,7 +44,8 @@ sps_gamln = special.gammaln
 
 
 class TLinearModel(GenericLikelihoodModel):
-    """Maximum Likelihood Estimation of Linear Model with t-distributed errors
+    """
+    Maximum Likelihood Estimation of Linear Model with t-distributed errors
 
     This is an example for generic MLE.
 
@@ -55,10 +53,10 @@ class TLinearModel(GenericLikelihoodModel):
     methods and results are generic. Gradients and Hessian
     and all resulting statistics are based on numerical
     differentiation.
-
     """
 
     def initialize(self):
+        """Initialize the model, setting up parameter names and start values"""
         print("running Tmodel initialize")
         # TODO: here or in __init__
         self.k_vars = self.exog.shape[1]
@@ -89,6 +87,20 @@ class TLinearModel(GenericLikelihoodModel):
         self._set_start_params()
 
     def _set_start_params(self, start_params=None, use_kurtosis=False):
+        """
+        Set starting values for the parameters
+
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Starting values to use directly. If None, starting values are
+            constructed from an OLS fit of `endog` on `exog`.
+        use_kurtosis : bool
+            If True and `start_params` is None and `df` is not fixed, use
+            the kurtosis of the OLS residuals to construct a starting
+            value for the degrees of freedom parameter. Otherwise a
+            starting value of 5 is used.
+        """
         if start_params is not None:
             self.start_params = start_params
         else:
@@ -112,11 +124,26 @@ class TLinearModel(GenericLikelihoodModel):
             self.start_params = start_params
 
     def loglike(self, params):
+        """
+        Loglikelihood of the model evaluated at params
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters of the model. The last 2 parameters are degrees
+            of freedom and scale.
+
+        Returns
+        -------
+        float
+            The log likelihood of the model evaluated at `params`, summed
+            over all observations.
+        """
         return -self.nloglikeobs(params).sum(0)
 
     def nloglikeobs(self, params):
         """
-        Loglikelihood of linear model with t distributed errors.
+        Negative loglikelihood of linear model with t distributed errors
 
         Parameters
         ----------
@@ -126,13 +153,15 @@ class TLinearModel(GenericLikelihoodModel):
 
         Returns
         -------
-        loglike : ndarray
-            The log likelihood of the model evaluated at `params` for each
-            observation defined by self.endog and self.exog.
+        ndarray
+            The negative log likelihood of the model evaluated at `params`
+            for each observation defined by self.endog and self.exog.
 
         Notes
         -----
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math:: \\ln f(x)=\\ln\\Gamma\\left(\\frac{df+1}{2}\\right)-\\ln\\Gamma\\left(\\frac{df}{2}\\right)-\\frac{1}{2}\\ln(df\\pi)-\\frac{df+1}{2}\\ln\\left(1+\\frac{x^{2}}{df}\\right)-\\ln(scale)
+
+        where :math:`x=(y-X\\beta)/scale`.
 
         The t distribution is the standard t distribution and not a standardized
         t distribution, which means that the scale parameter is not equal to the
@@ -160,71 +189,23 @@ class TLinearModel(GenericLikelihoodModel):
         return -lPx
 
     def predict(self, params, exog=None):
+        """
+        Return predicted mean values
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters of the model. Only the first `exog.shape[1]`
+            elements (the regression coefficients) are used.
+        exog : array_like, optional
+            Explanatory variables to use for prediction. If None,
+            `self.exog` is used.
+
+        Returns
+        -------
+        ndarray
+            The predicted mean, ``exog @ beta``.
+        """
         if exog is None:
             exog = self.exog
         return np.dot(exog, params[:self.exog.shape[1]])
-
-
-class TArma(Arma):
-    """Univariate Arma Model with t-distributed errors
-
-    This inherit all methods except loglike from tsa.arma_mle.Arma
-
-    This uses the standard t-distribution, the implied variance of
-    the error is not equal to scale, but ::
-
-        error_variance = df/(df-2)*scale**2
-
-    Notes
-    -----
-    This might be replaced by a standardized t-distribution with scale**2
-    equal to variance
-
-    """
-
-    def loglike(self, params):
-        return -self.nloglikeobs(params).sum(0)
-
-    # add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
-
-    def nloglikeobs(self, params):
-        """
-        Loglikelihood for arma model for each observation, t-distribute
-
-        Notes
-        -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
-        """
-
-        errorsest = self.geterrors(params[:-2])
-        # sigma2 = np.maximum(params[-1]**2, 1e-6)  # do I need this
-        # axis = 0
-        # nobs = len(errorsest)
-
-        df = params[-2]
-        scale = np.abs(params[-1])
-        llike = -stats.t._logpdf(errorsest / scale, df) + np_log(scale)
-        return llike
-
-    # TODO rename fit_mle -> fit, fit -> fit_ls
-    def fit_mle(
-        self, order, start_params=None, method="nm", maxiter=5000, tol=1e-08, **kwds
-    ):
-        nar, nma = order
-        if start_params is not None:
-            if len(start_params) != nar + nma + 2:
-                raise ValueError("start_param need sum(order) + 2 elements")
-        else:
-            start_params = np.concatenate((0.05 * np.ones(nar + nma), [5, 1]))
-
-        res = super().fit_mle(
-            order=order,
-            start_params=start_params,
-            method=method,
-            maxiter=maxiter,
-            tol=tol,
-            **kwds,
-        )
-
-        return res

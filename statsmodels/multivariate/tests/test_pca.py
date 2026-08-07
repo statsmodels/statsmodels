@@ -1,7 +1,5 @@
 from statsmodels.compat.platform import PLATFORM_WIN32
 
-import warnings
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
@@ -13,7 +11,7 @@ from statsmodels.multivariate.tests.results.datamlw import (
     princomp1,
     princomp2,
 )
-from statsmodels.tools.sm_exceptions import EstimationWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
 
 DECIMAL_5 = 0.00001
 
@@ -48,6 +46,7 @@ class TestPCA:
         cls.x_wide = f.dot(b) + e
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_smoke_plot_and_repr(self, close_figures):
         pc = PCA(self.x)
@@ -163,17 +162,17 @@ class TestPCA:
         assert_allclose(np.abs(pc.coeff), np.abs(ref.coef.T))
         assert_allclose(pc.factors.dot(pc.coeff), ref.factors.dot(ref.coef.T))
 
-    def test_warnings_and_errors(self):
-        with warnings.catch_warnings(record=True) as w:
+    @pytest.mark.thread_unsafe(reason="Issues and checks warnings")
+    def test_warnings(self):
+        with pytest.warns(ValueWarning, match="The requested number of components"):
             PCA(self.x, ncomp=300)
-            assert_equal(len(w), 1)
 
-        with warnings.catch_warnings(record=True) as w:
-            rs = self.rs
-            x = rs.standard_normal((200, 1)) * np.ones(200)
+        rs = self.rs
+        x = rs.standard_normal((200, 1)) * np.ones(200)
+        with pytest.warns(EstimationWarning, match="Only"):
             PCA(x, method="eig")
-            assert_equal(len(w), 1)
 
+    def test_errors(self):
         with pytest.raises(ValueError):
             PCA(self.x, method="unknown")
         with pytest.raises(ValueError):
@@ -183,6 +182,7 @@ class TestPCA:
         with pytest.raises(ValueError):
             PCA(np.nan * np.ones((200, 100)), tol=2.0)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_pandas(self, close_figures):
         pc = PCA(pd.DataFrame(self.x))
@@ -441,6 +441,22 @@ def test_too_many_missing():
         PCA(data, ncomp=5, missing="drop-col")
     p = PCA(data, missing="drop-min")
     assert max(p.factors.shape) == max(data.shape) - 1
+
+
+def test_prepare_data_all_nan():
+    # GH: _prepare_data's all-NaN branch did
+    # `return np.empty(adj_data.shape[1]).fill(np.nan)`, but ndarray.fill()
+    # mutates in place and returns None, so the branch returned None
+    # instead of a NaN-filled array.
+    rs = np.random.RandomState(0)
+    data = rs.standard_normal((10, 4))
+    p = PCA(data)
+    p._adjusted_data = np.full_like(data, np.nan)
+
+    result = p._prepare_data()
+    assert result is not None
+    assert result.shape == (4,)
+    assert np.all(np.isnan(result))
 
 
 def test_gls_warning():

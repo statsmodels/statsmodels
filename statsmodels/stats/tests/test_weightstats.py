@@ -47,7 +47,7 @@ class CheckExternalMixin:
             df["data1"] = cls.data
         else:
             for k in range(cls.data.shape[1]):
-                df["data%d" % (k + 1)] = cls.data[:, k]
+                df[f"data{k + 1:d}"] = cls.data[:, k]
         df.to_csv(fname)
 
     def test_mean(self):

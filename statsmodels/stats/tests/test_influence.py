@@ -3,10 +3,9 @@ Created on Tue Jun 12 13:18:12 2018
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.pandas import testing as pdt
 
-import os.path
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -17,16 +16,20 @@ import pytest
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.outliers_influence import MLEInfluence, variance_inflation_factor
+from statsmodels.stats.outliers_influence import (
+    GLMInfluence,
+    MLEInfluence,
+    variance_inflation_factor,
+)
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "binary_constrict.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 data_bin = pd.read_csv(file_path, index_col=0)
 
 file_name = "results_influence_logit.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 results_sas_df = pd.read_csv(file_path, index_col=0)
 
 
@@ -52,6 +55,23 @@ def test_influence_glm_bernoulli():
 
     c_bar = infl.cooks_distance[0] * 3 * (1 - infl.hat_matrix_diag)
     assert_allclose(c_bar, results_sas[:, 9], atol=6e-5)
+
+
+def test_glminfluence_direct_constructor():
+    # GH#9415: GLMInfluence constructed directly raised AttributeError
+    # on cooks_distance
+    df = data_bin
+    res = GLM(
+        df["constrict"],
+        df[["const", "log_rate", "log_volumne"]],
+        family=families.Binomial(),
+    ).fit(attach_wls=True, atol=1e-10)
+
+    infl_direct = GLMInfluence(res)
+    infl_method = res.get_influence()
+
+    assert_allclose(infl_direct.cooks_distance[0],
+                    infl_method.cooks_distance[0], rtol=1e-12)
 
 
 class InfluenceCompareExact:
@@ -84,6 +104,7 @@ class InfluenceCompareExact:
         )
 
     @pytest.mark.smoke
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plots(self, close_figures):
         import matplotlib.pyplot as plt

@@ -4,10 +4,9 @@ unit test for GAM
 Author: Josef Perktold
 
 """
-
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -48,12 +47,12 @@ class GLMPenalized(PenalizedMixin, GLM):
     pass
 
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
-file_path = os.path.join(cur_dir, "results", "motorcycle.csv")
+file_path = Path(cur_dir).joinpath("results", "motorcycle.csv")
 data_mcycle = pd.read_csv(file_path)
 
-file_path = os.path.join(cur_dir, "results", "autos.csv")
+file_path = Path(cur_dir).joinpath("results", "autos.csv")
 df_autos_ = pd.read_csv(file_path)
 df_autos = df_autos_[["city_mpg", "fuel", "drive", "weight", "hp"]].dropna()
 
@@ -530,7 +529,7 @@ class TestGAMMPG:
         cls.res1b = gam_cc.fit(method="newton")
 
     def test_exog(self):
-        file_path = os.path.join(cur_dir, "results", "autos_exog.csv")
+        file_path = Path(cur_dir).joinpath("results", "autos_exog.csv")
         df_exog = pd.read_csv(file_path)
         res2_exog = df_exog.values
         for res1 in [self.res1a, self.res1b]:
@@ -539,7 +538,7 @@ class TestGAMMPG:
             assert_allclose(exog, res2_exog, atol=1e-14)
 
     def test_fitted(self):
-        file_path = os.path.join(cur_dir, "results", "autos_predict.csv")
+        file_path = Path(cur_dir).joinpath("results", "autos_predict.csv")
         df_pred = pd.read_csv(file_path, index_col="Row.names")
         df_pred.index = df_pred.index - 1
         res2_fittedvalues = df_pred["fit"].values
@@ -574,7 +573,7 @@ class TestGAMMPGBS(CheckGAMMixin):
         #     then exog_linear will also be transformed in predict.
         mgr = FormulaManager()
         cls.exog = np.asarray(mgr.get_matrices("fuel + drive", data=df_autos))
-        bs = BSplines(
+        cls.bs = BSplines(
             x_spline,
             df=[12, 10],
             degree=[3, 3],
@@ -583,9 +582,12 @@ class TestGAMMPGBS(CheckGAMMixin):
             include_intercept=True,
         )
         # TODO alpha needs to be list
-        alpha0 = 1 / s_scale * sp / 2
+        cls.alpha0 = 1 / s_scale * sp / 2
         gam_bs = GLMGam(
-            df_autos["city_mpg"], exog=cls.exog, smoother=bs, alpha=(alpha0).tolist()
+            df_autos["city_mpg"],
+            exog=cls.exog,
+            smoother=cls.bs,
+            alpha=(cls.alpha0).tolist(),
         )
         cls.res1a = gam_bs.fit(use_t=True)
 
@@ -598,6 +600,14 @@ class TestGAMMPGBS(CheckGAMMixin):
 
         # for checking that alpha model attribute is unchanged, same as alpha0
         cls.alpha = [169947.78222669504, 26767.58046340008]
+
+    def setup_model(self):
+        return GLMGam(
+            df_autos["city_mpg"],
+            exog=self.exog,
+            smoother=self.bs,
+            alpha=(self.alpha0).tolist(),
+        ).fit(use_t=True)
 
     @classmethod
     def _init(cls):
@@ -631,6 +641,8 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_equal(mod.alpha, self.alpha)  # assert unchanged
         assert_allclose(self.res1.scale, 4.7064821354391118, rtol=1e-13)
 
+        # Require a local model to avoid thread saftey issues
+        mod = self.setup_model().model
         alpha_aic = mod.select_penweight(**{BASINHOPPING_RNG: rs})[0]
         # regression number, but in the right ball park
         assert_allclose(alpha_aic, [112487.81362014, 129.89155677], rtol=1e-3)
@@ -750,6 +762,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
         assert_equal(wtt.df_constraints[:2], res2.pTerms_df)
 
+    @pytest.mark.thread_unsafe("Some results classes are mutable that affect run")
     def test_select_alpha(self):
         res1 = self.res1
         alpha_mgcv = res1.model.alpha

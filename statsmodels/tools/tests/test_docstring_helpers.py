@@ -5,11 +5,11 @@ Adapted directly from:
     pandas/tests/util/test_deprecate_kwarg.py
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import warnings
 
 import pytest
-
-from statsmodels.tools.docstring_helpers import deprecate_kwarg
 
 
 @deprecate_kwarg(old_arg_name="old", new_arg_name="new")

@@ -60,7 +60,7 @@ from statsmodels.graphics._regressionplots_doc import (
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -135,11 +135,6 @@ class ParameterConstraint:
         """
         Returns a vector that should be added to the offset vector to
         accommodate the constraint.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogeneous data for the model.
         """
 
         return self._offset_increment
@@ -148,11 +143,6 @@ class ParameterConstraint:
         """
         Returns a linearly transformed exog matrix whose columns span
         the constrained model space.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogeneous data for the model.
         """
         return self.exog_fulltrans[:, 0 : self.lhs0.shape[1]]
 
@@ -193,7 +183,7 @@ _gee_init_doc = """
         1d array of endogenous values (i.e. responses, outcomes,
         dependent variables, or 'Y' values).
     exog : array_like
-        2d array of exogeneous values (i.e. covariates, predictors,
+        2d array of exogenous values (i.e. covariates, predictors,
         independent variables, regressors, or 'X' values). A `nobs x
         k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
@@ -701,6 +691,7 @@ class GEE(GLM):
     # Override to allow groups and time to be passed as variable
     # names.
     @classmethod
+    @Substitution(missing_param_doc=base._missing_param_doc)
     def from_formula(
         cls,
         formula,
@@ -755,10 +746,7 @@ class GEE(GLM):
             indicating the depth of the namespace to use. For example, the
             default ``eval_env=0`` uses the calling namespace.
             If you wish to use a "clean" environment set ``eval_env=-1``.
-
-        Optional arguments
-        ------------------
-        dep_data : str or array_like
+        dep_data : str or array_like, optional
             Data used for estimating the dependence structure.  See
             specific dependence structure classes (e.g. Nested) for
             details.  If `dep_data` is a string, it is interpreted as
@@ -777,9 +765,7 @@ class GEE(GLM):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-        """.format(
-            missing_param_doc=base._missing_param_doc
-        )
+        """
 
         groups_name = "Groups"
         if isinstance(groups, str):
@@ -1045,7 +1031,7 @@ class GEE(GLM):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed.
+           The exogenous data at which the derivative is computed.
         lin_pred : array_like
            The values of the linear predictor.
 
@@ -1886,11 +1872,8 @@ class GEE(GLM):
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= 4 * scale
 
-        try:
-            from scipy.integrate import trapezoid
-        except ImportError:
-            # Remove after minimum is SciPy 1.7
-            from scipy.integrate import trapz as trapezoid
+        from scipy.integrate import trapezoid
+
         ql = trapezoid(qv, dx=xv[1] - xv[0])
 
         qicu = -2 * ql + 2 * self.exog.shape[1]
@@ -2003,7 +1986,7 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        Adictionary containing the p-value, the test statistic,
+        A dictionary containing the p-value, the test statistic,
         and the degrees of freedom for the score test.
 
         Notes
@@ -2031,7 +2014,7 @@ class GEEResults(GLMResults):
     @cache_readonly
     def resid_split(self):
         """
-        Returns the residuals, the endogeneous data minus the fitted
+        Returns the residuals, the endogenous data minus the fitted
         values from the model.  The residuals are returned as a list
         of arrays containing the residuals for each cluster.
         """
@@ -2135,7 +2118,7 @@ class GEEResults(GLMResults):
             self, focus_exog, frac, cond_means=cond_means, ax=ax
         )
 
-    def conf_int(self, alpha=0.05, cols=None, cov_type=None):
+    def conf_int(self, alpha=0.05, cov_type=None):
         """
         Returns confidence intervals for the fitted parameters.
 
@@ -2144,8 +2127,6 @@ class GEEResults(GLMResults):
         alpha : float, optional
              The `alpha` level for the confidence interval.  i.e., The
              default `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-             `cols` specifies which confidence intervals to return
         cov_type : str
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
@@ -2166,13 +2147,8 @@ class GEEResults(GLMResults):
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
 
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
+        lower = params - q * bse
+        upper = params + q * bse
         return np.asarray(lzip(lower, upper))
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
@@ -2192,12 +2168,6 @@ class GEEResults(GLMResults):
             the default title
         alpha : float
             significance level for the confidence intervals
-        cov_type : str
-            The covariance type used to compute the standard errors;
-            one of 'robust' (the usual robust sandwich-type covariance
-            estimate), 'naive' (ignores dependence), and 'bias
-            reduced' (the Mancl/DeRouen estimate).
-
         Returns
         -------
         smry : Summary instance
@@ -2232,9 +2202,9 @@ class GEEResults(GLMResults):
             ("No. clusters:", [len(self.model.endog_li)]),
             ("Min. cluster size:", [min(NY)]),
             ("Max. cluster size:", [max(NY)]),
-            ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-            ("Num. iterations:", ["%d" % len(self.fit_history["params"])]),
-            ("Scale:", ["%.3f" % self.scale]),
+            ("Mean cluster size:", [f"{np.mean(NY):.1f}"]),
+            ("Num. iterations:", ["{:d}".format(len(self.fit_history["params"]))]),
+            ("Scale:", [f"{self.scale:.3f}"]),
             ("Time:", None),
         ]
 
@@ -2245,13 +2215,13 @@ class GEEResults(GLMResults):
         kurt2 = stats.kurtosis(self.centered_resid)
 
         diagn_left = [
-            ("Skew:", ["%12.4f" % skew1]),
-            ("Centered skew:", ["%12.4f" % skew2]),
+            ("Skew:", [f"{skew1:12.4f}"]),
+            ("Centered skew:", [f"{skew2:12.4f}"]),
         ]
 
         diagn_right = [
-            ("Kurtosis:", ["%12.4f" % kurt1]),
-            ("Centered kurtosis:", ["%12.4f" % kurt2]),
+            ("Kurtosis:", [f"{kurt1:12.4f}"]),
+            ("Centered kurtosis:", [f"{kurt2:12.4f}"]),
         ]
 
         if title is None:
@@ -2292,7 +2262,8 @@ class GEEResults(GLMResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Parameters
         ----------
@@ -2320,7 +2291,7 @@ class GEEResults(GLMResults):
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
@@ -2342,8 +2313,8 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        effects : ndarray
-            the marginal effect corresponding to the input options
+        GEEMargins
+            The marginal effects instance corresponding to the input options.
 
         Notes
         -----
@@ -2388,7 +2359,7 @@ class GEEResults(GLMResults):
         # All within-group pairwise time distances (xdt) and the
         # corresponding products of scaled residuals (xre).
         xre, xdt = [], []
-        for re, ti in zip(resid, time):
+        for re, ti in zip(resid, time, strict=True):
             ix = np.tril_indices(re.shape[0], 0)
             re = re[ix[0]] * re[ix[1]] / self.scale**2
             xre.append(re)
@@ -2586,7 +2557,7 @@ class OrdinalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset)
+        zipper = zip(exog, endog, groups, time, offset, strict=True)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2603,11 +2574,11 @@ class OrdinalGEE(GEE):
         exog_out = np.concatenate((intercepts, exog_out), axis=1)
 
         # exog column names, including intercepts
-        xnames = ["I(y>%.1f)" % v for v in endog_cuts]
+        xnames = [f"I(y>{v:.1f})" for v in endog_cuts]
         if type(self.exog_orig) is pd.DataFrame:
             xnames.extend(self.exog_orig.columns)
         else:
-            xnames.extend(["x%d" % k for k in range(1, exog.shape[1] + 1)])
+            xnames.extend([f"x{k:d}" for k in range(1, exog.shape[1] + 1)])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve the endog name if there is one
@@ -2693,7 +2664,7 @@ class OrdinalGEEResults(GEEResults):
             not included in a dictionary are held fixed at the mean
             value.
 
-        Example:
+        Examples
         --------
         We have a model with covariates 'age' and 'sex', and wish to
         plot the probabilities P(endog=y | exog) for males (sex=0) and
@@ -2728,7 +2699,7 @@ class OrdinalGEEResults(GEEResults):
 
             for k in ev.keys():
                 if k not in self.model.exog_names:
-                    raise ValueError("%s is not a variable in the model" % k)
+                    raise ValueError(f"{k} is not a variable in the model")
 
             # Get the fitted probability for each level, at the given
             # covariate values.
@@ -2929,7 +2900,7 @@ class NominalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset)
+        zipper = zip(exog, endog, groups, time, offset, strict=True)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2948,7 +2919,7 @@ class NominalGEE(GEE):
         if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
-            xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
+            xnames_in = [f"x{k:d}" for k in range(1, exog.shape[1] + 1)]
         xnames = []
         for tr in endog_cuts:
             xnames.extend([f"{v}[{tr:.1f}]" for v in xnames_in])
@@ -2968,7 +2939,7 @@ class NominalGEE(GEE):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed,
+           The exogenous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
         lin_pred : array_like
            The values of the linear predictor, length must be multiple
@@ -3011,11 +2982,12 @@ class NominalGEE(GEE):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed,
+           The exogenous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
-        lpr : array_like
-           The linear predictor values, length must be multiple of
-           `ncut`.
+        params : array_like
+           Parameter values at which the derivative is computed.
+        offset_exposure : None
+           Offset and exposure are ignored for the multinomial family.
 
         Returns
         -------
@@ -3131,7 +3103,7 @@ class NominalGEEResults(GEEResults):
             not included in a dictionary are held fixed at the mean
             value.
 
-        Example:
+        Examples
         --------
         We have a model with covariates 'age' and 'sex', and wish to
         plot the probabilities P(endog=y | exog) for males (sex=0) and
@@ -3173,7 +3145,7 @@ class NominalGEEResults(GEEResults):
 
             for k in ev.keys():
                 if k not in exog_names:
-                    raise ValueError("%s is not a variable in the model" % k)
+                    raise ValueError(f"{k} is not a variable in the model")
 
                 ii = exog_names.index(k)
                 exog[ii] = ev[k]
@@ -3269,6 +3241,10 @@ class _Multinomial(families.Family):
         nlevels : int
             The number of distinct categories for the multinomial
             distribution.
+        check_link : bool
+            If True (default), then an exception is raised if the link is
+            invalid for the family.
+            If False, then the link is not checked.
         """
         self._check_link = check_link
         self.initialize(nlevels)
@@ -3463,7 +3439,7 @@ class GEEMargins:
                     "std err",
                     "z",
                     "P>|z|",
-                    "[%3.1f%% Conf. Int.]" % (100 - alpha * 100),
+                    f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
                 ]
                 tble.insert_header_row(0, header)
                 # from IPython.core.debugger import Pdb; Pdb().set_trace()
@@ -3486,7 +3462,7 @@ class GEEMargins:
                 "std err",
                 "z",
                 "P>|z|",
-                "[%3.1f%% Conf. Int.]" % (100 - alpha * 100),
+                f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
             ]
             table.insert_header_row(0, header)
 

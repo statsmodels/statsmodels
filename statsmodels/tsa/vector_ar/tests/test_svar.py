@@ -9,6 +9,7 @@ from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 
 import statsmodels.datasets.macrodata
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.svar_model import SVAR
 
 DECIMAL_6 = 6
@@ -67,13 +68,15 @@ class TestSVAR:
         # this only checks that the methods work and produce the same result
         res1 = self.res1
         errband1 = res1.sirf_errband_mc(
-            orth=False, repl=50, steps=10, signif=0.05, seed=987123, burn=100, cum=False
+            orth=False, repl=50, steps=10, signif=0.05, rng=987123, burn=100, cum=False
         )
+        assert isinstance(errband1, ErrorBand)
 
         irf = res1.irf()
         errband2 = irf.errband_mc(
-            orth=False, svar=True, repl=50, signif=0.05, seed=987123, burn=100
+            orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
         )
+        assert isinstance(errband2, ErrorBand)
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8
         assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)

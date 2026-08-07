@@ -1,7 +1,7 @@
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 from scipy import sparse
@@ -10,6 +10,7 @@ from statsmodels.datasets import anes96, grunfeld
 from statsmodels.tools.grouputils import (
     Group,
     Grouping,
+    GroupSorted,
     combine_indices,
     dummy_sparse,
     group_sums,
@@ -25,6 +26,15 @@ class CheckGrouping:
     def test_count_categories(self):
         self.grouping.count_categories(level=0)
         np.testing.assert_equal(self.grouping.counts, self.expected_counts)
+
+    def test_check_index(self):
+        # GH: check_index used `if not index:`, which raises for a
+        # multi-element pandas Index/MultiIndex, and called the long-removed
+        # DataFrame.sort() instead of sort_index().
+        self.grouping.check_index(is_sorted=False, unique=False)
+        self.grouping.check_index(
+            is_sorted=False, unique=False, index=self.grouping.index
+        )
 
     def test_sort(self):
         # data frame
@@ -133,6 +143,7 @@ class CheckGrouping:
         if len(self.grouping.group_names) > 1:
             self.grouping.dummies_groups(level=1)
 
+    @pytest.mark.thread_unsafe(reason="Modifies self.grouping in-place")
     def test_dummy_sparse(self):
         data = self.data
         self.grouping.dummy_sparse()
@@ -171,6 +182,35 @@ class TestIndexGrouping(CheckGrouping):
         cls.data = index_data
 
         cls.expected_counts = [20] * 11
+
+
+def test_group_sorted_subclass_no_infinite_recursion():
+    # GH: GroupSorted.__init__ used super(self.__class__, self), which
+    # recurses infinitely for any subclass that doesn't override __init__,
+    # since self.__class__ always resolves to the most-derived runtime type.
+    class MyGroupSorted(GroupSorted):
+        pass
+
+    g = MyGroupSorted(np.array([0, 0, 1, 1, 2]))
+    assert isinstance(g, MyGroupSorted)
+    assert g.groupidx == [(0, 2), (2, 4), (4, 5)]
+
+
+def test_check_index_sorted_detection():
+    # GH: check_index used to raise AttributeError (DataFrame has no
+    # attribute "sort") on any call with the default is_sorted=True, and
+    # separately raised ValueError ("truth value ... is ambiguous") when an
+    # explicit multi-element index was passed, instead of correctly
+    # detecting whether the index is sorted.
+    sorted_grouping = Grouping(pd.Index([1, 1, 2, 2, 3]))
+    sorted_grouping.check_index(unique=False)  # default index=None
+    sorted_grouping.check_index(unique=False, index=pd.Index([1, 1, 2, 2, 3]))
+
+    unsorted_grouping = Grouping(pd.Index([2, 1, 3]))
+    with pytest.raises(Exception, match="not be sorted"):
+        unsorted_grouping.check_index(unique=False)
+    with pytest.raises(Exception, match="not be sorted"):
+        unsorted_grouping.check_index(unique=False, index=pd.Index([2, 1, 3]))
 
 
 def test_init_api():
@@ -717,7 +757,7 @@ def test_group_sums():
     assert isinstance(
         group_sums(
             np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2), g, use_bincount=False
-        ).T,
+        ),
         np.ndarray,
     )
     assert isinstance(
@@ -728,6 +768,27 @@ def test_group_sums():
         group_sums(np.arange(len(g) * 3 * 2).reshape(len(g), 3, 2)[:, :, 1], g),
         np.ndarray,
     )
+
+
+def test_group_sums_orientation_consistent():
+    """Both use_bincount paths return (n_groups, n_features) (GH9921)."""
+    g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
+    x = np.arange(len(g) * 3).reshape(len(g), 3, order="F")
+    a = group_sums(x, g, use_bincount=True)
+    b = group_sums(x, g, use_bincount=False)
+    assert a.shape == b.shape == (3, 3)  # 3 groups (0,1,2), 3 features
+    assert_allclose(a, b)
+
+
+def test_group_demean_default():
+    """group_demean works with default use_bincount and demeans by group size (GH9921)."""
+    g = np.array([0, 0, 1, 1, 1, 2, 2, 2])
+    x = np.array([1.0, 3.0, 1.0, 2.0, 3.0, 10.0, 20.0, 30.0])
+    demeaned, means = Group(g).group_demean(x)
+    # group means: 0->2, 1->2, 2->20
+    expected = x - np.array([2, 2, 2, 2, 2, 20, 20, 20])
+    assert_allclose(demeaned, expected)
+    assert_allclose(means, [2.0, 2.0, 20.0])
 
 
 @pytest.mark.smoke
@@ -750,7 +811,7 @@ def test_dummy_sparse():
 
     g = np.array([0, 0, 2, 1, 1, 2, 0])
     indi = dummy_sparse(g)
-    assert isinstance(indi, sparse.csr_matrix)
+    assert isinstance(indi, sparse.csr_array)
     result = indi.toarray()
     expected = np.array(
         [[1, 0, 0], [1, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]],

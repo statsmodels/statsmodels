@@ -1,5 +1,5 @@
 import itertools
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary2 import Summary
 
 # All the R results
 from .results import survival_enet_r_results, survival_r_results
@@ -34,15 +35,15 @@ args = {"method": "bfgs", "disp": 0}
 
 def get_results(n, p, ext, ties):
     if ext is None:
-        coef_name = "coef_%d_%d_%s" % (n, p, ties)
-        se_name = "se_%d_%d_%s" % (n, p, ties)
-        time_name = "time_%d_%d_%s" % (n, p, ties)
-        hazard_name = "hazard_%d_%d_%s" % (n, p, ties)
+        coef_name = f"coef_{n:d}_{p:d}_{ties}"
+        se_name = f"se_{n:d}_{p:d}_{ties}"
+        time_name = f"time_{n:d}_{p:d}_{ties}"
+        hazard_name = f"hazard_{n:d}_{p:d}_{ties}"
     else:
-        coef_name = "coef_%d_%d_%s_%s" % (n, p, ext, ties)
-        se_name = "se_%d_%d_%s_%s" % (n, p, ext, ties)
-        time_name = "time_%d_%d_%s_%s" % (n, p, ext, ties)
-        hazard_name = "hazard_%d_%d_%s_%s" % (n, p, ext, ties)
+        coef_name = f"coef_{n:d}_{p:d}_{ext}_{ties}"
+        se_name = f"se_{n:d}_{p:d}_{ext}_{ties}"
+        time_name = f"time_{n:d}_{p:d}_{ext}_{ties}"
+        hazard_name = f"hazard_{n:d}_{p:d}_{ext}_{ties}"
     coef = getattr(survival_r_results, coef_name)
     se = getattr(survival_r_results, se_name)
     time = getattr(survival_r_results, time_name)
@@ -55,8 +56,8 @@ class TestPHReg:
     # Load a data file from the results directory
     @staticmethod
     def load_file(fname):
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        data = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=" ")
+        cur_dir = Path(__file__).resolve().parent
+        data = np.genfromtxt(Path(cur_dir).joinpath("results", fname), delimiter=" ")
         time = data[:, 0]
         status = data[:, 1]
         entry = data[:, 2]
@@ -356,6 +357,20 @@ class TestPHReg:
         msg = "200 observations have positive entry times"
         assert_(msg in str(smry))
 
+    def test_summary_after_remove_data(self):
+        # summary() must still work after remove_data() has been called
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
+
+        mod = PHReg(time, exog, status)
+        res = mod.fit()
+
+        assert isinstance(res.summary(), Summary)
+        res.remove_data()
+        assert isinstance(res.summary(), Summary)
+
     @pytest.mark.smoke
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr
@@ -396,7 +411,7 @@ class TestPHReg:
         dist.mean()
         dist.var()
         dist.std()
-        dist.rvs(random_state=rs)
+        dist.rvs(rng=rs)
 
     def test_fit_regularized(self):
 
@@ -406,10 +421,10 @@ class TestPHReg:
             # Penalty weights
             for js, s in enumerate([0, 0.1]):
 
-                coef_name = "coef_%d_%d_%d" % (n, p, js)
+                coef_name = f"coef_{n:d}_{p:d}_{js:d}"
                 params = getattr(survival_enet_r_results, coef_name)
 
-                fname = "survival_data_%d_%d.csv" % (n, p)
+                fname = f"survival_data_{n:d}_{p:d}.csv"
                 time, status, entry, exog = self.load_file(fname)
 
                 exog -= exog.mean(0)
@@ -438,9 +453,9 @@ class TestPHReg:
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, "results")
-fnames = os.listdir(rdir)
+cur_dir = Path(__file__).resolve().parent
+rdir = Path(cur_dir).joinpath("results")
+fnames = [p.name for p in rdir.iterdir()]
 fnames = [x for x in fnames if x.startswith("survival") and x.endswith(".csv")]
 
 ties = ("breslow", "efron")

@@ -57,6 +57,7 @@ class TestCountDiagnostic:
         assert_allclose(tzi3, tzi3_1, rtol=5e-4)
         assert_equal(tzi3.df, 2)
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_probs(self, close_figures):
         nobs = self.nobs
@@ -67,7 +68,6 @@ class TestCountDiagnostic:
         # regression numbers
         tzi1 = (0.387770845, 0.5334734738)
         assert_allclose(tzi[:2], tzi1, rtol=5e-5)
-
         # smoke test for plot
         dia.plot_probs(freq, probs.mean(0))
 

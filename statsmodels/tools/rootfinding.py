@@ -13,8 +13,6 @@ from scipy import optimize
 
 from statsmodels.tools.testing import Holder
 
-DEBUG = False
-
 
 # based on scipy.stats.distributions._ppf_single_call
 def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
@@ -59,25 +57,26 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     full_output : bool, optional
         If full_output is False, the root is returned. If full_output is True,
         the return value is (x, r), where x is the root, and r is a
-        RootResults object.
-
+        ``Holder`` object.
 
     Returns
     -------
     x : float
         root of the function, value at which ``func(x) = 0``.
-    info : RootResult (optional)
+    info : Holder (optional)
         returned if ``full_output`` is True.
         attributes:
 
          - start_bounds : starting bounds for expansion stage
          - brentq_bounds : bounds used with ``brentq``
+         - root : root as returned by ``brentq``, same value as `x`
          - iterations_expand : number of iterations in expansion stage
          - converged : True if brentq converged.
          - flag : return status, 'converged' if brentq converged
          - function_calls : number of function calls by ``brentq``
          - iterations : number of iterations in ``brentq``
-
+         - increasing : whether the function was treated as
+           monotonically increasing
 
     Notes
     -----
@@ -87,8 +86,6 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     data in this range. In this case, using different starting bounds or
     directly specifying ``increasing`` can make it possible to move the
     expansion in the right direction.
-
-    If
 
     """
     # TODO: rtol is missing, what does it do?

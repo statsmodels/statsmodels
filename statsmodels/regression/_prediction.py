@@ -16,7 +16,7 @@ from statsmodels.formula._manager import FormulaManager
 # this is similar to ContrastResults after t_test, copied and adjusted
 class PredictionResults:
     """
-    Results class for predictions.
+    Results class for predictions
 
     Parameters
     ----------
@@ -79,7 +79,7 @@ class PredictionResults:
 
     def conf_int(self, obs=False, alpha=0.05):
         """
-        Confidence or prediction interval for the predicted values.
+        Confidence or prediction interval for the predicted values
 
         Parameters
         ----------
@@ -131,14 +131,15 @@ class PredictionResults:
 def get_prediction(self, exog=None, transform=True, weights=None,
                    row_labels=None, pred_kwds=None):
     """
-    Compute prediction results.
+    Compute prediction results
 
     Parameters
     ----------
-    self : RegressionResults
-        Results instance used to generate predictions.
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If the model was not fit
+        using a formula, the columns are matched by position and not by name,
+        so a DataFrame must have its columns in the same order as the exog
+        used to fit the model.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit

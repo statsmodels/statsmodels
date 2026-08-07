@@ -37,6 +37,31 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     All three functions have argument signature (x, model), where
     ``x`` is a point in the parameter space and ``model`` is an
     arbitrary statsmodels regression model.
+
+    Parameters
+    ----------
+    k : int
+        Index of the coefficient being optimized in the current
+        coordinate descent step.
+    L1_wt : scalar
+        The fraction of the penalty given to the L1 penalty term.
+    alpha : array_like
+        The penalty weight for each coefficient.
+    loglike_kwds : dict-like
+        Keyword arguments for the log-likelihood function.
+    score_kwds : dict-like
+        Keyword arguments for the score function.
+    hess_kwds : dict-like
+        Keyword arguments for the Hessian function.
+
+    Returns
+    -------
+    nploglike : function
+        The negative penalized log-likelihood function.
+    npscore : function
+        The derivative of `nploglike`.
+    nphess : function
+        The Hessian of `nploglike`.
     """
 
     def nploglike(params, model):
@@ -279,7 +304,7 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
     ----------
     func : function
         A smooth function of a single variable to be optimized
-        with L1 penaty.
+        with L1 penalty.
     grad : function
         The gradient of `func`.
     hess : function
@@ -309,7 +334,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
     Returns
     -------
-    The argmin of the objective function.
+    float
+        The argmin of the objective function.
     """
 
     # Overview:
@@ -372,9 +398,7 @@ class RegularizedResults(Results):
 
     @cache_readonly
     def fittedvalues(self):
-        """
-        The predicted values from the model at the estimated parameters.
-        """
+        """The predicted values from the model at the estimated parameters"""
         return self.model.predict(self.params)
 
 

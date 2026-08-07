@@ -4,8 +4,9 @@ from statsmodels.compat.pandas import PD_LT_3
 from statsmodels.compat.patsy import ensure_patsy_compat
 
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 import os
-from typing import Any, Literal, Mapping, NamedTuple, Sequence
+from typing import Any, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -14,18 +15,11 @@ import pandas as pd
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
-DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
-if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
-    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
-
-
 ensure_patsy_compat()
 
 try:
     import patsy
     import patsy.missing
-
-    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "patsy"
 
     class NAAction(patsy.missing.NAAction):
         # monkey-patch so we can handle missing values in 'extra' arrays later
@@ -40,7 +34,6 @@ try:
     HAVE_PATSY = True
 
 except ImportError:
-    DEFAULT_FORMULA_ENGINE = DEFAULT_FORMULA_ENGINE or "formulaic"
 
     class NAAction:
         def __init__(self, on_na="", na_types=("",)):
@@ -56,6 +49,30 @@ try:
 except ImportError:
     # Nothing to do if formulaic is not available
     pass
+
+
+DEFAULT_FORMULA_ENGINE = os.environ.get("SM_FORMULA_ENGINE", None)
+if DEFAULT_FORMULA_ENGINE not in ("formulaic", "patsy", None):
+    raise ValueError(f"Invalid value for SM_FORMULA_ENGINE: {DEFAULT_FORMULA_ENGINE}")
+if DEFAULT_FORMULA_ENGINE is None:
+    if HAVE_PATSY:
+        DEFAULT_FORMULA_ENGINE = "patsy"
+    elif HAVE_FORMULAIC:
+        DEFAULT_FORMULA_ENGINE = "formulaic"
+    else:
+        raise ImportError("One of patsy or formulaic must be installed to use statsmodels")
+elif DEFAULT_FORMULA_ENGINE == "patsy" and not HAVE_PATSY:
+    raise RuntimeError(
+        "The DEFAULT_FORMULA_ENGINE is set to 'patsy', but patsy is not installed. "
+        "Please install patsy or change the environment variable SM_FORMULA_ENGINE "
+        "to 'formulaic'."
+    )
+elif DEFAULT_FORMULA_ENGINE == "formulaic" and not HAVE_FORMULAIC:
+    raise RuntimeError(
+        "The DEFAULT_FORMULA_ENGINE is set to 'formulaic', but formulaic is not "
+        "installed. Please install formulaic or change the environment variable "
+        "SM_FORMULA_ENGINE to 'patsy'."
+    )
 
 
 EVAL_ENV_WARNING = """\
@@ -232,7 +249,6 @@ class FormulaManager:
         ValueError
             If the selected engine is not available.
         """
-        # Patsy for now, to be changed to a user-settable variable before release
         _engine: Literal["patsy", "formulaic"]
 
         if engine is not None:
@@ -349,7 +365,7 @@ class FormulaManager:
             The string formula. If not a string, it is returned as is.
         data : DataFrame
             The data used to materialize the formula.
-        context
+        context : int or Mapping[str, Any]
             The context used to evaluate the formula.
 
         Returns
@@ -695,7 +711,8 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec
+        spec : {ModelSpec, DesignInfo}
+            The model specification to check for an intercept term.
 
         Returns
         -------
@@ -711,7 +728,8 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec
+        spec : {ModelSpec, DesignInfo}
+            The model specification whose terms are searched for the intercept.
 
         Returns
         -------
@@ -729,8 +747,11 @@ class FormulaManager:
 
         Parameters
         ----------
-        action
-        types
+        action : str
+            The action to take on missing values, e.g. "drop" or "raise".
+        types : Sequence[Any]
+            The types of missing values to consider, e.g. "None" or "NaN".
+            Only used when using patsy.
 
         Returns
         -------
@@ -783,11 +804,14 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+            The DataFrame with a model specification attached, or the model
+            specification itself.
 
         Returns
         -------
-
+        list[str]
+            The list of term names.
         """
         spec = self._ensure_spec(spec_or_frame)
         if self._using_patsy:
@@ -801,7 +825,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
 
         Returns
         -------
@@ -834,6 +858,7 @@ class FormulaManager:
 
     def get_model_spec(self, frame, optional=False):
         """
+        Get the model specification attached to a DataFrame.
 
         Parameters
         ----------
@@ -858,6 +883,7 @@ class FormulaManager:
 
     def get_slice(self, model_spec, term):
         """
+        Get the slice of columns associated with a model term.
 
         Parameters
         ----------
@@ -900,12 +926,12 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
 
         Returns
         -------
         str
-            The human-readable description of the model specification.,
+            The human-readable description of the model specification.
         """
         spec = self._ensure_spec(spec_or_frame)
         if self._using_patsy:

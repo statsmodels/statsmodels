@@ -1,10 +1,10 @@
-"""Low discrepancy sequence tools."""
+"""Low discrepancy sequence tools"""
 import numpy as np
 
 
 def discrepancy(sample, bounds=None):
     """
-    Discrepancy.
+    Discrepancy
 
     Compute the centered discrepancy on a given sample.
     It is a measure of the uniformity of the points in the parameter space.
@@ -26,9 +26,9 @@ def discrepancy(sample, bounds=None):
 
     References
     ----------
-    [1] Fang et al. "Design and modeling for computer experiments",
-      Computer Science and Data Analysis Series Science and Data Analysis
-      Series, 2006.
+    .. [1] Fang et al. "Design and modeling for computer experiments",
+       Computer Science and Data Analysis Series Science and Data Analysis
+       Series, 2006.
 
     """
     sample = np.asarray(sample)
@@ -59,7 +59,7 @@ def discrepancy(sample, bounds=None):
 
 def primes_from_2_to(n):
     """
-    Prime numbers from 2 to *n*.
+    Prime numbers from 2 to *n*
 
     Parameters
     ----------
@@ -73,7 +73,7 @@ def primes_from_2_to(n):
 
     References
     ----------
-    [1] `StackOverflow <https://stackoverflow.com/questions/2068372>`_.
+    .. [1] `StackOverflow <https://stackoverflow.com/questions/2068372>`_.
 
     """
     sieve = np.ones(n // 3 + (n % 6 == 2), dtype=bool)
@@ -87,7 +87,7 @@ def primes_from_2_to(n):
 
 def n_primes(n):
     """
-    List of the n-first prime numbers.
+    List of the n-first prime numbers
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ def n_primes(n):
 
 def van_der_corput(n_sample, base=2, start_index=0):
     """
-    Van der Corput sequence.
+    Van der Corput sequence
 
     Pseudo-random number generator based on a b-adic expansion.
 
@@ -161,7 +161,7 @@ def van_der_corput(n_sample, base=2, start_index=0):
 
 def halton(dim, n_sample, bounds=None, start_index=0):
     """
-    Halton sequence.
+    Halton sequence
 
     Pseudo-random number generator that generalize the Van der Corput sequence
     for multiple dimensions. Halton sequence use base-two Van der Corput
@@ -188,8 +188,9 @@ def halton(dim, n_sample, bounds=None, start_index=0):
 
     References
     ----------
-    [1] Halton, "On the efficiency of certain quasi-random sequences of points
-      in evaluating multi-dimensional integrals", Numerische Mathematik, 1960.
+    .. [1] Halton, "On the efficiency of certain quasi-random sequences of
+       points in evaluating multi-dimensional integrals", Numerische
+       Mathematik, 1960.
 
     Examples
     --------
@@ -202,7 +203,7 @@ def halton(dim, n_sample, bounds=None, start_index=0):
 
     >>> uniformity = sequences.discrepancy(sample)
 
-    If some wants to continue an existing design, extra points can be obtained.
+    If one wants to continue an existing design, extra points can be obtained.
 
     >>> sample_continued = sequences.halton(dim=2, n_sample=5, start_index=5)
 

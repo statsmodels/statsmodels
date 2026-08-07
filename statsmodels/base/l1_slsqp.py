@@ -29,25 +29,59 @@ def fit_l1_slsqp(
 
     Parameters
     ----------
-    All the usual parameters from LikelhoodModel.fit
-    alpha : non-negative scalar or numpy array (same size as parameters)
-        The weight multiplying the l1 penalty term
-    trim_mode : 'auto, 'size', or 'off'
-        If not 'off', trim (set to zero) parameters that would have been zero
-            if the solver reached the theoretical minimum.
-        If 'auto', trim params using the Theory above.
-        If 'size', trim params if they have very small absolute value
-    size_trim_tol : float or 'auto' (default = 'auto')
-        For use when trim_mode === 'size'
-    auto_trim_tol : float
-        For sue when trim_mode == 'auto'.  Use
-    qc_tol : float
-        Print warning and do not allow auto trim when (ii) in "Theory" (above)
-        is violated by this much.
-    qc_verbose : bool
-        If true, print out a full QC report upon failure
-    acc : float (default 1e-6)
-        Requested accuracy as used by slsqp
+    f : function
+        Objective function to be minimized, as in LikelihoodModel.fit.
+    score : function
+        Gradient of the unregularized objective function.
+    start_params : array_like
+        Starting values for the parameters.
+    args : tuple
+        Extra positional arguments to be passed to `f` and `score`.
+    kwargs : dict
+        All the usual parameters from LikelihoodModel.fit, plus:
+
+        alpha : non-negative scalar or numpy array (same size as parameters)
+            The weight multiplying the l1 penalty term.
+        trim_mode : 'auto, 'size', or 'off'
+            If not 'off', trim (set to zero) parameters that would have
+            been zero if the solver reached the theoretical minimum.
+            If 'auto', trim params using the Theory above.
+            If 'size', trim params if they have very small absolute value.
+        size_trim_tol : float or 'auto' (default = 'auto')
+            Threshold below which a parameter is trimmed. Used when
+            trim_mode == 'size'.
+        auto_trim_tol : float
+            Threshold used to decide whether the theoretical condition (ii)
+            above holds closely enough to trim a parameter. Used when
+            trim_mode == 'auto'.
+        qc_tol : float
+            Print warning and do not allow auto trim when (ii) in "Theory"
+            (above) is violated by this much.
+        qc_verbose : bool
+            If true, print out a full QC report upon failure.
+        acc : float (default 1e-6)
+            Requested accuracy as used by slsqp.
+    disp : bool
+        Set to True to print convergence messages.
+    maxiter : int
+        The maximum number of iterations to perform.
+    callback : function, optional
+        Called after each iteration, as callback(xk), where xk is the
+        current parameter vector.
+    retall : bool
+        Set to True to return list of solutions at each iteration.
+    full_output : bool
+        Set to True to also return auxiliary output from the solver.
+    hess : optional
+        Unused; the Hessian is not required by slsqp.
+
+    Returns
+    -------
+    params : ndarray
+        The trimmed, regularized parameter estimates.
+    retvals : dict
+        Only returned if `full_output` is True. Contains convergence and
+        other diagnostic information from the optimizer.
     """
     start_params = np.array(start_params).ravel("F")
 
@@ -137,9 +171,7 @@ def _get_disp_slsqp(disp, retall):
 
 
 def _objective_func(f, x_full, k_params, alpha, *args):
-    """
-    The regularized objective function
-    """
+    """The regularized objective function"""
     x_params = x_full[:k_params]
     x_added = x_full[k_params:]
     # Return
@@ -147,18 +179,14 @@ def _objective_func(f, x_full, k_params, alpha, *args):
 
 
 def _fprime(score, x_full, k_params, alpha):
-    """
-    The regularized derivative
-    """
+    """The regularized derivative"""
     x_params = x_full[:k_params]
     # The derivative just appends a vector of constants
     return np.append(score(x_params), alpha)
 
 
 def _f_ieqcons(x_full, k_params):
-    """
-    The inequality constraints.
-    """
+    """The inequality constraints"""
     x_params = x_full[:k_params]
     x_added = x_full[k_params:]
     # All entries in this vector must be \geq 0 in a feasible solution
@@ -166,9 +194,7 @@ def _f_ieqcons(x_full, k_params):
 
 
 def _fprime_ieqcons(x_full, k_params):
-    """
-    Derivative of the inequality constraints
-    """
+    """Derivative of the inequality constraints"""
     eye = np.eye(k_params)
     A = np.concatenate((eye, eye), axis=1)
     B = np.concatenate((-eye, eye), axis=1)
