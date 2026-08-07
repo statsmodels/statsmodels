@@ -130,3 +130,10 @@ Other Plots
    :toctree: generated/
 
    mean_diff_plot
+
+.. currentmodule:: statsmodels.graphics.plottools
+
+.. autosummary::
+   :toctree: generated/
+
+   rainbow

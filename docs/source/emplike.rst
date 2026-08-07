@@ -71,4 +71,7 @@ Module Reference
    descriptive.DescStatUV
    descriptive.DescStatMV
    descriptive.EmpLikeTestResult
+   elanova.ANOVA
    elanova.ANOVAResult
+   originregress.ELOriginRegress
+   aft_el.emplikeAFT
