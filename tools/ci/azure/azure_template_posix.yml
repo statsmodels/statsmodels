@@ -200,7 +200,7 @@ jobs:
   - script: |
       echo "Testing x13 interface"
       if [[ ${COVERAGE} == "true" ]]; then
-        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
+        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term --cov-append"
       fi
       wget https://www2.census.gov/software/x-13arima-seats/x13as/unix-linux/program-archives/x13as_ascii-v1-1-b62.tar.gz -O x13.tar.gz
       tar -xzf x13.tar.gz
