@@ -44,22 +44,9 @@
 
 import numpy as np
 import pandas as pd
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.stats.meta_analysis import (
-=======
-from scipy import optimize, stats
-=======
->>>>>>> 4604dedd2 (Fix pandas read_csv options: add header=None and delimiter)
-
-from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.stats.meta_analysis import (
-    _fit_tau_iter_mm,
-    _fit_tau_iterative,
-    _fit_tau_mm,
-
     combine_effects,
     effectsize_2proportions,
     effectsize_smd,

@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 from scipy import stats
 
 from statsmodels.stats.descriptivestats import sign_test
@@ -152,7 +151,7 @@ def descstats(data, cols=None, axis=0):
 #    import os
 #    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
 #    relpath=(load_dataset(loc))
-#    dta = pd.read_csv(relpath).values
+#    dta=np.genfromtxt(relpath, delimiter=",")
 #    descstats(dta,['stpop'])
 #    raw_input('Hit enter for multivariate test')
 #    descstats(dta,['stpop','avginc','vio'])
@@ -185,7 +184,7 @@ if __name__ == "__main__":
     sum1a = descstats(data.exog[:, :1])
 
     #    loc='http://eagle1.american.edu/~js2796a/data/handguns_data.csv'
-    #    dta = pd.read_csv(loc).values
+    #    dta=np.genfromtxt(loc, delimiter=",")
     #    summary2 = descstats(dta,['stpop'])
     #    summary3 =  descstats(dta,['stpop','avginc','vio'])
     # TODO: needs a by argument
@@ -198,7 +197,7 @@ if __name__ == "__main__":
 
     # This is *really* slow ###
     if Path("./Econ724_PS_I_Data.csv").is_file():
-        data2 = pd.read_csv("./Econ724_PS_I_Data.csv").values
+        data2 = np.genfromtxt("./Econ724_PS_I_Data.csv", delimiter=",")
         sum2 = descstats(data2.ahe)
         sum3 = descstats(np.column_stack((data2.ahe, data2.yrseduc)))
         sum4 = descstats(np.column_stack([data2[_] for _ in data2.dtype.names]))

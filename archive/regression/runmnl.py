@@ -25,7 +25,6 @@ License: BSD (simplified)
 
 import numpy as np
 import numpy.lib.recfunctions as recf
-import pandas as pd
 from scipy import optimize
 
 
@@ -237,9 +236,9 @@ class RU2NMNL:
 # ------------------------------
 
 # travel data from Greene
-dta = pd.read_csv(
+dta = np.genfromtxt(
     "TableF23-2.txt",
-    skiprows=1,
+    skip_header=1,
     names="Mode   Ttme   Invc    Invt      GC     Hinc    PSize".split(),
 )
 

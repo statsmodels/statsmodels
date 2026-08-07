@@ -90,17 +90,9 @@ import numpy as np
 import pandas as pd
 from pandas.plotting import register_matplotlib_converters
 from pandas_datareader.data import DataReader
-<<<<<<< HEAD:examples/python/statespace_sarimax_pymc.py
 import pymc as pm
 from pytensor.graph.op import Op
 import pytensor.tensor as pt
-=======
-import pymc3 as pm
-import theano
-import theano.tensor as tt
-
-import statsmodels.api as sm
-:examples/python/statespace_sarimax_pymc3.py
 
 import statsmodels.api as sm
 

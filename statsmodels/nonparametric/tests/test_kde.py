@@ -208,7 +208,8 @@ class TestKdeWeights(CheckKDE):
     def setup_class(cls):
         cls.res1 = cls.result_factory()
         fname = Path(curdir).joinpath("results", "results_kde_weights.csv")
-        cls.res_density = pd.read_csv(fname, skiprows=1).values
+        cls.res_density = pd.read_csv(fname, skiprows=1, header=None).values.squeeze()
+        cls.res_density2 = np.genfromtxt(Path(fname).open("rb"), skip_header=1)
 
     @classmethod
     def result_factory(cls):
@@ -233,7 +234,7 @@ class TestKDEGaussFFT(CheckKDE):
         cls.decimal_density = 2  # low accuracy because binning is different
         cls.res1 = cls.result_factory()
         rfname2 = Path(curdir).joinpath("results", "results_kde_fft.csv")
-        cls.res_density = pd.read_csv(rfname2, header=None).values
+        cls.res_density = pd.read_csv(rfname2, header=None).values.squeeze()
 
     @classmethod
     def result_factory(cls):

@@ -13,17 +13,13 @@
 
 # # Regression Plots
 
-<<<<<<< HEAD
 
 from statsmodels.compat import lzip
-
-=======
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 import statsmodels.api as sm
-from statsmodels.compat import lzip
 from statsmodels.formula.api import ols
 
 plt.rc("figure", figsize=(16, 8))

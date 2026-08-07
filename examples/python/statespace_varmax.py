@@ -22,19 +22,8 @@
 #
 # where $y_t$ is a $\mathrm{k_endog} \times 1$ vector.
 
-<<<<<<< HEAD
 
-<<<<<<< HEAD
 import pandas as pd
-=======
-import matplotlib.pyplot as plt
-=======
->>>>>>> 4604dedd2 (Fix pandas read_csv options: add header=None and delimiter)
-import numpy as np
-import pandas as pd
-
-import statsmodels.api as sm
-
 
 import statsmodels.api as sm
 

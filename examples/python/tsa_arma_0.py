@@ -18,18 +18,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
-<<<<<<< HEAD
 
 import statsmodels.api as sm
 from statsmodels.tsa.arima.model import ARIMA
 
-
-=======
-
-import statsmodels.api as sm
 
 from statsmodels.graphics.api import qqplot
-from statsmodels.tsa.arima.model import ARIMA
 
 # ## Sunspots Data
 

@@ -8,6 +8,7 @@ generate the expected outcomes.
 The delta tests utilize Silverman's motorcycle collision data,
 available in R's MASS package.
 """
+
 from pathlib import Path
 
 import numpy as np
@@ -65,7 +66,6 @@ class TestLowess:
         kwargs = {} if kwargs is None else kwargs
         data = pd.read_csv(Path(rpath).joinpath(fname))
         assert_almost_equal.description = name
-        data = pd.read_csv(fpath, dtype=float)
         if callable(kwargs):
             kwargs = kwargs(data)
         result = lowess(data[y], data[x], **kwargs)
@@ -139,11 +139,12 @@ class TestLowess:
     def test_options(self):
         rs = np.random.RandomState(8437973)
         rfile = Path(rpath).joinpath("test_lowess_simple.csv")
-        test_data = pd.read_csv(rfile, header=None, names=["x", "y", "out"])
-        y, x = test_data["y"], test_data["x"]
-        expected_lowess = np.column_stack([test_data["x"].to_numpy(),
-                                            test_data["out"].to_numpy()])
-
+        test_data = pd.read_csv(rfile, dtype=float)
+        y = np.require(test_data["y"], requirements="W")
+        x = np.require(test_data["x"], requirements="W")
+        expected_lowess = np.column_stack(
+            [test_data["x"].to_numpy(), test_data["out"].to_numpy()]
+        )
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
         assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
@@ -243,7 +244,7 @@ class TestLowess:
     def test_exog_predict(self):
         rs = np.random.RandomState(8437971)
         rfile = Path(rpath).joinpath("test_lowess_simple.csv")
-        test_data = pd.read_csv(rfile, header=None, names=["x", "y", "out"])
+        test_data = pd.read_csv(rfile)
         y, x = test_data["y"], test_data["x"]
         target = lowess(y, x, is_sorted=True)
 

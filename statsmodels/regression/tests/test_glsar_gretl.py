@@ -314,11 +314,7 @@ class TestGLSARGretl:
         names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = Path(__file__).parent.resolve()
         fpath = Path(cur_dir).joinpath("results/leverage_influence_ols_nostars.txt")
-        lev = pd.read_csv(fpath, skiprows=3, skipfooter=1, engine="python", header=None).values
-        if pd.isna(lev.iloc[-1]["DFFITS"]):
-            lev = pd.read_csv(fpath, skiprows=3, skipfooter=2, engine="python", sep=r"\s+",
-                              header=None, names=names)
-            lev = lev.apply(pd.to_numeric, errors="coerce")
+        lev = pd.read_csv(fpath, skiprows=3, skipfooter=3, sep=r"\s+", header=None)
         lev.columns = names
 
         res = res_ols  # for easier copying

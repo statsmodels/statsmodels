@@ -24,10 +24,7 @@ import pandas as pd
 from scipy import stats
 
 import statsmodels.api as sm
-<<<<<<< HEAD
 
-
-=======
 
 from statsmodels.graphics.api import qqplot
 

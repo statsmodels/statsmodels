@@ -44,8 +44,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
-from scipy.stats import norm
-
 
 import statsmodels.api as sm
 

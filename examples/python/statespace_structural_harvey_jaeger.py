@@ -33,23 +33,9 @@
 # below we follow the steps of their paper, using a slightly updated
 # dataset.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 
 import numpy as np
 import pandas as pd
-
-=======
-from IPython.display import Latex, display
-import matplotlib.pyplot as plt
-=======
->>>>>>> 4604dedd2 (Fix pandas read_csv options: add header=None and delimiter)
-import numpy as np
-import pandas as pd
-
-# Datasets
-from pandas_datareader.data import DataReader
-
 
 import statsmodels.api as sm
 
@@ -230,12 +216,9 @@ import statsmodels.api as sm
 # Python library [Pandas](https://pandas.pydata.org/) has the ability to
 # download data from FRED directly.
 
-<<<<<<< HEAD
 
 # Datasets
 from pandas_datareader.data import DataReader
-=======
-
 
 # Get the raw data
 start = "1948-01"
