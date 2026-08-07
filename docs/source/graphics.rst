@@ -82,6 +82,7 @@ Regression Plots
    plot_fit
    plot_regress_exog
    plot_partregress
+   PartRegressPlotResult
    plot_partregress_grid
    plot_ccpr
    plot_ccpr_grid
@@ -101,6 +102,7 @@ Time Series Plots
    plot_acf
    plot_pacf
    plot_ccf
+   plot_pccf
    plot_accf_grid
    month_plot
    quarter_plot
@@ -128,3 +130,10 @@ Other Plots
    :toctree: generated/
 
    mean_diff_plot
+
+.. currentmodule:: statsmodels.graphics.plottools
+
+.. autosummary::
+   :toctree: generated/
+
+   rainbow

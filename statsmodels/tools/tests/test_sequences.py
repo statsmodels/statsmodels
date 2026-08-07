@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.testing as npt
+
 from statsmodels.tools import sequences
 
 
@@ -19,7 +20,7 @@ def test_discrepancy():
 
 def test_van_der_corput():
     sample = sequences.van_der_corput(10)
-    out = [0., 0.5, 0.25, 0.75, 0.125, 0.625, 0.375, 0.875, 0.0625, 0.5625]
+    out = [0.0, 0.5, 0.25, 0.75, 0.125, 0.625, 0.375, 0.875, 0.0625, 0.5625]
     npt.assert_almost_equal(sample, out)
 
     sample = sequences.van_der_corput(5, start_index=3)
@@ -37,7 +38,7 @@ def test_halton():
     corners = np.array([[0, 2], [10, 5]])
     sample = sequences.halton(dim=2, n_sample=5, bounds=corners)
 
-    out = np.array([[5., 3.], [2.5, 4.], [7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
+    out = np.array([[5.0, 3.0], [2.5, 4.0], [7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
     npt.assert_almost_equal(sample, out, decimal=1)
 
     sample = sequences.halton(dim=2, n_sample=3, bounds=corners, start_index=2)

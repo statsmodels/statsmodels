@@ -5,50 +5,47 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-import pytest
-
 import numpy as np
 from numpy.testing import assert_allclose
-
-# from scipy import stats
+import pytest
 
 from statsmodels.robust.norms import (
     AndrewWave,
-    TrimmedMean,
-    TukeyBiweight,
-    TukeyQuartic,
     Hampel,
     HuberT,
     StudentT,
-    )
-
+    TrimmedMean,
+    TukeyBiweight,
+    TukeyQuartic,
+)
 from statsmodels.robust.tools import (
+    _get_tuning_param,
     _var_normal,
     _var_normal_jump,
-    _get_tuning_param,
     tuning_s_estimator_mean,
-    )
-
+)
 
 effs = [0.9, 0.95, 0.98, 0.99]
 
 results_menenez = [
-    (HuberT(), [0.9818, 1.345, 1.7459, 2.0102]),
-    (TukeyBiweight(), [3.8827, 4.6851, 5.9207, 7.0414]),
-    (TukeyQuartic(), [3.1576, 3.6175, 4.2103, 4.6664]),
-    (TukeyQuartic(k=2), [3.8827, 4.6851, 5.9207, 7.0414]),  # biweight
-    (StudentT(df=1), [1.7249, 2.3849, 3.3962, 4.2904]),  # Cauchy
-    (AndrewWave(), [1.1117, 1.338, 1.6930, 2.0170]),
-    # (Hampel(), [4.4209, 5.4, 7.00609, 8.0456]),
+    (HuberT, {}, [0.9818, 1.345, 1.7459, 2.0102]),
+    (TukeyBiweight, {}, [3.8827, 4.6851, 5.9207, 7.0414]),
+    (TukeyQuartic, {}, [3.1576, 3.6175, 4.2103, 4.6664]),
+    (TukeyQuartic, dict(k=2), [3.8827, 4.6851, 5.9207, 7.0414]),  # biweight
+    (StudentT, dict(df=1), [1.7249, 2.3849, 3.3962, 4.2904]),  # Cauchy
+    (AndrewWave, {}, [1.1117, 1.338, 1.6930, 2.0170]),
+    # (Hampel(), [4.4209, 5.4, 7.00609, 8.0456]),ru
     # rounding problem in Hampel, menenez use a as tuning parameter
-    (Hampel(), [4.4208, 5.5275, 7.006, 8.0456]),
-    (TrimmedMean(), [2.5003, 2.7955, 3.1365, 3.3682]),
-    ]
+    (Hampel, {}, [4.4208, 5.5275, 7.006, 8.0456]),
+    (TrimmedMean, {}, [2.5003, 2.7955, 3.1365, 3.3682]),
+]
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("case", results_menenez)
 def test_eff(case):
-    norm, res2 = case
+    norm_cls, norm_kwargs, res2 = case
+    norm = norm_cls(**norm_kwargs)
     use_jump = False
 
     if norm.continuous == 2:
@@ -91,7 +88,8 @@ def test_tuning_biweight():
 @pytest.mark.parametrize("case", results_menenez)
 def test_tuning_smoke(case):
     # regression numbers but verified at 5 decimals
-    norm, _ = case
+    norm_cls, norm_kwargs, _ = case
+    norm = norm_cls(**norm_kwargs)
     # norm = Norm()
     if np.isfinite(norm.max_rho()):
         res = tuning_s_estimator_mean(norm, breakdown=0.5)

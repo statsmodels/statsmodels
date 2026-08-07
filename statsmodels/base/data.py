@@ -12,8 +12,8 @@ from functools import reduce
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 import statsmodels.tools.data as data_util
-from statsmodels.tools.decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import MissingDataError
 
 
@@ -120,7 +120,6 @@ class ModelData:
                     break
                 except (NameError, mgr.factor_evaluation_error) as e:
                     exc.append(e)  # why do I need a reference from outside except block
-                    pass
             else:
                 raise exc[-1]
 
@@ -201,8 +200,31 @@ class ModelData:
     @classmethod
     def handle_missing(cls, endog, exog, missing, **kwargs):
         """
+        Handle missing data in endog, exog and any extra arrays
+
         This returns a dictionary with keys endog, exog and the keys of
         kwargs. It preserves Nones.
+
+        Parameters
+        ----------
+        endog : array_like
+            The dependent variable data.
+        exog : array_like or None
+            The independent variable data.
+        missing : str
+            How to handle missing data, either "raise" or "drop".
+        **kwargs
+            Extra arrays to be checked for missing data alongside endog
+            and exog.
+
+        Returns
+        -------
+        combined : dict
+            Dictionary with keys endog, exog and the keys of kwargs, with
+            missing rows dropped if `missing` is "drop".
+        missing_idx : list[int]
+            The row indices that contained missing values and were
+            dropped, or an empty list if there was no missing data.
         """
         none_array_names = []
 
@@ -226,7 +248,7 @@ class ModelData:
         # deal with other arrays
         combined_2d = ()
         combined_2d_names = []
-        if len(kwargs):
+        if kwargs:
             for key, value_array in kwargs.items():
                 if value_array is None or np.ndim(value_array) == 0:
                     none_array_names += [key]
@@ -245,7 +267,7 @@ class ModelData:
                     combined_2d_names += [key]
                 else:
                     raise ValueError(
-                        "Arrays with more than 2 dimensions " "are not yet handled"
+                        "Arrays with more than 2 dimensions are not yet handled"
                     )
 
         if missing_idx is not None:
@@ -280,9 +302,9 @@ class ModelData:
                 nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
         if not np.any(nan_mask):  # no missing do not do anything
-            combined = dict(zip(combined_names, combined))
+            combined = dict(zip(combined_names, combined, strict=True))
             if combined_2d:
-                combined.update(dict(zip(combined_2d_names, combined_2d)))
+                combined.update(dict(zip(combined_2d_names, combined_2d, strict=True)))
             if none_array_names:
                 combined.update({k: kwargs.get(k, None) for k in none_array_names})
 
@@ -305,7 +327,7 @@ class ModelData:
             def drop_nans_2d(x):
                 return cls._drop_nans_2d(x, nan_mask)
 
-            combined = dict(zip(combined_names, lmap(drop_nans, combined)))
+            combined = dict(zip(combined_names, lmap(drop_nans, combined), strict=True))
 
             if missing_idx is not None:
                 if updated_row_mask is not None:
@@ -321,22 +343,24 @@ class ModelData:
 
             if combined_2d:
                 combined.update(
-                    dict(zip(combined_2d_names, lmap(drop_nans_2d, combined_2d)))
+                    dict(zip(combined_2d_names, lmap(drop_nans_2d, combined_2d), strict=True))
                 )
             if none_array_names:
                 combined.update({k: kwargs.get(k, None) for k in none_array_names})
 
             return combined, np.where(~nan_mask)[0].tolist()
         else:
-            raise ValueError("missing option %s not understood" % missing)
+            raise ValueError(f"missing option {missing} not understood")
 
     def _convert_endog_exog(self, endog, exog):
 
         # for consistent outputs if endog is (n,1)
-        yarr = self._get_yarr(endog)
+        # We call __array__() to convert to an array if the object is array-like
+        # but not yet an array. For actual ndarrays, this does nothing.
+        yarr = self._get_yarr(endog.__array__())
         xarr = None
         if exog is not None:
-            xarr = self._get_xarr(exog)
+            xarr = self._get_xarr(exog.__array__())
             if xarr.ndim == 1:
                 xarr = xarr[:, None]
             if xarr.ndim != 2:
@@ -641,7 +665,7 @@ def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:
         ynames = ["y"]
     else:  # for VAR
-        ynames = ["y%d" % (i + 1) for i in range(endog.shape[1])]
+        ynames = [f"y{i + 1:d}" for i in range(endog.shape[1])]
 
     return ynames
 
@@ -652,10 +676,10 @@ def _make_exog_names(exog):
         # assumes one constant in first or last position
         # avoid exception if more than one constant
         const_idx = exog_var.argmin()
-        exog_names = ["x%d" % i for i in range(1, exog.shape[1])]
+        exog_names = [f"x{i:d}" for i in range(1, exog.shape[1])]
         exog_names.insert(const_idx, "const")
     else:
-        exog_names = ["x%d" % i for i in range(1, exog.shape[1] + 1)]
+        exog_names = [f"x{i:d}" for i in range(1, exog.shape[1] + 1)]
 
     return exog_names
 
@@ -671,7 +695,20 @@ def handle_missing(endog, exog=None, missing="none", **kwargs):
 
 def handle_data_class_factory(endog, exog):
     """
-    Given inputs
+    Given the inputs, select the appropriate data handling class
+
+    Parameters
+    ----------
+    endog : array_like
+        The dependent variable data.
+    exog : array_like or None
+        The independent variable data.
+
+    Returns
+    -------
+    ModelData
+        The data handling class appropriate for the type of `endog` and
+        `exog`, e.g. `PandasData` if either is a pandas object.
     """
     if data_util._is_using_ndarray_type(endog, exog):
         klass = ModelData
@@ -681,12 +718,16 @@ def handle_data_class_factory(endog, exog):
         klass = PatsyData
     elif data_util._is_using_formulaic(endog, exog):
         klass = FormulaicData
+    elif data_util._is_using_ndarray_like(endog, exog):
+        klass = ModelData
+    elif data_util._is_using_pandas_like(endog, exog):
+        klass = PandasData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData
     else:
         raise ValueError(
-            "unrecognized data structures: %s / %s" % (type(endog), type(exog))
+            f"unrecognized data structures: {type(endog)} / {type(exog)}"
         )
     return klass
 
