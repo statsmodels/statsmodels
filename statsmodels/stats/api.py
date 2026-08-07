@@ -40,6 +40,7 @@ from .diagnostic import (
     linear_lm,
     linear_rainbow,
     linear_reset,
+    pesaran_timmermann,
     recursive_olsresiduals,
     spec_white,
 )
@@ -260,6 +261,7 @@ __all__ = [
     "nonequivalence_poisson_2indep",
     "normal_ad",
     "omni_normtest",
+    "pesaran_timmermann",
     "power_binom_tost",
     "power_equivalence_neginb_2indep",
     "power_equivalence_oneway",
