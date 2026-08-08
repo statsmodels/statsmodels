@@ -508,7 +508,8 @@ def _fit_newton(
         mle_retvals attribute. The output is dependent on the solver.
         See LikelihoodModelResults notes section for more information.
     hess : callable, optional
-        Method for computing the Hessian matrix, if applicable.
+        Method for computing the Hessian matrix of negative log likelihood 
+        with respect to params.
     ridge_factor : float
         Regularization factor for Hessian matrix.
 
