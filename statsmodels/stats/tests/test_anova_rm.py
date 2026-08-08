@@ -1,6 +1,6 @@
 from statsmodels.compat.pandas import assert_frame_equal
 
-import os
+from pathlib import Path
 
 from numpy.testing import (
     assert_array_almost_equal,
@@ -11,8 +11,8 @@ import pytest
 
 from statsmodels.stats.anova import AnovaRM
 
-CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
-ANOVA_RM_DATA = os.path.join(CURRENT_PATH, "results", "anova-rm-test-data.csv")
+CURRENT_PATH = Path(__file__).resolve().parent
+ANOVA_RM_DATA = Path(CURRENT_PATH).joinpath("results", "anova-rm-test-data.csv")
 
 data = pd.read_csv(ANOVA_RM_DATA)
 data["DV"] = data["DV"].astype("int")

@@ -4,31 +4,16 @@ import pytest
 
 from statsmodels.graphics.dotplots import dot_plot
 
-# If true, the output is written to a multi-page pdf file.
-pdf_output = False
-
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
 
 
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-    plt.close(fig)
-
-
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_all(close_figures):
     rs = np.random.RandomState(49814031)
-    if pdf_output:
-        from matplotlib.backends.backend_pdf import PdfPages
-
-        pdf = PdfPages("test_dotplot.pdf")
-    else:
-        pdf = None
     # Basic dotplot with points only
 
     plt.clf()
@@ -36,7 +21,7 @@ def test_all(close_figures):
     ax = plt.axes()
     fig = dot_plot(points, ax=ax)
     ax.set_title("Basic horizontal dotplot")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Basic vertical dotplot
 
@@ -45,7 +30,7 @@ def test_all(close_figures):
     ax = plt.axes()
     fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Basic vertical dotplot")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Tall and skinny
 
@@ -54,7 +39,7 @@ def test_all(close_figures):
     fig = dot_plot(points, ax=ax)
     ax.set_title("Tall and skinny dotplot")
     ax.set_xlabel("x axis label")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Short and wide
 
@@ -63,7 +48,7 @@ def test_all(close_figures):
     fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Short and wide dotplot")
     ax.set_ylabel("y axis label")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Tall and skinny striped dotplot
 
@@ -73,7 +58,7 @@ def test_all(close_figures):
     fig = dot_plot(points, ax=ax, striped=True)
     ax.set_title("Tall and skinny striped dotplot")
     ax.set_xlim(-10, 50)
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Short and wide striped
 
@@ -83,7 +68,7 @@ def test_all(close_figures):
     fig = dot_plot(points, ax=ax, striped=True, horizontal=False)
     ax.set_title("Short and wide striped dotplot")
     ax.set_ylim(-10, 50)
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Basic dotplot with few points
 
@@ -92,7 +77,7 @@ def test_all(close_figures):
     points = np.arange(4)
     fig = dot_plot(points, ax=ax)
     ax.set_title("Basic horizontal dotplot with few lines")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Basic dotplot with few points
 
@@ -101,7 +86,7 @@ def test_all(close_figures):
     points = np.arange(4)
     fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Basic vertical dotplot with few lines")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Manually set the x axis limits
 
@@ -111,7 +96,7 @@ def test_all(close_figures):
     fig = dot_plot(points, ax=ax)
     ax.set_xlim(-10, 30)
     ax.set_title("Dotplot with adjusted horizontal range")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Left row labels
 
@@ -121,7 +106,7 @@ def test_all(close_figures):
     points = rs.normal(size=20)
     fig = dot_plot(points, lines=lines, ax=ax)
     ax.set_title("Dotplot with user-supplied labels in the left margin")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Left and right row labels
 
@@ -131,7 +116,7 @@ def test_all(close_figures):
     lines = ["ABCDEFGH"[rs.randint(0, 8)] + "::" + str(k + 1) for k in range(20)]
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::")
     ax.set_title("Dotplot with user-supplied labels in both margins")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Both sides row labels
 
@@ -142,7 +127,7 @@ def test_all(close_figures):
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::", horizontal=False)
     txt = ax.set_title("Vertical dotplot with user-supplied labels in both margins")
     txt.set_position((0.5, 1.06))
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Custom colors and symbols
 
@@ -157,7 +142,7 @@ def test_all(close_figures):
     }
     fig = dot_plot(points, lines=lines, styles=styles, ax=ax, marker_props=marker_props)
     ax.set_title("Dotplot with custom colors and symbols")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Basic dotplot with symmetric intervals
 
@@ -166,7 +151,7 @@ def test_all(close_figures):
     points = range(20)
     fig = dot_plot(points, intervals=np.ones(20), ax=ax)
     ax.set_title("Dotplot with symmetric intervals")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Basic dotplot with symmetric intervals, pandas inputs.
 
@@ -176,7 +161,7 @@ def test_all(close_figures):
     intervals = pd.Series(np.ones(20))
     fig = dot_plot(points, intervals=intervals, ax=ax)
     ax.set_title("Dotplot with symmetric intervals (Pandas inputs)")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Basic dotplot with nonsymmetric intervals
 
@@ -186,7 +171,7 @@ def test_all(close_figures):
     intervals = [(1, 3) for i in range(20)]
     fig = dot_plot(points, intervals=intervals, ax=ax)
     ax.set_title("Dotplot with nonsymmetric intervals")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Vertical dotplot with nonsymmetric intervals
 
@@ -196,7 +181,7 @@ def test_all(close_figures):
     intervals = [(1, 3) for i in range(20)]
     fig = dot_plot(points, intervals=intervals, ax=ax, horizontal=False)
     ax.set_title("Vertical dotplot with nonsymmetric intervals")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with nonsymmetric intervals, adjust line properties
 
@@ -207,7 +192,7 @@ def test_all(close_figures):
     line_props = {0: {"color": "lightgrey", "solid_capstyle": "round"}}
     fig = dot_plot(points, intervals=intervals, line_props=line_props, ax=ax)
     ax.set_title("Dotplot with custom line properties")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with two points per line and a legend
 
@@ -227,7 +212,7 @@ def test_all(close_figures):
     )
     leg.draw_frame(False)
     ax.set_title("Dotplot with two points per line")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with two points per line and a legend
 
@@ -248,7 +233,7 @@ def test_all(close_figures):
     )
     leg.draw_frame(False)
     ax.set_title("Dotplot with two points per line (reverse order)")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Vertical dotplot with two points per line and a legend
 
@@ -274,7 +259,7 @@ def test_all(close_figures):
     )
     leg.draw_frame(False)
     ax.set_title("Vertical dotplot with two points per line")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Vertical dotplot with two points per line and a legend
 
@@ -292,14 +277,14 @@ def test_all(close_figures):
         styles_order=styles_order,
     )
     handles, labels = ax.get_legend_handles_labels()
-    lh = dict(zip(labels, handles))
+    lh = dict(zip(labels, handles, strict=True))
     handles = [lh[idx] for idx in styles_order]
     leg = plt.figlegend(
         handles, styles_order, loc="center right", numpoints=1, handletextpad=0.0001
     )
     leg.draw_frame(False)
     ax.set_title("Vertical dotplot with two points per line (reverse order)")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Vertical dotplot with two points per line and a legend
 
@@ -327,7 +312,7 @@ def test_all(close_figures):
     leg.draw_frame(False)
     plt.ylim(-20, 20)
     ax.set_title("Vertical dotplot with two points per line")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with color-matched points and intervals
 
@@ -356,7 +341,7 @@ def test_all(close_figures):
     )
     leg.draw_frame(False)
     ax.set_title("Dotplot with color-matched points and intervals")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with color-matched points and intervals
 
@@ -386,7 +371,7 @@ def test_all(close_figures):
     )
     leg.draw_frame(False)
     ax.set_title("Dotplot with color-matched points and intervals")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with sections
 
@@ -399,7 +384,7 @@ def test_all(close_figures):
     sections = [["Axx", "Byy", "Czz"][k] for k in sections]
     fig = dot_plot(points, lines=lines, styles=styles, sections=sections, ax=ax)
     ax.set_title("Dotplot with sections")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Vertical dotplot with sections
 
@@ -415,7 +400,7 @@ def test_all(close_figures):
     )
     txt = ax.set_title("Vertical dotplot with sections")
     txt.set_position((0.5, 1.08))
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Reorder sections
 
@@ -435,7 +420,7 @@ def test_all(close_figures):
         section_order=["Byy", "Axx", "Czz"],
     )
     ax.set_title("Dotplot with sections in specified order")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Reorder the lines.
 
@@ -446,13 +431,13 @@ def test_all(close_figures):
     line_order = ["B", "C", "A", "D"]
     fig = dot_plot(points, lines=lines, line_order=line_order, ax=ax)
     ax.set_title("Dotplot with reordered lines")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Format labels
 
     plt.clf()
     points = range(20)
-    lines = ["%d::%d" % (i, 100 + i) for i in range(20)]
+    lines = [f"{i:d}::{100 + i:d}" for i in range(20)]
 
     def fmt_left(x):
         return "lft_" + x
@@ -470,17 +455,17 @@ def test_all(close_figures):
         fmt_right_name=fmt_right,
     )
     ax.set_title("Horizontal dotplot with name formatting")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Right names only
 
     plt.clf()
     points = range(20)
-    lines = ["%d::%d" % (i, 100 + i) for i in range(20)]
+    lines = [f"{i:d}::{100 + i:d}" for i in range(20)]
     ax = plt.axes()
     fig = dot_plot(points, lines=lines, ax=ax, split_names="::", show_names="right")
     ax.set_title("Show right names only")
-    close_or_save(pdf, fig)
+    plt.close(fig)
 
     # Dotplot with different numbers of points per line
 
@@ -502,7 +487,4 @@ def test_all(close_figures):
     )
     leg.draw_frame(False)
     ax.set_title("Dotplot with different numbers of points per line")
-    close_or_save(pdf, fig)
-
-    if pdf_output:
-        pdf.close()
+    plt.close(fig)

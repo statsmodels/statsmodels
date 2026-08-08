@@ -1,5 +1,5 @@
 """
-Multivariate Conditional and Unconditional Kernel Density Estimation
+Multivariate Conditional and Unconditional Kernel Regression
 with Mixed Data Types
 
 References
@@ -27,6 +27,8 @@ References
         Models", 2006, Econometric Reviews 25, 523-544
 
 """
+
+from statsmodels.compat.pandas import deprecate_kwarg
 
 # TODO: make default behavior efficient=True above a certain n_obs
 import copy
@@ -93,7 +95,7 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    seed : {int, np.random.Generator, np.random.RandomState}, optional
+    rng : {int, np.random.Generator, np.random.RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -108,6 +110,7 @@ class KernelReg(GenericKDE):
         The bandwidth parameters.
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         endog,
@@ -120,7 +123,7 @@ class KernelReg(GenericKDE):
         ukertype="aitchisonaitken",
         defaults=None,
         *,
-        seed=None,
+        rng=None,
     ):
         self.var_type = var_type
         self.data_type = var_type
@@ -146,8 +149,9 @@ class KernelReg(GenericKDE):
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
-        self.seed = seed
-        self._generator = initialize_generator(seed)
+        self.seed = rng
+        self.rng = rng
+        self._generator = initialize_generator(rng)
         if not isinstance(bw, str):
             bw = np.asarray(bw)
             if len(bw) != self.k_vars:
@@ -488,7 +492,7 @@ class KernelReg(GenericKDE):
 
                 - `*` : at 90% confidence level
                 - `**` : at 95% confidence level
-                - `***` : at 99* confidence level
+                - `***` : at 99% confidence level
                 - "Not Significant" : if not significant
         """
         var_pos = np.asarray(var_pos)
@@ -497,9 +501,9 @@ class KernelReg(GenericKDE):
             if np.any(ix_ord[var_pos]) or np.any(ix_unord[var_pos]):
                 raise ValueError("Discrete variable in hypothesis. Must be continuous")
 
-            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, seed=self.seed)
+            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot, rng=self.rng)
         else:
-            Sig = TestRegCoefD(self, var_pos, nboot, seed=self.seed)
+            Sig = TestRegCoefD(self, var_pos, nboot, rng=self.rng)
 
         return Sig.sig
 
@@ -530,6 +534,12 @@ class KernelReg(GenericKDE):
         data : ndarray
             The data array, with the dependent variable in the first column
             and the independent variables in the remaining columns.
+
+        Returns
+        -------
+        ndarray
+            The minimum of the standard deviation and IQR / 1.349 for each
+            independent variable.
 
         References
         ----------
@@ -587,7 +597,7 @@ class KernelCensoredReg(KernelReg):
         Value at which the dependent variable is censored. Default is 0.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -602,6 +612,7 @@ class KernelCensoredReg(KernelReg):
         The bandwidth parameters
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         endog,
@@ -615,7 +626,7 @@ class KernelCensoredReg(KernelReg):
         censor_val=0,
         defaults=None,
         *,
-        seed=None,
+        rng=None,
     ):
         self.var_type = var_type
         self.data_type = var_type
@@ -639,7 +650,7 @@ class KernelCensoredReg(KernelReg):
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
         self.censor_val = censor_val
@@ -861,7 +872,7 @@ class TestRegCoefC:
         Significantly increases computational time. But pivot statistics
         have more desirable properties
         (See references). Default is False.
-    seed : {int, Generator, RandomState}, optional
+    rng : {int, Generator, RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -896,8 +907,9 @@ class TestRegCoefC:
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
+    @deprecate_kwarg("seed", "rng")
     def __init__(
-        self, model, test_vars, nboot=400, nested_res=400, pivot=False, seed=None
+        self, model, test_vars, nboot=400, nested_res=400, pivot=False, rng=None
     ):
         self.nboot = nboot
         self.nres = nested_res
@@ -911,7 +923,7 @@ class TestRegCoefC:
         self.gx = model.est[model.reg_type]
         self.test_vars = test_vars
         self.pivot = pivot
-        self._generator = initialize_generator(seed)
+        self._generator = initialize_generator(rng)
         self.run()
 
     def run(self):
@@ -1055,6 +1067,14 @@ class TestRegCoefD(TestRegCoefC):
     nboot : int, optional
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
+    rng : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------
@@ -1089,7 +1109,7 @@ class TestRegCoefD(TestRegCoefC):
             self.model.reg_type,
             self.bw,
             defaults=EstimatorSettings(efficient=False),
-            seed=self._generator,
+            rng=self._generator,
         )
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0

@@ -144,6 +144,8 @@ What's currently there?
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import special
 
@@ -345,7 +347,7 @@ class BivariateNormal:
     #      or normalize before integration
 
     def __init__(self, mean, cov):
-        self.mean = mu
+        self.mean = mean
         self.cov = cov
         self.sigmax, self.sigmaxy, tmp, self.sigmay = np.ravel(cov)
         self.nvars = 2
@@ -737,7 +739,7 @@ class MVNormal0:
 
         Parameters
         ----------
-        X : array_like, 1d or 2d
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -843,16 +845,25 @@ class MVNormal(MVElliptical):
 
     __name__ = "Multivariate Normal Distribution"
 
-    def rvs(self, size=1, *, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, size=1, *, rng=None):
         """random variable
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        random_state : int, np.random.RandomState, np.random.Generator, optional
-            The source of randomness used to produce the variates. If None,
-            uses the singleton RandomState provided by NumPy.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -866,7 +877,7 @@ class MVNormal(MVElliptical):
         uses numpy.random.multivariate_normal directly
 
         """
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         return rng.multivariate_normal(self.mean, self.sigma, size=size)
 
     def logpdf(self, x):
@@ -980,7 +991,7 @@ class MVNormal(MVElliptical):
         ----------
         indices : array_like, int
             list of indices of variables in the marginal distribution
-        given : array_like
+        values : array_like
             values of the conditioning variables
 
         Returns
@@ -1033,31 +1044,33 @@ class MVT(MVElliptical):
         sigma : array_like, 2d
             dispersion matrix, covariance matrix in normal distribution, but
             only proportional to covariance matrix in t distribution
-        args : list
-            distribution specific arguments, e.g. df for t distribution
-        kwds : dict
-            currently not used
+        df : int or float
+            degrees of freedom of the multivariate t distribution
 
         """
         super().__init__(mean, sigma)
         self.extra_args = ["df"]  # overwrites extra_args of super
         self.df = df
 
-    def rvs(self, size=1, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, size=1, rng=None):
         """random variables with Student T distribution
 
         Parameters
         ----------
         size : int or tuple
             the number and shape of random variables to draw.
-        random_state : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the
-            class:``~numpy.random.RandomState`` singleton is used.
-            If `seed` is an int, a new class:``~numpy.random.RandomState``
-            instance is used, seeded with `seed`.
-            If `seed` is already a class:``~numpy.random.Generator`` or
-            class:``~numpy.random.RandomState`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1077,9 +1090,7 @@ class MVT(MVElliptical):
         """
         from .multivariate import multivariate_t_rvs
 
-        return multivariate_t_rvs(
-            self.mean, self.sigma, df=self.df, n=size, random_state=random_state
-        )
+        return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size, rng=rng)
 
     def logpdf(self, x):
         """logarithm of probability density function
@@ -1205,100 +1216,3 @@ def quad2d(func=lambda x: 1, lower=(-10, -10), upper=(10, 10)):
     from scipy.integrate import dblquad
 
     return dblquad(fun, lower[0], upper[0], lambda y: lower[1], lambda y: upper[1])
-
-
-if __name__ == "__main__":
-
-    from numpy.testing import assert_almost_equal, assert_array_almost_equal
-
-    examples = ["mvn"]
-
-    mu = (0, 0)
-    covx = np.array([[1.0, 0.5], [0.5, 1.0]])
-    mu3 = [-1, 0.0, 2.0]
-    cov3 = np.array([[1.0, 0.5, 0.75], [0.5, 1.5, 0.6], [0.75, 0.6, 2.0]])
-
-    if "mvn" in examples:
-        bvn = BivariateNormal(mu, covx)
-        rvs = bvn.rvs(size=1000)
-        print(rvs.mean(0))
-        print(np.cov(rvs, rowvar=0))
-        print(bvn.expect())
-        print(bvn.cdf([0, 0]))
-        bvn1 = BivariateNormal(mu, np.eye(2))
-        bvn2 = BivariateNormal(mu, 4 * np.eye(2))
-
-        def fun(x):
-            return np.log(bvn1.pdf(x)) - np.log(bvn.pdf(x))
-
-        print(bvn1.expect(fun))
-        print(bvn1.kl(bvn2), bvn1.kl_mc(bvn2))
-        print(bvn2.kl(bvn1), bvn2.kl_mc(bvn1))
-        print(bvn1.kl(bvn), bvn1.kl_mc(bvn))
-        mvn = MVNormal(mu, covx)
-        mvn.pdf([0, 0])
-        mvn.pdf(np.zeros((2, 2)))
-        # np.dot(mvn.cholcovinv.T, mvn.cholcovinv) - mvn.covinv
-
-        cov3 = np.array([[1.0, 0.5, 0.75], [0.5, 1.5, 0.6], [0.75, 0.6, 2.0]])
-        mu3 = [-1, 0.0, 2.0]
-        mvn3 = MVNormal(mu3, cov3)
-        mvn3.pdf((0.0, 2.0, 3.0))
-        mvn3.logpdf((0.0, 2.0, 3.0))
-        # comparisons with R mvtnorm::dmvnorm
-        # decimal=14
-        #        mvn3.logpdf(cov3) - [-7.667977543898155, -6.917977543898155, -5.167977543898155]
-        #        # decimal 18
-        #        mvn3.pdf(cov3) - [0.000467562492721686, 0.000989829804859273, 0.005696077243833402]
-        #        # cheating new mean, same cov
-        #        mvn3.mean = np.array([0,0,0])
-        #        # decimal= 16
-        #        mvn3.pdf(cov3) - [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
-
-        # as asserts
-        r_val = [-7.667977543898155, -6.917977543898155, -5.167977543898155]
-        assert_array_almost_equal(mvn3.logpdf(cov3), r_val, decimal=14)
-        # decimal 18
-        r_val = [0.000467562492721686, 0.000989829804859273, 0.005696077243833402]
-        assert_array_almost_equal(mvn3.pdf(cov3), r_val, decimal=17)
-        # cheating new mean, same cov, too dangerous, got wrong instance in tests
-        # mvn3.mean = np.array([0,0,0])
-        mvn3c = MVNormal(np.array([0, 0, 0]), cov3)
-        r_val = [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
-        assert_array_almost_equal(mvn3c.pdf(cov3), r_val, decimal=16)
-
-        mvn3b = MVNormal((0, 0, 0), 1)
-
-        def fun(x):
-            return np.log(mvn3.pdf(x)) - np.log(mvn3b.pdf(x))
-
-        print(mvn3.expect_mc(fun))
-        print(mvn3.expect_mc(fun, size=200000))
-
-    mvt = MVT((0, 0), 1, 5)
-    assert_almost_equal(
-        mvt.logpdf(np.array([0.0, 0.0])), -1.837877066409345, decimal=15
-    )
-    assert_almost_equal(mvt.pdf(np.array([0.0, 0.0])), 0.1591549430918953, decimal=15)
-
-    mvt.logpdf(np.array([1.0, 1.0])) - (-3.01552989458359)
-
-    mvt1 = MVT((0, 0), 1, 1)
-    mvt1.logpdf(np.array([1.0, 1.0])) - (-3.48579549941151)  # decimal=16
-
-    rvs = mvt.rvs(100000)
-    assert_almost_equal(np.cov(rvs, rowvar=0), mvt.cov, decimal=1)
-
-    mvt31 = MVT(mu3, cov3, 1)
-    assert_almost_equal(
-        mvt31.pdf(cov3),
-        [0.0007276818698165781, 0.0009980625182293658, 0.0027661422056214652],
-        decimal=18,
-    )
-
-    mvt = MVT(mu3, cov3, 3)
-    assert_almost_equal(
-        mvt.pdf(cov3),
-        [0.000863777424247410, 0.001277510788307594, 0.004156314279452241],
-        decimal=17,
-    )

@@ -424,21 +424,22 @@ class HuberT(RobustNorm):
 
     def psi_deriv(self, z):
         """
-        The derivative of Huber's t psi function
+        Derivative of the Huber T psi function.
 
         Parameters
         ----------
         z : array_like
-            1d array
+            Input residual values.
 
         Returns
         -------
         ndarray
-            The value of the derivative of the psi function.
+            The value of the derivative of the psi function. Indicator values
+            equal to 1 when ``|z| <= t`` and 0 otherwise.
 
         Notes
         -----
-        Used to estimate the robust covariance matrix.
+        Used when computing the robust covariance matrix in robust linear models.
         """
         return np.less_equal(np.abs(z), self.t).astype(float)
 
@@ -1747,7 +1748,7 @@ class MQuantileNorm(RobustNorm):
     in QuantileRegression but replaces the L1 absolute value by a chosen
     base norm.
 
-        rho_q(u) = abs(q - I(q < 0)) * rho_base(u)
+        rho_q(u) = abs(q - I(u < 0)) * rho_base(u)
 
     or, equivalently,
 
@@ -1900,12 +1901,12 @@ class MQuantileNorm(RobustNorm):
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
     """
-    M-estimator of location using a robust norm and a current
-    estimator of scale
+    Estimate a robust location parameter using an M-estimator.
 
-    This iteratively finds a solution to
+    This function iteratively computes the location parameter that satisfies:
+            sum(psi((a-mu)/scale))=0
 
-    norm.psi((a-mu)/scale).sum() == 0
+    where 'psi' is the influence function defined by the selected robust norm.
 
     Parameters
     ----------
@@ -1943,10 +1944,9 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
         denom = np.sum(W, axis)
         if np.any(denom <= 0):
             return mu
-        nmu = np.sum(W * a, axis) / denom   
+        nmu = np.sum(W * a, axis) / denom
         if np.all(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations"
-                     % maxiter)
+    raise ValueError(f"location estimator failed to converge in {maxiter:d} iterations")

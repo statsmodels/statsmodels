@@ -3,7 +3,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 from statsmodels.tsa.statespace.kalman_filter import _check_dynamic
 
-DateLike = Union[int, str, dt.datetime, pd.Timestamp, np.datetime64]
+DateLike = int | str | dt.datetime | pd.Timestamp | np.datetime64
 
 ds = Docstring(STL.__doc__)
 ds.insert_parameters(
@@ -25,8 +25,10 @@ ds.insert_parameters(
         "model",
         "Model",
         [
-            "The model used to forecast endog after the seasonality has been "
-            "removed using STL"
+            (
+                "The model used to forecast endog after the seasonality has been "
+                "removed using STL"
+            )
         ],
     ),
 )
@@ -36,8 +38,10 @@ ds.insert_parameters(
         "model_kwargs",
         "dict[str, Any]",
         [
-            "Any additional arguments needed to initialized the model using "
-            "the residuals produced by subtracting the seasonality."
+            (
+                "Any additional arguments needed to initialized the model using "
+                "the residuals produced by subtracting the seasonality."
+            )
         ],
     ),
 )
@@ -170,19 +174,19 @@ class STLForecast:
         low_pass_jump=1,
     ):
         self._endog = endog
-        self._stl_kwargs = dict(
-            period=period,
-            seasonal=seasonal,
-            trend=trend,
-            low_pass=low_pass,
-            seasonal_deg=seasonal_deg,
-            trend_deg=trend_deg,
-            low_pass_deg=low_pass_deg,
-            robust=robust,
-            seasonal_jump=seasonal_jump,
-            trend_jump=trend_jump,
-            low_pass_jump=low_pass_jump,
-        )
+        self._stl_kwargs = {
+            "period": period,
+            "seasonal": seasonal,
+            "trend": trend,
+            "low_pass": low_pass,
+            "seasonal_deg": seasonal_deg,
+            "trend_deg": trend_deg,
+            "low_pass_deg": low_pass_deg,
+            "robust": robust,
+            "seasonal_jump": seasonal_jump,
+            "trend_jump": trend_jump,
+            "low_pass_jump": low_pass_jump,
+        }
         self._model = model
         self._model_kwargs = {} if model_kwargs is None else model_kwargs
         if not hasattr(model, "fit"):
@@ -206,9 +210,7 @@ class STLForecast:
         """
         fit_kwargs = {} if fit_kwargs is None else fit_kwargs
         stl = STL(self._endog, **self._stl_kwargs)
-        stl_fit: DecomposeResult = stl.fit(
-            inner_iter=inner_iter, outer_iter=outer_iter
-        )
+        stl_fit: DecomposeResult = stl.fit(inner_iter=inner_iter, outer_iter=outer_iter)
         model_endog = stl_fit.trend + stl_fit.resid
         mod = self._model(model_endog, **self._model_kwargs)
         res = mod.fit(**fit_kwargs)
@@ -294,17 +296,11 @@ class STLForecastResults:
         returns a ``Summary`` object.
         """
         if not hasattr(self._model_result, "summary"):
-            raise AttributeError(
-                "The model result does not have a summary attribute."
-            )
+            raise AttributeError("The model result does not have a summary attribute.")
         summary: Summary = self._model_result.summary()
         if not isinstance(summary, Summary):
-            raise TypeError(
-                "The model result's summary is not a Summary object."
-            )
-        summary.tables[0].title = (
-            "STL Decomposition and " + summary.tables[0].title
-        )
+            raise TypeError("The model result's summary is not a Summary object.")
+        summary.tables[0].title = "STL Decomposition and " + summary.tables[0].title
         config = self._stl.config
         left_keys = ("period", "seasonal", "robust")
         left_data = []
@@ -326,18 +322,25 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
-        tab = SimpleTable(
-            left_data, stubs=tuple(left_stubs), title="STL Configuration"
-        )
+        delta = len(left_data) - len(right_data)
+        adelta = abs(delta)
+        if delta < 0:
+            left_data += [[" " * len(left_data[0][0])] * adelta]
+            left_stubs += [" " * len(left_stubs[0])] * adelta
+        elif delta > 0:
+            right_data += [[" " * len(right_data[0][0])] * adelta]
+            right_stubs += [" " * len(right_stubs[0])] * adelta
+        tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
+        right_data += [[""]] * (len(left_data) - len(right_data))
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary
 
     def _get_seasonal_prediction(
         self,
-        start: Optional[DateLike],
-        end: Optional[DateLike],
-        dynamic: Union[bool, DateLike],
+        start: DateLike | None,
+        end: DateLike | None,
+        dynamic: bool | DateLike,
     ) -> np.ndarray:
         """
         Get STL's seasonal in- and out-of-sample predictions
@@ -372,7 +375,7 @@ class STLForecastResults:
         data = PandasData(pd.Series(self._endog), index=self._index)
         if start is None:
             start = 0
-        (start, end, out_of_sample, prediction_index) = get_prediction_index(
+        start, end, out_of_sample, prediction_index = get_prediction_index(
             start, end, self._nobs, self._index, data=data
         )
 
@@ -401,8 +404,8 @@ class STLForecastResults:
         return predictions
 
     def _seasonal_forecast(
-        self, steps: int, index: Optional[pd.Index], offset=None
-    ) -> Union[pd.Series, np.ndarray]:
+        self, steps: int, index: pd.Index | None, offset=None
+    ) -> pd.Series | np.ndarray:
         """
         Get the seasonal component of the forecast
 
@@ -434,7 +437,7 @@ class STLForecastResults:
 
     def forecast(
         self, steps: int = 1, **kwargs: dict[str, Any]
-    ) -> Union[np.ndarray, pd.Series]:
+    ) -> np.ndarray | pd.Series:
         """
         Out-of-sample forecasts
 
@@ -461,9 +464,9 @@ class STLForecastResults:
 
     def get_prediction(
         self,
-        start: Optional[DateLike] = None,
-        end: Optional[DateLike] = None,
-        dynamic: Union[bool, DateLike] = False,
+        start: DateLike | None = None,
+        end: DateLike | None = None,
+        dynamic: bool | DateLike = False,
         **kwargs: dict[str, Any],
     ):
         """
@@ -504,9 +507,7 @@ class STLForecastResults:
         pred = self._model_result.get_prediction(
             start=start, end=end, dynamic=dynamic, **kwargs
         )
-        seasonal_prediction = self._get_seasonal_prediction(
-            start, end, dynamic
-        )
+        seasonal_prediction = self._get_seasonal_prediction(start, end, dynamic)
         mean = pred.predicted_mean + seasonal_prediction
         try:
             var_pred_mean = pred.var_pred_mean

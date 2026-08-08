@@ -2,7 +2,7 @@ from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -31,10 +31,25 @@ from statsmodels.tools.validation import array_like, bool_like
 from statsmodels.tsa.arima_process import arma_acovf
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import (
+    AcfResult,
+    ADFullerResult,
+    BreakvarHeteroskedasticityResult,
+    CcfResult,
+    CointResult,
+    JackknifeResult,
+    KpssResult,
+    LevinsonDurbinPacfResult,
+    LevinsonDurbinResult,
+    PacfBurgResult,
+    PacfResult,
+    PccfResult,
+    QStatResult,
+    RangeUnitRootTestResult,
     acf,
     acovf,
     adfuller,
     arma_order_select_ic,
+    block_jackknife,
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
@@ -50,6 +65,8 @@ from statsmodels.tsa.stattools import (
     pacf_burg,
     pacf_ols,
     pacf_yw,
+    pccf,
+    q_stat,
     range_unit_root_test,
     zivot_andrews,
 )
@@ -62,7 +79,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
-CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+CURR_DIR = Path(__file__).resolve().parent
 
 
 @pytest.fixture(scope="module")
@@ -109,7 +126,9 @@ class TestADFConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="c", autolag=None, maxlag=4)
+        cls.res1 = adfuller(
+            cls.x, regression="c", autolag=None, maxlag=4, use_namedtuple=False
+        )
         cls.teststat = 0.97505319
         cls.pvalue = 0.99399563
         cls.critvalues = [-3.476, -2.883, -2.573]
@@ -120,7 +139,9 @@ class TestADFConstantTrend(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="ct", autolag=None, maxlag=4)
+        cls.res1 = adfuller(
+            cls.x, regression="ct", autolag=None, maxlag=4, use_namedtuple=False
+        )
         cls.teststat = -1.8566374
         cls.pvalue = 0.67682968
         cls.critvalues = [-4.007, -3.437, -3.137]
@@ -139,7 +160,9 @@ class TestADFNoConstant(CheckADF):
 
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.x, regression="n", autolag=None, maxlag=4)
+        cls.res1 = adfuller(
+            cls.x, regression="n", autolag=None, maxlag=4, use_namedtuple=False
+        )
         cls.teststat = 3.5227498
 
         cls.pvalue = 0.99999
@@ -156,7 +179,9 @@ class TestADFNoConstant(CheckADF):
 class TestADFConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="c", autolag=None, maxlag=1)
+        cls.res1 = adfuller(
+            cls.y, regression="c", autolag=None, maxlag=1, use_namedtuple=False
+        )
         cls.teststat = -4.3346988
         cls.pvalue = 0.00038661
         cls.critvalues = [-3.476, -2.883, -2.573]
@@ -165,7 +190,9 @@ class TestADFConstant2(CheckADF):
 class TestADFConstantTrend2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="ct", autolag=None, maxlag=1)
+        cls.res1 = adfuller(
+            cls.y, regression="ct", autolag=None, maxlag=1, use_namedtuple=False
+        )
         cls.teststat = -4.425093
         cls.pvalue = 0.00199633
         cls.critvalues = [-4.006, -3.437, -3.137]
@@ -174,14 +201,21 @@ class TestADFConstantTrend2(CheckADF):
 class TestADFNoConstant2(CheckADF):
     @classmethod
     def setup_class(cls):
-        cls.res1 = adfuller(cls.y, regression="n", autolag=None, maxlag=1)
+        cls.res1 = adfuller(
+            cls.y, regression="n", autolag=None, maxlag=1, use_namedtuple=False
+        )
         cls.teststat = -2.4511596
         cls.pvalue = 0.013747
         # Stata does not return a p-value for noconstant
         # this value is just taken from our results
         cls.critvalues = [-2.587, -1.950, -1.617]
         _, _1, _2, cls.store = adfuller(
-            cls.y, regression="n", autolag=None, maxlag=1, store=True
+            cls.y,
+            regression="n",
+            autolag=None,
+            maxlag=1,
+            store=True,
+            use_namedtuple=False,
         )
 
     def test_store_str(self):
@@ -201,7 +235,7 @@ class CheckCorrGram:
 
     data = macrodata.load_pandas()
     x = data.data["realgdp"]
-    filename = os.path.join(CURR_DIR, "results", "results_corrgram.csv")
+    filename = Path(CURR_DIR).joinpath("results", "results_corrgram.csv")
     results = pd.read_csv(filename, delimiter=",")
 
 
@@ -215,7 +249,9 @@ class TestACF(CheckCorrGram):
         cls.acf = cls.results["acvar"]
         # cls.acf = np.concatenate(([1.], cls.acf))
         cls.qstat = cls.results["Q1"]
-        cls.res1 = acf(cls.x, nlags=40, qstat=True, alpha=0.05, fft=False)
+        cls.res1 = acf(
+            cls.x, nlags=40, qstat=True, alpha=0.05, fft=False, use_namedtuple=False
+        )
         cls.confint_res = cls.results[["acvar_lb", "acvar_ub"]].values
 
     def test_acf(self):
@@ -234,6 +270,103 @@ class TestACF(CheckCorrGram):
     #    pass
     # NOTE: should not need testing if Q stat is correct
 
+    def test_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(
+                self.x, nlags=40, qstat=True, alpha=0.05, fft=False,
+                use_namedtuple=True,
+            )
+        assert isinstance(res, AcfResult)
+        assert res[0] is res.acf
+        assert res[1] is res.confint
+        assert res[2] is res.qstat
+        assert res[3] is res.pvalues
+        assert_almost_equal(res.acf[1:41], self.acf, DECIMAL_8)
+        assert_almost_equal(res.qstat[:40], self.qstat, DECIMAL_3)
+
+    @pytest.mark.parametrize("qstat", [True, False])
+    @pytest.mark.parametrize("alpha", [None, 0.05])
+    def test_use_namedtuple_true_always_four_fields(self, qstat, alpha):
+        # AcfResult always has 4 fields regardless of which of qstat/alpha
+        # were requested; unrequested fields are None rather than omitted.
+        if not (qstat or alpha):
+            pytest.skip("not a variable-arity case; acf always returns bare array")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(
+                self.x,
+                nlags=10,
+                qstat=qstat,
+                alpha=alpha,
+                fft=False,
+                use_namedtuple=True,
+            )
+        assert isinstance(res, AcfResult)
+        assert isinstance(res.acf, np.ndarray)
+        assert (res.confint is None) == (alpha is None)
+        assert (res.qstat is None) == (not qstat)
+        assert (res.pvalues is None) == (not qstat)
+
+    def test_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = acf(self.x, nlags=40, qstat=True, fft=False)
+        assert isinstance(res, tuple)
+        assert not isinstance(res, AcfResult)
+
+    def test_no_qstat_no_alpha_never_warns(self):
+        # The single-output path is unchanged and must stay silent, but an
+        # explicit use_namedtuple=True still returns the NamedTuple with the
+        # unrequested fields left as None.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(self.x, nlags=40, fft=False)
+            res_nt = acf(self.x, nlags=40, fft=False, use_namedtuple=True)
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, AcfResult)
+        assert_allclose(res_nt.acf, res)
+        assert res_nt.confint is None
+        assert res_nt.qstat is None
+        assert res_nt.pvalues is None
+
+    @pytest.mark.parametrize(
+        "kwargs, expected",
+        [
+            ({"alpha": 0.05}, 2),
+            ({"qstat": True}, 3),
+            ({"qstat": True, "alpha": 0.05}, 4),
+        ],
+    )
+    def test_legacy_unpacking_preserved(self, kwargs, expected):
+        # AcfResult always carries four fields, so it may only be adopted by
+        # default where that matches the legacy arity.  Returning it for
+        # alpha-only or qstat-only would raise "too many values to unpack"
+        # in existing user code.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            res = acf(self.x, nlags=40, fft=False, **kwargs)
+            opted_out = acf(
+                self.x, nlags=40, fft=False, use_namedtuple=False, **kwargs
+            )
+        assert len(res) == expected
+        assert len(opted_out) == expected
+        # unpacking with exactly `expected` names must not raise
+        _ = [*res]
+        assert len([*res]) == expected
+
+    def test_only_full_request_adopts_namedtuple_silently(self):
+        # Both qstat and alpha -> the four-field NamedTuple unpacks exactly
+        # like the legacy 4-tuple, so it is adopted with no warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = acf(self.x, nlags=40, fft=False, qstat=True, alpha=0.05)
+        assert isinstance(res, AcfResult)
+        # Requesting only one of them still warns and keeps the short tuple.
+        for kwargs in ({"alpha": 0.05}, {"qstat": True}):
+            with pytest.warns(FutureWarning, match="use_namedtuple"):
+                short = acf(self.x, nlags=40, fft=False, **kwargs)
+            assert not isinstance(short, AcfResult)
+
 
 class TestACF_FFT(CheckCorrGram):
     # Test Autocorrelation Function using FFT
@@ -241,7 +374,9 @@ class TestACF_FFT(CheckCorrGram):
     def setup_class(cls):
         cls.acf = cls.results["acvarfft"]
         cls.qstat = cls.results["Q1"]
-        cls.res1 = acf(cls.x, nlags=40, qstat=True, fft=True)
+        cls.res1 = acf(
+            cls.x, nlags=40, qstat=True, fft=True, use_namedtuple=False
+        )
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:], self.acf, DECIMAL_8)
@@ -258,8 +393,15 @@ class TestACFMissing(CheckCorrGram):
         cls.x = np.concatenate((np.array([np.nan]), cls.x))
         cls.acf = cls.results["acvar"]  # drop and conservative
         cls.qstat = cls.results["Q1"]
+        cls.confint_res = cls.results[["acvar_lb", "acvar_ub"]].values
         cls.res_drop = acf(
-            cls.x, nlags=40, qstat=True, alpha=0.05, missing="drop", fft=False
+            cls.x,
+            nlags=40,
+            qstat=True,
+            alpha=0.05,
+            missing="drop",
+            fft=False,
+            use_namedtuple=False,
         )
         cls.res_conservative = acf(
             cls.x,
@@ -268,11 +410,18 @@ class TestACFMissing(CheckCorrGram):
             alpha=0.05,
             fft=False,
             missing="conservative",
+            use_namedtuple=False,
         )
         cls.acf_none = np.empty(40) * np.nan  # lags 1 to 40 inclusive
         cls.qstat_none = np.empty(40) * np.nan
         cls.res_none = acf(
-            cls.x, nlags=40, qstat=True, alpha=0.05, missing="none", fft=False
+            cls.x,
+            nlags=40,
+            qstat=True,
+            alpha=0.05,
+            missing="none",
+            fft=False,
+            use_namedtuple=False,
         )
 
     def test_raise(self):
@@ -299,12 +448,25 @@ class TestACFMissing(CheckCorrGram):
         # todo why is res1/qstat 1 short
         assert_almost_equal(self.res_none[2], self.qstat_none, DECIMAL_3)
 
+    def test_qstat_drop(self):
+        assert_almost_equal(self.res_drop[2][:40], self.qstat, DECIMAL_3)
 
-# FIXME: enable/xfail/skip or delete
-# how to do this test? the correct q_stat depends on whether nobs=len(x) is
-# used when x contains NaNs or whether nobs<len(x) when x contains NaNs
-#    def test_qstat_drop(self):
-#        assert_almost_equal(self.res_drop[2][:40], self.qstat, DECIMAL_3)
+    def test_qstat_conservative(self):
+        assert_almost_equal(self.res_conservative[2][:40], self.qstat, DECIMAL_3)
+
+    def test_confint_drop(self):
+        centered = self.res_drop[1] - self.res_drop[1].mean(1)[:, None]
+        assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
+
+    def test_confint_conservative(self):
+        centered = self.res_conservative[1] - self.res_conservative[1].mean(1)[:, None]
+        assert_almost_equal(centered[1:41], self.confint_res, DECIMAL_8)
+
+    @pytest.mark.parametrize("missing", ["drop", "conservative"])
+    def test_drop_all(self, missing):
+        all_missing = np.full_like(self.x, np.nan)
+        with pytest.raises(ValueError, match="All observations are missing"):
+            acf(all_missing, nlags=40, missing=missing)
 
 
 class TestPACF(CheckCorrGram):
@@ -314,7 +476,9 @@ class TestPACF(CheckCorrGram):
         cls.pacfyw = cls.results["PACYW"]
 
     def test_ols(self):
-        pacfols, confint = pacf(self.x, nlags=40, alpha=0.05, method="ols")
+        pacfols, confint = pacf(
+            self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=False
+        )
         assert_almost_equal(pacfols[1:], self.pacfols, DECIMAL_6)
         centered = confint - confint.mean(1)[:, None]
         # from edited Stata ado file
@@ -324,6 +488,47 @@ class TestPACF(CheckCorrGram):
         assert_equal(centered[0], [0.0, 0.0])
         assert_equal(confint[0], [1, 1])
         assert_equal(pacfols[0], 1)
+
+    def test_alpha_default_returns_namedtuple(self):
+        # PacfResult has the same length and contents as the legacy
+        # (pacf, confint) tuple, so it is adopted without a warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pacf(self.x, nlags=40, alpha=0.05, method="ols")
+        assert isinstance(res, PacfResult)
+        assert len(res) == 2
+        # The NamedTuple is used whenever it unpacks identically, so
+        # use_namedtuple=False cannot opt out of it here.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            opted_out = pacf(
+                self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=False
+            )
+        assert isinstance(opted_out, PacfResult)
+        # ...and it still unpacks like the legacy 2-tuple
+        vals, confint = res
+        assert_allclose(vals, res.pacf)
+        assert_allclose(confint, res.confint)
+
+    def test_alpha_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pacf(
+                self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=True
+            )
+        assert isinstance(res, PacfResult)
+        assert res[0] is res.pacf
+        assert res[1] is res.confint
+
+    def test_no_alpha_never_warns(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pacf(self.x, nlags=40, method="ols")
+            res_nt = pacf(self.x, nlags=40, method="ols", use_namedtuple=True)
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, PacfResult)
+        assert_allclose(res_nt.pacf, res)
+        assert res_nt.confint is None
 
     def test_ols_inefficient(self):
         lag_len = 5
@@ -372,7 +577,7 @@ class TestCCF:
     data = macrodata.load_pandas()
     x = data.data["unemp"].diff().dropna()
     y = data.data["infl"].diff().dropna()
-    filename = os.path.join(CURR_DIR, "results", "results_ccf.csv")
+    filename = Path(CURR_DIR).joinpath("results", "results_ccf.csv")
     results = pd.read_csv(filename, delimiter=",")
     nlags = 20
 
@@ -387,12 +592,460 @@ class TestCCF:
     def test_confint(self):
         alpha = 0.05
         res2, confint = ccf(
-            self.x, self.y, nlags=self.nlags, adjusted=False, fft=False, alpha=alpha
+            self.x,
+            self.y,
+            nlags=self.nlags,
+            adjusted=False,
+            fft=False,
+            alpha=alpha,
+            use_namedtuple=False,
         )
         assert_equal(res2, self.res1)
         assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
         alpha1 = stats.norm.cdf(confint[:, 1] - res2, scale=1.0 / np.sqrt(len(self.x)))
         assert_almost_equal(alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8)
+
+    def test_alpha_default_returns_namedtuple(self):
+        # CcfResult has the same length and contents as the legacy
+        # (ccf, confint) tuple, so it is adopted without a warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = ccf(self.x, self.y, nlags=self.nlags, alpha=0.05)
+        assert isinstance(res, CcfResult)
+        assert len(res) == 2
+        # The NamedTuple is used whenever it unpacks identically, so
+        # use_namedtuple=False cannot opt out of it here.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            opted_out = ccf(
+                self.x, self.y, nlags=self.nlags, alpha=0.05, use_namedtuple=False
+            )
+        assert isinstance(opted_out, CcfResult)
+        # ...and it still unpacks like the legacy 2-tuple
+        vals, confint = res
+        assert_allclose(vals, res.ccf)
+        assert_allclose(confint, res.confint)
+
+    def test_alpha_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = ccf(
+                self.x, self.y, nlags=self.nlags, alpha=0.05, use_namedtuple=True
+            )
+        assert isinstance(res, CcfResult)
+        assert res[0] is res.ccf
+        assert res[1] is res.confint
+
+    def test_no_alpha_never_warns(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = ccf(self.x, self.y, nlags=self.nlags)
+            res_nt = ccf(self.x, self.y, nlags=self.nlags, use_namedtuple=True)
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, CcfResult)
+        assert_allclose(res_nt.ccf, res)
+        assert res_nt.confint is None
+
+
+class TestPCCF:
+    data = macrodata.load_pandas()
+    x = data.data["realgdp"]
+    y = data.data["realcons"]
+    filename = Path(CURR_DIR).joinpath("results", "results_pccf.csv")
+    results = pd.read_csv(filename, delimiter=",")
+    nlags = 20
+
+    @classmethod
+    def setup_class(cls):
+        cls.pccf = cls.results["pccf"]
+        cls.res1 = pccf(cls.x, cls.y, nlags=cls.nlags, method="ols")
+
+    def test_pccf(self):
+        assert_almost_equal(self.res1, self.pccf, DECIMAL_8)
+
+    def test_pccf_hand_computed(self):
+        x = np.array(
+            [2.1, 4.5, 1.3, 6.8, 3.2, 5.7, 0.9, 7.4, 2.8, 4.1, 6.3, 1.7, 5.5, 3.9, 7.1]
+        )
+        y = np.array(
+            [3.4, 2.7, 5.1, 1.8, 4.6, 3.3, 6.2, 2.5, 4.8, 3.1, 5.5, 2.2, 4.3, 3.7, 5.9]
+        )
+        result = pccf(x, y, nlags=3, method="ols")
+        expected = np.array(
+            [
+                0.46195683919821806,
+                0.11931602624087348,
+                0.5204421499138578,
+            ]
+        )
+        assert_almost_equal(result, expected, DECIMAL_8)
+
+    def test_confint(self):
+        alpha = 0.05
+        res2, confint = pccf(
+            self.x,
+            self.y,
+            nlags=self.nlags,
+            method="ols",
+            alpha=alpha,
+            use_namedtuple=False,
+        )
+        assert_equal(res2, self.res1)
+        assert_almost_equal(res2 - confint[:, 0], confint[:, 1] - res2, DECIMAL_8)
+        alpha1 = stats.norm.cdf(
+            confint[:, 1] - res2,
+            scale=1.0 / np.sqrt(len(self.x)),
+        )
+        assert_almost_equal(alpha1, np.repeat(1 - alpha / 2.0, self.nlags), DECIMAL_8)
+
+    def test_alpha_default_returns_namedtuple(self):
+        # PccfResult has the same length and contents as the legacy
+        # (pccf, confint) tuple, so it is adopted without a warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pccf(self.x, self.y, nlags=self.nlags, method="ols", alpha=0.05)
+        assert isinstance(res, PccfResult)
+        assert len(res) == 2
+        # The NamedTuple is used whenever it unpacks identically, so
+        # use_namedtuple=False cannot opt out of it here.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            opted_out = pccf(
+                self.x,
+                self.y,
+                nlags=self.nlags,
+                method="ols",
+                alpha=0.05,
+                use_namedtuple=False,
+            )
+        assert isinstance(opted_out, PccfResult)
+        # ...and it still unpacks like the legacy 2-tuple
+        vals, confint = res
+        assert_allclose(vals, res.pccf)
+        assert_allclose(confint, res.confint)
+
+    def test_alpha_use_namedtuple_true(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pccf(
+                self.x,
+                self.y,
+                nlags=self.nlags,
+                method="ols",
+                alpha=0.05,
+                use_namedtuple=True,
+            )
+        assert isinstance(res, PccfResult)
+        assert res[0] is res.pccf
+        assert res[1] is res.confint
+
+    def test_no_alpha_never_warns(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = pccf(self.x, self.y, nlags=self.nlags, method="ols")
+            res_nt = pccf(
+                self.x, self.y, nlags=self.nlags, method="ols", use_namedtuple=True
+            )
+        assert isinstance(res, np.ndarray)
+        assert isinstance(res_nt, PccfResult)
+        assert_allclose(res_nt.pccf, res)
+        assert res_nt.confint is None
+
+    def test_confint_widths(self):
+        alphas = [0.01, 0.05, 0.10]
+        widths = {}
+        for a in alphas:
+            _, confint = pccf(
+                self.x, self.y, nlags=5, method="ols", alpha=a, use_namedtuple=False
+            )
+            widths[a] = confint[:, 1] - confint[:, 0]
+        assert np.all(widths[0.01] > widths[0.05])
+        assert np.all(widths[0.05] > widths[0.10])
+
+    def test_pccf_edge_cases(self):
+        x_small = np.array([1.0, 2.0, 3.0])
+        y_small = np.array([4.0, 5.0, 6.0])
+        result_small = pccf(x_small, y_small, nlags=1, method="ols")
+        assert len(result_small) == 1
+        assert not np.isnan(result_small[0])
+
+        with pytest.raises(ValueError):
+            pccf(self.x[:10], self.y[:15], nlags=5)
+
+    def test_pccf_statistical_properties(self):
+        result = pccf(self.x, self.y, nlags=10)
+        valid_values = result[~np.isnan(result)]
+        assert np.all(valid_values >= -1.0)
+        assert np.all(valid_values <= 1.0)
+
+        result_lag1 = pccf(self.x, self.y, nlags=1, method="ols")
+        ccf_lag1 = np.corrcoef(self.x[:-1], self.y[1:])[0, 1]
+        assert_almost_equal(result_lag1[0], ccf_lag1, DECIMAL_8)
+
+    def test_pccf_parameter_validation(self):
+        with pytest.raises(ValueError):
+            pccf(self.x, self.y, nlags=0)
+        with pytest.raises(ValueError):
+            pccf(self.x, self.y, nlags=-1)
+        with pytest.raises(ValueError):
+            pccf(self.x[:10], self.y[:10], nlags=6)
+
+    @pytest.mark.parametrize("method", ["ols", "yw", "ywm"])
+    def test_constant_series(self, method):
+        x_const = np.ones(50)
+        y_const = np.ones(50) * 2.0
+        result = pccf(x_const, y_const, nlags=5, method=method)
+        assert len(result) == 5
+        assert np.all(np.isnan(result))
+
+    def test_yw_singular_intermediate_recursion_returns_nan(self):
+        x = np.array([0.0, 0.0, -1.0, 2.0, -1.0])
+        y = np.array([-1.0, 0.0, -2.0, -2.0, 0.0])
+        result = pccf(x, y, nlags=2, method="yw")
+        assert len(result) == 2
+        assert np.all(np.isfinite(result) | np.isnan(result))
+
+    def test_return_consistency(self):
+        result_no_alpha = pccf(self.x, self.y, nlags=5)
+        result_with_alpha, confint = pccf(
+            self.x, self.y, nlags=5, alpha=0.05, use_namedtuple=False
+        )
+        assert_almost_equal(result_no_alpha, result_with_alpha, DECIMAL_8)
+        assert confint.shape == (5, 2)
+        assert np.all(confint[:, 0] <= result_with_alpha)
+        assert np.all(result_with_alpha <= confint[:, 1])
+
+    def test_default_nlags(self):
+        result = pccf(self.x, self.y)
+        nobs = len(self.x)
+        expected_nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
+        assert len(result) == expected_nlags
+
+    def test_nan_fallback_large_lag(self):
+        x_short = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        y_short = np.array([2.0, 3.0, 1.0, 4.0, 2.0])
+        result = pccf(x_short, y_short, nlags=2, method="ols")
+        assert len(result) == 2
+        assert np.isnan(result[1])
+
+    def test_var1_pccf_cutoff(self):
+        rng = np.random.default_rng(98765)
+        n = 500
+        x = np.zeros(n)
+        y = np.zeros(n)
+        x[0] = rng.standard_normal()
+        y[0] = rng.standard_normal()
+        for t in range(1, n):
+            e = rng.standard_normal(2)
+            x[t] = 0.6 * x[t - 1] + 0.3 * y[t - 1] + e[0]
+            y[t] = 0.2 * x[t - 1] + 0.5 * y[t - 1] + e[1]
+        result = pccf(x, y, nlags=8)
+        threshold = 2.0 / np.sqrt(n)
+        assert np.abs(result[0]) > threshold
+        assert np.all(np.abs(result[3:]) < 3 * threshold)
+
+    def test_independent_series(self):
+        rng = np.random.default_rng(54321)
+        x = rng.standard_normal(200)
+        y = rng.standard_normal(200)
+        result = pccf(x, y, nlags=10)
+        threshold = 2.0 / np.sqrt(200)
+        assert np.all(np.abs(result) < 3 * threshold)
+
+    def test_yw_ols_agreement_stationary(self):
+        rng = np.random.default_rng(11111)
+        n = 2000
+        x = np.zeros(n)
+        y = np.zeros(n)
+        x[0] = rng.standard_normal()
+        y[0] = rng.standard_normal()
+        for t in range(1, n):
+            e = rng.standard_normal(2)
+            x[t] = 0.5 * x[t - 1] + 0.2 * y[t - 1] + e[0]
+            y[t] = 0.3 * x[t - 1] + 0.4 * y[t - 1] + e[1]
+        yw = pccf(x, y, nlags=5, method="ywm")
+        ols = pccf(x, y, nlags=5, method="ols")
+        assert_almost_equal(yw, ols, decimal=2)
+
+    def test_method_parameter_validation(self):
+        with pytest.raises(ValueError):
+            pccf(self.x, self.y, nlags=5, method="invalid")
+
+    def test_yw_method_aliases(self):
+        ywm = pccf(self.x, self.y, nlags=5, method="ywm")
+        ywmle = pccf(self.x, self.y, nlags=5, method="ywmle")
+        yw_mle = pccf(self.x, self.y, nlags=5, method="yw_mle")
+        assert_almost_equal(ywm, ywmle, DECIMAL_8)
+        assert_almost_equal(ywm, yw_mle, DECIMAL_8)
+
+        yw = pccf(self.x, self.y, nlags=5, method="yw")
+        ywa = pccf(self.x, self.y, nlags=5, method="ywa")
+        ywadjusted = pccf(self.x, self.y, nlags=5, method="ywadjusted")
+        yw_adjusted = pccf(self.x, self.y, nlags=5, method="yw_adjusted")
+        assert_almost_equal(yw, ywa, DECIMAL_8)
+        assert_almost_equal(yw, ywadjusted, DECIMAL_8)
+        assert_almost_equal(yw, yw_adjusted, DECIMAL_8)
+
+    def test_yw_analytical_var1(self):
+        from scipy.linalg import solve_discrete_lyapunov
+
+        A = np.array([[0.6, 0.3], [0.2, 0.5]])
+        Q = np.eye(2)
+        G0 = solve_discrete_lyapunov(A, Q)
+
+        nlags = 3
+        gamma = [G0]
+        for h in range(1, nlags + 1):
+            gamma.append(G0 @ np.linalg.matrix_power(A.T, h))
+
+        sig_f = G0.copy()
+        sig_b = G0.copy()
+        phi_prev = [None] * (nlags + 1)
+        psi_prev = [None] * (nlags + 1)
+        expected = np.empty(nlags)
+
+        for s in range(1, nlags + 1):
+            delta_f = gamma[s].copy()
+            delta_b = gamma[s].T.copy()
+            for j in range(1, s):
+                delta_f -= phi_prev[j] @ gamma[s - j]
+                delta_b -= psi_prev[j] @ gamma[s - j].T
+            d_f = np.sqrt(np.diag(sig_f))
+            d_b = np.sqrt(np.diag(sig_b))
+            expected[s - 1] = delta_f[0, 1] / (d_f[0] * d_b[1])
+            phi_ss = delta_f @ np.linalg.inv(sig_b)
+            psi_ss = delta_b @ np.linalg.inv(sig_f)
+            phi_new = [None] * (nlags + 1)
+            psi_new = [None] * (nlags + 1)
+            phi_new[s] = phi_ss
+            psi_new[s] = psi_ss
+            for j in range(1, s):
+                phi_new[j] = phi_prev[j] - phi_ss @ psi_prev[s - j]
+                psi_new[j] = psi_prev[j] - psi_ss @ phi_prev[s - j]
+            sig_f = sig_f - phi_ss @ delta_b
+            sig_b = sig_b - psi_ss @ delta_f
+            phi_prev = phi_new
+            psi_prev = psi_new
+
+        assert_almost_equal(expected[1:], np.zeros(nlags - 1), DECIMAL_8)
+
+        rng = np.random.default_rng(77777)
+        n = 5000
+        z = np.zeros((n, 2))
+        z[0] = rng.standard_normal(2)
+        for t in range(1, n):
+            z[t] = A @ z[t - 1] + rng.standard_normal(2)
+        result = pccf(z[:, 0], z[:, 1], nlags=nlags, method="ywm")
+        assert_almost_equal(result[0], expected[0], decimal=1)
+        assert_almost_equal(result[1:], expected[1:], decimal=1)
+
+    def test_asymmetry(self):
+        rng = np.random.default_rng(42)
+        n = 500
+        x = np.zeros(n)
+        y = np.zeros(n)
+        for t in range(1, n):
+            e = rng.standard_normal(2)
+            x[t] = 0.6 * x[t - 1] + 0.3 * y[t - 1] + e[0]
+            y[t] = 0.2 * x[t - 1] + 0.5 * y[t - 1] + e[1]
+        fwd = pccf(x, y, nlags=3)
+        rev = pccf(y, x, nlags=3)
+        assert not np.allclose(fwd, rev)
+
+    def test_nan_input_raises(self):
+        x = np.array([1.0, 2.0, np.nan, 4.0, 5.0, 6.0, 7.0, 8.0])
+        y = np.arange(8, dtype=float)
+        with pytest.raises(MissingDataError):
+            pccf(x, y, nlags=3)
+        with pytest.raises(MissingDataError):
+            pccf(y, x, nlags=3, method="ols")
+
+    def test_inf_input_raises(self):
+        x = np.array([1.0, 2.0, np.inf, 4.0, 5.0, 6.0, 7.0, 8.0])
+        y = np.arange(8, dtype=float)
+        with pytest.raises(MissingDataError):
+            pccf(x, y, nlags=3)
+
+    def test_ols_underdetermined_returns_nan(self):
+        rng = np.random.default_rng(42)
+        x = rng.standard_normal(30)
+        y = rng.standard_normal(30)
+        result = pccf(x, y, nlags=15, method="ols")
+        for h in range(1, 16):
+            n_obs = 30 - h
+            n_cols = 2 * (h - 1) + 1
+            if n_obs <= n_cols and h > 1:
+                assert np.isnan(
+                    result[h - 1]
+                ), f"lag {h}: {n_obs} obs, {n_cols} cols should be NaN"
+
+
+class TestBlockJackknife:
+    """
+    Test block (delete-k) jackknife estimator
+    """
+
+    def test_mean_closed_form(self):
+        # Leave-one-out jackknife applied to the sample mean should exactly
+        # reproduce the standard unbiased variance formula: Var(xbar) = s^2/n
+        rng = np.random.default_rng(42)
+        x = rng.normal(loc=10, scale=2, size=100)
+
+        theta_jack, se = block_jackknife(x, np.mean, n_blocks=-1)
+
+        expected_se = np.sqrt(np.var(x, ddof=1) / len(x))
+
+        assert_allclose(se, expected_se, rtol=1e-10)
+        assert_almost_equal(theta_jack, np.mean(x), DECIMAL_6)
+
+    def test_hand_computed(self):
+        # Matches the manually-verified 3-block case:
+        # x = [0..9], n_blocks=3
+        x = np.arange(10)
+
+        theta_jack, se = block_jackknife(x, np.mean, n_blocks=3)
+
+        assert_almost_equal(theta_jack, 4.309523809523809, DECIMAL_8)
+        assert_almost_equal(se, 2.044294088920541, DECIMAL_8)
+
+    def test_acf_runs(self):
+        # Reproduces the motivating AR(1)/ACF use case from the original
+        # feature request; checks shape and finiteness, not exact values,
+        # since there is no independent closed-form to check ACF jackknife
+        # SEs against.
+        rng = np.random.default_rng(0)
+        n = 5000
+        phi = 0.8
+        noise = rng.normal(scale=1.0, size=n)
+        x = np.zeros(n)
+        for t in range(1, n):
+            x[t] = phi * x[t - 1] + noise[t]
+
+        max_lag = 50
+        n_blocks = n // 20
+
+        def est(arr):
+            return acf(arr, nlags=max_lag)
+
+        rho, rho_se = block_jackknife(x, est, n_blocks=n_blocks)
+
+        assert rho.shape == (max_lag + 1,)
+        assert rho_se.shape == (max_lag + 1,)
+        assert np.all(np.isfinite(rho))
+        assert np.all(np.isfinite(rho_se))
+        assert np.all(rho_se >= 0)
+
+    def test_invalid_n_blocks(self):
+        x = np.arange(10)
+        with pytest.raises(ValueError, match="n_blocks must be greater than 1"):
+            block_jackknife(x, np.mean, n_blocks=1)
+        with pytest.raises(ValueError, match="n_blocks cannot exceed"):
+            block_jackknife(x, np.mean, n_blocks=20)
+
+    def test_non_callable_statistic(self):
+        x = np.arange(10)
+        with pytest.raises(ValueError, match="must be callable"):
+            block_jackknife(x, "not_a_function", n_blocks=2)
 
 
 class TestBreakvarHeteroskedasticityTest:
@@ -762,7 +1415,7 @@ class TestKPSS:
     def test_fail_nonvector_input(self):
         # should be fine
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, nlags="legacy")
+            kpss(self.x, nlags="legacy", use_namedtuple=False)
 
         x = rs.rand(20, 2)
         with pytest.raises(ValueError):
@@ -771,38 +1424,38 @@ class TestKPSS:
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "c", nlags="legacy")
+            kpss(self.x, "c", nlags="legacy", use_namedtuple=False)
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "C", nlags="legacy")
+            kpss(self.x, "C", nlags="legacy", use_namedtuple=False)
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "ct", nlags="legacy")
+            kpss(self.x, "ct", nlags="legacy", use_namedtuple=False)
         with pytest.warns(InterpolationWarning):
-            kpss(self.x, "CT", nlags="legacy")
+            kpss(self.x, "CT", nlags="legacy", use_namedtuple=False)
 
         with pytest.raises(ValueError):
             kpss(self.x, "unclear hypothesis", nlags="legacy")
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
-            kpss_stat, _, _, _ = kpss(self.x, "c", 3)
+            kpss_stat, _, _, _ = kpss(self.x, "c", 3, use_namedtuple=False)
         assert_almost_equal(kpss_stat, 5.0169, DECIMAL_3)
 
         with pytest.warns(InterpolationWarning):
-            kpss_stat, _, _, _ = kpss(self.x, "ct", 3)
+            kpss_stat, _, _, _ = kpss(self.x, "ct", 3, use_namedtuple=False)
         assert_almost_equal(kpss_stat, 1.1828, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
-            _, pval, _, _ = kpss(self.x, "c", 3)
+            _, pval, _, _ = kpss(self.x, "c", 3, use_namedtuple=False)
         assert_equal(pval, 0.01)
 
         with pytest.warns(InterpolationWarning):
-            _, pval, _, _ = kpss(self.x, "ct", 3)
+            _, pval, _, _ = kpss(self.x, "ct", 3, use_namedtuple=False)
         assert_equal(pval, 0.01)
 
     def test_store(self):
         with pytest.warns(InterpolationWarning):
-            _, _, _, store = kpss(self.x, "c", 3, True)
+            _, _, _, store = kpss(self.x, "c", 3, True, use_namedtuple=False)
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
@@ -812,22 +1465,39 @@ class TestKPSS:
     def test_lags(self):
         # real GDP from macrodata data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, "c", nlags="auto")
+            res = kpss(self.x, "c", nlags="auto", use_namedtuple=False)
         assert_equal(res[2], 9)
         # real interest rates from macrodata data set
-        res = kpss(sunspots.load().data["SUNACTIVITY"], "c", nlags="auto")
+        res = kpss(
+            sunspots.load().data["SUNACTIVITY"],
+            "c",
+            nlags="auto",
+            use_namedtuple=False,
+        )
         assert_equal(res[2], 7)
         # volumes from nile data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(nile.load().data["volume"], "c", nlags="auto")
+            res = kpss(
+                nile.load().data["volume"], "c", nlags="auto", use_namedtuple=False
+            )
         assert_equal(res[2], 5)
         # log-coinsurance from randhie data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(randhie.load().data["lncoins"], "ct", nlags="auto")
+            res = kpss(
+                randhie.load().data["lncoins"],
+                "ct",
+                nlags="auto",
+                use_namedtuple=False,
+            )
         assert_equal(res[2], 75)
         # in-vehicle time from modechoice data set
         with pytest.warns(InterpolationWarning):
-            res = kpss(modechoice.load().data["invt"], "ct", nlags="auto")
+            res = kpss(
+                modechoice.load().data["invt"],
+                "ct",
+                nlags="auto",
+                use_namedtuple=False,
+            )
         assert_equal(res[2], 18)
 
     def test_kpss_fails_on_nobs_check(self):
@@ -835,7 +1505,7 @@ class TestKPSS:
         # clear error
         # GH5925
         nobs = len(self.x)
-        msg = r"lags \({}\) must be < number of observations \({}\)".format(nobs, nobs)
+        msg = rf"lags \({nobs}\) must be < number of observations \({nobs}\)"
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
 
@@ -845,12 +1515,12 @@ class TestKPSS:
         # GH5925
         base = np.array([0, 0, 0, 0, 0, 1, 1.0])
         data_which_breaks_autolag = np.r_[np.tile(base, 297 // 7), [0, 0, 0]]
-        kpss(data_which_breaks_autolag, nlags="auto")
+        kpss(data_which_breaks_autolag, nlags="auto", use_namedtuple=False)
 
     def test_legacy_lags(self):
         # Test legacy lags are the same
         with pytest.warns(InterpolationWarning):
-            res = kpss(self.x, "c", nlags="legacy")
+            res = kpss(self.x, "c", nlags="legacy", use_namedtuple=False)
         assert_equal(res[2], 15)
 
     def test_unknown_lags(self):
@@ -861,6 +1531,36 @@ class TestKPSS:
     def test_none(self):
         with pytest.raises(ValueError, match="None is not a valid value"):
             kpss(self.x, nlags=None)
+
+    def test_use_namedtuple_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = kpss(self.x, "c", nlags=3)
+        assert not isinstance(res, KpssResult)
+
+    def test_use_namedtuple_false_silences_warning(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = kpss(self.x, "c", nlags=3, use_namedtuple=False)
+        assert not isinstance(res, KpssResult)
+
+    def test_use_namedtuple_true_returns_namedtuple(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = kpss(self.x, "c", nlags=3, use_namedtuple=True)
+        assert isinstance(res, KpssResult)
+        assert res.resstore is None
+        assert res[0] == res.kpss_stat
+        assert res[1] == res.p_value
+        assert res[2] == res.lags == 3
+        assert res[3] == res.crit
+
+    def test_use_namedtuple_true_with_store(self):
+        res = kpss(self.x, "c", nlags=3, store=True, use_namedtuple=True)
+        assert isinstance(res, KpssResult)
+        assert res.lags == 3
+        assert res.resstore is not None
+        assert res.resstore.nobs == len(self.x)
+        assert res.resstore.lags == 3
 
 
 class TestRUR:
@@ -977,31 +1677,50 @@ class TestRUR:
 
     def test_fail_nonvector_input(self):
         with pytest.warns(InterpolationWarning):
-            range_unit_root_test(self.x)
+            range_unit_root_test(self.x, use_namedtuple=False)
 
         rs = np.random.RandomState(8474768)
         x = rs.rand(20, 2)
         with pytest.raises(ValueError):
-            range_unit_root_test(x)
+            range_unit_root_test(x, use_namedtuple=False)
 
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
-            rur_stat, _, _ = range_unit_root_test(self.x)
+            rur_stat, _, _ = range_unit_root_test(self.x, use_namedtuple=False)
         simple_rur_stat, _, _ = self.simple_rur(self.x)
         assert_almost_equal(rur_stat, simple_rur_stat, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
-            _, pval, _ = range_unit_root_test(self.x)
+            _, pval, _ = range_unit_root_test(self.x, use_namedtuple=False)
         _, simple_pval, _ = self.simple_rur(self.x)
         assert_equal(pval, simple_pval)
 
     def test_store(self):
         with pytest.warns(InterpolationWarning):
-            _, _, _, store = range_unit_root_test(self.x, True)
+            _, _, _, store = range_unit_root_test(
+                self.x, True, use_namedtuple=False
+            )
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
+
+    def test_use_namedtuple_true_returns_namedtuple(self):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            warnings.filterwarnings("ignore", category=InterpolationWarning)
+            res = range_unit_root_test(self.x, use_namedtuple=True)
+        assert isinstance(res, RangeUnitRootTestResult)
+        assert res.resstore is None
+        assert res[0] == res.rur_stat
+        assert res[1] == res.p_value
+        assert res[2] == res.crit
+
+    def test_use_namedtuple_true_with_store(self):
+        res = range_unit_root_test(self.x, store=True, use_namedtuple=True)
+        assert isinstance(res, RangeUnitRootTestResult)
+        assert res.resstore is not None
+        assert res.resstore.nobs == len(self.x)
 
 
 def test_pandasacovf():
@@ -1088,6 +1807,23 @@ def test_ccovf_different_lengths_known_lag():
     # Peak should be at lag 5
     assert result.shape == (200,)
     assert np.argmax(result[:50]) == 5
+
+
+def test_ccovf_adjusted_shorter_y():
+    # GH#9565 follow-up: with len(y) < len(x), adjusted=True must divide by
+    # the number of overlapping observations, min(len(y), len(x) - k), not
+    # by len(x) - k.
+    x = np.ones(6)
+    y = np.ones(2)
+
+    # Every product is exactly 1.0, so every adjusted average must be 1.0.
+    result = ccovf(x, y, adjusted=True, demean=False)
+    assert_allclose(result, np.ones(6))
+
+    # The unadjusted path divides by len(x) throughout, by definition, so the
+    # overlap counts min(2, 6 - k) show through unscaled.
+    unadjusted = ccovf(x, y, adjusted=False, demean=False)
+    assert_allclose(unadjusted, np.array([2, 2, 2, 2, 2, 1]) / 6)
 
 
 def test_ccf_different_lengths():
@@ -1435,7 +2171,7 @@ def test_innovations_algo_filter_kalman_filter():
 def test_adfuller_short_series():
     rs = np.random.RandomState(9374)
     y = rs.standard_normal(7)
-    res = adfuller(y, store=True)
+    res = adfuller(y, store=True, use_namedtuple=False)
     assert res[-1].maxlag == 1
     y = rs.standard_normal(2)
     with pytest.raises(ValueError, match="sample size is too short"):
@@ -1452,17 +2188,76 @@ def test_adfuller_maxlag_too_large():
         adfuller(y, maxlag=51)
 
 
+@pytest.fixture
+def adfuller_data():
+    rs = np.random.RandomState(0)
+    return np.cumsum(rs.standard_normal(200))
+
+
+def test_adfuller_use_namedtuple_default_warns(adfuller_data):
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = adfuller(adfuller_data)
+    assert isinstance(res, tuple)
+    assert not isinstance(res, ADFullerResult)
+    assert len(res) == 6
+
+
+def test_adfuller_use_namedtuple_false_silences_warning(adfuller_data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = adfuller(adfuller_data, use_namedtuple=False)
+    assert isinstance(res, tuple)
+    assert not isinstance(res, ADFullerResult)
+    assert len(res) == 6
+
+
+def test_adfuller_use_namedtuple_true_returns_namedtuple(adfuller_data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = adfuller(adfuller_data, use_namedtuple=True)
+    assert isinstance(res, ADFullerResult)
+    # still positionally unpackable/indexable like the legacy tuple
+    assert res[0] == res.adf
+    assert res[1] == res.pvalue
+    assert res.resstore is None
+
+
+def test_adfuller_use_namedtuple_true_with_store(adfuller_data):
+    res = adfuller(adfuller_data, store=True, use_namedtuple=True)
+    assert isinstance(res, ADFullerResult)
+    assert res.resstore is not None
+    assert res.resstore.__str__() == "Augmented Dickey-Fuller Test Results"
+
+
+def test_adfuller_use_namedtuple_true_without_autolag(adfuller_data):
+    res = adfuller(adfuller_data, autolag=None, maxlag=4, use_namedtuple=True)
+    assert isinstance(res, ADFullerResult)
+    assert res.icbest is None
+
+
+def test_adfuller_use_namedtuple_matches_legacy_values(adfuller_data):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        legacy = adfuller(adfuller_data)
+        nt = adfuller(adfuller_data, use_namedtuple=True)
+    assert_almost_equal(nt.adf, legacy[0])
+    assert_almost_equal(nt.pvalue, legacy[1])
+    assert nt.usedlag == legacy[2]
+    assert nt.nobs == legacy[3]
+    assert nt.critical_values == legacy[4]
+    assert_almost_equal(nt.icbest, legacy[5])
+
+
 class SetupZivotAndrews:
     # test directory
     cur_dir = CURR_DIR
-    run_dir = os.path.join(cur_dir, "results")
+    run_dir = Path(cur_dir).joinpath("results")
     # use same file for testing failure modes
-    fail_file = os.path.join(run_dir, "rgnp.csv")
+    fail_file = Path(run_dir).joinpath("rgnp.csv")
     fail_mdl = np.asarray(pd.read_csv(fail_file))
 
 
 class TestZivotAndrews(SetupZivotAndrews):
-
     # failure mode tests
     def test_fail_regression_type(self):
         with pytest.raises(ValueError):
@@ -1492,7 +2287,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         assert_allclose([res[0], res[1], res[4]], [-5.57615, 0.00312, 20], rtol=1e-3)
 
     def test_gnpdef_case(self):
-        mdlfile = os.path.join(self.run_dir, "gnpdef.csv")
+        mdlfile = Path(self.run_dir).joinpath("gnpdef.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=8, regression="c", autolag="t-stat")
         assert_allclose(
@@ -1502,7 +2297,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
     def test_stkprc_case(self):
-        mdlfile = os.path.join(self.run_dir, "stkprc.csv")
+        mdlfile = Path(self.run_dir).joinpath("stkprc.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=8, regression="ct", autolag="t-stat")
         assert_allclose(
@@ -1512,7 +2307,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
     def test_rgnpq_case(self):
-        mdlfile = os.path.join(self.run_dir, "rgnpq.csv")
+        mdlfile = Path(self.run_dir).joinpath("rgnpq.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, maxlag=12, regression="t", autolag="t-stat")
         assert_allclose(
@@ -1522,7 +2317,7 @@ class TestZivotAndrews(SetupZivotAndrews):
         )
 
     def test_rand10000_case(self):
-        mdlfile = os.path.join(self.run_dir, "rand10000.csv")
+        mdlfile = Path(self.run_dir).joinpath("rand10000.csv")
         mdl = np.asarray(pd.read_csv(mdlfile))
         res = zivot_andrews(mdl, regression="c", autolag="t-stat")
         assert_allclose(
@@ -1643,12 +2438,12 @@ def test_zivot_andrews_change_data():
 
 class TestLeybourneMcCabe:
     cur_dir = CURR_DIR
-    run_dir = os.path.join(cur_dir, "results")
+    run_dir = Path(cur_dir).joinpath("results")
 
     # failure mode tests
     def test_fail_inputs(self):
         # use results/BAA.csv file for testing failure modes
-        fail_file = os.path.join(self.run_dir, "BAA.csv")
+        fail_file = Path(self.run_dir).joinpath("BAA.csv")
         fail_mdl = np.asarray(pd.read_csv(fail_file))
         with pytest.raises(ValueError):
             leybourne(fail_mdl, regression="nc")
@@ -1666,7 +2461,7 @@ class TestLeybourneMcCabe:
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13
     def test_baa_results(self):
-        mdl_file = os.path.join(self.run_dir, "BAA.csv")
+        mdl_file = Path(self.run_dir).joinpath("BAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct", method="mle")
         assert_allclose(res[0:3], [5.4438, 0.0000, 3], rtol=1e-4, atol=1e-4)
@@ -1674,7 +2469,7 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
 
     def test_dbaa_results(self):
-        mdl_file = os.path.join(self.run_dir, "DBAA.csv")
+        mdl_file = Path(self.run_dir).joinpath("DBAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.096534, 0.602535, 2], rtol=1e-4, atol=1e-4)
@@ -1682,7 +2477,7 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:3], [0.047924, 0.601817, 2], rtol=1e-4, atol=1e-4)
 
     def test_dsp500_results(self):
-        mdl_file = os.path.join(self.run_dir, "DSP500.csv")
+        mdl_file = Path(self.run_dir).joinpath("DSP500.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.3118, 0.1256, 0], rtol=1e-4, atol=1e-4)
@@ -1690,14 +2485,14 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:3], [0.306886, 0.129934, 0], rtol=1e-4, atol=1e-4)
 
     def test_dun_results(self):
-        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl_file = Path(self.run_dir).joinpath("DUN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct", method="ols")
         assert_allclose(res[0:3], [0.0938, 0.1890, 3], rtol=1e-4, atol=1e-4)
 
     @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
     def test_dun_results_arima(self):
-        mdl_file = os.path.join(self.run_dir, "DUN.csv")
+        mdl_file = Path(self.run_dir).joinpath("DUN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, regression="ct")
         assert_allclose(res[0], 0.024083, rtol=1e-4, atol=1e-4)
@@ -1705,7 +2500,7 @@ class TestLeybourneMcCabe:
         assert res[2] == 3
 
     def test_sp500_results(self):
-        mdl_file = os.path.join(self.run_dir, "SP500.csv")
+        mdl_file = Path(self.run_dir).joinpath("SP500.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, arlags=4, regression="ct", method="mle")
         assert_allclose(res[0:2], [1.8761, 0.0000], rtol=1e-4, atol=1e-4)
@@ -1713,14 +2508,14 @@ class TestLeybourneMcCabe:
         assert_allclose(res[0:2], [1.9053, 0.0000], rtol=1e-4, atol=1e-4)
 
     def test_un_results(self):
-        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl_file = Path(self.run_dir).joinpath("UN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, method="ols", varest="var99")
         assert_allclose(res[0:3], [556.0444, 0.0000, 4], rtol=1e-4, atol=1e-4)
 
     @pytest.mark.xfail(reason="Fails due to numerical issues", strict=False)
     def test_un_results_arima(self):
-        mdl_file = os.path.join(self.run_dir, "UN.csv")
+        mdl_file = Path(self.run_dir).joinpath("UN.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
         res = leybourne(mdl, varest="var99")
         assert_allclose(res[0], 285.5181, rtol=1e-4, atol=1e-4)
@@ -1732,3 +2527,60 @@ class TestLeybourneMcCabe:
         y = rg.standard_normal(250)
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
+
+
+def test_acovf_all_missing():
+    x = np.full(100, np.nan)
+    with pytest.raises(ValueError, match=r"All observations are missing after dropping."):
+        acovf(x, missing="drop")
+
+    assert np.all(np.isnan(acovf(x, missing="conservative")))
+
+
+def test_stattools_fixed_arity_namedtuples():
+    # These functions always return the same number of values, so unlike
+    # the use_namedtuple=True/False/None functions, they unconditionally
+    # return a NamedTuple with no deprecation cycle needed.
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal(200).cumsum()
+
+    res = block_jackknife(rs.standard_normal(100), np.mean, n_blocks=10)
+    assert isinstance(res, JackknifeResult)
+    assert res[0] is res.theta_jack
+    assert res[1] is res.se
+
+    a = acf(x, nlags=10, fft=False)
+    res = q_stat(a[1:], nobs=len(x))
+    assert isinstance(res, QStatResult)
+    assert res[0] is res.qstat
+    assert res[1] is res.pvalue
+
+    res = pacf_burg(x, nlags=5)
+    assert isinstance(res, PacfBurgResult)
+    assert res[0] is res.pacf
+    assert res[1] is res.sigma2
+
+    res = levinson_durbin(x, nlags=5, isacov=False)
+    assert isinstance(res, LevinsonDurbinResult)
+    assert res[0] == res.sigma_v
+    assert res[1] is res.arcoefs
+    assert res[2] is res.pacf
+    assert res[3] is res.sigma
+    assert res[4] is res.phi
+
+    res2 = levinson_durbin_pacf(res.pacf, nlags=3)
+    assert isinstance(res2, LevinsonDurbinPacfResult)
+    assert res2[0] is res2.arcoefs
+    assert res2[1] is res2.acf
+
+    res = breakvar_heteroskedasticity_test(x)
+    assert isinstance(res, BreakvarHeteroskedasticityResult)
+    assert res[0] == res.test_statistic
+    assert res[1] == res.p_value
+
+    y1 = (x + rs.standard_normal(200))[:, None]
+    res = coint(x, y1, trend="c", maxlag=0, autolag=None)
+    assert isinstance(res, CointResult)
+    assert res[0] == res.coint_t
+    assert res[1] == res.pvalue
+    assert res[2] is res.crit_value

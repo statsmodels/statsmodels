@@ -4,10 +4,9 @@ Tests for the generic MLEModel
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.pandas import MONTH_END
 
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -21,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import nile
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.statespace import (
     kalman_filter,
     kalman_smoother,
@@ -33,7 +33,7 @@ from statsmodels.tsa.statespace.tests.results import (
     results_var_misc,
 )
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 # Basic kwargs
 kwargs = {
@@ -663,6 +663,18 @@ def test_summary():
         res.summary()
         res.filter_results._standardized_forecasts_error = "a"
         res.summary()
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dates = pd.date_range(start="1980-01-01", end="1984-01-01", freq="YS")
+    endog = pd.Series([1, 2, 3, 4, 5], index=dates)
+    mod = MLEModel(endog, **kwargs)
+    res = mod.filter([])
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):

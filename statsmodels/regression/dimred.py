@@ -222,9 +222,6 @@ class SlicedInverseReg(_DimReductionRegression):
 
         start_params = kwargs.get("start_params", None)
 
-        # Sample size per slice
-        slice_n = kwargs.get("slice_n", 20)
-
         # Number of slices
         n_slice = self.exog.shape[0] // slice_n
 
@@ -266,7 +263,7 @@ class SlicedInverseReg(_DimReductionRegression):
         if not cnvrg:
             g = self._regularized_grad(params.ravel())
             gn = np.sqrt(np.dot(g, g))
-            msg = "SIR.fit_regularized did not converge, |g|=%f" % gn
+            msg = f"SIR.fit_regularized did not converge, |g|={gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = DimReductionResults(self, params, eigs=None)
@@ -405,7 +402,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
         if not self.bc:
             # Cook's original approach
             vm = 0
-            for w, cvx in zip(ns, cv):
+            for w, cvx in zip(ns, cv, strict=True):
                 icv = np.eye(p) - cvx
                 vm += w * np.dot(icv, icv)
             vm /= len(cv)
@@ -714,7 +711,7 @@ class CovarianceReduction(_DimReductionRegression):
         if not cnvrg:
             g = self.score(params.ravel())
             gn = np.sqrt(np.sum(g * g))
-            msg = "CovReduce optimization did not converge, |g|=%f" % gn
+            msg = f"CovReduce optimization did not converge, |g|={gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = DimReductionResults(self, params, eigs=None)

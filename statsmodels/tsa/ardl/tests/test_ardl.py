@@ -571,6 +571,71 @@ def test_get_prediction(data):
     assert_allclose(pred.var_pred_mean, ar_pred.var_pred_mean)
 
 
+def test_apply_forecast_matches_ardl_order():
+    """
+    ARDLResults.apply() used to inherit AutoRegResults.apply(), which
+    hardcodes a plain AutoReg(...) reconstruction and so silently drops the
+    exog lag structure ('order'). The applied model's design matrix ended up
+    narrower than the original params, abd any predict/forecast call raised a matmul shape mismatch
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    y_train, x_train = y.iloc[:45], x.iloc[:45]
+    sel_res = ardl_select_order(y_train, 3, x_train, 3, ic="aic", trend="c")
+    assert sel_res.model.ardl_order == (3, 0, 3, 3)
+    res = sel_res.model.fit()
+
+    y_apply, x_apply = y.iloc[:50], x.iloc[:50]
+    x_oos = x.iloc[50:55]
+    new_res = res.apply(endog=y_apply, exog=x_apply)
+    forecast = new_res.forecast(steps=5, exog=x_oos)
+    assert forecast.shape == (5, )
+    assert np.all(np.isfinite(forecast))
+
+    predicted = new_res.predict()
+    assert predicted.shape[0] == y_apply.shape[0]
+
+
+def test_apply_design_matrix_matches_fresh_fit():
+    """
+    Beyond not crashing, the applied model's exog lag columns must be numerically
+    identical to an independently constructed ARDL model fit directly on the new data
+    under the same order
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    orig = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c")
+    res = orig.fit()
+
+    y_apply, x_apply = y.iloc[:50], x.iloc[:50]
+    new_res = res.apply(endog=y_apply, exog=x_apply)
+
+    fresh = ARDL(y_apply, 3, x_apply, order=orig._order, trend="c")
+    assert new_res.model._x.shape == fresh._x.shape
+    assert_allclose(new_res.model._x, fresh._x)
+
+
+def test_append_matches_apply():
+    """
+    append()ing the tail of a series should give the same applied model as
+    apply()ing the full series, since both describe the same combined dataset under
+    the same order
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c").fit()
+
+    applied = res.apply(endog=y.iloc[:50], exog=x.iloc[:50])
+    appended = res.append(endog=y.iloc[45:50], exog=x.iloc[45:50])
+
+    assert_allclose(applied.model._x, appended.model._x)
+    x_oos = x.iloc[50:55]
+    assert_allclose(
+        applied.forecast(steps=5, exog=x_oos),
+        appended.forecast(steps=5, exog=x_oos)
+    )
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
@@ -765,7 +830,7 @@ def test_bounds_test_simulation(case):
     )
     res = mod.fit()
     bounds_result = res.bounds_test(
-        case=case, asymptotic=False, seed=[1, 2, 3, 4], nsim=10_000
+        case=case, asymptotic=False, rng=[1, 2, 3, 4], nsim=10_000
     )
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
@@ -773,10 +838,10 @@ def test_bounds_test_simulation(case):
 
 
 @pytest.mark.parametrize(
-    "seed",
+    "rng",
     [None, np.random.RandomState(0), 0, [1, 2], np.random.default_rng([1, 2])],
 )
-def test_bounds_test_seed(seed):
+def test_bounds_test_rng(rng):
     mod = UECM(
         dane_data.lrm,
         3,
@@ -784,7 +849,7 @@ def test_bounds_test_seed(seed):
         {"lry": 1, "ibo": 3, "ide": 2},
     )
     res = mod.fit()
-    bounds_result = res.bounds_test(case=3, asymptotic=False, seed=seed, nsim=10_000)
+    bounds_result = res.bounds_test(case=3, asymptotic=False, rng=rng, nsim=10_000)
     assert (bounds_result.p_values >= 0.0).all()
     assert (bounds_result.p_values <= 1.0).all()
     assert (bounds_result.crit_vals > 0.0).all().all()
@@ -800,9 +865,7 @@ def test_bounds_test_simulate_order():
     res = mod.fit()
     bounds_result = res.bounds_test(3)
     assert "BoundsTestResult" in str(bounds_result)
-    bounds_result_sim = res.bounds_test(
-        3, asymptotic=False, nsim=10_000, seed=[1, 2, 3]
-    )
+    bounds_result_sim = res.bounds_test(3, asymptotic=False, nsim=10_000, rng=[1, 2, 3])
     assert_allclose(bounds_result.stat, bounds_result_sim.stat)
     assert (bounds_result_sim.p_values > bounds_result.p_values).all()
 
@@ -834,7 +897,7 @@ def test_ardl_trend_ctt(data, y_lags, x_lags, causal):
     res = ARDL(data.y, y_lags, data.x, x_lags, trend="ctt", causal=causal).fit()
     n_x = data.x.shape[1]
     n_params = 3
-    n_params += y_lags if y_lags else 0
+    n_params += y_lags or 0
     n_params += n_x * (int(not causal) + x_lags) if x_lags else 0
     assert res.params.shape[0] == n_params
     check_results(res)
@@ -852,3 +915,22 @@ def test_uecm_resid():
 
     # Assert that the override fix is working
     np.testing.assert_allclose(res.resid, res.model._y - res.fittedvalues)
+
+
+@pytest.mark.parametrize("model", [ARDL, UECM])
+@pytest.mark.parametrize("lags", [0, 3])
+@pytest.mark.parametrize("pandas", [True, False])
+def test_ardl_uecm_summary_after_remove_data(model, lags, pandas):
+    """Test that UECMResults.resid is computed correctly using model._y."""
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    order = {"lry": 1, "ibo": 3, "ide": 2}
+    if not pandas:
+        y = np.array(y)
+        x = np.array(x)
+        order = dict(enumerate(order.values()))
+    mod = model(y, lags, x, order)
+    res = mod.fit()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

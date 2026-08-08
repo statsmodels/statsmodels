@@ -21,8 +21,17 @@ class ContrastResults:
     normal, the t, the F or the chisquare distribution.
     """
 
-    def __init__(self, t=None, F=None, sd=None, effect=None, df_denom=None,
-                 df_num=None, alpha=0.05, **kwds):
+    def __init__(
+        self,
+        t=None,
+        F=None,
+        sd=None,
+        effect=None,
+        df_denom=None,
+        df_num=None,
+        alpha=0.05,
+        **kwds,
+    ):
 
         self.effect = effect  # Let it be None for F
         if F is not None:
@@ -68,7 +77,7 @@ class ContrastResults:
         self.pvalue = np.squeeze(self.pvalue)
 
         if self.effect is not None:
-            self.c_names = ["c%d" % ii for ii in range(len(self.effect))]
+            self.c_names = [f"c{ii:d}" for ii in range(len(self.effect))]
         else:
             self.c_names = None
 
@@ -92,7 +101,7 @@ class ContrastResults:
         """
         if self.effect is not None:
             # confidence intervals
-            q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
+            q = self.dist.ppf(1 - alpha / 2.0, *self.dist_args)
             lower = self.effect - q * self.sd
             upper = self.effect + q * self.sd
             return np.column_stack((lower, upper))
@@ -163,25 +172,12 @@ class ContrastResults:
             return summ
         elif hasattr(self, "fvalue"):
             # TODO: create something nicer for these casee
-            return "<F test: F=%s, p=%s, df_denom=%.3g, df_num=%.3g>" % (
-                repr(self.fvalue),
-                self.pvalue,
-                self.df_denom,
-                self.df_num,
-            )
+            return f"<F test: F={self.fvalue!r}, p={self.pvalue}, df_denom={self.df_denom:.3g}, df_num={self.df_num:.3g}>"
         elif self.distribution == "chi2":
-            return "<Wald test (%s): statistic=%s, p-value=%s, df_denom=%.3g>" % (
-                self.distribution,
-                self.statistic,
-                self.pvalue,
-                self.df_denom,
-            )
+            return f"<Wald test ({self.distribution}): statistic={self.statistic}, p-value={self.pvalue}, df_denom={self.df_denom:.3g}>"
         else:
             # generic
-            return "<Wald test: statistic=%s, p-value=%s>" % (
-                self.statistic,
-                self.pvalue,
-            )
+            return f"<Wald test: statistic={self.statistic}, p-value={self.pvalue}>"
 
     def summary_frame(self, xname=None, alpha=0.05):
         """
@@ -298,9 +294,10 @@ class Contrast:
     >>> np.allclose(c3.contrast_matrix, test2)
     True
     """
+
     def _get_matrix(self):
         """Get the contrast_matrix property"""
-        if not hasattr(self, "_contrast_matrix"):
+        if self._contrast_matrix is None:
             self.compute_matrix()
         return self._contrast_matrix
 
@@ -309,6 +306,13 @@ class Contrast:
     def __init__(self, term, design):
         self.term = np.asarray(term)
         self.design = np.asarray(design)
+        # Populated by `compute_matrix`; declared here so they exist (as
+        # None) even before `compute_matrix`/`contrast_matrix` has been
+        # accessed.
+        self.T = None
+        self.D = None
+        self._contrast_matrix = None
+        self.rank = None
 
     def compute_matrix(self):
         """
@@ -327,9 +331,10 @@ class Contrast:
         self.D = self.design
         self._contrast_matrix = contrastfromcols(self.T, self.D)
         try:
-            self.rank = self.matrix.shape[1]
-        except (AttributeError, IndexError):
+            self.rank = self._contrast_matrix.shape[1]
+        except IndexError:
             self.rank = 1
+
 
 # TODO: fix docstring after usage is settled
 
@@ -385,7 +390,7 @@ def contrastfromcols(L, D, pseudo=None):
         raise ValueError("shape of L and D mismatched")
 
     if pseudo is None:
-        pseudo = np.linalg.pinv(D)    # D^+ \approx= ((dot(D.T,D))^(-1),D.T)
+        pseudo = np.linalg.pinv(D)  # D^+ \approx= ((dot(D.T,D))^(-1),D.T)
 
     if L.shape[0] == n:
         C = np.dot(pseudo, L).T
@@ -409,14 +414,15 @@ def contrastfromcols(L, D, pseudo=None):
 class WaldTestResults:
     # for F and chi2 tests of joint hypothesis, mainly for vectorized
 
-    def __init__(self, statistic, distribution, dist_args, table=None,
-                 pvalues=None):
+    def __init__(self, statistic, distribution, dist_args, table=None, pvalues=None):
         self.table = table
 
         self.distribution = distribution
         self.statistic = statistic
         # self.sd = sd
         self.dist_args = dist_args
+        # Cache populated by `summary_frame`.
+        self.dframe = None
 
         # The following is because I do not know which we want
         if table is not None:
@@ -447,7 +453,7 @@ class WaldTestResults:
     def col_names(self):
         """column names for summary table"""
 
-        pr_test = "P>%s" % self.distribution
+        pr_test = f"P>{self.distribution}"
         col_names = [self.distribution, pr_test, "df constraint"]
         if self.distribution == "F":
             col_names.append("df denom")
@@ -455,10 +461,10 @@ class WaldTestResults:
 
     def summary_frame(self):
         # needs to be a method for consistency
-        if hasattr(self, "_dframe"):
-            return self._dframe
+        if self.dframe is not None:
+            return self.dframe
         # rename the column nambes, but do not copy data
-        renaming = dict(zip(self.table.columns, self.col_names))
+        renaming = dict(zip(self.table.columns, self.col_names, strict=True))
         self.dframe = self.table.rename(columns=renaming)
         return self.dframe
 
@@ -489,8 +495,9 @@ def _get_pairs_labels(k_level, level_names):
         Labels for the pairwise comparisons of the levels.
     """
     idx_pairs_all = np.triu_indices(k_level, 1)
-    labels = [f"{level_names[name[1]]}-{level_names[name[0]]}"
-              for name in zip(*idx_pairs_all)]
+    labels = [
+        f"{level_names[name[1]]}-{level_names[name[0]]}" for name in zip(*idx_pairs_all, strict=True)
+    ]
     return labels
 
 
@@ -536,8 +543,9 @@ def _contrast_pairs(k_params, k_level, idx_start):
     return contrasts
 
 
-def t_test_multi(result, contrasts, method="hs", alpha=0.05, ci_method=None,
-                 contrast_names=None):
+def t_test_multi(
+    result, contrasts, method="hs", alpha=0.05, ci_method=None, contrast_names=None
+):
     """
     Perform t_test and add multiplicity correction to results dataframe
 
@@ -571,8 +579,8 @@ def t_test_multi(result, contrasts, method="hs", alpha=0.05, ci_method=None,
         method = [method]
     for meth in method:
         mt = multipletests(tt.pvalue, method=meth, alpha=alpha)
-        res_df["pvalue-%s" % meth] = mt[1]
-        res_df["reject-%s" % meth] = mt[0]
+        res_df[f"pvalue-{meth}"] = mt[1]
+        res_df[f"reject-{meth}"] = mt[0]
     return res_df
 
 
@@ -581,9 +589,35 @@ class MultiCompResult:
     Class to hold return of t_test_pairwise
 
     Currently just a minimal class to hold attributes.
+
+    Attributes
+    ----------
+    result_frame : DataFrame
+        The results of the pairwise t_test and additional columns for
+        multiplicity corrected p-values, as returned by `t_test_multi`.
+    contrasts : ndarray
+        Restriction matrix of constraints used in the pairwise t_test.
+    term : object
+        The model_spec term for which pairwise comparisons were computed.
+    contrast_labels : list[str]
+        Labels for the pairwise comparisons of the levels.
+    term_encoding_matrix : ndarray
+        Contrast matrix for the encoding of the factor as defined by patsy.
     """
-    def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+
+    def __init__(
+        self,
+        result_frame,
+        contrasts,
+        term,
+        contrast_labels,
+        term_encoding_matrix,
+    ):
+        self.result_frame = result_frame
+        self.contrasts = contrasts
+        self.term = term
+        self.contrast_labels = contrast_labels
+        self.term_encoding_matrix = term_encoding_matrix
 
 
 def _embed_constraints(contrasts, k_params, idx_start, index=None):
@@ -622,8 +656,9 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
     return c
 
 
-def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
-                        idx_start=None):
+def _constraints_factor(
+    encoding_matrix, comparison="pairwise", k_params=None, idx_start=None
+):
     """
     Helper function to create constraints based on encoding matrix
 
@@ -656,6 +691,7 @@ def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
     k_level, k_p = cm.shape
 
     import statsmodels.sandbox.stats.multicomp as mc
+
     if comparison in ["pairwise", "pw", "pairs"]:
         c_all = -mc.contrast_allpairs(k_level)
     else:
@@ -664,14 +700,14 @@ def _constraints_factor(encoding_matrix, comparison="pairwise", k_params=None,
     contrasts = c_all.dot(cm)
     if k_params is not None:
         if idx_start is None:
-            raise ValueError("if k_params is not None, then idx_start is "
-                             "required")
+            raise ValueError("if k_params is not None, then idx_start is required")
         contrasts = _embed_constraints(contrasts, k_params, idx_start)
     return contrasts
 
 
-def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
-                    factor_labels=None, ignore=False):
+def t_test_pairwise(
+    result, term_name, method="hs", alpha=0.05, factor_labels=None, ignore=False
+):
     """
     Perform pairwise t_test with multiple testing corrected p-values
 
@@ -733,7 +769,9 @@ def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
         if len(factor_labels) == len(cat):
             cat = factor_labels
         else:
-            raise ValueError("factor_labels has the wrong length, should be %d" % len(cat))
+            raise ValueError(
+                f"factor_labels has the wrong length, should be {len(cat):d}"
+            )
 
     k_level = len(cat)
     cm = mgr.get_contrast_matrix(term, factor, model_spec)
@@ -742,16 +780,25 @@ def t_test_pairwise(result, term_name, method="hs", alpha=0.05,
     labels = _get_pairs_labels(k_level, cat)
 
     import statsmodels.sandbox.stats.multicomp as mc
+
     c_all_pairs = -mc.contrast_allpairs(k_level)
     contrasts_sub = c_all_pairs.dot(cm)
     contrasts = _embed_constraints(contrasts_sub, k_params, idx_start)
-    res_df = t_test_multi(result, contrasts, method=method, ci_method=None,
-                          alpha=alpha, contrast_names=labels)
-    res = MultiCompResult(result_frame=res_df,
-                          contrasts=contrasts,
-                          term=term,
-                          contrast_labels=labels,
-                          term_encoding_matrix=cm)
+    res_df = t_test_multi(
+        result,
+        contrasts,
+        method=method,
+        ci_method=None,
+        alpha=alpha,
+        contrast_names=labels,
+    )
+    res = MultiCompResult(
+        result_frame=res_df,
+        contrasts=contrasts,
+        term=term,
+        contrast_labels=labels,
+        term_encoding_matrix=cm,
+    )
     return res
 
 
@@ -811,7 +858,7 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
-        If joint is True, then an array of noncentrality parameters will be
+        If joint is False, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
         This corresponds to the `t_test` in models and is not a quadratic
         form.
@@ -838,8 +885,9 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
     return nc
 
 
-def wald_test_noncent_generic(params, r_matrix, value, cov_params, diff=None,
-                              joint=True):
+def wald_test_noncent_generic(
+    params, r_matrix, value, cov_params, diff=None, joint=True
+):
     """
     Noncentrality parameter for a wald test
 
@@ -863,7 +911,7 @@ def wald_test_noncent_generic(params, r_matrix, value, cov_params, diff=None,
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
-        If joint is True, then an array of noncentrality parameters will be
+        If joint is False, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
         This corresponds to the `t_test` in models and is not a quadratic
         form.

@@ -5,8 +5,6 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip
-
 import numpy as np
 
 from statsmodels.tools.testing import Holder
@@ -134,7 +132,7 @@ class AllPairsResults:
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we do not assume we have all pairs
-        pvals_mat[lzip(*self.all_pairs)] = self.pval_corrected()
+        pvals_mat[list(zip(*self.all_pairs, strict=True))] = self.pval_corrected()
         return pvals_mat
 
     def summary(self):
@@ -152,9 +150,8 @@ class AllPairsResults:
         import statsmodels.stats.multitest as smt
         maxlevel = max(len(ss) for ss in self.all_pairs_names)
 
-        text = ("Corrected p-values using %s p-value correction\n\n"
-                % smt.multitest_methods_names[self.multitest_method])
+        text = (f"Corrected p-values using {smt.multitest_methods_names[self.multitest_method]} p-value correction\n\n")
         text += "Pairs" + (" " * (maxlevel - 5 + 1)) + "p-values\n"
         text += "\n".join(f"{pairs}  {pv:6.4g}" for (pairs, pv) in
-                          zip(self.all_pairs_names, self.pval_corrected()))
+                          zip(self.all_pairs_names, self.pval_corrected(), strict=True))
         return text

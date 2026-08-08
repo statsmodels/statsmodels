@@ -246,6 +246,8 @@ class Initialization:
 
         Parameters
         ----------
+        k_states : int
+            Number of states in the time series process.
         a : array_like, optional
             Vector of constant values describing the mean of the stationary
             component of the initial state.
@@ -494,23 +496,23 @@ class Initialization:
         if self.initialization_type is not None and not index == self._states:
             raise ValueError(
                 "Cannot set initialization for the block of"
-                "  states %s because initialization was"
+                f"  states {index!s} because initialization was"
                 " previously performed globally. You must either"
                 " re-initialize globally or"
                 " else unset the global initialization before"
-                " initializing specific blocks of states." % str(index)
+                " initializing specific blocks of states."
             )
         # Make sure that we are not setting a block that *overlaps* with
         # another block (although we are free to *replace* an entire block)
         uninitialized = np.equal(self._initialization[index,], None)
         if index not in self.blocks and not np.all(uninitialized):
             raise ValueError(
-                "Cannot set initialization for the state(s) %s"
+                f"Cannot set initialization for the state(s) {np.array(index)[~uninitialized]!s}"
                 " because they are a subset of a previously"
                 " initialized block. You must either"
                 " re-initialize the entire block as a whole or"
                 " else unset the entire block before"
-                " re-initializing the subset." % str(np.array(index)[~uninitialized])
+                " re-initializing the subset."
             )
 
         # If setting for all states, set this object's initialization
@@ -555,8 +557,7 @@ class Initialization:
                 if not stationary_cov.shape == (k_states, k_states):
                     raise ValueError(
                         "Invalid stationary covariance matrix;"
-                        " given shape %s but require shape %s."
-                        % (str(stationary_cov.shape), str((k_states, k_states)))
+                        f" given shape {stationary_cov.shape!s} but require shape {(k_states, k_states)!s}."
                     )
 
                 # Set values
@@ -588,8 +589,8 @@ class Initialization:
                 constant = np.array(constant)
             if not constant.shape == (k_states,):
                 raise ValueError(
-                    "Invalid constant vector; given shape %s"
-                    " but require shape %s." % (str(constant.shape), str((k_states,)))
+                    f"Invalid constant vector; given shape {constant.shape!s}"
+                    f" but require shape {(k_states,)!s}."
                 )
             self.constant = constant
         # Otherwise, if setting a sub-block, construct the new initialization

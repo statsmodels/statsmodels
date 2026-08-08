@@ -46,11 +46,11 @@ _doc_zi_params = """
 
 
 class GenericZeroInflated(CountModel):
-    __doc__ = """
+    __doc__ = f"""
     Generic Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -60,10 +60,7 @@ class GenericZeroInflated(CountModel):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params + base._missing_param_doc,
-    }
+    """
 
     def __init__(
         self,
@@ -100,7 +97,7 @@ class GenericZeroInflated(CountModel):
             self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]), self.exog_infl)
             self._hessian_inflate = self._hessian_probit
         else:
-            raise ValueError("inflation == %s, which is not handled" % inflation)
+            raise ValueError(f"inflation == {inflation}, which is not handled")
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
@@ -109,7 +106,7 @@ class GenericZeroInflated(CountModel):
             raise ValueError("exog and exog_infl have different number of"
                              "observation. `missing` handling is not supported")
 
-        infl_names = ["inflate_%s" % i for i in self.model_infl.data.param_names]
+        infl_names = [f"inflate_{i}" for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
@@ -477,7 +474,7 @@ class GenericZeroInflated(CountModel):
             the method. The user does not need to log it first.
             Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
+        which : str, optional
             Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x). This
@@ -487,7 +484,7 @@ class GenericZeroInflated(CountModel):
               model.
             - 'mean-main' : mean of the main count model
             - 'prob-main' : probability of selecting the main model.
-                The probability of zero inflation is ``1 - prob-main``.
+              The probability of zero inflation is ``1 - prob-main``.
             - 'mean-nonzero' : expected value conditional on having observation
               larger than zero, E(y | X, y>0)
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
@@ -583,7 +580,7 @@ class GenericZeroInflated(CountModel):
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
     def _derivative_predict(self, params, exog=None, transform="dydx"):
         """NotImplemented"""
@@ -661,11 +658,11 @@ class GenericZeroInflated(CountModel):
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
-    __doc__ = """
+    __doc__ = f"""
     Poisson Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -675,10 +672,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params + base._missing_param_doc,
-    }
+    """
 
     def __init__(
         self,
@@ -859,8 +853,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
     Zero-Inflated Generalized Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -872,15 +866,15 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         A reference to the zero-inflated exogenous design.
     p : scalar
         P denotes parameterizations for ZIGP regression.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the GeneralizedPoisson model.  p=1 for
         ZIGP-1 and p=2 for ZIGP-2. Default is p=2
     """
         + base._missing_param_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -999,8 +993,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
     Zero-Inflated Generalized Negative Binomial Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1012,16 +1006,16 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         A reference to the zero-inflated exogenous design.
     p : scalar
         P denotes parameterizations for ZINB regression. p=1 for ZINB-1 and
-    p=2 for ZINB-2. Default is p=2
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": _doc_zi_params
+        p=2 for ZINB-2. Default is p=2
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
         + """p : float
         dispersion power parameter for the NegativeBinomialP model.  p=1 for
-        ZINB-1 and p=2 for ZINM-2. Default is p=2
+        ZINB-1 and p=2 for ZINB-2. Default is p=2
     """
         + base._missing_param_doc,
-    }
+    )
 
     def __init__(
         self,
@@ -1182,7 +1176,7 @@ class ZeroInflatedResults(CountResults):
         for OLS. This is a measure for exog outliers but does not take
         specific features of the model into account.
         """
-        # same as sumper in DiscreteResults, only added for docstring
+        # same as super in DiscreteResults, only added for docstring
         from statsmodels.stats.outliers_influence import MLEInfluence
         return MLEInfluence(self)
 

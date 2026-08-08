@@ -54,14 +54,14 @@ _init_example = """
 
     >>> Z = patsy.dmatrix('~ coverage', df)
     >>> formula = 'methylation ~ disease + age + gender + coverage'
-    >>> mod = BetaModel.from_formula(formula, df, Z)
+    >>> mod = BetaModel.from_formula(formula, df, exog_precision=Z)
     >>> rslt = mod.fit()
 
 """
 
 
 class BetaModel(GenericLikelihoodModel):
-    __doc__ = """
+    __doc__ = f"""
     Beta Regression
 
     The Model is parameterized by mean and precision. Both can depend on
@@ -96,15 +96,13 @@ class BetaModel(GenericLikelihoodModel):
 
     Examples
     --------
-    {example}
+    {_init_example}
 
     See Also
     --------
     :ref:`links`
 
-    """.format(
-        example=_init_example
-    )
+    """
 
     def __init__(
         self,
@@ -123,7 +121,7 @@ class BetaModel(GenericLikelihoodModel):
             exog_precision = np.ones((len(endog), 1), dtype="f")
         else:
             extra_names = [
-                "precision-%s" % zc
+                f"precision-{zc}"
                 for zc in (
                     exog_precision.columns
                     if hasattr(exog_precision, "columns")
@@ -156,6 +154,28 @@ class BetaModel(GenericLikelihoodModel):
 
     @classmethod
     def from_formula(cls, formula, data, exog_precision_formula=None, *args, **kwargs):
+        """
+        Create a `BetaModel` from a formula and dataframe.
+
+        Parameters
+        ----------
+        formula : str or generic Formula object
+            The formula specifying the model for the mean.
+        data : array_like
+            The data for the model. See Notes.
+        exog_precision_formula : str, optional
+            The formula specifying the model for the precision. If None,
+            then the precision model only has a constant term (see the
+            `exog_precision` parameter of `BetaModel`).
+        *args
+            Additional positional arguments passed to the model.
+        **kwargs
+            Additional keyword arguments passed to the model.
+
+        Returns
+        -------
+        model : BetaModel instance
+        """
         if exog_precision_formula is not None:
 
             mgr = FormulaManager()
@@ -184,11 +204,14 @@ class BetaModel(GenericLikelihoodModel):
         exog_precision : array_like
             Array of predictor variables for precision parameter.
         which : str
+            Statistic to predict. Default is "mean".
 
             - "mean" : mean, conditional expectation E(endog | exog)
             - "precision" : predicted precision
             - "linear" : linear predictor for the mean function
             - "linear-precision" : linear predictor for the precision parameter
+            - "var" : returns the estimated variance of endog implied by the
+              model.
 
         Returns
         -------
@@ -230,7 +253,7 @@ class BetaModel(GenericLikelihoodModel):
             res = self._predict_var(params, exog=exog, exog_precision=exog_precision)
 
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
         return res
 
@@ -405,15 +428,18 @@ class BetaModel(GenericLikelihoodModel):
 
         Returns
         -------
-        score_factor : ndarray, 2-D
-            A 2d weight vector used in the calculation of the score_obs.
+        sf1 : ndarray
+            Score factor for the mean parameters.
+        sf2 : ndarray
+            Score factor for the precision parameters.
 
         Notes
         -----
-        The score_obs can be obtained from score_factor ``sf`` using
+        The score_obs can be obtained from the score factors ``sf1, sf2``
+        using
 
-            - d1 = sf[:, :1] * exog
-            - d2 = sf[:, 1:2] * exog_precision
+            - d1 = sf1[:, None] * exog
+            - d2 = sf2[:, None] * exog_precision
 
         """
         from scipy import special
@@ -467,11 +493,13 @@ class BetaModel(GenericLikelihoodModel):
 
         Returns
         -------
-        score_factor : ndarray, 2-D
-            A 2d weight vector used in the calculation of the score_obs.
-        (-jbb, -jbg, -jgg) : tuple
-            A tuple with 3 hessian factors, corresponding to the upper
-            triangle of the Hessian matrix.
+        (sf1, sf2) : tuple
+            The score factors, as returned by ``score_factor``. Only
+            returned if `return_hessian` is False.
+        (sf1, sf2), (-jbb, -jbg, -jgg) : tuple of tuples
+            The score factors and a tuple with 3 hessian factors,
+            corresponding to the upper triangle of the Hessian matrix.
+            Only returned if `return_hessian` is True.
             TODO: check why there are minus
         """
         from scipy import special
@@ -880,8 +908,6 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
         """
         Cox-Snell Likelihood-Ratio pseudo-R-squared
 
-        Notes
-        -----
         Computed as ``1 - exp((llnull - llf) * (2 / nobs))``.
         """
         return self.pseudo_rsquared(kind="lr")

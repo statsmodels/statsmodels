@@ -480,9 +480,9 @@ class MarkovSwitchingParams:
                 offset = 0
                 indices = []
                 for k, v in self.relative_index_regime_purpose[j].items():
-                    v = (np.r_[v] + offset).tolist()
-                    self.index_regime_purpose[j][k] = v
-                    indices.append(v)
+                    abs_v = (np.r_[v] + offset).tolist()
+                    self.index_regime_purpose[j][k] = abs_v
+                    indices.append(abs_v)
                     offset += self.k_parameters[k]
                 self.index_regime[j] = np.concatenate(indices).astype(int)
         else:
@@ -943,7 +943,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "filtered_joint_probabilities_log",
         ]
         result = HamiltonFilterResults(
-            self, Bunch(**dict(zip(names, self._filter(params))))
+            self, Bunch(**dict(zip(names, self._filter(params), strict=True)))
         )
 
         # Wrap in a results object
@@ -1069,7 +1069,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             "predicted_joint_probabilities_log",
             "filtered_joint_probabilities_log",
         ]
-        result = Bunch(**dict(zip(names, self._filter(params))))
+        result = Bunch(**dict(zip(names, self._filter(params), strict=True)))
 
         # Kim smoother
         out = self._smooth(
@@ -1255,9 +1255,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             search parameter repetitions.
         search_scale : float or array, optional.
             Scale of variates for random start parameter search.
-        rng : np.random.Generator or np.random.RandomState, optional
-            The source of random variables to use in parameter initialization.
-            If None, uses the singleton RandomState in np.random.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
@@ -1518,9 +1521,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Scale of variates for random start parameter search. Can be given
             as an array of length equal to the number of parameters or as a
             single scalar.
-        rng : np.random.Generator or np.random.RandomState, optional
-            The source of random variables to use in parameter initialization.
-            If None, uses the singleton RandomState in np.random.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Notes
         -----
@@ -1603,14 +1609,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if self.tvtp:
             # TODO add support for exog_tvtp_names
             param_names[self.parameters["regime_transition"]] = [
-                "p[%d->%d].tvtp%d" % (j, i, k)
+                f"p[{j:d}->{i:d}].tvtp{k:d}"
                 for i in range(self.k_regimes - 1)
                 for k in range(self.k_tvtp)
                 for j in range(self.k_regimes)
             ]
         else:
             param_names[self.parameters["regime_transition"]] = [
-                "p[%d->%d]" % (j, i)
+                f"p[{j:d}->{i:d}]"
                 for i in range(self.k_regimes - 1)
                 for j in range(self.k_regimes)
             ]
@@ -1848,7 +1854,7 @@ class KimSmootherResults(HamiltonFilterResults):
     model : MarkovSwitchingModel
         The model object.
     result : dict
-        A dictionary containing two keys: 'smoothd_joint_probabilities' and
+        A dictionary containing two keys: 'smoothed_joint_probabilities' and
         'smoothed_marginal_probabilities'.
 
     Attributes
@@ -2204,9 +2210,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
+            Additional arguments may be required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
         Returns
@@ -2258,9 +2264,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         if self.data.dates is not None:
             dates = self.data.dates
             d = dates[start]
-            sample = ["%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample = [f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
             d = dates[-1]
-            sample += ["- " + "%02d-%02d-%02d" % (d.month, d.day, d.year)]
+            sample += ["- " + f"{d.month:02d}-{d.day:02d}-{d.year:02d}"]
         else:
             sample = [str(start), " - " + str(self.model.nobs)]
 
@@ -2272,10 +2278,10 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         if not isinstance(model_name, list):
             model_name = [model_name]
 
-        top_left = [("Dep. Variable:", None)]
-        top_left.append(("Model:", [model_name[0]]))
-        for i in range(1, len(model_name)):
-            top_left.append(("", ["+ " + model_name[i]]))
+        top_left = [("Dep. Variable:", None), ("Model:", [model_name[0]])]
+        top_left.extend(
+            ("", ["+ " + model_name[i]]) for i in range(1, len(model_name))
+        )
         top_left += [
             ("Date:", None),
             ("Time:", None),
@@ -2285,10 +2291,10 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         top_right = [
             ("No. Observations:", [self.model.nobs]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         if hasattr(self, "cov_type"):
@@ -2345,11 +2351,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         for i in range(self.k_regimes):
             mask = regime_masks[i]
             if len(mask) > 0:
-                table = make_table(self, mask, "Regime %d parameters" % i)
+                table = make_table(self, mask, f"Regime {i:d} parameters")
                 summary.tables.append(table)
 
         mask = []
-        for _key, _mask in other_masks.items():
+        for _mask in other_masks.values():
             mask.extend(_mask)
         if len(mask) > 0:
             table = make_table(self, mask, "Non-switching parameters")
@@ -2368,8 +2374,8 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         if self._rank < len(self.params):
             etext.append(
                 "Covariance matrix is singular or near-singular,"
-                " with condition number %6.3g. Standard errors may be"
-                " unstable." % _safe_cond(self.cov_params())
+                f" with condition number {_safe_cond(self.cov_params()):6.3g}. Standard errors may be"
+                " unstable."
             )
 
         if etext:

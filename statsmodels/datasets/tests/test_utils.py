@@ -1,6 +1,6 @@
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
-import os
+from pathlib import Path
 from socket import timeout
 from urllib.error import HTTPError, URLError
 
@@ -10,7 +10,7 @@ import pytest
 
 from statsmodels.datasets import check_internet, get_rdataset, utils, webuse
 
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+CUR_DIR = Path(__file__).resolve().parent
 
 IGNORED_EXCEPTIONS = (HTTPError, URLError, UnicodeEncodeError, timeout)
 if not PYTHON_IMPL_WASM:
@@ -53,12 +53,12 @@ def test_get_rdataset_write_read_cache():
         "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,csv,"
         "HistData,Guerry-v2.csv.zip"
     )
-    os.remove(os.path.join(CUR_DIR, fn))
+    Path(CUR_DIR).joinpath(fn).unlink()
     fn = (
         "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,doc,"
         "HistData,rst,Guerry-v2.rst.zip"
     )
-    os.remove(os.path.join(CUR_DIR, fn))
+    Path(CUR_DIR).joinpath(fn).unlink()
 
 
 def test_webuse():

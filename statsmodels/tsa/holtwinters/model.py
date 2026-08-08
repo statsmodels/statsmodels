@@ -14,8 +14,6 @@ Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
 
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from collections.abc import Hashable, Sequence
 import contextlib
 from typing import Any
@@ -208,7 +206,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         and practice. OTexts, 2014.
     """
 
-    @deprecate_kwarg("damped", "damped_trend")
     def __init__(
         self,
         endog,
@@ -638,7 +635,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             not_fixed = np.array([name not in fixed for name in names])
             if (~sel[~not_fixed]).any():
                 invalid = []
-                for name, s, nf in zip(names, sel, not_fixed):
+                for name, s, nf in zip(names, sel, not_fixed, strict=True):
                     if not s and not nf:
                         invalid.append(name)
                 invalid_names = ", ".join(invalid)
@@ -837,7 +834,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # We always use [0, 1] for a, b and g and handle transform inside
         mod_bounds = [(0, 1)] * 3 + orig_bounds[3:]
-        relevant_bounds = [bnd for bnd, flag in zip(mod_bounds, sel) if flag]
+        relevant_bounds = [bnd for bnd, flag in zip(mod_bounds, sel, strict=True) if flag]
         bounds = np.array(relevant_bounds, dtype=float)
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
@@ -916,9 +913,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         return data
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("initial_slope", "initial_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def fit(
         self,
         smoothing_level=None,
@@ -932,10 +926,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         method=None,
         minimize_kwargs=None,
         use_brute=True,
-        use_boxcox=None,
-        use_basinhopping=None,
-        initial_level=None,
-        initial_trend=None,
     ):
         """
         Fit the model
@@ -980,36 +970,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
-        use_boxcox : {True, False, 'log', float}, optional
-            Should the Box-Cox transform be applied to the data first? If 'log'
-            then apply the log. If float then use the value as lambda.
-
-            .. deprecated:: 0.12
-
-               Set use_boxcox when constructing the model
-
-        use_basinhopping : bool, optional
-            Deprecated. Using Basin Hopping optimizer to find optimal values.
-            Use ``method`` instead.
-
-            .. deprecated:: 0.12
-
-               Use ``method`` instead.
-
-        initial_level : float, optional
-            Value to use when initializing the fitted level.
-
-            .. deprecated:: 0.12
-
-               Set initial_level when constructing the model
-
-        initial_trend : float, optional
-            Value to use when initializing the fitted trend.
-
-            .. deprecated:: 0.12
-
-               Set initial_trend when constructing the model
-               or set initialization_method.
 
         Returns
         -------
@@ -1049,14 +1009,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = float_like(smoothing_trend, "smoothing_trend", True)
         gamma = float_like(smoothing_seasonal, "smoothing_seasonal", True)
         phi = float_like(damping_trend, "damping_trend", True)
-        initial_level = float_like(initial_level, "initial_level", True)
-        initial_trend = float_like(initial_trend, "initial_trend", True)
         start_params = array_like(start_params, "start_params", optional=True)
         minimize_kwargs = dict_like(minimize_kwargs, "minimize_kwargs", optional=True)
         minimize_kwargs = {} if minimize_kwargs is None else minimize_kwargs
-        use_basinhopping = bool_like(
-            use_basinhopping, "use_basinhopping", optional=True
-        )
         supported_methods = ("basinhopping", "bh")
         supported_methods += ("least_squares", "ls")
         supported_methods += (
@@ -1073,26 +1028,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             lower=False,
             optional=True,
         )
-        # TODO: Deprecate initial_level and related parameters from fit
-        if initial_level is not None or initial_trend is not None:
-            raise ValueError(
-                "Initial values were set during model construction. These "
-                "cannot be changed during fit."
-            )
-        if use_boxcox is not None:
-            raise ValueError(
-                "use_boxcox was set at model initialization and cannot be changed"
-            )
-        elif self._use_boxcox is None:
-            use_boxcox = False
-        else:
-            use_boxcox = self._use_boxcox
-
-        if use_basinhopping is not None:
-            raise ValueError(
-                "use_basinhopping is deprecated. Set optimization method "
-                "using 'method'."
-            )
+        use_boxcox = False if self._use_boxcox is None else self._use_boxcox
 
         data = self._data
         damped = self.damped_trend
@@ -1118,8 +1054,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         res.beta = beta
         res.phi = phi
         res.gamma = gamma
-        res.level = initial_level
-        res.trend = initial_trend
+        res.level = None
+        res.trend = None
         res.seasonal = None
         res.y = y
         res.params = start_params
@@ -1128,9 +1064,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         if optimized:
             res = self._optimize_parameters(res, use_brute, method, minimize_kwargs)
         else:
-            l0, b0, s0 = self.initial_values(
-                initial_level=initial_level, initial_trend=initial_trend
-            )
+            l0, b0, s0 = self.initial_values()
             res.level = l0
             res.trend = b0
             res.seasonal = s0
@@ -1233,8 +1167,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         return l0, b0, s0
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def _predict(
         self,
         h=None,
@@ -1453,7 +1385,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         included = [True, has_trend, has_seasonal, True, has_trend, damped]
         included += [True] * m
         formatted = pd.DataFrame(
-            [[c, f, o] for c, f, o in zip(codes, formatted, optimized)],
+            [[c, f, o] for c, f, o in zip(codes, formatted, optimized, strict=True)],
             columns=["name", "param", "optimized"],
             index=idx,
         )
@@ -1552,9 +1484,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         *,
         optimized=True,
         start_params=None,
-        initial_level=None,
         use_brute=True,
-        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1573,14 +1503,9 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data.
-        initial_level : float, optional
-            Value to use when initializing the fitted level.
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
-        use_boxcox : {True, False, 'log', float}, optional
-            Should the Box-Cox transform be applied to the data first? If 'log'
-            then apply the log. If float then use the value as lambda.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
@@ -1616,10 +1541,8 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             smoothing_level=smoothing_level,
             optimized=optimized,
             start_params=start_params,
-            initial_level=initial_level,
             use_brute=use_brute,
             remove_bias=remove_bias,
-            use_boxcox=use_boxcox,
             method=method,
             minimize_kwargs=minimize_kwargs,
         )
@@ -1688,7 +1611,6 @@ class Holt(ExponentialSmoothing):
         and practice. OTexts, 2014.
     """
 
-    @deprecate_kwarg("damped", "damped_trend")
     def __init__(
         self,
         endog,
@@ -1708,9 +1630,6 @@ class Holt(ExponentialSmoothing):
             initial_trend=initial_trend,
         )
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("initial_slope", "initial_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def fit(
         self,
         smoothing_level=None,
@@ -1719,10 +1638,7 @@ class Holt(ExponentialSmoothing):
         damping_trend=None,
         optimized=True,
         start_params=None,
-        initial_level=None,
-        initial_trend=None,
         use_brute=True,
-        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1747,26 +1663,9 @@ class Holt(ExponentialSmoothing):
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data.
-        initial_level : float, optional
-            Value to use when initializing the fitted level.
-
-            .. deprecated:: 0.12
-
-               Set initial_level when constructing the model
-
-        initial_trend : float, optional
-            Value to use when initializing the fitted trend.
-
-            .. deprecated:: 0.12
-
-               Set initial_trend when constructing the model
-
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
-        use_boxcox : {True, False, 'log', float}, optional
-            Should the Box-Cox transform be applied to the data first? If 'log'
-            then apply the log. If float then use the value as lambda.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
@@ -1804,10 +1703,7 @@ class Holt(ExponentialSmoothing):
             damping_trend=damping_trend,
             optimized=optimized,
             start_params=start_params,
-            initial_level=initial_level,
-            initial_trend=initial_trend,
             use_brute=use_brute,
-            use_boxcox=use_boxcox,
             remove_bias=remove_bias,
             method=method,
             minimize_kwargs=minimize_kwargs,

@@ -4,8 +4,7 @@ Tests for Markov Regression models
 Author: Chad Fulton
 License: BSD-3
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -15,7 +14,7 @@ import pytest
 
 from statsmodels.tsa.regime_switching import markov_regression, markov_switching
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 # See https://www.stata-press.com/data/r14/usmacro
@@ -2721,7 +2720,7 @@ class TestFedFundsConst(MarkovRegression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, "results", "results_predict_fedfunds.csv")
+        path = Path(current_path).joinpath("results", "results_predict_fedfunds.csv")
         results = pd.read_csv(path)
         true = {
             "params": np.r_[0.9820939, 0.0503587, 3.70877, 9.556793, 2.107562**2],
@@ -3203,7 +3202,7 @@ class TestFedFundsConstL1Exog(MarkovRegression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, "results", "results_predict_fedfunds.csv")
+        path = Path(current_path).joinpath("results", "results_predict_fedfunds.csv")
         results = pd.read_csv(path)
 
         true = {

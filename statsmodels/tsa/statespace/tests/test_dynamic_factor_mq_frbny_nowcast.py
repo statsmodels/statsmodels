@@ -1,6 +1,6 @@
 from statsmodels.compat.pandas import QUARTER_END
 
-import os
+from pathlib import Path
 import threading
 
 import numpy as np
@@ -14,13 +14,13 @@ from statsmodels.tsa.statespace import dynamic_factor_mq, initialization
 DELETE_LOCK = threading.Lock()
 
 # Load dataset
-current_path = os.path.dirname(os.path.abspath(__file__))
-results_path = os.path.join(current_path, "results", "frbny_nowcast")
-data_path = os.path.join(results_path, "Nowcasting", "data", "US")
-us_data = pd.read_csv(os.path.join(data_path, "2016-06-29.csv"))
+current_path = Path(__file__).resolve().parent
+results_path = Path(current_path).joinpath("results", "frbny_nowcast")
+data_path = Path(results_path).joinpath("Nowcasting", "data", "US")
+us_data = pd.read_csv(Path(data_path).joinpath("2016-06-29.csv"))
 us_data.index = pd.PeriodIndex(us_data.Date.tolist(), freq="M")
 del us_data["Date"]
-us_data_update = pd.read_csv(os.path.join(data_path, "2016-07-29.csv"))
+us_data_update = pd.read_csv(Path(data_path).joinpath("2016-07-29.csv"))
 us_data_update.index = pd.PeriodIndex(us_data_update.Date.tolist(), freq="M")
 del us_data_update["Date"]
 
@@ -47,7 +47,7 @@ def matlab_results():
 
     # DFM results with a single block of factors
     for run in ["111", "112", "11F", "221", "222", "22F"]:
-        res = matlab.loadmat(os.path.join(results_path, f"test_dfm_{run}.mat"))
+        res = matlab.loadmat(Path(results_path).joinpath(f"test_dfm_{run}.mat"))
 
         # The FRBNY version orders the idiosyncratic AR(1) factors differently,
         # so we need to re-order the initial state mean and covariance matrix
@@ -78,7 +78,7 @@ def matlab_results():
 
     # News output with a single block of factors
     for run in ["112", "222"]:
-        res = matlab.loadmat(os.path.join(results_path, f"test_news_{run}.mat"))
+        res = matlab.loadmat(Path(results_path).joinpath(f"test_news_{run}.mat"))
 
         # The FRBNY version orders the idiosyncratic AR(1) factors differently,
         # so we need to re-order the initial state mean and covariance matrix
@@ -110,7 +110,7 @@ def matlab_results():
 
     # DFM results with three blocks of factors
     for run in ["111", "112", "221", "222"]:
-        res = matlab.loadmat(os.path.join(results_path, f"test_dfm_blocks_{run}.mat"))
+        res = matlab.loadmat(Path(results_path).joinpath(f"test_dfm_blocks_{run}.mat"))
 
         # The FRBNY version orders the idiosyncratic AR(1) factors differently,
         # so we need to re-order the initial state mean and covariance matrix
@@ -147,7 +147,7 @@ def matlab_results():
 
     # News output with three blocks of factors
     for run in ["112", "222"]:
-        res = matlab.loadmat(os.path.join(results_path, f"test_news_blocks_{run}.mat"))
+        res = matlab.loadmat(Path(results_path).joinpath(f"test_news_blocks_{run}.mat"))
 
         # The FRBNY version orders the idiosyncratic AR(1) factors differently,
         # so we need to re-order the initial state mean and covariance matrix
@@ -314,7 +314,7 @@ def test_emstep1(matlab_results, run):
 
 
 @pytest.mark.parametrize(
-    "k_factors,factor_orders,factor_multiplicities,idiosyncratic_ar1",
+    ("k_factors", "factor_orders", "factor_multiplicities", "idiosyncratic_ar1"),
     [
         (1, 1, 1, True),
         (3, 1, 1, True),
@@ -378,7 +378,7 @@ def test_emstep_methods_missing(
 
 
 @pytest.mark.parametrize(
-    "k_factors,factor_orders,factor_multiplicities,idiosyncratic_ar1",
+    ("k_factors", "factor_orders", "factor_multiplicities", "idiosyncratic_ar1"),
     [
         (1, 1, 1, True),
         (3, 1, 1, True),

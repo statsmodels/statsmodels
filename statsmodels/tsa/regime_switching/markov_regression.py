@@ -135,11 +135,11 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         # Switching options
         if self.switching_trend is True or self.switching_trend is False:
             self.switching_trend = [self.switching_trend] * self.k_trend
-        elif not len(self.switching_trend) == self.k_trend:
+        elif len(self.switching_trend) != self.k_trend:
             raise ValueError("Invalid iterable passed to `switching_trend`.")
         if self.switching_exog is True or self.switching_exog is False:
             self.switching_exog = [self.switching_exog] * self.k_exog
-        elif not len(self.switching_exog) == self.k_exog:
+        elif len(self.switching_exog) != self.k_exog:
             raise ValueError("Invalid iterable passed to `switching_exog`.")
 
         self.switching_coeffs = (
@@ -294,10 +294,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     @property
     def start_params(self):
         """
-        (array) Starting parameters for maximum likelihood estimation
+        Starting parameters for maximum likelihood estimation
 
-        Notes
-        -----
         These are not very sophisticated and / or good. We set equal transition
         probabilities and interpolate regression coefficients between zero and
         the OLS estimates, where the interpolation is based on the regime
@@ -343,14 +341,14 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         if np.any(self.switching_coeffs):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "exog"]] = [
-                    "%s[%d]" % (exog_name, i) for exog_name in self.exog_names]
+                    f"{exog_name}[{i:d}]" for exog_name in self.exog_names]
         else:
             param_names[self.parameters["exog"]] = self.exog_names
 
         # Variances
         if self.switching_variance:
             for i in range(self.k_regimes):
-                param_names[self.parameters[i, "variance"]] = "sigma2[%d]" % i
+                param_names[self.parameters[i, "variance"]] = f"sigma2[{i:d}]"
         else:
             param_names[self.parameters["variance"]] = "sigma2"
 

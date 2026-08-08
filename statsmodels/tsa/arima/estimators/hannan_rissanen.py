@@ -9,6 +9,7 @@ from scipy.signal import lfilter
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace.tools import diff
@@ -53,13 +54,16 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
 
     Returns
     -------
-    parameters : SARIMAXParams object
-    other_results : Bunch
-        Includes three components: `spec`, containing the
-        `SARIMAXSpecification` instance corresponding to the input arguments;
-        `initial_ar_order`, containing the autoregressive lag order used in the
-        first step; and `resid`, which contains the computed residuals from the
-        last step.
+    ARMAEstimationResult
+        A NamedTuple with fields:
+
+        parameters : SARIMAXParams object
+        other_results : Bunch
+            Includes three components: `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments; `initial_ar_order`, containing the autoregressive lag
+            order used in the first step; and `resid`, which contains the
+            computed residuals from the last step.
 
     Notes
     -----
@@ -186,7 +190,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
         initial_ar_params, _ = yule_walker(
-            endog, order=initial_ar_order, method="mle")
+            endog, order=initial_ar_order, method="mle", use_namedtuple=False)
         X = lagmat(endog, initial_ar_order, trim="both")
         y = endog[initial_ar_order:]
         resid = y - X.dot(initial_ar_params)
@@ -323,7 +327,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         "initial_ar_order": initial_ar_order,
         "resid": resid
     })
-    return p, other_results
+    return ARMAEstimationResult(p, other_results)
 
 
 def _validate_fixed_params(fixed_params, spec_param_names):
@@ -496,7 +500,7 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
     all_params = np.r_[fixed_ar_or_ma_params, free_ar_or_ma_params]
     assert set(all_lags) == set(spec_ar_or_ma_lags)
 
-    lag_to_param_map = dict(zip(all_lags, all_params))
+    lag_to_param_map = dict(zip(all_lags, all_params, strict=True))
 
     # Sort params by the order of their corresponding lags in
     # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or

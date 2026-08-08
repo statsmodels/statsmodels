@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lrange
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from statsmodels.tools.typing import NDArray
 
 __all__ = [
+    "LagmatResult",
     "add_trend",
     "commutation_matrix",
     "duplication_matrix",
@@ -293,12 +294,31 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
+class LagmatResult(NamedTuple):
+    """
+    Result of :func:`lagmat`.
+
+    Parameters
+    ----------
+    lags : ndarray or DataFrame
+        The array with lagged observations.
+    leads : ndarray or DataFrame
+        The original (unlagged) array, truncated to have the same number
+        of rows as ``lags``.
+    """
+
+    lags: NDArray | DataFrame
+    leads: NDArray | DataFrame
+
+
 def lagmat(
     x,
-    maxlag: int,
+    maxlag: int | list[int] | NDArray,
     trim: Literal["forward", "backward", "both", "none"] = "forward",
     original: Literal["ex", "sep", "in"] = "ex",
     use_pandas: bool = False,
+    *,
+    use_namedtuple: bool | None = None,
 ) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
     """
     Create 2d array of lags
@@ -307,8 +327,12 @@ def lagmat(
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : int
-        All lags from zero to maxlag are included.
+    maxlag : {int, list[int], array_like[int]}
+        The lags to be applied.
+
+        * int : All lags from zero to maxlag are included.
+        * array_like : All lags associated to the values in the array.
+            Must contain non-negative integers.
     trim : {'forward', 'backward', 'both', 'none', None}
         The trimming method to use.
 
@@ -328,13 +352,35 @@ def lagmat(
     use_pandas : bool
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``LagmatResult`` NamedTuple is
+        returned. When ``original="sep"`` a ``LagmatResult`` is always
+        returned; it holds the same two elements as the legacy tuple, so
+        it unpacks and indexes identically. For other values of
+        ``original`` a bare array is returned unless
+        ``use_namedtuple=True``, which additionally yields a
+        ``LagmatResult`` with ``leads`` set to ``None``.
 
     Returns
     -------
-    lagmat : ndarray
-        The array with lagged observations.
-    y : ndarray, optional
-        Only returned if original == 'sep'.
+    LagmatResult or ndarray
+        When ``original="sep"`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        lags : ndarray
+            The array with lagged observations.
+        leads : ndarray or None
+            The original (unlagged) array, truncated to have the same
+            number of rows as ``lags``. ``None`` for other values of
+            ``original``, where the original series was either excluded
+            ("ex") or folded into ``lags`` ("in").
+
+        ``LagmatResult`` has the same length and contents as the plain
+        ``(lags, leads)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.tsatools.LagmatResult`.
+
+        For other values of ``original`` a bare array of lagged
+        observations is returned instead.
 
     Notes
     -----
@@ -366,9 +412,39 @@ def lagmat(
        [ 5.,  6.,  3.,  4.,  1.,  2.],
        [ 0.,  0.,  5.,  6.,  3.,  4.],
        [ 0.,  0.,  0.,  0.,  5.,  6.]])
+
+    >>> lagmat(X, maxlag=[1, 3], trim="forward", original='ex')
+    array([[ 1.,  2.,  0.,  0.,  0.,  0.],
+       [ 3.,  4.,  1.,  2.,  0.,  0.],
+       [ 5.,  6.,  3.,  4.,  1.,  2.]])
+
     """
-    maxlag = int_like(maxlag, "maxlag")
+    if np.isscalar(maxlag):
+        maxlag = int_like(maxlag, "maxlag")
+        if maxlag < 0:
+            raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
+        # Convert to array to simplify and use only array path
+        lag_indices = np.arange(1, maxlag + 1, dtype=int)
+    else:
+        lag_indices = array_like(maxlag, "maxlag", dtype=int, ndim=1, maxdim=1)
+        if not np.all(lag_indices >= 0):
+            raise ValueError(
+                f"All values in `maxlag` must be >=  0. Found {lag_indices[lag_indices < 0]}."
+            )
+        if len(np.unique(lag_indices)) != len(lag_indices):
+            from collections import Counter
+
+            bad_lags = [
+                int(key) for key, val in Counter(lag_indices).items() if val > 1
+            ]
+            raise ValueError(
+                f"`maxlag` must contain unique values. maxlag contains the following "
+                f"duplicate values: {bad_lags}."
+            )
+        # Special case for lag_indices = [0] to empty to match above
+        lag_indices = lag_indices[lag_indices > 0]
     use_pandas = bool_like(use_pandas, "use_pandas")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     trim = string_like(
         trim,
         "trim",
@@ -377,7 +453,6 @@ def lagmat(
     )
     original = string_like(original, "original", options=("ex", "sep", "in"))
 
-    # TODO:  allow list of lags additional to maxlag
     orig = x
     x = array_like(x, "x", ndim=2, dtype=None)
     is_pandas = _is_using_pandas(orig, None) and use_pandas
@@ -392,21 +467,19 @@ def lagmat(
     nobs, nvar = x.shape
     if original in ["ex", "sep"]:
         dropidx = nvar
-    if maxlag >= nobs:
-        raise ValueError("maxlag should be < nobs")
-    lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
-    for k in range(int(maxlag + 1)):
-        lm[
-            maxlag - k : nobs + maxlag - k,
-            nvar * (maxlag - k) : nvar * (maxlag - k + 1),
-        ] = x
+
+    nlags = lag_indices.shape[0]
+    max_lag_value = lag_indices.max() if nlags else 0
+    if max_lag_value >= nobs:
+        raise ValueError("maximum of maxlag should be < nobs")
+    lm = np.zeros((nobs + max_lag_value, nvar * (nlags + 1)))
+    for i, k in enumerate([0] + lag_indices.tolist()):
+        lm[k : nobs + k, nvar * (i) : nvar * (i + 1)] = x
 
     if trim in ("none", "forward"):
         startobs = 0
-    elif trim in ("backward", "both"):
-        startobs = maxlag
-    else:
-        raise ValueError("trim option not valid")
+    else:  # trim in ("backward", "both")
+        startobs = max_lag_value
 
     if trim in ("none", "backward"):
         stopobs = len(lm)
@@ -425,8 +498,8 @@ def lagmat(
         else:
             x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
-        for lag in range(maxlag):
-            lag_str = str(lag + 1)
+        for lag in lag_indices:
+            lag_str = str(lag)
             columns.extend([str(col) + ".L." + lag_str for col in x_columns])
         lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
         lags = lm.iloc[startobs:]
@@ -438,10 +511,16 @@ def lagmat(
         if original == "sep":
             leads = lm[startobs:stopobs, :dropidx]
 
-    if original == "sep":
-        return lags, leads
-    else:
-        return lags
+    # LagmatResult has exactly the same length and contents as the legacy
+    # (lags, leads) tuple, so it unpacks and indexes identically and is
+    # always used when original="sep".  For other values of `original` a
+    # bare array is returned, as before; pass use_namedtuple=True to always
+    # get a LagmatResult.  `leads` is only meaningful for "sep" -- for "ex"
+    # the caller asked for it to be excluded and for "in" it is part of
+    # `lags`.
+    if use_namedtuple or original == "sep":
+        return LagmatResult(lags, leads if original == "sep" else None)
+    return lags
 
 
 def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False):
@@ -821,6 +900,6 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
         return 24
     else:  # pragma : no cover
         raise ValueError(
-            "freq {} not understood. Please report if you "
-            "think this is in error.".format(freq)
+            f"freq {freq} not understood. Please report if you "
+            "think this is in error."
         )

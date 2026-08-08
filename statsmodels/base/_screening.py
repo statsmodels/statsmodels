@@ -79,6 +79,10 @@ class VariableScreening:
         ignored.
     pen_weight : None or float
         Penalization weight use in SCAD penalized MLE.
+    use_weights : bool
+        If True, penalty weights are used so that `exog_keep` is not
+        penalized (weight 0) while candidate exog have weight 1. If False,
+        all penalty weights are set equally.
     k_add : int
         Number of exog to add during expansion or forward selection.
         See Notes section for tie handling.
@@ -356,7 +360,7 @@ class VariableScreening:
                                   warn_convergence=False,
                                   **fit_kwds)
         # set exog_names for final model
-        xnames = ["var%4d" % ii for ii in idx_nonzero]
+        xnames = [f"var{ii:4d}" for ii in idx_nonzero]
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
 
         res = ScreeningResults(self,
@@ -419,7 +423,7 @@ class VariableScreening:
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
 
-        exog_winner_names = ["var%d_%d" % (bidx, idx)
+        exog_winner_names = [f"var{bidx:d}_{idx:d}"
                              for bidx, batch in enumerate(exog_idx)
                              for idx in batch]
 

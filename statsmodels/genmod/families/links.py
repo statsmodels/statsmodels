@@ -311,17 +311,17 @@ class Power(Link):
 
         Parameters
         ----------
-        `z` : array_like
+        z : array_like
             Value of the transformed mean parameters at `p`
 
         Returns
         -------
-        `p` : ndarray
+        p : ndarray
             Mean parameters
 
         Notes
         -----
-        g^(-1)(z`) = `z`**(1/`power`)
+        g^(-1)(z) = `z`**(1/`power`)
         """
         if self.power == 1:
             return z
@@ -1303,7 +1303,7 @@ class logit(Logit):
     """
     Alias of Logit
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Logit instead.
     """
@@ -1317,7 +1317,7 @@ class inverse_power(InversePower):
     """
     Deprecated alias of InversePower.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use InversePower instead.
     """
@@ -1331,7 +1331,7 @@ class sqrt(Sqrt):
     """
     Deprecated alias of Sqrt.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use Sqrt instead.
     """
@@ -1345,7 +1345,7 @@ class inverse_squared(InverseSquared):
     """
     Deprecated alias of InverseSquared.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use InverseSquared instead.
     """
@@ -1359,7 +1359,7 @@ class identity(Identity):
     """
     Deprecated alias of Identity.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use Identity instead.
     """
@@ -1373,7 +1373,7 @@ class log(Log):
     """
     The log transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Log instead.
 
@@ -1391,7 +1391,7 @@ class logc(LogC):
     """
     The log-complement transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use LogC instead.
 
@@ -1409,7 +1409,7 @@ class probit(Probit):
     """
     The probit (standard normal CDF) transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Probit instead.
 
@@ -1427,7 +1427,7 @@ class cauchy(Cauchy):
     """
     The Cauchy (standard Cauchy CDF) transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Cauchy instead.
 
@@ -1445,7 +1445,7 @@ class cloglog(CLogLog):
     """
     The CLogLog transform link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use CLogLog instead.
 
@@ -1466,7 +1466,7 @@ class loglog(LogLog):
     """
     The LogLog transform link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use LogLog instead.
 
@@ -1487,7 +1487,7 @@ class nbinom(NegativeBinomial):
     """
     The negative binomial link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use NegativeBinomial instead.
 

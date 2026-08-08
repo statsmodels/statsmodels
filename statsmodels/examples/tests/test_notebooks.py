@@ -1,5 +1,5 @@
 import glob
-import os
+from pathlib import Path
 import sys
 
 import pytest
@@ -43,16 +43,15 @@ KNOWN_FAILURES = []
 JOBLIB_NOTEBOOKS = ["distributed_estimation"]
 RPY2_NOTEBOOKS = ["mixed_lm_example", "robust_models_1"]
 
-kernel_name = "python%s" % sys.version_info.major
+kernel_name = f"python{sys.version_info.major}"
 
-head, _ = os.path.split(__file__)
-NOTEBOOK_DIR = os.path.join(head, "..", "..", "..", "examples", "notebooks")
-NOTEBOOK_DIR = os.path.abspath(NOTEBOOK_DIR)
+head = Path(__file__).resolve().parent
+NOTEBOOK_DIR = head / ".." / ".." / ".." / "examples" / "notebooks"
 
-nbs = sorted(glob.glob(os.path.join(NOTEBOOK_DIR, "*.ipynb")))
+nbs = sorted(NOTEBOOK_DIR.glob("*.ipynb"))
 
 if nbs:
-    ids = [os.path.split(p)[-1] for p in nbs]
+    ids = [p.name for p in nbs]
 
     @pytest.fixture(params=nbs, ids=ids)
     def notebook(request):
@@ -62,9 +61,8 @@ if nbs:
     @pytest.mark.example
     @pytest.mark.thread_unsafe(reason="notebooks use matplotlib")
     def test_notebook(notebook):
-        fullfile = os.path.abspath(notebook)
-        _, filename = os.path.split(fullfile)
-        filename, _ = os.path.splitext(filename)
+        fullfile = notebook.resolve()
+        filename = notebook.stem
 
         if filename in KNOWN_FAILURES:
             pytest.skip(f"{filename} is known to fail")

@@ -40,10 +40,9 @@ the diffuse observations.
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.platform import PLATFORM_WIN
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -60,7 +59,7 @@ from statsmodels.tsa.statespace.varmax import VARMAX
 
 from . import kfas_helpers
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
@@ -714,9 +713,7 @@ class TestVAR1_Approx(CheckApproximateDiffuseMixin, CheckVAR1):
 
 
 class TestVAR1_KFAS(CheckKFASMixin, CheckVAR1):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_R.csv")
 
 
 # - VAR(1) + Measurement error -----------------------------------------------
@@ -752,9 +749,7 @@ class TestVAR1MeasurementError_Approx(
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_measurement_error_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_measurement_error_R.csv")
 
 
 # - VAR(1) + Missing data ----------------------------------------------------
@@ -797,9 +792,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
 
 
 class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_missing_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_missing_R.csv")
 
     def test_forecasts_error_cov(self):
         # TODO: fails for the general version of forecasts_error_cov because
@@ -864,9 +857,7 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin, CheckVA
 
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
     # TODO: fails
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_mixed_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_mixed_R.csv")
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
     # states, but it appears that they have a bug (e.g. since the approximate
@@ -912,9 +903,7 @@ class TestDFM_Approx(CheckApproximateDiffuseMixin, CheckDFM):
 
 
 class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_dfm_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_dfm_R.csv")
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
     # states, but it appears that they have a bug (e.g. since the approximate

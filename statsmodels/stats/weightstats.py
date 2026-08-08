@@ -260,7 +260,7 @@ class DescrStatsW:
         weights.  For a probability point p, if pW falls strictly
         between s_j and s_{j+1} then the estimated quantile is
         y_{j+1}.  If pW = s_j then the estimated quantile is (y_j +
-        y_{j+1})/2.  If pW < p_1 then the estimated quantile is y_1.
+        y_{j+1})/2.  If pW < s_1 then the estimated quantile is y_1.
 
         References
         ----------
@@ -284,7 +284,7 @@ class DescrStatsW:
                 rslt.append(self._quantile(vec, probs))
             rslt = np.column_stack(rslt)
             if return_pandas:
-                columns = ["col%d" % (j + 1) for j in range(rslt.shape[1])]
+                columns = [f"col{j + 1:d}" for j in range(rslt.shape[1])]
                 rslt = pd.DataFrame(data=rslt, columns=columns, index=probs)
 
         if return_pandas:
@@ -675,9 +675,10 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
     Parameters
     ----------
     mean : float or ndarray
-        Value, for example mean, of the first sample.
+        Point estimate, for example the mean or the difference of means
+        of two samples.
     std_mean : float or ndarray
-        Standard error of the difference value1 - value2
+        Standard error of `mean`.
     dof : int or float
         Degrees of freedom
     alpha : float
@@ -686,9 +687,9 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
     alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
-           * 'larger' :   H1: ``value1 - value2 - diff > 0``
-           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+           * 'two-sided' : H1: ``mean`` not equal to the null value.
+           * 'larger' :   H1: ``mean`` larger than the null value.
+           * 'smaller' :  H1: ``mean`` smaller than the null value.
 
     Returns
     -------
@@ -784,9 +785,9 @@ def _zstat_generic2(value, std, alternative):
     alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
-           * 'larger' :   H1: ``value1 - value2 - diff > 0``
-           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+           * 'two-sided' : H1: ``value`` not equal to 0.
+           * 'larger' :   H1: ``value > 0``
+           * 'smaller' :  H1: ``value < 0``
 
     Returns
     -------
@@ -816,18 +817,19 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
     Parameters
     ----------
     mean : float or ndarray
-        Value, for example mean, of the first sample.
+        Point estimate, for example the mean or the difference of means
+        of two samples.
     std_mean : float or ndarray
-        Standard error of the difference value1 - value2
+        Standard error of `mean`.
     alpha : float
         Significance level for the confidence interval, coverage is
         ``1-alpha``
     alternative : str
         The alternative hypothesis, H1, has to be one of the following
 
-           * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
-           * 'larger' :   H1: ``value1 - value2 - diff > 0``
-           * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+           * 'two-sided' : H1: ``mean`` not equal to the null value.
+           * 'larger' :   H1: ``mean`` larger than the null value.
+           * 'smaller' :  H1: ``mean`` smaller than the null value.
 
     Returns
     -------
@@ -968,7 +970,7 @@ class CompareMeans:
 
         title = "Test for equality of means"
         yname = "y"  # not used in params_frame
-        xname = ["subset #%d" % (ii + 1) for ii in range(tstat.shape[0])]
+        xname = [f"subset #{ii + 1:d}" for ii in range(tstat.shape[0])]
 
         from statsmodels.iolib.summary import summary_params
 
@@ -1356,7 +1358,7 @@ def ttost_ind(
     where m1, m2 are the means, expected values of the two samples.
 
     If the pvalue is smaller than a threshold, say 0.05, then we reject the
-    hypothesis that the difference between the two samples is larger than the
+    hypothesis that the difference between the two samples is larger than
     the thresholds given by low and upp.
 
     Parameters
@@ -1398,7 +1400,7 @@ def ttost_ind(
     compared with the corresponding column in d2. This is the same as
     comparing each of the corresponding columns separately. Currently no
     multi-comparison correction is used. The raw p-values reported here can
-    be correction with the functions in ``multitest``.
+    be corrected with the functions in ``multitest``.
 
     """
 
@@ -1446,13 +1448,13 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         second of the two independent samples
     low, upp : float
         equivalence interval low < mean of difference < upp
+    transform : None or function
+        If None (default), then the data is not transformed. Given a function
+        sample data and thresholds are transformed. If transform is log, then
+        the equivalence interval is in ratio: low < x1 / x2 < upp
     weights : None or ndarray
         case weights for the two samples. For details on weights see
         ``DescrStatsW``
-    transform : None or function
-        If None (default), then the data is not transformed. Given a function
-        sample data and thresholds are transformed. If transform is log the
-        the equivalence interval is in ratio: low < x1 / x2 < upp
 
     Returns
     -------

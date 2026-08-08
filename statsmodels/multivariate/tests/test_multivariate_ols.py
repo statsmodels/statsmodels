@@ -1,4 +1,4 @@
-import os.path
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -15,8 +15,8 @@ from statsmodels.multivariate.multivariate_ols import (
 )
 from statsmodels.regression.linear_model import OLS
 
-dir_path = os.path.dirname(os.path.abspath(__file__))
-csv_path = os.path.join(dir_path, "results", "mvreg.csv")
+dir_path = Path(__file__).resolve().parent
+csv_path = Path(dir_path).joinpath("results", "mvreg.csv")
 data_mvreg = pd.read_csv(csv_path)
 
 data = pd.DataFrame(

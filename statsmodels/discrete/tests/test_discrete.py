@@ -7,11 +7,10 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
-
-# pylint: disable-msg=E1101
 from statsmodels.compat.pandas import assert_index_equal
 
-import os
+# pylint: disable-msg=E1101
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -41,6 +40,7 @@ from statsmodels.discrete.discrete_model import (
     Probit,
 )
 import statsmodels.formula.api as smf
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     PerfectSeparationError,
@@ -1227,8 +1227,8 @@ class TestPoissonNewton(CheckModelResults):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
     def test_predict_prob(self):
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(cur_dir, "results", "predict_prob_poisson.csv")
+        cur_dir = Path(__file__).resolve().parent
+        path = Path(cur_dir).joinpath("results", "predict_prob_poisson.csv")
         probs_res = np.loadtxt(path, delimiter=",")
 
         # just check the first 100 obs. vs R to save memory
@@ -2580,12 +2580,12 @@ def test_mnlogit_basinhopping():
 
 
 def test_perfect_prediction():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    iris_dir = os.path.join(cur_dir, "..", "..", "genmod", "tests", "results")
-    iris_dir = os.path.abspath(iris_dir)
-    iris = np.genfromtxt(
-        os.path.join(iris_dir, "iris.csv"), delimiter=",", skip_header=1
-    )
+    cur_dir = Path(__file__).resolve().parent
+    iris_dir = Path(cur_dir).joinpath("..", "..", "genmod", "tests", "results")
+    iris_dir = Path(iris_dir).resolve()
+    iris_df = pd.read_csv(Path(iris_dir).joinpath("iris.csv"))
+    iris = iris_df.values
+
     y = iris[:, -1]
     X = iris[:, :-1]
     X = X[y != 2]
@@ -2638,6 +2638,45 @@ def test_poisson_newton():
     assert_(not res.mle_retvals["converged"])
 
 
+def test_l1_regularized_respects_warning_filters():
+    # GH#9179: an internal preliminary fit (used only to compute start_params)
+    # forced ``simplefilter("always")``, which overrode the caller's warning
+    # filters. As a result a ConvergenceWarning raised while fitting with
+    # ``fit_regularized(method="l1", ...)`` could not be silenced.
+    rng = np.random.RandomState(0)
+    endog = rng.negative_binomial(1, 0.5, size=(100,))
+    exog = rng.normal(size=(100, 5))
+
+    # When the caller silences warnings, none must escape.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("ignore")
+        NegativeBinomial(endog, exog).fit_regularized(
+            method="l1",
+            alpha=1e-12,
+            trim_mode="off",
+            method_kwargs={"warn_convergence": False},
+            qc_verbose=False,
+            disp=False,
+        )
+    convergence = [
+        w for w in caught if issubclass(w.category, ConvergenceWarning)
+    ]
+    assert convergence == []
+
+    # Sanity check that the warning is genuinely produced (so the assertion
+    # above is not passing trivially): with default filters the main fit still
+    # warns. The fix only stops the internal preliminary fit from overriding
+    # the caller's filters.
+    with pytest.warns(ConvergenceWarning):
+        NegativeBinomial(endog, exog).fit_regularized(
+            method="l1",
+            alpha=1e-12,
+            trim_mode="off",
+            qc_verbose=False,
+            disp=False,
+        )
+
+
 def test_issue_339():
     # make sure MNLogit summary works for J != K.
     data = load_anes96()
@@ -2648,9 +2687,9 @@ def test_issue_339():
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
     # strip the header from the test
     smry = "\n".join(res1.summary().as_text().split("\n")[9:])
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    test_case_file = os.path.join(cur_dir, "results", "mn_logit_summary.txt")
-    with open(test_case_file, encoding="utf-8") as fd:
+    cur_dir = Path(__file__).resolve().parent
+    test_case_file = Path(cur_dir).joinpath("results", "mn_logit_summary.txt")
+    with Path(test_case_file).open(encoding="utf-8") as fd:
         test_case = fd.read()
     np.testing.assert_equal(smry, test_case[:-1])
     # smoke test for summary2
@@ -2743,7 +2782,7 @@ def test_non_binary():
 
 def test_mnlogit_factor():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=True)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -2768,7 +2807,7 @@ def test_mnlogit_factor():
 
 def test_mnlogit_factor_categorical():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=True)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -3562,8 +3601,8 @@ def test_null_options():
 def test_optim_kwds_prelim():
     # test that fit options for preliminary fit is correctly transmitted
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    filepath = os.path.join(cur_dir, "results", "sm3533.csv")
+    cur_dir = Path(__file__).resolve().parent
+    filepath = Path(cur_dir).joinpath("results", "sm3533.csv")
     df = pd.read_csv(filepath)
 
     features = ["pp"]
@@ -3712,3 +3751,74 @@ def test_mlogit_t_test():
     wt = res1.wald_test("y1_logpopul, y2_logpopul", scalar=True)
     # regression test
     assert_allclose(wt.statistic, 5.68660562, rtol=1e-8)
+
+
+def _fit_logit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Logit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_probit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Probit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_poisson_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return Poisson(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_mnlogit_for_summary():
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomial(data.endog, exog, "nb2").fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_p_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomialP(data.endog, exog, p=2).fit(method="newton", disp=0)
+
+
+def _fit_generalized_poisson_for_summary():
+    data = load_randhie()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return GeneralizedPoisson(data.endog, data.exog, p=2).fit(method="newton", disp=0)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_logit_for_summary,
+        _fit_probit_for_summary,
+        _fit_poisson_for_summary,
+        _fit_mnlogit_for_summary,
+        _fit_negative_binomial_for_summary,
+        _fit_negative_binomial_p_for_summary,
+        _fit_generalized_poisson_for_summary,
+    ],
+    ids=[
+        "Logit",
+        "Probit",
+        "Poisson",
+        "MNLogit",
+        "NegativeBinomial",
+        "NegativeBinomialP",
+        "GeneralizedPoisson",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

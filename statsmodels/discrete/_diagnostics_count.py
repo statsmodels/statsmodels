@@ -42,7 +42,7 @@ def _combine_bins(edge_index, x):
 
     Examples
     --------
-    >>> dia.combine_bins([0,1,5], np.arange(4))
+    >>> dia._combine_bins([0,1,5], np.arange(4))
     (array([0, 6]), array([1, 4]))
 
     This aggregates to two bins with the sum of 1 and 4 elements.
@@ -54,7 +54,7 @@ def _combine_bins(edge_index, x):
     If the rightmost index is smaller than len(x)+1, then the remaining
     columns will not be included.
 
-    >>> dia.combine_bins([0,1,3], np.arange(4))
+    >>> dia._combine_bins([0,1,3], np.arange(4))
     (array([0, 3]), array([1, 2]))
     """
     x = np.asarray(x)
@@ -152,20 +152,16 @@ def test_chisquare_prob(results, probs, bin_edges=None):
         in rows and event counts in columns
     bin_edges : None or array
         intervals to combine several counts into cells
-        see combine_bins
+        see _combine_bins
 
     Returns
     -------
-    (api not stable, replace by test-results class)
-    statistic : float
-        Chi-square statistic for test.
-    p-value : float
-        p-value of test
-    df : int
-        degrees of freedom for chisquare distribution
-    extras : ???
-        currently returns a tuple with some intermediate results
-        (diff, res_aux)
+    HolderTuple
+        Instance with test statistic, p-value, and degrees of freedom as
+        main attributes (``statistic``, ``pvalue``, ``df``), and with
+        intermediate results ``diff1`` and ``res_aux`` as additional
+        attributes.  The api is not stable and might be replaced by a
+        test-results class.
 
     Notes
     -----
@@ -249,7 +245,7 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
+def test_poisson_dispersion(results, method="all"):
     """
     Score/LM type tests for Poisson variance assumptions
 
@@ -269,9 +265,6 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
         with family Poisson.
     method : str
         Not used yet. Currently results for all methods are returned.
-    _old : bool
-        Temporary keyword for backwards compatibility, will be removed
-        in future version of statsmodels.
 
     Returns
     -------
@@ -282,7 +275,7 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
 
     """
 
-    if method not in ["all"]:
+    if method != "all":
         raise ValueError(f'unknown method "{method}"')
 
     if hasattr(results, "_results"):
@@ -342,18 +335,14 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     description.append(["CT nb1 HC3", "mu (1 + a)"])
 
     results_all = np.array(results_all)
-    if _old:
-        # for backwards compatibility in 0.14, remove in later versions
-        return results_all, description
-    else:
-        res = DispersionResults(
-            statistic=results_all[:, 0],
-            pvalue=results_all[:, 1],
-            method=[i[0] for i in description],
-            alternative=[i[1] for i in description],
-            name="Poisson Dispersion Test",
-        )
-        return res
+    res = DispersionResults(
+        statistic=results_all[:, 0],
+        pvalue=results_all[:, 1],
+        method=[i[0] for i in description],
+        alternative=[i[1] for i in description],
+        name="Poisson Dispersion Test",
+    )
+    return res
 
 
 def _test_poisson_dispersion_generic(
@@ -375,6 +364,41 @@ def _test_poisson_dispersion_generic(
     of the `exog_new_test`.
 
     Warning: insufficiently tested, especially for options
+
+    Parameters
+    ----------
+    results : results instance
+        Results instance for a fitted Poisson model.
+    exog_new_test : ndarray
+        Additional exog variables that are added to the variance function
+        and whose coefficients are tested by a Wald test.
+    exog_new_control : ndarray, optional
+        Additional control variables that are added to the variance
+        function together with `exog_new_test`, but whose coefficients
+        are not tested.
+    include_score : bool
+        If True, then the score of the mean model is added as an
+        additional control variable.
+    use_endog : bool
+        If True, then the variance function is specified in terms of the
+        squared residuals based on `endog`. If False, then it is based on
+        the fitted mean instead of `endog`.
+    cov_type : str
+        Covariance type for the auxiliary OLS regression used in the
+        test. Default is "HC3".
+    cov_kwds : dict, optional
+        Keywords for the specified covariance type of the auxiliary OLS
+        regression.
+    use_t : bool
+        If True, then the t-distribution is used for the auxiliary OLS
+        regression.
+
+    Returns
+    -------
+    stat_ols : float
+        Test statistic.
+    pval_ols : float
+        p-value of the test.
     """
 
     if hasattr(results, "_results"):
@@ -533,6 +557,19 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
     The test reports two sided and one sided alternatives based on
     the normal distribution of the test statistic.
+
+    Parameters
+    ----------
+    results_poisson : Poisson results instance
+        The results instance for a fitted Poisson model. The test
+        assumes that the model includes a constant.
+
+    Returns
+    -------
+    HolderTuple
+        Test statistic and p-values for the two-sided and one-sided
+        alternatives, together with the corresponding chi-square
+        statistic and p-value.
 
     References
     ----------

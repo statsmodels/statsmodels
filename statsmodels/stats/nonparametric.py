@@ -197,7 +197,7 @@ class RankCompareResult(HolderTuple):
         Parameters
         ----------
         low, upp : float
-            equivalence interval low < mean < upp
+            equivalence interval low < p < upp
 
         Returns
         -------
@@ -343,9 +343,9 @@ class RankCompareResult(HolderTuple):
         sd = np.atleast_1d(np.sqrt(self.var_prob))
         statistic = np.atleast_1d(statistic)
         if xname is None:
-            xname = ["c%d" % ii for ii in range(len(effect))]
+            xname = [f"c{ii:d}" for ii in range(len(effect))]
 
-        xname2 = ["prob(x1>x2) %s" % ii for ii in xname]
+        xname2 = [f"prob(x1>x2) {ii}" for ii in xname]
 
         title = "Probability sample 1 is stochastically larger"
         from statsmodels.iolib.summary import summary_params
@@ -840,7 +840,7 @@ def samplesize_rank_compare_onetail(
     Examples
     --------
     The data for the placebo group of a clinical trial published in
-    Thall and Vail [2] is shown below. A relevant effect for the treatment
+    Thall and Vail [2]_ is shown below. A relevant effect for the treatment
     under investigation is considered to be a 50% reduction in the number
     of seizures. To compute the required sample size with a power of 0.8
     and holding the type I error rate at 0.05, we generate synthetic data

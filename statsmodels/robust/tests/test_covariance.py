@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -12,10 +12,10 @@ import statsmodels.robust.scale as robscale
 
 from .results import results_cov as res_cov
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "hbk.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 
 dta_hbk = pd.read_csv(file_path)
 
@@ -323,6 +323,31 @@ def test_covdetmm():
 
     assert_allclose(res.mean, mean_dmm_r, rtol=1e-3)
     assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
+
+
+def test_cov_tyler_regularized_n_iter():
+    # GH: n_iter was accumulated as `n_iter += i` inside `for i in
+    # range(maxiter)`, giving a triangular-number count instead of the
+    # actual number of completed iterations.
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal((50, 3))
+    res = robcov.cov_tyler_regularized(x, shrinkage_factor=0.1, maxiter=4, eps=0)
+    assert res.n_iter == 4
+
+
+def test_cov_tyler_regularized_corr_uses_scale():
+    # GH: `corr * np.outer(scale_mad, scale_mad)` discarded its result
+    # instead of `corr *= ...`, so the plugin-shrinkage `corr` matrix never
+    # reflected the per-column MAD scale, only the (scale-free) correlation
+    # structure from the std-standardized data.
+    rs = np.random.RandomState(0)
+    nobs = 1000
+    x = rs.standard_normal((nobs, 2))
+    x[:, 0] *= 100  # column 0 has a much larger scale than column 1
+
+    res = robcov.cov_tyler_regularized(x, shrinkage_factor=None)
+    ratio = res.corr[0, 0] / res.corr[1, 1]
+    assert ratio > 100
 
 
 def test_robcov_SMOKE():

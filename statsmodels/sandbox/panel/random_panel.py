@@ -14,6 +14,8 @@ Notes
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from statsmodels.tools.rng_qrng import check_random_state
@@ -46,9 +48,14 @@ class PanelSample:
         arguments for the corr_structure
     scale : float
         scale of noise, standard deviation of normal distribution
-    seed : None or int
-        If seed is given, then this is used to create the random numbers for
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is given, then this is used to create the random numbers for
         the sample.
+    seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        .. deprecated:: 0.15
+
+           seed has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
 
     Notes
     -----
@@ -62,6 +69,7 @@ class PanelSample:
 
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         nobs,
@@ -72,7 +80,7 @@ class PanelSample:
         corr_structure=np.eye,
         corr_args=(),
         scale=1,
-        seed=None,
+        rng=None,
     ):
 
         nobs_i = nobs // n_groups
@@ -107,11 +115,12 @@ class PanelSample:
         self.y_true = None
         self.beta = None
 
-        if seed is None:
-            seed = np.random.default_rng().integers(0, 999999)
+        if rng is None:
+            rng = np.random.default_rng().integers(0, 999999)
 
-        self.seed = seed
-        self.random_state = check_random_state(seed, deprecated=True, warn=False)
+        self.seed = rng
+        self.rng = rng
+        self.random_state = check_random_state(rng, deprecated=True, warn=False)
 
         # this makes overwriting difficult, move to method?
         self.std = scale * np.ones(nobs_i)

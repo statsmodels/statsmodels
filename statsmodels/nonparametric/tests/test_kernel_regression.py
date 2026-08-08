@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -242,7 +244,7 @@ class KernelRegressionTestBase:
         """Write some data to a csv file.  Only use for debugging!"""
         import csv
 
-        data_file = csv.writer(open(file_name, "w", encoding="utf-8"))
+        data_file = csv.writer(Path(file_name).open("w", encoding="utf-8"))
         data = np.column_stack(data)
         nobs = max(np.shape(data))
         K = min(np.shape(data))
@@ -409,6 +411,7 @@ class TestKernelReg(KernelRegressionTestBase):
         npt.assert_allclose(sm_mfx[:, 0], mfx1, rtol=2e-1)
         npt.assert_allclose(sm_mfx[0:10, 1], mfx2[0:10], rtol=2e-1)
 
+    @pytest.mark.joblib
     @pytest.mark.slow
     def test_continuous_cvls_efficient(self):
         nobs = 500
@@ -427,7 +430,7 @@ class TestKernelReg(KernelRegressionTestBase):
             var_type="c",
             bw="cv_ls",
             defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
-            seed=20260111,
+            rng=20260111,
         )
         with pytest.warns(FutureWarning, match="After 0.17"):
             model = nparam.KernelReg(
@@ -493,7 +496,7 @@ class TestKernelReg(KernelRegressionTestBase):
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
         model = nparam.KernelReg(
-            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed=20260111
+            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng=20260111
         )
         nboot = 45  # Number of bootstrap samples
         sig_var12 = model.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
@@ -520,7 +523,7 @@ class TestKernelReg(KernelRegressionTestBase):
 
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
-        seed = 1234561
+        rng = 1234561
         np.random.seed(1234561)
         with pytest.warns(FutureWarning, match="After 0.17"):
             model_0 = nparam.KernelReg(
@@ -532,7 +535,7 @@ class TestKernelReg(KernelRegressionTestBase):
             reg_type="ll",
             var_type="cc",
             bw=bw,
-            seed=np.random.RandomState(seed),
+            rng=np.random.RandomState(rng),
         )
 
         nboot = 45  # Number of bootstrap samples
@@ -557,17 +560,17 @@ class TestKernelReg(KernelRegressionTestBase):
 
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
-        seed = 1234561
+        rng = 1234561
         model_1 = nparam.KernelReg(
             endog=[Y],
             exog=[C1, C3],
             reg_type="ll",
             var_type="cc",
             bw=bw,
-            seed=np.random.RandomState(seed),
+            rng=np.random.RandomState(rng),
         )
         model_2 = nparam.KernelReg(
-            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed=seed
+            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng=rng
         )
         model_3 = nparam.KernelReg(
             endog=[Y],
@@ -575,7 +578,7 @@ class TestKernelReg(KernelRegressionTestBase):
             reg_type="ll",
             var_type="cc",
             bw=bw,
-            seed=np.random.default_rng(seed),
+            rng=np.random.default_rng(rng),
         )
 
         nboot = 45  # Number of bootstrap samples
@@ -587,9 +590,9 @@ class TestKernelReg(KernelRegressionTestBase):
         sig_var12_3 = model_3.sig_test([0, 1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         assert sig_var12_2 == sig_var12_3
 
-        with pytest.raises(TypeError, match="Seed must be a"):
+        with pytest.raises(TypeError, match="must either be an integer"):
             nparam.KernelReg(
-                endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed="a"
+                endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng="a"
             )
 
     @pytest.mark.slow
@@ -606,9 +609,9 @@ class TestKernelReg(KernelRegressionTestBase):
 
         # This is the cv_ls bandwidth estimated earlier
         bw = [11108137.1087194, 1333821.85150218]
-        seed = 12345
+        rng = 12345
         model_0 = nparam.KernelReg(
-            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, seed=seed
+            endog=[Y], exog=[C1, C3], reg_type="ll", var_type="cc", bw=bw, rng=rng
         )
         model_1 = nparam.KernelReg(
             endog=[Y],
@@ -616,7 +619,7 @@ class TestKernelReg(KernelRegressionTestBase):
             reg_type="ll",
             var_type="cc",
             bw=bw,
-            seed=np.random.default_rng(seed),
+            rng=np.random.default_rng(rng),
         )
 
         nboot = 45  # Number of bootstrap samples
@@ -639,14 +642,14 @@ class TestKernelReg(KernelRegressionTestBase):
         bw = [3.63473198e00, 1.21404803e06]
         # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
-        seed = 8329321
+        rng = 8329321
         model = nparam.KernelReg(
             endog=[Y],
             exog=[ovals, C3],
             reg_type="ll",
             var_type="oc",
             bw=bw,
-            seed=np.random.RandomState(seed),
+            rng=np.random.RandomState(rng),
         )
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples

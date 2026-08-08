@@ -2,7 +2,7 @@
 Test functions for models.GLM
 """
 import copy
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -23,7 +23,8 @@ import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import (
     approx_fprime,
     approx_fprime_cs,
@@ -44,34 +45,13 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_glm.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
-
-def teardown_module():
-    if pdf_output:
-        pdf.close()
-
 
 @pytest.fixture(scope="module")
 def iris():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    return np.genfromtxt(
-        os.path.join(cur_dir, "results", "iris.csv"),
-        delimiter=",",
-        skip_header=1,
-    )
+    cur_dir = Path(__file__).resolve().parent
+    return pd.read_csv(
+        Path(cur_dir).joinpath("results", "iris.csv")
+    ).values
 
 
 class CheckModelResultsMixin:
@@ -216,9 +196,9 @@ class CheckModelResultsMixin:
     decimal_bic = DECIMAL_4
 
     def test_bic(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            assert_almost_equal(self.res1.bic, self.res2.bic_Stata, self.decimal_bic)
+        assert_almost_equal(
+            self.res1.bic_deviance, self.res2.bic_Stata, self.decimal_bic
+        )
 
     def test_degrees(self):
         assert_equal(self.res1.model.df_resid, self.res2.df_resid)
@@ -1111,9 +1091,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         # Check that offset shifts the linear predictor
         mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
         offset = rs.uniform(1, 2, 10)
-        with pytest.warns(FutureWarning):
-            # deprecation warning for linear keyword
-            pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
+        pred1 = mod3.predict(exog=exog1, offset=offset, which="linear")
         pred2 = mod3.predict(exog=exog1, offset=2 * offset, which="linear")
         assert_almost_equal(pred2, pred1 + offset)
 
@@ -1276,13 +1254,10 @@ def test_plots(close_figures):
     for j in 0, 1:
         fig = result.plot_added_variable(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_partial_residuals(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_ceres_residuals(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
 
     # formula interface
     data = pd.DataFrame({"y": endog, "x1": exog[:, 0], "x2": exog[:, 1]})
@@ -1292,13 +1267,10 @@ def test_plots(close_figures):
         xname = ["x1", "x2"][j]
         fig = result.plot_added_variable(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_partial_residuals(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_ceres_residuals(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
 
 
 def gen_endog(lin_pred, family_class, link, binom_version=0):
@@ -1779,7 +1751,6 @@ def test_glm_irls_method():
     assert_equal(res3.mle_settings["wls_method"], "qr")
 
     assert_(hasattr(res2.results_wls.model, "pinv_wexog"))
-    assert_(hasattr(res3.results_wls.model, "exog_Q"))
 
     # fit_gradient currently does not attach mle_settings
     assert_equal(res_g1.method, "bfgs")
@@ -2775,15 +2746,13 @@ class TestRegularized:
 
     def test_regularized(self):
 
-        import os
-
         from .results import glmnet_r_results
 
         for dtype in "binomial", "poisson":
 
-            cur_dir = os.path.dirname(os.path.abspath(__file__))
+            cur_dir = Path(__file__).resolve().parent
             data = np.loadtxt(
-                os.path.join(cur_dir, "results", "enet_%s.csv" % dtype),
+                Path(cur_dir).joinpath("results", f"enet_{dtype}.csv"),
                 delimiter=",",
             )
 
@@ -2797,7 +2766,7 @@ class TestRegularized:
 
             for j in range(9):
 
-                vn = "rslt_%s_%d" % (dtype, j)
+                vn = f"rslt_{dtype}_{j:d}"
                 r_result = getattr(glmnet_r_results, vn)
                 L1_wt = r_result[0]
                 alpha = r_result[1]
@@ -3008,29 +2977,15 @@ def test_int_exog(dtype):
     assert isinstance(res.params, np.ndarray)
 
 
-@pytest.mark.thread_unsafe(reason="Sets global use_bic parameter")
 def test_glm_bic(iris):
-    # TODO: Before 0.15 release remove future warning and simplify test
     X = np.c_[np.ones(100), iris[50:, :4]]
     y = np.array(iris)[50:, 4].astype(np.int32)
     y -= 1
-    SET_USE_BIC_LLF(True)
     model = GLM(y, X, family=sm.families.Binomial()).fit()
     # 34.9244 is what glm() of R yields
     assert_almost_equal(model.bic, 34.9244, decimal=3)
     assert_almost_equal(model.bic_llf, 34.9244, decimal=3)
-    SET_USE_BIC_LLF(False)
-    assert_almost_equal(model.bic, model.bic_deviance, decimal=3)
-    SET_USE_BIC_LLF(None)
-
-
-def test_glm_bic_warning(iris):
-    X = np.c_[np.ones(100), iris[50:, :4]]
-    y = np.array(iris)[50:, 4].astype(np.int32)
-    y -= 1
-    model = GLM(y, X, family=sm.families.Binomial()).fit()
-    with pytest.warns(FutureWarning, match="The bic"):
-        assert isinstance(model.bic, float)
+    assert_almost_equal(model.bic, model.bic_llf, decimal=3)
 
 
 def test_output_exposure_null():
@@ -3040,7 +2995,7 @@ def test_output_exposure_null():
     rs = np.random.RandomState(0)
     # Variable exposures for each observation
     exposure = rs.randint(100, 200, size=1000)
-    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure)]
+    y = [np.sum(rs.poisson(x, size=e)) for x, e in zip(x0, exposure, strict=True)]
     x = add_constant(x0)
 
     model = GLM(endog=y, exog=x, exposure=exposure, family=sm.families.Poisson()).fit()
@@ -3200,3 +3155,16 @@ def test_glm_summary2_method():
     res_g1 = mod.fit(start_params=res1.params, method="bfgs")
     summ = res_g1.summary2()
     assert re.compile(r"Method:\s+bfgs").findall(str(summ))
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    data = longley.load()
+    data.endog = np.require(data.endog, requirements="W")
+    data.exog = np.require(data.exog, requirements="W")
+    data.exog = add_constant(data.exog, prepend=False)
+    res = GLM(data.endog, data.exog, family=sm.families.Gaussian()).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

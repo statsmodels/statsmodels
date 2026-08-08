@@ -10,6 +10,7 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.iolib.summary import Summary
 from statsmodels.robust import norms
 from statsmodels.robust.robust_linear_model import RLM
 from statsmodels.robust.scale import HuberScale, mad
@@ -410,6 +411,36 @@ def test_fit_history_scale():
     hist_scale = res.fit_history["scale"]
     hist_params = res.fit_history["params"][1:]
     assert len(hist_scale) == len(hist_params)
-    for recorded, params in zip(hist_scale, hist_params):
+    for recorded, params in zip(hist_scale, hist_params, strict=True):
         assert_allclose(recorded, mad(endog - exog @ params, center=0))
     assert_allclose(hist_scale[-1], res.scale)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    data = load_stackloss()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    res = RLM(data.endog, data.exog, M=norms.HuberT()).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_summary_title():
+    # GH: summary()'s `if title is not None:` always overwrote any
+    # explicitly-provided title with the default, since the sentinel
+    # default is 0 (not None), so only an explicit title=None ever
+    # survived -- the exact opposite of the documented behavior.
+    data = load_stackloss()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    res = RLM(data.endog, data.exog, M=norms.HuberT()).fit()
+
+    default_title = "Robust Linear Model Regression Results"
+    assert default_title in str(res.summary())
+    assert default_title in str(res.summary(title=None))
+
+    custom_title = "My Custom Title"
+    smry = res.summary(title=custom_title)
+    assert custom_title in str(smry)
+    assert default_title not in str(smry)

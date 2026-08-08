@@ -126,6 +126,10 @@ class SARIMAX(MLEModel):
         If 'raise', an error is raised. Default is 'none'.
     validate_specification : bool, optional
         Whether or not to validate the model specification. Default is True.
+    validate_exog : bool, optional
+        Whether or not to check that `exog` does not duplicate a constant trend
+        with a constant column. Has no effect unless `validate_specification`
+        is True. Default is True.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -288,14 +292,15 @@ class SARIMAX(MLEModel):
     does).
 
     If `filter_concentrated = True` is used, then the scale of the model is
-    concentrated out of the likelihood. A benefit of this is that there the
+    concentrated out of the likelihood. A benefit of this is that the
     dimension of the parameter vector is reduced so that numerical maximization
     of the log-likelihood function may be faster and more stable. If this
-    option in a model with measurement error, it is important to note that the
-    estimated measurement error parameter will be relative to the scale, and
-    is named "snr.measurement_error" instead of "var.measurement_error". To
-    compute the variance of the measurement error in this case one would
-    multiply `snr.measurement_error` parameter by the scale.
+    option is used in a model with measurement error, it is important to note
+    that the estimated measurement error parameter will be relative to the
+    scale, and is named "snr.measurement_error" instead of
+    "var.measurement_error". To compute the variance of the measurement error
+    in this case one would multiply `snr.measurement_error` parameter by the
+    scale.
 
     If `simple_differencing = True` is used, then the `endog` and `exog` data
     are differenced prior to putting the model in state-space form. This has
@@ -341,13 +346,14 @@ class SARIMAX(MLEModel):
                  hamilton_representation=False, concentrate_scale=False,
                  trend_offset=1, use_exact_diffuse=False, dates=None,
                  freq=None, missing="none", validate_specification=True,
-                 **kwargs):
+                 validate_exog=True, **kwargs):
 
         self._spec = SARIMAXSpecification(
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification)
+            missing=missing, validate_specification=validate_specification,
+            validate_exog=validate_exog)
         self._params = SARIMAXParams(self._spec)
 
         # Save given orders
@@ -490,7 +496,7 @@ class SARIMAX(MLEModel):
             kwargs.setdefault("initial_variance", 1e10)
 
         # Handle non-default loglikelihood burn
-        self._loglikelihood_burn = kwargs.get("loglikelihood_burn", None)
+        self._loglikelihood_burn = kwargs.get("loglikelihood_burn")
 
         # Number of parameters
         self.k_params = (
@@ -878,12 +884,12 @@ class SARIMAX(MLEModel):
                 residuals = Y - np.dot(X, params)
             except ValueError:
                 if warning_description is not None:
-                    warning_description = " for %s" % warning_description
+                    warning_description = f" for {warning_description}"
                 else:
                     warning_description = ""
-                warn("Too few observations to estimate starting parameters%s."
+                warn(f"Too few observations to estimate starting parameters{warning_description}."
                      " All parameters except for variances will be set to"
-                     " zeros." % warning_description, EstimationWarning,
+                     " zeros.", EstimationWarning,
                      stacklevel=2)
                 # Typically this will be raised if there are not enough
                 # observations for the `lagmat` calls.
@@ -1110,13 +1116,9 @@ class SARIMAX(MLEModel):
 
     @property
     def param_terms(self):
-        """
-        List of parameters actually included in the model, in sorted order
+        """List of parameters actually included in the model, in sorted order"""
+        # TODO: Make this a dict with slice or indices as the values.
 
-        Notes
-        -----
-        TODO: Make this a dict with slice or indices as the values.
-        """
         model_orders = self.model_orders
         # Get basic list from model orders
         params = [
@@ -1152,10 +1154,10 @@ class SARIMAX(MLEModel):
         if not self.simple_differencing:
             k_ar_states += (self.seasonal_periods * self._k_seasonal_diff +
                             self._k_diff)
-        names = ["state.%d" % i for i in range(k_ar_states)]
+        names = [f"state.{i:d}" for i in range(k_ar_states)]
 
         if self._k_exog > 0 and self.state_regression:
-            names += ["beta.%s" % self.exog_names[i]
+            names += [f"beta.{self.exog_names[i]}"
                       for i in range(self._k_exog)]
 
         return names
@@ -1529,9 +1531,9 @@ class SARIMAX(MLEModel):
             fix_all = param_names.issuperset(names)
             fix_any = len(param_names.intersection(names)) > 0
             if condition and fix_any and not fix_all:
-                raise ValueError("Cannot fix individual %s parameters when"
-                                 " %s. Must either fix all %s parameters or"
-                                 " none." % (title, condition_desc, title))
+                raise ValueError(f"Cannot fix individual {title} parameters when"
+                                 f" {condition_desc}. Must either fix all {title} parameters or"
+                                 " none.")
 
     def update(self, params, transformed=True, includes_fixed=False,
                complex_step=False):
@@ -1707,7 +1709,7 @@ class SARIMAX(MLEModel):
         # Transition matrix
         if self.k_ar > 0 or self.k_seasonal_ar > 0:
             self.ssm[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
-        elif not self.ssm.transition.dtype == params.dtype:
+        elif self.ssm.transition.dtype != params.dtype:
             # This is required if the transition matrix is not really in use
             # (e.g. for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
@@ -1797,7 +1799,7 @@ class SARIMAX(MLEModel):
 
         # Retrieve the extensions to the time-varying system matrices and
         # put them in kwargs
-        for name in self.ssm.shapes.keys():
+        for name in self.ssm.shapes:
             if name == "obs" or name in kwargs:
                 continue
             original = getattr(self.ssm, name)
@@ -1926,18 +1928,25 @@ class SARIMAXResults(MLEResults):
             else:
                 k = self.model_orders[name]
             end += k
-            setattr(self, "_params_%s" % name, self.params[start:end])
+            setattr(self, f"_params_{name}", self.params[start:end])
             start += k
         # GH7527, all terms must be defined
         all_terms = ["ar", "ma", "seasonal_ar", "seasonal_ma", "variance"]
         for name in set(all_terms).difference(self.param_terms):
-            setattr(self, "_params_%s" % name, np.empty(0))
+            setattr(self, f"_params_{name}", np.empty(0))
 
         # Handle removing data
         self._data_attr_model.extend(["orig_endog", "orig_exog"])
 
     def extend(self, endog, exog=None, **kwargs):
         kwargs.setdefault("trend_offset", self.nobs + 1)
+        # GH 8991. The specification was already validated when the original
+        # model was created, and `extend` cannot change it. Only the constant-
+        # `exog` check can misfire when re-run on the new data alone: `exog`
+        # that is constant over the extension window but not over the full
+        # sample would raise as though it collided with a constant trend.
+        # Disable just that check and leave the rest of the validation active.
+        kwargs.setdefault("validate_exog", False)
         return super().extend(endog, exog=exog, **kwargs)
 
     @cache_readonly
@@ -2034,7 +2043,7 @@ class SARIMAXResults(MLEResults):
             # If there is simple differencing, then that is reflected in the
             # dependent variable name
             k_diff = 0 if self.model.simple_differencing else self.model.k_diff
-            order = "(%s, %d, %s)" % (order_ar, k_diff, order_ma)
+            order = f"({order_ar}, {k_diff:d}, {order_ma})"
         # See if we have an SARIMA component
         seasonal_order = ""
         has_seasonal = (
@@ -2060,11 +2069,8 @@ class SARIMAXResults(MLEResults):
             k_seasonal_diff = self.model.k_seasonal_diff
             if self.model.simple_differencing:
                 k_seasonal_diff = 0
-            seasonal_order = ("(%s, %d, %s, %d)" %
-                              (str(order_seasonal_ar), k_seasonal_diff,
-                               str(order_seasonal_ma),
-                               self.model.seasonal_periods))
-            if not order == "":
+            seasonal_order = (f"({order_seasonal_ar!s}, {k_seasonal_diff:d}, {order_seasonal_ma!s}, {self.model.seasonal_periods:d})")
+            if order != "":
                 order += "x"
         model_name = f"{self.model.__class__.__name__}{order}{seasonal_order}"
 

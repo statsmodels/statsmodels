@@ -252,7 +252,7 @@ class ProbPlot:
                     "Initializing the distribution failed.  This "
                     "can occur if distargs contains loc or scale. "
                     "The distribution initialization command "
-                    "is:\n{cmd}".format(cmd=cmd)
+                    f"is:\n{cmd}"
                 ) from exc
             self.loc = loc
             self.scale = scale
@@ -1025,6 +1025,9 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
         created.
     fmt : str, optional
         matplotlib-compatible formatting string for the data markers
+    step : bool, optional
+        If True, plot with `ax.step` instead of `ax.plot`, connecting points
+        with a step function.
     **kwargs
         These are passed to matplotlib.plot
 
@@ -1061,7 +1064,7 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
         ax.plot(*args, **plot_style)
     if line:
         if line not in ["r", "q", "45", "s"]:
-            msg = "%s option for line not understood" % line
+            msg = f"{line} option for line not understood"
             raise ValueError(msg)
 
         qqline(ax, line, x=x, y=y, dist=dist)

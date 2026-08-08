@@ -325,7 +325,7 @@ def concat(series, axis=0, allow_mix=False):
     series : iterable
         An iterable of series to be concatenated
     axis : int, optional
-        The axis along which to concatenate. Default is 1 (columns).
+        The axis along which to concatenate. Default is 0 (rows).
     allow_mix : bool
         Whether or not to allow a mix of pandas and non-pandas objects. Default
         is False. If true, the returned object is an ndarray, and additional
@@ -527,8 +527,7 @@ def constrain_stationary_univariate(unconstrained):
     -------
     constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
-        component, to be transformed to arbitrary parameters used by the
-        optimizer.
+        component, used in likelihood evaluation.
 
     References
     ----------
@@ -563,9 +562,7 @@ def unconstrain_stationary_univariate(constrained):
     Returns
     -------
     unconstrained : ndarray
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component.
+        Unconstrained parameters used by the optimizer.
 
     References
     ----------
@@ -842,6 +839,10 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         Transformed coefficient matrices leading to a stationary VAR
         representation. Will match the type of the passed `unconstrained`
         variable (so if a list was passed, a list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term, transformed if
+        `transform_variance` is True (otherwise this is the same as the
+        input `error_variance`).
 
     Notes
     -----
@@ -1436,10 +1437,13 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
     Returns
     -------
     unconstrained : ndarray
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component. Will match the type of the passed `constrained`
-        variable (so if a list was passed, a list will be returned).
+        Unconstrained parameters used by the optimizer. Will match the type
+        of the passed `constrained` variable (so if a list was passed, a
+        list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term. This is the same
+        as the input `error_variance`, since this function does not
+        transform the error variance term.
 
     Notes
     -----
@@ -1510,29 +1514,27 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
     # Enforce dimension
     if ndim not in [2, 3]:
-        raise ValueError("Invalid value for %s matrix. Requires a"
-                         " 2- or 3-dimensional array, got %d dimensions" %
-                         (name, ndim))
+        raise ValueError(f"Invalid value for {name} matrix. Requires a"
+                         f" 2- or 3-dimensional array, got {ndim:d} dimensions")
     # Enforce the shape of the matrix
     if not shape[0] == nrows:
-        raise ValueError("Invalid dimensions for %s matrix: requires %d"
-                         " rows, got %d" % (name, nrows, shape[0]))
+        raise ValueError(f"Invalid dimensions for {name} matrix: requires {nrows:d}"
+                         f" rows, got {shape[0]:d}")
     if not shape[1] == ncols:
-        raise ValueError("Invalid dimensions for %s matrix: requires %d"
-                         " columns, got %d" % (name, ncols, shape[1]))
+        raise ValueError(f"Invalid dimensions for {name} matrix: requires {ncols:d}"
+                         f" columns, got {shape[1]:d}")
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
-        raise ValueError("Invalid dimensions for %s matrix: time-varying"
+        raise ValueError(f"Invalid dimensions for {name} matrix: time-varying"
                          " matrices cannot be given unless `nobs` is specified"
                          " (implicitly when a dataset is bound or else set"
-                         " explicity)" % name)
+                         " explicity)")
 
     # Enforce time-varying array size
     if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
-        raise ValueError("Invalid dimensions for time-varying %s"
-                         " matrix. Requires shape (*,*,%d), got %s" %
-                         (name, nobs, str(shape)))
+        raise ValueError(f"Invalid dimensions for time-varying {name}"
+                         f" matrix. Requires shape (*,*,{nobs:d}), got {shape!s}")
 
 
 def validate_vector_shape(name, shape, nrows, nobs):
@@ -1560,26 +1562,24 @@ def validate_vector_shape(name, shape, nrows, nobs):
     ndim = len(shape)
     # Enforce dimension
     if ndim not in [1, 2]:
-        raise ValueError("Invalid value for %s vector. Requires a"
-                         " 1- or 2-dimensional array, got %d dimensions" %
-                         (name, ndim))
+        raise ValueError(f"Invalid value for {name} vector. Requires a"
+                         f" 1- or 2-dimensional array, got {ndim:d} dimensions")
     # Enforce the shape of the vector
     if not shape[0] == nrows:
-        raise ValueError("Invalid dimensions for %s vector: requires %d"
-                         " rows, got %d" % (name, nrows, shape[0]))
+        raise ValueError(f"Invalid dimensions for {name} vector: requires {nrows:d}"
+                         f" rows, got {shape[0]:d}")
 
     # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
-        raise ValueError("Invalid dimensions for %s vector: time-varying"
+        raise ValueError(f"Invalid dimensions for {name} vector: time-varying"
                          " vectors cannot be given unless `nobs` is specified"
                          " (implicitly when a dataset is bound or else set"
-                         " explicity)" % name)
+                         " explicity)")
 
     # Enforce time-varying array size
     if ndim == 2 and shape[1] not in [1, nobs]:
-        raise ValueError("Invalid dimensions for time-varying %s"
-                         " vector. Requires shape (*,%d), got %s" %
-                         (name, nobs, str(shape)))
+        raise ValueError(f"Invalid dimensions for time-varying {name}"
+                         f" vector. Requires shape (*,{nobs:d}), got {shape!s}")
 
 
 def reorder_missing_matrix(matrix, missing, reorder_rows=False,
@@ -1742,7 +1742,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     Returns
     -------
     copied_vector : array_like
-        The vector b with the non-missing subvector of b copied onto it.
+        The vector b with the non-missing subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
@@ -1843,7 +1843,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     Returns
     -------
     copied_vector : array_like
-        The vector b with the non-index subvector of b copied onto it.
+        The vector b with the non-index subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
@@ -1989,13 +1989,11 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
     # components
     time_trend = np.arange(offset, nobs + offset)
     trend_data = np.zeros((nobs, k_trend))
-    i = 0
-    for k in polynomial_trend.nonzero()[0]:
+    for i, k in enumerate(polynomial_trend.nonzero()[0]):
         if k == 0:
             trend_data[:, i] = np.ones(nobs,)
         else:
             trend_data[:, i] = time_trend**k
-        i += 1
 
     return trend_data
 
@@ -2370,11 +2368,11 @@ def _atleast_1d(*arys):
         if ary is None:
             result = None
         else:
-            ary = np.asanyarray(ary)
-            if ary.ndim == 0:
-                result = ary.reshape(1)
+            arr = np.asanyarray(ary)
+            if arr.ndim == 0:
+                result = arr.reshape(1)
             else:
-                result = ary
+                result = arr
         res.append(result)
     if len(res) == 1:
         return res[0]
@@ -2409,13 +2407,13 @@ def _atleast_2d(*arys):
         if ary is None:
             result = None
         else:
-            ary = np.asanyarray(ary)
-            if ary.ndim == 0:
-                result = ary.reshape(1, 1)
-            elif ary.ndim == 1:
-                result = ary[:, np.newaxis]
+            arr = np.asanyarray(ary)
+            if arr.ndim == 0:
+                result = arr.reshape(1, 1)
+            elif arr.ndim == 1:
+                result = arr[:, np.newaxis]
             else:
-                result = ary
+                result = arr
         res.append(result)
     if len(res) == 1:
         return res[0]

@@ -481,15 +481,15 @@ class VARMAX(MLEModel):
             for j in range(self.k_endog):
                 for i in self.polynomial_trend.nonzero()[0]:
                     if i == 0:
-                        param_names += ["intercept.%s" % endog_names[j]]
+                        param_names += [f"intercept.{endog_names[j]}"]
                     elif i == 1:
-                        param_names += ["drift.%s" % endog_names[j]]
+                        param_names += [f"drift.{endog_names[j]}"]
                     else:
-                        param_names += ["trend.%d.%s" % (i, endog_names[j])]
+                        param_names += [f"trend.{i:d}.{endog_names[j]}"]
 
         # 2. AR terms
         param_names += [
-            "L%d.%s.%s" % (i+1, endog_names[k], endog_names[j])
+            f"L{i+1:d}.{endog_names[k]}.{endog_names[j]}"
             for j in range(self.k_endog)
             for i in range(self.k_ar)
             for k in range(self.k_endog)
@@ -497,7 +497,7 @@ class VARMAX(MLEModel):
 
         # 3. MA terms
         param_names += [
-            "L%d.e(%s).%s" % (i+1, endog_names[k], endog_names[j])
+            f"L{i+1:d}.e({endog_names[k]}).{endog_names[j]}"
             for j in range(self.k_endog)
             for i in range(self.k_ma)
             for k in range(self.k_endog)
@@ -513,12 +513,12 @@ class VARMAX(MLEModel):
         # 5. State covariance terms
         if self.error_cov_type == "diagonal":
             param_names += [
-                "sigma2.%s" % endog_names[i]
+                f"sigma2.{endog_names[i]}"
                 for i in range(self.k_endog)
             ]
         elif self.error_cov_type == "unstructured":
             param_names += [
-                ("sqrt.var.%s" % endog_names[i] if i == j else
+                (f"sqrt.var.{endog_names[i]}" if i == j else
                  f"sqrt.cov.{endog_names[j]}.{endog_names[i]}")
                 for i in range(self.k_endog)
                 for j in range(i+1)
@@ -527,7 +527,7 @@ class VARMAX(MLEModel):
         # 5. Measurement error variance terms
         if self.measurement_error:
             param_names += [
-                "measurement_variance.%s" % endog_names[i]
+                f"measurement_variance.{endog_names[i]}"
                 for i in range(self.k_endog)
             ]
 
@@ -1075,12 +1075,14 @@ class VARMAXResults(MLEResults):
                 self.model.trend_offset + self.nobs)
 
         # Get the prediction
-        with self._set_final_exog(exog):
-            with self._set_final_predicted_state(exog, out_of_sample):
-                out = super().get_prediction(
-                    start=start, end=end, dynamic=dynamic,
-                    information_set=information_set, index=index, exog=exog,
-                    extend_kwargs=extend_kwargs, **kwargs)
+        with (
+            self._set_final_exog(exog),
+            self._set_final_predicted_state(exog, out_of_sample),
+        ):
+            out = super().get_prediction(
+                start=start, end=end, dynamic=dynamic,
+                information_set=information_set, index=index, exog=exog,
+                extend_kwargs=extend_kwargs, **kwargs)
         return out
 
     @Appender(MLEResults.simulate.__doc__)
@@ -1156,10 +1158,10 @@ class VARMAXResults(MLEResults):
             order = f"({spec.k_ar},{spec.k_ma})"
         elif spec.k_ar > 0:
             model_name = "VAR"
-            order = "(%s)" % (spec.k_ar)
+            order = f"({spec.k_ar})"
         else:
             model_name = "VMA"
-            order = "(%s)" % (spec.k_ma)
+            order = f"({spec.k_ma})"
         if spec.k_exog > 0:
             model_name += "X"
         model_name = [model_name + order]
@@ -1190,7 +1192,7 @@ class VARMAXResults(MLEResults):
                     else:
                         param_name = name
                     if name in self.fixed_params:
-                        param_name = "%s (fixed)" % param_name
+                        param_name = f"{param_name} (fixed)"
                     param_names.append(param_name)
 
                 return summary_params(res, yname=None, xname=param_names,
@@ -1246,7 +1248,7 @@ class VARMAXResults(MLEResults):
                 endog_names = self.model.endog_names
                 if not isinstance(endog_names, list):
                     endog_names = [endog_names]
-                title = "Results for equation %s" % endog_names[i]
+                title = f"Results for equation {endog_names[i]}"
                 table = make_table(self, mask, title)
                 summary.tables.append(table)
 
@@ -1259,10 +1261,10 @@ class VARMAXResults(MLEResults):
 
             # Add a table for all other parameters
             masks = []
-            for m in (endog_masks, [state_cov_mask]):
-                m = np.array(m).flatten()
-                if len(m) > 0:
-                    masks.append(m)
+            for group in (endog_masks, [state_cov_mask]):
+                flat_mask = np.array(group).flatten()
+                if len(flat_mask) > 0:
+                    masks.append(flat_mask)
             masks = np.concatenate(masks)
             inverse_mask = np.array(list(set(indices).difference(set(masks))))
             if len(inverse_mask) > 0:

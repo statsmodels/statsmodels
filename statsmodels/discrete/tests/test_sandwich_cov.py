@@ -4,8 +4,7 @@ Created on Mon Dec 09 21:29:20 2013
 
 Author: Josef Perktold
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -25,9 +24,9 @@ from statsmodels.tools.tools import add_constant
 # get data and results as module global for now, TODO: move to class
 from .results import results_count_robust_cluster as results_st
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
-filepath = os.path.join(cur_dir, "results", "ships.csv")
+filepath = Path(cur_dir).joinpath("results", "ships.csv")
 data_raw = pd.read_csv(filepath, index_col=False)
 data = data_raw.dropna()
 
@@ -115,16 +114,6 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
         cls.res2 = results_st.results_poisson_clu
         mod = smd.Poisson(endog, exog)
         cls.res1 = mod.fit(disp=False)
-
-        debug = False
-        if debug:
-            # for debugging
-            cls.bse_nonrobust = cls.res1.bse.copy()
-            cls.res1 = mod.fit(disp=False)
-            cls.get_robust_clu()
-            cls.res3 = cls.res1
-            cls.bse_rob3 = cls.bse_rob.copy()
-            cls.res1 = mod.fit(disp=False)
 
         from statsmodels.base.covtype import get_robustcov_results
 

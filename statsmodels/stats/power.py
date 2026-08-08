@@ -6,7 +6,8 @@ Created on Sat Jan 12 21:48:06 2013
 
 Author: Josef Perktold
 
-Example
+Examples
+--------
 roundtrip - root with respect to all variables
 
        calculated, desired
@@ -30,6 +31,7 @@ refactoring
 
 
 """
+
 import warnings
 
 import numpy as np
@@ -447,19 +449,23 @@ class Power:
     so far this could all be class methods
     """
 
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
+    def __init__(self):
+        # Populated by `solve_power`; declared here so they exist (as
+        # None) even before `solve_power` has been called.
+        self._counter = None
+        self.cache_fit_res = None
+
         # used only for instance level start values
-        self.start_ttp = dict(
-            effect_size=0.01,
-            nobs=10.0,
-            alpha=0.15,
-            power=0.6,
-            nobs1=10.0,
-            ratio=1,
-            df_num=10,
-            df_denom=3,  # for FTestPower
-        )
+        self.start_ttp = {
+            "effect_size": 0.01,
+            "nobs": 10.0,
+            "alpha": 0.15,
+            "power": 0.6,
+            "nobs1": 10.0,
+            "ratio": 1,
+            "df_num": 10,
+            "df_denom": 3,  # for FTestPower
+        }
         # TODO: nobs1 and ratio are for ttest_ind,
         #      need start_ttp for each test/class separately,
         # possible rootfinding problem for effect_size, starting small seems to
@@ -468,13 +474,13 @@ class Power:
 
         self.start_bqexp = defaultdict(dict)
         for key in ["nobs", "nobs1", "df_num", "df_denom"]:
-            self.start_bqexp[key] = dict(low=2.0, start_upp=50.0)
+            self.start_bqexp[key] = {"low": 2.0, "start_upp": 50.0}
         for key in ["df_denom"]:
-            self.start_bqexp[key] = dict(low=1.0, start_upp=50.0)
+            self.start_bqexp[key] = {"low": 1.0, "start_upp": 50.0}
         for key in ["ratio"]:
-            self.start_bqexp[key] = dict(low=1e-8, start_upp=2)
+            self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2}
         for key in ["alpha"]:
-            self.start_bqexp[key] = dict(low=1e-12, upp=1 - 1e-12)
+            self.start_bqexp[key] = {"low": 1e-12, "upp": 1 - 1e-12}
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -506,7 +512,9 @@ class Power:
             The value solves the power equation given the remaining
             parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -546,6 +554,33 @@ class Power:
             else:
                 raise ValueError(
                     "Cannot detect an effect-size of 0. Try changing your effect-size."
+                )
+
+        # GH#9378 intercept impossible one-sided cases before root finding:
+        # if the effect size points into the tail opposite to the
+        # alternative, the attained power is smaller than alpha for any
+        # sample size, so no solution exists unless the requested power is
+        # also smaller than alpha.
+        alternative = kwds.get("alternative")
+        if key in ("nobs", "nobs1", "ratio") and alternative in (
+            "larger",
+            "smaller",
+        ):
+            effect_size = kwds["effect_size"]
+            wrong_sign = (
+                effect_size < 0
+                if alternative == "larger"
+                else effect_size > 0
+            )
+            if wrong_sign and kwds["power"] >= kwds["alpha"]:
+                raise ValueError(
+                    f"No solution exists for {key}: with alternative="
+                    f"{alternative!r} the attained power is smaller than "
+                    f"alpha for any {key} because effect_size is "
+                    f"{'negative' if effect_size < 0 else 'positive'}. A "
+                    "one-sided alternative requires an effect size with "
+                    "matching sign: positive for 'larger', negative for "
+                    "'smaller'."
                 )
 
         self._counter = 0
@@ -727,7 +762,7 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="es=%4.2F" % es,
+                    label=f"es={es:4.2F}",
                 )
                 xlabel = "Number of Observations"
         elif dep_var in ["effect size", "effect_size", "es"]:
@@ -741,10 +776,10 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="N=%4.2F" % n,
+                    label=f"N={n:4.2F}",
                 )
                 xlabel = "Effect Size"
-        elif dep_var in ["alpha"]:
+        elif dep_var == "alpha":
             # experimental nobs as defining separate lines
             colors = rainbow(len(nobs))
 
@@ -756,7 +791,7 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="N=%4.2F" % n,
+                    label=f"N={n:4.2F}",
                 )
                 xlabel = "alpha"
         else:
@@ -853,7 +888,9 @@ class TTestPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -862,8 +899,6 @@ class TTestPower(Power):
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
 
-        Notes
-        -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
@@ -1571,7 +1606,7 @@ class FTestAnovaPower(Power):
         # update start values for root finding
         if k_groups is not None:
             self.start_ttp["nobs"] = k_groups * 10
-            self.start_bqexp["nobs"] = dict(low=k_groups * 2, start_upp=k_groups * 10)
+            self.start_bqexp["nobs"] = {"low": k_groups * 2, "start_upp": k_groups * 10}
         # first attempt at special casing
         if effect_size is None:
             return self._solve_effect_size(
@@ -1647,7 +1682,7 @@ class GofChisquarePower(Power):
         """
         from statsmodels.stats.gof import chisquare_power
 
-        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=0)
+        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=ddof)
 
     # method is only added to have explicit keywords and docstring
     def solve_power(

@@ -21,7 +21,8 @@ def test_adf_autolag():
 
         # check exog
         adf3 = tsast.adfuller(x, maxlag=None, autolag="aic",
-                              regression=tr, store=True, regresults=True)
+                              regression=tr, store=True, regresults=True,
+                              use_namedtuple=False)
         st2 = adf3[-1]
 
         assert_equal(len(st2.autolag_results), 15 + 1)  # +1 for lagged level
@@ -34,14 +35,18 @@ def test_adf_autolag():
             assert_equal(st2.usedlag, 2)
 
         # same result with lag fixed at usedlag of autolag
-        adf2 = tsast.adfuller(x, maxlag=2, autolag=None, regression=tr)
+        adf2 = tsast.adfuller(
+            x, maxlag=2, autolag=None, regression=tr, use_namedtuple=False
+        )
         assert_almost_equal(adf3[:2], adf2[:2], decimal=12)
 
     tr = "c"
     # check maxlag with autolag
     adf3 = tsast.adfuller(x, maxlag=5, autolag="aic",
-                          regression=tr, store=True, regresults=True)
+                          regression=tr, store=True, regresults=True,
+                          use_namedtuple=False)
     assert_equal(len(adf3[-1].autolag_results), 5 + 1)
     adf3 = tsast.adfuller(x, maxlag=0, autolag="aic",
-                          regression=tr, store=True, regresults=True)
+                          regression=tr, store=True, regresults=True,
+                          use_namedtuple=False)
     assert_equal(len(adf3[-1].autolag_results), 0 + 1)

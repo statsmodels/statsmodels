@@ -7,6 +7,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -40,9 +42,37 @@ class EllipticalCopula(Copula):
         else:
             return args
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state`` argument. If `rng` is None, the global NumPy
+            singleton random state is used. If `rng` is an int or array of
+            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : array_like (nobs, k_dim)
+            Sample from the copula.
+        """
         self._handle_args(args)
-        x = self.distr_mv.rvs(size=nobs, random_state=random_state)
+        x = self.distr_mv.rvs(size=nobs, random_state=rng)
         return self.distr_uv.cdf(x)
 
     def pdf(self, u, args=()):
@@ -52,12 +82,41 @@ class EllipticalCopula(Copula):
 
         return mv_pdf_ppf / np.prod(self.distr_uv.pdf(ppf), axis=-1)
 
-    def cdf(self, u, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def cdf(self, u, args=(), rng=None):
+        """Evaluate the cdf of the copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+        args : tuple
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            Passed directly to the underlying SciPy distribution as its
+            ``random_state``/``rng`` argument, if supported. If `rng` is
+            None, the global NumPy singleton random state is used. If `rng`
+            is an int or array of ints, a new ``RandomState`` is created,
+            seeded with `rng`. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        cdf : ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
         try:
             # Modern SciPy supports this and is needed to avoid global random state
-            return self.distr_mv.cdf(ppf, rng=random_state)
+            return self.distr_mv.cdf(ppf, rng=rng)
         except TypeError:
             return self.distr_mv.cdf(ppf)
 
@@ -153,7 +212,7 @@ class GaussianCopula(EllipticalCopula):
     ----------
     corr : scalar or array_like
         Correlation or scatter matrix for the elliptical copula. In the
-        bivariate case, ``corr` can be a scalar and is then considered as
+        bivariate case, ``corr`` can be a scalar and is then considered as
         the correlation coefficient. If ``corr`` is None, then the scatter
         matrix is the identity matrix.
     k_dim : int
@@ -161,8 +220,8 @@ class GaussianCopula(EllipticalCopula):
     allow_singular : bool
         Allow singular correlation matrix.
         The behavior when the correlation matrix is singular is determined by
-        `scipy.stats.multivariate_normal`` and might not be appropriate for
-        all copula or copula distribution metnods. Behavior might change in
+        ``scipy.stats.multivariate_normal`` and might not be appropriate for
+        all copula or copula distribution methods. Behavior might change in
         future versions.
 
     Notes
@@ -227,7 +286,7 @@ class StudentTCopula(EllipticalCopula):
     ----------
     corr : scalar or array_like
         Correlation or scatter matrix for the elliptical copula. In the
-        bivariate case, ``corr` can be a scalar and is then considered as
+        bivariate case, ``corr`` can be a scalar and is then considered as
         the correlation coefficient. If ``corr`` is None, then the scatter
         matrix is the identity matrix.
     df : float (optional)

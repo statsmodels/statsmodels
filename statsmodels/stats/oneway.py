@@ -377,8 +377,8 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
 
     Returns
     -------
-    float
-        The end point of the confidence interval.
+    ndarray
+        Lower and upper confidence limits for the noncentrality parameter.
 
     See Also
     --------
@@ -450,8 +450,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     R package ``effectsize`` does not compute the confidence intervals in the
     same way. Their confidence intervals can be replicated with
 
-    >>> ci_nc = confint_noncentrality(f_stat, df1, df2, alpha=0.1)
-    >>> ci_es = smo._fstat2effectsize(ci_nc / df1, df1, df2)
+    >>> ci_nc = confint_noncentrality(f_stat, (df1, df2), alpha=0.1)
+    >>> ci_es = smo._fstat2effectsize(ci_nc / df1, (df1, df2))
     """
 
     df1, df2 = df
@@ -685,7 +685,7 @@ def anova_oneway(
     else:
         # uniques = None  # not used yet, add to info?
         pass
-    args = list(map(np.asarray, data))
+    args = [np.asarray(x) for x in data]
     if any(x.ndim != 1 for x in args):
         raise ValueError("data arrays have to be one-dimensional")
 
@@ -1079,9 +1079,12 @@ def simulate_power_equivalence_oneway(
         ``["unequal", "equal", "bf"]`` is used.
     margin_type : "f2" or "wellek"
         Type of effect size used for equivalence margin.
-    rng : {None, int, `numpy.random.Generator`}
-        Random number generator or seed used to simulate the samples. See
-        `statsmodels.tools.rng_qrng.check_random_state`.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -1107,7 +1110,7 @@ def simulate_power_equivalence_oneway(
     rng = check_random_state(rng)
     for _ in range(k_mc):
         y0, y1, y2, y3 = (
-            m + std * rng.randn(n) for (n, m, std) in zip(nobs, means, stds)
+            m + std * rng.standard_normal(n) for (n, m, std) in zip(nobs, means, stds, strict=True)
         )
 
         res_i = []
@@ -1178,7 +1181,6 @@ def test_scale_oneway(
         "unequal" : Variances are not assumed to be equal across samples.
             Heteroscedasticity is taken into account with Welch Anova and
             Satterthwaite-Welch degrees of freedom.
-            This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
         "bf" : Variances are not assumed to be equal across samples.
@@ -1186,6 +1188,7 @@ def test_scale_oneway(
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
+            This is the default.
 
     center : "median", "mean", "trimmed" or float
         Statistic used for centering observations. If a float, then this
@@ -1231,9 +1234,10 @@ def test_scale_oneway(
     scale_transform
     """
 
-    data = map(np.asarray, data)
     xxd = [
-        scale_transform(x, center=center, transform=transform, trim_frac=trim_frac_mean)
+        scale_transform(
+            np.asarray(x), center=center, transform=transform, trim_frac=trim_frac_mean
+        )
         for x in data
     ]
 
@@ -1287,7 +1291,6 @@ def equivalence_scale_oneway(
         "unequal" : Variances are not assumed to be equal across samples.
             Heteroscedasticity is taken into account with Welch Anova and
             Satterthwaite-Welch degrees of freedom.
-            This is the default.
         "equal" : Variances are assumed to be equal across samples.
             This is the standard Anova.
         "bf" : Variances are not assumed to be equal across samples.
@@ -1295,6 +1298,7 @@ def equivalence_scale_oneway(
             with the corrected degrees of freedom by Merothra. The original BF
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
+            This is the default.
     center : "median", "mean", "trimmed" or float
         Statistic used for centering observations. If a float, then this
         value is used to center. Default is median.
@@ -1323,9 +1327,10 @@ def equivalence_scale_oneway(
     scale_transform
     equivalence_oneway
     """
-    data = map(np.asarray, data)
     xxd = [
-        scale_transform(x, center=center, transform=transform, trim_frac=trim_frac_mean)
+        scale_transform(
+            np.asarray(x), center=center, transform=transform, trim_frac=trim_frac_mean
+        )
         for x in data
     ]
 

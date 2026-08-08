@@ -76,8 +76,8 @@ def omni_normtest(resids, axis=0):
     n = resids.shape[axis]
     if n < 8:
         from warnings import warn
-        warn("omni_normtest is not valid with less than 8 observations; %i "
-             "samples were given." % int(n), ValueWarning, stacklevel=2)
+        warn(f"omni_normtest is not valid with less than 8 observations; {int(n):d} "
+             "samples were given.", ValueWarning, stacklevel=2)
         return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)

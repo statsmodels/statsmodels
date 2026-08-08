@@ -261,12 +261,8 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     x_min = x.min()
     x_max = x.max()
 
-    if degree < 0:
-        raise ValueError("degree must be greater than 0 (not %r)"
-                         % (degree,))
-    if int(degree) != degree:
-        raise ValueError("degree must be an integer (not %r)"
-                         % (degree,))
+    if degree < 0 or int(degree) != degree:
+        raise ValueError(f"degree must be an integer >= 0 (got {degree!r})")
 
     # These are guaranteed to all be 1d vectors by the code above
     # x = np.concatenate(tmp["xs"])
@@ -276,18 +272,16 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     if df is not None:
         n_inner_knots = df - order
         if n_inner_knots < 0:
-            raise ValueError("df=%r is too small for degree=%r; must be >= %s"
-                             % (df, degree,
-                                # We know that n_inner_knots is negative;
-                                # if df were that much larger, it would
-                                # have been zero, and things would work.
-                                df - n_inner_knots))
+            # We know that n_inner_knots is negative; if df were that much
+            # larger, it would have been zero, and things would work.
+            min_df = df - n_inner_knots
+            raise ValueError(
+                f"df={df!r} is too small for degree={degree!r}; must be >= {min_df}"
+            )
         if knots is not None:
             if len(knots) != n_inner_knots:
-                raise ValueError("df=%s with degree=%r implies %s knots, "
-                                 "but %s knots were provided"
-                                 % (df, degree,
-                                    n_inner_knots, len(knots)))
+                raise ValueError(f"df={df} with degree={degree!r} implies {n_inner_knots} knots, "
+                                 f"but {len(knots)} knots were provided")
         elif spacing == "quantile":
             # Need to compute inner knots
             knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
@@ -307,21 +301,16 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
         upper_bound = np.max(x)
 
     if lower_bound > upper_bound:
-        raise ValueError("lower_bound > upper_bound (%r > %r)"
-                         % (lower_bound, upper_bound))
+        raise ValueError(f"lower_bound > upper_bound ({lower_bound!r} > {upper_bound!r})")
     inner_knots = np.asarray(inner_knots)
     if inner_knots.ndim > 1:
         raise ValueError("knots must be 1 dimensional")
     if np.any(inner_knots < lower_bound):
-        raise ValueError("some knot values (%s) fall below lower bound "
-                         "(%r)"
-                         % (inner_knots[inner_knots < lower_bound],
-                            lower_bound))
+        raise ValueError(f"some knot values ({inner_knots[inner_knots < lower_bound]}) fall below lower bound "
+                         f"({lower_bound!r})")
     if np.any(inner_knots > upper_bound):
-        raise ValueError("some knot values (%s) fall above upper bound "
-                         "(%r)"
-                         % (inner_knots[inner_knots > upper_bound],
-                            upper_bound))
+        raise ValueError(f"some knot values ({inner_knots[inner_knots > upper_bound]}) fall above upper bound "
+                         f"({upper_bound!r})")
 
     if spacing == "equal":
         diffs = np.arange(1, order + 1) * diff_knots
@@ -399,11 +388,8 @@ def get_covder2(smoother, k_points=3, integration_points=None,
         Approximation to the integral of the cross product of the
         `deriv`-th derivative of the smoother basis functions.
     """
-    try:
-        from scipy.integrate import simpson
-    except ImportError:
-        # Remove after SciPy 1.7 is the minimum version
-        from scipy.integrate import simps as simpson
+    from scipy.integrate import simpson
+
     knots = smoother.knots
     if integration_points is None:
         x = _get_integration_points(knots, k_points=k_points)
@@ -1347,7 +1333,9 @@ class CubicSplines(AdditiveGamSmoother):
                  variable_names=None):
         self.dfs = df
         self.constraints = constraints
-        self.transform = transform
+        # NOTE: cannot use `self.transform` here -- AdditiveGamSmoother
+        # defines a `transform(self, x_new)` method that this would shadow.
+        self.transform_arg = transform
         super().__init__(x, constraints=constraints,
                          variable_names=variable_names)
 
@@ -1357,7 +1345,7 @@ class CubicSplines(AdditiveGamSmoother):
             uv_smoother = UnivariateCubicSplines(
                             self.x[:, v], df=self.dfs[v],
                             constraints=self.constraints,
-                            transform=self.transform,
+                            transform=self.transform_arg,
                             variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
 

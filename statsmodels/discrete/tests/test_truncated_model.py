@@ -16,6 +16,7 @@ from statsmodels.distributions.discrete import (
     truncatednegbin,
     truncatedpoisson,
 )
+from statsmodels.iolib.summary import Summary
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.testing import Holder
@@ -558,3 +559,45 @@ class TestHurdleNegbinSimulated(CheckHurdlePredict):
             k_extra=df_null - 1,
             exog_names=["zm_const", "zm_x1", "zm_alpha", "const", "x1", "alpha"],
         )
+
+
+def _fit_truncated_lf_poisson_for_summary():
+    data = datasets.randhie.load()
+    exog = add_constant(np.asarray(data.exog)[:, :4], prepend=False)
+    mod = TruncatedLFPoisson(data.endog, exog, truncation=5)
+    return mod.fit(method="newton", maxiter=500)
+
+
+def _fit_truncated_negative_binomial_for_summary():
+    data = datasets.randhie.load()
+    exog = add_constant(np.asarray(data.exog)[:, :3], prepend=False)
+    mod = TruncatedLFNegativeBinomialP(data.endog, exog, truncation=0)
+    return mod.fit(maxiter=500)
+
+
+def _fit_hurdle_count_for_summary():
+    endog = DATA["docvis"]
+    exog_names = ["const", "aget", "totchr"]
+    exog = DATA[exog_names]
+    return HurdleCountModel(endog, exog).fit(method="newton", maxiter=300)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_truncated_lf_poisson_for_summary,
+        _fit_truncated_negative_binomial_for_summary,
+        _fit_hurdle_count_for_summary,
+    ],
+    ids=[
+        "TruncatedLFPoisson",
+        "TruncatedLFNegativeBinomialP",
+        "HurdleCountModel",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

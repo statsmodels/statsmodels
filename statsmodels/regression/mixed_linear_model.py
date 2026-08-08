@@ -142,6 +142,8 @@ Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
 
 """
+from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.scipy import SP_LT_2
 
 from io import StringIO
 import tokenize
@@ -308,7 +310,7 @@ class MixedLMParams:
         Parameters
         ----------
         params : array_like
-            The mode parameters packed into a single vector.
+            The model parameters packed into a single vector.
         k_fe : int
             The number of covariates with fixed effects
         k_re : int
@@ -511,7 +513,10 @@ def _smw_solver(s, A, AtA, Qi, di):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(A):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         def solver(rhs):
             ql = A.T.dot(rhs)
@@ -586,7 +591,10 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(qmat):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         # There are faster but much more difficult ways to do this
         # https://stackoverflow.com/questions/19107617
@@ -741,7 +749,7 @@ class MixedLM(base.LikelihoodModel):
         for x in kwargs.keys():
             if x not in _allowed_kwargs:
                 raise ValueError(
-                    "argument %s not permitted for MixedLM initialization" % x
+                    f"argument {x} not permitted for MixedLM initialization"
                 )
 
         self.use_sqrt = use_sqrt
@@ -865,7 +873,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Set the fixed effects parameter names
         if self.exog_names is None:
-            self.exog_names = ["FE%d" % (k + 1) for k in range(self.exog.shape[1])]
+            self.exog_names = [f"FE{k + 1:d}" for k in range(self.exog.shape[1])]
 
         # Precompute this
         self._aex_r = []
@@ -1110,7 +1118,7 @@ class MixedLM(base.LikelihoodModel):
                     )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
-                        evc_mats.append(sparse.csr_matrix(mat))
+                        evc_mats.append(sparse.csr_array(mat))
                     else:
                         evc_mats.append(np.asarray(mat))
                 vc_mats.append(evc_mats)
@@ -1489,7 +1497,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Quadratic terms for random effects covariance.
         ii = np.tril_indices(k_re)
-        ix = [(a, b) for a, b in zip(ii[0], ii[1])]
+        ix = [(a, b) for a, b in zip(ii[0], ii[1], strict=True)]
         for i1 in range(k_re2):
             for i2 in range(k_re2):
                 ix1 = ix[i1]
@@ -1567,9 +1575,9 @@ class MixedLM(base.LikelihoodModel):
         if any_sparse:
             for j, x in enumerate(ex):
                 if not sparse.issparse(x):
-                    ex[j] = sparse.csr_matrix(x)
+                    ex[j] = sparse.csr_array(x)
             ex = sparse.hstack(ex)
-            ex = sparse.csr_matrix(ex)
+            ex = sparse.csr_array(ex)
         else:
             ex = np.concatenate(ex, axis=1)
 
@@ -2307,13 +2315,15 @@ class MixedLM(base.LikelihoodModel):
             "disp",
             "maxls",
         ]
-        for x in fit_kwargs.keys():
-            if x not in _allowed_kwargs:
-                warnings.warn(
-                    "Argument %s not used by MixedLM.fit" % x,
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
+        disallowed_kwargs = sorted(set(fit_kwargs).difference(_allowed_kwargs))
+        if disallowed_kwargs:
+            warnings.warn(
+                "Argument(s) {} not used by MixedLM.fit".format(", ".join(disallowed_kwargs)),
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            fit_kwargs = {k: v for k, v in fit_kwargs.items()
+                          if k in _allowed_kwargs}
 
         if method is None:
             method = ["bfgs", "lbfgs", "cg"]
@@ -2322,7 +2332,7 @@ class MixedLM(base.LikelihoodModel):
 
         for meth in method:
             if meth.lower() in ["newton", "ncg"]:
-                raise ValueError("method %s not available for MixedLM" % meth)
+                raise ValueError(f"method {meth} not available for MixedLM")
 
         self.reml = reml
         self.cov_pen = cov_pen
@@ -2379,7 +2389,7 @@ class MixedLM(base.LikelihoodModel):
                 if j + 1 < len(method):
                     next_method = method[j + 1]
                     warnings.warn(
-                        "Retrying MixedLM optimization with %s" % next_method,
+                        f"Retrying MixedLM optimization with {next_method}",
                         ConvergenceWarning,
                         stacklevel=2,
                     )
@@ -2399,7 +2409,7 @@ class MixedLM(base.LikelihoodModel):
         if not converged:
             gn = self.score(rslt.params)
             gn = np.sqrt(np.sum(gn**2))
-            msg = "Gradient optimization failed, |grad| = %f" % gn
+            msg = f"Gradient optimization failed, |grad| = {gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         # Convert to the final parameterization (i.e. undo the square
@@ -2541,7 +2551,8 @@ class _mixedlm_distribution:
             group_idx[model.row_indices[g]] = k
         self.group_idx = group_idx
 
-    def rvs(self, n, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, n, rng=None):
         """
         Return a vector of simulated values from a mixed linear
         model
@@ -2550,11 +2561,17 @@ class _mixedlm_distribution:
         ----------
         n : int
             Ignored, but required by the interface.
-        random_state : {None, int, `numpy.random.Generator`, `numpy.random.RandomState`}, optional
-            If `random_state` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used. If `random_state` is an int, a new ``RandomState``
-            instance is used, seeded with `random_state`. If `random_state` is already
-            a ``Generator`` or ``RandomState`` instance, that instance is used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -2567,7 +2584,7 @@ class _mixedlm_distribution:
         y = np.dot(self.exog, self.fe_params)
 
         # Random effects
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         u = rng.normal(size=(model.n_groups, model.k_re))
         u = np.dot(u, np.linalg.cholesky(self.cov_re).T)
         y += (u[self.group_idx, :] * model.exog_re).sum(1)
@@ -2619,7 +2636,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         The standard errors of the fitted fixed effects coefficients
     bse_re : ndarray
         The standard errors of the fitted random effects covariance
-        matrix and variance components.  The first `k_re * (k_re + 1)`
+        matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
         the variance components.
@@ -2681,7 +2698,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
         Return the standard errors of the variance parameters
 
-        The first `k_re x (k_re + 1)` elements of the returned array
+        The first `k_re x (k_re + 1) / 2` elements of the returned array
         are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
         components.
@@ -2830,7 +2847,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         """
         if r_matrix.shape[1] != self.k_fe:
-            raise ValueError("r_matrix for t-test should have %d columns" % self.k_fe)
+            raise ValueError(f"r_matrix for t-test should have {self.k_fe:d} columns")
 
         d = self.k_re2 + self.k_vc
         z0 = np.zeros((r_matrix.shape[0], d))
@@ -2882,13 +2899,13 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         if xname_fe is not None:
             if len(xname_fe) != k_fe_params:
-                msg = "xname_fe should be a list of length %d" % k_fe_params
+                msg = f"xname_fe should be a list of length {k_fe_params:d}"
                 raise ValueError(msg)
             param_names[:k_fe_params] = xname_fe
 
         if xname_re is not None:
             if len(xname_re) != k_re_params:
-                msg = "xname_re should be a list of length %d" % k_re_params
+                msg = f"xname_re should be a list of length {k_re_params:d}"
                 raise ValueError(msg)
             param_names[k_fe_params:] = xname_re
 
@@ -2896,14 +2913,19 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["No. Groups:"] = str(self.model.n_groups)
 
         gs = np.array([len(x) for x in self.model.endog_li])
-        info["Min. group size:"] = "%.0f" % min(gs)
-        info["Max. group size:"] = "%.0f" % max(gs)
-        info["Mean group size:"] = "%.1f" % np.mean(gs)
+        info["Min. group size:"] = f"{min(gs):.0f}"
+        info["Max. group size:"] = f"{max(gs):.0f}"
+        info["Mean group size:"] = f"{np.mean(gs):.1f}"
 
         info["Dependent Variable:"] = yname
         info["Method:"] = self.method
         info["Scale:"] = self.scale
-        info["Log-Likelihood:"] = self.llf
+        # Cache llf as a plain (non-cache_readonly) attribute so summary()
+        # keeps working after remove_data() has cleared model.exog.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+        if "llf" not in cache:
+            cache["llf"] = self.llf
+        info["Log-Likelihood:"] = cache["llf"]
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
         if title is None:
@@ -3183,8 +3205,8 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
     tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
-    ii = pd.notnull(data).all(1)
+    ii = pd.notna(data).all(1)
     if type(groups) is not str:
-        ii &= pd.notnull(groups)
+        ii &= pd.notna(groups)
 
     return data.loc[ii, :], groups[np.asarray(ii)]

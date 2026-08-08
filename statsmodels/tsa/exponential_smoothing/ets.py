@@ -602,10 +602,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
-            zip(self._internal_param_names, np.arange(self._k_params_internal))
+            zip(self._internal_param_names, np.arange(self._k_params_internal), strict=True)
         )
         self._params_index = OrderedDict(
-            zip(self.param_names, np.arange(self.k_params))
+            zip(self.param_names, np.arange(self.k_params), strict=True)
         )
 
     def set_bounds(self, bounds):
@@ -827,10 +827,11 @@ class ETSModel(base.StateSpaceMLEModel):
         This should not be called directly, but by calling
         ``self.start_params``.
         """
-        params = []
-        for p in self._smoothing_param_names:
-            if p in self.param_names:
-                params.append(self._default_start_params[p])
+        params = [
+            self._default_start_params[p]
+            for p in self._smoothing_param_names
+            if p in self.param_names
+        ]
 
         if self.initialization_method == "estimated":
             lvl_idx = len(params)
@@ -948,7 +949,7 @@ class ETSModel(base.StateSpaceMLEModel):
             default), additionally, the parameters
 
             * `initial_level` (:math:`l_{-1}`)
-            * `initial_trend` (:math:`l_{-1}`)
+            * `initial_trend` (:math:`b_{-1}`)
             * `initial_seasonal.0` (:math:`s_{-1}`)
             * ...
             * `initial_seasonal.<m-1>` (:math:`s_{-m}`)
@@ -1354,7 +1355,7 @@ class ETSResults(base.StateSpaceMLEResults):
         for attr in model_definition_attrs:
             setattr(self, attr, getattr(model, attr))
         self.param_names = [
-            "%s (fixed)" % name if name in self.fixed_params else name
+            f"{name} (fixed)" if name in self.fixed_params else name
             for name in (self.model.param_names or [])
         ]
 
@@ -1603,10 +1604,14 @@ class ETSResults(base.StateSpaceMLEResults):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : int or np.random.RandomState, optional
-            A seed for the random number generator or a
-            ``np.random.RandomState`` object. Only used if `random_errors` is
-            ``None``. Default is ``None``.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used. Only used if `random_errors` is ``None``.
 
         Returns
         -------
@@ -1768,11 +1773,21 @@ class ETSResults(base.StateSpaceMLEResults):
             eps = rng.standard_normal((nsimulations, repetitions)) * sigma
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(self.resid)
-            eps = random_errors.rvs(
-                *params, size=(nsimulations, repetitions), random_state=rng
-            )
+            try:
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), rng=rng
+                )
+            except TypeError:
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), random_state=rng
+                )
         elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions), random_state=rng)
+            try:
+                eps = random_errors.rvs(size=(nsimulations, repetitions), rng=rng)
+            except TypeError:
+                eps = random_errors.rvs(
+                    size=(nsimulations, repetitions), random_state=rng
+                )
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 
@@ -1827,7 +1842,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # Wrap data / squeeze where appropriate
         if repetitions > 1:
-            names = ["simulation.%d" % num for num in range(repetitions)]
+            names = [f"simulation.{num:d}" for num in range(repetitions)]
         else:
             names = "simulation"
         return self.model._wrap_data(
@@ -2098,7 +2113,7 @@ class ETSResults(base.StateSpaceMLEResults):
                 params = params[0]
             names = self.model.initial_state_names
             param_header = [
-                "initialization method: %s" % self.model.initialization_method
+                f"initialization method: {self.model.initialization_method}"
             ]
             params_stubs = names
             params_data = [[forg(params[i], prec=4)] for i in range(len(params))]

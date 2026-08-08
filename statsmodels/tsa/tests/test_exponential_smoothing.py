@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 import scipy.stats
 
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
@@ -369,7 +370,7 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
     Fit the model with params as found by R's forecast package
     """
     params = get_params_from_R(results_R)
-    with model.fix_params(dict(zip(model.param_names, params))):
+    with model.fix_params(dict(zip(model.param_names, params, strict=True))):
         fit = model.fit(disp=False)
 
     if set_state:
@@ -1148,3 +1149,13 @@ def test_aicc_0_dof():
     aicc = model.fit().aicc
     assert not np.isfinite(aicc)
     assert aicc > 0
+
+
+def test_summary_after_remove_data(oildata):
+    # summary() must still work after remove_data() has been called
+    model = ETSModel(oildata, error="add", trend="add", damped_trend=True)
+    res = model.fit(disp=False)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

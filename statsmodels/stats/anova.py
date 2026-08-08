@@ -22,10 +22,11 @@ def _get_covariance(model, robust):
     elif robust == "hc3":
         return model.cov_HC3
     else:  # pragma: no cover
-        raise ValueError("robust options %s not understood" % robust)
+        raise ValueError(f"robust options {robust} not understood")
 
 
 # NOTE: these need to take into account weights !
+
 
 def anova_single(model, **kwargs):
     """
@@ -61,30 +62,30 @@ def anova_single(model, **kwargs):
     model_spec = model.model.data.model_spec
     # +1 for resids
     mgr = FormulaManager()
-    n_rows = (len(model_spec.terms) - mgr.has_intercept(model_spec) + 1)
+    n_rows = len(model_spec.terms) - mgr.has_intercept(model_spec) + 1
 
-    pr_test = "PR(>%s)" % test
+    pr_test = f"PR(>{test})"
     names = ["df", "sum_sq", "mean_sq", test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
     if typ in [1, "I"]:
-        return anova1_lm_single(model, endog, exog, nobs, model_spec, table,
-                                n_rows, test, pr_test, robust)
+        return anova1_lm_single(
+            model, endog, exog, nobs, model_spec, table, n_rows, test, pr_test, robust
+        )
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, model_spec, n_rows, test, pr_test,
-                                robust)
+        return anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust)
     elif typ in [3, "III"]:
-        return anova3_lm_single(model, model_spec, n_rows, test, pr_test,
-                                robust)
+        return anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust)
     elif typ in [4, "IV"]:
         raise NotImplementedError("Type IV not yet implemented")
     else:  # pragma: no cover
-        raise ValueError("Type %s not understood" % str(typ))
+        raise ValueError(f"Type {typ!s} not understood")
 
 
-def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
-                     pr_test, robust):
+def anova1_lm_single(
+    model, endog, exog, nobs, model_spec, table, n_rows, test, pr_test, robust
+):
     """
     Anova type I table for one fitted linear model
 
@@ -146,18 +147,17 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     term_names = term_names[~idx]
 
     index = term_names.tolist()
-    table.index = Index(index + ["Residual"])
+    table.index = Index([*index, "Residual"])
     table.loc[index, ["df", "sum_sq"]] = np.c_[arr[~idx].sum(1), sum_sq]
     # fill in residual
     table.loc["Residual", ["sum_sq", "df"]] = model.ssr, model.df_resid
     if test == "F":
-        table[test] = ((table["sum_sq"] / table["df"]) /
-                       (model.ssr / model.df_resid))
-        table[pr_test] = stats.f.sf(table["F"], table["df"],
-                                    model.df_resid)
+        table[test] = (table["sum_sq"] / table["df"]) / (model.ssr / model.df_resid)
+        table[pr_test] = stats.f.sf(table["F"], table["df"], model.df_resid)
         table.loc["Residual", [test, pr_test]] = np.nan, np.nan
     table["mean_sq"] = table["sum_sq"] / table["df"]
     return table
+
 
 # NOTE: the below is not agnostic about formula...
 
@@ -250,8 +250,8 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         table.loc[table.index[i], "df"] = r
         col_order.append(cols.start)
         index.append(mgr.get_term_name(term))
-    table.index = Index(index + ["Residual"])
-    table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1] + 1])]
+    table.index = Index([*index, "Residual"])
+    table = table.iloc[np.argsort([*col_order, model.model.exog.shape[1] + 1])]
     # back out sum of squares from f_test
 
     ssr = table[test] * table["df"] * model.ssr / model.df_resid
@@ -296,7 +296,7 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # col_order.append(cols.start)
 
         index.append(mgr.get_term_name(term))
-    table.index = Index(index + ["Residual"])
+    table.index = Index([*index, "Residual"])
     # NOTE: Do not need to sort because terms are an ordered dict now
     # table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
@@ -393,13 +393,14 @@ def anova_lm(*args, **kwargs):
         return anova_single(model, **kwargs)
 
     if typ not in [1, "I"]:
-        raise ValueError("Multiple models only supported for type I. "
-                         "Got type %s" % str(typ))
+        raise ValueError(
+            f"Multiple models only supported for type I. Got type {typ!s}"
+        )
 
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
     n_models = len(args)
-    pr_test = "Pr(>%s)" % test
+    pr_test = f"Pr(>{test})"
     names = ["df_resid", "ssr", "df_diff", "ss_diff", test, pr_test]
     table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
@@ -418,16 +419,15 @@ def anova_lm(*args, **kwargs):
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
-        table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
-                                    table["df_resid"])
+        table[pr_test] = stats.f.sf(table["F"], table["df_diff"], table["df_resid"])
         # for earlier scipy - stats.f.sf(np.nan, 10, 2) -> 0 not nan
-        table.loc[table["F"].isnull(), pr_test] = np.nan
+        table.loc[table["F"].isna(), pr_test] = np.nan
 
     return table
 
 
 def _not_slice(slices, slices_to_exclude, n):
-    ind = np.array([True]*n)
+    ind = np.array([True] * n)
     for term in slices_to_exclude:
         s = slices[term]
         ind[s] = False
@@ -497,7 +497,7 @@ class AnovaRM:
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will
-        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        not perform any aggregation; 'mean' is a shortcut to `numpy.mean`.
         An exception will be raised if aggregation is required, but no
         aggregation function was specified.
 
@@ -526,18 +526,20 @@ class AnovaRM:
     .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
     """
 
-    def __init__(self, data, depvar, subject, within=None, between=None,
-                 aggregate_func=None):
+    def __init__(
+        self, data, depvar, subject, within=None, between=None, aggregate_func=None
+    ):
         self.data = data
         self.depvar = depvar
         self.within = within
         if "C" in within:
-            raise ValueError("Factor name cannot be 'C'! This is in conflict "
-                             "with patsy's contrast function name.")
+            raise ValueError(
+                "Factor name cannot be 'C'! This is in conflict "
+                "with patsy's contrast function name."
+            )
         self.between = between
         if between is not None:
-            raise NotImplementedError("Between subject effect not "
-                                      "yet supported!")
+            raise NotImplementedError("Between subject effect not yet supported!")
         self.subject = subject
 
         if aggregate_func == "mean":
@@ -545,22 +547,23 @@ class AnovaRM:
         else:
             self.aggregate_func = aggregate_func
 
-        if not data.equals(data.drop_duplicates(subset=[subject] + within)):
+        if not data.equals(data.drop_duplicates(subset=[subject, *within])):
             if self.aggregate_func is not None:
                 self._aggregate()
             else:
-                msg = ("The data set contains more than one observation per "
-                       "subject and cell. Either aggregate the data manually, "
-                       "or pass the `aggregate_func` parameter.")
+                msg = (
+                    "The data set contains more than one observation per "
+                    "subject and cell. Either aggregate the data manually, "
+                    "or pass the `aggregate_func` parameter."
+                )
                 raise ValueError(msg)
 
         self._check_data_balanced()
 
     def _aggregate(self):
-        self.data = (self.data
-                     .groupby([self.subject] + self.within,
-                              as_index=False)[self.depvar]
-                     .agg(self.aggregate_func))
+        self.data = self.data.groupby([self.subject, *self.within], as_index=False)[
+            self.depvar
+        ].agg(self.aggregate_func)
 
     def _check_data_balanced(self):
         """
@@ -582,10 +585,7 @@ class AnovaRM:
 
         cell_count = {}
         for index in range(self.data.shape[0]):
-            key = []
-            for col in self.within:
-                key.append(self.data[col].iloc[index])
-            key = tuple(key)
+            key = tuple(self.data[col].iloc[index] for col in self.within)
             if key in cell_count:
                 cell_count[key] = cell_count[key] + 1
             else:
@@ -598,8 +598,9 @@ class AnovaRM:
             if count != cell_value:
                 raise ValueError(error_message)
         if self.data.shape[0] > count * factor_levels:
-            raise ValueError("There are more than 1 element in a cell! Missing"
-                             " factors?")
+            raise ValueError(
+                "There are more than 1 element in a cell! Missing factors?"
+            )
 
     def fit(self):
         """
@@ -613,14 +614,14 @@ class AnovaRM:
         y = self.data[self.depvar].values
 
         # Construct OLS endog and exog from string using patsy
-        within = ["C(%s, Sum)" % i for i in self.within]
-        subject = "C(%s, Sum)" % self.subject
-        factors = within + [subject]
+        within = [f"C({i}, Sum)" for i in self.within]
+        subject = f"C({self.subject}, Sum)"
+        factors = [*within, subject]
         mgr = FormulaManager()
         x = mgr.get_matrices("*".join(factors), data=self.data, pandas=False)
         term_slices = mgr.get_term_name_slices(x)
         for key in term_slices:
-            ind = np.array([False]*x.shape[1])
+            ind = np.array([False] * x.shape[1])
             ind[term_slices[key]] = True
             term_slices[key] = np.array(ind)
         term_exclude = [":".join(factors)]
@@ -646,18 +647,18 @@ class AnovaRM:
         for key in term_slices:
             if self.subject not in str(key) and str(key) not in ("Intercept", "1"):
                 #  Independent variables are orthogonal
-                ssr1, df_resid1 = _ssr_reduced_model(
-                    y, x, term_slices, params, [key])
+                ssr1, df_resid1 = _ssr_reduced_model(y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
-                if (str(key) == ":".join(factors[:-1]) or
-                        (str(key) + ":" + subject not in term_slices)):
+                if str(key) == ":".join(factors[:-1]) or (
+                    str(key) + ":" + subject not in term_slices
+                ):
                     mse = ssr / df_resid
                     df2 = df_resid
                 else:
                     ssr1, df_resid1 = _ssr_reduced_model(
-                        y, x, term_slices, params,
-                        [str(key) + ":" + subject])
+                        y, x, term_slices, params, [str(key) + ":" + subject]
+                    )
                     df2 = df_resid1 - df_resid
                     mse = (ssr1 - ssr) / df2
                 F = msm / mse
@@ -680,6 +681,7 @@ class AnovaResults:
     anova_table : DataFrame
         The Anova table.
     """
+
     def __init__(self, anova_table):
         self.anova_table = anova_table
 
@@ -700,32 +702,3 @@ class AnovaResults:
         summ.add_df(self.anova_table)
 
         return summ
-
-
-if __name__ == "__main__":
-    from statsmodels.formula.api import ols
-
-    # in R
-    # library(car)
-    # write.csv(Moore, "moore.csv", row.names=FALSE)
-
-    moore = pd.read_csv(
-        "moore.csv",
-        skiprows=1,
-        names=["partner_status", "conformity", "fcategory", "fscore"],
-    )
-    moore_lm = ols(
-        "conformity ~ C(fcategory, Sum)*C(partner_status, Sum)", data=moore
-    ).fit()
-
-    mooreB = ols("conformity ~ C(partner_status, Sum)", data=moore).fit()
-
-    # for each term you just want to test vs the model without its
-    # higher-order terms
-
-    # using Monette-Fox slides and Marden class notes for linear algebra /
-    # Reference for Orthogonal Projections/complement in ANOVA:
-    # https://people.math.aau.dk/~rw/Undervisning/MM_BI/
-# Handouts/anova_orthog.pdf
-
-    table = anova_lm(moore_lm, typ=2)

@@ -32,7 +32,7 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
         The main attributes are
 
         - ``nc`` : estimate of noncentrality parameter
-        - ``confint`` : lower and upper bound of confidence interval for `nc``
+        - ``confint`` : lower and upper bound of confidence interval for ``nc``
 
         Other attributes are estimates for nc by different methods.
 
@@ -92,7 +92,7 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
         The main attributes are
 
         - ``nc`` : estimate of noncentrality parameter
-        - ``confint`` : lower and upper bound of confidence interval for `nc``
+        - ``confint`` : lower and upper bound of confidence interval for ``nc``
 
         Other attributes are estimates for nc by different methods.
 
@@ -140,7 +140,7 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
         The main attributes are
 
         - ``nc`` : estimate of noncentrality parameter
-        - ``confint`` : lower and upper bound of confidence interval for `nc``
+        - ``confint`` : lower and upper bound of confidence interval for ``nc``
 
         Other attributes are estimates for nc by different methods.
 

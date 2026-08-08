@@ -326,7 +326,7 @@ class KalmanSmoother(KalmanFilter):
         >>> mod.smooth_method
         17
         >>> mod.set_smooth_method(filter_univariate=False,
-                                  filter_collapsed=True)
+        ...                       filter_collapsed=True)
         >>> mod.smooth_method
         33
         >>> mod.set_smooth_method(smooth_method=1)
@@ -567,9 +567,9 @@ class SmootherResults(FilterResults):
         The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
     smoothed_measurement_disturbance : ndarray
-        The smoothed measurement at each time period.
+        The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
-        The smoothed state at each time period.
+        The smoothed state disturbance at each time period.
     smoothed_measurement_disturbance_cov : ndarray
         The smoothed measurement disturbance covariance matrices at each time
         period.
@@ -932,7 +932,7 @@ class SmootherResults(FilterResults):
               usual.
 
             More generally, the dimension of the last axis will be
-            `start - end`.
+            `end - start`.
 
         Notes
         -----
@@ -1240,7 +1240,7 @@ class SmootherResults(FilterResults):
             raise ValueError(error_ss % "different state space dimensions than"
                              " `previous`")
 
-        for key in self.model.shapes.keys():
+        for key in self.model.shapes:
             if key == "obs":
                 continue
             tv = getattr(self, key).shape[-1] > 1
@@ -1265,7 +1265,7 @@ class SmootherResults(FilterResults):
 
         # For time-varying case, figure out extension kwargs
         extend_kwargs = {}
-        for key in self.model.shapes.keys():
+        for key in self.model.shapes:
             if key == "obs":
                 continue
             mat = getattr(self, key)
@@ -1326,7 +1326,7 @@ class SmootherResults(FilterResults):
         # or not we are computing detailed impacts)
         if len(revisions_ix) > 0:
             # Indexes
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=True)
             compute_j = np.arange(revised_j[0], revised_j[-1] + 1)
 
             # Data from updated model
@@ -1357,7 +1357,7 @@ class SmootherResults(FilterResults):
 
             # Copy time-varying matrices (required by clone)
             clone_kwargs = {}
-            for key in self.model.shapes.keys():
+            for key in self.model.shapes:
                 if key == "obs":
                     continue
                 mat = getattr(self, key)
@@ -1425,7 +1425,7 @@ class SmootherResults(FilterResults):
                 # elements
                 revised_j, revised_p = zip(*[
                     s for s in revisions_ix
-                    if s[0] >= revisions_details_start])
+                    if s[0] >= revisions_details_start], strict=True)
                 ix_j = revised_j - revised_j[0]
                 # Shape is: t, k, j * p
                 # Note: have to transpose first so that the two advanced
@@ -1468,7 +1468,7 @@ class SmootherResults(FilterResults):
 
         # Need to also flatten the revisions items that contain all revisions
         if len(revisions_ix) > 0:
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=True)
             ix_j = revised_j - revised_j[0]
 
             revisions_all = revisions_all[ix_j, revised_p]
@@ -1478,7 +1478,7 @@ class SmootherResults(FilterResults):
         # Now handle updates
         if len(updates_ix) > 0:
             # Figure out which time points we need forecast errors for
-            update_t, update_k = zip(*updates_ix)
+            update_t, update_k = zip(*updates_ix, strict=True)
             update_start_t = np.min(update_t)
             update_end_t = np.max(update_t)
 
@@ -1840,9 +1840,9 @@ class SmootherResults(FilterResults):
             time `j` to the `m`-th state at time `t`. If the smoothed signal
             is being decomposed, then `state_intercept_contributions` are
             shaped `(nobs, k_endog, nobs, k_endog)`, where the
-            `(t, k, j, l)`-th element is the contribution of the `p`-th
-            observation at time `j` to the smoothed prediction of the `k`-th
-            observation at time `t`.
+            `(t, k, j, l)`-th element is the contribution of the `l`-th
+            state intercept at time `j` to the smoothed prediction of the
+            `k`-th observation at time `t`.
         prior_contributions : array
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` are

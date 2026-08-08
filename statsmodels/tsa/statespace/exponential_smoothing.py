@@ -51,6 +51,7 @@ class ExponentialSmoothing(MLEModel):
 
         * 'estimated'
         * 'concentrated'
+        * 'simple'
         * 'heuristic'
         * 'known'
 
@@ -184,8 +185,7 @@ class ExponentialSmoothing(MLEModel):
 
         if self.initialization_method not in ["concentrated", "estimated",
                                               "simple", "heuristic", "known"]:
-            raise ValueError('Invalid initialization method "%s".'
-                             % initialization_method)
+            raise ValueError(f'Invalid initialization method "{initialization_method}".')
 
         if self.initialization_method == "known":
             if initial_level is None:
@@ -244,8 +244,7 @@ class ExponentialSmoothing(MLEModel):
 
         # Initialization of the states
         if self.initialization_method != "known":
-            msg = ('Cannot give `%%s` argument when initialization is "%s"'
-                   % initialization_method)
+            msg = (f'Cannot give `%s` argument when initialization is "{initialization_method}"')
             if initial_level is not None:
                 raise ValueError(msg % "initial_level")
             if initial_trend is not None:
@@ -339,7 +338,7 @@ class ExponentialSmoothing(MLEModel):
             state_names += ["trend"]
         if self.seasonal:
             state_names += (
-                ["seasonal"] + ["seasonal.L%d" % i
+                ["seasonal"] + [f"seasonal.L{i:d}"
                                 for i in range(1, self.seasonal_periods)])
 
         return state_names
@@ -364,7 +363,7 @@ class ExponentialSmoothing(MLEModel):
             if self.seasonal:
                 param_names += (
                     ["initial_seasonal"]
-                    + ["initial_seasonal.L%d" % i
+                    + [f"initial_seasonal.L{i:d}"
                        for i in range(1, self.seasonal_periods - 1)])
 
         return param_names
@@ -717,8 +716,7 @@ class ExponentialSmoothingResults(MLEResults):
             if params.ndim > 1:
                 params = params[0]
             names = self.model.state_names[1:]
-            param_header = ["initialization method: %s"
-                            % self.model.initialization_method]
+            param_header = [f"initialization method: {self.model.initialization_method}"]
             params_stubs = names
             params_data = [[forg(params[i], prec=4)]
                            for i in range(len(params))]

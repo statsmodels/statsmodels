@@ -13,8 +13,8 @@ joblib
 # cvxopt; os_name != "win32"
 
 # test
-pytest>=8.4.1,<9
-# pytest-randomly  <- Conflicts with np.random.seed() in tests, so we disable it for now
+pytest>=8.4.1,<10
+pytest-randomly
 pytest-run-parallel
 pytest-xdist
 pytest-cov
@@ -29,5 +29,4 @@ pywinpty; os_name == "nt"
 # code quality
 flake8
 flake8-bugbear
-isort
 ruff

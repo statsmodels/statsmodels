@@ -4,8 +4,7 @@ Tests for simulation smoothing
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -13,14 +12,14 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import mlemodel, sarimax, structural, varmax
+from statsmodels.tsa.statespace import mlemodel, sarimax, structural
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_ALL,
     SIMULATION_DISTURBANCE,
     SIMULATION_STATE,
 )
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class MultivariateVARKnown:
@@ -212,9 +211,7 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(
-                current_path, "results", "results_simulation_smoothing0.csv"
-            )
+            path = Path(current_path).joinpath("results", "results_simulation_smoothing0.csv")
             true = pd.read_csv(path)
 
             assert_allclose(
@@ -309,9 +306,7 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(
-                current_path, "results", "results_simulation_smoothing1.csv"
-            )
+            path = Path(current_path).joinpath("results", "results_simulation_smoothing1.csv")
             true = pd.read_csv(path)
             assert_allclose(
                 sim.simulated_state, true[["state1", "state2", "state3"]].T, atol=1e-7
@@ -435,9 +430,7 @@ class MultivariateVARKnown:
 
         # Test against R package KFAS values
         if self.test_against_KFAS:
-            path = os.path.join(
-                current_path, "results", "results_simulation_smoothing2.csv"
-            )
+            path = Path(current_path).joinpath("results", "results_simulation_smoothing2.csv")
             true = pd.read_csv(path)
             assert_allclose(
                 sim.simulated_state.T, true[["state1", "state2", "state3"]], atol=1e-7
@@ -652,13 +645,9 @@ class TestMultivariateVAR(MultivariateVAR):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        path = os.path.join(
-            current_path, "results", "results_simulation_smoothing3_variates.csv"
-        )
+        path = Path(current_path).joinpath("results", "results_simulation_smoothing3_variates.csv")
         cls.variates = pd.read_csv(path).values.squeeze()
-        path = os.path.join(
-            current_path, "results", "results_simulation_smoothing3.csv"
-        )
+        path = Path(current_path).joinpath("results", "results_simulation_smoothing3.csv")
         cls.true = pd.read_csv(path)
         cls.true_llf = 1695.34872
 
@@ -681,7 +670,7 @@ def test_misc():
     n_disturbance_variates = mod.nobs * (mod.k_endog + mod.k_states)
     variates = rs.normal(size=n_disturbance_variates)
     rs = np.random.RandomState(1234)
-    sim.simulate(random_state=rs)
+    sim.simulate(rng=rs)
     assert_allclose(sim.generated_measurement_disturbance[:, 0], variates[: mod.nobs])
     assert_allclose(sim.generated_state_disturbance[:, 0], variates[mod.nobs :])
 
@@ -782,109 +771,6 @@ def test_simulation_smoothing_state_intercept_diffuse():
     assert_equal(sim.simulated_state[0], intercept)
 
 
-def test_deprecated_arguments_univariate():
-    nobs = 10
-    intercept = 100
-    endog = np.ones(nobs) * intercept
-
-    mod = sarimax.SARIMAX(
-        endog,
-        order=(0, 0, 0),
-        trend="c",
-        measurement_error=True,
-        initialization="diffuse",
-    )
-    mod.update([intercept, 0.5, 2.0])
-
-    mds = np.arange(10) / 10.0
-    sds = np.arange(10)[::-1] / 20.0
-
-    # Test using deprecated `disturbance_variates`
-    sim = mod.simulation_smoother()
-    sim.simulate(
-        measurement_disturbance_variates=mds,
-        state_disturbance_variates=sds,
-        initial_state_variates=np.zeros(1),
-    )
-    desired = sim.simulated_state[0]
-
-    with pytest.warns(FutureWarning):
-        sim.simulate(
-            disturbance_variates=np.r_[mds, sds], initial_state_variates=np.zeros(1)
-        )
-    actual = sim.simulated_state[0]
-
-    # Test using deprecated `pretransformed`
-    sim = mod.simulation_smoother()
-    sim.simulate(
-        measurement_disturbance_variates=mds,
-        state_disturbance_variates=sds,
-        initial_state_variates=np.zeros(1),
-        pretransformed_measurement_disturbance_variates=True,
-        pretransformed_state_disturbance_variates=True,
-    )
-    desired = sim.simulated_state[0]
-
-    with pytest.warns(FutureWarning):
-        sim.simulate(
-            measurement_disturbance_variates=mds,
-            state_disturbance_variates=sds,
-            pretransformed=True,
-            initial_state_variates=np.zeros(1),
-        )
-    actual = sim.simulated_state[0]
-
-    assert_allclose(actual, desired)
-
-
-def test_deprecated_arguments_multivariate():
-    endog = np.array([[0.3, 1.4], [-0.1, 0.6], [0.2, 0.7], [0.1, 0.9], [0.5, -0.1]])
-
-    mod = varmax.VARMAX(endog, order=(1, 0, 0))
-    mod.update([1.2, 0.5, 0.8, 0.1, -0.2, 0.5, 5.2, 0.5, 8.1])
-
-    mds = np.arange(10).reshape(5, 2) / 10.0
-    sds = np.arange(10).reshape(5, 2)[::-1] / 20.0
-
-    # Test using deprecated `disturbance_variates`
-    sim = mod.simulation_smoother()
-    sim.simulate(
-        measurement_disturbance_variates=mds,
-        state_disturbance_variates=sds,
-        initial_state_variates=np.zeros(2),
-    )
-    desired = sim.simulated_state[0]
-
-    with pytest.warns(FutureWarning):
-        sim.simulate(
-            disturbance_variates=np.r_[mds.ravel(), sds.ravel()],
-            initial_state_variates=np.zeros(2),
-        )
-    actual = sim.simulated_state[0]
-
-    # Test using deprecated `pretransformed`
-    sim = mod.simulation_smoother()
-    sim.simulate(
-        measurement_disturbance_variates=mds,
-        state_disturbance_variates=sds,
-        initial_state_variates=np.zeros(2),
-        pretransformed_measurement_disturbance_variates=True,
-        pretransformed_state_disturbance_variates=True,
-    )
-    desired = sim.simulated_state[0]
-
-    with pytest.warns(FutureWarning):
-        sim.simulate(
-            measurement_disturbance_variates=mds,
-            state_disturbance_variates=sds,
-            pretransformed=True,
-            initial_state_variates=np.zeros(2),
-        )
-    actual = sim.simulated_state[0]
-
-    assert_allclose(actual, desired)
-
-
 def test_nan():
     """
     This is a very slow test to check that the distribution of simulated states
@@ -917,7 +803,7 @@ def test_nan():
     res = mod.smooth([0, 0.5, 1.0])
 
     rs = np.random.RandomState(1234)
-    sim = mod.simulation_smoother(random_state=rs)
+    sim = mod.simulation_smoother(rng=rs)
 
     n = 1000000
     out = np.zeros((n, mod.nobs))

@@ -14,13 +14,11 @@ from __future__ import annotations
 
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
-    PLATFORM_LINUX32,
     PLATFORM_OSX,
     PLATFORM_WIN32,
 )
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.python import PYTHON_IMPL_WASM
-from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
 from numpy.testing import (
@@ -227,10 +225,7 @@ class CheckGenericMixinBase:
             assert_allclose(tvals1, res2.tvalues, rtol=5e-8)
 
             # See gh5993
-            if PLATFORM_LINUX32 or SCIPY_GT_14:
-                pvals1 = res1.pvalues[keep_index_p]
-            else:
-                pvals1 = res1.pvalues[keep_index_p]
+            pvals1 = res1.pvalues[keep_index_p]
             assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, "resid"):
@@ -291,10 +286,7 @@ class CheckGenericMixin(CheckGenericMixinBase):
         assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
 
         # See gh5993
-        if PLATFORM_LINUX32 or SCIPY_GT_14:
-            pvals1 = res1.pvalues[keep_index_p]
-        else:
-            pvals1 = res1.pvalues[keep_index_p]
+        pvals1 = res1.pvalues[keep_index_p]
         assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
         if hasattr(res1, "resid"):

@@ -22,6 +22,7 @@ see:
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
+
 from statsmodels.compat.python import lrange
 
 import math
@@ -1904,7 +1905,7 @@ A = {
 p_keys = [0.1, 0.5, 0.675, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99, 0.995, 0.999]
 
 # v values that are defined in the A table
-v_keys = lrange(2, 21) + [24, 30, 40, 60, 120, inf]
+v_keys = [*lrange(2, 21), 24, 30, 40, 60, 120, inf]
 
 
 def _isfloat(x):
@@ -1961,7 +1962,7 @@ def _phi(p):
 
     if p <= 0 or p >= 1:
         # The original perl code exits here, we'll throw an exception instead
-        raise ValueError("Argument to ltqnorm %f must be in open interval (0,1)" % p)
+        raise ValueError(f"Argument to ltqnorm {p:f} must be in open interval (0,1)")
 
     # Coefficients in rational approximations.
     a = (
@@ -2356,9 +2357,9 @@ def qsturng(p, r, v):
     v : (scalar, array_like)
         The sample degrees of freedom
         if p >= .9:
-            v >=1 and v >= inf
+            v >=1 and v <= inf
         else:
-            v >=2 and v >= inf
+            v >=2 and v <= inf
 
     Returns
     -------
@@ -2445,10 +2446,10 @@ def psturng(q, r, v):
         (values over 200 are permitted but not recommended)
     v : (scalar, array_like)
         The sample degrees of freedom
-        if p >= .9:
-            v >=1 and v >= inf
+        if the corresponding probability is >= .9:
+            v >=1 and v <= inf
         else:
-            v >=2 and v >= inf
+            v >=2 and v <= inf
 
     Returns
     -------
@@ -2456,7 +2457,7 @@ def psturng(q, r, v):
         1. - area from zero to q under the Studentized Range
         distribution. When v == 1, p is bound between .001
         and .1, when v > 1, p is bound between .001 and .9.
-        Values between .5 and .9 are 1st order appoximations.
+        Values between .5 and .9 are 1st order approximations.
     """
     if all(map(_isfloat, [q, r, v])):
         return _psturng(q, r, v)

@@ -250,11 +250,13 @@ class emplikeAFT:
 
     Methods
     -------
-    params
-        Fits model parameters
+    fit
+        Fits the model and returns an AFTResults instance, whose
+        ``params`` and ``test_beta`` methods fit model parameters and
+        test if beta = b0 for any vector b0, respectively.
 
-    test_beta
-        Tests if beta = b0 for any vector b0.
+    predict
+        Returns the linear predictor, params multiplied by endog.
 
     Notes
     -----
@@ -435,7 +437,7 @@ class AFTResults(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30, print_weights=1):
+    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30):
         """
         Returns the profile log likelihood for regression parameters
         'param_nums' at 'b0_vals'
@@ -451,9 +453,6 @@ class AFTResults(OptAFT):
         ftol : float, optional
             The function tolerance for the EM optimization.
             Default is ``10**-5``
-        print_weights : bool, optional
-            If true, returns the weights that maximize the profile
-            log likelihood. Default is True
 
         Returns
         -------
@@ -505,7 +504,7 @@ class AFTResults(OptAFT):
         uncens_exog = exog[uncensored, :]
         reg_model = OLS(uncens_endog, uncens_exog).fit()
         llr, pval, new_weights = reg_model.el_test(
-            b0_vals, param_nums, return_weights=True
+            b0_vals, param_nums, return_weights=True, use_namedtuple=False
         )  # Needs to be changed
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs

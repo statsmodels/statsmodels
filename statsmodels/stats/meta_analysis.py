@@ -12,6 +12,7 @@ from scipy import stats
 
 from statsmodels.stats.base import HolderTuple
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.validation import float_like
 
 
 class CombineResults:
@@ -37,6 +38,9 @@ class CombineResults:
 
         # memoize ci_samples
         self.cache_ci = {}
+        # Populated by `conf_int_samples`; declared here so it exists (as
+        # None) even before that method has been called.
+        self.ci_sample_distr = None
 
     def conf_int_samples(self, alpha=0.05, use_t=None, nobs=None, ci_func=None):
         """
@@ -281,7 +285,8 @@ class CombineResults:
         """
         if use_t is None:
             use_t = self.use_t
-        labels = list(self.row_names) + [
+        labels = [
+            *list(self.row_names),
             "fixed effect",
             "random effect",
             "fixed effect wls",
@@ -337,6 +342,7 @@ class CombineResults:
             intervals=hw,
             lines=res_df.index,
             line_order=res_df.index,
+            ax=ax,
             **kwds,
         )
         return fig
@@ -477,12 +483,8 @@ def effectsize_2proportions(
     elif zero_correction == "clip":
         clip_bounds = zero_kwds.get("clip_bounds", (1e-6, 1 - 1e-6))
         cc1 = cc2 = 0
-    elif zero_correction:
-        # TODO: check is float_like
-        cc1 = cc2 = zero_correction
     else:
-        msg = "zero_correction not recognized or supported"
-        raise NotImplementedError(msg)
+        cc1 = cc2 = float_like(zero_correction, "zero_correction", optional=False)
 
     zero_mask1 = (count1 == 0) | (count1 == nobs1)
     zero_mask2 = (count2 == 0) | (count2 == nobs2)

@@ -25,6 +25,7 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -80,10 +81,8 @@ class _Bunch:
         ky = [k for k, _ in self.__dict__.items()]
         ky.sort()
         m = max([len(k) for k in ky])
-        tab = []
         f = "{:" + str(m) + "}   {}"
-        for k in ky:
-            tab.append(f.format(k, self.__dict__[k]))
+        tab = [f.format(k, self.__dict__[k]) for k in ky]
         return "\n".join(tab)
 
 
@@ -131,7 +130,9 @@ class Table:
             self.table[self.table == 0] = 0.5
 
     def __str__(self):
-        s = "A %dx%d contingency table with counts:\n" % tuple(self.table.shape)
+        s = "A {:d}x{:d} contingency table with counts:\n".format(
+            *tuple(self.table.shape)
+        )
         s += np.array_str(self.table)
         return s
 
@@ -497,7 +498,7 @@ class SquareTable(Table):
 
             * statistic : float
                 chisquare test statistic
-            * p-value : float
+            * pvalue : float
                 p-value of the test statistic based on chisquare distribution
             * df : int
                 degrees of freedom of the chisquare distribution
@@ -584,7 +585,7 @@ class SquareTable(Table):
 
         method = method.lower()
         if method not in ["bhapkar", "stuart_maxwell"]:
-            raise ValueError("method '%s' for homogeneity not known" % method)
+            raise ValueError(f"method '{method}' for homogeneity not known")
 
         n_obs = self.table.sum()
         pr = self.table.astype(np.float64) / n_obs
@@ -652,8 +653,8 @@ class SquareTable(Table):
         sy = self.symmetry()
         hm = self.homogeneity()
         data = [
-            [fmt % sy.statistic, fmt % sy.pvalue, "%d" % sy.df],
-            [fmt % hm.statistic, fmt % hm.pvalue, "%d" % hm.df],
+            [fmt % sy.statistic, fmt % sy.pvalue, f"{int(sy.df):d}"],
+            [fmt % hm.statistic, fmt % hm.pvalue, f"{int(hm.df):d}"],
         ]
         tab = iolib.SimpleTable(
             data, headers, stubs, data_aligns="r", table_dec_above=""
@@ -963,10 +964,13 @@ class StratifiedTable:
         Either a list containing several 2x2 contingency tables, or
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
+    shift_zeros : bool
+        If True and any cell count is zero, add 0.5 to all cells of the
+        affected table(s).
 
     Notes
     -----
-    This results are based on a sampling model in which the units are
+    These results are based on a sampling model in which the units are
     independent both within and between strata.
     """
 
@@ -1130,8 +1134,8 @@ class StratifiedTable:
         """
         Estimated standard error of the pooled log odds ratio
 
-        References
-        ----------
+        Based on work by:
+
         J. Robins, N. Breslow, S. Greenland. "Estimators of the
         Mantel-Haenszel Variance Consistent in Both Sparse Data and
         Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.
@@ -1225,7 +1229,7 @@ class StratifiedTable:
 
         statistic : float
             The chi^2 test statistic.
-        p-value : float
+        pvalue : float
             The p-value for the test.
         """
 
@@ -1300,26 +1304,26 @@ class StratifiedTable:
             data, headers, stubs, data_aligns="r", table_dec_above=""
         )
 
-        headers = ["Statistic", "P-value", ""]
+        headers = ["Statistic", "P-value", "   "]
         stubs = ["Test of OR=1", "Test constant OR"]
         rslt1 = self.test_null_odds()
         rslt2 = self.test_equal_odds()
         data = [
-            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, ""]],
-            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, ""]],
+            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, "    "]],
+            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, "    "]],
         ]
         tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab2)
 
-        headers = ["", "", ""]
+        headers = [" ", " ", " "]
         stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
         ss = self.table.sum(0).sum(0)
         data = [
-            ["%d" % self.table.shape[2], "", ""],
-            ["%d" % min(ss), "", ""],
-            ["%d" % max(ss), "", ""],
-            ["%.0f" % np.mean(ss), "", ""],
-            ["%d" % sum(ss), "", "", ""],
+            [f"{self.table.shape[2]:d}", "", ""],
+            [f"{int(min(ss)):d}", "", ""],
+            [f"{int(max(ss)):d}", "", ""],
+            [f"{np.mean(ss):.0f}", "", ""],
+            [f"{int(sum(ss)):d}", "", ""],
         ]
         tab3 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab3)
@@ -1365,6 +1369,18 @@ def mcnemar(table, exact=True, correction=True):
 
     table = _make_df_square(table)
     table = np.asarray(table, dtype=np.float64)
+    if table.ndim != 2:
+        raise ValueError(
+            "mcnemar requires a two-dimensional contingency table, but the input has "
+            f"shape {table.shape}."
+        )
+    if table.shape != (2, 2):
+        raise ValueError(
+            "mcnemar requires a 2x2 contingency table, but the input has "
+            f"shape {table.shape}. For a larger square table, use "
+            "SquareTable.symmetry (Bowker's test of symmetry), which "
+            "generalizes McNemar's test to k x k tables."
+        )
     n1, n2 = table[0, 1], table[1, 0]
 
     if exact:
@@ -1388,7 +1404,26 @@ def mcnemar(table, exact=True, correction=True):
     return b
 
 
-def cochrans_q(x, return_object=True):
+class CochransQResult(NamedTuple):
+    """
+    Result of :func:`cochrans_q`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic.
+    pvalue : float
+        p-value from the chisquare distribution.
+    df : int
+        Degrees of freedom of the chisquare distribution.
+    """
+
+    statistic: float
+    pvalue: float
+    df: int
+
+
+def cochrans_q(x, return_object=None):
     """
     Cochran's Q test for identical binomial proportions
 
@@ -1397,17 +1432,35 @@ def cochrans_q(x, return_object=True):
     x : array_like, 2d (N, k)
         data with N cases and k variables
     return_object : bool
-        Return values as bunch instead of as individual values.
+        No longer used. ``cochrans_q`` always returns a
+        ``CochransQResult``, which supports both the attribute access of the
+        bunch that ``return_object=True`` used to produce and the positional
+        unpacking of the ``(statistic, pvalue, df)`` tuple that
+        ``return_object=False`` used to produce.
+
+        .. deprecated:: 0.15.0
+
+            ``return_object`` no longer affects the return value and will be
+            removed in statsmodels 0.16.0. Passing it raises a
+            ``FutureWarning``; simply stop passing it.
 
     Returns
     -------
-    Returns a bunch containing the following attributes, or the
-    individual values according to the value of `return_object`.
+    CochransQResult
+        A NamedTuple with fields:
 
-    statistic : float
-       test statistic
-    pvalue : float
-       pvalue from the chisquare distribution
+        statistic : float
+            test statistic
+        pvalue : float
+            pvalue from the chisquare distribution
+        df : int
+            degrees of freedom of the chisquare distribution
+
+        ``CochransQResult`` unpacks and indexes exactly like the
+        ``(statistic, pvalue, df)`` tuple that ``return_object=False``
+        returned, and exposes the same ``statistic``, ``pvalue`` and ``df``
+        attributes as the bunch that ``return_object=True`` returned. See
+        :class:`~statsmodels.stats.contingency_tables.CochransQResult`.
 
     Notes
     -----
@@ -1431,6 +1484,17 @@ def cochrans_q(x, return_object=True):
     https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
     """
+    if return_object is not None:
+        warnings.warn(
+            "The return_object keyword of cochrans_q no longer changes the "
+            "return value and will be removed in statsmodels 0.16.0. "
+            "cochrans_q now always returns a CochransQResult, which unpacks "
+            "as (statistic, pvalue, df) and also exposes .statistic, "
+            ".pvalue and .df. Stop passing return_object to silence this "
+            "warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     x = np.asarray(x, dtype=np.float64)
     gruni = np.unique(x)
@@ -1457,11 +1521,8 @@ def cochrans_q(x, return_object=True):
     df = k - 1
     pvalue = stats.chi2.sf(q_stat, df)
 
-    if return_object:
-        b = _Bunch()
-        b.statistic = q_stat
-        b.df = df
-        b.pvalue = pvalue
-        return b
-
-    return q_stat, pvalue, df
+    # CochransQResult replaces both legacy return paths at once: it unpacks
+    # as the (statistic, pvalue, df) tuple that return_object=False produced
+    # and carries the same attributes as the bunch that return_object=True
+    # produced, so a single return covers every caller.
+    return CochransQResult(q_stat, pvalue, df)

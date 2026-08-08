@@ -1,6 +1,51 @@
+from typing import NamedTuple
+
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable
+
+
+class ForecastInterval(NamedTuple):
+    """
+    Result of the module-level
+    :func:`~statsmodels.tsa.vector_ar.var_model.forecast_interval` and
+    :meth:`~statsmodels.tsa.vector_ar.var_model.VARProcess.forecast_interval`.
+
+    Parameters
+    ----------
+    point_forecast : ndarray
+        Mean value of forecast.
+    forc_lower : ndarray
+        Lower bound of confidence interval.
+    forc_upper : ndarray
+        Upper bound of confidence interval.
+    """
+
+    point_forecast: np.ndarray
+    forc_lower: np.ndarray
+    forc_upper: np.ndarray
+
+
+class ErrorBand(NamedTuple):
+    """
+    Impulse-response error band, shared by
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz1`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz2`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz3`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.errband_mc`,
+    :meth:`~statsmodels.tsa.vector_ar.svar_model.SVARResults.sirf_errband_mc`,
+    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARResults.irf_errband_mc`.
+
+    Parameters
+    ----------
+    lower : ndarray
+        Lower error band for the impulse responses.
+    upper : ndarray
+        Upper error band for the impulse responses.
+    """
+
+    lower: np.ndarray
+    upper: np.ndarray
 
 
 class HypothesisTestResults:
@@ -41,7 +86,7 @@ class HypothesisTestResults:
             self.conclusion = "reject"
         self.title = title
         self.h0 = h0
-        self.conclusion_str = "Conclusion: %s H_0" % self.conclusion
+        self.conclusion_str = f"Conclusion: {self.conclusion} H_0"
         self.signif_str = f" at {self.signif:.0%} significance level"
 
     def summary(self):
@@ -76,6 +121,11 @@ class HypothesisTestResults:
             and np.allclose(self.crit_value, other.crit_value) \
             and np.allclose(self.pvalue, other.pvalue) \
             and np.allclose(self.signif, other.signif)
+
+    # Equality is based on np.allclose, which is not compatible with a
+    # hash based on field values, so instances remain unhashable (this
+    # matches the implicit behavior of defining __eq__ without __hash__).
+    __hash__ = None
 
 
 class CausalityTestResults(HypothesisTestResults):
@@ -113,7 +163,7 @@ class CausalityTestResults(HypothesisTestResults):
         method = method.capitalize()
         # attributes used in summary and string representation:
         title = "Granger" if self.test == "granger" else "Instantaneous"
-        title += " causality %s-test" % method
+        title += f" causality {method}-test"
         h0 = "H_0: "
         if len(self.causing) == 1:
             h0 += f"{self.causing[0]} does not "
@@ -143,6 +193,8 @@ class CausalityTestResults(HypothesisTestResults):
             variables = (self.causing == other.caused and
                          self.caused == other.causing)
         return test and variables
+
+    __hash__ = None
 
 
 class NormalityTestResults(HypothesisTestResults):

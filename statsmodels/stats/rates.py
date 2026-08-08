@@ -6,7 +6,6 @@ License: BSD-3
 
 """
 
-
 import numpy as np
 from scipy import optimize, stats
 
@@ -173,7 +172,7 @@ def test_poisson(
         ) / std
 
     else:
-        raise ValueError("unknown method %s" % method)
+        raise ValueError(f"unknown method {method}")
 
     if dist == "normal":
         statistic, pvalue = _zstat_generic2(statistic, 1, alternative)
@@ -385,7 +384,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
         )
 
     else:
-        raise ValueError("unknown method %s" % method)
+        raise ValueError(f"unknown method {method}")
 
     if alternative == "larger":
         ci = (0, ci[1])
@@ -699,7 +698,6 @@ def test_poisson_2indep(
     count2,
     exposure2,
     value=None,
-    ratio_null=None,
     method=None,
     compare="ratio",
     alternative="two-sided",
@@ -737,22 +735,9 @@ def test_poisson_2indep(
         Number of events in second sample, control group.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    ratio_null : float
-        Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-        Deprecated, use ``value`` instead.
-
-        .. deprecated:: 0.14.0
-
-            Use ``value`` instead.
-
     value : float
         Value of the ratio or difference of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
-
-        .. versionadded:: 0.14.0
-
-            Replacement for ``ratio_null``.
-
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
@@ -849,7 +834,12 @@ def test_poisson_2indep(
     """
 
     # shortcut names
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -859,29 +849,27 @@ def test_poisson_2indep(
             # default method
             method = "score"
 
-        if ratio_null is not None:
-            raise TypeError("'ratio_null' is no longer valid, use 'value' keyword")
         if value is None:
             # default value
-            value = ratio_null = 1
+            value = 1
 
         r = value
         r_d = r / d  # r1 * n1 / (r2 * n2)
 
-        if method in ["score"]:
+        if method == "score":
             stat = (y1 - y2 * r_d) / np.sqrt((y1 + y2) * r_d)
             dist = "normal"
-        elif method in ["wald"]:
+        elif method == "wald":
             stat = (y1 - y2 * r_d) / np.sqrt(y1 + y2 * r_d**2)
             dist = "normal"
-        elif method in ["score-log"]:
+        elif method == "score-log":
             stat = np.log(y1 / y2) - np.log(r_d)
             stat /= np.sqrt((2 + 1 / r_d + r_d) / (y1 + y2))
             dist = "normal"
-        elif method in ["wald-log"]:
+        elif method == "wald-log":
             stat = (np.log(y1 / y2) - np.log(r_d)) / np.sqrt(1 / y1 + 1 / y2)
             dist = "normal"
-        elif method in ["sqrt"]:
+        elif method == "sqrt":
             stat = 2 * (np.sqrt(y1 + 3 / 8.0) - np.sqrt((y2 + 3 / 8.0) * r_d))
             stat /= np.sqrt(1 + r_d)
             dist = "normal"
@@ -895,7 +883,7 @@ def test_poisson_2indep(
             pvalue = proportion.binom_test(
                 y1, y_total, prop=bp, alternative=alternative
             )
-            if method in ["cond-midp"]:
+            if method == "cond-midp":
                 # not inplace in case we still want binom pvalue
                 pvalue = pvalue - 0.5 * stats.binom.pmf(y1, y_total, bp)
 
@@ -926,15 +914,15 @@ def test_poisson_2indep(
     elif compare == "diff":
         if value is None:
             value = 0
-        if method in ["wald"]:
+        if method == "wald":
             stat = (rate1 - rate2 - value) / np.sqrt(rate1 / n1 + rate2 / n2)
             dist = "normal"
             "waldccv"
-        elif method in ["waldccv"]:
+        elif method == "waldccv":
             stat = rate1 - rate2 - value
             stat /= np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
             dist = "normal"
-        elif method in ["score"]:
+        elif method == "score":
             # estimate rates with constraint MLE
             count_pooled = y1 + y2
             rate_pooled = count_pooled / (n1 + n2)
@@ -1048,12 +1036,10 @@ def etest_poisson_2indep(
     exposure1,
     count2,
     exposure2,
-    ratio_null=None,
     value=None,
     method="score",
     compare="ratio",
     alternative="two-sided",
-    ygrid=None,
     y_grid=None,
 ):
     """
@@ -1087,22 +1073,9 @@ def etest_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    ratio_null : float
-        Ratio of the two Poisson rates under the Null hypothesis. Default is 1.
-        Deprecated, use ``value`` instead.
-
-        .. deprecated:: 0.14.0
-
-            Use ``value`` instead.
-
     value : float
         Value of the ratio or diff of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
-
-        .. versionadded:: 0.14.0
-
-            Replacement for ``ratio_null``.
-
     method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
     compare : {'diff', 'ratio'}
@@ -1114,22 +1087,14 @@ def etest_poisson_2indep(
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
 
-        - 'two-sided': H1: ratio of rates is not equal to ratio_null (default)
-        - 'larger' :   H1: ratio of rates is larger than ratio_null
-        - 'smaller' :  H1: ratio of rates is smaller than ratio_null
+        - 'two-sided': H1: ratio of rates is not equal to value (default)
+        - 'larger' :   H1: ratio of rates is larger than value
+        - 'smaller' :  H1: ratio of rates is smaller than value
 
     y_grid : None or 1-D ndarray
         Grid values for counts of the Poisson distribution used for computing
         the pvalue. By default truncation is based on an upper tail Poisson
         quantiles.
-
-    ygrid : None or 1-D ndarray
-        Same as y_grid. Deprecated. If both y_grid and ygrid are provided,
-        ygrid will be ignored.
-
-        .. deprecated:: 0.14.0
-
-            Use ``y_grid`` instead.
 
     Returns
     -------
@@ -1146,14 +1111,17 @@ def etest_poisson_2indep(
     for the Difference of Two Poisson Means.” Computational Statistics & Data
     Analysis 51 (6): 3085-99. https://doi.org/10.1016/j.csda.2006.02.004.
     """
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
 
     if compare == "ratio":
-        if ratio_null is not None:
-            raise TypeError("'ratio_null' is no longer valid, use 'value' keyword")
         if value is None:
             # default value
             value = 1
@@ -1163,7 +1131,7 @@ def etest_poisson_2indep(
         rate2_cmle = (y1 + y2) / n2 / (1 + r_d)
         rate1_cmle = rate2_cmle * r
 
-        if method in ["score"]:
+        if method == "score":
 
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt((x1 + x2) * r_d + eps)
@@ -1173,7 +1141,7 @@ def etest_poisson_2indep(
             # rate1_cmle = rate2_cmle * r
             # rate1 = rate1_cmle
             # rate2 = rate2_cmle
-        elif method in ["wald"]:
+        elif method == "wald":
 
             def stat_func(x1, x2):
                 return (x1 - x2 * r_d) / np.sqrt(x1 + x2 * r_d**2 + eps)
@@ -1191,12 +1159,12 @@ def etest_poisson_2indep(
         tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
         _, rate1_cmle, rate2_cmle = tmp
 
-        if method in ["score"]:
+        if method == "score":
 
             def stat_func(x1, x2):
                 return _score_diff(x1, n1, x2, n2, value=value)
 
-        elif method in ["wald"]:
+        elif method == "wald":
 
             def stat_func(x1, x2):
                 rate1, rate2 = x1 / n1, x2 / n2
@@ -1216,8 +1184,6 @@ def etest_poisson_2indep(
 
     stat_sample = stat_func(y1, y2)
 
-    if ygrid is not None:
-        raise TypeError("ygrid is no longer valid, use y_grid")
     # The following uses a fixed truncation for evaluating the probabilities
     # It will currently only work for small counts, so that sf at truncation
     # point is small
@@ -1268,7 +1234,7 @@ def tost_poisson_2indep(
     for compare = 'diff'
 
     - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
-    - H1: low < rate - rate < upp
+    - H1: low < rate1 - rate2 < upp
 
     Parameters
     ----------
@@ -1393,7 +1359,7 @@ def nonequivalence_poisson_2indep(
     for compare = 'diff':
 
     - H0: rate1 - rate2 <= low or upp <= rate1 - rate2
-    - H1: low < rate - rate < upp
+    - H1: low < rate1 - rate2 < upp
 
     Parameters
     ----------
@@ -1555,7 +1521,12 @@ def confint_poisson_2indep(
     """
 
     # shortcut names
-    y1, n1, y2, n2 = map(np.asarray, [count1, exposure1, count2, exposure2])
+    y1, n1, y2, n2 = (
+        np.asarray(count1),
+        np.asarray(exposure1),
+        np.asarray(count2),
+        np.asarray(exposure2),
+    )
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
@@ -1628,13 +1599,13 @@ def confint_poisson_2indep(
 
     elif compare == "diff":
 
-        if method in ["wald"]:
+        if method == "wald":
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             half = crit * np.sqrt(rate1 / n1 + rate2 / n2)
             ci = center - half, center + half
 
-        elif method in ["waldccv"]:
+        elif method == "waldccv":
             crit = stats.norm.isf(alpha)
             center = rate1 - rate2
             std = np.sqrt((count1 + 0.5) / n1**2 + (count2 + 0.5) / n2**2)
@@ -1758,7 +1729,7 @@ def power_poisson_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -1886,7 +1857,7 @@ def power_equivalence_poisson_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
@@ -2137,7 +2108,7 @@ def power_poisson_diff_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     diff = rate1 - rate2
     _, std_null, std_alt = _std_2poisson_power(
@@ -2320,7 +2291,7 @@ def power_negbin_ratio_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
     v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
@@ -2457,7 +2428,7 @@ def power_equivalence_neginb_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
-    rate1, rate2, nobs1 = map(np.asarray, [rate1, rate2, nobs1])
+    rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
 

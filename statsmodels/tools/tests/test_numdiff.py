@@ -361,3 +361,19 @@ def test_vectorized():
     # assert_allclose(approx_fprime(p.T, f), desired, rtol=1e-8)
     # similar as used in MarkovSwitching unit test
     assert_allclose(approx_fprime_cs(p.T, f).squeeze(), desired, rtol=1e-8)
+
+
+def test_approx_hess_alias_does_not_mutate_approx_hess3_doc():
+    # GH: approx_hess = approx_hess3 aliased the *same* function object, so
+    # `approx_hess.__doc__ += "..."` mutated approx_hess3's docstring too.
+    assert numdiff.approx_hess is not numdiff.approx_hess3
+    assert "alias for approx_hess3" in numdiff.approx_hess.__doc__
+    assert "alias for approx_hess3" not in numdiff.approx_hess3.__doc__
+
+
+def test_approx_hess_matches_approx_hess3():
+    def fun(x):
+        return (x**2).sum()
+
+    x = np.array([1.0, 2.0, 3.0])
+    assert_allclose(numdiff.approx_hess(x, fun), numdiff.approx_hess3(x, fun))

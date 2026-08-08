@@ -476,8 +476,8 @@ def cov_ogk(
 
     - cov : covariance, either raw OGK or reweighted OGK.
     - loc (and alias mean) : mean, either from raw OGK or reweighted OGK.
-    - cov_ogk_raw : OGK covariance without reweighting optionally rescaled.
-    - loc_ogk_raw : mean or center of OGK without reweighting.
+    - cov_raw : OGK covariance without reweighting optionally rescaled.
+    - loc_raw : mean or center of OGK without reweighting.
 
     and extra attributes from intermediate results.
 
@@ -637,7 +637,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
     .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
-       “Affine Equivariant Tyler`s M-Estimator Applied to Tail Parameter
+       “Affine Equivariant Tyler's M-Estimator Applied to Tail Parameter
        Learning of Elliptical Distributions.” arXiv, May 7, 2023.
        https://doi.org/10.48550/arXiv.2305.04330.
     """
@@ -752,12 +752,11 @@ def cov_tyler_regularized(
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
@@ -766,6 +765,8 @@ def cov_tyler_regularized(
         sf = k * k + (1 - 2.0 / k) * tr
         sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
@@ -775,8 +776,8 @@ def cov_tyler_regularized(
     identity = np.eye(k_vars)
 
     n_iter = 0
-    for i in range(maxiter):
-        n_iter += i
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -844,6 +845,8 @@ def cov_tyler_pairs_regularized(
 
     Returns
     -------
+    result instance with the following attributes
+
     cov : ndarray
         Estimate of the scatter matrix.
     n_iter : int
@@ -852,6 +855,9 @@ def cov_tyler_pairs_regularized(
     shrinkage_factor : float
         Shrinkage factor that was used in the estimation. This will be the
         same as the function argument if it was not None.
+    corr : ndarray or None
+        Correlation matrix used in the plugin shrinkage factor estimation,
+        or None if shrinkage_factor was given.
 
     Notes
     -----
@@ -874,12 +880,11 @@ def cov_tyler_pairs_regularized(
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
@@ -888,6 +893,8 @@ def cov_tyler_pairs_regularized(
         sf = k * k + (1 - 2.0 / k) * tr
         sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
@@ -1241,7 +1248,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
     percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
-    for p, cutoff in zip(percentiles, cutoffs):
+    for p, cutoff in zip(percentiles, cutoffs, strict=True):
         xsp = xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
@@ -1502,7 +1509,7 @@ class CovM:
         # todo: method defines how norm_mean and norm_scatter are linked
         #       currently I try for S-estimator
 
-        if method.lower() not in ["s"]:
+        if method.lower() != "s":
             msg = f"method {method} option not recognize or implemented"
             raise ValueError(msg)
 

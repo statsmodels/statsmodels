@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -299,11 +299,11 @@ def _zscore(x):
 
 @pytest.mark.smoke
 def test_factor_scoring():
-    path = os.path.abspath(__file__)
-    dir_path = os.path.dirname(path)
-    csv_path = os.path.join(dir_path, "results", "factor_data.csv")
+    path = Path(__file__).resolve()
+    dir_path = Path(path).parent
+    csv_path = Path(dir_path).joinpath("results", "factor_data.csv")
     y = pd.read_csv(csv_path)
-    csv_path = os.path.join(dir_path, "results", "factors_stata.csv")
+    csv_path = Path(dir_path).joinpath("results", "factors_stata.csv")
     f_s = pd.read_csv(csv_path)
     #  mostly smoke tests for now
     mod = Factor(y, 2)

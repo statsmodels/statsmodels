@@ -303,8 +303,8 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     min_nobs = 4 if dist == "norm" else 3
     if nobs < min_nobs:
         raise ValueError(
-            "Test for distribution {} requires at least {} "
-            "observations".format(dist, min_nobs)
+            f"Test for distribution {dist} requires at least {min_nobs} "
+            "observations"
         )
 
     d_ks = ksstat(z, test_d, alternative="two_sided")

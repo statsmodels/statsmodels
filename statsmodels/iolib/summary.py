@@ -38,17 +38,17 @@ def forg(x, prec=3):
     if prec == 3:
         # for 3 decimals
         if (abs(x) >= 1e4) or (abs(x) < 1e-4):
-            return "%9.3g" % x
+            return f"{x:9.3g}"
         else:
-            return "%9.3f" % x
+            return f"{x:9.3f}"
     elif prec == 4:
         if (abs(x) >= 1e4) or (abs(x) < 1e-4):
-            return "%10.4g" % x
+            return f"{x:10.4g}"
         else:
-            return "%10.4f" % x
+            return f"{x:10.4f}"
     else:
-        raise ValueError("`prec` argument must be either 3 or 4, not {prec}"
-                         .format(prec=prec))
+        raise ValueError(f"`prec` argument must be either 3 or 4, not {prec}"
+                         )
 
 
 def d_or_f(x, width=6):
@@ -74,9 +74,9 @@ def d_or_f(x, width=6):
         return (width - 3) * " " + "NaN"
 
     if x // 1 == x:
-        return "%#6d" % x
+        return f"{int(x):#6d}"
     else:
-        return "%#8.2f" % x
+        return f"{x:#8.2f}"
 
 
 def summary(self, yname=None, xname=None, title=0, alpha=.05,
@@ -93,12 +93,14 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         Default is `Y`.
     xname : list[str], optional
         Default is `X.#` for # in p the number of regressors.
-    title : str, optional
-        Default is 'Generalized linear model'.
-    alpha : float
+    title : str or int, optional
+        Title for the summary. If 0 (the default), the title is derived
+        from the model class, e.g. 'Generalized linear model' for a GLM
+        model.
+    alpha : float, optional
         The confidence interval, currently not implemented.
-    returns : str
-        One of 'text', 'table', 'csv', 'latex', 'html'.
+    returns : str, optional
+        One of 'print', 'text', 'table', 'csv', 'latex', 'html'.
     model_info : dict, optional
         Unused, retained for backward compatibility.
 
@@ -114,7 +116,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         - returns='csv' : a string of csv of the results, to import into
           a spreadsheet.
         - returns='latex' : not implemented yet.
-        - returns='HTML' : not implemented yet.
+        - returns='html' : not implemented yet.
 
     Notes
     -----
@@ -126,7 +128,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_results = sm.OLS(data.endog, data.exog).results
-    >>> print ols_results.summary()
+    >>> print(ols_results.summary())
     ...
     """
     if title == 0:
@@ -136,7 +138,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         # GH 2298
         raise ValueError("User supplied xnames must have the same number of "
                          "entries as the number of model parameters "
-                         "({})".format(len(self.params)))
+                         f"({len(self.params)})")
 
     yname, xname = _getnames(self, yname, xname)
 
@@ -224,11 +226,11 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     prob_stat = prob_stats[modeltype]
 
     # Simpletable should be able to handle the formating
-    params_data = lzip(["%#6.4g" % (params[i]) for i in exog_len],
-                       ["%#6.4f" % (std_err[i]) for i in exog_len],
-                       ["%#6.4f" % (tstat[i]) for i in exog_len],
-                       ["%#6.4f" % (prob_stat[i]) for i in exog_len],
-                       ["(%#5g, %#5g)" % tuple(conf_int[i]) for i in exog_len])
+    params_data = lzip([f"{params[i]:#6.4g}" for i in exog_len],
+                       [f"{std_err[i]:#6.4f}" for i in exog_len],
+                       [f"{tstat[i]:#6.4f}" for i in exog_len],
+                       [f"{prob_stat[i]:#6.4f}" for i in exog_len],
+                       ["({:#5g}, {:#5g})".format(*tuple(conf_int[i])) for i in exog_len])
     parameter_table = SimpleTable(params_data,
                                   param_header[modeltype],
                                   params_stubs,
@@ -298,7 +300,7 @@ def _getnames(self, yname=None, xname=None):
         if getattr(self.model, "exog_names", None) is not None:
             xname = self.model.exog_names
         else:
-            xname = ["var_%d" % i for i in range(len(self.params))]
+            xname = [f"var_{i:d}" for i in range(len(self.params))]
 
     return yname, xname
 
@@ -356,7 +358,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
           "No. Observations:": lambda: [d_or_f(results.nobs)],
           "Df Model:": lambda: [d_or_f(results.df_model)],
           "Df Residuals:": lambda: [d_or_f(results.df_resid)],
-          "Log-Likelihood:": lambda: ["%#8.5g" % results.llf]  # does not exist for RLM - exception
+          "Log-Likelihood:": lambda: [f"{results.llf:#8.5g}"]  # does not exist for RLM - exception
     }
 
     if title is None:
@@ -414,7 +416,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
         # padding in SimpleTable does not work like I want
         # force extra spacing and exact string length in right table
-        gen_right = [("%-21s" % ("  "+k), v) for k, v in gen_right]
+        gen_right = [("{:<21}".format(str("  "+k)), v) for k, v in gen_right]
         gen_stubs_right, gen_data_right = zip_longest(*gen_right)  # transpose row col
         gen_table_right = SimpleTable(gen_data_right,
                                       gen_header,
@@ -435,8 +437,8 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
                                  title=gen_title,
                                  txt_fmt=fmt_2cols
                                  )
-
-    gen_table_left.extend_right(gen_table_right)
+    if gen_table_right:
+        gen_table_left.extend_right(gen_table_right)
     general_table = gen_table_left
 
     return general_table
@@ -520,7 +522,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     params_data = lzip([forg(params[i], prec=4) for i in exog_idx],
                        [forg(std_err[i]) for i in exog_idx],
                        [forg(tvalues[i]) for i in exog_idx],
-                       ["%#6.3f" % (pvalues[i]) for i in exog_idx],
+                       [f"{pvalues[i]:#6.3f}" for i in exog_idx],
                        [forg(conf_int[i, 0]) for i in exog_idx],
                        [forg(conf_int[i, 1]) for i in exog_idx])
     parameter_table = SimpleTable(params_data,
@@ -624,15 +626,15 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     """
     if endog_names is None:
         # TODO: note the [1:] is specific to current MNLogit
-        endog_names = ["endog_%d" % i for i in
+        endog_names = [f"endog_{i:d}" for i in
                        np.unique(result.model.endog)[1:]]
     if exog_names is None:
-        exog_names = ["var%d" % i for i in range(len(result.params))]
+        exog_names = [f"var{i:d}" for i in range(len(result.params))]
 
     # TODO: check formatting options with different values
     res_params = [[forg(item, prec=4) for item in row] for row in result.params]
     if extras:
-        extras_list = [[["%10s" % ("(" + forg(v, prec=3).strip() + ")")
+        extras_list = [[["{:>10}".format(str("(" + forg(v, prec=3).strip() + ")"))
                          for v in col]
                         for col in getattr(result, what)]
                        for what in extras
@@ -667,7 +669,7 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
     exog_names : {list[str], None}
         names for columns of the parameter array (exog)
     alpha : float
-        level for confidence intervals, default 0.95
+        level for confidence intervals, default 0.05
     use_t : bool
         indicator whether the p-values are based on the Student-t
         distribution (if True) or on the normal distribution (if False)

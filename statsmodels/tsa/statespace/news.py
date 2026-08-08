@@ -206,7 +206,7 @@ class NewsResults:
         self.revisions_details_start = news_results.revisions_details_start
 
         self.revisions_iloc = pd.DataFrame(
-            list(zip(*news_results.revisions_ix)),
+            list(zip(*news_results.revisions_ix, strict=True)),
             index=["revision date", "revised variable"]).T
         iloc = self.revisions_iloc
         if len(iloc) > 0:
@@ -221,7 +221,7 @@ class NewsResults:
         self.revisions_ix_detailed = self.revisions_ix[mask]
 
         self.updates_iloc = pd.DataFrame(
-            list(zip(*news_results.updates_ix)),
+            list(zip(*news_results.updates_ix, strict=True)),
             index=["update date", "updated variable"]).T
         iloc = self.updates_iloc
         if len(iloc) > 0:
@@ -438,6 +438,12 @@ class NewsResults:
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        details_by_update
+        revision_details_by_update
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -460,12 +466,6 @@ class NewsResults:
         be more convenient for displaying the entire table of detailed updates.
         At the same time, `details_by_update` is less convenient for
         subsetting.
-
-        See Also
-        --------
-        details_by_update
-        revision_details_by_update
-        impacts
         """
         s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
         df = s.rename("weight").to_frame()
@@ -531,6 +531,12 @@ class NewsResults:
             - `impact`: the impact of the `revision` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        revision_details_by_update
+        details_by_impact
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -553,17 +559,11 @@ class NewsResults:
 
         However, since the `observed (prev)` and `revised` columns have a lot
         of duplication, printing the entire table gives a result that is less
-        easy to parse than that produced by the `details_by_revision` property.
-        `details_by_revision` contains the same information but is organized to
-        be more convenient for displaying the entire table of detailed
-        revisions. At the same time, `details_by_revision` is less convenient
-        for subsetting.
-
-        See Also
-        --------
-        details_by_revision
-        details_by_impact
-        impacts
+        easy to parse than that produced by the `revision_details_by_update`
+        property. `revision_details_by_update` contains the same information
+        but is organized to be more convenient for displaying the entire table
+        of detailed revisions. At the same time, `revision_details_by_update`
+        is less convenient for subsetting.
         """
         weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
         df = pd.concat([
@@ -619,6 +619,11 @@ class NewsResults:
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        details_by_impact
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -640,11 +645,6 @@ class NewsResults:
         make slicing by impacted variables / dates easy. This allows, for
         example, viewing the details of data updates on a particular variable
         or date of interest.
-
-        See Also
-        --------
-        details_by_impact
-        impacts
         """
         s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
         df = s.rename("weight").to_frame()
@@ -702,6 +702,11 @@ class NewsResults:
             - `impact`: the impact of the `revision` on the forecast of the
               variable of interest
 
+        See Also
+        --------
+        revision_details_by_impact
+        impacts
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest from
@@ -728,11 +733,6 @@ class NewsResults:
         organized to make slicing by impacted variables / dates easy. This
         allows, for example, viewing the details of data revisions on a
         particular variable or date of interest.
-
-        See Also
-        --------
-        details_by_impact
-        impacts
         """
         weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
 
@@ -792,6 +792,11 @@ class NewsResults:
               date / variable of interest after taking into account the effects
               of the revisions and news.
 
+        See Also
+        --------
+        details_by_impact
+        details_by_update
+
         Notes
         -----
         This table decomposes updated forecasts of variables of interest into
@@ -799,12 +804,7 @@ class NewsResults:
 
         This table does not break down the detail by the updated
         dates / variables. That information can be found in the
-        `details_by_impact` `details_by_update` tables.
-
-        See Also
-        --------
-        details_by_impact
-        details_by_update
+        `details_by_impact` and `details_by_update` tables.
         """
         # Summary of impacts
         impacts = pd.concat([
@@ -920,10 +920,10 @@ class NewsResults:
             impacts.index = tmp_index.droplevel(1)
             try:
                 impacts = impacts.map(
-                    lambda num: "" if pd.isnull(num) else float_format % num)
+                    lambda num: "" if pd.isna(num) else float_format % num)
             except AttributeError:
                 impacts = impacts.applymap(
-                    lambda num: "" if pd.isnull(num) else float_format % num)
+                    lambda num: "" if pd.isna(num) else float_format % num)
             impacts = impacts.reset_index()
             try:
                 impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
@@ -935,12 +935,12 @@ class NewsResults:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
                 for col in impacts.columns[2:]:
                     impacts[col] = impacts[col].map(
-                        lambda num: "" if pd.isnull(num) else float_format % num
+                        lambda num: "" if pd.isna(num) else float_format % num
                     )
             except AttributeError:
                 impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
                 impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
-                    lambda num: "" if pd.isnull(num) else float_format % num
+                    lambda num: "" if pd.isna(num) else float_format % num
                 )
         # Sparsify the groupby column
         if sparsify and groupby in impacts:
@@ -1166,7 +1166,7 @@ class NewsResults:
 
         # Function for formatting numbers
         def str_format(num, mark_ones=False, mark_zeroes=False):
-            if pd.isnull(num):
+            if pd.isna(num):
                 out = ""
             elif mark_ones and np.abs(1 - num) < self.tolerance:
                 out = "1.0"
@@ -1184,9 +1184,9 @@ class NewsResults:
                 if key in details:
                     args = (
                         # mark_ones
-                        True if key in ["weight"] else False,
+                        key == "weight",
                         # mark_zeroes
-                        True if key in ["weight", "impact"] else False)
+                        key in ["weight", "impact"])
                     details[key] = details[key].apply(str_format, args=args)
             for key in [columns["update date"], "impact date"]:
                 if key in details:
@@ -1262,21 +1262,24 @@ class NewsResults:
             - `detailed impacts computed` : whether detailed impacts were
               computed for this revision
         """
-        data = pd.merge(
-            self.data_revisions, self.revisions_all, left_index=True,
-            right_index=True).sort_index().reset_index()
+        data = self.data_revisions.merge(
+            self.revisions_all,
+            left_index=True,
+            right_index=True
+        )
+        data = data.sort_index().reset_index()
         data = data[["revision date", "revised variable", "observed (prev)",
                      "revision", "detailed impacts computed"]]
         try:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].map(str))
             data.iloc[:, 2:-1] = data.iloc[:, 2:-1].map(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isna(num) else f"{num:.2f}")
         except AttributeError:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].applymap(str))
             data.iloc[:, 2:-1] = data.iloc[:, 2:-1].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num)
+                lambda num: "" if pd.isna(num) else f"{num:.2f}")
 
         # Sparsify the date column
         if sparsify:
@@ -1322,20 +1325,19 @@ class NewsResults:
         --------
         data_updates
         """
-        data = pd.merge(
-            self.data_updates, self.news, left_index=True,
-            right_index=True).sort_index().reset_index()
+        data = self.data_updates.merge(self.news, left_index=True, right_index=True)
+        data = data.sort_index().reset_index()
         str_cols = ["update date", "updated variable"]
         try:
             data[str_cols] = data[str_cols].map(str)
             for col in data.columns[2:]:
                 data[col] = data[col].map(
-                    lambda num: "" if pd.isnull(num) else "%.2f" % num
+                    lambda num: "" if pd.isna(num) else f"{num:.2f}"
                 )
         except AttributeError:
             data[str_cols] = data[str_cols].applymap(str)
             data.iloc[:, 2:] = data.iloc[:, 2:].applymap(
-                lambda num: "" if pd.isnull(num) else "%.2f" % num
+                lambda num: "" if pd.isna(num) else f"{num:.2f}"
             )
 
         # Sparsify the date column
@@ -1469,9 +1471,9 @@ class NewsResults:
                 mask = ~np.isnan(model.endog).all(axis=1)
                 ix = model._index[mask]
                 d = ix[0]
-                sample = ["%s" % d]
+                sample = [f"{d}"]
                 d = ix[-1]
-                sample += ["- " + "%s" % d]
+                sample += ["- " + f"{d}"]
             else:
                 sample = [str(0), " - " + str(model.nobs)]
 

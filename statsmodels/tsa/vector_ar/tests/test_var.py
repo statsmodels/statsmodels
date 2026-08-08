@@ -1,7 +1,6 @@
 """
 Test VAR Model
 """
-
 from statsmodels.compat.pandas import (
     QUARTER_END,
     _infer_freq_returns_offset,
@@ -10,7 +9,7 @@ from statsmodels.compat.pandas import (
 from statsmodels.compat.python import lrange
 
 from io import BytesIO
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -23,6 +22,10 @@ import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import (
+    ErrorBand,
+    ForecastInterval,
+)
 from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
 
 DECIMAL_12 = 12
@@ -453,13 +456,18 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_forecast_interval(self):
         y = self.res.endog[: -self.p :]
-        point, lower, upper = self.res.forecast_interval(y, 5)
+        res = self.res.forecast_interval(y, 5)
+        assert isinstance(res, ForecastInterval)
+        point, lower, upper = res
+        assert point is res.point_forecast
+        assert lower is res.forc_lower
+        assert upper is res.forc_upper
 
     @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
         rs = np.random.RandomState(923298321)
-        self.res.plotsim(steps=100, seed=rs)
+        self.res.plotsim(steps=100, rng=rs)
 
     @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
@@ -576,18 +584,18 @@ class E1_Results:
         )
 
 
-basepath = os.path.split(__file__)[0]
-resultspath = os.path.join(basepath, "results")
+basepath = Path(__file__).parent
+resultspath = basepath / "results"
 
 
 def get_lutkepohl_data(name="e2"):
-    path = os.path.join(resultspath, f"{name}.dat")
+    path = Path(resultspath).joinpath(f"{name}.dat")
 
     return util.parse_lutkepohl_data(path)
 
 
 def test_lutkepohl_parse():
-    files = ["e%d" % i for i in range(1, 7)]
+    files = [f"e{i:d}" for i in range(1, 7)]
 
     for f in files:
         get_lutkepohl_data(f)
@@ -742,7 +750,7 @@ class TestVARExtras:
         mean_lr = res0.mean()
         assert_allclose(mean_lr, fc20[-1], rtol=5e-4)
 
-        ysim = res0.simulate_var(seed=987128)
+        ysim = res0.simulate_var(rng=987128)
         assert_allclose(ysim.mean(0), mean_lr, rtol=0.1)
         # initialization does not use long run intercept, see #4542
         assert_allclose(ysim[0], res0.intercept, rtol=1e-10)
@@ -750,17 +758,17 @@ class TestVARExtras:
 
         data = self.data
         resl1 = self.resl1
-        y_sim_init = res0.simulate_var(seed=987128, initial_values=data[-k_ar:])
-        y_sim_init_2 = res0.simulate_var(seed=987128, initial_values=data[-1])
+        y_sim_init = res0.simulate_var(rng=987128, initial_values=data[-k_ar:])
+        y_sim_init_2 = res0.simulate_var(rng=987128, initial_values=data[-1])
         assert_allclose(y_sim_init[:k_ar], data[-k_ar:])
         assert_allclose(y_sim_init_2[0], data[-1])
         assert_allclose(y_sim_init_2[k_ar - 1], data[-1])
 
-        y_sim_init_3 = resl1.simulate_var(seed=987128, initial_values=data[-1])
+        y_sim_init_3 = resl1.simulate_var(rng=987128, initial_values=data[-1])
         assert_allclose(y_sim_init_3[0], data[-1])
 
         n_sim = 900
-        ysimz = res0.simulate_var(steps=n_sim, offset=np.zeros((n_sim, 3)), seed=987128)
+        ysimz = res0.simulate_var(steps=n_sim, offset=np.zeros((n_sim, 3)), rng=987128)
         zero3 = np.zeros(3)
         assert_allclose(ysimz.mean(0), zero3, atol=0.4)
         # initialization does not use long run intercept, see #4542
@@ -786,7 +794,7 @@ class TestVARExtras:
         irf = res0.irf()
 
         rs = np.random.RandomState(429238921)
-        res0.plotsim(seed=rs)
+        res0.plotsim(rng=rs)
         res0.plot_acorr()
 
         fig = res0.plot_forecast(20)
@@ -798,8 +806,8 @@ class TestVARExtras:
         fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
         assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-        fig_asym = irf.plot(seed=rs)
-        fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
+        fig_asym = irf.plot(rng=rs)
+        fig_mc = irf.plot(stderr_type="mc", repl=1000, rng=987128)
 
         for k in range(3):
             a = fig_asym.axes[1].get_children()[k].get_ydata()
@@ -854,9 +862,9 @@ class TestVARExtras:
         assert_allclose(res_lin_trend.params, res_lin_trend2.params, rtol=5e-3)
         assert_allclose(res_lin_trend1.params, res_lin_trend2.params, rtol=1e-10)
 
-        y1 = res_lin_trend.simulate_var(seed=987128)
-        y2 = res_lin_trend1.simulate_var(seed=987128)
-        y3 = res_lin_trend2.simulate_var(seed=987128)
+        y1 = res_lin_trend.simulate_var(rng=987128)
+        y2 = res_lin_trend1.simulate_var(rng=987128)
+        y3 = res_lin_trend2.simulate_var(rng=987128)
         assert_allclose(y2.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y2.mean(0), rtol=1e-12)
@@ -893,13 +901,13 @@ class TestVARExtras:
         neqs = res0.neqs
         init = self.data[-k_ar:]
 
-        sim1 = res0.simulate_var(seed=987128, steps=10)
-        sim2 = res0.simulate_var(seed=987128, steps=10, nsimulations=2)
+        sim1 = res0.simulate_var(rng=987128, steps=10)
+        sim2 = res0.simulate_var(rng=987128, steps=10, nsimulations=2)
         assert_equal(sim2.shape, (2, 10, neqs))
         assert_allclose(sim1, sim2[0])
 
         sim2_init = res0.simulate_var(
-            seed=987128, steps=10, initial_values=init, nsimulations=2
+            rng=987128, steps=10, initial_values=init, nsimulations=2
         )
         assert_allclose(sim2_init[0, :k_ar], init)
         assert_allclose(sim2_init[1, :k_ar], init)
@@ -982,7 +990,7 @@ def test_correct_nobs():
     # make a VAR model
     model = VAR(endog=data, exog=data_exog)
     results = model.fit(maxlags=1)
-    irf = results.irf_resim(orth=False, repl=100, steps=10, seed=1, burn=100, cum=False)
+    irf = results.irf_resim(orth=False, repl=100, steps=10, rng=1, burn=100, cum=False)
     assert irf.shape == (100, 11, 3, 3)
 
 
@@ -995,10 +1003,36 @@ def test_irf_err_bands():
     irf = results.irf()
     # Smoke tests only
     rs = np.random.RandomState(2389711)
-    irf.err_band_sz1(seed=rs)
-    irf.err_band_sz2(seed=rs)
-    irf.err_band_sz3(seed=rs)
-    irf.errband_mc(seed=rs)
+    for res in (
+        irf.err_band_sz1(rng=rs),
+        irf.err_band_sz2(rng=rs),
+        irf.err_band_sz3(rng=rs),
+        irf.errband_mc(rng=rs),
+        irf.cum_errband_mc(rng=rs),
+    ):
+        assert isinstance(res, ErrorBand)
+        assert res[0] is res.lower
+        assert res[1] is res.upper
+
+
+@pytest.mark.matplotlib
+def test_irf_plot_err_bands_kwarg(close_figures):
+    # test that user can pass precalculated error bands to plot and plot_cum_effects
+    data = get_macrodata()
+    model = VAR(data)
+    results = model.fit(maxlags=2)
+    irf = results.irf()
+
+    # Precalculate
+    err_bands = irf.errband_mc(repl=10)
+
+    # Use in plot (bypassing internal calculation)
+    fig1 = irf.plot(err_bands=err_bands, stderr_type="mc")
+    assert fig1 is not None
+
+    cum_err_bands = irf.cum_errband_mc(repl=10)
+    fig2 = irf.plot_cum_effects(err_bands=cum_err_bands, stderr_type="mc")
+    assert fig2 is not None
 
 
 def test_0_lag():

@@ -26,7 +26,7 @@ def _check_period_index(x, freq="M"):
         if isinstance(inferred_freq, pd.tseries.offsets.BaseOffset):
             inferred_freq = inferred_freq.freqstr
     if not inferred_freq.startswith(freq):
-        raise ValueError("Expected frequency {}. Got {}".format(freq, inferred_freq))
+        raise ValueError(f"Expected frequency {freq}. Got {inferred_freq}")
 
 
 def is_series(obj):
@@ -78,15 +78,19 @@ def interpret_data(data, colnames=None, rownames=None):
 
     Returns
     -------
-    (values, colnames, rownames) : (homogeneous ndarray, list)
-        Converted values, column names, and row names.
+    values : ndarray
+        Converted, homogeneous data values.
+    colnames : list
+        Column names.
+    rownames : sequence or None
+        Row names, if available.
 
     """
     if isinstance(data, np.ndarray):
         values = np.asarray(data)
 
         if colnames is None:
-            colnames = ["Y_%d" % i for i in range(values.shape[1])]
+            colnames = [f"Y_{i:d}" for i in range(values.shape[1])]
     elif is_data_frame(data):
         # XXX: hack
         data = data.dropna()
@@ -95,7 +99,7 @@ def interpret_data(data, colnames=None, rownames=None):
         rownames = data.index
     else:  # pragma: no cover
         raise TypeError(
-            "Cannot handle input type {typ}".format(typ=type(data).__name__)
+            f"Cannot handle input type {type(data).__name__}"
         )
 
     if not isinstance(colnames, list):

@@ -49,6 +49,18 @@ Autocorrelation
    acorr_breusch_godfrey
    acorr_ljungbox
    acorr_lm
+   LMTestResult
+
+Forecast Evaluation
+~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   pesaran_timmermann
+   PesaranTimmermannResult
 
 Heteroscedasticity
 ~~~~~~~~~~~~~~~~~~
@@ -57,10 +69,11 @@ Heteroscedasticity
 
 .. autosummary::
    :toctree: generated/
-   
+
    het_arch
    het_breuschpagan
    het_goldfeldquandt
+   GoldfeldQuandtResult
    het_white
 
 Kurtosis
@@ -135,6 +148,7 @@ Specification test
    compare_cox
    compare_encompassing
    compare_j
+   NonNestedTestResult
    spec_white
    linear_harvey_collier
    linear_lm
@@ -194,6 +208,8 @@ some tests for goodness of fit for univariate distributions
    gof_chisquare_discrete
    gof_binning_discrete
    chisquare_effectsize
+   chisquare
+   ChisquareResult
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
@@ -224,6 +240,7 @@ Non-Parametric Tests
    runstest_1samp
    runstest_2samp
    cochrans_q
+   CochransQResult
    Runs
 
 .. currentmodule:: statsmodels.stats.descriptivestats
@@ -311,6 +328,7 @@ to one way ANOVA, but still in development
    GroupsStats
    MultiComparison
    TukeyHSDResults
+   tukeyhsd
 
 .. module:: statsmodels.stats.multicomp
    :synopsis: Methods for controlling size while performing multiple comparisons
@@ -687,6 +705,7 @@ inverse covariance or precision matrix.
    corr_nearest_factor
    corr_thresholded
    cov_nearest
+   CovNearestResult
    cov_nearest_factor_homog
    FactoredPSDMatrix
    kernel_covariance
@@ -718,6 +737,7 @@ kurtosis and cummulants.
    mvsk2mc
    mvsk2mnc
    cov2corr
+   Cov2CorrResult
    corr2cov
    se_cov
 

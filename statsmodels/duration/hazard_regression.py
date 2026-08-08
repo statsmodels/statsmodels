@@ -15,6 +15,8 @@ hazards model.
 http://www.mwsug.org/proceedings/2006/stats/MWSUG-2006-SD08.pdf
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
 from statsmodels.base import model
@@ -53,11 +55,7 @@ _predict_docstring = """
     pred_type : str
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
-        'cumhaz' returns the cumulative hazard function.
-    pred_only : bool
-        If True, returns only an array of predicted values.  Otherwise
-        returns a bunch containing the predicted values and standard
-        errors.
+        'cumhaz' returns the cumulative hazard function.%(extra_params_doc)s
 
     Returns
     -------
@@ -83,6 +81,17 @@ _predict_cov_params_docstring = """
         The covariance matrix of the estimated `params` vector,
         used to obtain prediction errors if pred_type='lhr',
         otherwise optional."""
+
+_predict_pred_only_docstring = """
+    pred_only : bool
+        If True, returns only an array of predicted values.  Otherwise
+        returns a bunch containing the predicted values and standard
+        errors."""
+
+_predict_transform_docstring = """
+    transform : bool
+        If the model was fit via a formula, whether to pass `exog`
+        through the formula before forming the prediction."""
 
 
 class PHSurvivalTime:
@@ -217,7 +226,7 @@ class PHSurvivalTime:
             # uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
             uft_map = {x: i for i, x in enumerate(uft)}  # 2.6
             uft_ix = [[] for k in range(nuft)]
-            for ix, ti in zip(ift, ft):
+            for ix, ti in zip(ift, ft, strict=True):
                 uft_ix[uft_map[ti]].append(ix)
 
             # Indices of cases (failed or censored) that enter the
@@ -488,10 +497,7 @@ class PHReg(model.LikelihoodModel):
         # TODO process for missing values
         if groups is not None:
             if len(groups) != len(self.endog):
-                msg = "len(groups) = %d and len(endog) = %d differ" % (
-                    len(groups),
-                    len(self.endog),
-                )
+                msg = f"len(groups) = {len(groups):d} and len(endog) = {len(self.endog):d} differ"
                 raise ValueError(msg)
             self.groups = np.asarray(groups)
         else:
@@ -1335,6 +1341,7 @@ class PHReg(model.LikelihoodModel):
         % {
             "params_doc": _predict_params_doc,
             "cov_params_doc": _predict_cov_params_docstring,
+            "extra_params_doc": _predict_pred_only_docstring,
         }
     )
     def predict(
@@ -1354,7 +1361,7 @@ class PHReg(model.LikelihoodModel):
 
         pred_type = pred_type.lower()
         if pred_type not in ["lhr", "hr", "surv", "cumhaz"]:
-            msg = "Type %s not allowed for prediction" % pred_type
+            msg = f"Type {pred_type} not allowed for prediction"
             raise ValueError(msg)
 
         class bunch:
@@ -1565,6 +1572,10 @@ class PHRegResults(base.LikelihoodModelResults):
         self.covariance_type = covariance_type
         self.df_resid = model.df_resid
         self.df_model = model.df_model
+        # Snapshot now, rather than reading through to model.groups later,
+        # so this result is unaffected by any later fit() call that passes
+        # a different `groups` argument on the same model instance.
+        self.groups = model.groups
 
         super().__init__(model, params, scale=1.0, normalized_cov_params=cov_params)
 
@@ -1599,7 +1610,14 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-    @Appender(_predict_docstring % {"params_doc": "", "cov_params_doc": ""})
+    @Appender(
+        _predict_docstring
+        % {
+            "params_doc": "",
+            "cov_params_doc": "",
+            "extra_params_doc": _predict_transform_docstring,
+        }
+    )
     def predict(
         self,
         endog=None,
@@ -1672,8 +1690,6 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         A matrix containing the Schoenfeld residuals
 
-        Notes
-        -----
         Schoenfeld residuals for censored observations are set to zero.
         """
 
@@ -1780,28 +1796,28 @@ class PHRegResults(base.LikelihoodModelResults):
         info["Sample size:"] = str(self.model.surv.n_obs)
         info["Num. events:"] = str(int(sum(self.model.status)))
 
-        if self.model.groups is not None:
-            mn, mx, avg, num = self._group_stats(self.model.groups)
-            info["Num groups:"] = "%.0f" % num
-            info["Min group size:"] = "%.0f" % mn
-            info["Max group size:"] = "%.0f" % mx
-            info["Avg group size:"] = "%.1f" % avg
+        if self.groups is not None:
+            mn, mx, avg, num = self._group_stats(self.groups)
+            info["Num groups:"] = f"{num:.0f}"
+            info["Min group size:"] = f"{mn:.0f}"
+            info["Max group size:"] = f"{mx:.0f}"
+            info["Avg group size:"] = f"{avg:.1f}"
 
         if self.model.strata is not None:
             mn, mx, avg, num = self._group_stats(self.model.strata)
-            info["Num strata:"] = "%.0f" % num
-            info["Min stratum size:"] = "%.0f" % mn
-            info["Max stratum size:"] = "%.0f" % mx
-            info["Avg stratum size:"] = "%.1f" % avg
+            info["Num strata:"] = f"{num:.0f}"
+            info["Min stratum size:"] = f"{mn:.0f}"
+            info["Max stratum size:"] = f"{mx:.0f}"
+            info["Avg stratum size:"] = f"{avg:.1f}"
 
         smry.add_dict(info, align="l", float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
         param = param.rename(columns={"Coef.": "log HR", "Std.Err.": "log HR SE"})
         param.insert(2, "HR", np.exp(param["log HR"]))
-        a = "[%.3f" % (alpha / 2)
+        a = f"[{alpha / 2:.3f}"
         param.loc[:, a] = np.exp(param.loc[:, a])
-        a = "%.3f]" % (1 - alpha / 2)
+        a = f"{1 - alpha / 2:.3f}]"
         param.loc[:, a] = np.exp(param.loc[:, a])
         if xname is not None:
             param.index = xname
@@ -1814,16 +1830,16 @@ class PHRegResults(base.LikelihoodModelResults):
             if dstrat == 1:
                 smry.add_text("1 stratum dropped for having no events")
             else:
-                smry.add_text("%d strata dropped for having no events" % dstrat)
+                smry.add_text(f"{dstrat:d} strata dropped for having no events")
 
         if self.model.entry is not None:
             n_entry = sum(self.model.entry != 0)
             if n_entry == 1:
                 smry.add_text("1 observation has a positive entry time")
             else:
-                smry.add_text("%d observations have positive entry times" % n_entry)
+                smry.add_text(f"{n_entry:d} observations have positive entry times")
 
-        if self.model.groups is not None:
+        if self.groups is not None:
             smry.add_text("Standard errors account for dependence within groups")
 
         if hasattr(self, "regularized"):
@@ -1866,7 +1882,8 @@ class rv_discrete_float:
         self.pk = pk
         self.cpk = np.cumsum(self.pk, axis=1)
 
-    def rvs(self, n=None, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, n=None, rng=None):
         """
         Returns a random sample from the discrete distribution
 
@@ -1877,11 +1894,19 @@ class rv_discrete_float:
         ----------
         n : not used
             Present for signature compatibility.
-        random_state : {None, int, array_like, BitGenerator, Generator, RandomState}, optional
-            If an int, array_like, or BitGenerator, a new Generator is
-            used with the seed provided. If a Generator or RandomState
-            is provided, it is used directly. If None (or np.random),
-            the global np.random state is used.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1890,7 +1915,7 @@ class rv_discrete_float:
         """
 
         n = self.xk.shape[0]
-        rng = check_random_state(random_state, deprecated=True)
+        rng = check_random_state(rng, deprecated=True)
         u = rng.uniform(size=n)
         ix = (self.cpk < u[:, None]).sum(1)
         ii = np.arange(n, dtype=np.int32)

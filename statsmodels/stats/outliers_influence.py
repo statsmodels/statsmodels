@@ -80,9 +80,9 @@ def outlier_test(
     if infl is None:
         results = maybe_unwrap_results(model_results)
         raise AttributeError(
-            "model_results object %s does not have a "
+            f"model_results object {results.__class__.__name__} does not have a "
             "get_influence "
-            "method." % results.__class__.__name__
+            "method."
         )
     resid = infl().resid_studentized_external
     if order:
@@ -708,11 +708,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     def _get_prediction(self):
         # TODO: do we cache this or does it need to be a method
         # we only need unchanging parts, alpha for confint could change
-        with warnings.catch_warnings():
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.filterwarnings("ignore", message=msg, category=FutureWarning)
-            pred = self.results.get_prediction()
-        return pred
+        return self.results.get_prediction()
 
     @cache_readonly
     def d_fittedvalues(self):
@@ -722,8 +718,6 @@ class MLEInfluence(_BaseInfluenceMixin):
         Local change of expected mean given the change in the parameters as
         computed in d_params.
 
-        Notes
-        -----
         This uses the one-step approximation of the parameter change to
         deleting one observation ``d_params``.
         """
@@ -779,22 +773,22 @@ class MLEInfluence(_BaseInfluenceMixin):
         # grab the results
         if self.hat_matrix_diag is not None:
             summary_data = DataFrame(
-                dict(
-                    cooks_d=self.cooks_distance[0],
-                    standard_resid=self.resid_studentized,
-                    hat_diag=self.hat_matrix_diag,
-                    dffits_internal=self.d_fittedvalues_scaled,
-                ),
+                {
+                    "cooks_d": self.cooks_distance[0],
+                    "standard_resid": self.resid_studentized,
+                    "hat_diag": self.hat_matrix_diag,
+                    "dffits_internal": self.d_fittedvalues_scaled,
+                },
                 index=row_labels,
             )
         else:
             summary_data = DataFrame(
-                dict(
-                    cooks_d=self.cooks_distance[0],
+                {
+                    "cooks_d": self.cooks_distance[0],
                     # standard_resid=self.resid_studentized,
                     # hat_diag=self.hat_matrix_diag,
-                    dffits_internal=self.d_fittedvalues_scaled,
-                ),
+                    "dffits_internal": self.d_fittedvalues_scaled,
+                },
                 index=row_labels,
             )
 
@@ -847,16 +841,14 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         self.aux_regression_exog = {}
         self.aux_regression_endog = {}
+        # Populated by `summary_table`; declared here so it exists (as
+        # None) even before `summary_table` has been called.
+        self.table_data = None
 
     @cache_readonly
     def hat_matrix_diag(self):
-        """
-        Diagonal of the hat_matrix for OLS
-
-        Notes
-        -----
-        temporarily calculated here, this should go to model class
-        """
+        """Diagonal of the hat_matrix for OLS"""
+        # TODO: temporarily calculated here, this should go to model class
         return (self.exog * self.results.model.pinv_wexog.T).sum(1)
 
     @cache_readonly
@@ -970,9 +962,9 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         References
         ----------
-        .. [*] Eubank, R. L. (1999). Nonparametric regression and spline
+        Eubank, R. L. (1999). Nonparametric regression and spline
             smoothing. CRC press.
-        .. [*] Cook's distance. (n.d.). In Wikipedia. July 2019, from
+        Cook's distance. (n.d.). In Wikipedia. July 2019, from
             https://en.wikipedia.org/wiki/Cook%27s_distance
         """
         hii = self.hat_matrix_diag
@@ -1009,21 +1001,25 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         dffits measure for influence of an observation
 
-        based on resid_studentized_external,
-        uses results from leave-one-observation-out loop
-
-        It is recommended that observations with dffits large than a
-        threshold of 2 sqrt{k / n} where k is the number of parameters, should
-        be investigated.
-
         Returns
         -------
         dffits : float
+            The dffits measure for each observation, which is a measure of the
+            influence of a single data point on the predicted value of a model.
         dffits_threshold : float
+            The threshold to determine if the influence of an observation is large.
+            The threshold is 2 * sqrt(k / n).
 
-        References
-        ----------
-        `Wikipedia <https://en.wikipedia.org/wiki/DFFITS>`_
+        Notes
+        -----
+        Based on resid_studentized_external, uses results from
+        leave-one-observation-out loop.
+
+        It is recommended that observations with dffits larger than a
+        threshold of 2 sqrt{k / n} where k is the number of parameters, should
+        be investigated.
+
+        Based on `Wikipedia <https://en.wikipedia.org/wiki/DFFITS>`_
         """
         # TODO: do I want to use different sigma estimate in
         #      resid_studentized_external
@@ -1242,7 +1238,11 @@ class OLSInfluence(_BaseInfluenceMixin):
             mse_resid[outidx] = res_i.mse_resid
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
-        return dict(params=params, mse_resid=mse_resid, det_cov_params=det_cov_params)
+        return {
+            "params": params,
+            "mse_resid": mse_resid,
+            "det_cov_params": det_cov_params,
+        }
 
     def summary_frame(self):
         """
@@ -1279,14 +1279,14 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         # grab the results
         summary_data = DataFrame(
-            dict(
-                cooks_d=self.cooks_distance[0],
-                standard_resid=self.resid_studentized_internal,
-                hat_diag=self.hat_matrix_diag,
-                dffits_internal=self.dffits_internal[0],
-                student_resid=self.resid_studentized_external,
-                dffits=self.dffits[0],
-            ),
+            {
+                "cooks_d": self.cooks_distance[0],
+                "standard_resid": self.resid_studentized_internal,
+                "hat_diag": self.hat_matrix_diag,
+                "dffits_internal": self.dffits_internal[0],
+                "student_resid": self.resid_studentized_external,
+                "dffits": self.dffits[0],
+            },
             index=row_labels,
         )
         # NOTE: if we do not give columns, order of above will be arbitrary
@@ -1515,8 +1515,6 @@ class GLMInfluence(MLEInfluence):
         """
         Diagonal of the hat_matrix for GLM
 
-        Notes
-        -----
         This returns the diagonal of the hat matrix that was provided as
         argument to GLMInfluence or computes it using the results method
         `get_hat_matrix`.
@@ -1531,8 +1529,6 @@ class GLMInfluence(MLEInfluence):
         """
         Change in parameter estimates
 
-        Notes
-        -----
         This uses one-step approximation of the parameter change to deleting
         one observation.
         """
@@ -1547,8 +1543,6 @@ class GLMInfluence(MLEInfluence):
         """
         Internally studentized pearson residuals
 
-        Notes
-        -----
         residuals / sqrt( scale * (1 - hii))
 
         where residuals are those provided to GLMInfluence which are
@@ -1564,8 +1558,6 @@ class GLMInfluence(MLEInfluence):
         """
         Cook's distance
 
-        Notes
-        -----
         Based on one step approximation using resid_studentized and
         hat_matrix_diag for the computation.
 
@@ -1706,10 +1698,10 @@ class GLMInfluence(MLEInfluence):
             scale[outidx] = res_i.scale
             det_cov_params[outidx] = get_det_cov_params(res_i)
 
-        return dict(
-            params=params,
-            scale=scale,
-            mse_resid=scale,
+        return {
+            "params": params,
+            "scale": scale,
+            "mse_resid": scale,
             # alias for now
-            det_cov_params=det_cov_params,
-        )
+            "det_cov_params": det_cov_params,
+        }

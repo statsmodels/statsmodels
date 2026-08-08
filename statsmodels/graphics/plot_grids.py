@@ -116,7 +116,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
     nvars = data.shape[1]
     if varnames is None:
         # assuming single digit, nvars<=10  else use 'var%2d'
-        varnames = ["var%d" % i for i in range(nvars)]
+        varnames = [f"var{i:d}" for i in range(nvars)]
 
     plot_kwds_ = dict(ls="none", marker=".", color="k", alpha=0.5)
     if plot_kwds:
@@ -184,7 +184,7 @@ def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
             else:
                 yt = ylim[1] - 0.2 * (ylim[1] - ylim[0])
             xt = xlim[0] + 0.1 * (xlim[1] - xlim[0])
-            ax.text(xt, yt, "$\\rho=%0.2f$" % dc[1, 0])
+            ax.text(xt, yt, f"$\\rho={dc[1, 0]:0.2f}$")
 
     for ax in fig.axes:
         if ax.get_subplotspec().is_last_row():  # or ax.is_first_col():

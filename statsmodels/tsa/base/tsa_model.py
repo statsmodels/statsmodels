@@ -163,7 +163,7 @@ def get_index_loc(key, index):
                 )
 
                 # Now make sure we include `key`
-                if not index[-1] == date_key:
+                if index[-1] != date_key:
                     index = index_fn(
                         start=base_index[0],
                         periods=len(index) + 1,
@@ -625,7 +625,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 elif (
                     freq is not None
                     and not inferred_freq
-                    and not (index.freq == freq)
+                    and index.freq != freq
                 ):
                     raise ValueError(
                         "The given frequency argument is"
@@ -648,11 +648,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
         if date_index:
-            try:
-                is_monotonic = index.is_monotonic_increasing
-            except AttributeError:
-                # Remove after pandas 1.5 is minimum
-                is_monotonic = index.is_monotonic
+            is_monotonic = index.is_monotonic_increasing
         else:
             is_monotonic = None
 

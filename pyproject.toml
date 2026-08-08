@@ -13,11 +13,11 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Programming Language :: Cython",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Intended Audience :: End Users/Desktop",
     "Intended Audience :: Developers",
@@ -56,7 +56,7 @@ maintainers = [
 ]
 name = "statsmodels"
 dependencies = [
-    "numpy>=1.22.3,<3",  # released March 2022
+    "numpy>=1.23.5,<3",  # released March 2022
     "scipy>=1.8,!=1.9.2",  # released Feb 2022, 1.9.2 blocked due to bug
     "pandas>=1.4,!=2.1.0",  # released Feb 2022, 2.1.0 blocked due to bug
     "patsy>=0.5.6",  # released December 2023
@@ -64,13 +64,13 @@ dependencies = [
     "formulaic>=1.1.0",  # released December 2024
 ]
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.optional-dependencies]
 test = [
     # test
-    "pytest>=8.4.1,<9",
-    # "pytest-randomly", <- Directly affects the global numpy random state
+    "pytest>=8.4.1,<10",
+    "pytest-randomly",
     "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
@@ -118,7 +118,6 @@ dev = [
     # code quality
     "flake8",
     "flake8-bugbear",
-    "isort",
     "ruff",
 ]
 polars = [
@@ -140,7 +139,13 @@ setup = ['--vsenv']
 [tool.ruff]
 line-length = 88
 fix = false
-target-version = "py39"
+# Matches requires-python (>=3.10) and [tool.black]'s target-version below;
+# also affects which pyupgrade (UP) rules apply.
+target-version = "py310"
+# archive/ is explicitly documented (archive/README) as deprecated, no
+# longer maintained legacy code; excluded so it's not linted as if it
+# were part of the active codebase.
+extend-exclude = ["archive", "examples/python"]
 
 [tool.ruff.lint]
 typing-modules = ["statsmodels.compat.python", "compat.python"]
@@ -180,21 +185,80 @@ select = [
   "PGH",
   # Ruff-specific rules
   "RUF",
-  # flake8-bandit: exec-builtin
-  "S102",
   # Perflint
   "PERF",
   # flynt
   "FLY",
   # flake8-future-annotations
   "FA",
-  # unconventional-import-alias
-  "ICN001",
+  # flake8-import-conventions
+  "ICN",
   # flake8-slots
   "SLOT",
   # flake8-raise
-  "RSE"
+  "RSE",
+  # flake8-async
+  "ASYNC",
+  # flake8-executable
+  "EXE",
+  # flake8-logging-format
+  "G",
+  # flake8-logging
+  "LOG",
+  # refurb
+  "FURB",
+  # flake8-bandit
+  "S",
+  # isort
+  "I",
+  # pyupgrade
+  "UP",
+  # flake8-builtins
+  "A",
+  # flake8-airflow (this project has no Airflow usage, so this and the
+  # frameworks below are all currently clean; enabled for completeness)
+  "AIR",
+  # flake8-commas: only COM812/COM819 fail (already in the never-enable
+  # list above), COM818 is otherwise clean
+  "COM",
+  # flake8-django (no Django usage, currently clean)
+  "DJ",
+  # flake8-datetimez
+  "DTZ",
+  # flake8-fastapi (no FastAPI usage, currently clean)
+  "FAST",
+  # pandas-vet
+  "PD",
+  # flake8-use-pathlib: os.path is used throughout, but fewer than half
+  # the rule's codes actually fire here, so the category is selected with
+  # the failing codes carved out below (see ignore list) rather than
+  # listing the larger set of passing codes individually. A full
+  # os.path -> pathlib migration is a bigger undertaking than a config
+  # change.
+  "PTH",
+  # pep8-naming: most of "N" fails on scientific/statistical variable
+  # naming conventions (e.g. X, Y, N806 alone is 2000+ hits), so only the
+  # individually-clean rules are selected rather than the whole category.
+  "N804", "N811", "N813", "N817",
+  # flake8-simplify: most of "SIM" still has real hits, so only the
+  # individually-clean rules are selected rather than the whole category.
+  "SIM107", "SIM109", "SIM110", "SIM112", "SIM116", "SIM202", "SIM208",
+  "SIM220", "SIM221", "SIM222", "SIM223", "SIM911",
+  # tryceratops: TRY003 alone (no vanilla-args messages in raise) is
+  # 1300+ hits, so only the individually-clean rules are selected rather
+  # than the whole category.
+  "TRY400", "TRY401",
+  # flake8-use-pathlib
+  "PTH",
 ]
+
+# pydocstyle ("D") is intentionally NOT selected above. This project already
+# validates numpydoc docstring structure via tools/validate_docstrings.py
+# (built on the numpydoc package), which understands our numpydoc convention
+# far more precisely than ruff's generic pydocstyle checks do - even with
+# `[tool.ruff.lint.pydocstyle] convention = "numpy"` set, D still produces
+# tens of thousands of violations and disagrees with the dedicated
+# validator in places. Do not add "D" to select.
 
 ignore = [
   # Required to allow black formatting
@@ -205,53 +269,134 @@ ignore = [
   # Multiple statements on one line (colon) (E701)
   "E701",
 
+  ### Never enable: these conflict with the black/ruff-format formatter.
+  # ISC001 is deliberately NOT in this list: we keep ISC001 enabled and fix
+  # the occasional real violation by hand instead of suppressing it.
+  "COM812", # missing-trailing-comma: black decides this, not us
+  "COM819", # prohibited-trailing-comma: black decides this, not us
+  "Q000", # bad-quotes-inline-string: quote style is the formatter's job
+  "Q001", # bad-quotes-multiline-string
+  "Q002", # bad-quotes-docstring
+  "Q003", # avoidable-escaped-quote
+
   ### Intentionally disabled
+  # Counts below are from `ruff check statsmodels tools docs --select ALL`
+  # (this project's conformance scope), refreshed 2026-07-27.
   # Too many arguments to function call
-  "PLR0913", # 635
+  "PLR0913", # 645
   # Too many returns
-  "PLR0911", # 11
+  "PLR0911", # 12
   # Too many branches
-  "PLR0912", # 217
+  "PLR0912", # 221
   # Too many statements
-  "PLR0915", # 220
+  "PLR0915", # 221
+  # Too many positional arguments
+  "PLR0917", # 617
   # Redefined loop name
-  "PLW2901", # 55
+  "PLW2901", # 49
   # incorrect-dict-iterator, flags valid Series.items usage
-  "PERF102", # 6
+  "PERF102", # 5
   # try-except-in-loop, becomes useless in Python 3.11
   "PERF203", # 9
   # pytest-parametrize-names-wrong-type
-  "PT006", # 37
+  "PT006", # 36
   # pytest-raises-with-multiple-statements
-  "PT012", # 11
+  "PT012", # 15
   # Docstring contains ambiguous letter
   "RUF002", # Do Not Enable
   # Magic number
-  "PLR2004", # 697
+  "PLR2004", # 717
   # import-outside-toplevel
-  "PLC0415", # 835
+  "PLC0415", # 853
 
   ### TODO: Enable gradually
   # Too many uses of dict(...) instread of {...}
   # Would be good enforce eventually
-  "C408", # 322
+  "C408", # 324
   # Too many places without match= in pytest raises
   # Would be goot enforce eventually
-  "PT011", # 511
-  "RUF013", # Enable when Py 3.10 is min
-  "RUF059", # 319
-  "PERF401", # 53
+  "PT011", # 519
+  "RUF059", # 342
+  "PERF401", # 30
   # collection-literal-concatenation
-  "RUF005", # 186
-  # pairwise-over-zipped
-  "RUF007", # 1
+  "RUF005", # 138
   # mutable-class-default
-  "RUF012", #  178
+  "RUF012", # 177
   # repeated-equality-comparison
-  "PLR1714", # 28
-  # Object does not implement `__hash__` method
-  "PLW1641", # 2
+  "PLR1714", # 27
+
+  ### New 2026-07-27 when enabling ASYNC, EXE, G, LOG, FURB, S, full ICN
+  # assert is used pervasively outside of tests in this codebase (input
+  # validation, invariant checks); not adopting flake8-bandit's blanket
+  # objection to it
+  "S101", # 1669
+  # try/except/pass: mostly deliberate best-effort cleanup code
+  "S110", # 5
+  # pickle usage: needed for model persistence, a documented feature
+  "S301", # 11
+  # eval usage in a handful of expression-parsing helpers
+  "S307", # 3
+  # urlopen used only for fetching public, hardcoded dataset URLs
+  "S310", # 2
+  # subprocess with shell=True / without shell=True check: used in a couple
+  # of dev/CI helper scripts, not on untrusted input
+  "S602", # 2
+  "S603", # 2
+
+  ### New 2026-07-27 when enabling A, DTZ, PD, PTH
+  # Variable/argument/import shadows a builtin name (e.g. `id`, `type`,
+  # `filter`); common in this codebase's mathematical notation and not
+  # worth a rename sweep
+  "A001", # 35
+  "A002", # 10
+  "A004", # 2
+  # datetime()/datetime.now() without tzinfo; this project works with
+  # naive timestamps throughout (dataset dates, log timestamps) and does
+  # not need timezone-aware datetimes
+  "DTZ001", # 82
+  "DTZ005", # 4
+  # inplace=True is used deliberately in a number of places
+  "PD002", # 10
+  # .pivot()/.unstack() and .stack() instead of .pivot_table()/.melt():
+  # deliberate choices, not accidental API misuse
+  "PD010", # 25
+  "PD013", # 13
+  # .values instead of .to_numpy(): a pervasive, long-standing idiom
+  # throughout this codebase, not worth a mechanical rewrite
+  "PD011", # 308
+  # os.path used throughout instead of pathlib; a real modernization
+  # opportunity, but a bigger migration than a quick fix
+  "PTH100", # 107
+  "PTH103", # 4
+  "PTH106", # 1
+  "PTH107", # 6
+  "PTH110", # 13
+  "PTH111", # 1
+  "PTH112", # 1
+  "PTH113", # 1
+  "PTH118", # 237
+  "PTH119", # 1
+  "PTH120", # 123
+  "PTH122", # 4
+  "PTH123", # 89
+  "PTH204", # 4
+  "PTH207", # 6
+  "PTH208", # 3
 ]
+
+[tool.ruff.lint.isort]
+# Mirrors original [tool.isort] below as closely as ruff's isort implementation
+# allows. 
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["statsmodels"]
+known-third-party = ["Cython", "cython", "numpy", "matplotlib", "pandas", "patsy", "pytest", "cvxopt"]
+section-order = ["future", "compat", "standard-library", "third-party", "first-party", "local-folder"]
+split-on-trailing-comma = true
+
+[tool.ruff.lint.isort.sections]
+# Mirrors known_compat from [tool.isort].
+compat = ["statsmodels.compat", "setuptools"]
 
 [tool.ruff.lint.per-file-ignores]
 # relative imports allowed for asv_bench
@@ -264,9 +409,11 @@ ignore = [
 "statsmodels/stats/diagnostic_gen.py" = ["PT028"]
 "statsmodels/discrete/_diagnostics_count.py" = ["PT028"]
 "statsmodels/examples/tests/test_notebooks.py" = ["F401"]
+# Example scripts/notebooks are left as-is (not converted to pathlib).
+"**/examples/**" = ["PTH"]
 [tool.pytest.ini_options]
 minversion = "8.4.1"
-addopts = "--strict --durations=30 --junitxml=test-data.xml"
+addopts = "--strict --durations=30 --junitxml=test-data.xml --randomly-dont-reset-seed"
 testpaths = "statsmodels"
 xfail_strict = true
 empty_parameter_set_mark = "fail_at_collect"
@@ -296,7 +443,9 @@ filterwarnings = [
     "error:The inplace keyword in::",
     "error:Keyword arguments have been passed:FutureWarning:",
     "error:After statsmodels 0.15 is released:FutureWarning:",
-    "error:Passing `None` as the seed currently:FutureWarning:"
+    "error:Passing `None` as the seed currently:FutureWarning:",
+    "error:the 'random_state' keyword is deprecated:FutureWarning:",
+    "error:the 'seed' keyword is deprecated:FutureWarning:",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -317,22 +466,8 @@ markers = [
     "todo: mark a test as incomplete",
     "polars: mark a test that requires polars"
     "singleton_randomstate: mark a test as changing the singleton RandomState",
+    "joblib: mark a test as using joblib for parallel computation",
 ]
-
-[tool.isort]
-profile = "black"
-src_paths = ["statsmodels"]
-sections = ["FUTURE","COMPAT","STDLIB","THIRDPARTY","FIRSTPARTY","LOCALFOLDER"]
-known_first_party = ["statsmodels"]
-known_compat = ["statsmodels.compat.*","setuptools,setuptools.*"]
-known_third_party=["Cython","numpy","matplotlib","pandas","patsy","pytest","cvxopt","cython"]
-line_length=88
-force_grid_wrap=0
-multi_line_output=3
-combine_as_imports=true
-force_sort_within_sections=true
-include_trailing_comma=true
-use_parentheses=true
 
 [tool.coverage.run]
 source = ["statsmodels"]

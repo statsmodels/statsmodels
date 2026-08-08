@@ -12,18 +12,39 @@ Author: Josef-pktd
 # not original copied from various experimental scripts
 # version control history is there
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, NamedTuple
+
 import numpy as np
 from scipy import signal
 import scipy.fftpack as fft
-
-try:
-    from scipy.signal._signaltools import _centered as trim_centered
-except ImportError:
-    # Must be using SciPy <1.8.0 where this function was moved (it's not a
-    # public SciPy function, but we need it here)
-    from scipy.signal.signaltools import _centered as trim_centered
+from scipy.signal._signaltools import _centered as trim_centered
 
 from statsmodels.tools.validation import PandasWrapper, array_like
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import ArrayLike1D, ArrayLike2D
+
+
+class CycleTrendResult(NamedTuple):
+    """
+    Result of :func:`cffilter`, :func:`hamilton_filter`, and
+    :func:`hpfilter`: a cycle/trend decomposition.
+
+    Parameters
+    ----------
+    cycle : array_like
+        The estimated cyclical component. See the docstring of the
+        function that produced this result for the precise definition
+        (e.g. :func:`hamilton_filter` leaves the first ``p + h - 1``
+        values as ``NaN``).
+    trend : array_like
+        The estimated trend component, matching ``cycle`` in shape.
+    """
+
+    cycle: ArrayLike1D | ArrayLike2D
+    trend: ArrayLike1D | ArrayLike2D
 
 
 def _pad_nans(x, head=None, tail=None):

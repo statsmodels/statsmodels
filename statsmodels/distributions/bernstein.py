@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
 
@@ -178,17 +180,27 @@ class BernsteinDistribution:
         bpd_marginal = BernsteinDistribution(cdf_m)
         return bpd_marginal
 
-    def rvs(self, nobs, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs, rng=None):
         """Generate random numbers from distribution.
 
         Parameters
         ----------
         nobs : int
             Number of random observations to generate.
-        rng : np.random.RandomState or np.random.Generator, optional
-            If not provided, uses the singleton RandomState provided by NumPy
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         """
-        rng = check_random_state(random_state)
+        rng = check_random_state(rng)
         rvs_mnl = rng.multinomial(nobs, self.prob_grid.flatten())
         k_comp = self.k_dim
         rvs_m = []

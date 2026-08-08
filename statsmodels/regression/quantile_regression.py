@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Quantile regression model
 
@@ -29,7 +27,7 @@ from statsmodels.regression.linear_model import (
     RegressionResults,
     RegressionResultsWrapper,
 )
-from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
 
 
@@ -117,6 +115,7 @@ class QuantReg(RegressionModel):
             Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
+            - biw: Biweight
             - epa: Epanechnikov
             - cos: Cosine
             - gau: Gaussian
@@ -319,7 +318,7 @@ class QuantRegResults(RegressionResults):
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
-    # @cache_readonly
+    @cache_writable()
     def scale(self):
         return 1.0
 
@@ -388,9 +387,9 @@ class QuantRegResults(RegressionResults):
         yname : str, optional
             Default is `y`.
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model.
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
@@ -407,8 +406,19 @@ class QuantRegResults(RegressionResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
-        eigvals = self.eigenvals
-        condno = self.condition_number
+        # Cache the data-dependent scalars computed below as a plain dict
+        # (not cache_readonly) so that summary() keeps working after
+        # remove_data() has cleared resid/model.exog and the like.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+
+        def cached(key, compute):
+            if key not in cache:
+                cache[key] = compute()
+            return cache[key]
+
+        eigvals = cached("eigvals", lambda: self.eigenvals)
+        condno = cached("condno", lambda: self.condition_number)
+        prsquared = cached("prsquared", lambda: self.prsquared)
 
         top_left = [
             ("Dep. Variable:", None),
@@ -419,9 +429,9 @@ class QuantRegResults(RegressionResults):
         ]
 
         top_right = [
-            ("Pseudo R-squared:", ["%#8.4g" % self.prsquared]),
-            ("Bandwidth:", ["%#8.4g" % self.bandwidth]),
-            ("Sparsity:", ["%#8.4g" % self.sparsity]),
+            ("Pseudo R-squared:", [f"{prsquared:#8.4g}"]),
+            ("Bandwidth:", [f"{self.bandwidth:#8.4g}"]),
+            ("Sparsity:", [f"{self.sparsity:#8.4g}"]),
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),

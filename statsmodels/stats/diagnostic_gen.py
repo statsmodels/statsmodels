@@ -92,7 +92,7 @@ def test_chisquare_binning(
 
     observed = np.asarray(counts)
     expected = np.asarray(expected)
-    n_observed = counts.sum()
+    n_observed = observed.sum()
     n_expected = expected.sum()
     if not np.allclose(n_observed, n_expected, atol=1e-13):
         if np.max(expected) < 1 + 1e-13:
@@ -178,7 +178,7 @@ def prob_larger_ordinal_choice(prob):
 
     References
     ----------
-    .. [2] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
+    .. [1] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
        Outcomes.” Biometrika 99 (2): 473-80.
     """
     # similar to `nonparametric rank_compare_2ordinal`
@@ -241,8 +241,8 @@ def prob_larger_2ordinal(probs1, probs2):
     freq1 = np.asarray(probs1)
     freq2 = np.asarray(probs2)
     # add zero at beginning of choices for cdf computation
-    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1), axis=-1)
-    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2), axis=-1)
+    freq1_ = np.concatenate((np.zeros((*freq1.shape[:-1], 1)), freq1), axis=-1)
+    freq2_ = np.concatenate((np.zeros((*freq2.shape[:-1], 1)), freq2), axis=-1)
 
     cdf1 = freq1_.cumsum(axis=-1)
     cdf2 = freq2_.cumsum(axis=-1)

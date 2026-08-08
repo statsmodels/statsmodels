@@ -105,6 +105,7 @@ categories) rather than an explicit constant (e.g., a column of 1s).
 Examples
 --------
 >>> from statsmodels.regression.rolling import Rolling%(model)s
+>>> from statsmodels.tools.tools import add_constant
 >>> from statsmodels.datasets import longley
 >>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
@@ -116,7 +117,8 @@ Use params_only to skip all calculations except parameter estimation
 >>> rolling_params = mod.fit(params_only=True)
 
 Use expanding and min_nobs to fill the initial results using an
-expanding scheme until window observation, and the roll.
+expanding scheme until window observations are available, after which
+rolling is used.
 
 >>> mod = Rolling%(model)s(data.endog, exog, window=60, min_nobs=12,
 ... expanding=True)
@@ -412,9 +414,9 @@ class RollingWLS:
         if (endog.ndim > 1 and endog.shape[1] > 1) or endog.ndim > 2:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {}. This occurs when "
+                f"columns that has shape {endog.shape}. This occurs when "
                 "the variable converted to endog is non-numeric"
-                " (e.g., bool or str).".format(endog.shape)
+                " (e.g., bool or str)."
             )
 
         kwargs.update({"missing": missing, "window": window})
@@ -701,7 +703,7 @@ class RollingRegressionResults:
             with np.errstate(invalid="ignore"):
                 return stats.norm.sf(np.abs(self.tvalues)) * 2
 
-    def _conf_int(self, alpha, cols):
+    def _conf_int(self, alpha):
         bse = np.asarray(self.bse)
 
         if self.use_t:
@@ -716,22 +718,16 @@ class RollingRegressionResults:
         params = np.asarray(self.params)
         lower = params - q * bse
         upper = params + q * bse
-        if cols is not None:
-            cols = np.asarray(cols)
-            lower = lower[:, cols]
-            upper = upper[:, cols]
-        return np.asarray(list(zip(lower, upper)))
+        return np.asarray(list(zip(lower, upper, strict=True)))
 
     @Appender(LikelihoodModelResults.conf_int.__doc__)
-    def conf_int(self, alpha=0.05, cols=None):
-        ci = self._conf_int(alpha, cols)
+    def conf_int(self, alpha=0.05):
+        ci = self._conf_int(alpha)
         if not self._use_pandas:
             return ci
         ci_names = ("lower", "upper")
         row_names = self.model.data.row_labels
         col_names = self.model.data.param_names
-        if cols is not None:
-            col_names = [col_names[i] for i in cols]
         mi = MultiIndex.from_product((col_names, ci_names))
         ci = np.reshape(np.swapaxes(ci, 1, 2), (ci.shape[0], -1))
         return DataFrame(ci, columns=mi, index=row_names)
@@ -791,7 +787,7 @@ class RollingRegressionResults:
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
         if alpha is not None:
-            ci = self._conf_int(alpha, None)
+            ci = self._conf_int(alpha)
 
         row_labels = self.model.data.row_labels
         if row_labels is None:

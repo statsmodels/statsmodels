@@ -267,7 +267,7 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
     * :math:`\gamma=\frac{1}{2}` corresponds to biquartimax,
     * :math:`\gamma=1` corresponds to varimax,
     * :math:`\gamma=\frac{1}{p}` corresponds to equamax.
-    For oblique rotations rotations:
+    For oblique rotations:
 
     * :math:`\gamma=0` corresponds to quartimin,
     * :math:`\gamma=\frac{1}{2}` corresponds to biquartimin.

@@ -135,10 +135,11 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     Parameters
     ----------
-    self : RegressionResults
-        Results instance used to generate predictions.
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If the model was not fit
+        using a formula, the columns are matched by position and not by name,
+        so a DataFrame must have its columns in the same order as the exog
+        used to fit the model.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit

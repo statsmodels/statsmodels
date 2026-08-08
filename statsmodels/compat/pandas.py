@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
 from contextlib import contextmanager
 import string
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import numpy as np
 from packaging.version import Version, parse
 import pandas as pd
+from pandas import testing
+from pandas.api.types import is_numeric_dtype
+from pandas.tseries import offsets as frequencies
 from pandas.util._decorators import (
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
@@ -15,10 +19,7 @@ from pandas.util._decorators import (
 from statsmodels.tools.docstring_helpers import Appender, Substitution
 
 if TYPE_CHECKING:
-    try:
-        from typing import TypeAlias
-    except ImportError:
-        from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
 
 FuncType: TypeAlias = Callable[..., Any]
@@ -59,22 +60,7 @@ PD_LT_2_1_0 = version < Version("2.0.99")
 PD_LT_2 = version < Version("1.99.99")
 PD_LT_3 = version < Version("2.99.99")
 
-try:
-    from pandas.api.types import is_numeric_dtype
-except ImportError:
-    from pandas.core.common import is_numeric_dtype
-
-try:
-    from pandas.tseries import offsets as frequencies
-except ImportError:
-    from pandas.tseries import frequencies
-
 data_klasses = (pd.Series, pd.DataFrame)
-
-try:
-    from pandas import testing
-except ImportError:
-    from pandas.util import testing
 
 assert_frame_equal = testing.assert_frame_equal
 assert_index_equal = testing.assert_index_equal
@@ -287,7 +273,7 @@ def call_cached_func(cached_prop, *args, **kwargs):
     return f(*args, **kwargs)
 
 
-def get_cached_doc(cached_prop) -> Optional[str]:
+def get_cached_doc(cached_prop) -> str | None:
     """
     Get the docstring of the underlying function of a cached property
 

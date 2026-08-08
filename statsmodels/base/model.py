@@ -64,12 +64,12 @@ _extra_param_doc = """
 
 
 class Model:
-    __doc__ = """
+    __doc__ = f"""
     A (predictive) statistical model. Intended to be subclassed, not used
     directly
 
-    {params_doc}
-    {extra_params_doc}
+    {_model_params_doc}
+    {_missing_param_doc + _extra_param_doc}
 
     Attributes
     ----------
@@ -81,10 +81,7 @@ class Model:
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """.format(
-        params_doc=_model_params_doc,
-        extra_params_doc=_missing_param_doc + _extra_param_doc,
-    )
+    """
 
     # Maximum number of endogenous variables when using a formula
     # Default is 1, which is more common. Override in models when needed
@@ -216,9 +213,9 @@ class Model:
         if max_endog is not None and endog.ndim > 1 and endog.shape[1] > max_endog:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {}. This occurs when "
+                f"columns that has shape {endog.shape}. This occurs when "
                 "the variable converted to endog is non-numeric"
-                " (e.g., bool or str).".format(endog.shape)
+                " (e.g., bool or str)."
             )
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
@@ -1161,7 +1158,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         k_miss = len(exog_names) - len(mlefit.params)
         if not k_miss == 0:
             if k_miss < 0:
-                self._set_extra_params_names(["par%d" % i for i in range(-k_miss)])
+                self._set_extra_params_names([f"par{i:d}" for i in range(-k_miss)])
             else:
                 # I do not want to raise after we have already fit()
                 warnings.warn(
@@ -1308,7 +1305,11 @@ class Results:
         If no formula was used, then the provided exog needs to have the
         same number of columns as the original exog in the model. No
         transformation of the data is performed except converting it to
-        a numpy array.
+        a numpy array. In this case the columns are matched by position and
+        not by name, so a DataFrame must have its columns in the same order
+        as the exog used to fit the model; its column labels are ignored.
+        This differs from the formula case above, where the variables are
+        matched by name and the column order does not matter.
 
         Row indices as in pandas data frames are supported, and added to the
         returned prediction.
@@ -1948,7 +1949,7 @@ class LikelihoodModelResults(Results):
         invcov=None,
         use_f=None,
         df_constraints=None,
-        scalar=None,
+        scalar=True,
     ):
         """
         Compute a Wald-test for a joint linear hypothesis
@@ -1982,12 +1983,8 @@ class LikelihoodModelResults(Results):
             The number of constraints. If not provided the number of
             constraints is determined from r_matrix.
         scalar : bool, optional
-            Flag indicating whether the Wald test statistic should be returned
-            as a scalar float. The current behavior is to return an array.
-            This will switch to a scalar float after 0.14 is released. To
-            get the future behavior now, set scalar to True. To silence
-            the warning and retain the legacy behavior, set scalar to
-            False.
+            Flag indicating whether the Wald test statistic should be
+            returned as a scalar float (the default) or as an array.
 
         Returns
         -------
@@ -2012,7 +2009,7 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
         """
         use_f = bool_like(use_f, "use_f", strict=True, optional=True)
-        scalar = bool_like(scalar, "scalar", strict=True, optional=True)
+        scalar = bool_like(scalar, "scalar", strict=True)
         if use_f is None:
             # switch to use_t false if undefined
             use_f = hasattr(self, "use_t") and self.use_t
@@ -2062,8 +2059,8 @@ class LikelihoodModelResults(Results):
             if J_ < J:
                 warnings.warn(
                     "covariance of constraints does not have full "
-                    "rank. The number of constraints is %d, but "
-                    "rank is %d" % (J, J_),
+                    f"rank. The number of constraints is {int(J):d}, but "
+                    f"rank is {J_:d}",
                     ValueWarning,
                     stacklevel=2,
                 )
@@ -2083,16 +2080,6 @@ class LikelihoodModelResults(Results):
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
         df_resid = getattr(self, "df_resid_inference", self.df_resid)
-        if scalar is None:
-            warnings.warn(
-                "The behavior of wald_test will change after 0.14 to returning "
-                "scalar test statistic values. To get the future behavior now, "
-                "set scalar to True. To silence this message while retaining "
-                "the legacy behavior, set scalar to False.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            scalar = False
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
@@ -2104,7 +2091,7 @@ class LikelihoodModelResults(Results):
             )
 
     def wald_test_terms(
-        self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=None
+        self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=True
     ):
         """
         Compute a sequence of Wald tests for terms over multiple columns
@@ -2127,12 +2114,8 @@ class LikelihoodModelResults(Results):
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
         scalar : bool, optional
-            Flag indicating whether the Wald test statistic should be returned
-            as a scalar float. The current behavior is to return an array.
-            This will switch to a scalar float after 0.14 is released. To
-            get the future behavior now, set scalar to True. To silence
-            the warning and retain the legacy behavior, set scalar to
-            False.
+            Flag indicating whether the Wald test statistic should be
+            returned as a scalar float (the default) or as an array.
 
         Returns
         -------
@@ -2338,7 +2321,7 @@ class LikelihoodModelResults(Results):
 
         return nl
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05):
         """
         Construct confidence interval for the fitted parameters
 
@@ -2347,15 +2330,6 @@ class LikelihoodModelResults(Results):
         alpha : float, optional
             The significance level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-            Specifies which confidence intervals to return.
-
-        .. deprecated:: 0.13
-
-           cols is deprecated and will be removed after 0.14 is released.
-           cols only works when inputs are NumPy arrays and will fail
-           when using pandas Series or DataFrames as input. You can
-           subset the confidence intervals using slices.
 
         Returns
         -------
@@ -2386,7 +2360,7 @@ class LikelihoodModelResults(Results):
                [      -0.56251721,        0.460309  ],
                [     798.7875153 ,     2859.51541392]])
 
-        >>> results.conf_int(cols=(2,3))
+        >>> results.conf_int()[2:4]
         array([[-0.1115811 ,  0.03994274],
                [-3.12506664, -0.91539297]])
         """
@@ -2403,19 +2377,6 @@ class LikelihoodModelResults(Results):
         params = self.params
         lower = params - q * bse
         upper = params + q * bse
-        if cols is not None:
-            warnings.warn(
-                "cols is deprecated and will be removed after 0.14 is "
-                "released. cols only works when inputs are NumPy arrays and "
-                "will fail when using pandas Series or DataFrames as input. "
-                "Subsets of confidence intervals can be selected using slices "
-                "of the full confidence interval array.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            cols = np.asarray(cols)
-            lower = lower[cols]
-            upper = upper[cols]
         return np.asarray(lzip(lower, upper))
 
     def save(self, fname, remove_data=False):
@@ -2478,6 +2439,13 @@ class LikelihoodModelResults(Results):
         This reduces the size of the instance, so it can be pickled with less
         memory. Currently tested for use with predict from an unpickled
         results and model instance.
+
+        .. warning::
+
+           Any data-dependent statistics needed for displaying a model summary
+           can be calculated and memoized by calling ``summary()`` prior to
+           calling ``remove_data()``. In general, if ``summary()`` is not
+           called before ``remove_data()``, ``summary()`` will fail.
 
         .. warning::
 
@@ -2544,6 +2512,35 @@ class LikelihoodModelResults(Results):
                 self._cache[key] = None
             except (AttributeError, KeyError):
                 pass
+
+    def _summary_cache(self, key, compute):
+        """
+        Compute and memoize a value that must survive remove_data().
+
+        ``cache_readonly`` values are unconditionally cleared by
+        ``remove_data()`` (see its docstring), so anything a `summary()`
+        (or similar) implementation needs after `remove_data()` has been
+        called must be memoized some other way. This stores the result of
+        ``compute()`` in a plain dict on the instance, keyed by ``key`` --
+        untouched by ``remove_data()`` -- and only calls ``compute()`` the
+        first time a given ``key`` is requested.
+
+        Parameters
+        ----------
+        key : str
+            Name under which to cache the computed value.
+        compute : callable
+            Zero-argument callable that computes the value; only invoked
+            on the first call for a given ``key``.
+
+        Returns
+        -------
+        The cached (or newly computed) value.
+        """
+        cache = self.__dict__.setdefault("_summary_statistics_cache", {})
+        if key not in cache:
+            cache[key] = compute()
+        return cache[key]
 
 
 class LikelihoodResultsWrapper(wrap.ResultsWrapper):
@@ -2659,9 +2656,12 @@ class ResultMixin:
         store : bool
             If true, then parameter estimates for all bootstrap iterations
             are attached in self.bootstrap_results.
-        rng : np.random.RandomState or np.random.Generator, optional
-            Random number generator to use in the bootstrap. If None, uses the
-            singleton RandomState provided by NumPy.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -2777,7 +2777,7 @@ class _LLRMixin:
             value llnull is stored.
         **kwargs
             Additional keyword arguments used as fit keyword arguments for the
-            null model. The override and model default values.
+            null model. These override the model default values.
 
         Notes
         -----
@@ -2904,6 +2904,10 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.endog = model.endog
         self.exog = model.exog
         self.nobs = model.endog.shape[0]
+        # Does not call Results.__init__, so set these directly; needed for
+        # remove_data() to work (it assumes both attributes exist).
+        self._data_attr = ["endog", "exog"]
+        self._data_in_cache = ["fittedvalues", "resid", "wresid"]
 
         # TODO: possibly move to model.fit()
         #       and outsource together with patching names
@@ -2959,7 +2963,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         which : str
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
-            see the model.predict docstring
+            See the model.predict docstring.
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
             exog through the formula. Default is True. E.g., if you fit
@@ -2968,7 +2972,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             their original form. Otherwise, you'd need to log the data
             first.
         row_labels : list of str or None
-            If row_lables are provided, then they will replace the generated
+            If row_labels are provided, then they will replace the generated
             labels.
         average : bool
             If average is True, then the mean prediction is computed, that is,
@@ -3053,8 +3057,8 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 
         top_right = [
             ("Log-Likelihood:", None),
-            ("AIC:", ["%#8.4g" % self.aic]),
-            ("BIC:", ["%#8.4g" % self.bic]),
+            ("AIC:", [f"{self.aic:#8.4g}"]),
+            ("BIC:", [f"{self.bic:#8.4g}"]),
         ]
 
         if title is None:

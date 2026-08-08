@@ -169,8 +169,15 @@ def multipletests(
         pvals = np.take(pvals, sortind)
 
     ntests = len(pvals)
-    alphacSidak = 1 - np.power((1.0 - alphaf), 1.0 / ntests)
-    alphacBonf = alphaf / float(ntests)
+    if ntests > 0:
+        alphacSidak = 1 - np.power((1.0 - alphaf), 1.0 / ntests)
+        alphacBonf = alphaf / float(ntests)
+    else:
+        # Nothing to correct. Skip the division by zero above and let the
+        # per-method branches operate on the empty array, which produces empty
+        # results. The corrected alphas are undefined without any tests.
+        alphacSidak = np.nan
+        alphacBonf = np.nan
     if method.lower() in ["b", "bonf", "bonferroni"]:
         reject = pvals <= alphacBonf
         pvals_corrected = pvals * float(ntests)
@@ -258,7 +265,7 @@ def multipletests(
             pvals, alpha=alpha, method="bh", maxiter=maxiter, is_sorted=True
         )[:2]
 
-    elif method.lower() in ["fdr_gbs"]:
+    elif method.lower() == "fdr_gbs":
         # adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
         #        notreject = pvals > alphaf / np.arange(ntests, 0, -1) # alphacSidak
         #        notrejectmin = np.min(np.nonzero(notreject))
@@ -411,6 +418,10 @@ def fdrcorrection_twostage(
         deprecated ``iter`` keyword.
         maxiter=False is two-stage fdr (maxiter=1)
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
+    iter : bool
+        Removed keyword that is kept only for backwards compatibility.
+        Passing anything other than the default ``None`` raises a
+        ``TypeError``; use ``maxiter`` instead.
     is_sorted : bool
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
@@ -477,7 +488,7 @@ def fdrcorrection_twostage(
         pvals, alpha=alpha_prime, method="indep", is_sorted=True
     )
     r1 = rej.sum()
-    if (r1 == 0) or (r1 == ntests):
+    if r1 in (0, ntests):
         # return rej, pvalscorr * fact, ntests - r1, alpha_stages
         reject = rej
         pvalscorr *= fact

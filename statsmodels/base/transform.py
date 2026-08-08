@@ -134,7 +134,7 @@ class BoxCox:
         method = method.lower()
 
         if len(bounds) != 2:
-            raise ValueError("Bounds of length {} not understood.".format(len(bounds)))
+            raise ValueError(f"Bounds of length {len(bounds)} not understood.")
         elif bounds[0] >= bounds[1]:
             raise ValueError("Lower bound exceeds upper bound.")
 
@@ -213,6 +213,9 @@ class BoxCox:
         ----------
         x : array_like
             The untransformed data.
+        bounds : tuple
+            Numeric 2-tuple, that indicate the solution space for the lambda
+            parameter.
         options : dict
             The options (as a dict) to be passed to the optimizer.
 

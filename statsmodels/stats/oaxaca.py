@@ -85,10 +85,12 @@ class OaxacaBlinder:
         See linear_model.RegressionResults.get_robustcov_results for a
         description of the required keywords for alternative covariance
         estimators.
-    rng : int, np.random.RandomState, np.random.Generator, optional
-        The source of randomness to use in variable calculation. If None,
-        uses the singleton RandomState provided by NumPy. If an int,
-        creates a new Generator.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -108,7 +110,7 @@ class OaxacaBlinder:
     '3' is the column of which we want to explain or which indicates
     the two groups. In this case, it is if you rent.
 
-    >>> model = sm.OaxacaBlinder(df.endog, df.exog, 3, hasconst = False)
+    >>> model = sm.OaxacaBlinder(data.endog, data.exog, 3, hasconst = False)
     >>> model.two_fold().summary()
     Oaxaca-Blinder Two-fold Effects
     Unexplained Effect: 27.94091
@@ -186,6 +188,20 @@ class OaxacaBlinder:
         self._f_model = OLS(endog_f, exog_f).fit(cov_type=cov_type, cov_kwds=cov_kwds)
         self._s_model = OLS(endog_s, exog_s).fit(cov_type=cov_type, cov_kwds=cov_kwds)
 
+        # Populated by `two_fold`/`three_fold` (and read back by
+        # `variance`); declared here so they exist (as None) even before
+        # either decomposition method has been called.
+        self.submitted_n = None
+        self.submitted_conf = None
+        self.submitted_weight = None
+        self.t_params = None
+        self._t_model = None
+        self.endow_eff = None
+        self.coef_eff = None
+        self.int_eff = None
+        self.unexplained = None
+        self.explained = None
+
     def variance(self, decomp_type, n=5000, conf=0.99):
         """
         A helper function to calculate the variance/std
@@ -234,7 +250,10 @@ class OaxacaBlinder:
             exog = self.exog
             amount = len(endog)
 
-            samples = self.rng.randint(0, high=amount, size=amount)
+            if isinstance(self.rng, np.random.RandomState):
+                samples = self.rng.randint(0, high=amount, size=amount)
+            else:
+                samples = self.rng.integers(0, high=amount, size=amount)
             endog = endog[samples]
             exog = exog[samples]
             neumark = np.delete(exog, bifurcate, axis=1)
@@ -387,10 +406,10 @@ class OaxacaBlinder:
             If true, bootstrapped standard errors will be calculated.
         two_fold_type : str, optional
             This method allows for the specific calculation of the
-            non-discriminatory model. There are four different types
-            available at this time: pooled, cotton, reimers, self_submitted.
-            Pooled is assumed and if a non-viable parameter is given,
-            pooled will be run.
+            non-discriminatory model. There are five different types
+            available at this time: pooled, nuemark, cotton, reimers,
+            self_submitted. Pooled is assumed and if a non-viable
+            parameter is given, pooled will be run.
 
             pooled - This type assumes that the pooled model's parameters
             (a normal regression) is the non-discriminatory model.
@@ -566,19 +585,13 @@ class OaxacaResults:
             else:
                 print(
                     dedent(
-                        """\
+                        f"""\
                 Oaxaca-Blinder Two-fold Effects
-                Unexplained Effect: {:.5f}
-                Unexplained Standard Error: {:.5f}
-                Explained Effect: {:.5f}
-                Explained Standard Error: {:.5f}
-                Gap: {:.5f}""".format(
-                            self.params[0],
-                            self.std[0],
-                            self.params[1],
-                            self.std[1],
-                            self.params[2],
-                        )
+                Unexplained Effect: {self.params[0]:.5f}
+                Unexplained Standard Error: {self.std[0]:.5f}
+                Explained Effect: {self.params[1]:.5f}
+                Explained Standard Error: {self.std[1]:.5f}
+                Gap: {self.params[2]:.5f}"""
                     )
                 )
         if self.model_type == 3:

@@ -8,7 +8,7 @@ from statsmodels.compat.pandas import MONTH_END
 
 import datetime as dt
 from itertools import product
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
@@ -20,11 +20,16 @@ import pytest
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    EstimationWarning,
+    SpecificationWarning,
+    ValueWarning,
+)
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import (
     AutoReg,
     AutoRegResultsWrapper,
+    InformationCriteria,
     ar_select_order,
 )
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -104,7 +109,10 @@ for param in params:
         final.append(param)
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
-ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param)]) for param in params]
+ids = [
+    ", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)])
+    for param in params
+]
 
 
 @pytest.fixture(scope="module", params=params, ids=ids)
@@ -146,7 +154,7 @@ def fix_ols_attribute(val, attrib, res):
     nparam = res.k_constant + res.df_model
     nobs = nparam + res.df_resid
     df_correction = (nobs - nparam) / nobs
-    if attrib in ("scale",):
+    if attrib == "scale":
         return val * df_correction
     elif attrib == "df_model":
         return val + res.k_constant
@@ -156,9 +164,9 @@ def fix_ols_attribute(val, attrib, res):
         return val * np.sqrt(df_correction)
     elif attrib in ("cov_params", "scale"):
         return val * df_correction
-    elif attrib in ("f_test",):
+    elif attrib == "f_test":
         return val / df_correction
-    elif attrib in ("tvalues",):
+    elif attrib == "tvalues":
         return val / np.sqrt(df_correction)
 
     return val
@@ -210,6 +218,19 @@ def test_other_tests_autoreg(ols_autoreg_result):
     a.t_test(r)
     r = np.eye(a.params.shape[0])
     a.wald_test(r, scalar=True)
+
+
+@pytest.mark.parametrize("pandas", [True, False])
+@pytest.mark.parametrize("nexog", [0, 2])
+def test_summary_after_remove_data(pandas, nexog):
+    data = gen_data(250, nexog, pandas)
+    # exog = {} if nexog == 0 else {"exog": data.exog}
+    mod = AutoReg(data.endog, 0, trend="n", seasonal=pandas, exog=data.exog)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 # TODO: test likelihood for ARX model?
@@ -286,8 +307,8 @@ def gen_data(nobs, nexog, pandas, seed=92874765):
             exog = pd.DataFrame(exog, columns=cols, index=index)
 
     class DataSet(NamedTuple):
-        endog: Union[np.ndarray, pd.Series]
-        exog: Union[np.ndarray, pd.DataFrame]
+        endog: np.ndarray | pd.Series
+        exog: np.ndarray | pd.DataFrame
 
     return DataSet(endog=endog, exog=exog)
 
@@ -529,6 +550,17 @@ def test_ar_select_order_smoke():
     ar_select_order(data, 4, seasonal=False)
     ar_select_order(data, 4, glob=True)
     ar_select_order(data, 4, glob=True, seasonal=True, period=12)
+
+
+def test_ar_select_order_ics_are_information_criteria():
+    data = sunspots.load().data["SUNACTIVITY"]
+    res = ar_select_order(data, 4)
+    assert len(res._ics) > 0
+    for _, ic in res._ics:
+        assert isinstance(ic, InformationCriteria)
+        assert ic[0] == ic.aic
+        assert ic[1] == ic.bic
+        assert ic[2] == ic.hqic
 
 
 def test_predict_ar_constant():
@@ -1339,3 +1371,13 @@ def test_autoreg_append_deterministic(append_data):
         deterministic=dp.apply(y_both.index),
     ).fit()
     assert_allclose(res_append.params, res_direct.params)
+
+
+def test_no_obs_for_adjustment():
+    # Ensure model work when there are insufficient observations to
+    # apply a small sample adjustment
+    rs = np.random.RandomState(0)
+    x = rs.standard_normal(7)
+    mod = AutoReg(x, lags=3, trend="c")
+    with pytest.warns(EstimationWarning, match="The adjusted number of observations"):
+        mod.fit()

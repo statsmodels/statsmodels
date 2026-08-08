@@ -47,7 +47,7 @@ def _check_args_1(endog, n_factor, corr, nobs):
         )
 
     if n_factor <= 0:
-        raise ValueError("n_factor must be larger than 0! %d < 0" % (n_factor))
+        raise ValueError(f"n_factor must be larger than 0! {n_factor:d} < 0")
 
     if nobs is not None and endog is not None:
         warnings.warn("nobs is ignored when endog is provided", stacklevel=2)
@@ -73,7 +73,7 @@ def _check_args_2(endog, n_factor, corr, nobs, k_endog):
     if n_factor > k_endog:
         raise ValueError(
             "n_factor cannot be greater than the number"
-            " of variables! %d > %d" % (n_factor, k_endog)
+            f" of variables! {n_factor:d} > {k_endog:d}"
         )
 
     if np.max(np.abs(np.diag(corr) - 1)) > 1e-10:
@@ -82,7 +82,7 @@ def _check_args_2(endog, n_factor, corr, nobs, k_endog):
     if corr.shape[0] != corr.shape[1]:
         raise ValueError(
             "Correlation matrix corr must be a square "
-            "(rows %d != cols %d)" % corr.shape
+            "(rows {:d} != cols {:d})".format(*corr.shape)
         )
 
 
@@ -180,6 +180,14 @@ class Factor(Model):
         self.corr = corr
         self.k_endog = k_endog
 
+        # Populated by `fit` (via `_fit_pa`/`_fit_ml`, depending on
+        # `method`); declared here so they exist (as None) even before
+        # `fit` has been called.
+        self.n_comp = None
+        self.eigenvals = None
+        self.uniqueness = None
+        self.mle_retvals = None
+
         if endog_names is None:
             if hasattr(corr, "index"):
                 endog_names = corr.index
@@ -243,8 +251,12 @@ class Factor(Model):
         em_iter : int
             The number of EM iterations before starting gradient optimization,
             only used for ML estimation.
-        rng : int, Generator, RandomState, or None
-            Seed or random state used only for ML estimation to generate
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used. Only used for ML estimation to generate
             starting values when `start` is None.
 
         Returns
@@ -259,7 +271,7 @@ class Factor(Model):
             rng = check_random_state(rng)
             return self._fit_ml(start, em_iter, opt_method, opt, rng)
         else:
-            msg = "Unknown factor extraction approach '%s'" % self.method
+            msg = f"Unknown factor extraction approach '{self.method}'"
             raise ValueError(msg)
 
     def _fit_pa(self, maxiter=50, tol=1e-8):
@@ -287,14 +299,14 @@ class Factor(Model):
         if self.n_factor > self.n_comp:
             raise ValueError(
                 "n_factor must be smaller or equal to the rank"
-                " of endog! %d > %d" % (self.n_factor, self.n_comp)
+                f" of endog! {self.n_factor:d} > {self.n_comp:d}"
             )
         if maxiter <= 0:
-            raise ValueError("n_max_iter must be larger than 0! %d < 0" % (maxiter))
+            raise ValueError(f"n_max_iter must be larger than 0! {maxiter:d} < 0")
         if tol <= 0 or tol > 0.01:
             raise ValueError(
                 "tolerance must be larger than 0 and smaller than"
-                " 0.01! Got %f instead" % (tol)
+                f" 0.01! Got {tol:f} instead"
             )
 
         #  Initial communality estimation
@@ -630,7 +642,7 @@ class FactorResults:
         principal components; not available under ML estimation.
     n_comp : int
         Number of components (factors)
-    nbs : int
+    nobs : int
         Number of observations
     fa_method : str
         The method used to obtain the decomposition, either 'pa' for
@@ -655,7 +667,7 @@ class FactorResults:
         self.model = factor
         self.endog_names = factor.endog_names
         self.loadings_no_rot = factor.loadings
-        if hasattr(factor, "eigenvals"):
+        if factor.eigenvals is not None:
             self.eigenvals = factor.eigenvals
 
         self.communality = factor.communality
@@ -665,7 +677,7 @@ class FactorResults:
         self.n_comp = factor.loadings.shape[1]
         self.nobs = factor.nobs
         self._factor = factor
-        if hasattr(factor, "mle_retvals"):
+        if factor.mle_retvals is not None:
             self.mle_retvals = factor.mle_retvals
 
         p, k = self.loadings_no_rot.shape
@@ -716,7 +728,7 @@ class FactorResults:
             "biquartimin",
             "promax",
         ]:
-            raise ValueError("Unknown rotation method %s" % (method))
+            raise ValueError(f"Unknown rotation method {method}")
 
         if method in [
             "varimax",
@@ -882,7 +894,7 @@ class FactorResults:
         summ.add_title("Factor analysis results")
         loadings_no_rot = pd.DataFrame(
             self.loadings_no_rot,
-            columns=["factor %d" % (i) for i in range(self.loadings_no_rot.shape[1])],
+            columns=[f"factor {i:d}" for i in range(self.loadings_no_rot.shape[1])],
             index=self.endog_names,
         )
         if hasattr(self, "eigenvals"):
@@ -905,10 +917,10 @@ class FactorResults:
         if self.rotation_method is not None:
             loadings = pd.DataFrame(
                 self.loadings,
-                columns=["factor %d" % (i) for i in range(self.loadings.shape[1])],
+                columns=[f"factor {i:d}" for i in range(self.loadings.shape[1])],
                 index=self.endog_names,
             )
-            summ.add_dict({"": "%s rotated loadings" % (self.rotation_method)})
+            summ.add_dict({"": f"{self.rotation_method} rotated loadings"})
             summ.add_df(loadings)
         return summ
 
@@ -973,14 +985,14 @@ class FactorResults:
         Options except for highlighting are available for plain test or Latex
         usage:
 
-        >>> lds = res_u.get_loadings_frame(style='strings', decimals=3,
-        ...                                threshold=0.3)
+        >>> lds = res.get_loadings_frame(style='strings', decimals=3,
+        ...                              threshold=0.3)
         >>> print(lds.to_latex())
         """
 
         loadings_df = pd.DataFrame(
             self.loadings,
-            columns=["factor %d" % (i) for i in range(self.loadings.shape[1])],
+            columns=[f"factor {i:d}" for i in range(self.loadings.shape[1])],
             index=self.endog_names,
         )
 
@@ -1015,7 +1027,7 @@ class FactorResults:
                     takes threshold from outer scope
                     """
                     color = "white" if np.abs(val) < threshold else "black"
-                    return "color: %s" % color
+                    return f"color: {color}"
 
                 try:
                     sty = loadings_df.style.map(color_white_small)
@@ -1044,7 +1056,7 @@ class FactorResults:
                 if sty is None:
                     sty = loadings_df.style
 
-                sty.format("{:.%sf}" % decimals)
+                sty.format(f"{{:.{decimals}f}}")
 
             if sty is None:
                 return loadings_df
@@ -1107,7 +1119,7 @@ class FactorResults:
         if plot_prerotated:
             title = "Prerotated Factor Pattern"
         else:
-            title = "%s Rotated Factor Pattern" % (self.rotation_method)
+            title = f"{self.rotation_method} Rotated Factor Pattern"
         var_explained = self.eigenvals / self.n_comp * 100
 
         return plot_loadings(

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -100,9 +100,6 @@ def array_like(
     >>> a.shape
     (4,)
 
-    >>> type(a.orig)
-    pandas.core.series.Series
-
     Squeezes singleton dimensions when required
     >>> x = np.array(x).reshape((4, 1))
     >>> a = array_like(x, 'x', ndim=1)
@@ -120,7 +117,7 @@ def array_like(
     >>> y = array_like(x, 'x', ndim=3, shape=(4, None, 4))
 
     Check only the first two dimensions
-    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10))
+    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10, None))
 
     Raises ValueError if constraints are not satisfied
     >>> z = array_like(x, 'x', ndim=2)
@@ -128,19 +125,21 @@ def array_like(
      ...
     ValueError: x is required to have ndim 2 but has ndim 3
 
-    >>> z = array_like(x, 'x', shape=(10, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(10, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (10, 4, 4) but has shape (4, 10, 4)
 
-    >>> z = array_like(x, 'x', shape=(None, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(None, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
 
     """
-    if optional and obj is None:
-        return None
+    if obj is None:
+        if optional:
+            return None
+        raise TypeError(f"{name} must be array_like, not None")
     reqs = ["W"] if writeable else []
     if order == "C" or contiguous:
         reqs += ["C"]
@@ -160,7 +159,13 @@ def array_like(
             msg = "{0} is required to have ndim {1} but has ndim {2}"
             raise ValueError(msg.format(name, ndim, arr.ndim))
     if shape is not None:
-        for actual, req in zip(arr.shape, shape):
+        if len(shape) != arr.ndim:
+            msg = (
+                f"Provided shape {shape} does not have the correct dimension for "
+                f"{name}, which is dimension {arr.ndim}"
+            )
+            raise ValueError(msg)
+        for actual, req in zip(arr.shape, shape, strict=True):
             if req is not None and actual != req:
                 req_shape = str(shape).replace("None, ", "*, ")
                 msg = "{0} is required to have shape {1} but has shape {2}"
@@ -211,7 +216,9 @@ class PandasWrapper:
         Returns
         -------
         array_like
-            A pandas Series or DataFrame, depending on the shape of obj.
+            A pandas Series or DataFrame, depending on the shape of obj, if
+            the object used to create the wrapper was pandas. Otherwise,
+            returns `obj` converted to an ndarray, unchanged.
 
         """
         obj = np.asarray(obj)
@@ -220,11 +227,10 @@ class PandasWrapper:
 
         if obj.shape[0] + trim_start + trim_end != self._pandas_obj.shape[0]:
             raise ValueError(
-                "obj must have the same number of elements in "
-                "axis 0 as orig"
+                "obj must have the same number of elements in axis 0 as orig"
             )
         index = self._pandas_obj.index
-        index = index[trim_start: index.shape[0] - trim_end]
+        index = index[trim_start : index.shape[0] - trim_end]
         if obj.ndim == 1:
             if columns is None:
                 name = getattr(self._pandas_obj, "name", None)
@@ -240,10 +246,7 @@ class PandasWrapper:
             if columns is None:
                 columns = getattr(self._pandas_obj, "columns", None)
             if append is not None:
-                new = []
-                for c in columns:
-                    new.append(append if c is None else f"{c}_{append}")
-                columns = new
+                columns = [append if c is None else f"{c}_{append}" for c in columns]
             return pd.DataFrame(obj, columns=columns, index=index)
         else:
             raise ValueError("Can only wrap 1 or 2-d array_like")
@@ -286,14 +289,13 @@ def bool_like(value, name, optional=False, strict=False):
         return bool(value)
     except Exception as exc:
         raise TypeError(
-            "{} must be a bool (or bool-compatible)"
-            "{}".format(name, extra_text)
+            f"{name} must be a bool (or bool-compatible){extra_text}"
         ) from exc
 
 
 def int_like(
     value: Any, name: str, optional: bool = False, strict: bool = False
-) -> Optional[int]:
+) -> int | None:
     """
     Convert to int or raise if not int_like
 
@@ -332,8 +334,8 @@ def int_like(
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{} must be integer_like (int or np.integer, but not bool"
-        " or timedelta64){}".format(name, extra_text)
+        f"{name} must be integer_like (int or np.integer, but not bool"
+        f" or timedelta64){extra_text}"
     )
 
 
@@ -408,8 +410,7 @@ def float_like(value, name, optional=False, strict=False):
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{} must be float_like (float or np.inexact)"
-        "{}".format(name, extra_text)
+        f"{name} must be float_like (float or np.inexact){extra_text}"
     )
 
 
@@ -443,7 +444,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
         If the input is not in ``options`` when ``options`` is set.
 
     """
-    if value is None:
+    if optional and value is None:
         return None
     if not isinstance(value, str):
         extra_text = " or None" if optional else ""
@@ -453,9 +454,7 @@ def string_like(value, name, optional=False, options=None, lower=True):
     if options is not None and value not in options:
         extra_text = "If not None, " if optional else ""
         options_text = "'" + "', '".join(options) + "'"
-        msg = "{}{} must be one of: {}".format(
-            extra_text, name, options_text
-        )
+        msg = f"{extra_text}{name} must be one of: {options_text}"
         raise ValueError(msg)
     return value
 
@@ -483,11 +482,9 @@ def dict_like(value, name, optional=False, strict=True):
     """
     if optional and value is None:
         return None
-    if not isinstance(value, Mapping) or (
-        strict and not (isinstance(value, dict))
-    ):
+    if not isinstance(value, Mapping) or (strict and not (isinstance(value, dict))):
         extra_text = "If not None, " if optional else ""
-        strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
+        strict_text = "" if strict else " or dict_like (i.e., a Mapping)"
         msg = f"{extra_text}{name} must be a dict{strict_text}"
         raise TypeError(msg)
     return value

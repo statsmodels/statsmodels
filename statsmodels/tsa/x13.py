@@ -6,10 +6,8 @@ Notes
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import os
+from pathlib import Path
 import re
 import subprocess
 import tempfile
@@ -77,8 +75,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     _binary_names = BINARY_NAMES
     if x12path is not None and x12path.endswith(_binary_names):
         # remove binary from path if path is not a directory
-        if not os.path.isdir(x12path):
-            x12path = os.path.dirname(x12path)
+        if not Path(x12path).is_dir():
+            x12path = Path(x12path).parent
 
     if not prefer_x13:  # search for x12 first
         _binary_names = _binary_names[::-1]
@@ -92,7 +90,7 @@ def _find_x12(x12path=None, prefer_x13=True):
             x12path = os.getenv("X12PATH", "")
 
     for binary in _binary_names:
-        x12 = os.path.join(x12path, binary)
+        x12 = Path(x12path).joinpath(binary)
         try:
             subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return x12
@@ -255,7 +253,7 @@ def _convert_out_to_series(x, dates, name):
 
 def _open_and_read(fname):
     # opens a file, reads it, and make sure it's closed
-    with open(fname, encoding="utf-8") as fin:
+    with Path(fname).open(encoding="utf-8") as fin:
         fout = fin.read()
     return fout
 
@@ -417,7 +415,6 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_analysis(
     endog,
     maxorder=(2, 1),
@@ -519,9 +516,11 @@ def x13_arima_analysis(
 
     Returns
     -------
-    Bunch
-        A bunch object containing the listed attributes.
+    X13ArimaAnalysisResult
+        An object containing the listed attributes.
 
+        - observed : pandas.Series
+          The original ``endog`` series.
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series
@@ -581,13 +580,13 @@ def x13_arima_analysis(
 
         rawspec_text = None
 
-        try:
-            with open(rawspec) as f:
-                rawspec_text = f.read()
-        except OSError as os_err:
-            if "{" in rawspec:
-                rawspec_text = rawspec
-            else:
+        if "{" in rawspec:
+            rawspec_text = rawspec
+        else:
+            try:
+                with Path(rawspec).open() as f:
+                    rawspec_text = f.read()
+            except Exception as os_err:
                 raise ValueError(
                     "rawspec argument provided but not valid path or spec string"
                 ) from os_err
@@ -622,61 +621,65 @@ def x13_arima_analysis(
 
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
-    ftempin = tempfile.NamedTemporaryFile(delete=False, suffix=".spc", dir=tempdir)
-    ftempout = tempfile.NamedTemporaryFile(delete=False, dir=tempdir)
-    try:
-        ftempin.write(spec.encode("utf8"))
-        ftempin.close()
-        ftempout.close()
-        # call x12 arima
-        p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
-        p.wait()
-        stdout = p.stdout.read()
-        if print_stdout:
-            print(p.stdout.read())
-        # check for errors
-        errors = _open_and_read(ftempout.name + ".err")
-        _check_errors(errors, rawspec)
+    with (
+        tempfile.NamedTemporaryFile(
+            delete=False, suffix=".spc", dir=tempdir
+        ) as ftempin,
+        tempfile.NamedTemporaryFile(delete=False, dir=tempdir) as ftempout,
+    ):
+        try:
+            ftempin.write(spec.encode("utf8"))
+            ftempin.close()
+            ftempout.close()
+            # call x12 arima
+            p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
+            p.wait()
+            stdout = p.stdout.read()
+            if print_stdout:
+                print(p.stdout.read())
+            # check for errors
+            errors = _open_and_read(ftempout.name + ".err")
+            _check_errors(errors, rawspec)
 
-        # read in results
-        results = _open_and_read(ftempout.name + ".out")
-        seasadj = _open_and_read(ftempout.name + ".d11")
-        trend = _open_and_read(ftempout.name + ".d12")
-        irregular = _open_and_read(ftempout.name + ".d13")
+            # read in results
+            results = _open_and_read(ftempout.name + ".out")
+            seasadj = _open_and_read(ftempout.name + ".d11")
+            trend = _open_and_read(ftempout.name + ".d12")
+            irregular = _open_and_read(ftempout.name + ".d13")
 
-        if log_diagnostics:
-            # read f8d m7 and q diagnostics from log
-            x13_logs = _open_and_read(ftempout.name + ".log")
-            x13_diagnostic = {
-                "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1)),
-            }
-        else:
-            x13_diagnostic = {
-                "F-D8": "Log diagnostics not retrieved.",
-                "M07": "Log diagnostics not retrieved.",
-                "Q": "Log diagnostics not retrieved.",
-            }
+            if log_diagnostics:
+                # read f8d m7 and q diagnostics from log
+                x13_logs = _open_and_read(ftempout.name + ".log")
+                x13_diagnostic = {
+                    "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
+                    "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
+                    "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1)),
+                }
+            else:
+                x13_diagnostic = {
+                    "F-D8": "Log diagnostics not retrieved.",
+                    "M07": "Log diagnostics not retrieved.",
+                    "Q": "Log diagnostics not retrieved.",
+                }
 
-    finally:
-        try:  # sometimes this gives a permission denied error?
-            #   not sure why. no process should have these open
-            os.remove(ftempin.name)
-            os.remove(ftempout.name)
-        except OSError:
-            if os.path.exists(ftempin.name):
-                warn(
-                    f"Failed to delete resource {ftempin.name}",
-                    IOWarning,
-                    stacklevel=2
-                )
-            if os.path.exists(ftempout.name):
-                warn(
-                    f"Failed to delete resource {ftempout.name}",
-                    IOWarning,
-                    stacklevel=2
-                )
+        finally:
+            try:  # sometimes this gives a permission denied error?
+                #   not sure why. no process should have these open
+                Path(ftempin.name).unlink()
+                Path(ftempout.name).unlink()
+            except OSError:
+                if Path(ftempin.name).exists():
+                    warn(
+                        f"Failed to delete resource {ftempin.name}",
+                        IOWarning,
+                        stacklevel=2
+                    )
+                if Path(ftempout.name).exists():
+                    warn(
+                        f"Failed to delete resource {ftempout.name}",
+                        IOWarning,
+                        stacklevel=2
+                    )
 
     seasadj = _convert_out_to_series(seasadj, endog.index, "seasadj")
     trend = _convert_out_to_series(trend, endog.index, "trend")
@@ -708,7 +711,6 @@ def x13_arima_analysis(
     return res
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_select_order(
     endog,
     maxorder=(2, 1),

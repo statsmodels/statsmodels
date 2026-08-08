@@ -201,12 +201,12 @@ class HoltWintersResults(Results):
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
+            Zero-indexed observation number at which to start forecasting, i.e.,
             the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
@@ -286,7 +286,7 @@ class HoltWintersResults(Results):
             None: "None",
         }
         transform = self.params["use_boxcox"]
-        box_cox_transform = True if transform else False
+        box_cox_transform = bool(transform)
         box_cox_coeff = (
             transform if isinstance(transform, str) else self.params["lamda"]
         )
@@ -389,27 +389,37 @@ class HoltWintersResults(Results):
 
             * ``None``: Random normally distributed values with variance
               estimated from the fit errors drawn from numpy's standard
-              RNG (can be seeded with the `random_state` argument). This is the
+              RNG (can be seeded with the `rng` argument). This is the
               default option.
             * A distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm``: Fits the distribution function to the fit
               errors and draws from the fitted distribution.
               Note the difference between ``scipy.stats.norm`` and
               ``scipy.stats.norm()``, the latter one is a frozen distribution
-              function.
+              function. The method ``rvs`` is called on the distribution function
+              to draw the random errors.
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
-              function.
+              function. The method ``rvs`` is called on the distribution function
+              to draw the random errors.
             * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : int, np.random.Generator or np.random.RandomState, optional
-            A seed for a numpy.random.RandomState or a
-            ``np.random.RandomState`` or ``np.random.Generator`` object.
-            Only used if `random_errors` is ``None`` or ``"bootstrap"``.
-            Default value of ``None`` uses the singleton RandomState object
-            provided by NumPy.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used. Only used if `random_errors` is ``None`` or
+            ``"bootstrap"``.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -648,13 +658,21 @@ class HoltWintersResults(Results):
                 eps = rng.standard_normal((nsimulations, repetitions)) * sigma
             elif isinstance(random_errors, (rv_continuous, rv_discrete)):
                 params = random_errors.fit(resid)
-                eps = random_errors.rvs(
-                    *params, size=(nsimulations, repetitions), random_state=rng
-                )
+                try:
+                    eps = random_errors.rvs(
+                        *params, size=(nsimulations, repetitions), rng=rng
+                    )
+                except TypeError:
+                    eps = random_errors.rvs(
+                        *params, size=(nsimulations, repetitions), random_state=rng
+                    )
             elif isinstance(random_errors, rv_frozen):
-                eps = random_errors.rvs(
-                    size=(nsimulations, repetitions), random_state=rng
-                )
+                try:
+                    eps = random_errors.rvs(size=(nsimulations, repetitions), rng=rng)
+                except TypeError:
+                    eps = random_errors.rvs(
+                        size=(nsimulations, repetitions), random_state=rng
+                    )
             else:
                 raise ValueError("Argument random_errors has unexpected value!")
 

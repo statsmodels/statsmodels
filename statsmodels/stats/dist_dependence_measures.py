@@ -73,10 +73,12 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         - `asym` : An asymptotic approximation of the distribution of the test
           statistic is used to find the p-value.
 
-    rng : int, np.random.RandomState or np.random.Generator, optional
-        Random number generator or seed for constructing the empirical
-        distribution, if needed.  If None, the NumPy singleton RandomState instance
-        is used.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -220,9 +222,12 @@ def _empirical_pvalue(x, y, B, n, stats, rng):
         Number of observations found in each of `x` and `y`.
     stats : namedtuple
         The result obtained from calling ``distance_statistics(x, y)``.
-    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}
-        Random number generator or seed used to permute `y`'s rows when
-        constructing the empirical distribution.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -285,9 +290,12 @@ def _get_test_statistic_distribution(x, y, B, rng):
     B : int
         The number of iterations to perform when evaluating the null
         distribution.
-    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}
-        Random number generator or seed used to shuffle `y`'s rows when
-        constructing the empirical distribution.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------

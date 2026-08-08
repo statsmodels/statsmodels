@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
-from typing import Literal, Union
+from typing import Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -37,13 +36,28 @@ from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
-ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
+ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 __all__ = [
+    "ADFullerResult",
+    "AcfResult",
+    "BreakvarHeteroskedasticityResult",
+    "CcfResult",
+    "CointResult",
+    "JackknifeResult",
+    "KpssResult",
+    "LevinsonDurbinPacfResult",
+    "LevinsonDurbinResult",
+    "PacfBurgResult",
+    "PacfResult",
+    "PccfResult",
+    "QStatResult",
+    "RangeUnitRootTestResult",
     "acf",
     "acovf",
     "adfuller",
     "bds",
+    "block_jackknife",
     "breakvar_heteroskedasticity_test",
     "ccf",
     "ccovf",
@@ -59,6 +73,7 @@ __all__ = [
     "pacf_burg",
     "pacf_ols",
     "pacf_yw",
+    "pccf",
     "q_stat",
     "range_unit_root_test",
     "zivot_andrews",
@@ -156,8 +171,51 @@ def _autolag(
         return icbest, bestlag, results
 
 
-# this needs to be converted to a class like HetGoldfeldQuandt,
-# 3 different returns are a mess
+class ADFullerResult(NamedTuple):
+    """
+    Result of :func:`adfuller`.
+
+    Parameters
+    ----------
+    adf : float
+        The test statistic.
+    pvalue : float
+        MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
+    usedlag : int
+        The number of lags used.
+    nobs : int
+        The number of observations used for the ADF regression and
+        calculation of the critical values.
+    critical_values : dict[str, float]
+        Critical values for the test statistic at the 1 %, 5 %, and 10 %
+        levels. Based on MacKinnon (2010).
+    icbest : float or None
+        The maximized information criterion if autolag is not None,
+        otherwise None.
+    resstore : ResultsStore or None
+        A dummy class with results attached as attributes, if ``store`` was
+        True, otherwise None.
+    """
+
+    adf: float
+    pvalue: float
+    usedlag: int
+    nobs: int
+    critical_values: dict[str, float]
+    icbest: float | None
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+ADF Statistic: {self.adf:0.5f}
+P-value: {self.pvalue:0.5f}
+Used Lag: {self.usedlag}
+Nobs: {self.nobs}
+Critical Values: {self.critical_values}
+"""
+
+
 # See:
 # Ng and Perron(2001), Lag length selection and the construction of unit root
 # tests with good size and power, Econometrica, Vol 69 (6) pp 1519-1554
@@ -171,6 +229,8 @@ def adfuller(
     autolag="AIC",
     store=False,
     regresults=False,
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Augmented Dickey-Fuller unit root test
@@ -208,9 +268,31 @@ def adfuller(
         the adf statistic. Default is False.
     regresults : bool, optional
         If True, the full regression results are returned. Default is False.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an
+        ``ADFullerResult`` NamedTuple instead of a plain tuple. If ``None``
+        (the default), the current tuple-returning behavior is used and a
+        ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return an ``ADFullerResult``.
+            Set ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    ADFullerResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``adf``,
+        ``pvalue``, ``usedlag``, ``nobs``, ``critical_values``, ``icbest``,
+        and ``resstore`` (``icbest``/``resstore`` are ``None`` when not
+        computed). See :class:`~statsmodels.tsa.stattools.ADFullerResult`.
+
+    Otherwise (the deprecated default), a plain tuple whose length depends
+    on `store` and `autolag`, made up of a subset of:
+
     adf : float
         The test statistic.
     pvalue : float
@@ -225,7 +307,7 @@ def adfuller(
         levels. Based on MacKinnon (2010).
     icbest : float
         The maximized information criterion if autolag is not None.
-    resstore : ResultStore, optional
+    resstore : ResultsStore, optional
         A dummy class with results attached as attributes.
 
     Notes
@@ -267,6 +349,7 @@ def adfuller(
     )
     store = bool_like(store, "store")
     regresults = bool_like(regresults, "regresults")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     if x.max() == x.min():
         raise ValueError("Invalid input, x is constant")
@@ -372,6 +455,25 @@ def adfuller(
         resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         resstore._str = "Augmented Dickey-Fuller Test Results"
+    else:
+        resstore = None
+
+    if use_namedtuple is None:
+        warnings.warn(
+            "adfuller currently returns a plain tuple whose length depends "
+            "on the store and autolag arguments. In release 0.16 or after "
+            "July 2027, whichever is later, the default behavior will "
+            "switch to always returning an ADFullerResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return ADFullerResult(
+            adfstat, pvalue, usedlag, nobs, critvalues, icbest, resstore
+        )
+    if store:
         return adfstat, pvalue, critvalues, resstore
     elif not autolag:
         return adfstat, pvalue, usedlag, nobs, critvalues
@@ -379,7 +481,6 @@ def adfuller(
         return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     """
     Estimate autocovariances
@@ -438,10 +539,12 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         deal_with_masked = False
     else:
         deal_with_masked = has_missing(x)
+    notmask_bool = ~np.isnan(x)
     if deal_with_masked:
         if missing == "raise":
             raise MissingDataError("NaNs were encountered in the data")
-        notmask_bool = ~np.isnan(x)  # bool
+        if missing == "drop" and notmask_bool.sum() == 0:
+            raise ValueError("All observations are missing after dropping.")
         if missing == "conservative":
             # Must copy for thread safety
             x = x.copy()
@@ -509,10 +612,162 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     else:
         acov = np.correlate(xo, xo, "full")[n - 1 :] / d[n - 1 :]
 
+    if deal_with_masked and notmask_bool.sum() == 0:
+        acov[:] = np.nan
+
     if nlag is not None:
         # Copy to allow gc of full array rather than view
         return acov[: lag_len + 1].copy()
     return acov
+
+
+class JackknifeResult(NamedTuple):
+    """
+    Result of :func:`block_jackknife`.
+
+    Parameters
+    ----------
+    theta_jack : float or ndarray
+        The bias-corrected jackknife point estimate.
+    se : float or ndarray
+        The jackknife standard error estimate.
+    """
+
+    theta_jack: float | np.ndarray
+    se: float | np.ndarray
+
+
+def block_jackknife(x, statistic, n_blocks=-1):
+    """
+    Delete-k (block) jackknife estimate of bias and standard error
+
+    Computes the jackknife point estimate and standard error of a statistic
+    by systematically leaving out contiguous blocks of the sample and
+    recomputing the statistic, generalizing the classical delete-1 jackknife
+    to allow for serial dependence in the data.
+
+    Parameters
+    ----------
+    x : array_like
+        The data series, 1-D.
+    statistic : callable
+        Function that takes an array and returns a scalar or array-valued
+        estimate.
+    n_blocks : int
+        The number of blocks to use. If -1 (default), uses ``n_blocks =
+        len(x)``, i.e., the classical delete-1 jackknife.
+
+    Returns
+    -------
+    JackknifeResult
+        A NamedTuple with fields:
+
+        theta_jack : float or ndarray
+            The bias-corrected jackknife point estimate.
+        se : float or ndarray
+            The jackknife standard error estimate.
+
+    Notes
+    -----
+    For data with serial dependence, ``n_blocks`` should be chosen small
+    enough (equivalently, block size large enough) that observations in
+    different blocks are approximately uncorrelated; this is a modeling
+    choice left to the user and is not verified automatically.
+
+    This implementation performs single-order bias correction only. A
+    known residual bias of order O(1/n^2) remains uncorrected; an iterated
+    jackknife (Schucany, Gray & Owen 1971) would address this at added
+    computational cost. Additionally, non-overlapping block placement
+    introduces some sensitivity to the arbitrary choice of block
+    boundaries; overlapping/moving-block schemes (Kunsch 1989) would
+    reduce this. Both are natural extensions but out of scope here.
+
+    To avoid O(n_blocks * n) cumulative memory allocation, a single
+    internal buffer is allocated once and reused across all delete-block
+    computations. As a result, ``statistic`` must not modify the array
+    it receives in place; doing so will silently corrupt results in
+    later iterations.
+
+    References
+    ----------
+    .. [1] Quenouille, M.H. (1949). "Approximate tests of correlation in
+       time-series." Journal of the Royal Statistical Society, Series B,
+       11: 68-84.
+    .. [2] Tukey, J.W. (1958). "Bias and confidence in not-quite large
+       samples." Annals of Mathematical Statistics, 29: 614.
+    .. [3] Kunsch, H.R. (1989). "The jackknife and the bootstrap for
+       general stationary observations." Annals of Statistics, 17:
+       1217-1241.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x = np.random.normal(size=100)
+    >>> theta_jack, se = block_jackknife(x, np.mean, n_blocks=10)
+    """
+    x = array_like(x, "x", ndim=1)
+    n = x.shape[0]
+
+    if n_blocks == -1:
+        n_blocks = n
+    n_blocks = int_like(n_blocks, "n_blocks")
+
+    if n_blocks <= 1:
+        raise ValueError("n_blocks must be greater than 1.")
+    if n_blocks > n:
+        raise ValueError("n_blocks cannot exceed the number of observations.")
+    if not callable(statistic):
+        raise ValueError("statistic must be callable.")
+
+    block_sizes = np.full(n_blocks, n // n_blocks)
+    block_sizes[: n % n_blocks] += 1
+    block_bounds = np.cumsum(block_sizes)
+
+    theta_full = np.asarray(statistic(x))
+
+    max_reduced_len = n - block_sizes.min()
+    buffer = np.empty(max_reduced_len, dtype=float)
+
+    theta_delete = np.empty((n_blocks,) + theta_full.shape, dtype=float)
+    start = 0
+    for b in range(n_blocks):
+        end = block_bounds[b]
+        reduced_len = n - (end - start)
+
+        buffer[:start] = x[:start]
+        buffer[start:reduced_len] = x[end:]
+
+        theta_delete[b] = statistic(buffer[:reduced_len])
+        start = end
+
+    pseudo_values = n_blocks * theta_full - (n_blocks - 1) * theta_delete
+    theta_jack = np.mean(pseudo_values, axis=0)
+    variance = np.sum((pseudo_values - theta_jack) ** 2, axis=0) / (
+        n_blocks * (n_blocks - 1)
+    )
+    se = np.sqrt(variance)
+
+    if theta_full.shape == ():
+        theta_jack = float(theta_jack)
+        se = float(se)
+
+    return JackknifeResult(theta_jack, se)
+
+
+class QStatResult(NamedTuple):
+    """
+    Result of :func:`q_stat`.
+
+    Parameters
+    ----------
+    qstat : ndarray
+        Ljung-Box Q-statistic for autocorrelation parameters.
+    pvalue : ndarray
+        P-value of the Q statistic.
+    """
+
+    qstat: np.ndarray
+    pvalue: np.ndarray
 
 
 def q_stat(x, nobs):
@@ -529,10 +784,13 @@ def q_stat(x, nobs):
 
     Returns
     -------
-    q-stat : ndarray
-        Ljung-Box Q-statistic for autocorrelation parameters.
-    p-value : ndarray
-        P-value of the Q statistic.
+    QStatResult
+        A NamedTuple with fields:
+
+        qstat : ndarray
+            Ljung-Box Q-statistic for autocorrelation parameters.
+        pvalue : ndarray
+            P-value of the Q statistic.
 
     See Also
     --------
@@ -552,12 +810,38 @@ def q_stat(x, nobs):
         nobs * (nobs + 2) * np.cumsum((1.0 / (nobs - np.arange(1, len(x) + 1))) * x**2)
     )
     chi2 = stats.chi2.sf(ret, np.arange(1, len(x) + 1))
-    return ret, chi2
+    return QStatResult(ret, chi2)
 
 
 # NOTE: Changed unbiased to False
 # see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
+class AcfResult(NamedTuple):
+    """
+    Result of :func:`acf`.
+
+    Parameters
+    ----------
+    acf : ndarray
+        The autocorrelation function for lags 0, 1, ..., nlags. Shape
+        (nlags+1,).
+    confint : ndarray or None
+        Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
+        (nlags + 1, 2). ``None`` unless ``alpha`` was not None.
+    qstat : ndarray or None
+        The Ljung-Box Q-statistic for autocorrelation parameters. ``None``
+        unless ``qstat`` was True.
+    pvalues : ndarray or None
+        The p-values associated with the Q-statistics of the Ljung-Box
+        autocorrelation test. ``None`` unless ``qstat`` was True.
+    """
+
+    acf: np.ndarray
+    confint: np.ndarray | None
+    qstat: np.ndarray | None
+    pvalues: np.ndarray | None
+
+
 def acf(
     x,
     adjusted=False,
@@ -567,6 +851,8 @@ def acf(
     alpha=None,
     bartlett_confint=True,
     missing="none",
+    *,
+    use_namedtuple: bool | None = None,
 ):
     """
     Calculate the autocorrelation function
@@ -619,23 +905,58 @@ def acf(
         and cross-products that are used to estimate the autocovariance.
         When using "conservative", n is set to the number of non-missing
         observations.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an ``AcfResult``
+        NamedTuple instead of a plain tuple. ``AcfResult`` always carries
+        all four fields, so it unpacks identically to the legacy tuple
+        only when both ``qstat`` is True and ``alpha`` is not None; that
+        combination is always returned, with no warning. Requesting
+        only one of ``qstat`` or ``alpha`` still returns the shorter
+        legacy tuple by default and issues a ``FutureWarning``, because
+        the NamedTuple would change how many values are unpacked. Ignored
+        when ``qstat`` is False and ``alpha`` is None, since ``acf``
+        returns a single array in that case.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return an ``AcfResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
     acf : ndarray
         The autocorrelation function for lags 0, 1, ..., nlags. Shape
-        (nlags+1,).
+        (nlags+1,). Returned directly (not part of a tuple) unless
+        ``qstat`` is True or ``alpha`` is not None.
+    AcfResult
+        A NamedTuple with fields ``acf``, ``confint``, ``qstat`` and
+        ``pvalues`` (each of the latter three is ``None`` when it was not
+        computed). See :class:`~statsmodels.tsa.stattools.AcfResult`.
+
+        This is returned whenever ``use_namedtuple=True``. It is also
+        returned by default when both ``qstat`` is True and ``alpha`` is
+        not None, because the NamedTuple then has exactly the same four
+        elements as the legacy tuple and so unpacks identically; that
+        case is adopted silently. Requesting only one of ``qstat`` or
+        ``alpha`` still returns the shorter legacy tuple below and warns,
+        since the NamedTuple would change how many values are unpacked.
     confint : ndarray, optional
         Confidence intervals for the ACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None. The confidence
+        (nlags + 1, 2). Returned (as part of a plain tuple, the
+        deprecated default) if alpha is not None. The confidence
         intervals are centered on the estimated ACF values. This behavior
         differs from plot_acf which centers the confidence intervals on 0.
     qstat : ndarray, optional
         The Ljung-Box Q-Statistic for lags 1, 2, ..., nlags (excludes lag
-        zero). Returned if q_stat is True.
+        zero). Returned (as part of a plain tuple, the deprecated
+        default) if qstat is True.
     pvalues : ndarray, optional
         The p-values associated with the Q-statistics for lags 1, 2, ...,
-        nlags (excludes lag zero). Returned if q_stat is True.
+        nlags (excludes lag zero). Returned (as part of a plain tuple,
+        the deprecated default) if qstat is True.
 
     Notes
     -----
@@ -671,36 +992,71 @@ def acf(
     qstat = bool_like(qstat, "qstat")
     fft = bool_like(fft, "fft", optional=False)
     alpha = float_like(alpha, "alpha", optional=True)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     missing = string_like(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
     x = array_like(x, "x")
-    # TODO: should this shrink for missing="drop" and NaNs in x?
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(int(10 * np.log10(nobs)), nobs - 1)
+    if missing in ("drop", "conservative"):
+        # "drop" removes the NaNs and "conservative" zeroes them out, and
+        # acovf uses the non-missing count as the divisor in both cases
+        # (see the missing docstring), so nobs must match.
+        nobs = int(np.sum(~np.isnan(x)))
+        if nobs == 0:
+            raise ValueError("All observations are missing after dropping.")
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
+
+    confint = None
+    if alpha is not None:
+        if bartlett_confint:
+            varacf = np.ones_like(acf) / nobs
+            varacf[0] = 0
+            varacf[1] = 1.0 / nobs
+            varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
+        else:
+            varacf = 1.0 / nobs
+        interval = stats.norm.ppf(1 - alpha / 2.0) * np.sqrt(varacf)
+        confint = np.array(lzip(acf - interval, acf + interval))
+
+    qstat_vals = pvalue = None
+    if qstat:
+        qstat_vals, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
+
+    # AcfResult always carries all four fields, so it unpacks identically to
+    # the legacy tuple only when both qstat and alpha were requested; in that
+    # case it is adopted silently.  Requesting just one of the two still
+    # returns the shorter legacy tuple and warns.  Only the qstat/alpha paths
+    # return more than one value today, so the single-output path stays quiet
+    # -- warning there would fire for every internal use of acf.
+    unpacks_unchanged = qstat and alpha is not None
+    if (
+        use_namedtuple is None
+        and (qstat or alpha is not None)
+        and not unpacks_unchanged
+    ):
+        warnings.warn(
+            "acf currently returns a plain tuple whose length depends on "
+            "the qstat and alpha arguments. In release 0.16 or after "
+            "July 2027, whichever is later, the default behavior will "
+            "switch to always returning an AcfResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or unpacks_unchanged:
+        return AcfResult(acf, confint, qstat_vals, pvalue)
+
     if not (qstat or alpha):
         return acf
-    _alpha = alpha if alpha is not None else 0.05
-    if bartlett_confint:
-        varacf = np.ones_like(acf) / nobs
-        varacf[0] = 0
-        varacf[1] = 1.0 / nobs
-        varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1] ** 2)
-    else:
-        varacf = 1.0 / len(x)
-    interval = stats.norm.ppf(1 - _alpha / 2.0) * np.sqrt(varacf)
-    confint = np.array(lzip(acf - interval, acf + interval))
-    if not qstat:
+    elif not qstat:
         return acf, confint
-    qstat, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
-    if alpha is not None:
-        return acf, confint, qstat, pvalue
-    else:
-        return acf, qstat, pvalue
+    return acf, qstat_vals, pvalue
 
 
 def pacf_yw(
@@ -750,14 +1106,34 @@ def pacf_yw(
     with warnings.catch_warnings():
         warnings.simplefilter("once", ValueWarning)
         pacf.extend(
-            [yule_walker(x, k, method=method)[0][-1] for k in range(1, nlags + 1)]
+            [
+                yule_walker(x, k, method=method, use_namedtuple=False)[0][-1]
+                for k in range(1, nlags + 1)
+            ]
         )
     return np.array(pacf)
 
 
+class PacfBurgResult(NamedTuple):
+    """
+    Result of :func:`pacf_burg`.
+
+    Parameters
+    ----------
+    pacf : ndarray
+        Partial autocorrelations for lags 0, 1, ..., nlag.
+    sigma2 : ndarray
+        Residual variance estimates where the value in position m is the
+        residual variance in an AR model that includes m lags.
+    """
+
+    pacf: np.ndarray
+    sigma2: np.ndarray
+
+
 def pacf_burg(
     x: ArrayLike1D, nlags: int | None = None, demean: bool = True
-) -> tuple[np.ndarray, np.ndarray]:
+) -> PacfBurgResult:
     """
     Calculate Burg's partial autocorrelation estimator
 
@@ -774,11 +1150,14 @@ def pacf_burg(
 
     Returns
     -------
-    pacf : ndarray
-        Partial autocorrelations for lags 0, 1, ..., nlag.
-    sigma2 : ndarray
-        Residual variance estimates where the value in position m is the
-        residual variance in an AR model that includes m lags.
+    PacfBurgResult
+        A NamedTuple with fields:
+
+        pacf : ndarray
+            Partial autocorrelations for lags 0, 1, ..., nlag.
+        sigma2 : ndarray
+            Residual variance estimates where the value in position m is
+            the residual variance in an AR model that includes m lags.
 
     See Also
     --------
@@ -821,10 +1200,9 @@ def pacf_burg(
     sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
     pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
-    return pacf, sigma2
+    return PacfBurgResult(pacf, sigma2)
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def pacf_ols(
     x: ArrayLike1D,
     nlags: int | None = None,
@@ -892,11 +1270,11 @@ def pacf_ols(
     if nlags is None:
         nlags = max(min(int(10 * np.log10(nobs)), nobs // 2), 1)
     if nlags > nobs // 2:
-        raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs//2})")
+        raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs // 2})")
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
-        xlags, x0 = lagmat(x, nlags, original="sep")
+        xlags, x0 = lagmat(x, nlags, original="sep", use_namedtuple=False)
         xlags = add_constant(xlags)
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
@@ -904,7 +1282,9 @@ def pacf_ols(
     else:
         x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
-        xlags, x0 = lagmat(x, nlags, original="sep", trim="both")
+        xlags, x0 = lagmat(
+            x, nlags, original="sep", trim="both", use_namedtuple=False
+        )
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])
@@ -912,6 +1292,23 @@ def pacf_ols(
     if adjusted:
         pacf *= nobs / (nobs - np.arange(nlags + 1))
     return pacf
+
+
+class PacfResult(NamedTuple):
+    """
+    Result of :func:`pacf`.
+
+    Parameters
+    ----------
+    pacf : ndarray
+        Partial autocorrelations for lags 0, 1, ..., nlags.
+    confint : ndarray or None
+        Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
+        (nlags + 1, 2). ``None`` when ``alpha`` is None.
+    """
+
+    pacf: np.ndarray
+    confint: np.ndarray
 
 
 def pacf(
@@ -932,6 +1329,8 @@ def pacf(
         "burg",
     ] = "ywadjusted",
     alpha: float | None = None,
+    *,
+    use_namedtuple: bool | None = None,
 ) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """
     Partial autocorrelation estimate
@@ -966,15 +1365,33 @@ def pacf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x)).
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``PacfResult`` NamedTuple is returned.
+        When ``alpha`` is not None a ``PacfResult`` is always returned; it
+        holds the same two elements as the legacy tuple, so it unpacks
+        and indexes identically. When ``alpha`` is None a bare array is
+        returned unless ``use_namedtuple=True``, which additionally
+        yields a ``PacfResult`` with ``confint`` set to ``None``.
 
     Returns
     -------
-    pacf : ndarray
-        The partial autocorrelations for lags 0, 1, ..., nlags. Shape
-        (nlags+1,).
-    confint : ndarray, optional
-        Confidence intervals for the PACF at lags 0, 1, ..., nlags. Shape
-        (nlags + 1, 2). Returned if alpha is not None.
+    PacfResult or ndarray
+        When ``alpha`` is not None (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        pacf : ndarray
+            The partial autocorrelations for lags 0, 1, ..., nlags. Shape
+            (nlags+1,).
+        confint : ndarray or None
+            Confidence intervals for the PACF at lags 0, 1, ..., nlags.
+            Shape (nlags + 1, 2). ``None`` when ``alpha`` is None.
+
+        ``PacfResult`` has the same length and contents as the plain
+        ``(pacf, confint)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.stattools.PacfResult`.
+
+        When ``alpha`` is None a bare ndarray of partial autocorrelations
+        is returned instead.
 
     See Also
     --------
@@ -999,6 +1416,7 @@ def pacf(
     Yule-Walker (adjusted) and Levinson-Durbin (adjusted) performed
     consistently worse than the other options.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     nlags = int_like(nlags, "nlags", optional=True)
     methods = (
         "ols",
@@ -1053,17 +1471,23 @@ def pacf(
         acv = acovf(x, adjusted=False, fft=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         ret = ld_[2]
+    confint = None
     if alpha is not None:
         varacf = 1.0 / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
         confint = np.array(lzip(ret - interval, ret + interval))
         confint[0] = ret[0]  # fix confidence interval for lag 0 to varpacf=0
-        return ret, confint
-    else:
-        return ret
+
+    # PacfResult has exactly the same length and contents as the legacy
+    # (pacf, confint) tuple, so it unpacks and indexes identically and is
+    # always used when alpha is not None.  When alpha is None a bare array
+    # is returned, as before; pass use_namedtuple=True to always get a
+    # PacfResult.
+    if use_namedtuple or alpha is not None:
+        return PacfResult(ret, confint)
+    return ret
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def ccovf(x, y, adjusted=True, demean=True, fft=True):
     """
     Calculate the cross-covariance between two series
@@ -1073,7 +1497,8 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     x, y : array_like
        The time series data to use in the calculation.
     adjusted : bool, optional
-       If True, then denominators for cross-covariance are n-k, otherwise n.
+       If True, then denominators for cross-covariance are the number of
+       overlapping observations at each lag k, min(m, n-k), otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
     fft : bool, default True
@@ -1095,6 +1520,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     fft = bool_like(fft, "fft", optional=False)
 
     n = len(x)
+    m = len(y)
     if demean:
         xo = x - x.mean()
         yo = y - y.mean()
@@ -1102,19 +1528,46 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         xo = x
         yo = y
     if adjusted:
-        d = np.arange(n, 0, -1)
+        d = np.minimum(np.arange(n, 0, -1), m)
     else:
         d = n
 
-    m = len(y)
     method = "fft" if fft else "direct"
     # When y is shorter than x, the denominator counts must follow len(y)
     # to match the actual number of overlapping observations at each lag.
     return correlate(xo, yo, "full", method=method)[m - 1 :] / d
 
 
-@deprecate_kwarg("unbiased", "adjusted")
-def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
+class CcfResult(NamedTuple):
+    """
+    Result of :func:`ccf`.
+
+    Parameters
+    ----------
+    ccf : ndarray
+        The cross-correlation function of x and y: the element at index k
+        is the correlation between {x[k], x[k+1], ..., x[n]} and
+        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and
+        y, respectively.
+    confint : ndarray or None
+        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1. Shape
+        (nlags, 2). ``None`` when ``alpha`` is None.
+    """
+
+    ccf: np.ndarray
+    confint: np.ndarray
+
+
+def ccf(
+    x,
+    y,
+    adjusted=True,
+    fft=True,
+    *,
+    nlags=None,
+    alpha=None,
+    use_namedtuple: bool | None = None,
+):
     """
     The cross-correlation function
 
@@ -1135,18 +1588,48 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         1/sqrt(len(x)).
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``CcfResult`` NamedTuple is returned.
+        When ``alpha`` is not None a ``CcfResult`` is always returned; it
+        holds the same two elements as the legacy tuple, so it unpacks
+        and indexes identically. When ``alpha`` is None a bare array is
+        returned unless ``use_namedtuple=True``, which additionally
+        yields a ``CcfResult`` with ``confint`` set to ``None``.
 
     Returns
     -------
-    ndarray
-        The cross-correlation function of x and y: the element at index k
-        is the correlation between {x[k], x[k+1], ..., x[n]} and
-        {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
-        respectively.
-    confint : ndarray, optional
-        Confidence intervals for the CCF at lags 0, 1, ..., nlags-1 using the
-        level given by alpha and the standard deviation calculated as
-        1/sqrt(len(x)) [1]_. Shape (nlags, 2). Returned if alpha is not None.
+    CcfResult or ndarray
+        When ``alpha`` is not None (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        ccf : ndarray
+            The cross-correlation function of x and y: the element at
+            index k is the correlation between {x[k], x[k+1], ..., x[n]}
+            and {y[0], y[1], ..., y[m-k]}, where n and m are the lengths
+            of x and y, respectively.
+        confint : ndarray or None
+            Confidence intervals for the CCF at lags 0, 1, ..., nlags-1
+            using the level given by alpha and the standard deviation
+            calculated as 1/sqrt(len(x)) [1]_. Shape (nlags, 2). ``None``
+            when ``alpha`` is None.
+
+        ``CcfResult`` has the same length and contents as the plain
+        ``(ccf, confint)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.stattools.CcfResult`.
+
+        When ``alpha`` is None a bare ndarray of cross-correlations is
+        returned instead.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.pccf
+        Partial cross-correlation function.
+    statsmodels.tsa.stattools.acf
+        Autocorrelation function.
+    statsmodels.tsa.stattools.pacf
+        Partial autocorrelation function.
+    statsmodels.graphics.tsaplots.plot_ccf
+        Plot cross-correlations and confidence intervals.
 
     Notes
     -----
@@ -1161,21 +1644,394 @@ def ccf(x, y, adjusted=True, fft=True, *, nlags=None, alpha=None):
     y = array_like(y, "y")
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
     ret = cvf / (np.std(x) * np.std(y))
     ret = ret[:nlags]
 
+    confint = None
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
-        return ret, confint
+
+    # CcfResult has exactly the same length and contents as the legacy
+    # (ccf, confint) tuple, so it unpacks and indexes identically and is
+    # always used when alpha is not None.  When alpha is None a bare array
+    # is returned, as before; pass use_namedtuple=True to always get a
+    # CcfResult.
+    if use_namedtuple or alpha is not None:
+        return CcfResult(ret, confint)
+    return ret
+
+
+def _pccf_yw(x, y, nlags, adjusted=False):
+    """PCCF via multivariate Levinson-Durbin recursion."""
+    nobs = len(x)
+    xo = x - x.mean()
+    yo = y - y.mean()
+
+    gamma = np.empty((nlags + 1, 2, 2))
+    for h in range(nlags + 1):
+        if h == 0:
+            gamma[h] = [[xo.dot(xo), yo.dot(xo)], [xo.dot(yo), yo.dot(yo)]]
+        else:
+            gamma[h] = [
+                [xo[h:].dot(xo[:-h]), yo[h:].dot(xo[:-h])],
+                [xo[h:].dot(yo[:-h]), yo[h:].dot(yo[:-h])],
+            ]
+        gamma[h] /= nobs - h if adjusted else nobs
+
+    if np.linalg.matrix_rank(gamma[0]) < 2:
+        return np.full(nlags, np.nan)
+
+    sig_f = gamma[0].copy()
+    sig_b = gamma[0].copy()
+
+    phi_prev = [None] * (nlags + 1)
+    psi_prev = [None] * (nlags + 1)
+
+    pccf_vals = np.empty(nlags)
+
+    for s in range(1, nlags + 1):
+        delta_f = gamma[s].copy()
+        delta_b = gamma[s].T.copy()
+        for j in range(1, s):
+            delta_f -= phi_prev[j] @ gamma[s - j]
+            delta_b -= psi_prev[j] @ gamma[s - j].T
+
+        v_f = sig_f[0, 0]
+        v_b = sig_b[1, 1]
+        if not np.isfinite(v_f) or not np.isfinite(v_b):
+            pccf_vals[s - 1 :] = np.nan
+            break
+        tol = np.finfo(np.float64).eps * gamma[0].trace()
+        if v_f <= tol or v_b <= tol:
+            pccf_vals[s - 1 :] = np.nan
+            break
+
+        d_f = np.sqrt(v_f)
+        d_b = np.sqrt(v_b)
+
+        pccf_vals[s - 1] = delta_f[0, 1] / (d_f * d_b)
+
+        try:
+            phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
+            psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
+        except np.linalg.LinAlgError:
+            pccf_vals[s - 1 :] = np.nan
+            break
+
+        phi_new = [None] * (nlags + 1)
+        psi_new = [None] * (nlags + 1)
+        phi_new[s] = phi_ss
+        psi_new[s] = psi_ss
+        for j in range(1, s):
+            phi_new[j] = phi_prev[j] - phi_ss @ psi_prev[s - j]
+            psi_new[j] = psi_prev[j] - psi_ss @ phi_prev[s - j]
+
+        sig_f = sig_f - phi_ss @ delta_b
+        sig_b = sig_b - psi_ss @ delta_f
+        phi_prev = phi_new
+        psi_prev = psi_new
+
+    return pccf_vals
+
+
+def _pccf_ols(x, y, nlags):
+    """PCCF via OLS regression on intervening observations."""
+    nobs = len(x)
+    pccf_vals = []
+
+    for h in range(1, nlags + 1):
+        if h == 1:
+            resid_x = x[: nobs - 1]
+            resid_y = y[1:nobs]
+        else:
+            indices = np.arange(0, nobs - h)
+            n_carriers = 2 * (h - 1) + 1
+            if len(indices) <= n_carriers:
+                pccf_vals.append(np.nan)
+                continue
+
+            carriers = add_constant(
+                np.column_stack(
+                    [x[indices + j] for j in range(1, h)]
+                    + [y[indices + j] for j in range(1, h)]
+                )
+            )
+            targets = np.column_stack([x[indices], y[indices + h]])
+            coeffs = np.linalg.lstsq(carriers, targets, rcond=None)[0]
+            resids = targets - carriers.dot(coeffs)
+            resid_x = resids[:, 0]
+            resid_y = resids[:, 1]
+
+        if resid_x.size < 2 or np.ptp(resid_x) == 0 or np.ptp(resid_y) == 0:
+            pccf_vals.append(np.nan)
+        else:
+            pccf_vals.append(np.corrcoef(resid_x, resid_y)[0, 1])
+
+    return np.array(pccf_vals)
+
+
+class PccfResult(NamedTuple):
+    """
+    Result of :func:`pccf`.
+
+    Parameters
+    ----------
+    pccf : ndarray
+        The partial cross-correlation function for lags 1, 2, ..., nlags.
+    confint : ndarray or None
+        Confidence intervals for the PCCF at lags 1, 2, ..., nlags. Shape
+        (nlags, 2). ``None`` when ``alpha`` is None.
+    """
+
+    pccf: np.ndarray
+    confint: np.ndarray
+
+
+def pccf(
+    x: ArrayLike1D,
+    y: ArrayLike1D,
+    *,
+    nlags: int | None = None,
+    method: Literal[
+        "yw",
+        "ywa",
+        "ywadjusted",
+        "yw_adjusted",
+        "ywm",
+        "ywmle",
+        "yw_mle",
+        "ols",
+    ] = "ywm",
+    alpha: float | None = None,
+    use_namedtuple: bool | None = None,
+) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
+    """
+    Partial Cross-Correlation Function
+
+    Computes the (1,2) element of the partial lag correlation
+    matrix P(s) for the bivariate series (x, y) at lags
+    1, 2, ..., nlags. At lag h, this is the correlation between
+    x_t and y_{t+h} after removing the linear dependence on all
+    intervening observations of both series.
+
+    Parameters
+    ----------
+    x, y : array_like
+        The time series data to use in the calculation.
+    nlags : int, optional
+        Number of lags to return partial cross-correlations for.
+        If not provided, uses
+        min(10 * np.log10(nobs), nobs // 2 - 1).
+    method : str, default "ywm"
+        Specifies which method for the calculations to use.
+
+        - "ywm", "ywmle" or "yw_mle" : Yule-Walker via the
+          multivariate Levinson-Durbin recursion without sample-size
+          adjustment in the autocovariance denominator. Default.
+        - "yw", "ywa", "ywadjusted" or "yw_adjusted" : Yule-Walker
+          via the multivariate Levinson-Durbin recursion with
+          sample-size adjustment in the autocovariance denominator.
+        - "ols" : OLS regression of x_t and y_{t+h} on all
+          intervening observations.
+    alpha : float, optional
+        If a number is given, the confidence intervals for the
+        given level are returned. For instance if alpha=.05,
+        95 % confidence intervals are returned where the standard
+        deviation is 1/sqrt(n).
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``PccfResult`` NamedTuple is returned.
+        When ``alpha`` is not None a ``PccfResult`` is always returned; it
+        holds the same two elements as the legacy tuple, so it unpacks
+        and indexes identically. When ``alpha`` is None a bare array is
+        returned unless ``use_namedtuple=True``, which additionally
+        yields a ``PccfResult`` with ``confint`` set to ``None``.
+
+    Returns
+    -------
+    PccfResult or ndarray
+        When ``alpha`` is not None (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        pccf : ndarray
+            The partial cross-correlation function for lags
+            1, 2, ..., nlags.
+        confint : ndarray or None
+            Confidence intervals for the PCCF at lags 1, 2, ..., nlags
+            using the level given by alpha. Shape (nlags, 2). ``None``
+            when ``alpha`` is None.
+
+        ``PccfResult`` has the same length and contents as the plain
+        ``(pccf, confint)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.stattools.PccfResult`.
+
+        When ``alpha`` is None a bare ndarray of partial
+        cross-correlations is returned instead.
+
+    See Also
+    --------
+    statsmodels.tsa.stattools.ccf
+        Cross-correlation function.
+    statsmodels.tsa.stattools.acf
+        Autocorrelation function.
+    statsmodels.tsa.stattools.pacf
+        Partial autocorrelation function.
+    statsmodels.graphics.tsaplots.plot_pccf
+        Plot partial cross-correlations and confidence intervals.
+
+    Notes
+    -----
+    The PCCF at lag h is the (1,2) element of the partial lag
+    correlation matrix P(h) defined by Heyse and Wei (1985) [2]_.
+
+    pccf(x, y) is not symmetric: pccf(x, y) != pccf(y, x) in
+    general. The (1,2) element measures the partial association
+    from x to y, while pccf(y, x) measures the reverse direction.
+
+    The Yule-Walker methods use the multivariate Levinson-Durbin
+    recursion on the bivariate autocovariance matrix sequence. For
+    stationary series, this is asymptotically equivalent to OLS by
+    the Frisch-Waugh-Lovell theorem [3]_, but is O(n * nlags)
+    versus O(n * nlags^3) for OLS. The two methods may differ
+    substantially on non-stationary (e.g. trending) data.
+
+    The "ols" method computes pccf(h) as the sample correlation
+    between the backward residual (x_t regressed on the
+    intervening observations) and the forward residual (y_{t+h}
+    regressed on the same intervening observations). Both
+    regressions include an intercept. For h=1, there are no
+    intervening observations, so pccf(1) is the correlation between
+    x[:-1] and y[1:].
+
+    For a bivariate VAR(p) process, P(h) = 0 for h > p,
+    providing a useful identification tool.
+
+    If the series are perfectly collinear or constant, the sample
+    autocovariance matrix is singular and the Yule-Walker methods
+    return NaN for all lags.
+
+    The OLS method returns NaN for lags where either residual series
+    has zero variance.
+
+    The confidence intervals use the asymptotic standard deviation
+    1/sqrt(n), following Wei (2006, Section 11.2) [1]_.
+
+    References
+    ----------
+    .. [1] Wei, W. W. S. (2006). Time Series Analysis:
+       Univariate and Multivariate Methods, 2nd edition.
+       Pearson.
+    .. [2] Heyse, J. F. and Wei, W. W. S. (1985). Inverse
+       and partial lag autocorrelation for vector time series.
+       American Statistical Association Proceedings of Business
+       and Economic Statistics Section, pp. 233-237.
+    .. [3] Frisch, R. and Waugh, F. V. (1933). Partial time
+       regressions as compared with individual trends.
+       Econometrica, 1(4), 387-401.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from statsmodels.tsa.stattools import pccf
+    >>> rng = np.random.default_rng(12345)
+    >>> x = rng.standard_normal(100)
+    >>> y = 0.5 * x + rng.standard_normal(100)
+    >>> result = pccf(x, y, nlags=5)
+    >>> result_with_ci = pccf(x, y, nlags=5, alpha=0.05, use_namedtuple=True)
+    >>> result_with_ci.pccf.shape
+    (5,)
+    >>> result_with_ci.confint.shape
+    (5, 2)
+    """
+    x = array_like(x, "x")
+    y = array_like(y, "y")
+    nlags = int_like(nlags, "nlags", optional=True)
+    methods = (
+        "ols",
+        "yw",
+        "ywa",
+        "ywadjusted",
+        "yw_adjusted",
+        "ywm",
+        "ywmle",
+        "yw_mle",
+    )
+    method = string_like(method, "method", options=methods)
+    alpha = float_like(alpha, "alpha", optional=True)
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+
+    nobs = len(x)
+    if len(y) != nobs:
+        raise ValueError("x and y must have the same length")
+    if np.any(~np.isfinite(x)) or np.any(~np.isfinite(y)):
+        raise MissingDataError("x and y must not contain NaN or inf values")
+
+    if nlags is None:
+        nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
+        nlags = max(nlags, 1)
+    elif nlags <= 0:
+        raise ValueError("nlags must be a positive integer")
+    if nlags > nobs // 2:
+        raise ValueError(
+            "Can only compute partial correlations for lags up to 50% "
+            f"of the sample size. The requested nlags {nlags} must be "
+            f"<= {nobs // 2}."
+        )
+
+    if method == "ols":
+        ret = _pccf_ols(x, y, nlags)
     else:
-        return ret
+        adjusted = method in ("yw", "ywa", "ywadjusted", "yw_adjusted")
+        ret = _pccf_yw(x, y, nlags, adjusted=adjusted)
+
+    confint = None
+    if alpha is not None:
+        interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
+        confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
+
+    # PccfResult has exactly the same length and contents as the legacy
+    # (pccf, confint) tuple, so it unpacks and indexes identically and is
+    # always used when alpha is not None.  When alpha is None a bare array
+    # is returned, as before; pass use_namedtuple=True to always get a
+    # PccfResult.
+    if use_namedtuple or alpha is not None:
+        return PccfResult(ret, confint)
+    return ret
 
 
 # moved from sandbox.tsa.examples.try_ld_nitime, via nitime
 # TODO: check what to return, for testing and trying out returns everything
+class LevinsonDurbinResult(NamedTuple):
+    """
+    Result of :func:`levinson_durbin`.
+
+    Parameters
+    ----------
+    sigma_v : float
+        The estimate of the error variance.
+    arcoefs : ndarray
+        The estimate of the autoregressive coefficients for a model
+        including nlags.
+    pacf : ndarray
+        The partial autocorrelation function.
+    sigma : ndarray
+        The entire sigma array from intermediate result, last value is
+        sigma_v.
+    phi : ndarray
+        The entire phi array from intermediate result, last column
+        contains autoregressive coefficients for AR(nlags).
+    """
+
+    sigma_v: float
+    arcoefs: np.ndarray
+    pacf: np.ndarray
+    sigma: np.ndarray
+    phi: np.ndarray
+
+
 def levinson_durbin(s, nlags=10, isacov=False):
     """
     Levinson-Durbin recursion for autoregressive processes
@@ -1194,18 +2050,22 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
     Returns
     -------
-    sigma_v : float
-        The estimate of the error variance.
-    arcoefs : ndarray
-        The estimate of the autoregressive coefficients for a model including
-        nlags.
-    pacf : ndarray
-        The partial autocorrelation function.
-    sigma : ndarray
-        The entire sigma array from intermediate result, last value is sigma_v.
-    phi : ndarray
-        The entire phi array from intermediate result, last column contains
-        autoregressive coefficients for AR(nlags).
+    LevinsonDurbinResult
+        A NamedTuple with fields:
+
+        sigma_v : float
+            The estimate of the error variance.
+        arcoefs : ndarray
+            The estimate of the autoregressive coefficients for a model
+            including nlags.
+        pacf : ndarray
+            The partial autocorrelation function.
+        sigma : ndarray
+            The entire sigma array from intermediate result, last value is
+            sigma_v.
+        phi : ndarray
+            The entire phi array from intermediate result, last column
+            contains autoregressive coefficients for AR(nlags).
 
     Notes
     -----
@@ -1242,7 +2102,24 @@ def levinson_durbin(s, nlags=10, isacov=False):
     arcoefs = phi[1:, -1]
     pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.0
-    return sigma_v, arcoefs, pacf_, sig, phi  # return everything
+    return LevinsonDurbinResult(sigma_v, arcoefs, pacf_, sig, phi)  # return everything
+
+
+class LevinsonDurbinPacfResult(NamedTuple):
+    """
+    Result of :func:`levinson_durbin_pacf`.
+
+    Parameters
+    ----------
+    arcoefs : ndarray
+        AR coefficients computed from the partial autocorrelations.
+    acf : ndarray
+        The acf computed from the partial autocorrelations. Contains the
+        autocorrelations corresponding to lags 0, 1, ..., p.
+    """
+
+    arcoefs: np.ndarray
+    acf: np.ndarray
 
 
 def levinson_durbin_pacf(pacf, nlags=None):
@@ -1259,11 +2136,15 @@ def levinson_durbin_pacf(pacf, nlags=None):
 
     Returns
     -------
-    arcoefs : ndarray
-        AR coefficients computed from the partial autocorrelations.
-    acf : ndarray
-        The acf computed from the partial autocorrelations. Array returned
-        contains the autocorrelations corresponding to lags 0, 1, ..., p.
+    LevinsonDurbinPacfResult
+        A NamedTuple with fields:
+
+        arcoefs : ndarray
+            AR coefficients computed from the partial autocorrelations.
+        acf : ndarray
+            The acf computed from the partial autocorrelations. Array
+            returned contains the autocorrelations corresponding to lags
+            0, 1, ..., p.
 
     References
     ----------
@@ -1298,7 +2179,23 @@ def levinson_durbin_pacf(pacf, nlags=None):
         arcoefs[: -(n - i)] = prev - arcoefs[i] * prev[::-1]
         acf[i + 1] = arcoefs[i] * nu[i - 1] + prev.dot(acf[1 : -(n - i)][::-1])
     acf[0] = 1
-    return arcoefs, acf
+    return LevinsonDurbinPacfResult(arcoefs, acf)
+
+
+class BreakvarHeteroskedasticityResult(NamedTuple):
+    """
+    Result of :func:`breakvar_heteroskedasticity_test`.
+
+    Parameters
+    ----------
+    test_statistic : float or ndarray
+        Test statistic(s) H(h).
+    p_value : float or ndarray
+        p-value(s) of test statistic(s).
+    """
+
+    test_statistic: float | np.ndarray
+    p_value: float | np.ndarray
 
 
 def breakvar_heteroskedasticity_test(
@@ -1332,10 +2229,13 @@ def breakvar_heteroskedasticity_test(
 
     Returns
     -------
-    test_statistic : {float, ndarray}
-        Test statistic(s) H(h).
-    p_value : {float, ndarray}
-        p-value(s) of test statistic(s).
+    BreakvarHeteroskedasticityResult
+        A NamedTuple with fields:
+
+        test_statistic : {float, ndarray}
+            Test statistic(s) H(h).
+        p_value : {float, ndarray}
+            p-value(s) of test statistic(s).
 
     Notes
     -----
@@ -1392,9 +2292,9 @@ def breakvar_heteroskedasticity_test(
     for i, dof in enumerate(numer_dof):
         if dof < 2:
             warnings.warn(
-                "Early subset of data for variable %d"
+                f"Early subset of data for variable {i:d}"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i,
+                " calculate test statistic.",
                 stacklevel=2,
             )
             numer_squared_sum[i] = np.nan
@@ -1405,9 +2305,9 @@ def breakvar_heteroskedasticity_test(
     for i, dof in enumerate(denom_dof):
         if dof < 2:
             warnings.warn(
-                "Later subset of data for variable %d"
+                f"Later subset of data for variable {i:d}"
                 " has too few non-missing observations to"
-                " calculate test statistic." % i,
+                " calculate test statistic.",
                 stacklevel=2,
             )
             denom_squared_sum[i] = np.nan
@@ -1423,6 +2323,7 @@ def breakvar_heteroskedasticity_test(
 
         def pval_upper(test_statistics):
             return f.sf(test_statistics, numer_dof, denom_dof)
+
     else:
         from scipy.stats import chi2
 
@@ -1445,9 +2346,9 @@ def breakvar_heteroskedasticity_test(
         raise ValueError("Invalid alternative.")
 
     if len(test_statistic) == 1:
-        return test_statistic[0], p_value[0]
+        return BreakvarHeteroskedasticityResult(test_statistic[0], p_value[0])
 
-    return test_statistic, p_value
+    return BreakvarHeteroskedasticityResult(test_statistic, p_value)
 
 
 def grangercausalitytests(x, maxlag, addconst=True):
@@ -1539,8 +2440,7 @@ def grangercausalitytests(x, maxlag, addconst=True):
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
-            "Insufficient observations. Maximum allowable "
-            "lag is {}".format(int((x.shape[0] - int(addconst)) / 3) - 1)
+            f"Insufficient observations. Maximum allowable lag is {int((x.shape[0] - int(addconst)) / 3) - 1}"
         )
 
     resli = {}
@@ -1632,6 +2532,28 @@ def grangercausalitytests(x, maxlag, addconst=True):
     return resli
 
 
+class CointResult(NamedTuple):
+    """
+    Result of :func:`coint`.
+
+    Parameters
+    ----------
+    coint_t : float
+        The t-statistic of unit-root test on residuals.
+    pvalue : float
+        MacKinnon's approximate, asymptotic p-value based on MacKinnon
+        (1994).
+    crit_value : ndarray
+        Critical values for the test statistic at the 1 %, 5 %, and 10 %
+        levels based on regression curve. This depends on the number of
+        observations.
+    """
+
+    coint_t: float
+    pvalue: float
+    crit_value: np.ndarray
+
+
 def coint(
     y0,
     y1,
@@ -1689,14 +2611,18 @@ def coint(
 
     Returns
     -------
-    coint_t : float
-        The t-statistic of unit-root test on residuals.
-    pvalue : float
-        MacKinnon's approximate, asymptotic p-value based on MacKinnon (1994).
-    crit_value : dict
-        Critical values for the test statistic at the 1 %, 5 %, and 10 %
-        levels based on regression curve. This depends on the number of
-        observations.
+    CointResult
+        A NamedTuple with fields:
+
+        coint_t : float
+            The t-statistic of unit-root test on residuals.
+        pvalue : float
+            MacKinnon's approximate, asymptotic p-value based on MacKinnon
+            (1994).
+        crit_value : ndarray
+            Critical values for the test statistic at the 1 %, 5 %, and
+            10 % levels based on regression curve. This depends on the
+            number of observations.
 
     Notes
     -----
@@ -1747,7 +2673,13 @@ def coint(
     res_co = OLS(y0, xx).fit()
 
     if res_co.rsquared < 1 - 100 * SQRTEPS:
-        res_adf = adfuller(res_co.resid, maxlag=maxlag, autolag=autolag, regression="n")
+        res_adf = adfuller(
+            res_co.resid,
+            maxlag=maxlag,
+            autolag=autolag,
+            regression="n",
+            use_namedtuple=False,
+        )
     else:
         warnings.warn(
             "y0 and y1 are (almost) perfectly colinear."
@@ -1767,7 +2699,7 @@ def coint(
         #  TODO: check nobs or df = nobs - k
 
     pval_asy = mackinnonp(res_adf[0], regression=trend, N=k_vars)
-    return res_adf[0], pval_asy, crit
+    return CointResult(res_adf[0], pval_asy, crit)
 
 
 def has_missing(data):
@@ -1787,11 +2719,52 @@ def has_missing(data):
     return np.isnan(np.sum(data))
 
 
+class KpssResult(NamedTuple):
+    """
+    Result of :func:`kpss`.
+
+    Parameters
+    ----------
+    kpss_stat : float
+        The KPSS test statistic.
+    p_value : float
+        The p-value of the test. The p-value is interpolated from Table 1
+        in Kwiatkowski et al. (1992), and a boundary point is returned if
+        the test statistic is outside the table of critical values, that
+        is, if the p-value is outside the interval (0.01, 0.1).
+    lags : int
+        The truncation lag parameter.
+    crit : dict[str, float]
+        The critical values at 10%, 5%, 2.5% and 1%. Based on Kwiatkowski
+        et al. (1992).
+    resstore : ResultsStore or None
+        An instance of a dummy class with results attached as attributes,
+        if ``store`` was True, otherwise None.
+    """
+
+    kpss_stat: float
+    p_value: float
+    lags: int
+    crit: dict[str, float]
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+KPSS Statistic: {self.kpss_stat:0.5f}
+P-value: {self.p_value:0.5f}
+Lags: {self.lags}
+Critical Values: {self.crit}
+"""
+
+
 def kpss(
     x,
     regression: Literal["c", "ct"] = "c",
     nlags: Literal["auto", "legacy"] | int = "auto",
     store: bool = False,
+    *,
+    use_namedtuple: bool | None = None,
 ) -> tuple[float, float, int, dict[str, float]]:
     """
     Kwiatkowski-Phillips-Schmidt-Shin test for stationarity
@@ -1817,9 +2790,30 @@ def kpss(
     store : bool
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a ``KpssResult``
+        NamedTuple instead of a plain tuple. If ``None`` (the default), the
+        current tuple-returning behavior is used and a ``FutureWarning`` is
+        issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return a ``KpssResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    KpssResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``kpss_stat``,
+        ``p_value``, ``lags``, ``crit``, and ``resstore`` (``resstore`` is
+        ``None`` when not computed). See
+        :class:`~statsmodels.tsa.stattools.KpssResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     kpss_stat : float
         The KPSS test statistic.
     p_value : float
@@ -1829,12 +2823,16 @@ def kpss(
         critical values, that is, if the p-value is outside the
         interval (0.01, 0.1).
     lags : int
-        The truncation lag parameter.
+        The truncation lag parameter. Only returned when ``store=False``;
+        when ``store=True`` the lag is instead available as
+        ``resstore.lags``.
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Kwiatkowski et al. (1992).
-    resstore : (optional) instance of ResultStore
-        An instance of a dummy class with results attached as attributes.
+    resstore : instance of ResultsStore
+        Only returned when ``store=True`` (and, in that case, in place of
+        ``lags``). An instance of a dummy class with results attached as
+        attributes.
 
     Notes
     -----
@@ -1873,6 +2871,7 @@ def kpss(
     x = array_like(x, "x")
     regression = string_like(regression, "regression", options=("c", "ct"))
     store = bool_like(store, "store")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     nobs = x.shape[0]
     hypo = regression
@@ -1950,7 +2949,24 @@ look-up table. The actual p-value is {direction} than the p-value returned.
         stationary_type = "level" if hypo == "c" else "trend"
         rstore.H0 = f"The series is {stationary_type} stationary"
         rstore.HA = f"The series is not {stationary_type} stationary"
+    else:
+        rstore = None
 
+    if use_namedtuple is None:
+        warnings.warn(
+            "kpss currently returns a plain tuple whose length and layout "
+            "depends on the store argument (and which silently drops "
+            "`lags` when store=True). In release 0.16 or after July 2027, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a KpssResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple:
+        return KpssResult(kpss_stat, p_value, nlags, crit_dict, rstore)
+    if store:
         return kpss_stat, p_value, crit_dict, rstore
     else:
         return kpss_stat, p_value, nlags, crit_dict
@@ -2017,7 +3033,42 @@ def _kpss_autolag(resids, nobs):
     return autolags
 
 
-def range_unit_root_test(x, store=False):
+class RangeUnitRootTestResult(NamedTuple):
+    """
+    Result of :func:`range_unit_root_test` when ``use_namedtuple=True``.
+
+    Parameters
+    ----------
+    rur_stat : float
+        The RUR test statistic.
+    p_value : float
+        The p-value of the test. The p-value is interpolated from Table 1
+        in Aparicio et al. (2006), and a boundary point is returned if the
+        test statistic is outside the table of critical values, that is,
+        if the p-value is outside the interval (0.01, 0.1).
+    crit : dict[str, float]
+        The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
+        al. (2006).
+    resstore : ResultsStore or None
+        An instance of a dummy class with results attached as attributes,
+        if ``store`` was True, otherwise None.
+    """
+
+    rur_stat: float
+    p_value: float
+    crit: dict[str, float]
+    resstore: ResultsStore | None
+
+    def __repr__(self):
+        return f"""\
+{self.__class__.__name__}
+RUR Statistic: {self.rur_stat:0.5f}
+P-value: {self.p_value:0.5f}
+Critical Values: {self.crit}
+"""
+
+
+def range_unit_root_test(x, store=False, *, use_namedtuple: bool | None = None):
     """
     Range unit-root test for stationarity
 
@@ -2031,9 +3082,34 @@ def range_unit_root_test(x, store=False):
     store : bool
         If True, then a result instance is returned additionally to
         the RUR statistic (default is False).
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``RangeUnitRootTestResult`` NamedTuple instead of a plain tuple.
+        When ``store=True`` the NamedTuple holds the same four elements as
+        the legacy tuple, so it unpacks identically and is always
+        returned, with no warning. When ``store=False`` the legacy
+        three-element tuple is returned by default and a ``FutureWarning``
+        is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return a
+            ``RangeUnitRootTestResult``. Set ``use_namedtuple=True`` to opt
+            in now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
+    RangeUnitRootTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``rur_stat``,
+        ``p_value``, ``crit``, and ``resstore`` (``resstore`` is ``None``
+        when not computed). See
+        :class:`~statsmodels.tsa.stattools.RangeUnitRootTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple whose length depends
+    on `store`, made up of a subset of:
+
     rur_stat : float
         The RUR test statistic.
     p_value : float
@@ -2045,7 +3121,7 @@ def range_unit_root_test(x, store=False):
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Aparicio et al. (2006).
-    resstore : (optional) instance of ResultStore
+    resstore : (optional) instance of ResultsStore
         An instance of a dummy class with results attached as attributes.
 
     Notes
@@ -2065,6 +3141,7 @@ def range_unit_root_test(x, store=False):
     """
     x = array_like(x, "x")
     store = bool_like(store, "store")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
 
     nobs = x.shape[0]
 
@@ -2146,10 +3223,24 @@ look-up table. The actual p-value is {direction} than the p-value returned.
 
         rstore.H0 = "The series is not stationary"
         rstore.HA = "The series is stationary"
-
-        return rur_stat, p_value, crit_dict, rstore
     else:
-        return rur_stat, p_value, crit_dict
+        rstore = None
+
+    if use_namedtuple is None and not store:
+        warnings.warn(
+            "range_unit_root_test currently returns a plain tuple whose "
+            "length depends on the store argument. In release 0.16 or "
+            "after July 2027, whichever is later, the default behavior "
+            "will switch to always returning a RangeUnitRootTestResult "
+            "NamedTuple. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or store:
+        return RangeUnitRootTestResult(rur_stat, p_value, crit_dict, rstore)
+    return rur_stat, p_value, crit_dict
 
 
 class ZivotAndrewsUnitRoot:
@@ -2556,7 +3647,13 @@ class ZivotAndrewsUnitRoot:
             raise ValueError("trim value must be a float in range [0, 1/3)")
         nobs = x.shape[0]
         if autolag:
-            adf_res = adfuller(x, maxlag=maxlag, regression="ct", autolag=autolag)
+            adf_res = adfuller(
+                x,
+                maxlag=maxlag,
+                regression="ct",
+                autolag=autolag,
+                use_namedtuple=False,
+            )
             baselags = adf_res[2]
         elif maxlag:
             baselags = maxlag
@@ -2597,9 +3694,7 @@ class ZivotAndrewsUnitRoot:
                 if o.df_model < exog.shape[1] - 1:
                     raise ValueError(
                         "ZA: auxiliary exog matrix is not full rank.\n"
-                        "  cols (exc intercept) = {}  rank = {}".format(
-                            exog.shape[1] - 1, o.df_model
-                        )
+                        f"  cols (exc intercept) = {exog.shape[1] - 1}  rank = {o.df_model}"
                     )
                 stats[bp] = o.tvalues[basecols - 1]
             else:

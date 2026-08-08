@@ -396,7 +396,7 @@ class Exchangeable(CovStruct):
     def summary(self):
         return (
             "The correlation between two observations in the "
-            + "same cluster is %.3f" % self.dep_params
+            f"same cluster is {self.dep_params:.3f}"
         )
 
 
@@ -579,7 +579,7 @@ class Nested(CovStruct):
             dep_names.extend(self.model._dep_data_names)
         else:
             dep_names.extend(
-                ["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)]
+                [f"Component {k + 1:d}:" for k in range(len(self.vcomp_coeff) - 1)]
             )
         if hasattr(self.model, "_groups_name"):
             dep_names[0] = self.model._groups_name
@@ -1015,7 +1015,7 @@ class Autoregressive(CovStruct):
 
     def summary(self):
 
-        return "Autoregressive(1) dependence parameter: %.3f\n" % self.dep_params
+        return f"Autoregressive(1) dependence parameter: {self.dep_params:.3f}\n"
 
 
 class CategoricalCovStruct(CovStruct):
@@ -1058,17 +1058,6 @@ class GlobalOddsRatio(CategoricalCovStruct):
     Estimate the global odds ratio for a GEE with ordinal or nominal
     data.
 
-    References
-    ----------
-    PJ Heagerty and S Zeger. "Marginal Regression Models for Clustered
-    Ordinal Measurements". Journal of the American Statistical
-    Association Vol. 91, Issue 435 (1996).
-
-    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
-    A Note on Working Correlation Structures. Biometrics Vol. 52,
-    No. 1 (Mar., 1996), pp. 354-361
-    http://www.jstor.org/stable/2533173
-
     Notes
     -----
     The following data structures are calculated in the class:
@@ -1080,6 +1069,17 @@ class GlobalOddsRatio(CategoricalCovStruct):
     `cpp` is a dictionary where cpp[group] is a map from cut-point
     pairs (c,c') to the indices of all between-subject pairs derived
     from the given cut points.
+
+    References
+    ----------
+    PJ Heagerty and S Zeger. "Marginal Regression Models for Clustered
+    Ordinal Measurements". Journal of the American Statistical
+    Association Vol. 91, Issue 435 (1996).
+
+    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
+    A Note on Working Correlation Structures. Biometrics Vol. 52,
+    No. 1 (Mar., 1996), pp. 354-361
+    http://www.jstor.org/stable/2533173
     """
 
     def __init__(self, endog_type):
@@ -1151,7 +1151,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
         wts = [1 / v for v in var]
         wtsum = sum(wts)
         wts = [w / wtsum for w in wts]
-        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio)])
+        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio, strict=True)])
 
         return np.exp(log_pooled_or)
 
@@ -1281,7 +1281,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             )
 
     def summary(self):
-        return "Global odds ratio: %.3f\n" % self.dep_params
+        return f"Global odds ratio: {self.dep_params:.3f}\n"
 
 
 class OrdinalIndependence(CategoricalCovStruct):
@@ -1510,7 +1510,21 @@ class Equivalence(CovStruct):
         self.pairs = pairs
 
     def initialize(self, model, rng=None):
+        """
+        Called by GEE, used by implementations that need additional
+        setup prior to running `fit`.
 
+        Parameters
+        ----------
+        model : GEE class
+            A reference to the parent GEE class instance.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        """
         super().initialize(model)
 
         if self.model.weights is not None:

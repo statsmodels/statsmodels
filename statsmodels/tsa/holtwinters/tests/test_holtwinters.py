@@ -2,12 +2,12 @@
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
-
 from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
 import os
+from pathlib import Path
 import re
 import warnings
 
@@ -35,9 +35,9 @@ from statsmodels.tsa.holtwinters._smoothers import (
     to_unrestricted,
 )
 
-base, _ = os.path.split(os.path.abspath(__file__))
+base, _ = os.path.split(Path(__file__).resolve())
 housing_data = pd.read_csv(
-    os.path.join(base, "results", "housing-data.csv"),
+    Path(base).joinpath("results", "housing-data.csv"),
     index_col="DATE",
     parse_dates=True,
 )
@@ -1673,7 +1673,7 @@ def test_error_boxcox():
     mod = ExponentialSmoothing(
         y**2, use_boxcox=True, initialization_method="legacy-heuristic"
     )
-    with pytest.raises(ValueError, match="use_boxcox was set"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'use_boxcox'"):
         mod.fit(use_boxcox=False)
 
 
@@ -1717,9 +1717,11 @@ def test_error_initialization(ses):
             initial_trend=2.0,
         )
     mod = ExponentialSmoothing(ses, initialization_method="known", initial_level=1.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'initial_level'"):
         mod.fit(initial_level=2.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        TypeError, match="unexpected keyword argument 'use_basinhopping'"
+    ):
         mod.fit(use_basinhopping=True, method="least_squares")
 
 
@@ -1957,7 +1959,7 @@ def test_summary_boxcox(ses):
     mod = ExponentialSmoothing(
         ses**2, use_boxcox=True, initialization_method="heuristic"
     )
-    with pytest.raises(ValueError, match="use_boxcox was set at model"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'use_boxcox'"):
         mod.fit(use_boxcox=True)
     res = mod.fit()
     summ = str(res.summary())

@@ -144,7 +144,7 @@ class LeybourneMcCabeStationarity:
         ----------
         x : array_like
             data series
-        arlags : int, optional
+        arlags : {None, int}, optional
             Number of autoregressive terms to include. If None, the number
             of lags is selected using the empirical autolag procedure.
             Default is 1.
@@ -157,7 +157,7 @@ class LeybourneMcCabeStationarity:
         method : {'mle','ols'}
             Method used to estimate ARIMA(p, 1, 1) filter model
 
-            * 'mle' : condition sum of squares maximum likelihood (default)
+            * 'mle' : conditional sum of squares maximum likelihood (default)
             * 'ols' : two-stage least squares
 
         varest : {'var94','var99'}
@@ -218,11 +218,11 @@ class LeybourneMcCabeStationarity:
         roots in macroeconomic data. Journal of Monetary Economics, 20: 73-103.
         """
         if regression not in ["c", "ct"]:
-            raise ValueError("LM: regression option '%s' not understood" % regression)
+            raise ValueError(f"LM: regression option '{regression}' not understood")
         if method not in ["mle", "ols"]:
-            raise ValueError("LM: method option '%s' not understood" % method)
+            raise ValueError(f"LM: method option '{method}' not understood")
         if varest not in ["var94", "var99"]:
-            raise ValueError("LM: varest option '%s' not understood" % varest)
+            raise ValueError(f"LM: varest option '{varest}' not understood")
         x = np.asarray(x)
         if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
             raise ValueError(
@@ -234,7 +234,7 @@ class LeybourneMcCabeStationarity:
             arlags = self._autolag(x)
         elif not isinstance(arlags, int) or arlags < 0 or arlags > int(len(x) / 2):
             raise ValueError(
-                "LM: arlags must be an integer in range [0..%s]" % str(int(len(x) / 2))
+                f"LM: arlags must be an integer in range [0..{int(len(x) / 2)!s}]"
             )
         # estimate the reduced ARIMA(p, 1, 1) model
         if method == "mle":

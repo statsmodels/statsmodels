@@ -140,7 +140,7 @@ class PatsyFormula:
 
 class MICEData:
 
-    __doc__ = """\
+    __doc__ = f"""\
     Wrap a data set to allow missing data handling with MICE
 
     Parameters
@@ -157,12 +157,12 @@ class MICEData:
         cycle.  The return value is appended to `history`.  The
         MICEData object is passed as the sole argument to
         `history_callback`.
-    rng : {{None, int, array_like[ints], Generator, RandomState}}, optional
-        If `rng` is None, fresh, unpredictable entropy is pulled from
-        the OS and a `numpy.random.Generator` is used. If `rng` is an
-        int or array_like[ints], a new Generator instance is used,
-        seeded with `rng`. If `rng` is already a Generator or
-        RandomState instance, then that instance is used.
+    rng : {{None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -184,7 +184,7 @@ class MICEData:
     `data`.  The variable named `x1` has a conditional mean structure
     that includes an additional term for x2^2.
     {_mice_data_example_1}
-    """.format(_mice_data_example_1=_mice_data_example_1)
+    """
 
     def __init__(
         self,
@@ -305,7 +305,7 @@ class MICEData:
         self.data.fillna(imp_values, inplace=True)
 
     def _split_indices(self, vec):
-        null = pd.isnull(vec)
+        null = pd.isna(vec)
         ix_obs = np.flatnonzero(~null)
         ix_miss = np.flatnonzero(null)
         if len(ix_obs) == 0:
@@ -453,7 +453,7 @@ class MICEData:
             imputed is observed.
         exog_miss : DataFrame
             Current values of the predictors where the variable to be
-            Imputed is missing.
+            imputed is missing.
         init_kwds : dict-like
             The init keyword arguments for `vname`, processed through Patsy
             as required.
@@ -989,7 +989,10 @@ class MICEData:
         endog, exog, init_kwds, fit_kwds = self.get_fitting_data(vname)
 
         m = len(endog)
-        rix = self.rng.randint(0, m, m)
+        if isinstance(self.rng, np.random.RandomState):
+            rix = self.rng.randint(0, m, m)
+        else:
+            rix = self.rng.integers(0, m, size=m)
         endog = endog[rix]
         exog = exog[rix, :]
 
@@ -1065,7 +1068,7 @@ class MICEData:
         elif hasattr(obj, "predicted_values"):
             return obj.predicted_values
         else:
-            raise ValueError("cannot obtain predicted values from %s" % obj.__class__)
+            raise ValueError(f"cannot obtain predicted values from {obj.__class__}")
 
     def impute_pmm(self, vname):
         """
@@ -1119,7 +1122,10 @@ class MICEData:
         dxi = np.argsort(dx, 1)[:, 0:k_pmm]
 
         # Choose a column for each row.
-        ir = self.rng.randint(0, k_pmm, len(pendog_miss))
+        if isinstance(self.rng, np.random.RandomState):
+            ir = self.rng.randint(0, k_pmm, len(pendog_miss))
+        else:
+            ir = self.rng.integers(0, k_pmm, len(pendog_miss))
 
         # Unwind the indices
         jj = np.arange(dxi.shape[0])
@@ -1153,7 +1159,7 @@ _mice_example_2 = """
 
 class MICE:
 
-    __doc__ = """\
+    __doc__ = f"""\
     Multiple Imputation with Chained Equations
 
     This class can be used to fit most statsmodels models to data sets
@@ -1184,12 +1190,12 @@ class MICE:
     Examples
     --------
     Run all MICE steps and obtain results:
-    {mice_example_1}
+    {_mice_example_1}
 
     Obtain a sequence of fitted analysis models without combining
     to obtain summary::
-    {mice_example_2}
-    """.format(mice_example_1=_mice_example_1, mice_example_2=_mice_example_2)
+    {_mice_example_2}
+    """
 
     def __init__(
         self, model_formula, model_class, data, n_skip=3, init_kwds=None, fit_kwds=None
@@ -1267,6 +1273,10 @@ class MICE:
 
         # Run without fitting the analysis model
         self.data.update_all(n_burnin)
+
+        # Reset so that repeated calls to fit do not pool results across
+        # calls (results_list would otherwise keep growing).
+        self.results_list = []
 
         for _ in range(n_imputations):
             result = self.next_sample()
@@ -1368,9 +1378,9 @@ class MICEResults(LikelihoodModelResults):
         info["Method:"] = "MICE"
         info["Model:"] = self.model_class.__name__
         info["Dependent variable:"] = self.endog_names
-        info["Sample size:"] = "%d" % self.model.data.data.shape[0]
-        info["Scale"] = "%.2f" % self.scale
-        info["Num. imputations"] = "%d" % len(self.model.results_list)
+        info["Sample size:"] = f"{self.model.data.data.shape[0]:d}"
+        info["Scale"] = f"{self.scale:.2f}"
+        info["Num. imputations"] = f"{len(self.model.results_list):d}"
 
         smry.add_dict(info, align="l", float_format=float_format)
 

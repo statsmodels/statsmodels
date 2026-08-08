@@ -9,7 +9,7 @@ from collections.abc import Iterable, Sequence
 import datetime
 import datetime as dt
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 import warnings
 
 import numpy as np
@@ -23,7 +23,7 @@ from statsmodels.tools import eval_measures
 from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender, Substitution
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -51,27 +51,31 @@ if TYPE_CHECKING:
     )
 
 
-__all__ = ["AR", "AutoReg"]
+__all__ = ["AR", "AutoReg", "InformationCriteria"]
 
-AR_DEPRECATION_WARN = """
-statsmodels.tsa.AR has been deprecated in favor of statsmodels.tsa.AutoReg and
-statsmodels.tsa.SARIMAX.
 
-AutoReg adds the ability to specify exogenous variables, include time trends,
-and add seasonal dummies. The AutoReg API differs from AR since the model is
-treated as immutable, and so the entire specification including the lag
-length must be specified when creating the model. This change is too
-substantial to incorporate into the existing AR api. The function
-ar_select_order performs lag length selection for AutoReg models.
+class InformationCriteria(NamedTuple):
+    """
+    Result of order-selection information-criteria computations, shared
+    between :func:`ar_select_order` and
+    :func:`~statsmodels.tsa.ardl.model.ardl_select_order`.
 
-AutoReg only estimates parameters using conditional MLE (OLS). Use SARIMAX to
-estimate ARX and related models using full MLE via the Kalman Filter.
+    Parameters
+    ----------
+    aic : float
+        The Akaike information criterion for the candidate model order.
+    bic : float
+        The Bayesian (Schwarz) information criterion for the candidate
+        model order.
+    hqic : float
+        The Hannan-Quinn information criterion for the candidate model
+        order.
+    """
 
-To silence this warning and continue using AR until it is removed, use:
+    aic: float
+    bic: float
+    hqic: float
 
-import warnings
-warnings.filterwarnings('ignore', 'statsmodels.tsa.ar_model.AR', FutureWarning)
-"""
 
 REPEATED_FIT_ERROR = """
 Model has been fit using maxlag={0}, method={1}, ic={2}, trend={3}. These
@@ -191,7 +195,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         self,
         endog: ArrayLike1D,
         lags: int | Sequence[int] | None,
-        trend: Literal["n", "c", "t", "ct"] = "c",
+        trend: Literal["n", "c", "t", "ct", "ctt"] = "c",
         seasonal: bool = False,
         exog: ArrayLike2D | None = None,
         hold_back: int | None = None,
@@ -247,7 +251,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def ar_lags(self) -> list[int] | None:
         """The autoregressive lags included in the model"""
         lags = list(self._lags)
-        return None if not lags else lags
+        return lags or None
 
     @property
     def hold_back(self) -> int | None:
@@ -330,7 +334,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         hold_back = self._hold_back
         exog_names = []
         endog_names = self.endog_names
-        x, y = lagmat(self.endog, maxlag, original="sep")
+        x, y = lagmat(self.endog, maxlag, original="sep", use_namedtuple=False)
         exog_names.extend([endog_names + f".L{lag}" for lag in self._lags])
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
@@ -450,8 +454,18 @@ class AutoReg(tsa_model.TimeSeriesModel):
         if cov_type == "nonrobust" and not use_t:
             nobs = self._y.shape[0]
             k = self._x.shape[1]
-            scale = nobs / (nobs - k)
-            cov_params /= scale
+            if (nobs - k) > 0:
+                scale = nobs / (nobs - k)
+                cov_params /= scale
+            else:
+                warnings.warn(
+                    f"The adjusted number of observations (nobs - k) is "
+                    f"{nobs - k}, which is non-positive, where k is the "
+                    f"number of parameters in the model. Covariance matrix "
+                    f"has not been adjusted for the sample size.",
+                    EstimationWarning,
+                    stacklevel=2,
+                )
         res = AutoRegResults(
             self,
             ols_res.params,
@@ -1005,7 +1019,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
     def sigma2(self):
         return 1.0 / self.nobs * sumofsq(self.resid)
 
-    @cache_writable()  # for compatability with RegressionResults
+    @cache_writable()  # for compatibility with RegressionResults
     def scale(self):
         return self.sigma2
 
@@ -1014,9 +1028,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         """
         The standard errors of the estimated parameters
 
-        If `method` is 'cmle', then the standard errors that are returned are
-        the OLS standard errors of the coefficients. If the `method` is 'mle'
-        then they are computed using the numerical Hessian.
+        These are the OLS standard errors of the estimated coefficients,
+        computed using the covariance estimator selected in `fit`.
         """
         return np.sqrt(np.diag(self.cov_params()))
 
@@ -1220,17 +1233,17 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
 
+        See Also
+        --------
+        statsmodels.stats.diagnostic.acorr_ljungbox
+            Ljung-Box test for serial correlation.
+
         Notes
         -----
         Null hypothesis is no serial correlation.
 
         If the test degree-of-freedom is 0 or negative once accounting for
         model_df, then the test statistic's p-value is missing.
-
-        See Also
-        --------
-        statsmodels.stats.diagnostic.acorr_ljungbox
-            Ljung-Box test for serial correlation.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.diagnostic import acorr_ljungbox
@@ -1267,14 +1280,14 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             Series containing four values, the test statistic and its p-value,
             the skewness and the kurtosis.
 
-        Notes
-        -----
-        Null hypothesis is normality.
-
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
             The Jarque-Bera test of normality.
+
+        Notes
+        -----
+        Null hypothesis is normality.
         """
         # Deferred to prevent circular import
         from statsmodels.stats.stattools import jarque_bera
@@ -1313,7 +1326,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags = min(nobs_effective // 5, 10)
         out = []
         for lag in range(1, lags + 1):
-            res = het_arch(self.resid, nlags=lag)
+            res = het_arch(self.resid, nlags=lag, use_namedtuple=False)
             out.append([res[0], res[1], lag])
         index = pd.RangeIndex(1, lags + 1, name="Lag")
         cols = ["ARCH-LM", "P-value", "DF"]
@@ -1594,6 +1607,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        statsmodels.graphics.gofplots.qqplot
+        statsmodels.graphics.tsaplots.plot_acf
+
         Notes
         -----
         Produces a 2x2 plot grid with the following plots (ordered clockwise
@@ -1604,11 +1622,6 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
            with a Normal(0,1) density plotted for reference.
         3. Normal Q-Q plot, with Normal reference line.
         4. Correlogram
-
-        See Also
-        --------
-        statsmodels.graphics.gofplots.qqplot
-        statsmodels.graphics.tsaplots.plot_acf
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
@@ -1696,7 +1709,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             sample = [dates[start].strftime("%m-%d-%Y")]
             sample += ["- " + dates[-1].strftime("%m-%d-%Y")]
         else:
-            sample = [str(start), str(len(self.data.orig_endog))]
+            sample = [str(start), str(self._n_totobs)]
         model = model.__class__.__name__
         if self.model.seasonal:
             model = "Seas. " + model
@@ -1716,14 +1729,13 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             ("Sample:", [sample[0]]),
             ("", [sample[1]]),
         ]
-
         top_right = [
-            ("No. Observations:", [str(len(self.model.endog))]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
-            ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("No. Observations:", [str(self._nobs)]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
+            ("S.D. of innovations", [f"{self.sigma2**0.5:#5.3f}"]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         smry = Summary()
@@ -1734,7 +1746,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         from statsmodels.iolib.table import SimpleTable
 
         if self._max_lag:
-            arstubs = ["AR.%d" % i for i in range(1, self._max_lag + 1)]
+            arstubs = [f"AR.{i:d}" for i in range(1, self._max_lag + 1)]
             stubs = arstubs
             roots = self.roots
             freq = self.arfreq
@@ -1743,10 +1755,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             roots_table = SimpleTable(
                 [
                     (
-                        "%17.4f" % row[0],
-                        "%+17.4fj" % row[1],
-                        "%17.4f" % row[2],
-                        "%17.4f" % row[3],
+                        f"{row[0]:17.4f}",
+                        f"{row[1]:+17.4f}j",
+                        f"{row[2]:17.4f}",
+                        f"{row[3]:17.4f}",
                     )
                     for row in data
                 ],
@@ -2006,9 +2018,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         no_exog = existing.exog is None
         if no_exog != (exog is None):
             if no_exog:
-                err = (
-                    "Original model does not contain exog data but exog data passed"
-                )
+                err = "Original model does not contain exog data but exog data passed"
             else:
                 err = "Original model has exog data but not exog data passed"
             raise ValueError(err)
@@ -2056,7 +2066,7 @@ def ar_select_order(
     maxlag,
     ic="bic",
     glob=False,
-    trend: Literal["n", "c", "ct", "ctt"] = "c",
+    trend: Literal["n", "c", "t", "ct", "ctt"] = "c",
     seasonal=False,
     exog=None,
     hold_back=None,
@@ -2123,7 +2133,7 @@ def ar_select_order(
     y, x = full_mod._y, full_mod._x
     base_col = x.shape[1] - nexog - maxlag
     sel = np.ones(x.shape[1], dtype=bool)
-    ics: list[tuple[int | tuple[int, ...], tuple[float, float, float]]] = []
+    ics: list[tuple[int | tuple[int, ...], InformationCriteria]] = []
 
     def compute_ics(res):
         nobs = res.nobs
@@ -2136,7 +2146,7 @@ def ar_select_order(
         bic = call_cached_func(AutoRegResults.bic, res)
         hqic = call_cached_func(AutoRegResults.hqic, res)
 
-        return aic, bic, hqic
+        return InformationCriteria(aic, bic, hqic)
 
     def ic_no_data():
         """Fake mod and results to handle no regressor case"""
@@ -2157,7 +2167,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(j for j in range(1, i + 1))
-            lags = 0 if not lags else lags
+            lags = lags or 0
             ics.append((lags, compute_ics(res)))
     else:
         bits = np.arange(2**maxlag, dtype=np.int32)[:, None]
@@ -2173,7 +2183,7 @@ def ar_select_order(
                 continue
             res = OLS(y, x[:, sel]).fit()
             lags = tuple(np.where(mask)[0] + 1)
-            lags = 0 if not lags else lags
+            lags = lags or 0
             ics.append((lags, compute_ics(res)))
 
     key_loc = {"aic": 0, "bic": 1, "hqic": 2}[ic]
@@ -2202,7 +2212,7 @@ class AROrderSelectionResults:
     def __init__(
         self,
         model: AutoReg,
-        ics: list[tuple[int | tuple[int, ...], tuple[float, float, float]]],
+        ics: list[tuple[int | tuple[int, ...], InformationCriteria]],
         trend: Literal["n", "c", "ct", "ctt"],
         seasonal: bool,
         period: int | None,

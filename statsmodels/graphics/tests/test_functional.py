@@ -27,11 +27,12 @@ data = data.raw_data[:, 1:]
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
 )
+@pytest.mark.slow
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
-        _, hdr = hdrboxplot(data, labels=labels, seed=12345, kernel_seed=1234567)
+        _, hdr = hdrboxplot(data, labels=labels, rng=12345, kernel_rng=1234567)
 
         assert len(hdr.extra_quantiles) == 0
 
@@ -186,7 +187,7 @@ def test_hdr_basic(close_figures):
 def test_hdr_basic_brute(close_figures):
     try:
         _, hdr = hdrboxplot(
-            data, ncomp=2, labels=labels, use_brute=True, kernel_seed=1234567
+            data, ncomp=2, labels=labels, use_brute=True, kernel_rng=1234567
         )
         assert len(hdr.extra_quantiles) == 0
         median_t = [
@@ -225,8 +226,8 @@ def test_hdr_plot(close_figures):
             labels=labels.tolist(),
             ax=ax,
             threshold=1,
-            seed=12345,
-            kernel_seed=1234567,
+            rng=12345,
+            kernel_rng=1234567,
         )
 
         ax.set_xlabel("Month of the year")
@@ -246,7 +247,7 @@ def test_hdr_plot(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
     try:
-        _, hdr = hdrboxplot(data, alpha=[0.7], seed=12345, kernel_seed=1234567)
+        _, hdr = hdrboxplot(data, alpha=[0.7], rng=12345, kernel_rng=1234567)
 
         extra_quant_t = np.vstack(
             [
@@ -293,7 +294,7 @@ def test_hdr_alpha(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
     try:
-        _, hdr = hdrboxplot(data, alpha=[0.4, 0.92], seed=12345, kernel_seed=1234567)
+        _, hdr = hdrboxplot(data, alpha=[0.4, 0.92], rng=12345, kernel_rng=1234567)
 
         extra_quant_t = [
             [
@@ -367,7 +368,7 @@ def test_hdr_multiple_alpha(close_figures):
 def test_hdr_threshold(close_figures):
     try:
         _, hdr = hdrboxplot(
-            data, alpha=[0.8], threshold=0.93, seed=12345, kernel_seed=1234567
+            data, alpha=[0.8], threshold=0.93, rng=12345, kernel_rng=1234567
         )
         labels_pos = np.all(np.isin(data, hdr.outliers).reshape(data.shape), axis=1)
         outliers = labels[labels_pos]
@@ -384,7 +385,7 @@ def test_hdr_threshold(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     try:
-        _, hdr = hdrboxplot(data, bw="cv_ml", seed=12345, kernel_seed=1234567)
+        _, hdr = hdrboxplot(data, bw="cv_ml", rng=12345, kernel_rng=1234567)
 
         median_t = [
             24.25,
@@ -413,7 +414,7 @@ def test_hdr_bw(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
     try:
-        _, hdr = hdrboxplot(data, ncomp=3, seed=12345, kernel_seed=1234567)
+        _, hdr = hdrboxplot(data, ncomp=3, rng=12345, kernel_rng=1234567)
         median_t = [
             24.33,
             25.71,

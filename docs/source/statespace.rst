@@ -813,6 +813,17 @@ documentation for the full list of available attributes.
    representation.Representation
    representation.FrozenRepresentation
 
+The `Initialization` class specifies how the initial state distribution
+(mean and covariance) is constructed for a `Representation`, and it supports
+combining different initialization types (`known`, `diffuse`,
+`approximate_diffuse`, or `stationary`) across different blocks of the state
+vector.
+
+.. autosummary::
+   :toctree: generated/
+
+   initialization.Initialization
+
 The `KalmanFilter` class is a subclass of Representation that provides
 filtering capabilities. Once the state space representation matrices have been
 constructed, the :py:meth:`filter <kalman_filter.KalmanFilter.filter>`

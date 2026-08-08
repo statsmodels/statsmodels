@@ -9,7 +9,7 @@ The delta tests utilize Silverman's motorcycle collision data,
 available in R's MASS package.
 """
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -25,8 +25,8 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 # Number of decimals to test equality with.
 # The default is 7.
-curdir = os.path.dirname(os.path.abspath(__file__))
-rpath = os.path.join(curdir, "results")
+curdir = Path(__file__).resolve().parent
+rpath = Path(curdir).joinpath("results")
 
 
 class TestLowess:
@@ -64,7 +64,7 @@ class TestLowess:
     @staticmethod
     def generate(name, fname, x="x", y="y", out="out", kwargs=None, decimal=7):
         kwargs = {} if kwargs is None else kwargs
-        data = np.genfromtxt(os.path.join(rpath, fname), delimiter=",", names=True)
+        data = pd.read_csv(Path(rpath).joinpath(fname))
         assert_almost_equal.description = name
         if callable(kwargs):
             kwargs = kwargs(data)
@@ -138,11 +138,13 @@ class TestLowess:
 
     def test_options(self):
         rs = np.random.RandomState(8437973)
-        rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
-        y, x = test_data["y"], test_data["x"]
-        expected_lowess = np.array([test_data["x"], test_data["out"]]).T
-
+        rfile = Path(rpath).joinpath("test_lowess_simple.csv")
+        test_data = pd.read_csv(rfile, dtype=float)
+        y = np.require(test_data["y"], requirements="W")
+        x = np.require(test_data["x"], requirements="W")
+        expected_lowess = np.column_stack(
+            [test_data["x"].to_numpy(), test_data["out"].to_numpy()]
+        )
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
         assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
@@ -241,8 +243,8 @@ class TestLowess:
 
     def test_exog_predict(self):
         rs = np.random.RandomState(8437971)
-        rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
+        rfile = Path(rpath).joinpath("test_lowess_simple.csv")
+        test_data = pd.read_csv(rfile)
         y, x = test_data["y"], test_data["x"]
         target = lowess(y, x, is_sorted=True)
 

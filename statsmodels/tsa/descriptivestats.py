@@ -18,6 +18,8 @@ class TsaDescriptive:
         self.data = data
         self.label = label
         self.name = name
+        self.mod = None
+        self.res = None
 
     def filter(self, num, den):
         from scipy.signal import lfilter
@@ -43,7 +45,7 @@ class TsaDescriptive:
         return stt.pacf(self.data, nlags=nlags)
 
     def periodogram(self):
-        # does not return frequesncies
+        # does not return frequencies
         return stt.periodogram(self.data)
 
     # copied from fftarma.py
@@ -57,7 +59,7 @@ class TsaDescriptive:
             import matplotlib.pyplot as plt
             fig = plt.figure()
         ax = fig.add_subplot(2, 2, 1)
-        namestr = " for %s" % self.name if self.name else ""
+        namestr = f" for {self.name}" if self.name else ""
         ax.plot(data)
         ax.set_title("Time series" + namestr)
 

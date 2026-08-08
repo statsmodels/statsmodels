@@ -4,8 +4,7 @@ Tests for VARMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 import re
 import warnings
 
@@ -14,15 +13,15 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.iolib.summary import forg
+from statsmodels.iolib.summary import Summary, forg
 from statsmodels.tsa.statespace import dynamic_factor
 
 from .results import results_dynamic_factor, results_varmax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-output_path = os.path.join("results", "results_dynamic_factor_stata.csv")
-output_results = pd.read_csv(os.path.join(current_path, output_path))
+output_path = Path("results").joinpath("results_dynamic_factor_stata.csv")
+output_results = pd.read_csv(Path(current_path).joinpath(output_path))
 
 
 class CheckDynamicFactor:
@@ -257,7 +256,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 7)
@@ -276,7 +275,7 @@ class TestDynamicFactor2(CheckDynamicFactor):
             table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            assert re.search("Results for factor equation f%d" % (i + 1), table)
+            assert re.search(f"Results for factor equation f{i + 1:d}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 7)
@@ -393,7 +392,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 8)
@@ -415,7 +414,7 @@ class TestDynamicFactor_exog2(CheckDynamicFactor):
             table = tables[model.k_endog + i + 2]
 
             # -> Make sure we have the right table / table name
-            assert re.search("Results for factor equation f%d" % (i + 1), table)
+            assert re.search(f"Results for factor equation f{i + 1:d}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 6)
@@ -521,7 +520,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search("Results for equation %s" % name, table)
+            assert re.search(f"Results for equation {name}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 6)
@@ -536,7 +535,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             table = tables[2 + model.k_endog + i]
 
             # -> Make sure we have the right table / table name
-            assert re.search("Results for factor equation f%d" % (i + 1), table)
+            assert re.search(f"Results for factor equation f{i + 1:d}", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 6)
@@ -551,7 +550,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
 
             # -> Make sure we have the right table / table name
             name = model.endog_names[i]
-            assert re.search(r"Results for error equation e\(%s\)" % name, table)
+            assert re.search(fr"Results for error equation e\({name}\)", table)
 
             # -> Make sure it's the right size
             assert_equal(len(table.split("\n")), 8)
@@ -559,9 +558,7 @@ class TestDynamicFactor_general_errors(CheckDynamicFactor):
             # -> Check that we have the right coefficients
             for j in range(model.k_endog):
                 name = model.endog_names[j]
-                pattern = r"L1.e\({}\) +{}".format(
-                    name, forg(params[offset + j], prec=4)
-                )
+                pattern = rf"L1.e\({name}\) +{forg(params[offset + j], prec=4)}"
                 assert re.search(pattern, table)
 
         # Check the Error covariance matrix output
@@ -892,7 +889,7 @@ def test_recreate_model():
     for element in itertools.product(
         k_factors, factor_orders, error_orders, error_vars, error_cov_types
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
 
         mod = dynamic_factor.DynamicFactor(endog, exog=exog, **kwargs)
         mod2 = dynamic_factor.DynamicFactor(endog, exog=exog, **mod._get_init_kwds())
@@ -1069,3 +1066,26 @@ def test_start_params_nans():
     mod2 = dynamic_factor.DynamicFactor(endog2, k_factors=1, factor_order=1)
 
     assert_allclose(mod2.start_params, mod1.start_params)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dta = pd.DataFrame(
+        results_varmax.lutkepohl_data,
+        columns=["inv", "inc", "consump"],
+        index=pd.date_range("1960-01-01", "1982-10-01", freq="QS"),
+    )
+    dta["dln_inv"] = np.log(dta["inv"]).diff()
+    dta["dln_inc"] = np.log(dta["inc"]).diff()
+    dta["dln_consump"] = np.log(dta["consump"]).diff()
+    endog = dta.loc[
+        "1960-04-01":"1978-10-01", ["dln_inv", "dln_inc", "dln_consump"]
+    ]
+
+    true = results_dynamic_factor.lutkepohl_sfm.copy()
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=0)
+    res = mod.smooth(true["params"], cov_type="approx")
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

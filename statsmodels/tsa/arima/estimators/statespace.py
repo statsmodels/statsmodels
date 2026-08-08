@@ -7,6 +7,7 @@ License: BSD-3
 import numpy as np
 
 from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -51,19 +52,23 @@ def statespace(endog, exog=None, order=(0, 0, 0),
     start_params : array_like, optional
         Initial guess of the solution for the loglikelihood maximization. The
         AR polynomial must be stationary. If `enforce_invertibility=True` the
-        MA poylnomial must be invertible. If not provided, default starting
+        MA polynomial must be invertible. If not provided, default starting
         parameters are computed using the Hannan-Rissanen method.
     fit_kwargs : dict, optional
         Arguments to pass to the state space model's `fit` method.
 
     Returns
     -------
-    parameters : SARIMAXParams object
-    other_results : Bunch
-        Includes two components, `spec`, containing the `SARIMAXSpecification`
-        instance corresponding to the input arguments; and
-        `statespace_results`, corresponding to the results from the underlying
-        state space model and Kalman filter / smoother.
+    ARMAEstimationResult
+        A NamedTuple with fields:
+
+        parameters : SARIMAXParams object
+        other_results : Bunch
+            Includes two components, `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments; and `statespace_results`, corresponding to the
+            results from the underlying state space model and Kalman
+            filter / smoother.
 
     Notes
     -----
@@ -121,4 +126,4 @@ def statespace(endog, exog=None, order=(0, 0, 0),
         "statespace_results": res_ss,
     })
 
-    return p, res
+    return ARMAEstimationResult(p, res)

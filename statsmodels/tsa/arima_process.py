@@ -97,15 +97,16 @@ def arma_generate_sample(
     Examples
     --------
     >>> import numpy as np
+    >>> import statsmodels.api as sm
     >>> np.random.seed(12345)
     >>> arparams = np.array([.75, -.25])
     >>> maparams = np.array([.65, .35])
     >>> ar = np.r_[1, -arparams] # add zero-lag and negate
     >>> ma = np.r_[1, maparams] # add zero-lag
     >>> y = sm.tsa.arma_generate_sample(ar, ma, 250)
-    >>> model = sm.tsa.ARIMA(y, (2, 0, 2), trend='n').fit(disp=0)
+    >>> model = sm.tsa.ARIMA(y, order=(2, 0, 2), trend='n').fit()
     >>> model.params
-    array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
+    array([ 0.790456  , -0.2314185 ,  0.70071724,  0.40606905,  0.98005244])
     """
     distrvs = np.random.standard_normal if distrvs is None else distrvs
     if np.ndim(nsample) == 0:
@@ -393,7 +394,7 @@ def arma2ma(ar, ma, lags=100):
     Returns
     -------
     ndarray
-        The coefficients of AR lag polynomial with nobs elements.
+        The coefficients of MA lag polynomial with nobs elements.
 
     Notes
     -----
@@ -657,9 +658,9 @@ def deconvolve(num, den, n=None):
     else:
         if n is None:
             n = N - D + 1
-        input = np.zeros(n, float)
-        input[0] = 1
-        quot = signal.lfilter(num, den, input)
+        impulse = np.zeros(n, float)
+        impulse[0] = 1
+        quot = signal.lfilter(num, den, impulse)
         num_approx = signal.convolve(den, quot, mode="full")
         if len(num) < len(num_approx):  # 1d only ?
             num = np.concatenate((num, np.zeros(len(num_approx) - len(num))))
@@ -731,9 +732,9 @@ class ArmaProcess:
     >>> arma_process.arroots
     array([1.5-1.32287566j, 1.5+1.32287566j])
     >>> y = arma_process.generate_sample(250)
-    >>> model = sm.tsa.ARIMA(y, (2, 0, 2), trend='n').fit(disp=0)
+    >>> model = sm.tsa.ARIMA(y, order=(2, 0, 2), trend='n').fit()
     >>> model.params
-    array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
+    array([ 0.790456  , -0.2314185 ,  0.70071724,  0.40606905,  0.98005244])
 
     The same ARMA(2,2) Using the from_coeffs class method
 
@@ -782,9 +783,11 @@ class ArmaProcess:
 
         Examples
         --------
-        >>> arroots = [.75, -.25]
-        >>> maroots = [.65, .35]
-        >>> arma_process = sm.tsa.ArmaProcess.from_roots(arroots, maroots)
+        >>> arroots = [2, -2]
+        >>> maroots = [3, 1.5]
+        >>> arma_process = sm.tsa.ArmaProcess.from_roots(
+        ...     arroots=arroots, maroots=maroots
+        ... )
         >>> arma_process.isstationary
         True
         >>> arma_process.isinvertible
@@ -833,7 +836,7 @@ class ArmaProcess:
         --------
         >>> arparams = [.75, -.25]
         >>> maparams = [.65, .35]
-        >>> arma_process = sm.tsa.ArmaProcess.from_coeffs(ar, ma)
+        >>> arma_process = sm.tsa.ArmaProcess.from_coeffs(arparams, maparams)
         >>> arma_process.isstationary
         True
         >>> arma_process.isinvertible
@@ -898,9 +901,7 @@ class ArmaProcess:
         )
 
     def __str__(self):
-        return "ArmaProcess\nAR: {}\nMA: {}".format(
-            self.ar.tolist(), self.ma.tolist()
-        )
+        return f"ArmaProcess\nAR: {self.ar.tolist()}\nMA: {self.ma.tolist()}"
 
     @Appender(remove_parameters(arma_acovf.__doc__, ["ar", "ma", "sigma2"]))
     def acovf(self, nobs=None):
@@ -961,10 +962,7 @@ class ArmaProcess:
         bool
              True if autoregressive roots are outside unit circle.
         """
-        if np.all(np.abs(self.arroots) > 1.0):
-            return True
-        else:
-            return False
+        return bool(np.all(np.abs(self.arroots) > 1.0))
 
     @property
     def isinvertible(self):
@@ -976,10 +974,7 @@ class ArmaProcess:
         bool
              True if moving average roots are outside unit circle.
         """
-        if np.all(np.abs(self.maroots) > 1):
-            return True
-        else:
-            return False
+        return bool(np.all(np.abs(self.maroots) > 1))
 
     def invertroots(self, retnew=False):
         """

@@ -16,6 +16,8 @@ Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 """
 
 import itertools
+from typing import NamedTuple
+import warnings
 
 import numpy as np
 from scipy import optimize
@@ -23,6 +25,46 @@ from scipy.stats import chi2, kurtosis, skew
 
 from statsmodels.base.optimizer import _fit_newton
 from statsmodels.graphics import utils
+from statsmodels.tools.validation import bool_like
+
+
+class EmpLikeTestResult(NamedTuple):
+    """
+    Result of an empirical likelihood hypothesis test.
+
+    Returned by the ``test_*`` methods of
+    :class:`~statsmodels.emplike.descriptive.DescStatUV` and
+    :class:`~statsmodels.emplike.descriptive.DescStatMV`, and by
+    :meth:`statsmodels.emplike.originregress.OriginResults.el_test`.
+
+    Parameters
+    ----------
+    llr : float
+        -2 times the log-likelihood ratio, the test statistic.
+    pvalue : float
+        The p-value of the test statistic.
+    weights : ndarray or None
+        The observation weights that maximize the likelihood under the
+        null hypothesis.
+    """
+
+    llr: float
+    pvalue: float
+    weights: np.ndarray | None
+
+
+def _warn_return_weights(name):
+    """Emit the ``return_weights`` variable-arity FutureWarning for ``name``."""
+    warnings.warn(
+        f"{name} currently returns a plain tuple whose length depends on the "
+        "return_weights argument. In release 0.16.0 or after July 2027, "
+        "whichever is later, the default behavior will switch to always "
+        "returning an EmpLikeTestResult NamedTuple. Set use_namedtuple=True "
+        "to switch now, or use_namedtuple=False to keep the current behavior "
+        "and silence this warning.",
+        FutureWarning,
+        stacklevel=3,
+    )
 
 
 def DescStat(endog):
@@ -69,7 +111,7 @@ class _OptFuncts:
     observation as a 1 x n array and est_vect is n x k.  Then _modif_Newton is
     called to determine the optimal p by solving for the Lagrange multiplier
     (eta) in the profile likelihood maximization problem.  In the presence
-    of nuisance parameters, _opt_ functions are  optimized over to profile
+    of nuisance parameters, _opt_ functions are optimized over to profile
     out the nuisance parameters.
 
     Any method starting with _ci_limits calculates the log likelihood
@@ -257,7 +299,7 @@ class _OptFuncts:
             The difference between the log likelihood value of mu0 and
             a specified value.
         """
-        return self.test_mean(mu)[0] - self.r0
+        return self.test_mean(mu, use_namedtuple=True).llr - self.r0
 
     def _find_gamma(self, gamma):
         """
@@ -337,7 +379,7 @@ class _OptFuncts:
             The difference between the log likelihood ratio at var and a
             pre-specified value.
         """
-        return self.test_var(var)[0] - self.r0
+        return self.test_var(var, use_namedtuple=True).llr - self.r0
 
     def _opt_skew(self, nuis_params):
         """
@@ -460,7 +502,7 @@ class _OptFuncts:
             The difference between the log likelihood ratio at skew and a
             pre-specified value.
         """
-        return self.test_skew(skew)[0] - self.r0
+        return self.test_skew(skew, use_namedtuple=True).llr - self.r0
 
     def _ci_limits_kurt(self, kurt):
         """
@@ -478,7 +520,7 @@ class _OptFuncts:
             The difference between the log likelihood ratio at kurt and a
             pre-specified value.
         """
-        return self.test_kurt(kurt)[0] - self.r0
+        return self.test_kurt(kurt, use_namedtuple=True).llr - self.r0
 
     def _opt_correl(self, nuis_params, corr0, endog, nobs, x0, weights0):
         """
@@ -544,7 +586,7 @@ class _OptFuncts:
             The difference between the log likelihood ratio at corr and a
             pre-specified value.
         """
-        return self.test_corr(corr)[0] - self.r0
+        return self.test_corr(corr, use_namedtuple=True).llr - self.r0
 
 
 class DescStatUV(_OptFuncts):
@@ -570,7 +612,7 @@ class DescStatUV(_OptFuncts):
         self.endog = np.squeeze(endog)
         self.nobs = endog.shape[0]
 
-    def test_mean(self, mu0, return_weights=False):
+    def test_mean(self, mu0, return_weights=False, *, use_namedtuple=None):
         """
         Returns - 2 x log-likelihood ratio, p-value and weights
         for a hypothesis test of the mean.
@@ -584,12 +626,34 @@ class DescStatUV(_OptFuncts):
             If return_weights is True the function returns
             the weights of the observations under the null hypothesis.
             Default is False
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The log-likelihood ratio and p-value of mu0
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         self.mu0 = mu0
         endog = self.endog
         nobs = self.nobs
@@ -598,10 +662,12 @@ class DescStatUV(_OptFuncts):
         eta_star = optimize.brentq(self._find_eta, eta_min, eta_max)
         new_weights = (1.0 / nobs) * 1.0 / (1.0 + eta_star * (endog - self.mu0))
         llr = -2 * np.sum(np.log(nobs * new_weights))
-        if return_weights:
-            return llr, chi2.sf(llr, 1), new_weights
-        else:
-            return llr, chi2.sf(llr, 1)
+        pval = chi2.sf(llr, 1)
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatUV.test_mean")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, pval, new_weights)
+        return llr, pval
 
     def ci_mean(
         self,
@@ -691,7 +757,7 @@ class DescStatUV(_OptFuncts):
             mu_high = np.sum(weights_high * endog)
             return mu_low, mu_high
 
-    def test_var(self, sig2_0, return_weights=False):
+    def test_var(self, sig2_0, return_weights=False, *, use_namedtuple=None):
         """
         Returns  -2 x log-likelihood ratio and the p-value for the
         hypothesized variance
@@ -704,11 +770,32 @@ class DescStatUV(_OptFuncts):
         return_weights : bool
             If True, returns the weights that maximize the
             likelihood of observing sig2_0. Default is False
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The  log-likelihood ratio and the p_value  of sig2_0
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
 
         Examples
         --------
@@ -716,17 +803,19 @@ class DescStatUV(_OptFuncts):
         >>> import statsmodels.api as sm
         >>> random_numbers = np.random.standard_normal(1000)*100
         >>> el_analysis = sm.emplike.DescStat(random_numbers)
-        >>> hyp_test = el_analysis.test_var(9500)
+        >>> hyp_test = el_analysis.test_var(9500, use_namedtuple=True)
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         self.sig2_0 = sig2_0
         mu_max = max(self.endog)
         mu_min = min(self.endog)
         llr = optimize.fminbound(self._opt_var, mu_min, mu_max, full_output=1)[1]
         p_val = chi2.sf(llr, 1)
-        if return_weights:
-            return llr, p_val, self.new_weights.T
-        else:
-            return llr, p_val
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatUV.test_var")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, p_val, self.new_weights.T)
+        return llr, p_val
 
     def ci_var(self, lower_bound=None, upper_bound=None, sig=0.05):
         """
@@ -842,7 +931,7 @@ class DescStatUV(_OptFuncts):
         ax.contour(mu_vect, var_vect, z, levels=levs)
         return fig
 
-    def test_skew(self, skew0, return_weights=False):
+    def test_skew(self, skew0, return_weights=False, *, use_namedtuple=None):
         """
         Returns  -2 x log-likelihood and p-value for the hypothesized
         skewness.
@@ -855,12 +944,34 @@ class DescStatUV(_OptFuncts):
         return_weights : bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default is False.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The log-likelihood ratio and p_value of skew0
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         self.skew0 = skew0
         start_nuisance = np.array([self.endog.mean(), self.endog.var()])
 
@@ -868,11 +979,13 @@ class DescStatUV(_OptFuncts):
             self._opt_skew, start_nuisance, full_output=1, disp=0
         )[1]
         p_val = chi2.sf(llr, 1)
-        if return_weights:
-            return llr, p_val, self.new_weights.T
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatUV.test_skew")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, p_val, self.new_weights.T)
         return llr, p_val
 
-    def test_kurt(self, kurt0, return_weights=False):
+    def test_kurt(self, kurt0, return_weights=False, *, use_namedtuple=None):
         """
         Returns -2 x log-likelihood and the p-value for the hypothesized
         kurtosis.
@@ -885,12 +998,34 @@ class DescStatUV(_OptFuncts):
         return_weights : bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default is False.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The log-likelihood ratio and p-value of kurt0
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         self.kurt0 = kurt0
         start_nuisance = np.array([self.endog.mean(), self.endog.var()])
 
@@ -898,11 +1033,15 @@ class DescStatUV(_OptFuncts):
             self._opt_kurt, start_nuisance, full_output=1, disp=0
         )[1]
         p_val = chi2.sf(llr, 1)
-        if return_weights:
-            return llr, p_val, self.new_weights.T
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatUV.test_kurt")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, p_val, self.new_weights.T)
         return llr, p_val
 
-    def test_joint_skew_kurt(self, skew0, kurt0, return_weights=False):
+    def test_joint_skew_kurt(
+        self, skew0, kurt0, return_weights=False, *, use_namedtuple=None
+    ):
         """
         Returns - 2 x log-likelihood and the p-value for the joint
         hypothesis test for skewness and kurtosis
@@ -917,12 +1056,34 @@ class DescStatUV(_OptFuncts):
         return_weights : bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default is False.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The log-likelihood ratio and p-value  of the joint hypothesis test.
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         self.skew0 = skew0
         self.kurt0 = kurt0
         start_nuisance = np.array([self.endog.mean(), self.endog.var()])
@@ -931,8 +1092,10 @@ class DescStatUV(_OptFuncts):
             self._opt_skew_kurt, start_nuisance, full_output=1, disp=0
         )[1]
         p_val = chi2.sf(llr, 2)
-        if return_weights:
-            return llr, p_val, self.new_weights.T
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatUV.test_joint_skew_kurt")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, p_val, self.new_weights.T)
         return llr, p_val
 
     def ci_skew(self, sig=0.05, upper_bound=None, lower_bound=None):
@@ -1076,26 +1239,48 @@ class DescStatMV(_OptFuncts):
         self.endog = endog
         self.nobs = endog.shape[0]
 
-    def mv_test_mean(self, mu_array, return_weights=False):
+    def mv_test_mean(self, mu_array, return_weights=False, *, use_namedtuple=None):
         """
         Returns -2 x log likelihood and the p-value
         for a multivariate hypothesis test of the mean
 
         Parameters
         ----------
-        mu_array  : 1d array
+        mu_array : 1d array
             Hypothesized values for the mean.  Must have same number of
             elements as columns in endog
 
         return_weights : bool
             If True, returns the weights that maximize the
             likelihood of mu_array. Default is False.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The log-likelihood ratio and p-value for mu_array
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         endog = self.endog
         nobs = self.nobs
         if len(mu_array) != endog.shape[1]:
@@ -1115,10 +1300,11 @@ class DescStatMV(_OptFuncts):
         self.new_weights = 1 / nobs * 1 / denom
         llr = -2 * np.sum(np.log(nobs * self.new_weights))
         p_val = chi2.sf(llr, mu_array.shape[1])
-        if return_weights:
-            return llr, p_val, self.new_weights.T
-        else:
-            return llr, p_val
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatMV.mv_test_mean")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, p_val, self.new_weights.T)
+        return llr, p_val
 
     def mv_mean_contour(
         self,
@@ -1193,7 +1379,7 @@ class DescStatMV(_OptFuncts):
         pairs = itertools.product(x, y)
         z = []
         for i in pairs:
-            z.append(self.mv_test_mean(np.asarray(i))[0])
+            z.append(self.mv_test_mean(np.asarray(i), use_namedtuple=True).llr)
         X, Y = np.meshgrid(x, y)
         z = np.asarray(z)
         z = z.reshape(X.shape[1], Y.shape[0])
@@ -1202,7 +1388,7 @@ class DescStatMV(_OptFuncts):
             ax.plot(self.endog[:, 0], self.endog[:, 1], "bo")
         return fig
 
-    def test_corr(self, corr0, return_weights=0):
+    def test_corr(self, corr0, return_weights=0, *, use_namedtuple=None):
         """
         Returns -2 x log-likelihood ratio and  p-value for the
         correlation coefficient between 2 variables
@@ -1215,12 +1401,34 @@ class DescStatMV(_OptFuncts):
         return_weights : bool
             If true, returns the weights that maximize
             the log-likelihood at the hypothesized value
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        test_results : tuple
-            The log-likelihood ratio and p-value of corr0
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields ``llr``, ``pvalue`` and ``weights``. See
+            :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         nobs = self.nobs
         endog = self.endog
         if endog.shape[1] != 2:
@@ -1241,8 +1449,10 @@ class DescStatMV(_OptFuncts):
             1
         ]
         p_val = chi2.sf(llr, 1)
-        if return_weights:
-            return llr, p_val, self.new_weights.T
+        if use_namedtuple is None and not return_weights:
+            _warn_return_weights("DescStatMV.test_corr")
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr, p_val, self.new_weights.T)
         return llr, p_val
 
     def ci_corr(self, sig=0.05, upper_bound=None, lower_bound=None):

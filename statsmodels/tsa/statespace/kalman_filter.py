@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import contextlib
 from warnings import warn
 
@@ -415,8 +417,8 @@ class KalmanFilter(Representation):
             kalman_filter = self._kalman_filters[prefix]
 
             create_filter = (
-                not kalman_filter.conserve_memory == conserve_memory or
-                not kalman_filter.loglikelihood_burn == loglikelihood_burn
+                kalman_filter.conserve_memory != conserve_memory or
+                kalman_filter.loglikelihood_burn != loglikelihood_burn
             )
 
         # If the dtype-specific _kalman_filter does not exist (or if we need
@@ -881,6 +883,9 @@ class KalmanFilter(Representation):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
+        complex_step : bool, optional
+            Whether or not to compute the filter using complex-step
+            differentiation. Default is False.
 
         Notes
         -----
@@ -1037,13 +1042,14 @@ class KalmanFilter(Representation):
 
         return llf_obs
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(self, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None,
                  pretransformed_measurement_shocks=True,
                  pretransformed_state_shocks=True,
                  pretransformed_initial_state=True,
                  simulator=None, return_simulator=False,
-                 random_state=None):
+                 rng=None):
         r"""
         Simulate a new time series following the state space model
 
@@ -1099,13 +1105,16 @@ class KalmanFilter(Representation):
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is
             False.
-        random_state : {None, int, Generator, RandomState}, optional
-            If `seed` is None (or `np.random`), the `numpy.random.RandomState`
-            singleton is used.
-            If `seed` is an int, a new ``RandomState`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` or ``RandomState`` instance
-            then that instance is used.
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None or an int, a new ``Generator`` is created
+            (seeded with `rng` if an int is given). If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -1136,9 +1145,9 @@ class KalmanFilter(Representation):
             pretransformed_initial_state_variates=(
                 pretransformed_initial_state),
             simulator=simulator, return_simulator=return_simulator,
-            random_state=random_state)
+            rng=rng)
 
-    def _simulate(self, nsimulations, simulator=None, random_state=None,
+    def _simulate(self, nsimulations, simulator=None, rng=None,
                   **kwargs):
         raise NotImplementedError("Simulation only available through"
                                   " the simulation smoother.")
@@ -1213,7 +1222,7 @@ class KalmanFilter(Representation):
                 impulse = np.squeeze(impulse)
             if not impulse.shape == (self.k_posdef,):
                 raise ValueError("Invalid impulse vector. Must be shaped"
-                                 " (%d,)" % self.k_posdef)
+                                 f" ({self.k_posdef:d},)")
 
         # Orthogonalize the impulses, if requested, using Cholesky on the
         # first state covariance matrix
@@ -1804,8 +1813,6 @@ class FilterResults(FrozenRepresentation):
         r"""
         Standardized forecast errors
 
-        Notes
-        -----
         The forecast errors produced by the Kalman filter are
 
         .. math::
@@ -2168,8 +2175,7 @@ class PredictionResults(FilterResults):
         """
         # Prevent infinite recursive lookups
         if attr[0] == "_":
-            raise AttributeError("'%s' object has no attribute '%s'" %
-                                 (self.__class__.__name__, attr))
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
         _attr = "_" + attr
 
@@ -2233,8 +2239,7 @@ class PredictionResults(FilterResults):
                         value = np.concatenate([value, oos_value], axis=-1)
                     value = value[..., self.start:self.end]
             else:
-                raise AttributeError("'%s' object has no attribute '%s'" %
-                                     (self.__class__.__name__, attr))
+                raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{attr}'")
 
             setattr(self, _attr, value)
 
