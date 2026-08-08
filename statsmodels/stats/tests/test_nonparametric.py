@@ -35,6 +35,7 @@ from statsmodels.stats.contingency_tables import (
 from statsmodels.stats.nonparametric import (
     _compute_rank_placements,
     cohensd2problarger,
+    jonckheere_terpstra,
     prob_larger_continuous,
     rank_compare_2indep,
     rank_compare_2ordinal,
@@ -526,6 +527,105 @@ def test_rank_compare_vectorized():
         tost_i = res_i.tost_prob_superior(0.4, 0.6)
         assert_allclose(tost.statistic[i], tost_i.statistic, rtol=1e-14)
         assert_allclose(tost.pvalue[i], tost_i.pvalue, rtol=1e-14)
+
+
+def _jt_statistic_bruteforce(samples):
+    statistic = 0.0
+    for i, sample_low in enumerate(samples[:-1]):
+        for sample_high in samples[i + 1:]:
+            for x_low in sample_low:
+                for x_high in sample_high:
+                    statistic += x_high > x_low
+                    statistic += 0.5 * (x_high == x_low)
+    return statistic
+
+
+def test_jonckheere_terpstra_larger_matches_kendalltau():
+    samples = [
+        np.array([1, 2, 2, 4]),
+        np.array([2, 3, 4]),
+        np.array([3, 4, 5, 6]),
+    ]
+    res = jonckheere_terpstra(samples, alternative="larger")
+
+    expected_stat = _jt_statistic_bruteforce(samples)
+    counts = [len(sample) for sample in samples]
+    group = np.repeat(np.arange(len(samples)), counts)
+    pooled = np.concatenate(samples)
+    expected = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="greater",
+    )
+
+    assert_allclose(res.statistic, expected_stat, rtol=1e-13)
+    assert_allclose(res.tau, expected.statistic, rtol=1e-13)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
+
+
+def test_jonckheere_terpstra_smaller_and_two_sided():
+    samples = [
+        np.array([6, 5, 4, 4]),
+        np.array([4, 3, 2]),
+        np.array([2, 1, 1]),
+    ]
+    counts = [len(sample) for sample in samples]
+    group = np.repeat(np.arange(len(samples)), counts)
+    pooled = np.concatenate(samples)
+
+    res_small = jonckheere_terpstra(samples, alternative="smaller")
+    expected_small = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="less",
+    )
+    assert_allclose(res_small.statistic, _jt_statistic_bruteforce(samples))
+    assert_allclose(res_small.tau, expected_small.statistic, rtol=1e-13)
+    assert_allclose(res_small.pvalue, expected_small.pvalue, rtol=1e-13)
+
+    res_two = jonckheere_terpstra(samples, alternative="two-sided")
+    expected_two = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="two-sided",
+    )
+    assert_allclose(res_two.pvalue, expected_two.pvalue, rtol=1e-13)
+
+
+def test_jonckheere_terpstra_known_extreme_statistic():
+    samples = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
+    res = jonckheere_terpstra(samples)
+
+    assert_allclose(res.statistic, 12.0, rtol=1e-13)
+    assert_allclose(res.mean_null, 6.0, rtol=1e-13)
+    assert_(res.zstat > 0)
+
+
+def test_jonckheere_terpstra_stats_api_export():
+    from statsmodels.stats import api as sms
+
+    assert sms.jonckheere_terpstra is jonckheere_terpstra
+
+
+@pytest.mark.parametrize(
+    ("samples", "alternative", "expected_message"),
+    [
+        ([np.array([1, 2])], "larger", "at least two ordered samples"),
+        ([np.array([]), np.array([1])], "larger", "zero length"),
+        ([np.array([1]), np.array([2])], "invalid", "alternative"),
+        (
+            [np.array([1, 1]), np.array([1, 1])],
+            "larger",
+            "variance is zero",
+        ),
+    ],
+)
+def test_jonckheere_terpstra_invalid(samples, alternative, expected_message):
+    with pytest.raises(ValueError, match=expected_message):
+        jonckheere_terpstra(samples, alternative=alternative)
 
 
 cases_continuous = [
