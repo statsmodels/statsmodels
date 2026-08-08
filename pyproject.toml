@@ -120,6 +120,10 @@ dev = [
     "flake8-bugbear",
     "ruff",
 ]
+polars = [
+    # Polars support
+    "polars>=1.0.0",
+]
 
 [project.urls]
 homepage = "https://www.statsmodels.org"
@@ -459,6 +463,7 @@ markers = [
     "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
     "todo: mark a test as incomplete",
+    "polars: mark a test that requires polars",
     "singleton_randomstate: mark a test as changing the singleton RandomState",
     "joblib: mark a test as using joblib for parallel computation",
 ]

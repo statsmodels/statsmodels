@@ -733,6 +733,10 @@ def handle_data_class_factory(endog, exog):
 
 
 def handle_data(endog, exog, missing="none", hasconst=None, **kwargs):
+    # Convert Polars objects to pandas
+    endog = data_util._to_pandas(endog)
+    exog = data_util._to_pandas(exog)
+
     # deal with lists and tuples up-front
     if isinstance(endog, (list, tuple)):
         endog = np.asarray(endog)
