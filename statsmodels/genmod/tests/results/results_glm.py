@@ -1191,8 +1191,7 @@ class InvGauss:
     def __init__(self):
         # set up data #
         filename = Path(__file__).resolve().parent.joinpath("inv_gaussian.csv")
-        with Path(filename).open(encoding="utf-8") as fd:
-            data = np.genfromtxt(fd, delimiter=",", dtype=float)[1:]
+        data = pd.read_csv(filename).values
         self.endog = data[:5000, 0]
         self.exog = data[:5000, 1:]
         self.exog = add_constant(self.exog, prepend=False)

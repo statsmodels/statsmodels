@@ -17,8 +17,7 @@ from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 current_path = Path(__file__).resolve().parent
 dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
-with Path(dta_path).open("rb") as fd:
-    dta = np.genfromtxt(fd)
+dta = pd.read_csv(dta_path, header=None, delimiter=r"\s+").values
 
 
 class CheckCointJoh:

@@ -22,16 +22,16 @@ from statsmodels.sandbox.nonparametric import kernels
 curdir = Path(__file__).resolve().parent
 rfname = Path(curdir).joinpath("results", "results_kde.csv")
 # print rfname
-KDEResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
+KDEResults = pd.read_csv(rfname, dtype=float)
 
 rfname = Path(curdir).joinpath("results", "results_kde_univ_weights.csv")
-KDEWResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
+KDEWResults = pd.read_csv(rfname)
 
 # get results from R
 curdir = Path(__file__).resolve().parent
 rfname = Path(curdir).joinpath("results", "results_kcde.csv")
 # print rfname
-KCDEResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
+KCDEResults = pd.read_csv(rfname, dtype=float)
 
 # setup test data
 
@@ -208,7 +208,8 @@ class TestKdeWeights(CheckKDE):
     def setup_class(cls):
         cls.res1 = cls.result_factory()
         fname = Path(curdir).joinpath("results", "results_kde_weights.csv")
-        cls.res_density = np.genfromtxt(Path(fname).open("rb"), skip_header=1)
+        cls.res_density = pd.read_csv(fname, skiprows=1, header=None).values.squeeze()
+        cls.res_density2 = np.genfromtxt(Path(fname).open("rb"), skip_header=1)
 
     @classmethod
     def result_factory(cls):
@@ -233,7 +234,7 @@ class TestKDEGaussFFT(CheckKDE):
         cls.decimal_density = 2  # low accuracy because binning is different
         cls.res1 = cls.result_factory()
         rfname2 = Path(curdir).joinpath("results", "results_kde_fft.csv")
-        cls.res_density = np.genfromtxt(Path(rfname2).open("rb"))
+        cls.res_density = pd.read_csv(rfname2, header=None).values.squeeze()
 
     @classmethod
     def result_factory(cls):

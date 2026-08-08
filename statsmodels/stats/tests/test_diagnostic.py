@@ -8,6 +8,7 @@ License: BSD-3
 currently all tests are against R
 
 """
+
 import json
 from pathlib import Path
 import warnings
@@ -23,6 +24,7 @@ from numpy.testing import (
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.regression.linear_model import OLS
@@ -61,6 +63,40 @@ def compare_to_reference(sp, sp_dict, decimal=(12, 12)):
         atol=10 ** -decimal[1],
         rtol=10 ** -decimal[0],
     )
+
+
+def _pt_reference(actual, predicted):
+    # Independent re-derivation of the Pesaran-Timmermann (1992) statistic.
+    #
+    # p_hat_y and p_hat_z are independent sample proportions, so the exact
+    # variance of the product p_hat_y * p_hat_z (needed for Var(p_hat_star))
+    # is, for independent A, B:
+    #   Var(A * B) = Var(A) Var(B) + Var(A) E[B]^2 + Var(B) E[A]^2
+    # Expanding p_hat_star = p_hat_y * p_hat_z + (1 - p_hat_y)(1 - p_hat_z)
+    # in terms of this identity gives the delta-method terms (as used for
+    # v_hat) plus an exact O(1/nobs**2) cross term of
+    # 4 * Var(p_hat_y) * Var(p_hat_z) that the delta method alone omits.
+    actual = np.asarray(actual)
+    predicted = np.asarray(predicted)
+    realized_pos = (actual > 0).astype(float)
+    predicted_pos = (predicted > 0).astype(float)
+    nobs = actual.shape[0]
+    p_y = realized_pos.mean()
+    p_z = predicted_pos.mean()
+    p_hat = np.mean(realized_pos == predicted_pos)
+    p_ind = p_y * p_z + (1 - p_y) * (1 - p_z)
+    v_hat = p_ind * (1 - p_ind) / nobs
+    w_hat = (
+        ((2 * p_y - 1) ** 2) * p_z * (1 - p_z) + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    ) / nobs
+    #     w_hat = (
+    #         ((2 * p_y - 1) ** 2) * var_p_z
+    #         + ((2 * p_z - 1) ** 2) * var_p_y
+    #         + 4 * var_p_y * var_p_z
+    #     )
+    variance = v_hat - w_hat
+    stat = (p_hat - p_ind) / np.sqrt(variance)
+    return stat, 2 * stats.norm.sf(np.abs(stat))
 
 
 def test_gq():
@@ -205,9 +241,7 @@ class TestDiagnosticG:
 
         endogg, exogg = self.endog, self.exog
         # tests
-        gq = smsdia.het_goldfeldquandt(
-            endogg, exogg, split=0.5, use_namedtuple=False
-        )
+        gq = smsdia.het_goldfeldquandt(endogg, exogg, split=0.5, use_namedtuple=False)
         compare_to_reference(gq, het_gq_greater, decimal=(12, 12))
         assert_equal(gq[-1], "increasing")
 
@@ -225,7 +259,11 @@ class TestDiagnosticG:
 
         # TODO: forcing the same split as R 202-90-90-1=21
         gq = smsdia.het_goldfeldquandt(
-            endogg, exogg, split=90, drop=21, alternative="two-sided",
+            endogg,
+            exogg,
+            split=90,
+            drop=21,
+            alternative="two-sided",
             use_namedtuple=False,
         )
         compare_to_reference(gq, het_gq_two_sided_01, decimal=(12, 12))
@@ -690,10 +728,59 @@ class TestDiagnosticG:
         ct2 = smsdia.compare_cox(res2, res, use_namedtuple=False)
         assert_almost_equal(ct2, coxtest[1][3:5], decimal=12)
 
-        _, _, store = smsdia.compare_cox(
-            res, res2, store=True, use_namedtuple=False
-        )
+        _, _, store = smsdia.compare_cox(res, res2, store=True, use_namedtuple=False)
         assert isinstance(store, smsdia.ResultsStore)
+
+    def test_pesaran_timmermann_reference(self):
+        actual = np.r_[np.ones(50), -np.ones(50)]
+        predicted = actual.copy()
+
+        pt = smsdia.pesaran_timmermann(actual, predicted)
+        assert isinstance(pt, smsdia.PesaranTimmermannResult)
+        assert pt.res_store is not None
+        expected = _pt_reference(actual, predicted)
+        assert_allclose((pt.statistic, pt.pvalue), expected, rtol=1e-12)
+
+    def test_pesaran_timmermann_manual_formula(self):
+        actual = np.array([1.2, -0.4, 0.0, 0.9, -1.1, 0.5, -0.2, 0.3])
+        predicted = np.array([0.6, -0.2, -0.1, 1.0, 0.7, 0.2, -0.4, -0.6])
+
+        pt = smsdia.pesaran_timmermann(actual, predicted)
+        expected = _pt_reference(actual, predicted)
+        assert_allclose((pt.statistic, pt.pvalue), expected, rtol=1e-12)
+
+        pt_larger = smsdia.pesaran_timmermann(actual, predicted, alternative="larger")
+        pt_smaller = smsdia.pesaran_timmermann(actual, predicted, alternative="smaller")
+        assert_allclose(pt_larger.statistic, expected[0], rtol=1e-12)
+        assert_allclose(pt_smaller.statistic, expected[0], rtol=1e-12)
+        assert_allclose(pt_larger.pvalue, stats.norm.sf(expected[0]), rtol=1e-12)
+        assert_allclose(pt_smaller.pvalue, stats.norm.cdf(expected[0]), rtol=1e-12)
+
+    def test_pesaran_timmermann_store(self):
+        actual = np.r_[np.ones(10), -np.ones(10)]
+        predicted = actual.copy()
+
+        pt = smsdia.pesaran_timmermann(actual, predicted)
+        assert isinstance(pt, smsdia.PesaranTimmermannResult)
+        store = pt.res_store
+        assert isinstance(store, smsdia.ResultsStore)
+        assert store.nobs == actual.shape[0]
+        assert_allclose(store.p_hat, 1.0, rtol=1e-12)
+        assert_allclose(store.p_ind, 0.5, rtol=1e-12)
+
+    @pytest.mark.parametrize(
+        ("actual", "predicted", "kwargs", "message"),
+        [
+            ([1, -1], [1], {}, "same length"),
+            ([1], [1], {}, "at least 2 values"),
+            ([1, np.nan], [1, -1], {}, "finite"),
+            ([1, 1, 1], [1, 1, 1], {}, "variance is non-positive"),
+            ([1, -1], [1, -1], {"alternative": "bad"}, "alternative"),
+        ],
+    )
+    def test_pesaran_timmermann_invalid(self, actual, predicted, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            smsdia.pesaran_timmermann(actual, predicted, **kwargs)
 
     def test_cusum_ols(self):
         # R library(strucchange)
@@ -1872,17 +1959,88 @@ def test_rainbow_smoke_order_by(frac, order_by):
     smsdia.linear_rainbow(res, frac=frac, order_by=order_by)
 
 
-@pytest.mark.parametrize("center", [None, 0.33, 300])
-def test_rainbow_smoke_centered(center):
+@pytest.mark.parametrize("add_const", [False, True])
+def test_rainbow_use_distance_order_invariant(add_const):
+    # GH#9103: with use_distance=True the observations are ordered by their
+    # Mahalanobis distance to the exog centroid (the multivariate mean), so
+    # the statistic must not depend on the order of the rows of the data.
+    # Prior to the fix the center was an arbitrary middle-indexed observation
+    # (exog[nobs // 2]), which made the result order dependent (and raised a
+    # LinAlgError when exog contained a constant column).
     rs = np.random.RandomState(38342096)
-    e = pd.DataFrame(rs.standard_normal((500, 1)))
-    x = pd.DataFrame(
-        rs.standard_normal((500, 3)),
-        columns=[f"x{i}" for i in range(3)],
-    )
-    y = x @ np.ones((3, 1)) + e
+    nobs = 500
+    x = rs.standard_normal((nobs, 3))
+    if add_const:
+        x = add_constant(x)
+    y = x @ np.ones(x.shape[1]) + 0.5 * x[:, -1] ** 2 + rs.standard_normal(nobs)
     res = OLS(y, x).fit()
-    smsdia.linear_rainbow(res, use_distance=True, center=center)
+    ref = smsdia.linear_rainbow(res, use_distance=True)
+
+    for seed in (0, 1, 2):
+        perm = np.random.RandomState(seed).permutation(nobs)
+        res_perm = OLS(y[perm], x[perm]).fit()
+        stat = smsdia.linear_rainbow(res_perm, use_distance=True)
+        assert_allclose(stat, ref)
+
+
+def test_rainbow_use_distance_order_invariant_discrete():
+    # GH#9103: with discrete / duplicated regressors many Mahalanobis
+    # distances tie. The non-stable argsort previously used to order the
+    # observations made which of the tied rows landed in the central subset
+    # depend on the input row order, so the statistic was still order
+    # dependent. The deterministic exog-based tie-break makes it invariant.
+    # Every exog row on this integer lattice is distinct, so there is no
+    # identical-exog / different-endog boundary residual.
+    vals = np.arange(-2, 3)
+    grid = np.array([(a, b, c) for a in vals for b in vals for c in vals], dtype=float)
+    nobs = grid.shape[0]
+    rs = np.random.RandomState(7)
+    y = grid @ np.ones(3) + rs.standard_normal(nobs)
+    res = OLS(y, grid).fit()
+    ref = smsdia.linear_rainbow(res, use_distance=True)
+
+    for seed in range(10):
+        perm = np.random.RandomState(1000 + seed).permutation(nobs)
+        res_perm = OLS(y[perm], grid[perm]).fit()
+        stat = smsdia.linear_rainbow(res_perm, use_distance=True)
+        assert_allclose(stat, ref)
+
+
+def test_rainbow_use_distance_matches_manual_ordering():
+    # GH#9103: use_distance=True must be equivalent to ordering the data by
+    # the Mahalanobis distance to the exog centroid and running the standard
+    # order_by path. The centroid and covariance are recomputed here via an
+    # independent route (np.cov + einsum) as a reference.
+    rs = np.random.RandomState(11223344)
+    nobs = 400
+    x = rs.standard_normal((nobs, 3))
+    y = x @ np.ones(3) + rs.standard_normal(nobs)
+    res = OLS(y, x).fit()
+
+    exog = res.model.exog
+    centroid = exog.mean(0)
+    vi = np.linalg.pinv(np.cov(exog, rowvar=False, bias=True))
+    diff = exog - centroid
+    d2 = np.einsum("ij,jk,ik->i", diff, vi, diff)
+    order = np.argsort(d2)
+
+    manual = smsdia.linear_rainbow(res, order_by=order)
+    dist = smsdia.linear_rainbow(res, use_distance=True)
+    assert_allclose(dist, manual)
+
+
+def test_rainbow_center_deprecated():
+    # GH#9103: the center keyword no longer has any effect and is deprecated.
+    rs = np.random.RandomState(38342096)
+    x = rs.standard_normal((500, 3))
+    y = x @ np.ones(3) + rs.standard_normal(500)
+    res = OLS(y, x).fit()
+
+    ref = smsdia.linear_rainbow(res, use_distance=True)
+    for center in (0.33, 300):
+        with pytest.warns(FutureWarning, match="center keyword is deprecated"):
+            stat = smsdia.linear_rainbow(res, use_distance=True, center=center)
+        assert_allclose(stat, ref)
 
 
 def test_rainbow_exception():
@@ -1899,6 +2057,12 @@ def test_rainbow_exception():
     res = OLS(np.asarray(y), np.asarray(x)).fit()
     with pytest.raises(TypeError, match="order_by must contain"):
         smsdia.linear_rainbow(res, order_by=("x0",))
+    with pytest.raises(ValueError, match="frac is too small to perform t"):
+        smsdia.linear_rainbow(res, frac=0.001)
+    with pytest.raises(TypeError, match="res must be a results instance"):
+        smsdia.linear_rainbow(x)
+    with pytest.raises(ValueError, match="order_by and use_distance"):
+        smsdia.linear_rainbow(res, use_distance=True, order_by=["x0"])
 
 
 def test_small_skip():
@@ -2057,9 +2221,7 @@ def test_compare_use_namedtuple_true(diagnostic_namedtuple_data):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
-        result = smsdia.compare_cox(
-            res, res_other, store=True, use_namedtuple=True
-        )
+        result = smsdia.compare_cox(res, res_other, store=True, use_namedtuple=True)
     assert isinstance(result, smsdia.NonNestedTestResult)
     assert isinstance(result.res_store, smsdia.ResultsStore)
 
@@ -2070,9 +2232,7 @@ def test_compare_use_namedtuple_true(diagnostic_namedtuple_data):
     assert result.res_store is None
 
 
-@pytest.mark.parametrize(
-    "func", ["acorr_lm", "acorr_breusch_godfrey", "het_arch"]
-)
+@pytest.mark.parametrize("func", ["acorr_lm", "acorr_breusch_godfrey", "het_arch"])
 def test_lm_test_use_namedtuple(func, diagnostic_namedtuple_data):
     res = diagnostic_namedtuple_data.res
     # acorr_breusch_godfrey takes the results instance directly; the other
@@ -2123,8 +2283,6 @@ def test_het_goldfeldquandt_use_namedtuple(diagnostic_namedtuple_data):
 
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
-        result = smsdia.het_goldfeldquandt(
-            y, x, store=True, use_namedtuple=True
-        )
+        result = smsdia.het_goldfeldquandt(y, x, store=True, use_namedtuple=True)
     assert isinstance(result, smsdia.GoldfeldQuandtResult)
     assert isinstance(result.res_store, smsdia.ResultsStore)

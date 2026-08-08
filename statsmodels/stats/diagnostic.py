@@ -25,6 +25,8 @@ missing:
 
 from __future__ import annotations
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 from collections.abc import Iterable
 from typing import NamedTuple
 import warnings
@@ -56,6 +58,7 @@ __all__ = [
     "GoldfeldQuandtResult",
     "LMTestResult",
     "NonNestedTestResult",
+    "PesaranTimmermannResult",
     "acorr_breusch_godfrey",
     "acorr_ljungbox",
     "acorr_lm",
@@ -74,6 +77,7 @@ __all__ = [
     "linear_lm",
     "linear_rainbow",
     "normal_ad",
+    "pesaran_timmermann",
     "spec_white",
 ]
 
@@ -341,6 +345,166 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
     return tstat, pval
 
 
+class PesaranTimmermannResult(NamedTuple):
+    """
+    Result of :func:`pesaran_timmermann`.
+
+    Parameters
+    ----------
+    statistic : float
+        Normal test statistic.
+    pvalue : float
+        P-value for the chosen alternative.
+    res_store : ResultsStore or None
+        An instance of a dummy class with intermediate results attached as
+        attributes, if ``store`` was True, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    res_store: ResultsStore | None
+
+
+def pesaran_timmermann(actual, predicted, alternative="two-sided"):
+    r"""
+    Pesaran-Timmermann test of directional predictive accuracy.
+
+    Parameters
+    ----------
+    actual : array_like
+        Realized values. The direction is classified by ``actual > 0``.
+    predicted : array_like
+        Forecasted or predicted values. The direction is classified by
+        ``predicted > 0``.
+    alternative : {"two-sided", "larger", "smaller"}
+        Alternative hypothesis for the directional accuracy statistic.
+
+    Returns
+    -------
+    PesaranTimmermannResult
+        A NamedTuple with fields:
+
+        statistic : float
+            Normal test statistic.
+        pvalue : float
+            P-value for the chosen alternative.
+        res_store : ResultsStore or None
+            Intermediate results.
+
+    Notes
+    -----
+    The Pesaran-Timmermann test evaluates whether the realized and predicted
+    signs are independent. Let
+
+    .. math::
+
+       \hat{p} = n^{-1}\sum_{t=1}^n 1\{\operatorname{sign}(y_t)
+       = \operatorname{sign}(\hat{y}_t)\}
+
+    be the observed success rate, and let
+
+    .. math::
+
+       \hat{p}_* = \hat{p}_y \hat{p}_z + (1 - \hat{p}_y)(1 - \hat{p}_z)
+
+    denote the success rate implied by independence, where
+    :math:`\hat{p}_y` and :math:`\hat{p}_z` are the sample proportions of
+    positive realizations and positive predictions. The test statistic is
+
+    .. math::
+
+       S_n = \frac{\hat{p} - \hat{p}_*} {\sqrt{\hat{v} - \hat{w}}},
+
+    where
+
+    .. math::
+
+       \hat{v} = \hat{p}_* (1 - \hat{p}_*) / n
+
+    and
+
+    .. math::
+
+       \hat{w} = \left[(2\hat{p}_y - 1)^2 \hat{p}_z (1 - \hat{p}_z)
+       + (2\hat{p}_z - 1)^2 \hat{p}_y (1 - \hat{p}_y)\right] / n.
+
+    Under the null of no directional predictive ability, the statistic is
+    asymptotically standard normal.
+
+    References
+    ----------
+    .. [1] Pesaran, M. H., and Timmermann, A. "A Simple Nonparametric Test
+       of Predictive Performance." Journal of Business & Economic Statistics
+       10, no. 4 (1992): 461-465.
+    """
+    actual = array_like(actual, "actual", ndim=1)
+    predicted = array_like(predicted, "predicted", ndim=1)
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+    )
+
+    if actual.shape[0] != predicted.shape[0]:
+        raise ValueError("actual and predicted must have the same length")
+    if actual.shape[0] < 2:
+        raise ValueError("actual and predicted must contain at least 2 values")
+    if not np.all(np.isfinite(actual)) or not np.all(np.isfinite(predicted)):
+        raise ValueError("actual and predicted must contain only finite values")
+
+    nobs = actual.shape[0]
+    realized_pos = (actual > 0).astype(float)
+    predicted_pos = (predicted > 0).astype(float)
+
+    p_y = realized_pos.mean()
+    p_z = predicted_pos.mean()
+    p_hat = np.mean(realized_pos == predicted_pos)
+    p_ind = p_y * p_z + (1 - p_y) * (1 - p_z)
+
+    v_hat = p_ind * (1 - p_ind) / nobs
+    w_hat = (
+        ((2 * p_y - 1) ** 2) * p_z * (1 - p_z) + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    ) / nobs
+    variance = v_hat - w_hat
+    # An alternative exact estimator that includes terms of order n^2.
+    # Retailed but not what was used in P-T
+    # w_hat = (
+    #     ((2 * p_y - 1) ** 2) * p_z * (1 - p_z)
+    #     + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    # ) / nobs + 4 * p_y * (1 - p_y) * p_z * (1 - p_z) / nobs**2
+
+    if variance <= 0:
+        raise ValueError(
+            "Pesaran-Timmermann test is undefined when the estimated "
+            "variance is non-positive."
+        )
+
+    statistic = (p_hat - p_ind) / np.sqrt(variance)
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(statistic))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(statistic)
+    else:
+        pvalue = stats.norm.cdf(statistic)
+
+    res_store = ResultsStore()
+    res_store.statistic = statistic
+    res_store.pvalue = pvalue
+    res_store.dist = stats.norm
+    res_store.alternative = alternative
+    res_store.nobs = nobs
+    res_store.p_hat = p_hat
+    res_store.p_ind = p_ind
+    res_store.p_y = p_y
+    res_store.p_z = p_z
+    res_store.v_hat = v_hat
+    res_store.w_hat = w_hat
+    res_store.variance = variance
+
+    return PesaranTimmermannResult(statistic, pvalue, res_store)
+
+
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
 def compare_encompassing(results_x, results_z, cov_type="nonrobust", cov_kwds=None):
     r"""
     Davidson-MacKinnon encompassing test for comparing non-nested models
@@ -1451,6 +1615,7 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     return stats.ttest_1samp(rr[3][3:], 0)
 
 
+@deprecate_kwarg("center", None)
 def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None):
     """
     Rainbow test for linearity
@@ -1465,18 +1630,26 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         A results instance from a linear regression.
     frac : float, default 0.5
         The fraction of the data to include in the center model.
-    order_by : {ndarray, str, List[str]}, default None
+    order_by : {ndarray, str, list[str]}, optional
         If an ndarray, the values in the array are used to sort the
         observations. If a string or a list of strings, these are interpreted
         as column name(s) which are then used to lexicographically sort the
         data.
     use_distance : bool, default False
-        Flag indicating whether data should be ordered by the Mahalanobis
-        distance to the center.
+        Flag indicating whether the data should be ordered by the Mahalanobis
+        distance to the exog centroid (the multivariate mean). This makes the
+        test invariant to the order of the observations; see the Notes for the
+        precise statement.
     center : {float, int}, default None
-        If a float, the value must be in [0, 1] and the center is center *
-        nobs of the ordered data.  If an integer, must be in [0, nobs) and
-        is interpreted as the observation of the ordered data to use.
+        Deprecated and ignored. The center used to order the observations
+        when ``use_distance`` is True is always the exog centroid (the
+        multivariate mean). Passing a value emits a ``FutureWarning``.
+
+        .. deprecated:: 0.15.0
+
+            ``center`` has no effect. ``center`` previously was a fraction
+            of the sample and so was not well-defined for regression with
+            more than 1 regressor.
 
     Returns
     -------
@@ -1489,6 +1662,25 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     -----
     This test assumes residuals are homoskedastic and may reject a correct
     linear specification if the residuals are heteroskedastic.
+
+    When ``use_distance`` is True the observations are ordered by their
+    Mahalanobis distance to the centroid of ``exog``. Using the centroid (the
+    multivariate mean) as the center follows Utts (1982) [1]_; the subset used
+    is the middle band of the distance ranks (the same slicing as the
+    ``order_by`` path), not the "closest ``frac``" subset of Utts. Because the
+    centroid is order invariant and exact ties in distance are broken
+    deterministically using the exog values, the returned statistic does not
+    depend on the order of the rows of the data. The one exception is a pair of
+    observations with identical exog rows but different ``endog`` values that
+    fall on opposite sides of the subset boundary: resolving such a tie would
+    require ordering by the response, which would make the subset depend on
+    ``endog``, so these are left in their input order.
+
+    References
+    ----------
+    .. [1] Utts, J. M. (1982). The rainbow test for lack of fit in
+       regression. Communications in Statistics - Theory and Methods,
+       11(24), 2801-2815.
     """
     if not isinstance(res, RegressionResultsWrapper):
         raise TypeError("res must be a results instance from a linear model.")
@@ -1523,26 +1715,29 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         endog = endog[order_by]
         exog = exog[order_by]
     if use_distance:
-        center = int(nobs) // 2 if center is None else center
-        if isinstance(center, float):
-            if not 0.0 <= center <= 1.0:
-                raise ValueError("center must be in (0, 1) when a float.")
-            center = int(center * (nobs - 1))
-        else:
-            center = int_like(center, "center")
-            if not 0 < center < nobs - 1:
-                raise ValueError("center must be in [0, nobs) when an int.")
-        center_obs = exog[center : center + 1]
+        if center is not None:
+            warnings.warn(
+                "The center keyword is deprecated and no longer has any "
+                "effect. The Mahalanobis distances used to order the "
+                "observations are now measured from the exog centroid (the "
+                "multivariate mean) rather than from an individual "
+                "observation, so that the rainbow test no longer depends on "
+                "the order of the observations (Utts, 1982).",
+                FutureWarning,
+                stacklevel=2,
+            )
         from scipy.spatial.distance import cdist
 
-        try:
-            err = exog - center_obs
-            vi = np.linalg.inv(err.T @ err / nobs)
-        except np.linalg.LinAlgError:
-            err = exog - exog.mean(0)
-            vi = np.linalg.inv(err.T @ err / nobs)
+        center_obs = exog.mean(0, keepdims=True)
+        err = exog - center_obs
+        vi = np.linalg.pinv(err.T @ err / nobs)
         dist = cdist(exog, center_obs, metric="mahalanobis", VI=vi)
-        idx = np.argsort(dist.ravel())
+        # Order by distance, breaking exact ties deterministically using the
+        # exog values (never endog, which would make the subset depend on the
+        # response) so that the ordering, and hence the statistic, does not
+        # depend on the input row order even when distances tie (e.g. discrete
+        # or duplicated regressors). lexsort uses the last key as primary.
+        idx = np.lexsort((*exog.T[::-1], dist.ravel()))
         endog = endog[idx]
         exog = exog[idx]
 

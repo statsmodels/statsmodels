@@ -79,6 +79,7 @@ provide a set of functions like sampling, PDF, CDF.
    StudentTCopula
    ExtremeValueCopula
    IndependenceCopula
+   rvs_kernel
 
 Distribution Extras
 -------------------

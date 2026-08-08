@@ -5290,7 +5290,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             endogenous variable when used in plot titles. Default is 24.
         auto_ylims : bool, optional
             If True, adjusts automatically the y-axis limits to ACF values.
-        bartlett_confint : bool, default True
+        bartlett_confint : bool, default False
             Confidence intervals for ACF values are generally placed at 2
             standard errors around r_k. The formula used for standard error
             depends upon the situation. If the autocorrelations are being used
