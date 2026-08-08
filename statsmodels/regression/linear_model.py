@@ -1460,19 +1460,19 @@ class GLSAR(GLS):
         return results
 
     def whiten(self, x):
-        """
+        r"""
         For an AR(p) process, the errors are modeled as
 
         .. math::
 
-            u_t = \\rho_1 u_{t-1} + \\cdots + \\rho_p u_{t-p} + \\epsilon_t,
+            u_t = \rho_1 u_{t-1} + \cdots + \rho_p u_{t-p} + \epsilon_t,
 
-        where :math:`\\epsilon_t` is white noise. The corresponding whitening
+        where :math:`\epsilon_t` is white noise. The corresponding whitening
         transformation is
 
         .. math::
 
-            \\epsilon_t = u_t - \\sum_{i=1}^{p} \\rho_i u_{t-i}.
+            \epsilon_t = u_t - \sum_{i=1}^{p} \rho_i u_{t-i}.
 
         Whitening using this method drops the initial p observations.
 
@@ -1485,7 +1485,6 @@ class GLSAR(GLS):
         -------
         ndarray
             The whitened data.
-
         """
         x = np.asarray(x, np.float64)
         _x = x.copy()
