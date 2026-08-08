@@ -1,7 +1,4 @@
-"""
-Test Results for the VAR model.  Obtained from Stata using
-datasets/macrodata/var.do
-"""
+"""Test results for the VAR model, obtained from Stata using datasets/macrodata/var.do"""
 
 import numpy as np
 

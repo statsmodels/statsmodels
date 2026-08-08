@@ -7,9 +7,9 @@ from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.stl.mstl import MSTL
 
 __all__ = [
+    "MSTL",
     "STL",
+    "DecomposeResult",
     "seasonal_decompose",
     "seasonal_mean",
-    "DecomposeResult",
-    "MSTL",
 ]

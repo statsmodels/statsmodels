@@ -1,12 +1,14 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 
 from statsmodels.discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
     ConditionalPoisson,
 )
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
 
 
@@ -41,7 +43,7 @@ def test_logit_1d():
 
 
 def test_logit_formula():
-    """Test that ConditionalLogit uses the right environment for formulas."""
+    """Test that ConditionalLogit uses the right environment for formulas"""
 
     def times_two(x):
         return 2 * x
@@ -49,7 +51,7 @@ def test_logit_formula():
     groups = np.repeat([0, 1], 50)
     exog = np.linspace(-2, 2, len(groups))
 
-    error = np.linspace(-1, 1, len(groups)) # Needed for within-group variance
+    error = np.linspace(-1, 1, len(groups))  # Needed for within-group variance
     logit_link = 1 / (1 + np.exp(exog + groups)) + error
     endog = (logit_link > 0.5).astype(int)
 
@@ -105,12 +107,12 @@ def test_formula():
 
     for j in 0, 1:
 
-        np.random.seed(34234)
+        rs = np.random.RandomState(34234)
         n = 200
-        y = np.random.randint(0, 2, size=n)
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        g = np.random.randint(0, 25, size=n)
+        y = rs.randint(0, 2, size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        g = rs.randint(0, 25, size=n)
 
         x = np.hstack((x1[:, None], x2[:, None]))
         if j == 0:
@@ -190,20 +192,20 @@ def test_poisson_2d():
 
 def test_lasso_logistic():
 
-    np.random.seed(3423948)
+    rs = np.random.RandomState(3423948)
 
     n = 200
     groups = np.arange(10)
     groups = np.kron(groups, np.ones(n // 10))
-    group_effects = np.random.normal(size=10)
+    group_effects = rs.normal(size=10)
     group_effects = np.kron(group_effects, np.ones(n // 10))
 
-    x = np.random.normal(size=(n, 4))
+    x = rs.normal(size=(n, 4))
     params = np.r_[0, 0, 1, 0]
     lin_pred = np.dot(x, params) + group_effects
 
     mean = 1 / (1 + np.exp(-lin_pred))
-    y = (np.random.uniform(size=n) < mean).astype(int)
+    y = (rs.uniform(size=n) < mean).astype(int)
 
     model0 = ConditionalLogit(y, x, groups=groups)
     result0 = model0.fit()
@@ -239,20 +241,20 @@ def test_lasso_logistic():
 
 def test_lasso_poisson():
 
-    np.random.seed(342394)
+    rs = np.random.RandomState(342394)
 
     n = 200
     groups = np.arange(10)
     groups = np.kron(groups, np.ones(n // 10))
-    group_effects = np.random.normal(size=10)
+    group_effects = rs.normal(size=10)
     group_effects = np.kron(group_effects, np.ones(n // 10))
 
-    x = np.random.normal(size=(n, 4))
+    x = rs.normal(size=(n, 4))
     params = np.r_[0, 0, 1, 0]
     lin_pred = np.dot(x, params) + group_effects
 
     mean = np.exp(lin_pred)
-    y = np.random.poisson(mean)
+    y = rs.poisson(mean)
 
     model0 = ConditionalPoisson(y, x, groups=groups)
     result0 = model0.fit()
@@ -288,11 +290,11 @@ def test_lasso_poisson():
 
 def gen_mnlogit(n):
 
-    np.random.seed(235)
+    rs = np.random.RandomState(235)
 
     g = np.kron(np.ones(5), np.arange(n // 5))
-    x1 = np.random.normal(size=n)
-    x2 = np.random.normal(size=n)
+    x1 = rs.normal(size=n)
+    x2 = rs.normal(size=n)
     xm = np.concatenate((x1[:, None], x2[:, None]), axis=1)
     pa = np.array([[0, 1, -1], [0, 2, -1]])
     lpr = np.dot(xm, pa)
@@ -300,23 +302,22 @@ def gen_mnlogit(n):
     pr /= pr.sum(1)[:, None]
     cpr = pr.cumsum(1)
     y = 2 * np.ones(n)
-    u = np.random.uniform(size=n)
+    u = rs.uniform(size=n)
     y[u < cpr[:, 2]] = 2
     y[u < cpr[:, 1]] = 1
     y[u < cpr[:, 0]] = 0
 
     df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "g": g})
-    return df
+    return df, rs
 
 
 def test_conditional_mnlogit_grad():
-
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
 
     # Compare the gradients to numeric gradients
     for _ in range(5):
-        za = np.random.normal(size=4)
+        za = rs.normal(size=4)
         grad = model.score(za)
         ngrad = approx_fprime(za, model.loglike)
         assert_allclose(grad, ngrad, rtol=1e-5, atol=1e-3)
@@ -324,9 +325,9 @@ def test_conditional_mnlogit_grad():
 
 def test_conditional_mnlogit_2d():
 
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    result = model.fit()
+    result = model.fit(generator=rs)
 
     # Regression tests
     assert_allclose(
@@ -344,11 +345,10 @@ def test_conditional_mnlogit_2d():
 
 
 def test_conditional_mnlogit_3d():
-
-    df = gen_mnlogit(90)
-    df["x3"] = np.random.normal(size=df.shape[0])
+    df, rs = gen_mnlogit(90)
+    df["x3"] = rs.normal(size=df.shape[0])
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3", groups="g", data=df)
-    result = model.fit()
+    result = model.fit(generator=rs)
 
     # Regression tests
     assert_allclose(
@@ -383,3 +383,44 @@ def test_skip_hessian():
     result_hess = model.fit(skip_hessian=False)
     assert result_no_hess.normalized_cov_params is None
     assert isinstance(result_hess.normalized_cov_params, np.ndarray)
+
+
+def _fit_conditional_logit_for_summary():
+    y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[0, 0, 1, 0, 0, 1, 0, 1, 1, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalLogit(y, x, groups=g).fit()
+
+
+def _fit_conditional_poisson_for_summary():
+    y = np.r_[3, 1, 4, 8, 2, 5, 4, 7, 2, 6]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[2, 1, 0, 0, 1, 2, 3, 2, 0, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalPoisson(y, x, groups=g).fit()
+
+
+def _fit_conditional_mnlogit_for_summary():
+    df, rs = gen_mnlogit(90)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    return model.fit(generator=rs)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_conditional_logit_for_summary,
+        _fit_conditional_poisson_for_summary,
+        _fit_conditional_mnlogit_for_summary,
+    ],
+    ids=["ConditionalLogit", "ConditionalPoisson", "ConditionalMNLogit"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

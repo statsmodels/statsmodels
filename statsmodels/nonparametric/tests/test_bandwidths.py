@@ -6,36 +6,35 @@ Author: Padarn Wilson
 """
 
 import numpy as np
-from scipy import stats
-
-from statsmodels.sandbox.nonparametric import kernels
-from statsmodels.distributions.mixture_rvs import mixture_rvs
-from statsmodels.nonparametric.bandwidths import select_bandwidth
-from statsmodels.nonparametric.bandwidths import bw_normal_reference
-
-
 from numpy.testing import assert_allclose
 import pytest
+from scipy import stats
+
+from statsmodels.distributions.mixture_rvs import mixture_rvs
+from statsmodels.nonparametric.bandwidths import bw_normal_reference, select_bandwidth
+from statsmodels.sandbox.nonparametric import kernels
 
 # setup test data
-
-np.random.seed(12345)
-Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
-                kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+RANDOM_STATE = np.random.RandomState(12345)
+Xi = mixture_rvs(
+    [0.25, 0.75],
+    size=200,
+    dist=[stats.norm, stats.norm],
+    kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
+    rng=RANDOM_STATE,
+)
 
 
 class TestBandwidthCalculation:
 
     def test_calculate_bandwidth_gaussian(self):
 
-        bw_expected = [0.29774853596742024,
-                       0.25304408155871411,
-                       0.29781147113698891]
+        bw_expected = [0.29774853596742024, 0.25304408155871411, 0.29781147113698891]
 
         kern = kernels.Gaussian()
 
         bw_calc = [0, 0, 0]
-        for ii, bw in enumerate(['scott','silverman','normal_reference']):
+        for ii, bw in enumerate(["scott", "silverman", "normal_reference"]):
             bw_calc[ii] = select_bandwidth(Xi, bw, kern)
 
         assert_allclose(bw_expected, bw_calc)
@@ -84,9 +83,8 @@ class BandwidthZero:
     def test_bandwidth_zero(self):
 
         kern = kernels.Gaussian()
-        for bw in ['scott', 'silverman', 'normal_reference']:
-            with pytest.raises(RuntimeError,
-                               match="Selected KDE bandwidth is 0"):
+        for bw in ["scott", "silverman", "normal_reference"]:
+            with pytest.raises(RuntimeError, match="Selected KDE bandwidth is 0"):
                 select_bandwidth(self.xx, bw, kern)
 
 
@@ -96,6 +94,6 @@ class TestAllBandwidthZero(BandwidthZero):
 
 
 class TestAnyBandwidthZero(BandwidthZero):
-
-    xx = np.random.normal(size=(100, 3))
+    rs = np.random.RandomState(328193821)
+    xx = rs.normal(size=(100, 3))
     xx[:, 0] = 1.0

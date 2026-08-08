@@ -7,9 +7,7 @@ from statsmodels.tsa.stattools._stattools import lagmat, pacf
 
 
 class LeybourneMcCabeStationarity:
-    """
-    Class wrapper for Leybourne-McCabe stationarity test
-    """
+    """Class wrapper for Leybourne-McCabe stationarity test"""
 
     def __init__(self):
         """
@@ -83,11 +81,11 @@ class LeybourneMcCabeStationarity:
 
         Returns
         -------
-        arparams : int
+        arparams : ndarray
             AR(1) coefficient plus constant
-        theta : int
+        theta : float
             MA(1) coefficient
-        olsfit.resid : ndarray
+        resid : ndarray
             residuals from second-stage regression
         """
         endog = np.diff(x, axis=0)
@@ -113,9 +111,9 @@ class LeybourneMcCabeStationarity:
 
     def _autolag(self, x):
         """
-        Empirical method for Leybourne-McCabe auto AR lag detection.
+        Empirical method for Leybourne-McCabe auto AR lag detection
         Set number of AR lags equal to the first PACF falling within the
-        95% confidence interval. Maximum nuber of AR lags is limited to
+        95% confidence interval. Maximum number of AR lags is limited to
         the smaller of 10 or 1/2 series length. Minimum is zero lags.
 
         Parameters
@@ -146,18 +144,25 @@ class LeybourneMcCabeStationarity:
         ----------
         x : array_like
             data series
-        arlags : int
-            number of autoregressive terms to include, default=None
+        arlags : {None, int}, optional
+            Number of autoregressive terms to include. If None, the number
+            of lags is selected using the empirical autolag procedure.
+            Default is 1.
         regression : {'c','ct'}
             Constant and trend order to include in regression
+
             * 'c'  : constant only (default)
             * 'ct' : constant and trend
+
         method : {'mle','ols'}
             Method used to estimate ARIMA(p, 1, 1) filter model
-            * 'mle' : condition sum of squares maximum likelihood
-            * 'ols' : two-stage least squares (default)
+
+            * 'mle' : conditional sum of squares maximum likelihood (default)
+            * 'ols' : two-stage least squares
+
         varest : {'var94','var99'}
             Method used for residual variance estimation
+
             * 'var94' : method used in original Leybourne-McCabe paper (1994)
                         (default)
             * 'var99' : method used in follow-up paper (1999)
@@ -176,11 +181,11 @@ class LeybourneMcCabeStationarity:
 
         Notes
         -----
-        H0 = series is stationary
+        The null, H0 is that the series is stationary.
 
         Basic process is to create a filtered series which removes the AR(p)
         effects from the series under test followed by an auxiliary regression
-        similar to that of Kwiatkowski et al (1992). The AR(p) coefficients
+        similar to that of Kwiatkowski et al. (1992). The AR(p) coefficients
         are obtained by estimating an ARIMA(p, 1, 1) model. Two methods are
         provided for ARIMA estimation: MLE and two-stage least squares.
 
@@ -192,32 +197,32 @@ class LeybourneMcCabeStationarity:
 
         An empirical autolag procedure is provided. In this context, the number
         of lags is equal to the number of AR(p) terms used in the filtering
-        step. The number of AR(p) terms is set equal to the to the first PACF
-        falling within the 95% confidence interval. Maximum nuber of AR lags is
-        limited to 1/2 series length.
+        step. The number of AR(p) terms is set equal to the first PACF
+        falling within the 95% confidence interval. Maximum number of AR lags
+        is limited to 1/2 series length.
 
         References
         ----------
         Kwiatkowski, D., Phillips, P.C.B., Schmidt, P. & Shin, Y. (1992).
         Testing the null hypothesis of stationarity against the alternative of
-        a unit root. Journal of Econometrics, 54: 159–178.
+        a unit root. Journal of Econometrics, 54: 159-178.
 
         Leybourne, S.J., & McCabe, B.P.M. (1994). A consistent test for a
-        unit root. Journal of Business and Economic Statistics, 12: 157–166.
+        unit root. Journal of Business and Economic Statistics, 12: 157-166.
 
         Leybourne, S.J., & McCabe, B.P.M. (1999). Modified stationarity tests
         with data-dependent model-selection rules. Journal of Business and
         Economic Statistics, 17: 264-270.
 
         Schwert, G W. (1987). Effects of model specification on tests for unit
-        roots in macroeconomic data. Journal of Monetary Economics, 20: 73–103.
+        roots in macroeconomic data. Journal of Monetary Economics, 20: 73-103.
         """
         if regression not in ["c", "ct"]:
-            raise ValueError("LM: regression option '%s' not understood" % regression)
+            raise ValueError(f"LM: regression option '{regression}' not understood")
         if method not in ["mle", "ols"]:
-            raise ValueError("LM: method option '%s' not understood" % method)
+            raise ValueError(f"LM: method option '{method}' not understood")
         if varest not in ["var94", "var99"]:
-            raise ValueError("LM: varest option '%s' not understood" % varest)
+            raise ValueError(f"LM: varest option '{varest}' not understood")
         x = np.asarray(x)
         if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
             raise ValueError(
@@ -229,7 +234,7 @@ class LeybourneMcCabeStationarity:
             arlags = self._autolag(x)
         elif not isinstance(arlags, int) or arlags < 0 or arlags > int(len(x) / 2):
             raise ValueError(
-                "LM: arlags must be an integer in range [0..%s]" % str(int(len(x) / 2))
+                f"LM: arlags must be an integer in range [0..{int(len(x) / 2)!s}]"
             )
         # estimate the reduced ARIMA(p, 1, 1) model
         if method == "mle":

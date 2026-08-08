@@ -47,14 +47,14 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     -----
     Since this can be a very large matrix, use np.int8 to save some space.
     """
-    x = array_like(x, 'x')
+    x = array_like(x, "x")
 
     if epsilon is not None and epsilon <= 0:
         raise ValueError("Threshold distance must be positive if specified."
-                         " Got epsilon of %f" % epsilon)
+                         f" Got epsilon of {epsilon:f}")
     if distance <= 0:
         raise ValueError("Threshold distance must be positive."
-                         " Got distance multiplier %f" % distance)
+                         f" Got distance multiplier {distance:f}")
 
     # TODO: add functionality to select epsilon optimally
     # TODO: and/or compute for a range of epsilons in [0.5*s, 2.0*s]?
@@ -69,7 +69,7 @@ def correlation_sum(indicators, embedding_dim):
     """
     Calculate a correlation sum
 
-    Useful as an estimator of a correlation integral
+    Useful as an estimator of a correlation integral.
 
     Parameters
     ----------
@@ -86,9 +86,9 @@ def correlation_sum(indicators, embedding_dim):
         matrix of joint-distance-threshold indicators
     """
     if not indicators.ndim == 2:
-        raise ValueError('Indicators must be a matrix')
+        raise ValueError("Indicators must be a matrix")
     if not indicators.shape[0] == indicators.shape[1]:
-        raise ValueError('Indicator matrix must be symmetric (square)')
+        raise ValueError("Indicator matrix must be symmetric (square)")
 
     if embedding_dim == 1:
         indicators_joint = indicators
@@ -201,12 +201,12 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     required to calculate the m-histories:
     x_t^m = (x_t, x_{t-1}, ... x_{t-(m-1)})
     """
-    x = array_like(x, 'x', ndim=1)
+    x = array_like(x, "x", ndim=1)
     nobs_full = len(x)
 
     if max_dim < 2 or max_dim >= nobs_full:
         raise ValueError("Maximum embedding dimension must be in the range"
-                         " [2,len(x)-1]. Got %d." % max_dim)
+                         f" [2,len(x)-1]. Got {max_dim:d}.")
 
     # Cache the indicators
     indicators = distance_indicators(x, epsilon, distance)

@@ -1,4 +1,4 @@
-from statsmodels.compat.pandas import PD_LT_3
+from statsmodels.compat.scipy import SP_LT_116
 
 import warnings
 
@@ -10,6 +10,10 @@ import pytest
 from statsmodels.iolib.summary2 import summary_col
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
+
+
+def _rstrip_txt(txt):
+    return "\n".join([line.rstrip() for line in txt.split("\n")])
 
 
 class TestSummaryLatex:
@@ -45,7 +49,7 @@ Standard errors in parentheses.
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
         actual = summary_col([reg1, reg2]).as_latex()
-        actual = "\n%s\n" % actual
+        actual = f"\n{actual}\n"
         assert_equal(desired, actual)
 
     def test_summarycol_float_format(self):
@@ -54,16 +58,16 @@ Standard errors in parentheses.
 ==========================
                 y I   y II
 --------------------------
-const          7.7   12.4 
+const          7.7   12.4
                (1.1) (3.2)
-x1             -0.7  -1.6 
+x1             -0.7  -1.6
                (0.2) (0.7)
-R-squared      0.8   0.6  
-R-squared Adj. 0.7   0.5  
+R-squared      0.8   0.6
+R-squared Adj. 0.7   0.5
 ==========================
 Standard errors in
 parentheses.
-"""  # noqa:W291
+"""
         x = [1, 5, 7, 3, 5]
         x = add_constant(x)
         y1 = [6, 4, 2, 7, 4]
@@ -71,14 +75,14 @@ parentheses.
         reg1 = OLS(y1, x).fit()
         reg2 = OLS(y2, x).fit()
         actual = summary_col([reg1, reg2], float_format="%0.1f").as_text()
-        actual = "%s\n" % actual
+        actual = f"{actual}\n"
 
         starred = summary_col([reg1, reg2], stars=True, float_format="%0.1f")
         assert "7.7***" in str(starred)
         assert "12.4**" in str(starred)
         assert "12.4***" not in str(starred)
 
-        assert_equal(actual, desired)
+        assert_equal(_rstrip_txt(actual), desired)
 
     def test_summarycol_drop_omitted(self):
         # gh-3702
@@ -156,7 +160,7 @@ Standard errors in parentheses.
         reg2 = OLS(y2, x).fit()
 
         actual = summary_col([reg1, reg2])._repr_latex_()
-        actual = "\n%s\n" % actual
+        actual = f"\n{actual}\n"
         assert_equal(actual, desired)
 
     def test_OLSsummary(self):
@@ -180,40 +184,40 @@ Standard errors in parentheses.
 ======================================
                model_0 model_1 model_2
 --------------------------------------
-Intercept      1.35    1.32    1.48   
-               (0.19)  (0.42)  (0.73) 
-yrs_married    -0.03   -0.02   -0.02  
-               (0.00)  (0.00)  (0.00) 
-educ           -0.03   -0.02   -0.02  
-               (0.01)  (0.02)  (0.02) 
-occupation FE          Yes     Yes    
-religious FE           Yes     Yes    
-R-squared      0.01    0.02    0.03   
-R-squared Adj. 0.01    0.02    0.02   
+Intercept      1.35    1.32    1.48
+               (0.19)  (0.42)  (0.73)
+yrs_married    -0.03   -0.02   -0.02
+               (0.00)  (0.00)  (0.00)
+educ           -0.03   -0.02   -0.02
+               (0.01)  (0.02)  (0.02)
+occupation FE          Yes     Yes
+religious FE           Yes     Yes
+R-squared      0.01    0.02    0.03
+R-squared Adj. 0.01    0.02    0.02
 ======================================
-Standard errors in parentheses."""  # noqa:W291
+Standard errors in parentheses."""
 
         desired2 = r"""
 ========================================
-                     mod0   mod1   mod2 
+                     mod0   mod1   mod2
 ----------------------------------------
-Intercept           1.35   1.32   1.48  
+Intercept           1.35   1.32   1.48
                     (0.19) (0.42) (0.73)
-yrs_married         -0.03  -0.02  -0.02 
+yrs_married         -0.03  -0.02  -0.02
                     (0.00) (0.00) (0.00)
-educ                -0.03  -0.02  -0.02 
+educ                -0.03  -0.02  -0.02
                     (0.01) (0.02) (0.02)
-C(religious)[T.2.0]        -0.46  -0.86 
+C(religious)[T.2.0]        -0.46  -0.86
                            (0.08) (0.87)
-C(religious)[T.3.0]        -0.66  -0.71 
+C(religious)[T.3.0]        -0.66  -0.71
                            (0.08) (1.13)
-C(religious)[T.4.0]        -0.91  -0.92 
+C(religious)[T.4.0]        -0.91  -0.92
                            (0.11) (1.03)
-occupation FE              Yes    Yes   
-R-squared           0.01   0.02   0.03  
-R-squared Adj.      0.01   0.02   0.02  
+occupation FE              Yes    Yes
+R-squared           0.01   0.02   0.03
+R-squared Adj.      0.01   0.02   0.02
 ========================================
-Standard errors in parentheses."""  # noqa:W291
+Standard errors in parentheses."""
 
         from statsmodels.datasets.fair import load_pandas
 
@@ -233,7 +237,7 @@ Standard errors in parentheses."""  # noqa:W291
             float_format="%0.2f",
         )
 
-        assert_equal(summary1.as_text(), desired1)
+        assert_equal(_rstrip_txt(summary1.as_text()), desired1)
 
         summary2 = summary_col(
             regressions,
@@ -242,7 +246,7 @@ Standard errors in parentheses."""  # noqa:W291
             float_format="%0.2f",
         )
 
-        assert_equal(summary2.as_text(), desired2)
+        assert_equal(_rstrip_txt(summary2.as_text()), desired2)
 
 
 def test_ols_summary_rsquared_label():
@@ -251,10 +255,10 @@ def test_ols_summary_rsquared_label():
     y = [6, 4, 2, 7, 4, 9, 10, 2]
     reg_with_constant = OLS(y, add_constant(x)).fit()
     r2_str = "R-squared:"
-    if PD_LT_3:
-        with pytest.warns(UserWarning):
+    if SP_LT_116:
+        with pytest.warns(UserWarning, match=r"(.*)kurtosistest(.*)"):
             assert r2_str in str(reg_with_constant.summary2())
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match=r"(.*)kurtosistest(.*)"):
             assert r2_str in str(reg_with_constant.summary())
     else:
         assert r2_str in str(reg_with_constant.summary2())
@@ -262,10 +266,10 @@ def test_ols_summary_rsquared_label():
 
     reg_without_constant = OLS(y, x, hasconst=False).fit()
     r2_str = "R-squared (uncentered):"
-    if PD_LT_3:
-        with pytest.warns(UserWarning):
+    if SP_LT_116:
+        with pytest.warns(UserWarning, match=r"(.*)kurtosistest(.*)"):
             assert r2_str in str(reg_without_constant.summary2())
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match=r"(.*)kurtosistest(.*)"):
             assert r2_str in str(reg_without_constant.summary())
     else:
         assert r2_str in str(reg_without_constant.summary2())

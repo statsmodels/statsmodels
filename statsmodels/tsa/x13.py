@@ -1,16 +1,13 @@
 """
-Run x12/x13-arima specs in a subprocess from Python and curry results back
-into python.
+Run x12/x13-arima specs in a subprocess and curry results back into Python
 
 Notes
 -----
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import os
+from pathlib import Path
 import re
 import subprocess
 import tempfile
@@ -26,9 +23,9 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tools.tools import Bunch
 
-__all__ = ["x13_arima_select_order", "x13_arima_analysis"]
+__all__ = ["x13_arima_analysis", "x13_arima_select_order"]
 
-_binary_names = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
+BINARY_NAMES = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
 
 
 class _freq_to_period:
@@ -45,21 +42,41 @@ _freq_to_period = _freq_to_period()
 
 _period_to_freq = {12: "M", 4: "Q"}
 _log_to_x12 = {True: "log", False: "none", None: "auto"}
-_bool_to_yes_no = lambda x: "yes" if x else "no"  # noqa:E731
+
+
+def _bool_to_yes_no(x):
+    return "yes" if x else "no"
 
 
 def _find_x12(x12path=None, prefer_x13=True):
     """
+    Locate the x12 or x13 binary
+
     If x12path is not given, then either x13as[.exe] or x12a[.exe] must
     be found on the PATH. Otherwise, the environmental variable X12PATH or
     X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
-    for. If it is false, only X12PATH is searched for.
+    for. If it is False, only X12PATH is searched for.
+
+    Parameters
+    ----------
+    x12path : str, optional
+        The path to the x12 or x13 binary, or to the directory containing
+        it. If None, the X12PATH or X13PATH environmental variable is used.
+    prefer_x13 : bool
+        If True, search for x13as (and the X13PATH environmental variable)
+        first. If False, search for x12a (and the X12PATH environmental
+        variable) first.
+
+    Returns
+    -------
+    str or bool
+        The full path to the located binary, or False if none was found.
     """
-    global _binary_names
+    _binary_names = BINARY_NAMES
     if x12path is not None and x12path.endswith(_binary_names):
         # remove binary from path if path is not a directory
-        if not os.path.isdir(x12path):
-            x12path = os.path.dirname(x12path)
+        if not Path(x12path).is_dir():
+            x12path = Path(x12path).parent
 
     if not prefer_x13:  # search for x12 first
         _binary_names = _binary_names[::-1]
@@ -73,15 +90,14 @@ def _find_x12(x12path=None, prefer_x13=True):
             x12path = os.getenv("X12PATH", "")
 
     for binary in _binary_names:
-        x12 = os.path.join(x12path, binary)
+        x12 = Path(x12path).joinpath(binary)
         try:
             subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return x12
         except OSError:
             pass
 
-    else:
-        return False
+    return False
 
 
 def _check_x12(x12path=None):
@@ -97,8 +113,21 @@ def _check_x12(x12path=None):
 
 def _clean_order(order):
     """
-    Takes something like (1 1 0)(0 1 1) and returns a arma order, sarma
-    order tuple. Also accepts (1 1 0) and return arma order and (0, 0, 0)
+    Takes something like (1 1 0)(0 1 1) and returns an arma order, sarma
+    order tuple. Also accepts (1 1 0) and returns arma order and (0, 0, 0)
+
+    Parameters
+    ----------
+    order : str
+        The regular and, optionally, seasonal ARMA order as returned by
+        X12/X13, e.g. ``"(1 1 0)(0 1 1)"`` or ``"(1 1 0)"``.
+
+    Returns
+    -------
+    order : tuple
+        The regular ARMA order.
+    sorder : tuple
+        The seasonal ARMA order. (0, 0, 0) if not given in `order`.
     """
     order = re.findall(r"\([0-9 ]*?\)", order)
 
@@ -185,18 +214,34 @@ def _make_forecast_options(forecast_periods):
     return forecast_spec
 
 
-def _check_errors(errors):
+def _check_errors(errors, rawspec_text):
     errors = errors[errors.find("spc:") + 4 :].strip()
     if errors and "ERROR" in errors:
+        if rawspec_text is not None:
+            warn("User-provided rawspec file has errors. Please check.", stacklevel=2)
         raise X13Error(errors)
     elif errors and "WARNING" in errors:
-        warn(errors, X13Warning)
+        warn(errors, X13Warning, stacklevel=2)
 
 
 def _convert_out_to_series(x, dates, name):
     """
-    Convert x to a DataFrame where x is a string in the format given by
-    x-13arima-seats output.
+    Convert x to a Series where x is a string in the format given by
+    x-13arima-seats output
+
+    Parameters
+    ----------
+    x : str
+        The tab-delimited string containing the x-13arima-seats output.
+    dates : array_like
+        The index to use for the resulting Series.
+    name : str
+        The name to give to the resulting Series.
+
+    Returns
+    -------
+    Series
+        The parsed series, indexed by `dates`.
     """
     from io import StringIO
 
@@ -208,7 +253,7 @@ def _convert_out_to_series(x, dates, name):
 
 def _open_and_read(fname):
     # opens a file, reads it, and make sure it's closed
-    with open(fname, encoding="utf-8") as fin:
+    with Path(fname).open(encoding="utf-8") as fin:
         fout = fin.read()
     return fout
 
@@ -235,32 +280,53 @@ class Spec:
 
 class SeriesSpec(Spec):
     """
+    Parameters for building a X12/X13 series spec
+
     Parameters
     ----------
-    data
+    data : array_like
+        The data to use in the spec.
+    name : str
+        The name of the series.
     appendbcst : bool
+        Whether or not to append the backcasts to the series.
     appendfcst : bool
-    comptype
-    compwt
-    decimals
-    modelspan
-    name
-    period
-    precision
-    to_print
-    to_save
-    span
-    start
-    title
-    type
+        Whether or not to append the forecasts to the series.
+    comptype : str
+        The type of composite series.
+    compwt : int
+        The weight for the composite series.
+    decimals : int
+        The number of decimals to use in the output.
+    modelspan : tuple
+        The span of the data to use for modeling.
+    period : int
+        The period of the series, 12 for monthly, 4 for quarterly.
+    precision : int
+        The precision to use in the output.
+    to_print : tuple
+        Optional list of tables to print.
+    to_save : tuple
+        Optional list of tables to save.
+    span : tuple
+        The span of the data to use.
+    start : tuple
+        The start date, as a (year, period) tuple.
+    title : str
+        The title of the series.
+    series_type : str
+        The type of the series.
+    divpower : int
+        The power of 10 by which the data are divided.
+    missingcode : int
+        The code that identifies a missing observation.
+    missingval : int
+        The value substituted for missing observations.
 
     Notes
     -----
     Rarely used arguments
 
-    divpower
-    missingcode
-    missingval
     saveprecision
     trimzero
     """
@@ -277,8 +343,8 @@ class SeriesSpec(Spec):
         modelspan=(),
         period=12,
         precision=0,
-        to_print=[],
-        to_save=[],
+        to_print=(),
+        to_save=(),
         span=(),
         start=(1, 1),
         title="",
@@ -313,7 +379,7 @@ def pandas_to_series_spec(x):
     # check_period_index(x)
     if hasattr(x, "columns"):  # convert to series
         if len(x.columns) > 1:
-            raise ValueError("Does not handle DataFrame with more than one " "column")
+            raise ValueError("Does not handle DataFrame with more than one column")
         x = x[x.columns[0]]
 
     data = "({})".format("\n".join(map(str, x.values.tolist())))
@@ -324,7 +390,7 @@ def pandas_to_series_spec(x):
     try:
         period = _freq_to_period[x.index.freqstr]
     except (AttributeError, ValueError):
-        from pandas.tseries.api import infer_freq
+        from statsmodels.compat.pandas import infer_freq
 
         period = _freq_to_period[infer_freq(x.index)]
     start_date = x.index[0]
@@ -349,7 +415,6 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_analysis(
     endog,
     maxorder=(2, 1),
@@ -364,6 +429,7 @@ def x13_arima_analysis(
     speconly=False,
     start=None,
     freq=None,
+    rawspec=None,
     print_stdout=False,
     x12path=None,
     prefer_x13=True,
@@ -371,7 +437,7 @@ def x13_arima_analysis(
     tempdir=None,
 ):
     """
-    Perform x13-arima analysis for monthly or quarterly data.
+    Perform x13-arima analysis for monthly or quarterly data
 
     Parameters
     ----------
@@ -417,8 +483,18 @@ def x13_arima_analysis(
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``endog`` does not have date information in its
+        Must be given if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
+    rawspec : str or Path
+        As this wrapper does not provide all the available parameter
+        options, users can provide a full spec file instead.
+        If valid Path, will read in contents of file, otherwise string will
+        be treated as a valid spec file. Other parameters for the spec file
+        will be IGNORED.
+        Series data and required output formats (`x11{save=(d11 d12 d13)}`)
+        are spliced into spec file before it is passed to x12/x13. Spec
+        file must not contain `series{data=()}` or `series{file="" format=""}`
+        parameters. See tests/x13_test.py for example test files.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
@@ -440,9 +516,11 @@ def x13_arima_analysis(
 
     Returns
     -------
-    Bunch
-        A bunch object containing the listed attributes.
+    X13ArimaAnalysisResult
+        An object containing the listed attributes.
 
+        - observed : pandas.Series
+          The original ``endog`` series.
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series
@@ -464,7 +542,6 @@ def x13_arima_analysis(
     -----
     This works by creating a specification file, writing it to a temporary
     directory, invoking X12/X13 in a subprocess, and reading the output
-    directory, invoking exog12/X13 in a subprocess, and reading the output
     back in.
     """
     x12path = _check_x12(x12path)
@@ -472,70 +549,137 @@ def x13_arima_analysis(
     if not isinstance(endog, (pd.DataFrame, pd.Series)):
         if start is None or freq is None:
             raise ValueError(
-                "start and freq cannot be none if endog is not " "a pandas object"
+                "start and freq cannot be none if endog is not a pandas object"
             )
         idx = pd.date_range(start=start, periods=len(endog), freq=freq)
         endog = pd.Series(endog, index=idx)
 
     spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
-    spec += f"transform{{function={_log_to_x12[log]}}}\n"
-    if outlier:
-        spec += "outlier{}\n"
-    options = _make_automdl_options(maxorder, maxdiff, diff)
-    spec += f"automdl{{{options}}}\n"
-    spec += _make_regression_options(trading, exog)
-    spec += _make_forecast_options(forecast_periods)
-    spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
+
+    if rawspec is None:
+
+        spec += f"transform{{function={_log_to_x12[log]}}}\n"
+        if outlier:
+            spec += "outlier{}\n"
+        options = _make_automdl_options(maxorder, maxdiff, diff)
+        spec += f"automdl{{{options}}}\n"
+        spec += _make_regression_options(trading, exog)
+        spec += _make_forecast_options(forecast_periods)
+        spec += "x11{ save=(d11 d12 d13) \n savelog=(fd8 m7 q)}"
+
+    # if specfile string (or path) is passed
+    else:
+
+        if any([diff, exog, start, freq]):
+
+            raise ValueError(
+                "other arguments not allowed for diff, exog, start, freq"
+                "when rawspec is specified"
+            )
+
+        rawspec_text = None
+
+        if "{" in rawspec:
+            rawspec_text = rawspec
+        else:
+            try:
+                with Path(rawspec).open() as f:
+                    rawspec_text = f.read()
+            except Exception as os_err:
+                raise ValueError(
+                    "rawspec argument provided but not valid path or spec string"
+                ) from os_err
+
+        # merge series {} properties created above into raw spec file
+        spec = re.sub(
+            r"series\s*\{\s*",
+            spec.replace("}\n", ""),
+            rawspec_text,
+            flags=re.IGNORECASE,
+        )
+        spec_outputs = re.search(
+            r"x1[123]\s?\{[^}]*save\s*=\s*\(", spec, flags=re.DOTALL | re.IGNORECASE
+        )
+        spec_x_block = re.search(r"x1[123]\s?\{", spec, flags=re.DOTALL | re.IGNORECASE)
+
+        # merge in expected types of output
+        # (d11=final seasonally adjusted series)
+        # (d12=final trend cycle)
+        # (d13=final irregular component)
+        if spec_outputs:
+            pos = spec_outputs.span()[1]
+            spec = spec[:pos] + " d11 d12 d13 " + spec[pos:]
+        elif spec_x_block:
+            pos = spec_x_block.span()[1]
+            spec = spec[:pos] + "\nsave=(d11 d12 d13)\n" + spec[pos:]
+        else:
+            spec = spec + "\nx11 {save=(d11 d12 d13)}"
+
     if speconly:
         return spec
+
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
-    ftempin = tempfile.NamedTemporaryFile(delete=False, suffix=".spc", dir=tempdir)
-    ftempout = tempfile.NamedTemporaryFile(delete=False, dir=tempdir)
-    try:
-        ftempin.write(spec.encode("utf8"))
-        ftempin.close()
-        ftempout.close()
-        # call x12 arima
-        p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
-        p.wait()
-        stdout = p.stdout.read()
-        if print_stdout:
-            print(p.stdout.read())
-        # check for errors
-        errors = _open_and_read(ftempout.name + ".err")
-        _check_errors(errors)
+    with (
+        tempfile.NamedTemporaryFile(
+            delete=False, suffix=".spc", dir=tempdir
+        ) as ftempin,
+        tempfile.NamedTemporaryFile(delete=False, dir=tempdir) as ftempout,
+    ):
+        try:
+            ftempin.write(spec.encode("utf8"))
+            ftempin.close()
+            ftempout.close()
+            # call x12 arima
+            p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
+            p.wait()
+            stdout = p.stdout.read()
+            if print_stdout:
+                print(p.stdout.read())
+            # check for errors
+            errors = _open_and_read(ftempout.name + ".err")
+            _check_errors(errors, rawspec)
 
-        # read in results
-        results = _open_and_read(ftempout.name + ".out")
-        seasadj = _open_and_read(ftempout.name + ".d11")
-        trend = _open_and_read(ftempout.name + ".d12")
-        irregular = _open_and_read(ftempout.name + ".d13")
+            # read in results
+            results = _open_and_read(ftempout.name + ".out")
+            seasadj = _open_and_read(ftempout.name + ".d11")
+            trend = _open_and_read(ftempout.name + ".d12")
+            irregular = _open_and_read(ftempout.name + ".d13")
 
-        if log_diagnostics:
-            # read f8d m7 and q diagnostics from log
-            x13_logs = _open_and_read(ftempout.name + ".log")
-            x13_diagnostic = {
-                "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
-                "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1))
-            }
-        else:
-            x13_diagnostic = {"F-D8": "Log diagnostics not retrieved.",
-                              "M07": "Log diagnostics not retrieved.",
-                              "Q": "Log diagnostics not retrieved."}
+            if log_diagnostics:
+                # read f8d m7 and q diagnostics from log
+                x13_logs = _open_and_read(ftempout.name + ".log")
+                x13_diagnostic = {
+                    "F-D8": float(re.search(r"D8 table\s*:\s*([\d.]+)", x13_logs).group(1)),
+                    "M07": float(re.search(r"M07\s*:\s*([\d.]+)", x13_logs).group(1)),
+                    "Q": float(re.search(r"Q\s*:\s*([\d.]+)", x13_logs).group(1)),
+                }
+            else:
+                x13_diagnostic = {
+                    "F-D8": "Log diagnostics not retrieved.",
+                    "M07": "Log diagnostics not retrieved.",
+                    "Q": "Log diagnostics not retrieved.",
+                }
 
-    finally:
-        try:  # sometimes this gives a permission denied error?
-            #   not sure why. no process should have these open
-            os.remove(ftempin.name)
-            os.remove(ftempout.name)
-        except OSError:
-            if os.path.exists(ftempin.name):
-                warn(f"Failed to delete resource {ftempin.name}", IOWarning)
-            if os.path.exists(ftempout.name):
-                warn(f"Failed to delete resource {ftempout.name}", IOWarning)
+        finally:
+            try:  # sometimes this gives a permission denied error?
+                #   not sure why. no process should have these open
+                Path(ftempin.name).unlink()
+                Path(ftempout.name).unlink()
+            except OSError:
+                if Path(ftempin.name).exists():
+                    warn(
+                        f"Failed to delete resource {ftempin.name}",
+                        IOWarning,
+                        stacklevel=2
+                    )
+                if Path(ftempout.name).exists():
+                    warn(
+                        f"Failed to delete resource {ftempout.name}",
+                        IOWarning,
+                        stacklevel=2
+                    )
 
     seasadj = _convert_out_to_series(seasadj, endog.index, "seasadj")
     trend = _convert_out_to_series(trend, endog.index, "trend")
@@ -567,7 +711,6 @@ def x13_arima_analysis(
     return res
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_select_order(
     endog,
     maxorder=(2, 1),
@@ -586,7 +729,7 @@ def x13_arima_select_order(
     tempdir=None,
 ):
     """
-    Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA.
+    Perform automatic seasonal ARIMA order identification using x12/x13 ARIMA
 
     Parameters
     ----------
@@ -626,7 +769,7 @@ def x13_arima_select_order(
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
-        Must be givein if ``endog`` does not have date information in its
+        Must be given if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this

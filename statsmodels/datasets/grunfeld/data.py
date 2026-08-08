@@ -3,11 +3,11 @@ import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """This is the Grunfeld (1950) Investment Data.
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """This is the Grunfeld (1950) Investment Data.
 
 The source for the data was the original 11-firm data set from Grunfeld's Ph.D.
 thesis recreated by Kleiber and Zeileis (2008) "The Grunfeld Data at 50".
@@ -18,11 +18,11 @@ For a note on the many versions of the Grunfeld data circulating see:
 http://www.stanford.edu/~clint/bench/grunfeld.htm
 """
 
-DESCRSHORT  = """Grunfeld (1950) Investment Data for 11 U.S. Firms."""
+DESCRSHORT = """Grunfeld (1950) Investment Data for 11 U.S. Firms."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 220 (20 years for 11 firms)
 
@@ -42,6 +42,7 @@ NOTE        = """::
     string categorical variable.
 """
 
+
 def load():
     """
     Loads the Grunfeld data and returns a Dataset class.
@@ -57,6 +58,7 @@ def load():
     firm (ie., there is no reference dummy)
     """
     return load_pandas()
+
 
 def load_pandas():
     """
@@ -81,5 +83,5 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'grunfeld.csv')
+    data = du.load_csv(__file__, "grunfeld.csv")
     return data

@@ -39,8 +39,6 @@ class TestDistDependenceMeasures:
         $dVarY
         [1] 48.46151
         """
-        np.random.seed(3)
-
         cls.x = np.array(range(1, 101)).reshape((20, 5))
         cls.y = cls.x + np.log(cls.x)
 
@@ -59,25 +57,30 @@ class TestDistDependenceMeasures:
         cls.pval_asym_exp = 0.00452
 
     def test_input_validation_nobs(self):
+        rs = np.random.RandomState(34784729)
         with pytest.raises(ValueError, match="same number of observations"):
-            ddm.distance_covariance_test(self.x[:2, :], self.y)
+            ddm.distance_covariance_test(self.x[:2, :], self.y, rng=rs)
 
     def test_input_validation_unknown_method(self):
+        rs = np.random.RandomState(34784729)
         with pytest.raises(ValueError, match="Unknown 'method' parameter"):
-            ddm.distance_covariance_test(self.x, self.y, method="wrong_name")
+            ddm.distance_covariance_test(self.x, self.y, method="wrong_name", rng=rs)
 
     def test_statistic_value_asym_method(self):
+        rs = np.random.RandomState(34784729)
         statistic, pval, method = ddm.distance_covariance_test(
-            self.x, self.y, method="asym")
+            self.x, self.y, method="asym", rng=rs
+        )
 
         assert method == "asym"
         assert_almost_equal(statistic, self.test_stat_asym_exp, 4)
         assert_almost_equal(pval, self.pval_asym_exp, 3)
 
     def test_statistic_value_emp_method(self):
+        rs = np.random.RandomState(34784729)
         with pytest.warns(HypothesisTestWarning):
             statistic, pval, method = ddm.distance_covariance_test(
-                self.x, self.y, method="emp"
+                self.x, self.y, method="emp", rng=rs
             )
 
         assert method == "emp"
@@ -86,18 +89,18 @@ class TestDistDependenceMeasures:
         assert_almost_equal(pval, self.pval_emp_exp, 3)
 
     def test_fallback_to_asym_method(self):
+        rs = np.random.RandomState(34784727)
         match_text = "The asymptotic approximation will be used"
         with pytest.warns(UserWarning, match=match_text):
             statistic, pval, _ = ddm.distance_covariance_test(
-                self.x, self.y, method="emp", B=200
+                self.x, self.y, method="emp", B=200, rng=rs
             )
-            assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
-            assert_almost_equal(pval, self.pval_asym_exp, 3)
+        assert_almost_equal(statistic, self.test_stat_emp_exp, 0)
+        assert_almost_equal(pval, self.pval_asym_exp, 3)
 
     def test_statistics_for_2d_input(self):
         stats = ddm.distance_statistics(
-            np.asarray(self.x, dtype=float),
-            np.asarray(self.y, dtype=float)
+            np.asarray(self.x, dtype=float), np.asarray(self.y, dtype=float)
         )
 
         assert_almost_equal(stats.test_statistic, self.test_stat_emp_exp, 0)
@@ -139,10 +142,11 @@ class TestDistDependenceMeasures:
              dCov
         0.1025087
         """
+        rs = np.random.RandomState(34784725)
         try:
             iris = get_rdataset("iris").data.values[:, :4]
         except IGNORED_EXCEPTIONS:
-            pytest.skip('Failed with HTTPError or URLError, these are random')
+            pytest.skip("Failed with HTTPError or URLError, these are random")
 
         x = np.asarray(iris[:50], dtype=float)
         y = np.asarray(iris[50:100], dtype=float)
@@ -156,7 +160,7 @@ class TestDistDependenceMeasures:
         assert_almost_equal(stats.dvar_y, 0.4135274, 4)
         assert_almost_equal(stats.S, 0.667456, 4)
 
-        test_statistic, _, method = ddm.distance_covariance_test(x, y, B=199)
+        test_statistic, _, method = ddm.distance_covariance_test(x, y, B=199, rng=rs)
 
         assert_almost_equal(test_statistic, 0.5254, 4)
         assert method == "emp"
@@ -179,10 +183,11 @@ class TestDistDependenceMeasures:
             dCov
         30.01526
         """
+        rs = np.random.RandomState(34784723)
         try:
             quakes = get_rdataset("quakes").data.values[:, :3]
         except IGNORED_EXCEPTIONS:
-            pytest.skip('Failed with HTTPError or URLError, these are random')
+            pytest.skip("Failed with HTTPError or URLError, these are random")
 
         x = np.asarray(quakes[:50], dtype=float)
         y = np.asarray(quakes[50:100], dtype=float)
@@ -196,19 +201,16 @@ class TestDistDependenceMeasures:
         assert_almost_equal(stats.dvar_y, 147.5545, 4)
         assert_almost_equal(stats.S, 52265, 0)
 
-        test_statistic, _, method = ddm.distance_covariance_test(x, y, B=199)
+        test_statistic, _, method = ddm.distance_covariance_test(x, y, B=199, rng=rs)
 
         assert_almost_equal(np.round(test_statistic), 45046, 0)
         assert method == "emp"
 
     def test_dcor(self):
-        assert_almost_equal(ddm.distance_correlation(self.x, self.y),
-                            self.dcor_exp, 4)
+        assert_almost_equal(ddm.distance_correlation(self.x, self.y), self.dcor_exp, 4)
 
     def test_dcov(self):
-        assert_almost_equal(ddm.distance_covariance(self.x, self.y),
-                            self.dcov_exp, 4)
+        assert_almost_equal(ddm.distance_covariance(self.x, self.y), self.dcov_exp, 4)
 
     def test_dvar(self):
-        assert_almost_equal(ddm.distance_variance(self.x),
-                            self.dvar_x_exp, 4)
+        assert_almost_equal(ddm.distance_variance(self.x), self.dvar_x_exp, 4)

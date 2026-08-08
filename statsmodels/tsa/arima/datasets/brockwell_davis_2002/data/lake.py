@@ -1,5 +1,5 @@
 """
-Lake level of Lake Huron in feet (reduced by 570), 1875--1972.
+Lake level of Lake Huron in feet (reduced by 570), 1875--1972
 
 Dataset described in [1]_ and included as a part of the ITSM2000 software [2]_.
 Downloaded on April 22, 2019 from:
@@ -24,4 +24,4 @@ lake = pd.Series([
     9.38, 9.1, 7.95, 8.12, 9.75, 10.85, 10.41, 9.96, 9.61, 8.76, 8.18, 7.21,
     7.13, 9.1, 8.25, 7.91, 6.89, 5.96, 6.8, 7.68, 8.38, 8.52, 9.74, 9.31,
     9.89, 9.96],
-    index=pd.period_range(start='1875', end='1972', freq='Y').to_timestamp())
+    index=pd.period_range(start="1875", end="1972", freq="Y").to_timestamp())

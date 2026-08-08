@@ -1,4 +1,5 @@
-"""Parallel utility function using joblib
+"""
+Parallel utility function using joblib
 
 copied from https://github.com/mne-tools/mne-python
 
@@ -10,12 +11,15 @@ changes for statsmodels (Josef Perktold)
 
 """
 
-from statsmodels.tools.sm_exceptions import (ModuleUnavailableWarning,
-                                             module_unavailable_doc)
+from statsmodels.tools.sm_exceptions import (
+    ModuleUnavailableWarning,
+    module_unavailable_doc,
+)
 
 
 def parallel_func(func, n_jobs, verbose=5):
-    """Return parallel instance with delayed function
+    """
+    Return parallel instance with delayed function
 
     Util function to use joblib only if available
 
@@ -44,6 +48,7 @@ def parallel_func(func, n_jobs, verbose=5):
     >>> parallel, p_func, n_jobs = parallel_func(sqrt, n_jobs=-1, verbose=0)
     >>> print(n_jobs)
     >>> parallel(p_func(i**2) for i in range(10))
+
     """
     try:
         try:
@@ -57,17 +62,26 @@ def parallel_func(func, n_jobs, verbose=5):
         if n_jobs == -1:
             try:
                 import multiprocessing
+
                 n_jobs = multiprocessing.cpu_count()
             except (ImportError, NotImplementedError):
                 import warnings
-                warnings.warn(module_unavailable_doc.format('multiprocessing'),
-                              ModuleUnavailableWarning)
+
+                warnings.warn(
+                    module_unavailable_doc.format("multiprocessing"),
+                    ModuleUnavailableWarning,
+                    stacklevel=2,
+                )
                 n_jobs = 1
 
     except ImportError:
         import warnings
-        warnings.warn(module_unavailable_doc.format('joblib'),
-                      ModuleUnavailableWarning)
+
+        warnings.warn(
+            module_unavailable_doc.format("joblib"),
+            ModuleUnavailableWarning,
+            stacklevel=2,
+        )
         n_jobs = 1
         my_func = func
         parallel = list

@@ -24,8 +24,8 @@ main changes
 * added separate example and tests (2010-05-09)
 * collect transformation function into classes
 
-Example
--------
+Examples
+--------
 
 >>> logtg = Transf_gen(stats.t, np.exp, np.log,
                 numargs = 1, a=0, name = 'lnnorm',
@@ -61,14 +61,9 @@ from statsmodels.stats.moment_helpers import mc2mvsk, mvsk2mc
 try:
     from scipy.stats._mvn import mvndst
 except ImportError:
-    try:
-        # Must be using SciPy <1.8.0 where this function was moved (it's not a
-        # public SciPy function, but we need it here)
-        from scipy.stats.mvn import mvndst
-    except ImportError:
 
-        def mvndst(*args, **kwargs):
-            raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
+    def mvndst(*args, **kwargs):
+        raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
 
 
 # note copied from distr_skewnorm_0.py
@@ -178,12 +173,12 @@ class ACSkewT_gen(distributions.rv_continuous):
     # """                               )
 
     def _argcheck(self, df, alpha):
-        return (alpha == alpha) * (df > 0)
+        return ~np.isnan(alpha) * (df > 0)
 
-    ##    def _arg_check(self, alpha):
-    ##        return np.where(alpha>=0, 0, 1)
-    ##    def _argcheck(self, alpha):
-    ##        return np.where(alpha>=0, 1, 0)
+    #    def _arg_check(self, alpha):
+    #        return np.where(alpha>=0, 0, 1)
+    #    def _argcheck(self, alpha):
+    #        return np.where(alpha>=0, 1, 0)
 
     def _rvs(self, df, alpha):
         # see http://azzalini.stat.unipd.it/SN/faq.html
@@ -206,43 +201,43 @@ class ACSkewT_gen(distributions.rv_continuous):
         )
 
 
-##
-##def mvsk2cm(*args):
-##    mu,sig,sk,kur = args
-##    # Get central moments
-##    cnt = [None]*4
-##    cnt[0] = mu
-##    cnt[1] = sig #*sig
-##    cnt[2] = sk * sig**1.5
-##    cnt[3] = (kur+3.0) * sig**2.0
-##    return cnt
-##
-##
-##def mvsk2m(args):
-##    mc, mc2, skew, kurt = args#= self._stats(*args,**mdict)
-##    mnc = mc
-##    mnc2 = mc2 + mc*mc
-##    mc3  = skew*(mc2**1.5) # 3rd central moment
-##    mnc3 = mc3+3*mc*mc2+mc**3 # 3rd non-central moment
-##    mc4  = (kurt+3.0)*(mc2**2.0) # 4th central moment
-##    mnc4 = mc4+4*mc*mc3+6*mc*mc*mc2+mc**4
-##    return (mc, mc2, mc3, mc4), (mnc, mnc2, mnc3, mnc4)
-##
-##def mc2mvsk(args):
-##    mc, mc2, mc3, mc4 = args
-##    skew = mc3 / mc2**1.5
-##    kurt = mc4 / mc2**2.0 - 3.0
-##    return (mc, mc2, skew, kurt)
-##
-##def m2mc(args):
-##    mnc, mnc2, mnc3, mnc4 = args
-##    mc = mnc
-##    mc2 = mnc2 - mnc*mnc
-##    #mc3  = skew*(mc2**1.5) # 3rd central moment
-##    mc3 = mnc3 - (3*mc*mc2+mc**3) # 3rd central moment
-##    #mc4  = (kurt+3.0)*(mc2**2.0) # 4th central moment
-##    mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
-##    return (mc, mc2, mc3, mc4)
+#
+# def mvsk2cm(*args):
+#    mu,sig,sk,kur = args
+#    # Get central moments
+#    cnt = [None]*4
+#    cnt[0] = mu
+#    cnt[1] = sig #*sig
+#    cnt[2] = sk * sig**1.5
+#    cnt[3] = (kur+3.0) * sig**2.0
+#    return cnt
+#
+#
+# def mvsk2m(args):
+#    mc, mc2, skew, kurt = args#= self._stats(*args,**mdict)
+#    mnc = mc
+#    mnc2 = mc2 + mc*mc
+#    mc3  = skew*(mc2**1.5) # 3rd central moment
+#    mnc3 = mc3+3*mc*mc2+mc**3 # 3rd non-central moment
+#    mc4  = (kurt+3.0)*(mc2**2.0) # 4th central moment
+#    mnc4 = mc4+4*mc*mc3+6*mc*mc*mc2+mc**4
+#    return (mc, mc2, mc3, mc4), (mnc, mnc2, mnc3, mnc4)
+#
+# def mc2mvsk(args):
+#    mc, mc2, mc3, mc4 = args
+#    skew = mc3 / mc2**1.5
+#    kurt = mc4 / mc2**2.0 - 3.0
+#    return (mc, mc2, skew, kurt)
+#
+# def m2mc(args):
+#    mnc, mnc2, mnc3, mnc4 = args
+#    mc = mnc
+#    mc2 = mnc2 - mnc*mnc
+#    # mc3  = skew*(mc2**1.5) # 3rd central moment
+#    mc3 = mnc3 - (3*mc*mc2+mc**3) # 3rd central moment
+#    # mc4  = (kurt+3.0)*(mc2**2.0) # 4th central moment
+#    mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
+#    return (mc, mc2, mc3, mc4)
 
 
 def _hermnorm(N):
@@ -269,7 +264,7 @@ def pdf_moments_st(cnt):
     N = len(cnt)
     if N < 2:
         raise ValueError(
-            "At least two moments must be given to " "approximate the pdf."
+            "At least two moments must be given to approximate the pdf."
         )
 
     totp = poly1d(1)
@@ -342,7 +337,7 @@ def pdf_mvsk(mvsk):
     """
     N = len(mvsk)
     if N < 4:
-        raise ValueError("Four moments must be given to " "approximate the pdf.")
+        raise ValueError("Four moments must be given to approximate the pdf.")
 
     mu, mc2, skew, kurt = mvsk
 
@@ -392,7 +387,7 @@ def pdf_moments(cnt):
     N = len(cnt)
     if N < 2:
         raise ValueError(
-            "At least two moments must be given to " "approximate the pdf."
+            "At least two moments must be given to approximate the pdf."
         )
 
     mc, mc2, mc3, mc4 = cnt
@@ -404,21 +399,21 @@ def pdf_moments(cnt):
     mu = cnt[0]
     if N > 2:
         Dvals = _hermnorm(N + 1)
-        ##    for k in range(3,N+1):
-        ##        # Find Ck
-        ##        Ck = 0.0
-        ##        for n in range((k-3)/2):
-        ##            m = k-2*n
-        ##            if m % 2: # m is odd
-        ##                momdiff = cnt[m-1]
-        ##            else:
-        ##                momdiff = cnt[m-1] - sig*sig*scipy.factorial2(m-1)
-        ##            Ck += Dvals[k][m] / sig**m * momdiff
-        ##        # Add to totp
-        ##        raise
-        ##        print Dvals
-        ##        print Ck
-        ##        totp = totp +  Ck*Dvals[k]
+        #    for k in range(3,N+1):
+        #        # Find Ck
+        #        Ck = 0.0
+        #        for n in range((k-3)/2):
+        #            m = k-2*n
+        #            if m % 2: # m is odd
+        #                momdiff = cnt[m-1]
+        #            else:
+        #                momdiff = cnt[m-1] - sig*sig*scipy.factorial2(m-1)
+        #            Ck += Dvals[k][m] / sig**m * momdiff
+        #        # Add to totp
+        #        raise
+        #        print Dvals
+        #        print Ck
+        #        totp = totp +  Ck*Dvals[k]
         C3 = skew / 6.0
         C4 = kurt / 24.0
         totp = totp - C3 * Dvals[3] + C4 * Dvals[4]
@@ -493,7 +488,7 @@ class NormExpan_gen(distributions.rv_continuous):
         return self.mvsk
 
 
-## copied from nonlinear_transform_gen.py
+# copied from nonlinear_transform_gen.py
 
 """ A class for the distribution of a non-linear monotonic transformation of a continuous random variable
 
@@ -635,7 +630,7 @@ lognormalg = Transf_gen(
 
 loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp, numargs=1)
 
-## copied form nonlinear_transform_short.py
+# copied form nonlinear_transform_short.py
 
 """univariate distribution of a non-linear monotonic transformation of a
 random variable
@@ -666,7 +661,6 @@ class ExpTransf_gen(distributions.rv_continuous):
         self.kls = kls
 
     def _cdf(self, x, *args):
-        pass
         # print args
         return self.kls.cdf(np.log(x), *args)
 
@@ -708,7 +702,7 @@ class LogTransf_gen(distributions.rv_continuous):
         return np.log(self.kls._ppf(q, *args))
 
 
-## copied from transformtwo.py
+# copied from transformtwo.py
 
 """
 Created on Apr 28, 2009
@@ -773,7 +767,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         derivplus,
         derivminus,
         *args,
-        **kwargs
+        **kwargs,
     ):
         # print args
         # print kwargs
@@ -1164,8 +1158,8 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     something wrong completion with ERROR > EPS and MAXPTS function values used;
                         increase MAXPTS to decrease ERROR; 1.048330348e-006
     0.166666546218
-    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr, \
-                            maxpts=100000, abseps=1e-8))
+    >>> print(mvstdnormcdf([-np.inf,-np.inf,-100.0],[0.0,0.0,0.0], corr,
+    ...     maxpts=100000, abseps=1e-8))
     0.166666588293
 
     """
@@ -1210,9 +1204,9 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     # this has to be last
     np.putmask(infin, lowinf * uppinf, -1)
 
-    ##    #remove infs
-    ##    np.putmask(lower,lowinf,-100)# infin.putmask(0,lowinf)
-    ##    np.putmask(upper,uppinf,100) #infin.putmask(1,uppinf)
+    #    # remove infs
+    #    np.putmask(lower,lowinf,-100)# infin.putmask(0,lowinf)
+    #    np.putmask(upper,uppinf,100) # infin.putmask(1,uppinf)
 
     # print lower,',',upper,',',infin,',',correl
     # print correl.shape
@@ -1235,7 +1229,7 @@ def mvnormcdf(upper, mu, cov, lower=None, **kwds):
        lower and upper integration limits with length equal to the number
        of dimensions of the multivariate normal distribution. It can contain
        -np.inf or np.inf for open integration intervals
-    mu : array_lik, 1d
+    mu : array_like, 1d
        list or array of means
     cov : array_like, 2d
        specifies covariance matrix

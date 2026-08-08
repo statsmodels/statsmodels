@@ -1,12 +1,12 @@
-import pytest
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.robust import norms
-from statsmodels.tools.numdiff import (
+from statsmodels.tools.numdiff import (  # _approx_fprime_cs_scalar,  # not yet
     _approx_fprime_scalar,
-    # _approx_fprime_cs_scalar,  # not yet
-    )
+)
+
 from .results import results_norms as res_r
 
 cases = [
@@ -35,7 +35,7 @@ dtypes = ["int", np.float64, np.complex128]
 @pytest.mark.parametrize("case", cases)
 def test_norm(case, dtype):
     ncls, args, res = case
-    if ncls in [norms.HuberT] and dtype == np.complex128:
+    if ncls == norms.HuberT and dtype == np.complex128:
         # skip for now
         return
 

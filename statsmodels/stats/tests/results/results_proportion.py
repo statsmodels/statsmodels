@@ -1,4 +1,5 @@
 """
+Results for proportion tests
 
 Created on Fri Mar 01 14:48:59 2013
 
@@ -6,6 +7,7 @@ Author: Josef Perktold
 """
 
 import collections
+
 import numpy as np
 
 from statsmodels.tools.testing import Holder

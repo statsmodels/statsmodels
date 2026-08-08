@@ -1,7 +1,7 @@
 *.py[oc]
-# setup.py working directory
+# setup working directory
 build
-# setup.py dist directory
+# setup dist directory
 dist
 #docs build and others
 #generated  #not yet? generated for dataset not rebuild
@@ -15,6 +15,10 @@ docs/source/datasets/statsmodels.datasets.*
 docs/source/savefig
 docs/gettingstarted_0.png
 examples/executed
+# Data downloaded for notebooks, not needed for source distribution
+examples/notebooks/*.dta
+examples/notebooks/*.table
+examples/notebooks/*.csv
 
 #setuptools-scm generated version file
 statsmodels/_version.py
@@ -111,3 +115,6 @@ statsmodels/LICENSE.txt
 
 # Dataset downloads
 statsmodels/datasets/tests/*.zip
+
+# Pytest data
+test-data.xml

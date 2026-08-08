@@ -3,12 +3,12 @@ from packaging.version import Version, parse
 import scipy
 
 SP_VERSION = parse(scipy.__version__)
-SP_LT_15 = SP_VERSION < Version("1.4.99")
-SCIPY_GT_14 = not SP_LT_15
-SP_LT_16 = SP_VERSION < Version("1.5.99")
-SP_LT_17 = SP_VERSION < Version("1.6.99")
 SP_LT_19 = SP_VERSION < Version("1.8.99")
+SP_LT_115 = SP_VERSION < Version("1.14.99")
 SP_LT_116 = SP_VERSION < Version("1.15.99")
+SP_LT_118 = SP_VERSION < Version("1.17.99")
+SP_LT_2 = SP_VERSION < Version("1.99.99")
+BASINHOPPING_RNG = "seed" if SP_LT_115 else "rng"
 
 
 def _next_regular(target):
@@ -46,13 +46,13 @@ def _next_regular(target):
             p35 *= 3
             if p35 == target:
                 return p35
-        if p35 < match:
-            match = p35
+        # if p35 < match: match = p35
+        match = min(p35, match)
         p5 *= 5
         if p5 == target:
             return p5
-    if p5 < match:
-        match = p5
+    #  if p5 < match: match = p5
+    match = min(match, p5)
     return match
 
 
@@ -65,13 +65,6 @@ def _valarray(shape, value=np.nan, typecode=None):
     if not isinstance(out, np.ndarray):
         out = np.asarray(out)
     return out
-
-
-if SP_LT_16:
-    # copied from scipy, added to scipy in 1.6.0
-    from ._scipy_multivariate_t import multivariate_t  # noqa: F401
-else:
-    from scipy.stats import multivariate_t  # noqa: F401
 
 
 def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
@@ -125,10 +118,26 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
 
     """
     try:
-        import scipy._lib.array_api_extra as xpx
+        try:
+            # From scipy >= 1.18.0
+            import scipy._external.array_api_extra as xpx
+        except (ImportError, AttributeError):
+            import scipy._lib.array_api_extra as xpx
 
         return xpx.apply_where(cond, args, f1, f2, fill_value=fill_value)
     except (ImportError, AttributeError):
         from scipy._lib._util import _lazywhere
 
         return _lazywhere(cond, args, f1, fill_value, f2)
+
+
+__all__ = [
+    "BASINHOPPING_RNG",
+    "SP_LT_2",
+    "SP_LT_19",
+    "SP_LT_115",
+    "SP_LT_116",
+    "SP_LT_118",
+    "SP_VERSION",
+    "apply_where",
+]
