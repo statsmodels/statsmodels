@@ -1576,7 +1576,8 @@ def ccf(
     x, y : array_like
         The time series data to use in the calculation.
     adjusted : bool
-        If True, then denominators for cross-correlation are n-k, otherwise n.
+        If True, then denominators for cross-covariance are the number of
+        overlapping observations at each lag k, min(m, n-k), otherwise n.
     fft : bool, default True
         If True, use FFT convolution.  This method should be preferred
         for long time series.

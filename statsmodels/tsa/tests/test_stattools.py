@@ -1809,7 +1809,8 @@ def test_ccovf_different_lengths_known_lag():
     assert np.argmax(result[:50]) == 5
 
 
-def test_ccovf_adjusted_shorter_y():
+@pytest.mark.parametrize("fft", [True, False])
+def test_ccovf_adjusted_shorter_y(fft):
     # GH#9565 follow-up: with len(y) < len(x), adjusted=True must divide by
     # the number of overlapping observations, min(len(y), len(x) - k), not
     # by len(x) - k.
@@ -1817,12 +1818,12 @@ def test_ccovf_adjusted_shorter_y():
     y = np.ones(2)
 
     # Every product is exactly 1.0, so every adjusted average must be 1.0.
-    result = ccovf(x, y, adjusted=True, demean=False)
+    result = ccovf(x, y, adjusted=True, demean=False, fft=fft)
     assert_allclose(result, np.ones(6))
 
     # The unadjusted path divides by len(x) throughout, by definition, so the
     # overlap counts min(2, 6 - k) show through unscaled.
-    unadjusted = ccovf(x, y, adjusted=False, demean=False)
+    unadjusted = ccovf(x, y, adjusted=False, demean=False, fft=fft)
     assert_allclose(unadjusted, np.array([2, 2, 2, 2, 2, 1]) / 6)
 
 
