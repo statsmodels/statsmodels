@@ -217,7 +217,8 @@ def seasonal_decompose(
         warnings.warn(
             "`extrapolate_trend='freq'` is deprecated and will be "
             "removed in 0.16, use `extrapolate_trend='period'` instead.",
-            FutureWarning
+            FutureWarning,
+            stacklevel=2,
         )
         extrapolate_trend = "period"
 
