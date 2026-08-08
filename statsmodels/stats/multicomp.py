@@ -33,10 +33,24 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
     -------
     results : TukeyHSDResults instance
         A results class containing relevant data and some post-hoc
-        calculations, including adjusted p-value
+        calculations, including adjusted p-value.
+
+    See Also
+    --------
+    MultiComparison
+    tukeyhsd
+    statsmodels.sandbox.stats.multicomp.TukeyHSDResults
 
     Notes
     -----
+    The results include the following attributes and methods:
+
+    * ``reject`` is a boolean array indicating whether each comparison is
+      statistically significant.
+    * ``pvalues`` contains the adjusted p-values for each comparison.
+    * ``summary()`` returns a printable table that includes the reject column.
+    * ``summary_frame()`` returns a DataFrame with the comparison results.
+
     This is just a wrapper around tukeyhsd method of MultiComparison.
     Tukey-hsd is not robust to heteroscedasticity, i.e. variance differ across
     groups, especially if group sizes also vary. In those cases, the actual
@@ -50,11 +64,20 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
 
         The `use_var` keyword and option for Games-Howell test.
 
-    See Also
+    Examples
     --------
-    MultiComparison
-    tukeyhsd
-    statsmodels.sandbox.stats.multicomp.TukeyHSDResults
+    The reject decisions and adjusted p-values can be accessed directly from
+    the results instance.
+
+    >>> import numpy as np
+    >>> endog = np.array([1, 2, 3, 4, 5, 6])
+    >>> groups = np.array(["a", "a", "b", "b", "c", "c"])
+    >>> res = pairwise_tukeyhsd(endog, groups)
+    >>> res.reject
+    array([False,  True, False])
+    >>> res.pvalues.round(3)
+    array([0.129, 0.022, 0.129])
+
     """
 
     return MultiComparison(endog, groups).tukeyhsd(alpha=alpha,
