@@ -123,7 +123,6 @@ dev = [
 polars = [
     # Polars support
     "polars>=1.0.0",
-    "narwhals>=1.0",
 ]
 
 [project.urls]
