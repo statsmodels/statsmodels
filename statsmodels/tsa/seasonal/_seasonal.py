@@ -144,6 +144,8 @@ def seasonal_decompose(
         Christiano-Fitzgerald asymmetric, random walk filter.
     statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
+    statsmodels.tsa.filters.hamilton_filter.hamilton_filter
+        Hanilton's autoregression-based filter.
     statsmodels.tsa.filters.convolution_filter
         Linear filtering via convolution.
     statsmodels.tsa.seasonal.STL
@@ -214,11 +216,12 @@ def seasonal_decompose(
     if extrapolate_trend == "freq":
         warnings.warn(
             "`extrapolate_trend='freq'` is deprecated and will be "
-            "removed in 0.16, use `extrapolate_trend='freq'` instead.",
+            "removed in 0.16, use `extrapolate_trend='period'` instead.",
             FutureWarning
         )
+        extrapolate_trend = "period"
 
-    if extrapolate_trend in ("freq", "period"):
+    if extrapolate_trend == "period":
         extrapolate_trend = period - 1
 
     if extrapolate_trend > 0:
