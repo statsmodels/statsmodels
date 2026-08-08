@@ -25,12 +25,12 @@ class TestPolarsDirectConstructor:
     def setup_class(cls):
         """Create test data in both pandas and Polars formats."""
         cls.n = 50
-        np.random.seed(42)
+        rs = np.random.default_rng(42)
 
         # Create pandas versions
-        cls.pandas_y = np.random.randn(cls.n)
+        cls.pandas_y = rs.randn(cls.n)
         cls.pandas_X = np.column_stack(
-            [np.ones(cls.n), np.random.randn(cls.n), np.random.randn(cls.n)]
+            [np.ones(cls.n), rs.randn(cls.n), rs.randn(cls.n)]
         )
 
         # Create Polars versions
@@ -135,10 +135,10 @@ class TestPolarsFormulaAPI:
     def setup_class(cls):
         """Create test data."""
         cls.n = 50
-        np.random.seed(123)
-        cls.y = np.random.randn(cls.n)
-        cls.x1 = np.random.randn(cls.n)
-        cls.x2 = np.random.randn(cls.n)
+        rg = np.random.default_rng(123)
+        cls.y = rg.randn(cls.n)
+        cls.x1 = rg.randn(cls.n)
+        cls.x2 = rg.randn(cls.n)
 
         cls.pandas_df = pd.DataFrame({"y": cls.y, "x1": cls.x1, "x2": cls.x2})
         cls.polars_df = pl.DataFrame(
@@ -184,10 +184,10 @@ class TestPolarsOutputMetadata:
     def setup_class(cls):
         """Create test data with named columns."""
         cls.n = 30
-        np.random.seed(456)
-        cls.y = np.random.randn(cls.n)
-        cls.x1 = np.random.randn(cls.n)
-        cls.x2 = np.random.randn(cls.n)
+        rg = np.random.default_rng(456)
+        cls.y = rg.randn(cls.n)
+        cls.x1 = rg.randn(cls.n)
+        cls.x2 = rg.randn(cls.n)
 
         cls.pandas_df = pd.DataFrame({"y": cls.y, "x1": cls.x1, "x2": cls.x2})
         cls.polars_df = pl.DataFrame(
@@ -219,14 +219,14 @@ class TestPolarsPredict:
         """Create train and test data."""
         cls.n_train = 40
         cls.n_test = 10
-        np.random.seed(789)
+        rg = np.random.default_rng(789)
 
-        cls.y_train = np.random.randn(cls.n_train)
-        cls.x1_train = np.random.randn(cls.n_train)
-        cls.x2_train = np.random.randn(cls.n_train)
+        cls.y_train = rg.randn(cls.n_train)
+        cls.x1_train = rg.randn(cls.n_train)
+        cls.x2_train = rg.randn(cls.n_train)
 
-        cls.x1_test = np.random.randn(cls.n_test)
-        cls.x2_test = np.random.randn(cls.n_test)
+        cls.x1_test = rg.randn(cls.n_test)
+        cls.x2_test = rg.randn(cls.n_test)
 
         # Pandas versions
         cls.pandas_df_train = pd.DataFrame(
@@ -267,11 +267,11 @@ class TestPolarsEdgeCases:
 
     def test_polars_with_null_values(self):
         """Test Polars DataFrame with null values and missing='drop'."""
-        np.random.seed(321)
+        rg = np.random.default_rng(321)
         n = 30
-        y = np.random.randn(n)
-        x1 = np.random.randn(n)
-        x2 = np.random.randn(n)
+        y = rg.randn(n)
+        x1 = rg.randn(n)
+        x2 = rg.randn(n)
 
         # Create Polars DataFrame with some nulls
         df_polars = pl.DataFrame({"y": y, "x1": x1, "x2": x2})
@@ -292,10 +292,10 @@ class TestPolarsEdgeCases:
 
     def test_polars_single_variable(self):
         """Test with Polars Series as both endog and simple exog."""
-        np.random.seed(654)
+        rg = np.random.default_rng(654)
         n = 25
-        y = np.random.randn(n)
-        x = np.random.randn(n)
+        y = rg.randn(n)
+        x = rg.randn(n)
 
         poly_y = pl.Series("y", values=y)
         poly_X = pl.DataFrame({"x": x, "const": [1.0] * n})[["const", "x"]]
