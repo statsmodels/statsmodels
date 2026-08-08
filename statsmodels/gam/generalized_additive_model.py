@@ -243,6 +243,37 @@ class GLMGamResults(GLMResults):
         -------
         prediction : ndarray, pandas.Series or pandas.DataFrame
             predicted values
+
+        Notes
+        -----
+        When predicting out of sample, provide the new values for variables in
+        smooth terms through `exog_smooth`. If the model also has linear
+        terms, provide their new values through `exog`. For example::
+
+            results.predict(exog=X_linear_test, exog_smooth=X_smooth_test)
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
+        >>> from statsmodels.gam.api import GLMGam, BSplines
+
+        >>> rng = np.random.default_rng(0)
+        >>> x_linear = sm.add_constant(rng.uniform(-1, 1, size=200))
+        >>> x_smooth = np.linspace(-1, 1, 200)
+        >>> y = x_smooth + x_smooth ** 2 + rng.normal(scale=0.1, size=200)
+
+        >>> bs = BSplines(x_smooth, df=[10], degree=[3])
+        >>> gam_bs = GLMGam(y, exog=x_linear, smoother=bs, alpha=0.1)
+        >>> res_bs = gam_bs.fit()
+
+        Predict for new, out-of-sample values of the linear and smooth
+        terms:
+
+        >>> exog_linear_test = sm.add_constant([0.1, -0.2])
+        >>> exog_smooth_test = [0.3, -0.4]
+        >>> res_bs.predict(exog=exog_linear_test, exog_smooth=exog_smooth_test)
+        array([ 0.39325773, -0.23569393])
         """
         ex, exog_index = self._tranform_predict_exog(
             exog=exog, exog_smooth=exog_smooth, transform=transform
