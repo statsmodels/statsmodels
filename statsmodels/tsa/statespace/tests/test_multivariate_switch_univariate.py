@@ -186,6 +186,7 @@ def check_smoother_output(mod, periods, atol=1e-12):
         "smoothed_state_autocov",
         "smoothed_state_disturbance",
         "smoothed_state_disturbance_cov",
+        "smoothed_measurement_disturbance",
         "innovations_transition",
     ]
     for attr in attrs:
@@ -201,7 +202,6 @@ def check_smoother_output(mod, periods, atol=1e-12):
     # Test attributes that can differ for the univariate vs multivariate method
     attrs = [
         "smoothing_error",
-        "smoothed_measurement_disturbance",
         "smoothed_measurement_disturbance_cov",
     ]
     for attr in attrs:
