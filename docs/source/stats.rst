@@ -62,6 +62,15 @@ Forecast Evaluation
    pesaran_timmermann
    PesaranTimmermannResult
 
+.. currentmodule:: statsmodels.tsa.stattools
+
+.. autosummary::
+   :toctree: generated/
+
+   diebold_mariano_test
+   DieboldMarianoTestResult
+
+
 Heteroscedasticity
 ~~~~~~~~~~~~~~~~~~
 
