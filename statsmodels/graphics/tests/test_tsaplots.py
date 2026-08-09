@@ -366,7 +366,7 @@ def test_plot_month(close_figures):
 def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(
-        "-Q".join,
+        "Q".join,
         zip(dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str), strict=True),
     )
     # test dates argument
@@ -375,13 +375,13 @@ def test_plot_quarter(close_figures):
     # test with a DatetimeIndex with no freq
     from statsmodels.compat.pandas import PD_LT_2_2_0
 
-    FREQ = "QS-Oct" if PD_LT_2_2_0 else "QS-OCT"
-    dta.set_index(pd.DatetimeIndex(dates, freq=FREQ), inplace=True)
+    FREQ = "Q-Oct" if PD_LT_2_2_0 else "Q-OCT"
+    dta.set_index(pd.PeriodIndex(dates, freq=FREQ), inplace=True)
     quarter_plot(dta.unemp)
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex(dates, freq=FREQ)
+    dta.index = pd.PeriodIndex(dates, freq=FREQ).to_timestamp(freq=FREQ)
     quarter_plot(dta.unemp)
 
     # w PeriodIndex

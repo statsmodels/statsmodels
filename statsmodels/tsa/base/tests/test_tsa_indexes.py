@@ -1172,7 +1172,7 @@ def test_custom_index():
 
 def test_nonmonotonic_periodindex():
     # Create a nonmonotonic period index
-    tmp = pd.period_range(start=2000, end=2002, freq="Y")
+    tmp = pd.period_range(start="2000", end="2002", freq="Y")
     index = tmp.tolist() + tmp.tolist()
     endog = pd.Series(np.zeros(len(index)), index=index)
 
@@ -1194,10 +1194,9 @@ def test_nonfull_periodindex():
 
 def test_get_index_loc_quarterly():
     # See GH#6339
-
-    ix = pd.date_range("2000Q1", periods=8, freq="QS")
+    ix = pd.period_range("2000Q1", periods=8, freq="Q").to_timestamp()
     endog = pd.Series(np.zeros(8), index=ix)
 
     mod = tsa_model.TimeSeriesModel(endog)
     loc, index, _ = mod._get_index_loc("2003Q2")
-    assert_equal(index[loc], pd.Timestamp("2003Q2"))
+    assert_equal(index[loc], pd.Period("2003Q2").to_timestamp())
