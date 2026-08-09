@@ -1,95 +1,317 @@
-# pylint: disable=W0611
-# flake8: noqa
-
-from . import diagnostic
-from .diagnostic import (
-    acorr_ljungbox, acorr_breusch_godfrey, acorr_lm,
-    CompareCox, compare_cox, CompareJ, compare_j, compare_encompassing,
-    HetGoldfeldQuandt, het_goldfeldquandt,
-    het_breuschpagan, het_white, het_arch,
-    linear_harvey_collier, linear_rainbow, linear_lm, linear_reset,
-    breaks_cusumolsresid, breaks_hansen, recursive_olsresiduals,
-    spec_white
-)
-from ._adnorm import normal_ad
-from ._lilliefors import lilliefors
-
-from ._knockoff import RegressionFDR
-from . import multicomp
-from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage,
-                        local_fdr, NullDistribution)
-from .multicomp import tukeyhsd
-from . import gof
-from .gof import (powerdiscrepancy, gof_chisquare_discrete,
-                  chisquare_effectsize)
-from . import stattools
-from .stattools import durbin_watson, omni_normtest, jarque_bera
-
-from . import sandwich_covariance
-from .sandwich_covariance import (
-    cov_cluster, cov_cluster_2groups, cov_nw_panel,
-    cov_hac, cov_white_simple,
-    cov_hc0, cov_hc1, cov_hc2, cov_hc3,
-    se_cov
-)
-
-from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, ttost_ind,
-                          ttost_paired, ztest, ztost, zconfint)
-
-from .proportion import (
-    binom_test_reject_interval, binom_test,
-    binom_tost, binom_tost_reject_interval,
-    power_binom_tost, power_ztost_prop,
-    proportion_confint, proportion_effectsize,
-    proportions_chisquare, proportions_chisquare_allpairs,
-    proportions_chisquare_pairscontrol, proportions_ztest,
-    proportions_ztost, multinomial_proportions_confint)
-
-from .power import (TTestPower, TTestIndPower, GofChisquarePower,
-                    NormalIndPower, FTestAnovaPower, FTestPower,
-                    tt_solve_power, tt_ind_solve_power, zt_ind_solve_power)
-
-from .descriptivestats import Describe
-
-from .anova import anova_lm
-
-from .oaxaca import OaxacaBlinder
-
-from . import moment_helpers
-from .correlation_tools import (
-    corr_clipped, corr_nearest,
-    corr_nearest_factor, corr_thresholded, cov_nearest,
-    cov_nearest_factor_homog, FactoredPSDMatrix)
-
 from statsmodels.sandbox.stats.runs import Runs, runstest_1samp, runstest_2samp
+from statsmodels.stats.contingency_tables import (
+    SquareTable,
+    StratifiedTable,
+    Table,
+    Table2x2,
+    cochrans_q,
+    mcnemar,
+)
 
-from statsmodels.stats.contingency_tables import (mcnemar, cochrans_q,
-                                                  SquareTable,
-                                                  Table2x2,
-                                                  Table,
-                                                  StratifiedTable)
+from . import diagnostic, gof, moment_helpers, multicomp, sandwich_covariance, stattools
+from ._adnorm import normal_ad
+from ._knockoff import RegressionFDR
+from ._lilliefors import lilliefors
+from .anova import AnovaRM, anova_lm
+from .correlation_tools import (
+    FactoredPSDMatrix,
+    corr_clipped,
+    corr_nearest,
+    corr_nearest_factor,
+    corr_thresholded,
+    cov_nearest,
+    cov_nearest_factor_homog,
+)
+from .descriptivestats import Describe
+from .diagnostic import (
+    acorr_breusch_godfrey,
+    acorr_ljungbox,
+    acorr_lm,
+    breaks_cusumolsresid,
+    breaks_hansen,
+    compare_cox,
+    compare_encompassing,
+    compare_j,
+    het_arch,
+    het_breuschpagan,
+    het_goldfeldquandt,
+    het_white,
+    linear_harvey_collier,
+    linear_lm,
+    linear_rainbow,
+    linear_reset,
+    pesaran_timmermann,
+    recursive_olsresiduals,
+    spec_white,
+)
+from .gof import chisquare_effectsize, gof_chisquare_discrete, powerdiscrepancy
+from .inter_rater import cohens_kappa, fleiss_kappa
 from .mediation import Mediation
+from .meta_analysis import (
+    combine_effects,
+    effectsize_2proportions,
+    effectsize_smd,
+)
+from .multicomp import tukeyhsd
+from .multitest import (
+    NullDistribution,
+    fdrcorrection,
+    fdrcorrection_twostage,
+    local_fdr,
+    multipletests,
+)
+from .multivariate import (
+    confint_mvmean,
+    confint_mvmean_fromstats,
+    test_cov,
+    test_cov_blockdiagonal,
+    test_cov_diagonal,
+    test_cov_oneway,
+    test_cov_spherical,
+    test_mvmean,
+    test_mvmean_2indep,
+)
+from .oaxaca import OaxacaBlinder
+from .oneway import (  # mean and scale; power; from stats; effect size
+    anova_generic,
+    anova_oneway,
+    confint_effectsize_oneway,
+    confint_noncentrality,
+    convert_effectsize_fsqu,
+    effectsize_oneway,
+    equivalence_oneway,
+    equivalence_oneway_generic,
+    equivalence_scale_oneway,
+    f2_to_wellek,
+    fstat_to_wellek,
+    power_equivalence_oneway,
+    simulate_power_equivalence_oneway,
+    test_scale_oneway,
+    wellek_to_f2,
+)
+from .power import (
+    FTestAnovaPower,
+    FTestPower,
+    GofChisquarePower,
+    NormalIndPower,
+    TTestIndPower,
+    TTestPower,
+    tt_ind_solve_power,
+    tt_solve_power,
+    zt_ind_solve_power,
+)
+from .proportion import (  # 2 sample functions:
+    binom_test,
+    binom_test_reject_interval,
+    binom_tost,
+    binom_tost_reject_interval,
+    confint_proportions_2indep,
+    multinomial_proportions_confint,
+    power_binom_tost,
+    power_proportions_2indep,
+    power_ztost_prop,
+    proportion_confint,
+    proportion_effectsize,
+    proportions_chisquare,
+    proportions_chisquare_allpairs,
+    proportions_chisquare_pairscontrol,
+    proportions_ztest,
+    proportions_ztost,
+    samplesize_confint_proportion,
+    samplesize_proportions_2indep_onetail,
+    test_proportions_2indep,
+    tost_proportions_2indep,
+)
+from .rates import (  # 1 sample:; 2-sample; power
+    confint_poisson,
+    confint_poisson_2indep,
+    confint_quantile_poisson,
+    etest_poisson_2indep,
+    nonequivalence_poisson_2indep,
+    power_equivalence_neginb_2indep,
+    power_equivalence_poisson_2indep,
+    power_negbin_ratio_2indep,
+    power_poisson_diff_2indep,
+    power_poisson_ratio_2indep,
+    test_poisson,
+    test_poisson_2indep,
+    tolerance_int_poisson,
+    tost_poisson_2indep,
+)
+from .sandwich_covariance import (
+    cov_cluster,
+    cov_cluster_2groups,
+    cov_hac,
+    cov_hc0,
+    cov_hc1,
+    cov_hc2,
+    cov_hc3,
+    cov_nw_panel,
+    cov_white_simple,
+    se_cov,
+)
+from .stattools import durbin_watson, jarque_bera, omni_normtest
+from .weightstats import (
+    CompareMeans,
+    DescrStatsW,
+    ttest_ind,
+    ttost_ind,
+    ttost_paired,
+    zconfint,
+    ztest,
+    ztost,
+)
 
-__all__ = ["acorr_lm", "acorr_breusch_godfrey", "acorr_ljungbox", "anova_lm", "binom_test",
-           "binom_test_reject_interval", "Mediation", "mcnemar", "cochrans_q", "SquareTable",
-           "Table", 'Table2x2', "StratifiedTable", "corr_clipped", "corr_nearest",
-           "corr_nearest_factor", "corr_thresholded", "cov_nearest", "cov_nearest_factor_homog",
-           "FactoredPSDMatrix", "Describe", "OaxacaBlinder", "Runs", "runstest_1samp",
-           "runstest_2samp", "moment_helpers", "binom_tost", "binom_tost_reject_interval",
-           "power_binom_tost", "power_ztost_prop", "proportion_confint", "proportion_effectsize",
-           "proportions_chisquare", "proportions_chisquare_allpairs",
-           "proportions_chisquare_pairscontrol", "proportions_ztest", "proportions_ztost",
-           "multinomial_proportions_confint", "TTestPower", "TTestIndPower", "GofChisquarePower",
-           "NormalIndPower", "FTestAnovaPower", "FTestPower", "tt_solve_power",
-           "tt_ind_solve_power", "zt_ind_solve_power", "cov_cluster", "cov_cluster_2groups",
-           "cov_nw_panel", "cov_hac", "cov_white_simple", "cov_hc0", "cov_hc1", "cov_hc2",
-           "cov_hc3", "se_cov", "CompareCox", "compare_cox", "CompareJ", "compare_j",
-           "compare_encompassing", "HetGoldfeldQuandt", "het_goldfeldquandt", "het_breuschpagan",
-           "het_white", "het_arch", "linear_harvey_collier", "linear_rainbow", "linear_lm",
-           "linear_reset", "breaks_cusumolsresid", "breaks_hansen", "recursive_olsresiduals",
-           "spec_white", "diagnostic", "normal_ad", "lilliefors", "RegressionFDR", "multicomp",
-           "multipletests", "fdrcorrection", "fdrcorrection_twostage", "local_fdr",
-           "NullDistribution", "tukeyhsd", "gof", "powerdiscrepancy", "gof_chisquare_discrete",
-           "chisquare_effectsize", "stattools", "durbin_watson", "omni_normtest", "jarque_bera",
-           "sandwich_covariance", "DescrStatsW", "CompareMeans", "ttest_ind", "ttost_ind",
-           "ttost_paired", "ztest", "ztost", "zconfint"]
+__all__ = [
+    "AnovaRM",
+    "CompareMeans",
+    "DescrStatsW",
+    "Describe",
+    "FTestAnovaPower",
+    "FTestPower",
+    "FactoredPSDMatrix",
+    "GofChisquarePower",
+    "Mediation",
+    "NormalIndPower",
+    "NullDistribution",
+    "OaxacaBlinder",
+    "RegressionFDR",
+    "Runs",
+    "SquareTable",
+    "StratifiedTable",
+    "TTestIndPower",
+    "TTestPower",
+    "Table",
+    "Table2x2",
+    "acorr_breusch_godfrey",
+    "acorr_ljungbox",
+    "acorr_lm",
+    "anova_generic",
+    "anova_lm",
+    "anova_oneway",
+    "binom_test",
+    "binom_test_reject_interval",
+    "binom_tost",
+    "binom_tost_reject_interval",
+    "breaks_cusumolsresid",
+    "breaks_hansen",
+    "chisquare_effectsize",
+    "cochrans_q",
+    "cohens_kappa",
+    "combine_effects",
+    "compare_cox",
+    "compare_encompassing",
+    "compare_j",
+    "confint_effectsize_oneway",
+    "confint_mvmean",
+    "confint_mvmean_fromstats",
+    "confint_noncentrality",
+    "confint_poisson",
+    "confint_poisson_2indep",
+    "confint_proportions_2indep",
+    "confint_quantile_poisson",
+    "convert_effectsize_fsqu",
+    "corr_clipped",
+    "corr_nearest",
+    "corr_nearest_factor",
+    "corr_thresholded",
+    "cov_cluster",
+    "cov_cluster_2groups",
+    "cov_hac",
+    "cov_hc0",
+    "cov_hc1",
+    "cov_hc2",
+    "cov_hc3",
+    "cov_nearest",
+    "cov_nearest_factor_homog",
+    "cov_nw_panel",
+    "cov_white_simple",
+    "diagnostic",
+    "durbin_watson",
+    "effectsize_2proportions",
+    "effectsize_oneway",
+    "effectsize_smd",
+    "equivalence_oneway",
+    "equivalence_oneway_generic",
+    "equivalence_scale_oneway",
+    "etest_poisson_2indep",
+    "f2_to_wellek",
+    "fdrcorrection",
+    "fdrcorrection_twostage",
+    "fleiss_kappa",
+    "fstat_to_wellek",
+    "gof",
+    "gof_chisquare_discrete",
+    "het_arch",
+    "het_breuschpagan",
+    "het_goldfeldquandt",
+    "het_white",
+    "jarque_bera",
+    "lilliefors",
+    "linear_harvey_collier",
+    "linear_lm",
+    "linear_rainbow",
+    "linear_reset",
+    "local_fdr",
+    "mcnemar",
+    "moment_helpers",
+    "multicomp",
+    "multinomial_proportions_confint",
+    "multipletests",
+    "nonequivalence_poisson_2indep",
+    "normal_ad",
+    "omni_normtest",
+    "pesaran_timmermann",
+    "power_binom_tost",
+    "power_equivalence_neginb_2indep",
+    "power_equivalence_oneway",
+    "power_equivalence_poisson_2indep",
+    "power_negbin_ratio_2indep",
+    "power_poisson_diff_2indep",
+    "power_poisson_ratio_2indep",
+    "power_proportions_2indep",
+    "power_ztost_prop",
+    "powerdiscrepancy",
+    "proportion_confint",
+    "proportion_effectsize",
+    "proportions_chisquare",
+    "proportions_chisquare_allpairs",
+    "proportions_chisquare_pairscontrol",
+    "proportions_ztest",
+    "proportions_ztost",
+    "recursive_olsresiduals",
+    "runstest_1samp",
+    "runstest_2samp",
+    "samplesize_confint_proportion",
+    "samplesize_proportions_2indep_onetail",
+    "sandwich_covariance",
+    "se_cov",
+    "simulate_power_equivalence_oneway",
+    "spec_white",
+    "stattools",
+    "test_cov",
+    "test_cov_blockdiagonal",
+    "test_cov_diagonal",
+    "test_cov_oneway",
+    "test_cov_spherical",
+    "test_mvmean",
+    "test_mvmean_2indep",
+    "test_poisson",
+    "test_poisson_2indep",
+    "test_proportions_2indep",
+    "test_scale_oneway",
+    "tolerance_int_poisson",
+    "tost_poisson_2indep",
+    "tost_proportions_2indep",
+    "tt_ind_solve_power",
+    "tt_solve_power",
+    "ttest_ind",
+    "ttost_ind",
+    "ttost_paired",
+    "tukeyhsd",
+    "wellek_to_f2",
+    "zconfint",
+    "zt_ind_solve_power",
+    "ztest",
+    "ztost",
+]

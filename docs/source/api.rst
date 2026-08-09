@@ -25,9 +25,9 @@ Regression
 .. autosummary::
 
    ~statsmodels.regression.linear_model.OLS
+   ~statsmodels.regression.linear_model.WLS
    ~statsmodels.regression.linear_model.GLS
    ~statsmodels.regression.linear_model.GLSAR
-   ~statsmodels.regression.linear_model.WLS
    ~statsmodels.regression.recursive_ls.RecursiveLS
    ~statsmodels.regression.rolling.RollingOLS
    ~statsmodels.regression.rolling.RollingWLS
@@ -37,8 +37,6 @@ Imputation
 .. autosummary::
 
    ~statsmodels.imputation.bayes_mi.BayesGaussMI
-   ~statsmodels.genmod.bayes_mixed_glm.BinomialBayesMixedGLM
-   ~statsmodels.multivariate.factor.Factor
    ~statsmodels.imputation.bayes_mi.MI
    ~statsmodels.imputation.mice.MICE
    ~statsmodels.imputation.mice.MICEData
@@ -57,40 +55,47 @@ Generalized Linear Models
 
    ~statsmodels.genmod.generalized_linear_model.GLM
    ~statsmodels.gam.generalized_additive_model.GLMGam
+   ~statsmodels.genmod.bayes_mixed_glm.BinomialBayesMixedGLM
    ~statsmodels.genmod.bayes_mixed_glm.PoissonBayesMixedGLM
 
 Discrete and Count Models
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autosummary::
 
-   ~statsmodels.discrete.discrete_model.GeneralizedPoisson
    ~statsmodels.discrete.discrete_model.Logit
-   ~statsmodels.discrete.discrete_model.MNLogit
-   ~statsmodels.discrete.discrete_model.Poisson
    ~statsmodels.discrete.discrete_model.Probit
+   ~statsmodels.discrete.discrete_model.MNLogit
+   ~statsmodels.miscmodels.ordinal_model.OrderedModel
+   ~statsmodels.discrete.discrete_model.Poisson
    ~statsmodels.discrete.discrete_model.NegativeBinomial
    ~statsmodels.discrete.discrete_model.NegativeBinomialP
-   ~statsmodels.discrete.count_model.ZeroInflatedGeneralizedPoisson
-   ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
+   ~statsmodels.discrete.discrete_model.GeneralizedPoisson
    ~statsmodels.discrete.count_model.ZeroInflatedPoisson
+   ~statsmodels.discrete.count_model.ZeroInflatedNegativeBinomialP
+   ~statsmodels.discrete.count_model.ZeroInflatedGeneralizedPoisson
+   ~statsmodels.discrete.conditional_models.ConditionalLogit
+   ~statsmodels.discrete.conditional_models.ConditionalMNLogit
+   ~statsmodels.discrete.conditional_models.ConditionalPoisson
+
 
 Multivariate Models
 ~~~~~~~~~~~~~~~~~~~
 .. autosummary::
 
+   ~statsmodels.multivariate.factor.Factor
    ~statsmodels.multivariate.manova.MANOVA
    ~statsmodels.multivariate.pca.PCA
 
-Misc Models
-~~~~~~~~~~~
+Other Models
+~~~~~~~~~~~~
 .. autosummary::
 
    ~statsmodels.regression.mixed_linear_model.MixedLM
+   ~statsmodels.duration.survfunc.SurvfuncRight
    ~statsmodels.duration.hazard_regression.PHReg
    ~statsmodels.regression.quantile_regression.QuantReg
    ~statsmodels.robust.robust_linear_model.RLM
-   ~statsmodels.duration.survfunc.SurvfuncRight
-
+   ~statsmodels.othermod.betareg.BetaModel
 
 Graphics
 ~~~~~~~~
@@ -135,10 +140,14 @@ Statistics and Tests
    ~statsmodels.tsa.stattools.ccovf
    ~statsmodels.tsa.stattools.coint
    ~statsmodels.tsa.stattools.kpss
+   ~statsmodels.tsa.stattools.leybourne
    ~statsmodels.tsa.stattools.pacf
    ~statsmodels.tsa.stattools.pacf_ols
    ~statsmodels.tsa.stattools.pacf_yw
    ~statsmodels.tsa.stattools.q_stat
+   ~statsmodels.tsa.stattools.range_unit_root_test
+   ~statsmodels.tsa.stattools.zivot_andrews
+
 
 Univariate Time-Series Analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -146,11 +155,14 @@ Univariate Time-Series Analysis
 .. autosummary::
 
    ~statsmodels.tsa.ar_model.AutoReg
+   ~statsmodels.tsa.ardl.ARDL
    ~statsmodels.tsa.arima.model.ARIMA
    ~statsmodels.tsa.statespace.sarimax.SARIMAX
+   ~statsmodels.tsa.ardl.ardl_select_order
    ~statsmodels.tsa.stattools.arma_order_select_ic
    ~statsmodels.tsa.arima_process.arma_generate_sample
    ~statsmodels.tsa.arima_process.ArmaProcess
+   ~statsmodels.tsa.ardl.UECM
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
@@ -184,8 +196,10 @@ Filters and Decompositions
 
    ~statsmodels.tsa.seasonal.seasonal_decompose
    ~statsmodels.tsa.seasonal.STL
+   ~statsmodels.tsa.seasonal.MSTL
    ~statsmodels.tsa.filters.bk_filter.bkfilter
    ~statsmodels.tsa.filters.cf_filter.cffilter
+   ~statsmodels.tsa.filters.hamilton_filter.hamilton_filter
    ~statsmodels.tsa.filters.hp_filter.hpfilter
 
 Markov Regime Switching Models
@@ -230,8 +244,10 @@ X12/X13 Interface
 Models
 ~~~~~~
 
-The function descriptions of the methods exposed in the formula API are generic.
-See the documentation for the parent model for details.
+The lower case names are aliases to the `from_formula` method of the
+corresponding model class. The function descriptions of the methods exposed in
+the formula API are generic. See the documentation for the parent model for
+details.
 
 .. autosummary::
    :toctree: generated/
@@ -242,15 +258,18 @@ See the documentation for the parent model for details.
    ~statsmodels.formula.api.glsar
    ~statsmodels.formula.api.mixedlm
    ~statsmodels.formula.api.glm
+   ~statsmodels.formula.api.gee
+   ~statsmodels.formula.api.ordinal_gee
+   ~statsmodels.formula.api.nominal_gee
    ~statsmodels.formula.api.rlm
-   ~statsmodels.formula.api.mnlogit
    ~statsmodels.formula.api.logit
    ~statsmodels.formula.api.probit
+   ~statsmodels.formula.api.mnlogit
    ~statsmodels.formula.api.poisson
    ~statsmodels.formula.api.negativebinomial
    ~statsmodels.formula.api.quantreg
    ~statsmodels.formula.api.phreg
-   ~statsmodels.formula.api.ordinal_gee
-   ~statsmodels.formula.api.nominal_gee
-   ~statsmodels.formula.api.gee
    ~statsmodels.formula.api.glmgam
+   ~statsmodels.formula.api.conditional_logit
+   ~statsmodels.formula.api.conditional_mnlogit
+   ~statsmodels.formula.api.conditional_poisson

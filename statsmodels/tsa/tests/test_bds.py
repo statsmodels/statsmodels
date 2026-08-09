@@ -11,12 +11,13 @@ Statistical Software Components. Boston College Department of Economics.
 http://ideas.repec.org/c/boc/bocode/t871803.html.
 
 """
+from pathlib import Path
 
-import os
 import numpy as np
-import pandas as pd
-from statsmodels.tsa.stattools import bds
 from numpy.testing import assert_almost_equal
+import pandas as pd
+
+from statsmodels.tsa.stattools import bds
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -26,15 +27,15 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-data_file = os.path.join(curdir, "results", "bds_data.csv")
+curdir = Path(__file__).resolve().parent
+data_file = Path(curdir).joinpath("results", "bds_data.csv")
 data = pd.read_csv(data_file, header=None)
 
-res_file = os.path.join(curdir, "results", "bds_results.csv")
+res_file = Path(curdir).joinpath("results", "bds_results.csv")
 results = pd.read_csv(res_file, header=None)
 
 
-class CheckBDS(object):
+class CheckBDS:
     """
     Test BDS
 
@@ -54,10 +55,10 @@ class TestBDSSequence(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 1]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[0][data[0].notnull()]
+        cls.data = data[0][data[0].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -68,10 +69,10 @@ class TestBDSNormal(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 2]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[1][data[1].notnull()]
+        cls.data = data[1][data[1].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -82,10 +83,10 @@ class TestBDSCombined(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 3]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[2][data[2].notnull()]
+        cls.data = data[2][data[2].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -100,8 +101,8 @@ class TestBDSGDPC1(CheckBDS):
     @classmethod
     def setup_class(cls):
         cls.results = results[results[0] == 4]
-        cls.bds_stats = np.array(cls.results[2][1:])
-        cls.pvalues = np.array(cls.results[3][1:])
+        cls.bds_stats = np.array(cls.results[2].iloc[1:])
+        cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[3][data[3].notnull()]
+        cls.data = data[3][data[3].notna()]
         cls.res = bds(cls.data, 5)

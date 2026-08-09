@@ -1,12 +1,12 @@
 import numpy as np
 
-from statsmodels.tools.validation import array_like, PandasWrapper
-
+from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 # the data is sampled quarterly, so cut-off frequency of 18
 
 # Wn is normalized cut-off freq
-#Cutoff frequency is that frequency where the magnitude response of the filter
+# Cutoff frequency is that frequency where the magnitude response of the filter
 # is sqrt(1/2.). For butter, the normalized cutoff frequency Wn must be a
 # number between  0 and 1, where 1 corresponds to the Nyquist frequency, p
 # radians per sample.
@@ -15,7 +15,7 @@ from statsmodels.tools.validation import array_like, PandasWrapper
 # NOTE: uses a loop, could probably be sped-up for very large datasets
 def cffilter(x, low=6, high=32, drift=True):
     """
-    Christiano Fitzgerald asymmetric, random walk filter.
+    Christiano Fitzgerald asymmetric, random walk filter
 
     Parameters
     ----------
@@ -36,24 +36,34 @@ def cffilter(x, low=6, high=32, drift=True):
 
     Returns
     -------
-    cycle : array_like
-        The features of x between the periodicities low and high.
-    trend : array_like
-        The trend in the data with the cycles removed.
+    CycleTrendResult
+        A NamedTuple with fields:
+
+        cycle : array_like
+            The features of x between the periodicities low and high.
+        trend : array_like
+            The trend in the data with the cycles removed.
 
     See Also
     --------
     statsmodels.tsa.filters.bk_filter.bkfilter
         Baxter-King filter.
-    statsmodels.tsa.filters.bk_filter.hpfilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
     statsmodels.tsa.seasonal.seasonal_decompose
         Decompose a time series using moving averages.
     statsmodels.tsa.seasonal.STL
         Season-Trend decomposition using LOESS.
 
+    Notes
+    -----
+    See the notebook `Time Series Filters
+    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
+
     Examples
     --------
+    >>> import statsmodels.api as sm
+    >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
     >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
@@ -67,12 +77,12 @@ def cffilter(x, low=6, high=32, drift=True):
 
     .. plot:: plots/cff_plot.py
     """
-    #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
+    # TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.
     if low < 2:
         raise ValueError("low must be >= 2")
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', ndim=2)
+    x = array_like(x, "x", ndim=2)
     nobs, nseries = x.shape
     a = 2*np.pi/high
     b = 2*np.pi/low
@@ -95,12 +105,6 @@ def cffilter(x, low=6, high=32, drift=True):
 
     cycle, trend = y.squeeze(), x.squeeze() - y
 
-    return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')
-
-
-if __name__ == "__main__":
-    import statsmodels as sm
-    dta = sm.datasets.macrodata.load(as_pandas=False).data[['infl','tbilrate']].view((float,2))[1:]
-    cycle, trend = cffilter(dta, 6, 32, drift=True)
-    dta = sm.datasets.macrodata.load(as_pandas=False).data['tbilrate'][1:]
-    cycle2, trend2 = cffilter(dta, 6, 32, drift=True)
+    return CycleTrendResult(
+        pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    )

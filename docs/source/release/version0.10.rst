@@ -10,14 +10,14 @@ Release summary
 statsmodels is using github to store the updated documentation. Two version are available:
 
 * `Stable <https://www.statsmodels.org/stable/>`_, the latest release
-* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the master branch
+* `Development <https://www.statsmodels.org/devel/>`_, the latest build of the main branch
 
 **Warning**
 
 API stability is not guaranteed for new features, although even in
 this case changes will be made in a backwards compatible way if
 possible. The stability of a new feature depends on how much time it
-was already in statsmodels master and how much usage it has already
+was already in statsmodels main and how much usage it has already
 seen.  If there are specific known problems or limitations, then they
 are mentioned in the docstrings.
 
@@ -277,7 +277,7 @@ Submodules
 
 ``maintenance``
 ~~~~~~~~~~~~~~~
-- Switch to standard setup.py so that ``pip install statsmodels`` can succeed in an empty virtual environment
+- Switch to standard setup.py so that ``python -m pip install statsmodels`` can succeed in an empty virtual environment
 - General compatibility fixes for recent versions of numpy, scipy and pandas
 - Added new CI using Azure Pipelines (:pr:`5617`)
 - Enable linting on travis to ensure code is up to standards (:pr:`4820`)
@@ -292,7 +292,7 @@ A new issue label `type-bug-wrong` indicates bugs that cause that incorrect
 numbers are returned without warnings.
 (Regular bugs are mostly usability bugs or bugs that raise an exception for
 unsupported use cases.)
-`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.10/>`_
+`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A0.10>`_
 
 - :issue:`5475`
 - :issue:`5316`
@@ -303,8 +303,8 @@ Major Bugs Fixed
 
 See github issues for a list of bug fixes included in this release
 
-- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.10+label%3Atype-bug/>`_
-- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.10+label%3Atype-bug-wrong/>`_
+- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A0.10+label%3Atype-bug>`_
+- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A0.10+label%3Atype-bug-wrong>`_
 
 
 Development summary and credits
@@ -625,7 +625,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5204`: MAINT: Avoid/Fix FutureWarnings
 * :pr:`5207`: TST: Ensure random numbers are reproducible
 * :pr:`5208`: TST/CLN: Tighten tol to reduce spurious test failure
-* :pr:`5210`: BLD: Ensure master is available when linting
+* :pr:`5210`: BLD: Ensure main is available when linting
 * :pr:`5211`: MAINT: Import instead of copy/pasting utils
 * :pr:`5213`: MAINT: Move misplaced duration results files
 * :pr:`5214`: MAINT: remove example-like file that could never run
@@ -735,7 +735,7 @@ Thie following Pull Requests were merged since the last release:
 * :pr:`5600`: TST: Relax tolerance for OpenBlas issue
 * :pr:`5601`: Update mixed_linear.rst
 * :pr:`5602`: ENH: White spec test (clean commit for PR 4721)
-* :pr:`5604`: MAINT: Update template to encourage master check
+* :pr:`5604`: MAINT: Update template to encourage main check
 * :pr:`5605`: Guofei9987 modify comments proportion confint
 * :pr:`5606`: Mattwigway mice setting with copy warning
 * :pr:`5607`: Jtweeder graphics addgraphics

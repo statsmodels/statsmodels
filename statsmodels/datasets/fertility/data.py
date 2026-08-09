@@ -1,11 +1,11 @@
-"""World Bank Fertility Data."""
+"""World Bank Fertility Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This data is distributed according to the World Bank terms of use. See SOURCE."""
-TITLE       = """World Bank Fertility Data"""
-SOURCE      = """
+COPYRIGHT = """This data is distributed according to the World Bank terms of use. See SOURCE."""
+TITLE = """World Bank Fertility Data"""
+SOURCE = """
 This data has been acquired from
 
 The World Bank: Fertility rate, total (births per woman): World Development Indicators
@@ -26,12 +26,12 @@ The World Bank Terms of Use can be found at the following URL
 http://go.worldbank.org/OJC02YMLA0
 """
 
-DESCRSHORT  = """Total fertility rate represents the number of children that would be born to a woman if she were to live to the end of her childbearing years and bear children in accordance with current age-specific fertility rates."""
+DESCRSHORT = """Total fertility rate represents the number of children that would be born to a woman if she were to live to the end of her childbearing years and bear children in accordance with current age-specific fertility rates."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-#suggested notes
-NOTE        = """
+# suggested notes
+NOTE = """
 ::
 
     This is panel data in wide-format
@@ -47,22 +47,16 @@ NOTE        = """
 """
 
 
-def load(as_pandas=None):
+def load():
     """
     Load the data and return a Dataset class instance.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def load_pandas():
@@ -71,4 +65,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'fertility.csv')
+    return du.load_csv(__file__, "fertility.csv")

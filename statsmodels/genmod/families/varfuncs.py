@@ -2,10 +2,11 @@
 Variance functions for use with the link functions in statsmodels.family.links
 """
 import numpy as np
+
 FLOAT_EPS = np.finfo(float).eps
 
 
-class VarianceFunction(object):
+class VarianceFunction:
     """
     Relates the variance of a random variable to its mean. Defaults to 1.
 
@@ -59,7 +60,7 @@ constant is an alias of VarianceFunction()
 """
 
 
-class Power(object):
+class Power:
     """
     Power variance function
 
@@ -142,7 +143,7 @@ This is an alias of statsmodels.family.links.Power(power=3)
 """
 
 
-class Binomial(object):
+class Binomial:
     """
     Binomial variance function
 
@@ -198,9 +199,13 @@ class Binomial(object):
     # TODO: inherit from super
     def deriv(self, mu):
         """
-        Derivative of the variance function v'(mu)
+        Derivative of the variance function V'(mu).
+
+        For the Binomial variance V(mu) = p*(1 - p)*n where p = mu/n, the
+        derivative with respect to mu is dV/dmu = 1 - 2*p.
         """
-        return 1 - 2*mu
+        p = self._clean(mu / self.n)
+        return 1 - 2 * p
 
 
 binary = Binomial()
@@ -213,8 +218,8 @@ This is an alias of Binomial(n=1)
 """
 
 
-class NegativeBinomial(object):
-    '''
+class NegativeBinomial:
+    """
     Negative binomial variance function
 
     Parameters
@@ -239,7 +244,7 @@ class NegativeBinomial(object):
 
     A private method _clean trims the data by machine epsilon so that p is
     in (0,inf)
-    '''
+    """
 
     def __init__(self, alpha=1.):
         self.alpha = alpha

@@ -39,37 +39,42 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-from distutils.version import LooseVersion
-
 import numpy as np
+from packaging.version import Version, parse
 
-NP_LT_114 = LooseVersion(np.__version__) < LooseVersion('1.14')
+__all__ = [
+    "NP_LT_2",
+    "NP_LT_24",
+    "inplace_reshape",
+    "np_matrix_rank",
+    "np_new_unique",
+]
+
+NP_LT_2 = parse(np.__version__) < Version("1.99.99")
+NP_LT_24 = parse(np.__version__) < Version("2.3.99")
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique
 
 
-def recarray_select(recarray, fields):
-    """"
-    Work-around for changes in NumPy 1.13 that return views for recarray
-    multiple column selection
+def inplace_reshape(arr: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
     """
-    from pandas import DataFrame
-    fields = [fields] if not isinstance(fields, (tuple, list)) else fields
-    if len(fields) == len(recarray.dtype):
-        selection = recarray
-    else:
-        recarray = DataFrame.from_records(recarray)
-        selection = recarray[fields].to_records(index=False)
+    Reshape an array in place when possible, falling back to a copy
 
-    return selection
+    Parameters
+    ----------
+    arr : ndarray
+        The array to reshape.
+    shape : tuple[int, ...]
+        The new shape.
 
-
-def lstsq(a, b, rcond=None):
+    Returns
+    -------
+    ndarray
+        The reshaped array.
     """
-    Shim that allows modern rcond setting with backward compat for NumPY
-    earlier than 1.14
-    """
-    if NP_LT_114 and rcond is None:
-        rcond = -1
-    return np.linalg.lstsq(a, b, rcond=rcond)
+    try:
+        return arr.reshape(shape, copy=False)
+    except TypeError:
+        arr.shape = shape
+        return arr

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Nov  5 14:48:19 2017
 
@@ -9,8 +8,8 @@ License: BSD-3
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.validation import array_like
 
 
@@ -20,7 +19,8 @@ def _logdet(x):
 
 
 def test_mvmean(data, mean_null=0, return_results=True):
-    """Hotellings test for multivariate mean in one sample
+    """
+    Hotelling's test for multivariate mean in one sample
 
     Parameters
     ----------
@@ -52,18 +52,15 @@ def test_mvmean(data, mean_null=0, return_results=True):
     df = (k_vars, nobs - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
     if return_results:
-        res = HolderTuple(statistic=statistic,
-                          pvalue=pvalue,
-                          df=df,
-                          t2=t2,
-                          distr="F")
+        res = HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
         return res
     else:
         return statistic, pvalue
 
 
 def test_mvmean_2indep(data1, data2):
-    """Hotellings test for multivariate mean in two independent samples
+    """
+    Hotelling's test for multivariate mean in two independent samples
 
     The null hypothesis is that both samples have the same mean.
     The alternative hypothesis is that means differ.
@@ -99,15 +96,12 @@ def test_mvmean_2indep(data1, data2):
     statistic = t2 / factor
     df = (k_vars, nobs_t - 1 - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       t2=t2,
-                       distr="F")
+    return HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
 
 
-def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
-    """Confidence interval for linear transformation of a multivariate mean
+def confint_mvmean(data, lin_transf=None, alpha=0.05, simult=False):
+    """
+    Confidence interval for linear transformation of a multivariate mean
 
     Either pointwise or simultaneous confidence intervals are returned.
 
@@ -163,14 +157,17 @@ def confint_mvmean(data, lin_transf=None, alpha=0.5, simult=False):
     mean = x.mean(0)
     cov = np.cov(x, rowvar=False, ddof=0)
 
-    ci = confint_mvmean_fromstats(mean, cov, nobs, lin_transf=lin_transf,
-                                  alpha=alpha, simult=simult)
+    ci = confint_mvmean_fromstats(
+        mean, cov, nobs, lin_transf=lin_transf, alpha=alpha, simult=simult
+    )
     return ci
 
 
-def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
-                             simult=False):
-    """Confidence interval for linear transformation of a multivariate mean
+def confint_mvmean_fromstats(
+    mean, cov, nobs, lin_transf=None, alpha=0.05, simult=False
+):
+    """
+    Confidence interval for linear transformation of a multivariate mean
 
     Either pointwise or simultaneous confidence intervals are returned.
     Data is provided in the form of summary statistics, mean, cov, nobs.
@@ -178,8 +175,11 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
     Parameters
     ----------
     mean : ndarray
+        Mean of the multivariate data.
     cov : ndarray
+        Covariance matrix of the multivariate data.
     nobs : int
+        Number of observations used in the estimation of mean and cov.
     lin_transf : array_like or None
         The linear transformation or contrast matrix for transforming the
         vector of means. If this is None, then the identity matrix is used
@@ -193,6 +193,15 @@ def confint_mvmean_fromstats(mean, cov, nobs, lin_transf=None, alpha=0.05,
         Otherwise, a simultaneous confidence interval is returned.
         Warning: additional simultaneous confidence intervals might be added
         and the default for those might change.
+
+    Returns
+    -------
+    low : ndarray
+        lower confidence bound on the linear transformed
+    upp : ndarray
+        upper confidence bound on the linear transformed
+    values : ndarray
+        mean or their linear transformation, center of the confidence region
 
     Notes
     -----
@@ -259,7 +268,8 @@ to the formula collection in Bartlett 1954 for several of them.
 
 
 def test_cov(cov, nobs, cov_null):
-    """One sample hypothesis test for covariance equal to null covariance
+    """
+    One sample hypothesis test for covariance equal to null covariance
 
     The Null hypothesis is that cov = cov_null, against the alternative that
     it is not equal to cov_null
@@ -271,7 +281,7 @@ def test_cov(cov, nobs, cov_null):
         i.e. `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
-    cov_null : nd_array
+    cov_null : ndarray
         covariance under the null hypothesis
 
     Returns
@@ -283,7 +293,7 @@ def test_cov(cov, nobs, cov_null):
     ----------
     Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
     Approximations.” Journal of the Royal Statistical Society. Series B
-    (Methodological) 16 (2): 296–98.
+    (Methodological) 16 (2): 296-98.
 
     Rencher, Alvin C., and William F. Christensen. 2012. Methods of
     Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
@@ -302,24 +312,26 @@ def test_cov(cov, nobs, cov_null):
     k = cov.shape[0]
     n = nobs
 
-    fact = nobs - 1.
+    fact = nobs - 1.0
     fact *= 1 - (2 * k + 1 - 2 / (k + 1)) / (6 * (n - 1) - 1)
     fact2 = _logdet(S0) - _logdet(n / (n - 1) * S)
     fact2 += np.trace(n / (n - 1) * np.linalg.solve(S0, S)) - k
     statistic = fact * fact2
     df = k * (k + 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="equal value",
-                       cov_null=cov_null
-                       )
+    return HolderTuple(
+        statistic=statistic,
+        pvalue=pvalue,
+        df=df,
+        distr="chi2",
+        null="equal value",
+        cov_null=cov_null,
+    )
 
 
 def test_cov_spherical(cov, nobs):
-    r"""One sample hypothesis test that covariance matrix is spherical
+    r"""
+    One sample hypothesis test that covariance matrix is spherical
 
     The Null and alternative hypotheses are
 
@@ -347,7 +359,7 @@ def test_cov_spherical(cov, nobs):
     ----------
     Bartlett, M. S. 1954. “A Note on the Multiplying Factors for Various Χ2
     Approximations.” Journal of the Royal Statistical Society. Series B
-    (Methodological) 16 (2): 296–98.
+    (Methodological) 16 (2): 296-98.
 
     Rencher, Alvin C., and William F. Christensen. 2012. Methods of
     Multivariate Analysis: Rencher/Methods. Wiley Series in Probability and
@@ -367,16 +379,14 @@ def test_cov_spherical(cov, nobs):
     statistic *= k * np.log(np.trace(cov)) - _logdet(cov) - k * np.log(k)
     df = k * (k + 1) / 2 - 1
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="spherical"
-                       )
+    return HolderTuple(
+        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="spherical"
+    )
 
 
 def test_cov_diagonal(cov, nobs):
-    r"""One sample hypothesis test that covariance matrix is diagonal matrix.
+    r"""
+    One sample hypothesis test that covariance matrix is diagonal matrix
 
     The Null and alternative hypotheses are
 
@@ -417,16 +427,28 @@ def test_cov_diagonal(cov, nobs):
     statistic = -(nobs - 1 - (2 * k + 5) / 6) * _logdet(R)
     df = k * (k - 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="diagonal"
-                       )
+    return HolderTuple(
+        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="diagonal"
+    )
 
 
 def _get_blocks(mat, block_len):
-    """get diagonal blocks from matrix
+    """
+    Get diagonal blocks from matrix
+
+    Parameters
+    ----------
+    mat : ndarray
+        Square matrix.
+    block_len : list
+        List of length of each square diagonal block.
+
+    Returns
+    -------
+    blocks : list of ndarray
+        List of diagonal blocks extracted from mat.
+    idx_blocks : list of ndarray
+        List of arrays containing the indices for each block.
     """
     k = len(mat)
     idx = np.cumsum(block_len)
@@ -438,14 +460,13 @@ def _get_blocks(mat, block_len):
         # allow one missing block that is the remainder
         pass
     idx_blocks = np.split(np.arange(k), idx)
-    blocks = []
-    for ii in idx_blocks:
-        blocks.append(mat[ii[:, None], ii])
+    blocks = [mat[ii[:, None], ii] for ii in idx_blocks]
     return blocks, idx_blocks
 
 
 def test_cov_blockdiagonal(cov, nobs, block_len):
-    r"""One sample hypothesis test that covariance is block diagonal.
+    r"""
+    One sample hypothesis test that covariance is block diagonal
 
     The Null and alternative hypotheses are
 
@@ -492,21 +513,19 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     a2 = k**2 - sum(ki**2 for ki in k_blocks)
     a3 = k**3 - sum(ki**3 for ki in k_blocks)
 
-    statistic = (nobs - 1 - (2 * a3 + 3 * a2) / (6. * a2))
+    statistic = nobs - 1 - (2 * a3 + 3 * a2) / (6.0 * a2)
     statistic *= logdet_blocks - _logdet(cov)
 
     df = a2 / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(statistic=statistic,
-                       pvalue=pvalue,
-                       df=df,
-                       distr="chi2",
-                       null="block-diagonal"
-                       )
+    return HolderTuple(
+        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="block-diagonal"
+    )
 
 
 def test_cov_oneway(cov_list, nobs_list):
-    r"""Multiple sample hypothesis test that covariance matrices are equal.
+    r"""
+    Multiple sample hypothesis test that covariance matrices are equal
 
     This is commonly known as Box-M test.
 
@@ -551,24 +570,24 @@ def test_cov_oneway(cov_list, nobs_list):
     Stata Press Publication.
     """
     # Note stata uses nobs in cov, this uses nobs - 1
-    cov_list = list(map(np.asarray, cov_list))
+    cov_list = [np.asarray(cov) for cov in cov_list]
     m = len(cov_list)
     nobs = sum(nobs_list)  # total number of observations
     k = cov_list[0].shape[0]
 
-    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list))
-    cov_pooled /= (nobs - m)
+    cov_pooled = sum((n - 1) * c for (n, c) in zip(nobs_list, cov_list, strict=True))
+    cov_pooled /= nobs - m
     stat0 = (nobs - m) * _logdet(cov_pooled)
-    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list))
+    stat0 -= sum((n - 1) * _logdet(c) for (n, c) in zip(nobs_list, cov_list, strict=True))
 
     # Box's chi2
     c1 = sum(1 / (n - 1) for n in nobs_list) - 1 / (nobs - m)
-    c1 *= (2 * k*k + 3 * k - 1) / (6 * (k + 1) * (m - 1))
+    c1 *= (2 * k * k + 3 * k - 1) / (6 * (k + 1) * (m - 1))
     df_chi2 = (m - 1) * k * (k + 1) / 2
     statistic_chi2 = (1 - c1) * stat0
     pvalue_chi2 = stats.chi2.sf(statistic_chi2, df_chi2)
 
-    c2 = sum(1 / (n - 1)**2 for n in nobs_list) - 1 / (nobs - m)**2
+    c2 = sum(1 / (n - 1) ** 2 for n in nobs_list) - 1 / (nobs - m) ** 2
     c2 *= (k - 1) * (k + 2) / (6 * (m - 1))
     a1 = df_chi2
     a2 = (a1 + 2) / abs(c2 - c1**2)
@@ -581,14 +600,16 @@ def test_cov_oneway(cov_list, nobs_list):
         statistic_f = a2 / a1 * tmp / (1 + tmp)
     df_f = (a1, a2)
     pvalue_f = stats.f.sf(statistic_f, *df_f)
-    return HolderTuple(statistic=statistic_f,  # name convention, using F here
-                       pvalue=pvalue_f,   # name convention, using F here
-                       statistic_base=stat0,
-                       statistic_chi2=statistic_chi2,
-                       pvalue_chi2=pvalue_chi2,
-                       df_chi2=df_chi2,
-                       distr_chi2='chi2',
-                       statistic_f=statistic_f,
-                       pvalue_f=pvalue_f,
-                       df_f=df_f,
-                       distr_f='F')
+    return HolderTuple(
+        statistic=statistic_f,  # name convention, using F here
+        pvalue=pvalue_f,  # name convention, using F here
+        statistic_base=stat0,
+        statistic_chi2=statistic_chi2,
+        pvalue_chi2=pvalue_chi2,
+        df_chi2=df_chi2,
+        distr_chi2="chi2",
+        statistic_f=statistic_f,
+        pvalue_f=pvalue_f,
+        df_f=df_f,
+        distr_f="F",
+    )

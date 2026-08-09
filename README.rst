@@ -1,3 +1,6 @@
+.. image:: docs/source/images/statsmodels-logo-v2-horizontal.svg
+  :alt: Statsmodels logo
+
 |PyPI Version| |Conda Version| |License| |Azure CI Build Status|
 |Codecov Coverage| |Coveralls Coverage| |PyPI downloads| |Conda downloads|
 
@@ -22,7 +25,7 @@ https://www.statsmodels.org/dev/
 
 Recent improvements are highlighted in the release notes
 
-https://www.statsmodels.org/stable/release/version0.9.html
+https://www.statsmodels.org/stable/release/
 
 Backups of documentation are available at https://statsmodels.github.io/stable/
 and https://statsmodels.github.io/dev/.
@@ -115,7 +118,7 @@ Main Features
 
 How to get it
 =============
-The master branch on GitHub is the most up to date code
+The main branch on GitHub is the most up to date code
 
 https://www.github.com/statsmodels/statsmodels
 
@@ -132,8 +135,19 @@ Binaries can be installed in Anaconda
 conda install statsmodels
 
 
-Installing from sources
+Getting the latest code
 =======================
+
+Installing the most recent nightly wheel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The most recent nightly wheel can be installed using pip.
+
+.. code:: bash
+
+   python -m pip install -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple statsmodels --upgrade --use-deprecated=legacy-resolver
+
+Installing from sources
+~~~~~~~~~~~~~~~~~~~~~~~
 
 See INSTALL.txt for requirements or see the documentation
 
@@ -174,13 +188,14 @@ Bug reports can be submitted to the issue tracker at
 
 https://github.com/statsmodels/statsmodels/issues
 
-.. |Azure CI Build Status| image:: https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branch=master
-   :target: https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branch=master
-.. |Codecov Coverage| image:: https://codecov.io/gh/statsmodels/statsmodels/branch/master/graph/badge.svg
+.. |Azure CI Build Status| image:: https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branchName=main
+   :target: https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branchName=main
+.. |Codecov Coverage| image:: https://codecov.io/gh/statsmodels/statsmodels/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/statsmodels/statsmodels
-.. |Coveralls Coverage| image:: https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=master
-   :target: https://coveralls.io/github/statsmodels/statsmodels?branch=master
-.. |PyPI downloads| image:: https://img.shields.io/pypi/dm/statsmodels.svg?label=Pypi%20downloads
+.. |Coveralls Coverage| image:: https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=main
+   :target: https://coveralls.io/github/statsmodels/statsmodels?branch=main
+.. |PyPI downloads| image:: https://img.shields.io/pypi/dm/statsmodels?label=PyPI%20Downloads
+   :alt: PyPI - Downloads
    :target: https://pypi.org/project/statsmodels/
 .. |Conda downloads| image:: https://img.shields.io/conda/dn/conda-forge/statsmodels.svg?label=Conda%20downloads
    :target: https://anaconda.org/conda-forge/statsmodels/
@@ -189,4 +204,4 @@ https://github.com/statsmodels/statsmodels/issues
 .. |Conda Version| image:: https://anaconda.org/conda-forge/statsmodels/badges/version.svg
    :target: https://anaconda.org/conda-forge/statsmodels/
 .. |License| image:: https://img.shields.io/pypi/l/statsmodels.svg
-   :target: https://github.com/statsmodels/statsmodels/blob/master/LICENSE.txt
+   :target: https://github.com/statsmodels/statsmodels/blob/main/LICENSE.txt

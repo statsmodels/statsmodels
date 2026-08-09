@@ -27,7 +27,7 @@ A current limitation of this approach is that it generally does not support
 design matrix (known as `exog`) in statsmodels, is a little challenging.
 
 A detailed example is available
-`here <examples/notebooks/generated/distributed_estimation.html>`_.
+`here <examples/notebooks/generated/distributed_estimation.ipynb>`_.
 
 .. autosummary::
    :toctree: generated/

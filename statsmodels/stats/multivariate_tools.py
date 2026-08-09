@@ -1,34 +1,31 @@
-'''Tools for multivariate analysis
-
+'''
+Tools for multivariate analysis
 
 Author : Josef Perktold
 License : BSD-3
-
-
 
 TODO:
 
 - names of functions, currently just "working titles"
 
 '''
-
-
-
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
 
+
 def partial_project(endog, exog):
-    '''helper function to get linear projection or partialling out of variables
+    """
+    Helper function to get linear projection or partialling out of variables
 
     endog variables are projected on exog variables
 
     Parameters
     ----------
     endog : ndarray
-        array of variables where the effect of exog is partialled out.
+        Array of variables where the effect of exog is partialled out.
     exog : ndarray
-        array of variables on which the endog variables are projected.
+        Array of variables on which the endog variables are projected.
 
     Returns
     -------
@@ -43,8 +40,7 @@ def partial_project(endog, exog):
     -----
     This is no-frills mainly for internal calculations, no error checking or
     array conversion is performed, at least for now.
-
-    '''
+    """
     x1, x2 = endog, exog
     params = np.linalg.pinv(x2).dot(x1)
     predicted = x2.dot(params)
@@ -56,32 +52,33 @@ def partial_project(endog, exog):
     return res
 
 
-
 def cancorr(x1, x2, demean=True, standardize=False):
-    '''canonical correlation coefficient beween 2 arrays
+    """
+    Canonical correlation coefficient between 2 arrays
 
     Parameters
     ----------
     x1, x2 : ndarrays, 2_D
-        two 2-dimensional data arrays, observations in rows, variables in columns
-    demean : bool
-         If demean is true, then the mean is subtracted from each variable
-    standardize : bool
-         If standardize is true, then each variable is demeaned and divided by
-         its standard deviation. Rescaling does not change the canonical
-         correlation coefficients.
+        Two 2-dimensional data arrays, observations in rows, variables in
+        columns.
+    demean : bool, optional
+        If demean is true, then the mean is subtracted from each variable.
+    standardize : bool, optional
+        If standardize is true, then each variable is demeaned and divided by
+        its standard deviation. Rescaling does not change the canonical
+        correlation coefficients.
 
     Returns
     -------
     ccorr : ndarray, 1d
-        canonical correlation coefficients, sorted from largest to smallest.
+        Canonical correlation coefficients, sorted from largest to smallest.
         Note, that these are the square root of the eigenvalues.
 
     Notes
     -----
     This is a helper function for other statistical functions. It only
     calculates the canonical correlation coefficients and does not do a full
-    canoncial correlation analysis
+    canonical correlation analysis.
 
     The canonical correlation coefficient is calculated with the generalized
     matrix inverse and does not raise an exception if one of the data arrays
@@ -91,16 +88,15 @@ def cancorr(x1, x2, demean=True, standardize=False):
     --------
     cc_ranktest
     cc_stats
-    CCA not yet
-
-    '''
-    #x, y = x1, x2
+    CCA : not yet implemented
+    """
+    # x, y = x1, x2
     if demean or standardize:
         x1 = (x1 - x1.mean(0))
         x2 = (x2 - x2.mean(0))
 
     if standardize:
-        #std does not make a difference to canonical correlation coefficients
+        # std does not make a difference to canonical correlation coefficients
         x1 /= x1.std(0)
         x2 /= x2.std(0)
 
@@ -113,7 +109,8 @@ def cancorr(x1, x2, demean=True, standardize=False):
 
 
 def cc_ranktest(x1, x2, demean=True, fullrank=False):
-    '''rank tests based on smallest canonical correlation coefficients
+    """
+    Rank tests based on smallest canonical correlation coefficients
 
     Anderson canonical correlations test (LM test) and
     Cragg-Donald test (Wald test)
@@ -123,27 +120,29 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
     The Null Hypothesis is that the rank is k - 1, the alternative hypothesis
     is that the rank is at least k.
 
-
     Parameters
     ----------
     x1, x2 : ndarrays, 2_D
-        two 2-dimensional data arrays, observations in rows, variables in columns
-    demean : bool
-         If demean is true, then the mean is subtracted from each variable.
-    fullrank : bool
-         If true, then only the test that the matrix has full rank is returned.
-         If false, the test for all possible ranks are returned. However, no
-         the p-values are not corrected for the multiplicity of tests.
+        Two 2-dimensional data arrays, observations in rows, variables in
+        columns.
+    demean : bool, optional
+        If demean is true, then the mean is subtracted from each variable.
+    fullrank : bool, optional
+        If true, then only the test that the matrix has full rank is returned.
+        If false, the test for all possible ranks are returned. However,
+        the p-values are not corrected for the multiplicity of tests.
 
     Returns
     -------
     value : float
-        value of the test statistic
+        Value of the test statistic.
     p-value : float
-        p-value for the test Null Hypothesis tha the smallest canonical
-        correlation coefficient is zero. based on chi-square distribution
+        P-value for the null hypothesis that the smallest canonical
+        correlation coefficient is zero, based on the chi-square
+        distribution.
     df : int
-        degrees of freedom for thechi-square distribution in the hypothesis test
+        Degrees of freedom for the chi-square distribution in the
+        hypothesis test.
     ccorr : ndarray, 1d
         All canonical correlation coefficients sorted from largest to smallest.
 
@@ -158,8 +157,7 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
     --------
     cancorr
     cc_stats
-
-    '''
+    """
 
     from scipy import stats
 
@@ -182,7 +180,8 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
 
 
 def cc_stats(x1, x2, demean=True):
-    '''MANOVA statistics based on canonical correlation coefficient
+    """
+    MANOVA statistics based on canonical correlation coefficient
 
     Calculates Pillai's Trace, Wilk's Lambda, Hotelling's Trace and
     Roy's Largest Root.
@@ -190,9 +189,10 @@ def cc_stats(x1, x2, demean=True):
     Parameters
     ----------
     x1, x2 : ndarrays, 2_D
-        two 2-dimensional data arrays, observations in rows, variables in columns
-    demean : bool
-         If demean is true, then the mean is subtracted from each variable.
+        Two 2-dimensional data arrays, observations in rows, variables in
+        columns.
+    demean : bool, optional
+        If demean is true, then the mean is subtracted from each variable.
 
     Returns
     -------
@@ -201,15 +201,13 @@ def cc_stats(x1, x2, demean=True):
 
     Notes
     -----
+    Same as `canon` in Stata.
 
-    same as `canon` in Stata
-
-    missing: F-statistics and p-values
+    Missing: F-statistics and p-values.
 
     TODO: should return a results class instead
     produces nans sometimes, singular, perfect correlation of x1, x2 ?
-
-    '''
+    """
 
     nobs1, k1 = x1.shape  # endogenous ?
     nobs2, k2 = x2.shape
@@ -220,27 +218,21 @@ def cc_stats(x1, x2, demean=True):
     #          but df will depend on rank
     df_model = k1 * k2  # df_hypothesis (we do not include mean in x1, x2)
     df_resid = k1 * (nobs1 - k2 - demean)
-    s = min(df_model, k1)
     m = 0.5 * (df_model - k1)
-    n = 0.5 * (df_resid - k1 - 1)
-
-    df1 = k1 * df_model
-    df2 = k2
-
 
     pt_value = cc2.sum()    # Pillai's trace
     wl_value = np.product(1 / (1 + lam))   # Wilk's Lambda
     ht_value = lam.sum()    # Hotelling's Trace
     rm_value = lam.max()    # Roy's largest root
-    #from scipy import stats
+    # from scipy import stats
     # what's the distribution, the test statistic ?
     res = {}
-    res['canonical correlation coefficient'] = cc
-    res['eigenvalues'] = lam
+    res["canonical correlation coefficient"] = cc
+    res["eigenvalues"] = lam
     res["Pillai's Trace"] = pt_value
     res["Wilk's Lambda"] = wl_value
     res["Hotelling's Trace"] = ht_value
     res["Roy's Largest Root"] = rm_value
-    res['df_resid'] = df_resid
-    res['df_m'] = m
+    res["df_resid"] = df_resid
+    res["df_m"] = m
     return res

@@ -1,11 +1,11 @@
 """Longley dataset"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 The classic 1967 Longley Data
 
 http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
@@ -13,17 +13,17 @@ http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
 ::
 
     Longley, J.W. (1967) "An Appraisal of Least Squares Programs for the
-        Electronic Comptuer from the Point of View of the User."  Journal of
+        Electronic Computer from the Point of View of the User."  Journal of
         the American Statistical Association.  62.319, 819-41.
 """
 
-DESCRSHORT  = """"""
+DESCRSHORT = """"""
 
-DESCRLONG   = """The Longley dataset contains various US macroeconomic
+DESCRLONG = """The Longley dataset contains various US macroeconomic
 variables that are known to be highly collinear.  It has been used to appraise
 the accuracy of least squares routines."""
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 16
 
@@ -41,23 +41,16 @@ NOTE        = """::
 """
 
 
-
-def load(as_pandas=None):
+def load():
     """
     Load the Longley data and return a Dataset class.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def load_pandas():
@@ -74,6 +67,6 @@ def load_pandas():
 
 
 def _get_data():
-    data = du.load_csv(__file__, 'longley.csv')
+    data = du.load_csv(__file__, "longley.csv")
     data = data.iloc[:, [1, 2, 3, 4, 5, 6, 7]].astype(float)
     return data

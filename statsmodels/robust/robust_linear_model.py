@@ -1,6 +1,6 @@
 """
-Robust linear models with support for the M-estimators  listed under
-:ref:`norms <norms>`.
+Robust linear models with support for the M-estimators listed under
+:ref:`norms <norms>`
 
 References
 ----------
@@ -13,19 +13,19 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
-import numpy as np
-import scipy.stats as stats
 
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
-import statsmodels.regression.linear_model as lm
-import statsmodels.regression._tools as reg_tools
-import statsmodels.robust.norms as norms
-import statsmodels.robust.scale as scale
+import numpy as np
+from scipy import stats
+
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+import statsmodels.regression._tools as reg_tools
+import statsmodels.regression.linear_model as lm
+from statsmodels.robust import norms, scale
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
-__all__ = ['RLM']
+__all__ = ["RLM"]
 
 
 def _check_convergence(criterion, iteration, tol, maxiter):
@@ -34,23 +34,22 @@ def _check_convergence(criterion, iteration, tol, maxiter):
 
 
 class RLM(base.LikelihoodModel):
-    __doc__ = """
+    __doc__ = f"""
     Robust Linear Model
 
     Estimate a robust linear model via iteratively reweighted least squares
     given a robust criterion estimator.
 
-    %(params)s
+    {base._model_params_doc}
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See statsmodels.robust.norms for more information.
-    %(extra_params)s
+    {base._missing_param_doc}
 
     Attributes
     ----------
-
     df_model : float
         The degrees of freedom of the model.  The number of regressors p less
         one for the intercept.  Note that the reported model degrees
@@ -83,11 +82,9 @@ class RLM(base.LikelihoodModel):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.stackloss.load(as_pandas=False)
+    >>> data = sm.datasets.stackloss.load()
     >>> data.exog = sm.add_constant(data.exog)
-    >>> rlm_model = sm.RLM(data.endog, data.exog, \
-                           M=sm.robust.norms.HuberT())
-
+    >>> rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
     >>> rlm_results = rlm_model.fit()
     >>> rlm_results.params
     array([  0.82938433,   0.92606597,  -0.12784672, -41.02649835])
@@ -102,29 +99,36 @@ class RLM(base.LikelihoodModel):
     >>> rlm_hamp_hub = mod.fit(scale_est=sm.robust.scale.HuberScale())
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
-    """ % {'params': base._model_params_doc,
-           'extra_params': base._missing_param_doc}
+    """
 
-    def __init__(self, endog, exog, M=None, missing='none',
-                 **kwargs):
+    def __init__(self, endog, exog, M=None, missing="none", **kwargs):
+        self._check_kwargs(kwargs)
         self.M = M if M is not None else norms.HuberT()
-        super(base.LikelihoodModel, self).__init__(endog, exog,
-                                                   missing=missing, **kwargs)
+        super(base.LikelihoodModel, self).__init__(
+            endog, exog, missing=missing, **kwargs
+        )
         self._initialize()
         # things to remove_data
-        self._data_attr.extend(['weights', 'pinv_wexog'])
+        self._data_attr.extend(["weights", "pinv_wexog"])
+
+        # Populated by `fit`; declared here so they exist (as None) even
+        # before `fit` has been called.
+        self.cov = None
+        self.scale_est = None
+        self.scale = None
+        self.weights = None
 
     def _initialize(self):
         """
-        Initializes the model for the IRLS fit.
+        Initialize the model for the IRLS fit
 
         Resets the history and number of iterations.
         """
         self.pinv_wexog = np.linalg.pinv(self.exog)
-        self.normalized_cov_params = np.dot(self.pinv_wexog,
-                                            np.transpose(self.pinv_wexog))
-        self.df_resid = (float(self.exog.shape[0] -
-                               np.linalg.matrix_rank(self.exog)))
+        self.normalized_cov_params = np.dot(
+            self.pinv_wexog, np.transpose(self.pinv_wexog)
+        )
+        self.df_resid = float(self.exog.shape[0] - np.linalg.matrix_rank(self.exog))
         self.df_model = float(np.linalg.matrix_rank(self.exog) - 1)
         self.nobs = float(self.endog.shape[0])
 
@@ -136,18 +140,19 @@ class RLM(base.LikelihoodModel):
 
     def predict(self, params, exog=None):
         """
-        Return linear predicted values from a design matrix.
+        Return linear predicted values from a design matrix
 
         Parameters
         ----------
         params : array_like
             Parameters of a linear model
-        exog : array_like, optional.
+        exog : array_like, optional
             Design / exogenous data. Model exog is used if None.
 
         Returns
         -------
-        An array of fitted values
+        ndarray
+            The predicted values.
         """
         # copied from linear_model  # TODO: then is it needed?
         if exog is None:
@@ -159,41 +164,75 @@ class RLM(base.LikelihoodModel):
 
     def deviance(self, tmp_results):
         """
-        Returns the (unnormalized) log-likelihood from the M estimator.
+        Return the (unnormalized) log-likelihood from the M estimator
+
+        Parameters
+        ----------
+        tmp_results : Results
+            Results from intermediate fit containing ``fittedvalues`` and
+            ``scale`` used to compute the residuals.
+
+        Returns
+        -------
+        float
+            The value of the deviance.
         """
         tmp_resid = self.endog - tmp_results.fittedvalues
         return self.M(tmp_resid / tmp_results.scale).sum()
 
     def _update_history(self, tmp_results, history, conv):
-        history['params'].append(tmp_results.params)
-        history['scale'].append(tmp_results.scale)
-        if conv == 'dev':
-            history['deviance'].append(self.deviance(tmp_results))
-        elif conv == 'sresid':
-            history['sresid'].append(tmp_results.resid / tmp_results.scale)
-        elif conv == 'weights':
-            history['weights'].append(tmp_results.model.weights)
+        history["params"].append(tmp_results.params)
+        history["scale"].append(self.scale)
+        if conv == "dev":
+            history["deviance"].append(self.deviance(tmp_results))
+        elif conv == "sresid":
+            history["sresid"].append(tmp_results.resid / tmp_results.scale)
+        elif conv == "weights":
+            history["weights"].append(tmp_results.model.weights)
         return history
 
-    def _estimate_scale(self, resid):
+    def _estimate_scale(self, resid, scale_est):
         """
-        Estimates the scale based on the option provided to the fit method.
+        Estimate the scale based on the option provided to the fit method
+
+        Parameters
+        ----------
+        resid : ndarray
+            The residuals used to estimate the scale.
+        scale_est : str or HuberScale()
+            The scale estimator requested in the call to `fit`.
+
+        Returns
+        -------
+        float
+            The estimated scale.
         """
-        if isinstance(self.scale_est, str):
-            if self.scale_est.lower() == 'mad':
+        if isinstance(scale_est, str):
+            if scale_est.lower() == "mad":
                 return scale.mad(resid, center=0)
             else:
-                raise ValueError("Option %s for scale_est not understood" %
-                                 self.scale_est)
-        elif isinstance(self.scale_est, scale.HuberScale):
-            return self.scale_est(self.df_resid, self.nobs, resid)
+                raise ValueError(
+                    f"Option {scale_est} for scale_est not understood"
+                )
+        elif isinstance(scale_est, scale.HuberScale):
+            return scale_est(self.df_resid, self.nobs, resid)
         else:
-            return scale.scale_est(self, resid) ** 2
+            # use df correction to match HuberScale
+            return scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
-    def fit(self, maxiter=50, tol=1e-8, scale_est='mad', init=None, cov='H1',
-            update_scale=True, conv='dev', start_params=None):
+    def fit(
+        self,
+        maxiter=50,
+        tol=1e-8,
+        scale_est="mad",
+        cov="H1",
+        update_scale=True,
+        conv="dev",
+        start_params=None,
+        start_scale=None,
+    ):
         """
-        Fits the model using iteratively reweighted least squares.
+        Fit the model using iteratively reweighted least squares
 
         The IRLS routine runs until the specified objective converges to `tol`
         or `maxiter` has been reached.
@@ -210,10 +249,6 @@ class RLM(base.LikelihoodModel):
             'H1', 'H2', or 'H3'
             Indicates how the covariance matrix is estimated.  Default is 'H1'.
             See rlm.RLMResults for more information.
-        init : str
-            Specifies method for the initial estimates of the parameters.
-            Default is None, which means that the least squares estimate
-            is used.  Currently it is the only available choice.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
         scale_est : str or HuberScale()
@@ -233,49 +268,61 @@ class RLM(base.LikelihoodModel):
         start_params : array_like, optional
             Initial guess of the solution of the optimizer. If not provided,
             the initial parameters are computed using OLS.
+        start_scale : float, optional
+            Initial scale. If update_scale is False, then the scale will be
+            fixed at this level for the estimation of the mean parameters.
+            during iteration. If not provided, then the initial scale is
+            estimated from the OLS residuals
 
         Returns
         -------
-        results : statsmodels.rlm.RLMresults
+        results : statsmodels.robust.robust_linear_model.RLMResults
             Results instance
         """
         if cov.upper() not in ["H1", "H2", "H3"]:
-            raise ValueError("Covariance matrix %s not understood" % cov)
-        else:
-            self.cov = cov.upper()
+            raise ValueError(f"Covariance matrix {cov} not understood")
+        cov = cov.upper()
         conv = conv.lower()
         if conv not in ["weights", "coefs", "dev", "sresid"]:
-            raise ValueError("Convergence argument %s not understood" % conv)
-        self.scale_est = scale_est
+            raise ValueError(f"Convergence argument {conv} not understood")
 
         if start_params is None:
             wls_results = lm.WLS(self.endog, self.exog).fit()
         else:
             start_params = np.asarray(start_params, dtype=np.double).squeeze()
-            if (start_params.shape[0] != self.exog.shape[1] or
-                    start_params.ndim != 1):
-                raise ValueError('start_params must by a 1-d array with {0} '
-                                 'values'.format(self.exog.shape[1]))
-            fake_wls = reg_tools._MinimalWLS(self.endog, self.exog,
-                                             weights=np.ones_like(self.endog),
-                                             check_weights=False)
+            start_params = np.atleast_1d(start_params)
+            if start_params.shape[0] != self.exog.shape[1] or start_params.ndim != 1:
+                raise ValueError(
+                    f"start_params must by a 1-d array with {self.exog.shape[1]} "
+                    "values"
+                )
+            fake_wls = reg_tools._MinimalWLS(
+                self.endog,
+                self.exog,
+                weights=np.ones_like(self.endog),
+                check_weights=False,
+            )
             wls_results = fake_wls.results(start_params)
 
-        if not init:
-            self.scale = self._estimate_scale(wls_results.resid)
+        if not start_scale:
+            self.scale = self._estimate_scale(wls_results.resid, scale_est)
+        elif start_scale:
+            self.scale = start_scale
+            if not update_scale:
+                scale_est = "fixed"
 
         history = dict(params=[np.inf], scale=[])
-        if conv == 'coefs':
-            criterion = history['params']
-        elif conv == 'dev':
+        if conv == "coefs":
+            criterion = history["params"]
+        elif conv == "dev":
             history.update(dict(deviance=[np.inf]))
-            criterion = history['deviance']
-        elif conv == 'sresid':
+            criterion = history["deviance"]
+        elif conv == "sresid":
             history.update(dict(sresid=[np.inf]))
-            criterion = history['sresid']
-        elif conv == 'weights':
+            criterion = history["sresid"]
+        elif conv == "weights":
             history.update(dict(weights=[np.inf]))
-            criterion = history['weights']
+            criterion = history["weights"]
 
         # done one iteration so update
         history = self._update_history(wls_results, history, conv)
@@ -284,31 +331,42 @@ class RLM(base.LikelihoodModel):
         while not converged:
             if self.scale == 0.0:
                 import warnings
-                warnings.warn('Estimated scale is 0.0 indicating that the most'
-                              ' last iteration produced a perfect fit of the '
-                              'weighted data.', ConvergenceWarning)
+
+                warnings.warn(
+                    "Estimated scale is 0.0 indicating that the most"
+                    " last iteration produced a perfect fit of the "
+                    "weighted data.",
+                    ConvergenceWarning,
+                    stacklevel=2,
+                )
                 break
             self.weights = self.M.weights(wls_results.resid / self.scale)
-            wls_results = reg_tools._MinimalWLS(self.endog, self.exog,
-                                                weights=self.weights,
-                                                check_weights=True).fit()
+            wls_results = reg_tools._MinimalWLS(
+                self.endog, self.exog, weights=self.weights, check_weights=True
+            ).fit()
             if update_scale is True:
-                self.scale = self._estimate_scale(wls_results.resid)
+                self.scale = self._estimate_scale(wls_results.resid, scale_est)
             history = self._update_history(wls_results, history, conv)
             iteration += 1
             converged = _check_convergence(criterion, iteration, tol, maxiter)
-        results = RLMResults(self, wls_results.params,
-                             self.normalized_cov_params, self.scale)
+        results = RLMResults(
+            self,
+            wls_results.params,
+            self.normalized_cov_params,
+            self.scale,
+            cov=cov,
+        )
 
-        history['iteration'] = iteration
+        history["iteration"] = iteration
         results.fit_history = history
-        results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
-                                   norm=self.M.__class__.__name__, conv=conv)
+        results.fit_options = dict(
+            cov=cov,
+            scale_est=scale_est,
+            norm=self.M.__class__.__name__,
+            conv=conv,
+        )
         # norm is not changed in fit, no old state
 
-        # doing the next causes exception
-        # self.cov = self.scale_est = None #reset for additional fits
-        # iteration and history could contain wrong state with repeated fit
         return RLMResultsWrapper(results)
 
 
@@ -318,7 +376,6 @@ class RLMResults(base.LikelihoodModelResults):
 
     Attributes
     ----------
-
     bcov_scaled : ndarray
         p x p scaled covariance matrix specified in the model fit method.
         The default is H1. H1 is defined as
@@ -350,9 +407,9 @@ class RLMResults(base.LikelihoodModelResults):
         argument to fit.
     chisq : ndarray
         An array of the chi-squared values of the parameter estimates.
-    df_model
+    df_model : float
         See RLM.df_model
-    df_resid
+    df_resid : float
         See RLM.df_resid
     fit_history : dict
         Contains information about the iterations. Its keys are `deviance`,
@@ -362,7 +419,7 @@ class RLMResults(base.LikelihoodModelResults):
         Contains the options given to fit.
     fittedvalues : ndarray
         The linear predicted values.  dot(exog, params)
-    model : statsmodels.rlm.RLM
+    model : statsmodels.robust.robust_linear_model.RLM
         A reference to the model instance
     nobs : float
         The number of observations n
@@ -398,16 +455,21 @@ class RLMResults(base.LikelihoodModelResults):
     statsmodels.base.model.LikelihoodModelResults
     """
 
-    def __init__(self, model, params, normalized_cov_params, scale):
-        super(RLMResults, self).__init__(model, params,
-                                         normalized_cov_params, scale)
+    def __init__(self, model, params, normalized_cov_params, scale, cov="H1"):
+        super().__init__(model, params, normalized_cov_params, scale)
         self.model = model
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
+        self.cov = cov
+        # Snapshot the final IRLS weights now, rather than deferring to
+        # model.weights, so this result is unaffected by any later fit()
+        # call on the same model instance.
+        self.weights = model.weights
         self._cache = {}
         # for remove_data
-        self._data_in_cache.extend(['sresid'])
+        self._data_in_cache.extend(["sresid"])
+        self._data_attr.extend(["weights"])
 
         self.cov_params_default = self.bcov_scaled
         # TODO: "pvals" should come from chisq on bse?
@@ -433,40 +495,45 @@ class RLMResults(base.LikelihoodModelResults):
         return self.normalized_cov_params
 
     @cache_readonly
-    def weights(self):
-        return self.model.weights
-
-    @cache_readonly
     def bcov_scaled(self):
         model = self.model
         m = np.mean(model.M.psi_deriv(self.sresid))
         var_psiprime = np.var(model.M.psi_deriv(self.sresid))
-        k = 1 + (self.df_model + 1) / self.nobs * var_psiprime / m ** 2
+        k = 1 + (self.df_model + 1) / self.nobs * var_psiprime / m**2
 
-        if model.cov == "H1":
+        if self.cov == "H1":
             ss_psi = np.sum(model.M.psi(self.sresid) ** 2)
             s_psi_deriv = np.sum(model.M.psi_deriv(self.sresid))
-            return k ** 2 * (1 / self.df_resid * ss_psi * self.scale ** 2) /\
-                ((1 / self.nobs * s_psi_deriv) ** 2) *\
-                model.normalized_cov_params
+            return (
+                k**2
+                * (1 / self.df_resid * ss_psi * self.scale**2)
+                / ((1 / self.nobs * s_psi_deriv) ** 2)
+                * model.normalized_cov_params
+            )
         else:
-            W = np.dot(model.M.psi_deriv(self.sresid) * model.exog.T,
-                       model.exog)
+            W = np.dot(model.M.psi_deriv(self.sresid) * model.exog.T, model.exog)
             W_inv = np.linalg.inv(W)
             # [W_jk]^-1 = [SUM(psi_deriv(Sr_i)*x_ij*x_jk)]^-1
             # where Sr are the standardized residuals
-            if model.cov == "H2":
+            if self.cov == "H2":
                 # These are correct, based on Huber (1973) 8.13
-                return k * (1 / self.df_resid) * np.sum(
-                    model.M.psi(self.sresid) ** 2) * self.scale ** 2 \
-                       / ((1 / self.nobs) *
-                          np.sum(model.M.psi_deriv(self.sresid))) * W_inv
-            elif model.cov == "H3":
-                return k ** -1 * 1 / self.df_resid * np.sum(
-                    model.M.psi(self.sresid) ** 2) * self.scale ** 2 \
-                       * np.dot(
-                    np.dot(W_inv, np.dot(model.exog.T, model.exog)),
-                    W_inv)
+                return (
+                    k
+                    * (1 / self.df_resid)
+                    * np.sum(model.M.psi(self.sresid) ** 2)
+                    * self.scale**2
+                    / ((1 / self.nobs) * np.sum(model.M.psi_deriv(self.sresid)))
+                    * W_inv
+                )
+            elif self.cov == "H3":
+                return (
+                    k**-1
+                    * 1
+                    / self.df_resid
+                    * np.sum(model.M.psi(self.sresid) ** 2)
+                    * self.scale**2
+                    * np.dot(np.dot(W_inv, np.dot(model.exog.T, model.exog)), W_inv)
+                )
 
     @cache_readonly
     def pvalues(self):
@@ -474,48 +541,84 @@ class RLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bse(self):
-        return np.sqrt(np.diag(self.bcov_scaled))
+        # Use cov_params_default (a plain attribute snapshotted once in
+        # __init__) rather than bcov_scaled directly, so bse still works
+        # after remove_data() has cleared model.exog.
+        return np.sqrt(np.diag(self.cov_params_default))
 
     @cache_readonly
     def chisq(self):
         return (self.params / self.bse) ** 2
 
-    def summary(self, yname=None, xname=None, title=0, alpha=.05,
-                return_fmt='text'):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05, return_fmt="text"):
         """
-        This is for testing the new summary setup
-        """
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['IRLS']),
-                    ('Norm:', [self.fit_options['norm']]),
-                    ('Scale Est.:', [self.fit_options['scale_est']]),
-                    ('Cov Type:', [self.fit_options['cov']]),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Iterations:', ["%d" % self.fit_history['iteration']])
-                    ]
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None)
-                     ]
+        Summarize the fitted model
 
-        if title is not None:
-            title = "Robust linear Model Regression Results"
+        Parameters
+        ----------
+        yname : str, optional
+            Name of the dependent variable (optional)
+        xname : list[str], optional
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model
+        title : str, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            Significance level for the confidence intervals
+        return_fmt : str
+            Unused
+
+        Returns
+        -------
+        Summary
+            Instance holding the summary tables and text, which can be
+            printed or converted to various output formats.
+        """
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", None),
+            ("Method:", ["IRLS"]),
+            ("Norm:", [self.fit_options["norm"]]),
+            ("Scale Est.:", [self.fit_options["scale_est"]]),
+            ("Cov Type:", [self.fit_options["cov"]]),
+            ("Date:", None),
+            ("Time:", None),
+            ("No. Iterations:", ["{:d}".format(self.fit_history["iteration"])]),
+        ]
+        top_right = [
+            ("No. Observations:", None),
+            ("Df Residuals:", None),
+            ("Df Model:", None),
+        ]
+
+        if title is None:
+            title = "Robust Linear Model Regression Results"
 
         # boiler plate
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
 
         # add warnings/notes, added to text format only
         etext = []
-        wstr = ("If the model instance has been used for another fit with "
-                "different fit parameters, then the fit options might not be "
-                "the correct ones anymore .")
+        wstr = (
+            "If the model instance has been used for another fit with "
+            "different fit parameters, then the fit options might not be "
+            "the correct ones anymore ."
+        )
         etext.append(wstr)
 
         if etext:
@@ -523,30 +626,32 @@ class RLMResults(base.LikelihoodModelResults):
 
         return smry
 
-    def summary2(self, xname=None, yname=None, title=None, alpha=.05,
-                 float_format="%.4f"):
-        """Experimental summary function for regression results
+    def summary2(
+        self, xname=None, yname=None, title=None, alpha=0.05, float_format="%.4f"
+    ):
+        """
+        Experimental summary function for regression results
 
         Parameters
         ----------
-        yname : str
-            Name of the dependent variable (optional)
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model
+        yname : str, optional
+            Name of the dependent variable (optional)
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
-            significance level for the confidence intervals
+            Significance level for the confidence intervals
         float_format : str
-            print format for floats in parameters summary
+            Print format for floats in parameters summary
 
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
@@ -554,9 +659,16 @@ class RLMResults(base.LikelihoodModelResults):
         statsmodels.iolib.summary2.Summary : class to hold summary results
         """
         from statsmodels.iolib import summary2
+
         smry = summary2.Summary()
-        smry.add_base(results=self, alpha=alpha, float_format=float_format,
-                      xname=xname, yname=yname, title=title)
+        smry.add_base(
+            results=self,
+            alpha=alpha,
+            float_format=float_format,
+            xname=xname,
+            yname=yname,
+            title=title,
+        )
 
         return smry
 
@@ -565,4 +677,4 @@ class RLMResultsWrapper(lm.RegressionResultsWrapper):
     pass
 
 
-wrap.populate_wrapper(RLMResultsWrapper, RLMResults)  # noqa:E305
+wrap.populate_wrapper(RLMResultsWrapper, RLMResults)

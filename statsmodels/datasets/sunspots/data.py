@@ -1,23 +1,23 @@
 """Yearly sunspots data 1700-2008"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This data is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This data is public domain."""
+TITLE = __doc__
+SOURCE = """
 http://www.ngdc.noaa.gov/stp/solar/solarda3.html
 
 The original dataset contains monthly data on sunspot activity in the file
 ./src/sunspots_yearly.dat.  There is also sunspots_monthly.dat.
 """
 
-DESCRSHORT  = """Yearly (1700-2008) data on sunspots from the National
+DESCRSHORT = """Yearly (1700-2008) data on sunspots from the National
 Geophysical Data Center."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 309 (Annual 1700 - 2008)
     Number of Variables - 1
@@ -34,19 +34,13 @@ def load_pandas():
     # TODO: time series
     endog = data.set_index(data.YEAR).SUNACTIVITY
     dataset = du.Dataset(data=data, names=list(data.columns),
-                         endog=endog, endog_name='volume')
+                         endog=endog, endog_name="volume")
     return dataset
 
 
-def load(as_pandas=None):
+def load():
     """
     Load the yearly sunspot data and returns a data class.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
@@ -59,8 +53,8 @@ def load(as_pandas=None):
     data, raw_data, and endog are all the same variable.  There is no exog
     attribute defined.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def _get_data():
-    return du.load_csv(__file__, 'sunspots.csv').astype(float)
+    return du.load_csv(__file__, "sunspots.csv").astype(float)

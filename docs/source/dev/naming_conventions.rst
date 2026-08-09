@@ -18,7 +18,6 @@ Our directory tree stripped down looks something like::
             api.py
             tsatools.py
             stattools.py
-            arima_model.py
             arima_process.py
             vector_ar/
                 __init__.py

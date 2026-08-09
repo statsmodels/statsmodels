@@ -91,7 +91,7 @@ Examples
 
 Detailed examples can be found here
 
-* `Mixed LM <examples/notebooks/generated/mixed_lm_example.html>`__
+* `Mixed LM <examples/notebooks/generated/mixed_lm_example.ipynb>`_
 
 There are some notebook examples on the Wiki:
 `Wiki notebooks for MixedLM <https://github.com/statsmodels/statsmodels/wiki/Examples#linear-mixed-models>`_
@@ -158,7 +158,7 @@ The primary reference for the implementation details is:
 
 See also this more recent document:
 
-* http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
+* https://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
 
 All the likelihood, gradient, and Hessian calculations closely follow
 Lindstrom and Bates.

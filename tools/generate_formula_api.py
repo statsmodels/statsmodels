@@ -10,12 +10,12 @@ usage
 
 generate_formula_api /home/skipper/statsmodels/statsmodels/
 """
-
 import os
+from pathlib import Path
 import sys
 
 
-def iter_subclasses(cls, _seen=None, template_classes=[]):
+def iter_subclasses(cls, _seen=None, template_classes=()):
     """
     Generator to iterate over all the subclasses of Model. Based on
 
@@ -24,8 +24,9 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
     Yields class
     """
     if not isinstance(cls, type):
-        raise TypeError('itersubclasses must be called with '
-                        'new-style classes, not %.100r' % cls)
+        raise TypeError(
+            f"itersubclasses must be called with new-style classes, not {cls!r:.100}"
+        )
     if _seen is None:
         _seen = set()
     try:
@@ -38,41 +39,47 @@ def iter_subclasses(cls, _seen=None, template_classes=[]):
             # we do not want to yield the templates, but we do want to
             # recurse on them
             yield sub
-        for sub in iter_subclasses(sub, _seen, template_classes):
-            yield sub
+        yield from iter_subclasses(sub, _seen, template_classes)
 
 
 def write_formula_api(directory):
-    template_classes = ['DiscreteModel', 'BinaryModel', 'MultinomialModel',
-                        'OrderedModel', 'CountModel',
-                        'LikelihoodModel', 'GenericLikelihoodModel',
-                        'TimeSeriesModel',
-                        # this class should really be deleted
-                        'ARIMAProcess',
-                        # these need some more work, so do not expose them
-                        'ARIMA', 'VAR', 'SVAR', 'AR', 'NBin', 'NbReg', 'ARMA',
-                        ]
+    template_classes = [
+        "DiscreteModel",
+        "BinaryModel",
+        "MultinomialModel",
+        "OrderedModel",
+        "CountModel",
+        "LikelihoodModel",
+        "GenericLikelihoodModel",
+        "TimeSeriesModel",
+        # this class should really be deleted
+        "ARIMAProcess",
+        # these need some more work, so do not expose them
+        "ARIMA",
+        "VAR",
+        "SVAR",
+        "AR",
+        "NBin",
+        "NbReg",
+        "ARMA",
+    ]
 
-    path = os.path.join(directory, 'statsmodels', 'formula', 'api.py')
-    fout = open(path, 'w')
+    path = Path(directory).joinpath("statsmodels", "formula", "api.py")
+    fout = Path(path).open("w", encoding="utf-8")
     for model in iter_subclasses(Model, template_classes=template_classes):
-        print("Generating API for %s" % model.__name__)
-        fout.write(
-            'from ' + model.__module__ + ' import ' + model.__name__ + '\n'
-        )
-        fout.write(
-            model.__name__.lower() + ' = ' + model.__name__ + '.from_formula\n'
-        )
+        print(f"Generating API for {model.__name__}")
+        fout.write("from " + model.__module__ + " import " + model.__name__ + "\n")
+        fout.write(model.__name__.lower() + " = " + model.__name__ + ".from_formula\n")
     fout.close()
 
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    print("Generating formula API for statsmodels version %s"
-          % sm.version.full_version)
+
+    print(f"Generating formula API for statsmodels version {sm.version.full_version}")
     directory = sys.argv[1]
-    cur_dir = os.path.dirname(__file__)
     os.chdir(directory)
     # it needs to be installed to walk the whole subclass chain?
     from statsmodels.base.model import Model
+
     write_formula_api(directory)

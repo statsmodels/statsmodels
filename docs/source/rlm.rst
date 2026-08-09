@@ -17,7 +17,7 @@ Examples
 
     # Load modules and data
     import statsmodels.api as sm
-    data = sm.datasets.stackloss.load(as_pandas=False)
+    data = sm.datasets.stackloss.load()
     data.exog = sm.add_constant(data.exog)
 
     # Fit model and print summary
@@ -27,8 +27,8 @@ Examples
 
 Detailed examples can be found here:
 
-* `Robust Models 1 <examples/notebooks/generated/robust_models_0.html>`__
-* `Robust Models 2 <examples/notebooks/generated/robust_models_1.html>`__
+* `Robust Models 1 <examples/notebooks/generated/robust_models_0.ipynb>`_
+* `Robust Models 2 <examples/notebooks/generated/robust_models_1.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -85,6 +85,7 @@ Norms
    Hampel
    HuberT
    LeastSquares
+   MQuantileNorm
    RamsayE
    RobustNorm
    TrimmedMean

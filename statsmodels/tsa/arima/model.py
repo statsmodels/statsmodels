@@ -1,33 +1,30 @@
 """
-ARIMA model class.
+ARIMA model class
 
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
 import numpy as np
 
+import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tsa.arima.estimators.burg import burg
+from statsmodels.tsa.arima.estimators.gls import gls as estimate_gls
+from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
+from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
+from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
 from statsmodels.tsa.statespace import sarimax
 from statsmodels.tsa.statespace.kalman_filter import MEMORY_CONSERVE
 from statsmodels.tsa.statespace.tools import diff
-import statsmodels.base.wrapper as wrap
-
-from statsmodels.tsa.arima.estimators.yule_walker import yule_walker
-from statsmodels.tsa.arima.estimators.burg import burg
-from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
-from statsmodels.tsa.arima.estimators.innovations import (
-    innovations, innovations_mle)
-from statsmodels.tsa.arima.estimators.gls import gls as estimate_gls
-
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
 class ARIMA(sarimax.SARIMAX):
-    """
+    r"""
     Autoregressive Integrated Moving Average (ARIMA) model, and extensions
 
     This model is the basic interface for ARIMA-type models, including those
@@ -44,19 +41,23 @@ class ARIMA(sarimax.SARIMAX):
 
     Parameters
     ----------
-    endog : array_like, optional
+    endog : array_like
         The observed time-series process :math:`y`.
     exog : array_like, optional
         Array of exogenous regressors.
     order : tuple, optional
         The (p,d,q) order of the model for the autoregressive, differences, and
         moving average components. d is always an integer, while p and q may
-        either be integers or lists of integers.
+        either be integers or lists of integers specifying exactly which lag
+        orders are included. The order of differences is to achieve
+        stationarity in the context of a stochastic trend or seasonality.
+        The default is (0, 0, 0).
     seasonal_order : tuple, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
-        AR parameters, differences, MA parameters, and periodicity. Default
-        is (0, 0, 0, 0). D and s are always integers, while P and Q
-        may either be integers or lists of positive integers.
+        AR parameters, differences, MA parameters, and periodicity. D is a non-
+        negative integer, and s is an integer strictly greater than one. P and
+        Q may either be integers or lists of positive integers specifying
+        exactly which lag orders are included. The default is (0, 0, 0, 0).
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend. Can be specified as a
         string where 'c' indicates a constant term, 't' indicates a
@@ -64,17 +65,21 @@ class ARIMA(sarimax.SARIMAX):
         an iterable defining a polynomial, as in `numpy.poly1d`, where
         `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is 'c' for
         models without integration, and no trend for models with integration.
+        Note that all trend terms are included in the model as exogenous
+        regressors, which differs from how trends are included in ``SARIMAX``
+        models.  See the Notes section for a precise definition of the
+        treatment of trend terms.
     enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
-        to a stationarity process.
+        to a stationarity process. Default is True.
     enforce_invertibility : bool, optional
         Whether or not to require the moving average parameters to correspond
-        to an invertible process.
+        to an invertible process. Default is True.
     concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
         out of the likelihood. This reduces the number of parameters by one.
         This is only applicable when considering estimation by numerical
-        maximum likelihood.
+        maximum likelihood. Default is False.
     trend_offset : int, optional
         The offset at which to start time trend values. Default is 1, so that
         if `trend='t'` the trend is equal to 1, 2, ..., nobs. Typically is only
@@ -85,22 +90,50 @@ class ARIMA(sarimax.SARIMAX):
     freq : str, optional
         If no index is given by `endog` or `exog`, the frequency of the
         time-series may be specified here as a Pandas offset or offset string.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
+    validate_specification : bool, optional
+        Whether or not to validate the model specification. Default is True.
+    validate_exog : bool, optional
+        Whether or not to check that `exog` does not duplicate a constant trend
+        with a constant column. Has no effect unless `validate_specification`
+        is True. Default is True.
 
     Notes
     -----
     This model incorporates both exogenous regressors and trend components
-    through "regression with ARIMA errors".
+    through "regression with ARIMA errors". This differs from the
+    specification estimated using ``SARIMAX`` which treats the trend
+    components separately from any included exogenous regressors. The full
+    specification of the model estimated here is:
+
+    .. math::
+
+        Y_{t}-\delta_{0}-\delta_{1}t-\ldots-\delta_{k}t^{k}-X_{t}\beta
+            & =\epsilon_{t} \\
+        \left(1-L\right)^{d}\left(1-L^{s}\right)^{D}\Phi\left(L\right)
+        \Phi_{s}\left(L\right)\epsilon_{t}
+            & =\Theta\left(L\right)\Theta_{s}\left(L\right)\eta_{t}
+
+    where :math:`\eta_t \sim WN(0,\sigma^2)` is a white noise process, L
+    is the lag operator, and :math:`G(L)` are lag polynomials corresponding
+    to the autoregressive (:math:`\Phi`), seasonal autoregressive
+    (:math:`\Phi_s`), moving average (:math:`\Theta`), and seasonal moving
+    average components (:math:`\Theta_s`).
 
     `enforce_stationarity` and `enforce_invertibility` are specified in the
     constructor because they affect loglikelihood computations, and so should
     not be changed on the fly. This is why they are not instead included as
     arguments to the `fit` method.
 
-    TODO: should we use concentrate_scale=True by default?
+    See the notebook `ARMA: Sunspots Data
+    <../examples/notebooks/generated/tsa_arma_0.html>`__ and
+    `ARMA: Artificial Data <../examples/notebooks/generated/tsa_arma_1.html>`__
+    for an overview.
+
+    .. todo:: should concentrate_scale=True by default
 
     Examples
     --------
@@ -112,7 +145,8 @@ class ARIMA(sarimax.SARIMAX):
                  seasonal_order=(0, 0, 0, 0), trend=None,
                  enforce_stationarity=True, enforce_invertibility=True,
                  concentrate_scale=False, trend_offset=1, dates=None,
-                 freq=None, missing='none', validate_specification=True):
+                 freq=None, missing="none", validate_specification=True,
+                 validate_exog=True):
         # Default for trend
         # 'c' if there is no integration and 'n' otherwise
         # TODO: if trend='c', then we could alternatively use `demean=True` in
@@ -120,9 +154,9 @@ class ARIMA(sarimax.SARIMAX):
         # Not sure if it's worth the trouble though.
         integrated = order[1] > 0 or seasonal_order[1] > 0
         if trend is None and not integrated:
-            trend = 'c'
+            trend = "c"
         elif trend is None:
-            trend = 'n'
+            trend = "n"
 
         # Construct the specification
         # (don't pass specific values of enforce stationarity/invertibility,
@@ -134,7 +168,8 @@ class ARIMA(sarimax.SARIMAX):
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, trend_offset=trend_offset,
             dates=dates, freq=freq, missing=missing,
-            validate_specification=validate_specification)
+            validate_specification=validate_specification,
+            validate_exog=validate_exog)
         exog = self._spec_arima._model.data.orig_exog
 
         # Raise an error if we have a constant in an integrated model
@@ -144,14 +179,14 @@ class ARIMA(sarimax.SARIMAX):
             lowest_trend = np.min(self._spec_arima.trend_terms)
             if lowest_trend < order[1] + seasonal_order[1]:
                 raise ValueError(
-                    'In models with integration (`d > 0`) or seasonal'
-                    ' integration (`D > 0`), trend terms of lower order than'
-                    ' `d + D` cannot be (as they would be eliminated due to'
-                    ' the differencing operation). For example, a constant'
-                    ' cannot be included in an ARIMA(1, 1, 1) model, but'
-                    ' including a linear trend, which would have the same'
-                    ' effect as fitting a constant to the differenced data,'
-                    ' is allowed.')
+                    "In models with integration (`d > 0`) or seasonal"
+                    " integration (`D > 0`), trend terms of lower order than"
+                    " `d + D` cannot be (as they would be eliminated due to"
+                    " the differencing operation). For example, a constant"
+                    " cannot be included in an ARIMA(1, 1, 1) model, but"
+                    " including a linear trend, which would have the same"
+                    " effect as fitting a constant to the differenced data,"
+                    " is allowed.")
 
         # Keep the given `exog` by removing the prepended trend variables
         input_exog = None
@@ -165,13 +200,14 @@ class ARIMA(sarimax.SARIMAX):
         # Note: we don't pass in a trend value to the base class, since ARIMA
         # standardizes the trend to always be part of exog, while the base
         # SARIMAX class puts it in the transition equation.
-        super(ARIMA, self).__init__(
+        super().__init__(
             endog, exog, trend=None, order=order,
             seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
             enforce_invertibility=enforce_invertibility,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification)
+            missing=missing, validate_specification=validate_specification,
+            validate_exog=validate_exog)
         self.trend = trend
 
         # Save the input exog and input exog names, so that we can refer to
@@ -189,21 +225,21 @@ class ARIMA(sarimax.SARIMAX):
         self.k_trend = self._spec_arima.k_trend
 
         # Remove some init kwargs that aren't used in this model
-        unused = ['measurement_error', 'time_varying_regression',
-                  'mle_regression', 'simple_differencing',
-                  'hamilton_representation']
+        unused = ["measurement_error", "time_varying_regression",
+                  "mle_regression", "simple_differencing",
+                  "hamilton_representation"]
         self._init_keys = [key for key in self._init_keys if key not in unused]
 
     @property
     def _res_classes(self):
-        return {'fit': (ARIMAResults, ARIMAResultsWrapper)}
+        return {"fit": (ARIMAResults, ARIMAResultsWrapper)}
 
     def fit(self, start_params=None, transformed=True, includes_fixed=False,
             method=None, method_kwargs=None, gls=None, gls_kwargs=None,
             cov_type=None, cov_kwds=None, return_params=False,
             low_memory=False):
         """
-        Fit (estimate) the parameters of the model.
+        Fit (estimate) the parameters of the model
 
         Parameters
         ----------
@@ -295,26 +331,29 @@ class ARIMA(sarimax.SARIMAX):
         # (since in some cases it may be faster than state space), but it is
         # less tested.
         else:
-            method = 'statespace'
+            method = "statespace"
 
-        # Can only use fixed parameters with method='statespace'
-        if self._has_fixed_params and method != 'statespace':
-            raise ValueError('When parameters have been fixed, only the method'
-                             ' "statespace" can be used; got "%s".' % method)
+        # Can only use fixed parameters with the following methods
+        methods_with_fixed_params = ["statespace", "hannan_rissanen"]
+        if self._has_fixed_params and method not in methods_with_fixed_params:
+            raise ValueError(
+                "When parameters have been fixed, only the methods "
+                f"{methods_with_fixed_params} can be used; got '{method}'."
+            )
 
         # Handle kwargs related to the fit method
         if method_kwargs is None:
             method_kwargs = {}
         required_kwargs = []
-        if method == 'statespace':
-            required_kwargs = ['enforce_stationarity', 'enforce_invertibility',
-                               'concentrate_scale']
-        elif method == 'innovations_mle':
-            required_kwargs = ['enforce_invertibility']
+        if method == "statespace":
+            required_kwargs = ["enforce_stationarity", "enforce_invertibility",
+                               "concentrate_scale"]
+        elif method == "innovations_mle":
+            required_kwargs = ["enforce_invertibility"]
         for name in required_kwargs:
             if name in method_kwargs:
-                raise ValueError('Cannot override model level value for "%s"'
-                                 ' when method="%s".' % (name, method))
+                raise ValueError(f'Cannot override model level value for "{name}"'
+                                 f' when method="{method}".')
             method_kwargs[name] = getattr(self, name)
 
         # Handle kwargs related to GLS estimation
@@ -325,40 +364,44 @@ class ARIMA(sarimax.SARIMAX):
         # TODO: maybe should have standard way of computing starting
         # parameters in this class?
         if start_params is not None:
-            if method not in ['statespace', 'innovations_mle']:
-                raise ValueError('Estimation method "%s" does not use starting'
+            if method not in ["statespace", "innovations_mle"]:
+                raise ValueError(f'Estimation method "{method}" does not use starting'
                                  ' parameters, but `start_params` argument was'
-                                 ' given.' % method)
+                                 ' given.')
 
-            method_kwargs['start_params'] = start_params
-            method_kwargs['transformed'] = transformed
-            method_kwargs['includes_fixed'] = includes_fixed
+            method_kwargs["start_params"] = start_params
+            method_kwargs["transformed"] = transformed
+            method_kwargs["includes_fixed"] = includes_fixed
 
         # Perform estimation, depending on whether we have exog or not
         p = None
         fit_details = None
         has_exog = self._spec_arima.exog is not None
-        if has_exog or method == 'statespace':
+        if has_exog or method == "statespace":
             # Use GLS if it was explicitly requested (`gls = True`) or if it
             # was left at the default (`gls = None`) and the ARMA estimator is
             # anything but statespace.
             # Note: both GLS and statespace are able to handle models with
             # integration, so we don't need to difference endog or exog here.
-            if has_exog and (gls or (gls is None and method != 'statespace')):
+            if has_exog and (gls or (gls is None and method != "statespace")):
+                if self._has_fixed_params:
+                    raise NotImplementedError(
+                        "GLS estimation is not yet implemented for the case "
+                        "with fixed parameters."
+                    )
                 p, fit_details = estimate_gls(
                     self.endog, exog=self.exog, order=self.order,
                     seasonal_order=self.seasonal_order, include_constant=False,
                     arma_estimator=method, arma_estimator_kwargs=method_kwargs,
                     **gls_kwargs)
-            elif method != 'statespace':
-                raise ValueError('If `exog` is given and GLS is disabled'
-                                 ' (`gls=False`), then the only valid'
-                                 " method is 'statespace'. Got '%s'."
-                                 % method)
+            elif method != "statespace":
+                raise ValueError("If `exog` is given and GLS is disabled"
+                                 " (`gls=False`), then the only valid"
+                                 f" method is 'statespace'. Got '{method}'.")
             else:
-                method_kwargs.setdefault('disp', 0)
+                method_kwargs.setdefault("disp", 0)
 
-                res = super(ARIMA, self).fit(
+                res = super().fit(
                     return_params=return_params, low_memory=low_memory,
                     cov_type=cov_type, cov_kwds=cov_kwds, **method_kwargs)
                 if not return_params:
@@ -373,7 +416,8 @@ class ARIMA(sarimax.SARIMAX):
             if self._spec_arima.is_integrated:
                 warnings.warn('Provided `endog` series has been differenced'
                               ' to eliminate integration prior to parameter'
-                              ' estimation by method "%s".' % method)
+                              f' estimation by method "{method}".',
+                              stacklevel=2,)
                 endog = diff(
                     endog, k_diff=self._spec_arima.diff,
                     k_seasonal_diff=self._spec_arima.seasonal_diff,
@@ -383,27 +427,29 @@ class ARIMA(sarimax.SARIMAX):
                 if seasonal_order[1] > 0:
                     seasonal_order = (seasonal_order[0], 0, seasonal_order[2],
                                       seasonal_order[3])
+            if self._has_fixed_params:
+                method_kwargs["fixed_params"] = self._fixed_params.copy()
 
             # Now, estimate parameters
-            if method == 'yule_walker':
+            if method == "yule_walker":
                 p, fit_details = yule_walker(
                     endog, ar_order=order[0], demean=False,
                     **method_kwargs)
-            elif method == 'burg':
+            elif method == "burg":
                 p, fit_details = burg(endog, ar_order=order[0],
                                       demean=False, **method_kwargs)
-            elif method == 'hannan_rissanen':
+            elif method == "hannan_rissanen":
                 p, fit_details = hannan_rissanen(
                     endog, ar_order=order[0],
                     ma_order=order[2], demean=False, **method_kwargs)
-            elif method == 'innovations':
+            elif method == "innovations":
                 p, fit_details = innovations(
                     endog, ma_order=order[2], demean=False,
                     **method_kwargs)
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
-            elif method == 'innovations_mle':
+            elif method == "innovations_mle":
                 p, fit_details = innovations_mle(
                     endog, order=order,
                     seasonal_order=seasonal_order,
@@ -494,4 +540,6 @@ class ARIMAResultsWrapper(sarimax.SARIMAXResultsWrapper):
     _methods = {}
     _wrap_methods = wrap.union_dicts(
         sarimax.SARIMAXResultsWrapper._wrap_methods, _methods)
-wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)  # noqa:E305
+
+
+wrap.populate_wrapper(ARIMAResultsWrapper, ARIMAResults)

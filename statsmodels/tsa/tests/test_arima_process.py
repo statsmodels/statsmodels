@@ -1,30 +1,41 @@
+from statsmodels.compat.pandas import QUARTER_END
 
-from statsmodels.tsa.arima_model import ARMA
-from unittest import TestCase
+import datetime as dt
 
 import numpy as np
-from numpy.testing import (assert_array_almost_equal, assert_almost_equal,
-                           assert_allclose,
-                           assert_equal, assert_raises, assert_)
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_almost_equal,
+    assert_equal,
+)
+import pandas as pd
 import pytest
 
-from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
-                                           arma_acf, arma_impulse_response, lpol_fiar, lpol_fima,
-                                           ArmaProcess, lpol2index, index2lpol)
 from statsmodels.sandbox.tsa.fftarma import ArmaFft
-
-from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima_process import (
+    ArmaProcess,
+    arma_acf,
+    arma_acovf,
+    arma_generate_sample,
+    arma_impulse_response,
+    index2lpol,
+    lpol2index,
+    lpol_fiar,
+    lpol_fima,
+)
 from statsmodels.tsa.tests.results import results_arma_acf
+from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
 
-arlist = [[1.],
-          [1, -0.9],  # ma representation will need many terms to get high precision
-          [1, 0.9],
-          [1, -0.9, 0.3]]
+arlist = [
+    [1.0],
+    [1, -0.9],  # ma representation will need many terms to get high precision
+    [1, 0.9],
+    [1, -0.9, 0.3],
+]
 
-malist = [[1.],
-          [1, 0.9],
-          [1, -0.9],
-          [1, 0.9, -0.3]]
+malist = [[1.0], [1, 0.9], [1, -0.9], [1, 0.9, -0.3]]
 
 DECIMAL_4 = 4
 
@@ -37,7 +48,7 @@ def test_arma_acovf():
     # rep 1: from module function
     rep1 = arma_acovf([1, -phi], [1], N)
     # rep 2: manually
-    rep2 = [1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)]
+    rep2 = [1.0 * sigma * phi**i / (1 - phi**2) for i in range(N)]
     assert_allclose(rep1, rep2)
 
 
@@ -45,17 +56,17 @@ def test_arma_acovf_persistent():
     # Test arma_acovf in case where there is a near-unit root.
     # .999 is high enough to trigger the "while ir[-1] > 5*1e-5:" clause,
     # but not high enough to trigger the "nobs_ir > 50000" clause.
-    ar = np.array([1, -.9995])
+    ar = np.array([1, -0.9995])
     ma = np.array([1])
     process = ArmaProcess(ar, ma)
     res = process.acovf(10)
 
     # Theoretical variance sig2 given by:
     # sig2 = .9995**2 * sig2 + 1
-    sig2 = 1/(1-.9995**2)
+    sig2 = 1 / (1 - 0.9995**2)
 
-    corrs = .9995**np.arange(10)
-    expected = sig2*corrs
+    corrs = 0.9995 ** np.arange(10)
+    expected = sig2 * corrs
     assert_equal(res.ndim, 1)
     assert_allclose(res, expected)
 
@@ -68,8 +79,8 @@ def test_arma_acf():
     # rep 1: from module function
     rep1 = arma_acf([1, -phi], [1], N)
     # rep 2: manually
-    acovf = np.array([1. * sigma * phi ** i / (1 - phi ** 2) for i in range(N)])
-    rep2 = acovf / (1. / (1 - phi ** 2))
+    acovf = np.array([1.0 * sigma * phi**i / (1 - phi**2) for i in range(N)])
+    rep2 = acovf / (1.0 / (1 - phi**2))
     assert_allclose(rep1, rep2)
 
 
@@ -110,16 +121,21 @@ def test_arma_acov_compare_theoretical_arma_acov():
             ir = arma_impulse_response(ar, ma, leads=nobs_ir)
         if nobs_ir > 50000 and nobs < 1001:
             end = len(ir)
-            acovf = np.array([np.dot(ir[:end-nobs-t], ir[t:end-nobs])
-                              for t in range(nobs)])
+            acovf = np.array(
+                [np.dot(ir[: end - nobs - t], ir[t : end - nobs]) for t in range(nobs)]
+            )
         else:
-            acovf = np.correlate(ir, ir, 'full')[len(ir) - 1:]
+            acovf = np.correlate(ir, ir, "full")[len(ir) - 1 :]
         return acovf[:nobs]
 
-    assert_allclose(arma_acovf([1, -0.5], [1, 0.2]),
-                    arma_acovf_historical([1, -0.5], [1, 0.2]))
-    assert_allclose(arma_acovf([1, -0.99], [1, 0.2]),
-                    arma_acovf_historical([1, -0.99], [1, 0.2]))
+    assert_allclose(
+        arma_acovf([1, -0.5], [1, 0.2]),
+        arma_acovf_historical([1, -0.5], [1, 0.2]),
+    )
+    assert_allclose(
+        arma_acovf([1, -0.99], [1, 0.2]),
+        arma_acovf_historical([1, -0.99], [1, 0.2]),
+    )
 
 
 def _manual_arma_generate_sample(ar, ma, eta):
@@ -134,24 +150,23 @@ def _manual_arma_generate_sample(ar, ma, eta):
             yt += np.dot(rep2[-p:], ar)
         if q:
             # left pad shocks with zeros
-            yt += np.dot([0] * (q - t) + list(eta[max(0, t - q):t]), ma)
+            yt += np.dot([0] * (q - t) + list(eta[max(0, t - q) : t]), ma)
         rep2.append(yt)
-    return np.array(rep2[max(p, q):])
+    return np.array(rep2[max(p, q) :])
 
 
-@pytest.mark.parametrize('ar', arlist)
-@pytest.mark.parametrize('ma', malist)
-@pytest.mark.parametrize('dist', [np.random.standard_normal])
-def test_arma_generate_sample(dist, ar, ma):
+@pytest.mark.parametrize("ar", arlist)
+@pytest.mark.parametrize("ma", malist)
+def test_arma_generate_sample(ar, ma):
     # Test that this generates a true ARMA process
     # (amounts to just a test that scipy.signal.lfilter does what we want)
     T = 100
-    np.random.seed(1234)
-    eta = dist(T)
+    rg = np.random.RandomState(1234)
+    eta = rg.standard_normal(T)
 
     # rep1: from module function
-    np.random.seed(1234)
-    rep1 = arma_generate_sample(ar, ma, T, distrvs=dist)
+    rg2 = np.random.RandomState(1234)
+    rep1 = arma_generate_sample(ar, ma, T, distrvs=rg2.standard_normal)
     # rep2: "manually" create the ARMA process
     ar_params = -1 * np.array(ar[1:])
     ma_params = np.array(ma[1:])
@@ -174,8 +189,8 @@ def test_arma_impulse_response():
     assert_array_almost_equal(-armarep.arrep.ravel(), arrep, 14)
 
 
-@pytest.mark.parametrize('ar', arlist)
-@pytest.mark.parametrize('ma', malist)
+@pytest.mark.parametrize("ar", arlist)
+@pytest.mark.parametrize("ma", malist)
 def test_spectrum(ar, ma):
     nfreq = 20
     w = np.linspace(0, np.pi, nfreq, endpoint=False)
@@ -187,24 +202,28 @@ def test_spectrum(ar, ma):
     assert_equal(w, wr)
     assert_equal(w, wp)
     assert_almost_equal(w, wd[:nfreq], decimal=14)
-    assert_almost_equal(spdr, spdd[:nfreq], decimal=7,
-                        err_msg='spdr spdd not equal for %s, %s' % (ar, ma))
-    assert_almost_equal(spdr, spdp, decimal=7,
-                        err_msg='spdr spdp not equal for %s, %s' % (ar, ma))
+    assert_almost_equal(
+        spdr,
+        spdd[:nfreq],
+        decimal=7,
+        err_msg=f"spdr spdd not equal for {ar}, {ma}",
+    )
+    assert_almost_equal(
+        spdr,
+        spdp,
+        decimal=7,
+        err_msg=f"spdr spdp not equal for {ar}, {ma}",
+    )
 
 
-@pytest.mark.parametrize('ar', arlist)
-@pytest.mark.parametrize('ma', malist)
+@pytest.mark.parametrize("ar", arlist)
+@pytest.mark.parametrize("ma", malist)
 def test_armafft(ar, ma):
     # test other methods
-    nfreq = 20
-    w = np.linspace(0, np.pi, nfreq, endpoint=False)
-
     arma = ArmaFft(ar, ma, 20)
     ac1 = arma.invpowerspd(1024)[:10]
     ac2 = arma.acovf(10)[:10]
-    assert_allclose(ac1, ac2, atol=1e-15,
-                    err_msg='acovf not equal for %s, %s' % (ar, ma))
+    assert_allclose(ac1, ac2, atol=1e-15, err_msg=f"acovf not equal for {ar}, {ma}")
 
 
 def test_lpol2index_index2lpol():
@@ -213,15 +232,15 @@ def test_lpol2index_index2lpol():
     assert_almost_equal(coefs, [0.8])
     assert_equal(locs, [2])
 
-    process = ArmaProcess([1, .1, .1, -0.8])
+    process = ArmaProcess([1, 0.1, 0.1, -0.8])
     coefs, locs = lpol2index(process.arcoefs)
-    assert_almost_equal(coefs, [-.1, -.1, 0.8])
+    assert_almost_equal(coefs, [-0.1, -0.1, 0.8])
     assert_equal(locs, [0, 1, 2])
     ar = index2lpol(coefs, locs)
     assert_equal(process.arcoefs, ar)
 
 
-class TestArmaProcess(TestCase):
+class TestArmaProcess:
     def test_empty_coeff(self):
         process = ArmaProcess()
         assert_equal(process.arcoefs, np.array([]))
@@ -234,6 +253,61 @@ class TestArmaProcess(TestCase):
         process = ArmaProcess(ma=[1, -0.8])
         assert_equal(process.arcoefs, np.array([]))
         assert_equal(process.macoefs, np.array([-0.8]))
+
+    def test_from_roots(self):
+        ar = [1.8, -0.9]
+        ma = [0.3]
+
+        ar.insert(0, -1)
+        ma.insert(0, 1)
+        ar_p = -1 * np.array(ar)
+        ma_p = ma
+        process_direct = ArmaProcess(ar_p, ma_p)
+
+        process = ArmaProcess.from_roots(
+            np.array(process_direct.maroots), np.array(process_direct.arroots)
+        )
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess(ar=ar_p)
+        process = ArmaProcess.from_roots(arroots=np.array(process_direct.arroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess(ma=ma_p)
+        process = ArmaProcess.from_roots(maroots=np.array(process_direct.maroots))
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
+
+        process_direct = ArmaProcess()
+        process = ArmaProcess.from_roots()
+
+        assert_almost_equal(process.arcoefs, process_direct.arcoefs)
+        assert_almost_equal(process.macoefs, process_direct.macoefs)
+        assert_almost_equal(process.nobs, process_direct.nobs)
+        assert_almost_equal(process.maroots, process_direct.maroots)
+        assert_almost_equal(process.arroots, process_direct.arroots)
+        assert_almost_equal(process.isinvertible, process_direct.isinvertible)
+        assert_almost_equal(process.isstationary, process_direct.isstationary)
 
     def test_from_coeff(self):
         ar = [1.8, -0.9]
@@ -254,69 +328,55 @@ class TestArmaProcess(TestCase):
         assert_equal(process.isinvertible, process_direct.isinvertible)
         assert_equal(process.isstationary, process_direct.isstationary)
 
-    def test_from_model(self):
-        process = ArmaProcess([1, -.8], [1, .3], 1000)
-        t = 1000
-        rs = np.random.RandomState(12345)
-        y = process.generate_sample(t, burnin=100, distrvs=rs.standard_normal)
-        res = ARMA(y, (1, 1)).fit(disp=False)
-        process_model = ArmaProcess.from_estimation(res)
-        process_coef = ArmaProcess.from_coeffs(res.arparams, res.maparams, t)
-
-        assert_equal(process_model.arcoefs, process_coef.arcoefs)
-        assert_equal(process_model.macoefs, process_coef.macoefs)
-        assert_equal(process_model.nobs, process_coef.nobs)
-        assert_equal(process_model.isinvertible, process_coef.isinvertible)
-        assert_equal(process_model.isstationary, process_coef.isstationary)
-
     def test_process_multiplication(self):
-        process1 = ArmaProcess.from_coeffs([.9])
-        process2 = ArmaProcess.from_coeffs([.7])
+        process1 = ArmaProcess.from_coeffs([0.9])
+        process2 = ArmaProcess.from_coeffs([0.7])
         process3 = process1 * process2
         assert_equal(process3.arcoefs, np.array([1.6, -0.7 * 0.9]))
         assert_equal(process3.macoefs, np.array([]))
 
-        process1 = ArmaProcess.from_coeffs([.9], [.2])
-        process2 = ArmaProcess.from_coeffs([.7])
+        process1 = ArmaProcess.from_coeffs([0.9], [0.2])
+        process2 = ArmaProcess.from_coeffs([0.7])
         process3 = process1 * process2
 
         assert_equal(process3.arcoefs, np.array([1.6, -0.7 * 0.9]))
         assert_equal(process3.macoefs, np.array([0.2]))
 
-        process1 = ArmaProcess.from_coeffs([.9], [.2])
+        process1 = ArmaProcess.from_coeffs([0.9], [0.2])
         process2 = process1 * (np.array([1.0, -0.7]), np.array([1.0]))
         assert_equal(process2.arcoefs, np.array([1.6, -0.7 * 0.9]))
 
-        assert_raises(TypeError, process1.__mul__, [3])
+        with pytest.raises(TypeError):
+            process1.__mul__([3])
 
     def test_str_repr(self):
-        process1 = ArmaProcess.from_coeffs([.9], [.2])
+        process1 = ArmaProcess.from_coeffs([0.9], [0.2])
         out = process1.__str__()
         print(out)
-        assert_(out.find('AR: [1.0, -0.9]') != -1)
-        assert_(out.find('MA: [1.0, 0.2]') != -1)
+        assert out.find("AR: [1.0, -0.9]") != -1
+        assert out.find("MA: [1.0, 0.2]") != -1
 
         out = process1.__repr__()
-        assert_(out.find('nobs=100') != -1)
-        assert_(out.find('at ' + str(hex(id(process1)))) != -1)
+        assert out.find("nobs=100") != -1
+        assert out.find("at " + str(hex(id(process1)))) != -1
 
     def test_acf(self):
-        process1 = ArmaProcess.from_coeffs([.9])
+        process1 = ArmaProcess.from_coeffs([0.9])
         acf = process1.acf(10)
         expected = np.array(0.9) ** np.arange(10.0)
         assert_array_almost_equal(acf, expected)
 
         acf = process1.acf()
-        assert_(acf.shape[0] == process1.nobs)
+        assert acf.shape[0] == process1.nobs
 
     def test_pacf(self):
-        process1 = ArmaProcess.from_coeffs([.9])
+        process1 = ArmaProcess.from_coeffs([0.9])
         pacf = process1.pacf(10)
         expected = np.array([1, 0.9] + [0] * 8)
         assert_array_almost_equal(pacf, expected)
 
         pacf = process1.pacf()
-        assert_(pacf.shape[0] == process1.nobs)
+        assert pacf.shape[0] == process1.nobs
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])
@@ -350,37 +410,37 @@ class TestArmaProcess(TestCase):
 
     def test_generate_sample(self):
         process = ArmaProcess.from_coeffs([0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample()
-        np.random.seed(12345)
-        expected = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(100)
         for i in range(1, 100):
             expected[i] = 0.9 * expected[i - 1] + expected[i]
         assert_almost_equal(sample, expected)
 
         process = ArmaProcess.from_coeffs([1.6, -0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample()
-        np.random.seed(12345)
-        expected = np.random.randn(100)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(100)
         expected[1] = 1.6 * expected[0] + expected[1]
         for i in range(2, 100):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected)
 
         process = ArmaProcess.from_coeffs([1.6, -0.9])
-        np.random.seed(12345)
-        sample = process.generate_sample(burnin=100)
-        np.random.seed(12345)
-        expected = np.random.randn(200)
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(burnin=100, distrvs=rs.standard_normal)
+        rs = np.random.RandomState(12345)
+        expected = rs.randn(200)
         expected[1] = 1.6 * expected[0] + expected[1]
         for i in range(2, 200):
             expected[i] = 1.6 * expected[i - 1] - 0.9 * expected[i - 2] + expected[i]
         assert_almost_equal(sample, expected[100:])
 
-        np.random.seed(12345)
-        sample = process.generate_sample(nsample=(100,5))
-        assert_equal(sample.shape, (100,5))
+        rs = np.random.RandomState(12345)
+        sample = process.generate_sample(nsample=(100, 5), distrvs=rs.standard_normal)
+        assert_equal(sample.shape, (100, 5))
 
     def test_impulse_response(self):
         process = ArmaProcess.from_coeffs([0.9])
@@ -390,5 +450,26 @@ class TestArmaProcess(TestCase):
     def test_periodogram(self):
         process = ArmaProcess()
         pg = process.periodogram()
-        assert_almost_equal(pg[0], np.linspace(0,np.pi,100,False))
+        assert_almost_equal(pg[0], np.linspace(0, np.pi, 100, False))
         assert_almost_equal(pg[1], np.sqrt(2 / np.pi) / 2 * np.ones(100))
+
+
+@pytest.mark.parametrize("d", [0, 1])
+@pytest.mark.parametrize("seasonal", [True])
+def test_from_estimation(d, seasonal):
+    ar = [0.8] if not seasonal else [0.8, 0, 0, 0.2, -0.16]
+    ma = [0.4] if not seasonal else [0.4, 0, 0, 0.2, -0.08]
+    ap = ArmaProcess.from_coeffs(ar, ma, 500)
+    idx = pd.date_range(dt.datetime(1900, 1, 1), periods=500, freq=QUARTER_END)
+    rs = np.random.RandomState(12345111)
+    data = ap.generate_sample(500, distrvs=rs.standard_normal)
+    if d == 1:
+        data = np.cumsum(data)
+    data = pd.Series(data, index=idx)
+    seasonal_order = (1, 0, 1, 4) if seasonal else None
+    mod = ARIMA(data, order=(1, d, 1), seasonal_order=seasonal_order)
+    res = mod.fit()
+    ap_from = ArmaProcess.from_estimation(res)
+    shape = (5,) if seasonal else (1,)
+    assert ap_from.arcoefs.shape == shape
+    assert ap_from.macoefs.shape == shape

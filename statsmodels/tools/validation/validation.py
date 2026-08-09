@@ -1,5 +1,9 @@
-from typing import Any, Optional
+"""Validation helpers for array-like and scalar inputs"""
+
+from __future__ import annotations
+
 from collections.abc import Mapping
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -22,6 +26,7 @@ def _right_squeeze(arr, stop_dim=0):
     squeezed : ndarray
         Array with all trailing singleton dimensions (0 or 1) removed.
         Singleton dimensions for dimension < stop_dim are retained.
+
     """
     last = arr.ndim
     for s in reversed(arr.shape):
@@ -43,6 +48,7 @@ def array_like(
     order=None,
     contiguous=False,
     optional=False,
+    writeable=True,
 ):
     """
     Convert array-like to a ndarray and check conditions
@@ -59,7 +65,7 @@ def array_like(
         of obj (if present) or uses NumPy to automatically detect the dtype
     ndim : {int, None}
         Required number of dimensions of obj. If None, no check is performed.
-        If the numebr of dimensions of obj is less than ndim, additional axes
+        If the number of dimensions of obj is less than ndim, additional axes
         are inserted on the right. See examples.
     maxdim : {int, None}
         Maximum allowed dimension.  Use ``maxdim`` instead of ``ndim`` when
@@ -73,6 +79,8 @@ def array_like(
         Ensure that the array's data is contiguous with order ``order``
     optional : bool
         Flag indicating whether None is allowed
+    writeable : bool
+        Whether to ensure the returned array is writeable
 
     Returns
     -------
@@ -92,9 +100,6 @@ def array_like(
     >>> a.shape
     (4,)
 
-    >>> type(a.orig)
-    pandas.core.series.Series
-
     Squeezes singleton dimensions when required
     >>> x = np.array(x).reshape((4, 1))
     >>> a = array_like(x, 'x', ndim=1)
@@ -112,7 +117,7 @@ def array_like(
     >>> y = array_like(x, 'x', ndim=3, shape=(4, None, 4))
 
     Check only the first two dimensions
-    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10))
+    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10, None))
 
     Raises ValueError if constraints are not satisfied
     >>> z = array_like(x, 'x', ndim=2)
@@ -120,22 +125,30 @@ def array_like(
      ...
     ValueError: x is required to have ndim 2 but has ndim 3
 
-    >>> z = array_like(x, 'x', shape=(10, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(10, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (10, 4, 4) but has shape (4, 10, 4)
 
-    >>> z = array_like(x, 'x', shape=(None, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(None, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
+
     """
-    if optional and obj is None:
-        return None
-    arr = np.asarray(obj, dtype=dtype, order=order)
+    if obj is None:
+        if optional:
+            return None
+        raise TypeError(f"{name} must be array_like, not None")
+    reqs = ["W"] if writeable else []
+    if order == "C" or contiguous:
+        reqs += ["C"]
+    elif order == "F":
+        reqs += ["F"]
+    arr = np.require(obj, dtype=dtype, requirements=reqs)
     if maxdim is not None:
         if arr.ndim > maxdim:
-            msg = "{0} must have ndim <= {1}".format(name, maxdim)
+            msg = f"{name} must have ndim <= {maxdim}"
             raise ValueError(msg)
     elif ndim is not None:
         if arr.ndim > ndim:
@@ -146,17 +159,21 @@ def array_like(
             msg = "{0} is required to have ndim {1} but has ndim {2}"
             raise ValueError(msg.format(name, ndim, arr.ndim))
     if shape is not None:
-        for actual, req in zip(arr.shape, shape):
+        if len(shape) != arr.ndim:
+            msg = (
+                f"Provided shape {shape} does not have the correct dimension for "
+                f"{name}, which is dimension {arr.ndim}"
+            )
+            raise ValueError(msg)
+        for actual, req in zip(arr.shape, shape, strict=True):
             if req is not None and actual != req:
                 req_shape = str(shape).replace("None, ", "*, ")
                 msg = "{0} is required to have shape {1} but has shape {2}"
                 raise ValueError(msg.format(name, req_shape, arr.shape))
-    if contiguous:
-        arr = np.ascontiguousarray(arr, dtype=dtype)
     return arr
 
 
-class PandasWrapper(object):
+class PandasWrapper:
     """
     Wrap array_like using the index from the original input, if pandas
 
@@ -167,9 +184,10 @@ class PandasWrapper(object):
 
     Notes
     -----
-    Raises if ``orig`` is a pandas type but obj and and ``orig`` have
+    Raises if ``orig`` is a pandas type but obj and ``orig`` have
     different numbers of elements in axis 0. Also raises if the ndim of obj
     is larger than 2.
+
     """
 
     def __init__(self, pandas_obj):
@@ -178,6 +196,8 @@ class PandasWrapper(object):
 
     def wrap(self, obj, columns=None, append=None, trim_start=0, trim_end=0):
         """
+        Wrap array_like using the index from the original input
+
         Parameters
         ----------
         obj : {array_like}
@@ -196,7 +216,10 @@ class PandasWrapper(object):
         Returns
         -------
         array_like
-            A pandas Series or DataFrame, depending on the shape of obj.
+            A pandas Series or DataFrame, depending on the shape of obj, if
+            the object used to create the wrapper was pandas. Otherwise,
+            returns `obj` converted to an ndarray, unchanged.
+
         """
         obj = np.asarray(obj)
         if not self._is_pandas:
@@ -204,11 +227,10 @@ class PandasWrapper(object):
 
         if obj.shape[0] + trim_start + trim_end != self._pandas_obj.shape[0]:
             raise ValueError(
-                "obj must have the same number of elements in "
-                "axis 0 as orig"
+                "obj must have the same number of elements in axis 0 as orig"
             )
         index = self._pandas_obj.index
-        index = index[trim_start: index.shape[0] - trim_end]
+        index = index[trim_start : index.shape[0] - trim_end]
         if obj.ndim == 1:
             if columns is None:
                 name = getattr(self._pandas_obj, "name", None)
@@ -224,10 +246,7 @@ class PandasWrapper(object):
             if columns is None:
                 columns = getattr(self._pandas_obj, "columns", None)
             if append is not None:
-                new = []
-                for c in columns:
-                    new.append(append if c is None else f"{c}_{append}")
-                columns = new
+                columns = [append if c is None else f"{c}_{append}" for c in columns]
             return pd.DataFrame(obj, columns=columns, index=index)
         else:
             raise ValueError("Can only wrap 1 or 2-d array_like")
@@ -253,6 +272,7 @@ def bool_like(value, name, optional=False, strict=False):
     -------
     converted : bool
         value converted to a bool
+
     """
     if optional and value is None:
         return value
@@ -261,22 +281,21 @@ def bool_like(value, name, optional=False, strict=False):
         if isinstance(value, bool):
             return value
         else:
-            raise TypeError("{0} must be a bool{1}".format(name, extra_text))
+            raise TypeError(f"{name} must be a bool{extra_text}")
 
     if hasattr(value, "squeeze") and callable(value.squeeze):
         value = value.squeeze()
     try:
         return bool(value)
-    except Exception:
+    except Exception as exc:
         raise TypeError(
-            "{0} must be a bool (or bool-compatible)"
-            "{1}".format(name, extra_text)
-        )
+            f"{name} must be a bool (or bool-compatible){extra_text}"
+        ) from exc
 
 
 def int_like(
     value: Any, name: str, optional: bool = False, strict: bool = False
-) -> Optional[int]:
+) -> int | None:
     """
     Convert to int or raise if not int_like
 
@@ -296,6 +315,7 @@ def int_like(
     -------
     converted : int
         value converted to a int
+
     """
     if optional and value is None:
         return None
@@ -314,14 +334,14 @@ def int_like(
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{0} must be integer_like (int or np.integer, but not bool"
-        " or timedelta64){1}".format(name, extra_text)
+        f"{name} must be integer_like (int or np.integer, but not bool"
+        f" or timedelta64){extra_text}"
     )
 
 
 def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     """
-    Convert to int or raise if not int_like
+    Convert to int or raise if not int_like, requiring a value (not optional)
 
     Parameters
     ----------
@@ -329,8 +349,6 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
         Value to verify
     name : str
         Variable name for exceptions
-    optional : bool
-        Flag indicating whether None is allowed
     strict : bool
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
@@ -339,6 +357,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
     -------
     converted : int
         value converted to a int
+
     """
     _int = int_like(value, name, optional=False, strict=strict)
     assert _int is not None
@@ -360,13 +379,14 @@ def float_like(value, name, optional=False, strict=False):
     strict : bool
         If True, then only allow int, np.integer, float or np.inexact that are
         not bool or complex. If False, allow complex types with 0 imag part or
-        any other type that is float like in the sense that it support
+        any other type that is float-like in the sense that it supports
         multiplication by 1.0 and conversion to float.
 
     Returns
     -------
     converted : float
         value converted to a float
+
     """
     if optional and value is None:
         return None
@@ -390,8 +410,7 @@ def float_like(value, name, optional=False, strict=False):
             pass
     extra_text = " or None" if optional else ""
     raise TypeError(
-        "{0} must be float_like (float or np.inexact)"
-        "{1}".format(name, extra_text)
+        f"{name} must be float_like (float or np.inexact){extra_text}"
     )
 
 
@@ -423,20 +442,19 @@ def string_like(value, name, optional=False, options=None, lower=True):
         If the value is not a string or None when optional is True.
     ValueError
         If the input is not in ``options`` when ``options`` is set.
+
     """
-    if value is None:
+    if optional and value is None:
         return None
     if not isinstance(value, str):
         extra_text = " or None" if optional else ""
-        raise TypeError("{0} must be a string{1}".format(name, extra_text))
+        raise TypeError(f"{name} must be a string{extra_text}")
     if lower:
         value = value.lower()
     if options is not None and value not in options:
         extra_text = "If not None, " if optional else ""
         options_text = "'" + "', '".join(options) + "'"
-        msg = "{0}{1} must be one of: {2}".format(
-            extra_text, name, options_text
-        )
+        msg = f"{extra_text}{name} must be one of: {options_text}"
         raise ValueError(msg)
     return value
 
@@ -460,14 +478,13 @@ def dict_like(value, name, optional=False, strict=True):
     -------
     converted : dict_like
         value
+
     """
     if optional and value is None:
         return None
-    if not isinstance(value, Mapping) or (
-        strict and not (isinstance(value, dict))
-    ):
+    if not isinstance(value, Mapping) or (strict and not (isinstance(value, dict))):
         extra_text = "If not None, " if optional else ""
-        strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
-        msg = "{0}{1} must be a dict{2}".format(extra_text, name, strict_text)
+        strict_text = "" if strict else " or dict_like (i.e., a Mapping)"
+        msg = f"{extra_text}{name} must be a dict{strict_text}"
         raise TypeError(msg)
     return value
