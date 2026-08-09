@@ -18,6 +18,7 @@ from scipy import stats
 from scipy.interpolate import interp1d
 
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     InfeasibleTestError,
@@ -50,11 +51,11 @@ from statsmodels.tsa.stattools import (
     adfuller,
     arma_order_select_ic,
     block_jackknife,
-    diebold_mariano_test,
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
     coint,
+    diebold_mariano_test,
     grangercausalitytests,
     innovations_algo,
     innovations_filter,
@@ -275,7 +276,11 @@ class TestACF(CheckCorrGram):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = acf(
-                self.x, nlags=40, qstat=True, alpha=0.05, fft=False,
+                self.x,
+                nlags=40,
+                qstat=True,
+                alpha=0.05,
+                fft=False,
                 use_namedtuple=True,
             )
         assert isinstance(res, AcfResult)
@@ -346,9 +351,7 @@ class TestACF(CheckCorrGram):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             res = acf(self.x, nlags=40, fft=False, **kwargs)
-            opted_out = acf(
-                self.x, nlags=40, fft=False, use_namedtuple=False, **kwargs
-            )
+            opted_out = acf(self.x, nlags=40, fft=False, use_namedtuple=False, **kwargs)
         assert len(res) == expected
         assert len(opted_out) == expected
         # unpacking with exactly `expected` names must not raise
@@ -375,9 +378,7 @@ class TestACF_FFT(CheckCorrGram):
     def setup_class(cls):
         cls.acf = cls.results["acvarfft"]
         cls.qstat = cls.results["Q1"]
-        cls.res1 = acf(
-            cls.x, nlags=40, qstat=True, fft=True, use_namedtuple=False
-        )
+        cls.res1 = acf(cls.x, nlags=40, qstat=True, fft=True, use_namedtuple=False)
 
     def test_acf(self):
         assert_almost_equal(self.res1[0][1:], self.acf, DECIMAL_8)
@@ -514,9 +515,7 @@ class TestPACF(CheckCorrGram):
     def test_alpha_use_namedtuple_true(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            res = pacf(
-                self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=True
-            )
+            res = pacf(self.x, nlags=40, alpha=0.05, method="ols", use_namedtuple=True)
         assert isinstance(res, PacfResult)
         assert res[0] is res.pacf
         assert res[1] is res.confint
@@ -630,9 +629,7 @@ class TestCCF:
     def test_alpha_use_namedtuple_true(self):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            res = ccf(
-                self.x, self.y, nlags=self.nlags, alpha=0.05, use_namedtuple=True
-            )
+            res = ccf(self.x, self.y, nlags=self.nlags, alpha=0.05, use_namedtuple=True)
         assert isinstance(res, CcfResult)
         assert res[0] is res.ccf
         assert res[1] is res.confint
@@ -1699,9 +1696,7 @@ class TestRUR:
 
     def test_store(self):
         with pytest.warns(InterpolationWarning):
-            _, _, _, store = range_unit_root_test(
-                self.x, True, use_namedtuple=False
-            )
+            _, _, _, store = range_unit_root_test(self.x, True, use_namedtuple=False)
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
@@ -1900,31 +1895,85 @@ def test_arma_order_select_ic():
 
 
 def test_diebold_mariano_test():
-    y = np.array([0.7905291971644244, 1.3165423213858396, 2.629194824493898, 2.274163381390831,
-                  2.3350897900078773, 4.309556160533848, 3.2008616600117854, 3.0279620894948263,
-                  2.567645423157318, 0.8342527751292501, 2.0985671460216464, 3.408247061676925,
-                  2.9699882967078457, 3.6732582708103863, 3.4609292040029644])
-    f1 = np.array([0.9824387126880363, 3.347555830856235, 1.8132440948000608, 4.501884323116638,
-                  0.993073450965922, 0.988116816888287, 3.7834883570834847, 2.498189378576747,
-                  4.8566413245270965, 1.7412497391486617, 3.4637323882747384, 3.101483832900048,
-                  3.0411384793663037, 3.2500575506493394, 3.199491151189982])
-    f2 = np.array([0.8002551776387801, 2.35554283908294, 2.5017107565163754, 2.9709840260800897,
-                  2.031947528256514, 2.044069317891979, 1.8690271476061573, 2.541558191277514,
-                  3.0762879697739653, 3.420942734113572,3.9529070460967226, 3.036772850400313,
-                  3.898343203105889, 4.397338510819033, 4.699775884928464])
+    y = np.array(
+        [
+            0.7905291971644244,
+            1.3165423213858396,
+            2.629194824493898,
+            2.274163381390831,
+            2.3350897900078773,
+            4.309556160533848,
+            3.2008616600117854,
+            3.0279620894948263,
+            2.567645423157318,
+            0.8342527751292501,
+            2.0985671460216464,
+            3.408247061676925,
+            2.9699882967078457,
+            3.6732582708103863,
+            3.4609292040029644,
+        ]
+    )
+    f1 = np.array(
+        [
+            0.9824387126880363,
+            3.347555830856235,
+            1.8132440948000608,
+            4.501884323116638,
+            0.993073450965922,
+            0.988116816888287,
+            3.7834883570834847,
+            2.498189378576747,
+            4.8566413245270965,
+            1.7412497391486617,
+            3.4637323882747384,
+            3.101483832900048,
+            3.0411384793663037,
+            3.2500575506493394,
+            3.199491151189982,
+        ]
+    )
+    f2 = np.array(
+        [
+            0.8002551776387801,
+            2.35554283908294,
+            2.5017107565163754,
+            2.9709840260800897,
+            2.031947528256514,
+            2.044069317891979,
+            1.8690271476061573,
+            2.541558191277514,
+            3.0762879697739653,
+            3.420942734113572,
+            3.9529070460967226,
+            3.036772850400313,
+            3.898343203105889,
+            4.397338510819033,
+            4.699775884928464,
+        ]
+    )
 
-    res1 = diebold_mariano_test(y, f1, f2, criterion='MSE')
-    res2 = diebold_mariano_test(y, f1, f2, horizon=2, criterion='MSE')
-    res3 = diebold_mariano_test(y, f1, f2, harvey_adj=True)
-    res4 = diebold_mariano_test(y, f1, f2, criterion='MAD')
+    res1 = diebold_mariano_test(y, f1, f2, criterion="mse")
+    res2 = diebold_mariano_test(y, f1, f2, lags=2, criterion="mse")
+    res3 = diebold_mariano_test(y, f1, f2, criterion="mad")
 
+    d = (y - f1) ** 2 - (y - f2) ** 2
+    maxlags = int(np.ceil(len(d) ** (1 / 3)))
+    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
 
-    assert_almost_equal(res1['DM test statistic'], 0.816, DECIMAL_3)
-    assert_almost_equal(res1['p value'], 0.428, DECIMAL_3)
-    assert_almost_equal(res2['DM test statistic'], 0.901, DECIMAL_3)
-    assert_almost_equal(res2['p value'], 0.382, DECIMAL_3)
-    assert_almost_equal(res3['DM test statistic'], 0.788, DECIMAL_3)
-    assert_almost_equal(res3['p value'], 0.443, DECIMAL_3)
+    assert_almost_equal(res1.dm_stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res1.pval, res.pvalues[0], DECIMAL_3)
+
+    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
+
+    assert_almost_equal(res2.dm_stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res2.pval, res.pvalues[0], DECIMAL_3)
+
+    d = np.abs(y - f1) - np.abs(y - f2)
+    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
+
+    assert_almost_equal(res3.dm_stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res3.pval, res.pvalues[0], DECIMAL_3)
 
 
 def test_arma_order_select_ic_failure():
@@ -2561,7 +2610,9 @@ class TestLeybourneMcCabe:
 
 def test_acovf_all_missing():
     x = np.full(100, np.nan)
-    with pytest.raises(ValueError, match=r"All observations are missing after dropping."):
+    with pytest.raises(
+        ValueError, match=r"All observations are missing after dropping."
+    ):
         acovf(x, missing="drop")
 
     assert np.all(np.isnan(acovf(x, missing="conservative")))

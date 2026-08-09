@@ -1282,9 +1282,7 @@ def pacf_ols(
     else:
         x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
-        xlags, x0 = lagmat(
-            x, nlags, original="sep", trim="both", use_namedtuple=False
-        )
+        xlags, x0 = lagmat(x, nlags, original="sep", trim="both", use_namedtuple=False)
         for k in range(1, nlags + 1):
             params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
             # Last coefficient corresponds to PACF value (see [1])
@@ -2703,8 +2701,40 @@ def coint(
     return CointResult(res_adf[0], pval_asy, crit)
 
 
-def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
-                         criterion="MSE", power=2, harvey_adj=False):
+class DieoldMarianoResult(NamedTuple):
+    """
+    Results class for Diebold-Mariano tests
+
+    Produced by func:`diebold_mariano_test`
+
+    Parameters
+    ----------
+    dm_stat : float
+        The Diebold-Mariano test statistic.
+    pvalue : float
+        The p-value for the null of equal predictave accuracy.
+    harvey_adj : float or None
+        The adjustment factor using Harvey et. al. (1997)'s finite
+        sample correction. Not computed if parameter ``harvey_adj``
+        is False (default).
+    """
+
+    dm_stat: float
+    pval: float
+    harvey_adj: float | None
+
+
+def diebold_mariano_test(
+    y,
+    forecast1,
+    forecast2,
+    *,
+    lags=None,
+    criterion="mse",
+    power=2,
+    harvey_adj=False,
+    horizon=1,
+):
     """
     Performs a Diebold-Mariano test under the null hypothesis of
     equal predictive accuracy between two forecasts.
@@ -2717,22 +2747,38 @@ def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
         Array of the forecasted values.
     forecast2 : array_like
         Array of the forecasted values.
-    horizon : int
-        Horizon of the forecast. Default is horizon=1.
-    criterion : str
-        Criterion for the difference of residuals. Default is 'MSE'.
-        Implemented criterions are 'MSE', 'MAD', 'MAPE', 'poly'.
+    lags : int, optional
+        The number of lags to include in the Newey-West variance
+        estimator of the difference. Must be non-negative if provided.
+        If not provided, the rule of thumb of lags = ceil(nobs^(1/3)) is used.
+    criterion : {str, Callable[[ndarray, ndarray], ndarray]}
+        Criterion for the difference of residuals. Default is 'mse'.
+        Implemented criterion are 'mse', 'mad', 'mae', 'mape', 'poly'.
+        Alternatively can be a callable function that accepts two
+        ndarrays and returns an ndarray of losses.  The function
+        signature should be `loss = criterion(y, forecast)`.
     power : int, optional
         Keyword arguments to be passed when criterion='poly'.
-    harvey_adj: bool
+    harvey_adj : bool
         indicates if Harvey-Leybourne-Newbold correction for small samples
-        should be used. Default is False.
+        should be used. Default is False. When True, the p-value is computed
+        from a student's t distribution with nobs - 1 defrees of freedom.
+    horizon : int
+        The forecast horizon. Only used if harvey_adj is True. Default is 1.
 
     Returns
     -------
-    Out
-        Dictionary containing the the DM test statistic and p-values with
+    DiebolaMarianoResult
+        A namedTuple containing the the DM test statistic and p-values with
         adjustments based on Harvey et. al (1997).
+
+    Notes
+    -----
+    The default implemention in uses a Newwy-West variance estimator for the
+    difference in the losses with a bandwith of
+    max(horizon - 1, ceil(nobs ** (1/3))). This differs from some versions of
+    the DM test that use horizon - l lags. Set lags = horizon - 1 to get
+    the alternative parameterization.
 
     References
     -----
@@ -2744,57 +2790,74 @@ def diebold_mariano_test(y, forecast1, forecast2, horizon=1,
        no. 2 (1997): 281-291.
     """
 
-    horizon = int_like(horizon, 'horizon')
+    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
+    forecast1 = array_like(forecast1, "forecast1", ndim=1, maxdim=1, dtype=float)
+    forecast2 = array_like(forecast2, "forecast2", ndim=1, maxdim=1, dtype=float)
+    lags = int_like(lags, "lags", optional=True)
+    harvey_adj = bool_like(harvey_adj, "harvey_adj")
+    power = float_like(power, "power", optional=True)
 
-    if horizon < 1:
-        raise ValueError("horizon argument sould be greater than 0.")
+    t = len(y)
 
-    y =  array_like(y, 'y')
-    forecast1 = array_like(forecast1, 'forecast1')
-    forecast2 = array_like(forecast2, 'forecast2')
+    if lags is None:
+        lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
+    elif lags < 0:
+        raise ValueError("lags must be positive.")
 
-    T = len(y)
-    if any(len(arr) != T for arr in [y, forecast1, forecast2]):
-        raise ValueError("All arrays should be of  equal lenght.")
+    if forecast1.shape[0] != t or forecast2.shape[0] != t:
+        raise ValueError("All arrays must be of equal length.")
+    if isinstance(criterion, str):
+        criterion = string_like(
+            criterion, "criterion", options=("mse", "mad", "mape", "poly")
+        )
+        if criterion == "mse":
+
+            def criterion_func(y, f):
+                return (y - f) ** 2
+
+        elif criterion == "mape":
+
+            def criterion_func(y, f):
+                return np.abs((y - f) / y)
+
+        elif criterion in ("mae", "mad"):
+
+            def criterion_func(y, f):
+                return np.abs(y - f)
+
+        else:
+
+            def criterion_func(y, f):
+                return np.abs(y - f) ** float(power)
+
+    else:
+        criterion_func = criterion
 
     # calculate d based on criterion
-    if (criterion == "MSE"):
-        resid1 = np.power(forecast1 - y, 2)
-        resid2 = np.power(forecast2 - y, 2)
-        d = resid1 - resid2
-
-    elif (criterion == "MAD"):
-        resid1 = np.absolute(forecast1 - y)
-        resid2 = np.absolute(forecast2 - y)
-        d = resid1 - resid2
-
-    elif (criterion == "MAPE"):
-        resid1 = np.absolute((y-forecast1)/y)
-        resid2 = np.absolute((y-forecast2)/y)
-        d = resid1 - resid2
-
-    elif (criterion == "poly"):
-        resid1 = np.power(forecast1 - y, power)
-        resid2 = np.power(forecast2 - y, power)
-        d = resid1 - resid2
+    loss_1 = criterion_func(y, forecast1)
+    loss_2 = criterion_func(y, forecast2)
+    d = loss_1 - loss_2
 
     # calculate test statistics
-    mean_d = d.mean()
-    gamma = acovf(d, nlag=(horizon-1))
-    V_d = (gamma[0] + 2*sum(gamma[1:]))/T
-    DM_stat=V_d**(-0.5)*mean_d
+    from statsmodels.regression.linear_model import OLS
+
+    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
+    dm_stat = float(res.tvalues[0])
 
     # Harvey adjustment based on Harvey et. al (1997)
     if harvey_adj:
-        adj=((T+1 - 2*horizon + horizon*(horizon-1)/T)/T)**(0.5)
-        DM_stat = adj*DM_stat
+        adj = (t + 1 - 2 * horizon + horizon * (horizon - 1) / t) / t
+        dm_stat = np.sqrt(adj) * dm_stat
+    else:
+        adj = None
 
     # Find p-value & format output
-    p_value = 2*stats.t.cdf(-np.abs(DM_stat), df = T - 1)
-    out = {'DM test statistic': DM_stat,
-           'p value': p_value}
+    if harvey_adj:
+        p_value = 2 * stats.t.cdf(-np.abs(dm_stat), df=t - 1)
+    else:
+        p_value = 2 * stats.norm.cdf(-np.abs(dm_stat))
 
-    return out
+    return DieoldMarianoResult(dm_stat, p_value, adj)
 
 
 def has_missing(data):
