@@ -1975,13 +1975,70 @@ def test_diebold_mariano_test():
     assert_almost_equal(res3.dm_stat, res.tvalues[0], DECIMAL_3)
     assert_almost_equal(res3.pvalue, res.pvalues[0], DECIMAL_3)
 
+    y += 10
+    f1 += 10
+    f2 += 10
+    res4 = diebold_mariano_test(y, f1, f2, criterion="mape")
+    d = np.abs((y - f1) / y) - np.abs((y - f2) / y)
+    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
+
+    assert_almost_equal(res4.dm_stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res4.pvalue, res.pvalues[0], DECIMAL_3)
+
+
+def test_diebold_mariano_harvey_adj():
+    rs = np.random.default_rng()
+    y, f1, f2 = rs.standard_normal((3, 100))
+    res_no = diebold_mariano_test(y, f1, f2, harvey_adj=False)
+    res_yes = diebold_mariano_test(y, f1, f2, harvey_adj=True, horizon=3)
+    assert res_no.harvey_adj_factor is None
+    assert isinstance(res_yes.harvey_adj_factor, float)
+    assert 0 <= res_yes.harvey_adj_factor < 1
+    direct_factor = np.sqrt((100 + 1 - (2 * 3) + ((3 * 2) / 100)) / 100)
+    assert_almost_equal(res_yes.harvey_adj_factor, direct_factor)
+    assert res_yes.pvalue > res_no.pvalue
+    assert np.abs(res_no.dm_stat) > np.abs(res_yes.dm_stat)
+    assert len(res_no) == 4
+
+
+def test_diebold_mariano_equiv():
+    rs = np.random.default_rng()
+    y, f1, f2 = rs.standard_normal((3, 100))
+    res = diebold_mariano_test(y, f1, f2)
+    res_poly = diebold_mariano_test(y, f1, f2, criterion="poly", power=2)
+    assert_almost_equal(res.dm_stat, res_poly.dm_stat)
+
+    res = diebold_mariano_test(y, f1, f2, criterion="mad")
+    res_mae = diebold_mariano_test(y, f1, f2, criterion="mae")
+    res_poly = diebold_mariano_test(y, f1, f2, criterion="poly", power=1)
+    assert_almost_equal(res.dm_stat, res_poly.dm_stat)
+    assert_almost_equal(res_mae.dm_stat, res_poly.dm_stat)
+
+
+@pytest.mark.smoke
+def test_diebold_mariano_callable_smoke():
+
+    rng = np.random.default_rng(0)
+    y = rng.standard_normal(200) ** 2
+    scale = rng.chisquare(5, size=y.shape) / 5
+    forecast_a = 0.9 * scale * y
+    forecast_b = scale * y
+
+    def qlike(y, forecast):
+        ratio = y / forecast
+        return ratio - np.log(ratio) - 1
+
+    res = diebold_mariano_test(y, forecast_a, forecast_b, criterion=qlike)
+    assert np.isfinite(res.dm_stat)
+    assert 0 <= res.pvalue <= 1
+
 
 def test_diebold_mariano_exceptions():
     rs = np.random.default_rng()
     y, f1, f2 = rs.standard_normal((3, 100))
     with pytest.raises(ValueError, match="lags must be a non-negative integer"):
         diebold_mariano_test(y, f1, f2, lags=-1)
-    with pytest.raises(ValueError, match="y, forecast1 and forecast2 must all"):
+    with pytest.raises(ValueError, match="y, forecast_a and forecast_b must all"):
         diebold_mariano_test(y, f1, f2[::2])
     with pytest.raises(ValueError, match="horizon must be a positive integer"):
         diebold_mariano_test(y, f1, f2, horizon=0)

@@ -2714,6 +2714,9 @@ class DieboldMarianoResult(NamedTuple):
         small-sample correction is applied.
     pvalue : float
         The two-sided p-value for the null of equal predictive accuracy.
+    lags : int
+        The number of lags used in the Newey-West estimator of the long-run
+        variance of the loss differential.
     harvey_adj_factor : float or None
         The finite-sample adjustment factor of Harvey et al. (1997) that
         was applied to ``dm_stat``. ``None`` unless ``harvey_adj`` was
@@ -2722,13 +2725,14 @@ class DieboldMarianoResult(NamedTuple):
 
     dm_stat: float
     pvalue: float
+    lags: int
     harvey_adj_factor: float | None
 
 
 def diebold_mariano_test(
     y,
-    forecast1,
-    forecast2,
+    forecast_a,
+    forecast_b,
     *,
     lags=None,
     criterion="mse",
@@ -2744,9 +2748,9 @@ def diebold_mariano_test(
     ----------
     y : array_like
         Array of the observed variable.
-    forecast1 : array_like
+    forecast_a : array_like
         Array of forecasted values from the first model.
-    forecast2 : array_like
+    forecast_b : array_like
         Array of forecasted values from the second model.
     lags : int, optional
         The number of lags to include in the Newey-West (HAC) variance
@@ -2787,14 +2791,14 @@ def diebold_mariano_test(
     Notes
     -----
     The Diebold-Mariano (1995) test compares the predictive accuracy of two
-    competing forecasts, ``forecast1`` and ``forecast2``, of the same
+    competing forecasts, ``forecast_a`` and ``forecast_b``, of the same
     series ``y``. Accuracy is measured with a loss function :math:`g(y, f)`
     (chosen via ``criterion``), and the test is based on the loss
     differential
 
     .. math::
 
-        d_t = g(y_t, \\text{forecast1}_t) - g(y_t, \\text{forecast2}_t).
+        d_t = g(y_t, \\text{forecast}_{a,t}) - g(y_t, \\text{forecast}_{b,t}).
 
     Under the null hypothesis of equal predictive accuracy,
     :math:`E[d_t] = 0`. The test statistic is the t-statistic from
@@ -2814,7 +2818,7 @@ def diebold_mariano_test(
     parameterization. Under the null, ``dm_stat`` is asymptotically
     standard normal.
 
-    Because ``forecast1`` and ``forecast2`` are typically generated from
+    Because ``forecast_a`` and ``forecast_b`` are typically generated from
     overlapping information sets (e.g. multi-step-ahead forecasts), the
     loss differential is often serially correlated even under the null,
     which is why a HAC estimator rather than the usual OLS standard error
@@ -2873,23 +2877,22 @@ def diebold_mariano_test(
     >>> import numpy as np
     >>> from statsmodels.tsa.stattools import diebold_mariano_test
     >>> rng = np.random.default_rng(0)
-    >>> y = np.abs(rng.standard_normal(200)) + 0.5
-    >>> forecast1 = y + 0.1 * rng.standard_normal(200)
-    >>> forecast2 = y + 0.3 * rng.standard_normal(200)
-    >>> forecast1 = np.abs(forecast1) + 0.1
-    >>> forecast2 = np.abs(forecast2) + 0.1
+    >>> y = rng.standard_normal(200) ** 2
+    >>> scale = rng.chisquare(5, size=y.shape) / 5
+    >>> forecast_a = (0.9 * scale * y)
+    >>> forecast_b = scale * y
 
     >>> def qlike(y, forecast):
     ...     ratio = y / forecast
     ...     return ratio - np.log(ratio) - 1
 
-    >>> res = diebold_mariano_test(y, forecast1, forecast2, criterion=qlike)
+    >>> res = diebold_mariano_test(y, forecast_a, forecast_b, criterion=qlike)
     >>> res.dm_stat, res.pvalue  # doctest: +SKIP
     """
 
     y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
-    forecast1 = array_like(forecast1, "forecast1", ndim=1, maxdim=1, dtype=float)
-    forecast2 = array_like(forecast2, "forecast2", ndim=1, maxdim=1, dtype=float)
+    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, maxdim=1, dtype=float)
+    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, maxdim=1, dtype=float)
     lags = int_like(lags, "lags", optional=True)
     harvey_adj = bool_like(harvey_adj, "harvey_adj")
     power = float_like(power, "power", optional=True)
@@ -2901,8 +2904,8 @@ def diebold_mariano_test(
         raise ValueError("lags must be a non-negative integer.")
 
     t = len(y)
-    if forecast1.shape[0] != t or forecast2.shape[0] != t:
-        raise ValueError("y, forecast1 and forecast2 must all have equal length.")
+    if forecast_a.shape[0] != t or forecast_b.shape[0] != t:
+        raise ValueError("y, forecast_a and forecast_b must all have equal length.")
 
     if lags is None:
         lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
@@ -2935,8 +2938,8 @@ def diebold_mariano_test(
         criterion_func = criterion
 
     # calculate d based on criterion
-    loss_1 = criterion_func(y, forecast1)
-    loss_2 = criterion_func(y, forecast2)
+    loss_1 = criterion_func(y, forecast_a)
+    loss_2 = criterion_func(y, forecast_b)
     d = loss_1 - loss_2
 
     # calculate test statistic as the t-stat of a constant-only HAC regression
@@ -2945,14 +2948,16 @@ def diebold_mariano_test(
 
     # Harvey et. al (1997) small-sample adjustment
     if harvey_adj:
-        adj_factor = (t + 1 - 2 * horizon + horizon * (horizon - 1) / t) / t
-        dm_stat = np.sqrt(adj_factor) * dm_stat
+        adj_factor = np.sqrt(
+            (t + 1 - (2 * horizon) + (horizon * (horizon - 1) / t)) / t
+        )
+        dm_stat = adj_factor * dm_stat
         p_value = 2 * stats.t.cdf(-np.abs(dm_stat), df=t - 1)
     else:
         adj_factor = None
         p_value = 2 * stats.norm.cdf(-np.abs(dm_stat))
 
-    return DieboldMarianoResult(dm_stat, p_value, adj_factor)
+    return DieboldMarianoResult(dm_stat, p_value, lags, adj_factor)
 
 
 def has_missing(data):
