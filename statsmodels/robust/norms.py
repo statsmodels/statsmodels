@@ -177,9 +177,9 @@ class LeastSquares(RobustNorm):
         .. math::
 
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = \frac{z^2}{2}
-        
+
         Parameters
         ----------
         z : array_like
@@ -200,9 +200,9 @@ class LeastSquares(RobustNorm):
         The analytic derivative of rho:
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = z
 
         Parameters
@@ -229,11 +229,11 @@ class LeastSquares(RobustNorm):
             w(z) = 1
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \frac{\psi(z)}{z}
-                      
+
         Parameters
         ----------
         z : array_like
@@ -358,7 +358,7 @@ class HuberT(RobustNorm):
         .. math::
 
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = \begin{cases}
                           \frac{z^2}{2} & \text{if } \lvert z \rvert \le t \\
                           \lvert z \rvert t - \frac{z^2}{2} & \text{if } \lvert z \rvert \le t
@@ -376,8 +376,7 @@ class HuberT(RobustNorm):
         """
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * 0.5 * z**2 +
-                (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2))
+        return test * 0.5 * z**2 + (1 - test) * (np.abs(z) * self.t - 0.5 * self.t**2)
 
     def psi(self, z):
         r"""
@@ -393,14 +392,14 @@ class HuberT(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = \begin{cases}
                           z & \text{if } \lvert z \rvert \le t \\
                           \text{sign}(z) \cdot t & \text{if } \lvert z \rvert \le t
                       \end{cases}
-            
+
         Parameters
         ----------
         z : array_like
@@ -429,14 +428,14 @@ class HuberT(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \begin{cases}
                                     1 & \text{if } \lvert z \rvert \le t \\
                                     \frac{t}{\lvert z \rvert} & \text{if } \lvert z \rvert \le t
                                 \end{cases}
-            
+
         Parameters
         ----------
         z : array_like
@@ -499,7 +498,7 @@ class RamsayE(RobustNorm):
     continuous = 2
     redescending = "soft"
 
-    def __init__(self, a=.3):
+    def __init__(self, a=0.3):
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
@@ -545,9 +544,9 @@ class RamsayE(RobustNorm):
         .. math::
 
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = a^{-2} \cdot (1 - \exp(-1 \lvert z \rvert ) \cdot (1 + a \lvert z \rvert))
-        
+
         Parameters
         ----------
         z : array_like
@@ -559,8 +558,7 @@ class RamsayE(RobustNorm):
             The value of the robust criterion function.
         """
         z = np.asarray(z)
-        return (1 - np.exp(-self.a * np.abs(z)) *
-                (1 + self.a * np.abs(z))) / self.a**2
+        return (1 - np.exp(-self.a * np.abs(z)) * (1 + self.a * np.abs(z))) / self.a**2
 
     def psi(self, z):
         r"""
@@ -573,11 +571,11 @@ class RamsayE(RobustNorm):
             \psi(z) = z \exp(-a|z|)
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = z \cdot \exp(-a \cdot \lvert z \rvert)
-                      
+
         Parameters
         ----------
         z : array_like
@@ -602,11 +600,11 @@ class RamsayE(RobustNorm):
             w(z) = \exp(-a|z|)
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \exp(-a \cdot \lvert z \rvert)
-            
+
         Parameters
         ----------
         z : array_like
@@ -731,12 +729,12 @@ class AndrewWave(RobustNorm):
         .. math::
 
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = \begin{cases}
                           a^2 \cdot (1 - \cos(\frac{z}{a})) & \text{if } \lvert z \rvert \le a\pi \\
                           2a & \text{if } \lvert z \rvert > a\pi
                       \end{cases}
-            
+
         Parameters
         ----------
         z : array_like
@@ -746,7 +744,7 @@ class AndrewWave(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
-        
+
         Notes
         -----
         The elements of rho are defined as:
@@ -760,8 +758,7 @@ class AndrewWave(RobustNorm):
         a = self.a
         z = np.asarray(z)
         test = self._subset(z)
-        return (test * a**2 * (1 - np.cos(z / a)) +
-                (1 - test) * a**2 * 2)
+        return test * a**2 * (1 - np.cos(z / a)) + (1 - test) * a**2 * 2
 
     def psi(self, z):
         r"""
@@ -777,14 +774,14 @@ class AndrewWave(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = \begin{cases}
                           a \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
                           0 & \text{if } \lvert z \rvert > a\pi
                       \end{cases}
-                      
+
         Parameters
         ----------
         z : array_like
@@ -815,14 +812,14 @@ class AndrewWave(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \begin{cases}
                                     \frac{a}{z} \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
                                     0 & \text{if } \lvert z \rvert > a\pi
                                 \end{cases}
-            
+
         Parameters
         ----------
         z : array_like
@@ -888,7 +885,7 @@ class TrimmedMean(RobustNorm):
     continuous = 0
     redescending = "hard"
 
-    def __init__(self, c=2.):
+    def __init__(self, c=2.0):
         self.c = c
 
     def _set_tuning_param(self, c, inplace=False):
@@ -953,9 +950,9 @@ class TrimmedMean(RobustNorm):
             \end{cases}
 
         .. math::
-        
+
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = \begin{cases}
                           \frac{z^2}{2} & \text{if } \lvert z \rvert \le c \\
                           \frac{c^2}{2} & \text{if } \lvert z \rvert > c
@@ -990,9 +987,9 @@ class TrimmedMean(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = \begin{cases}
                           z & \text{if } \lvert z \rvert \le c \\
                           0 & \text{if } \lvert z \rvert > c
@@ -1026,9 +1023,9 @@ class TrimmedMean(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \begin{cases}
                                     1 & \text{if } \lvert z \rvert \le c \\
                                     0 & \text{if } \lvert z \rvert > c
@@ -1088,7 +1085,7 @@ class Hampel(RobustNorm):
     continuous = 1
     redescending = "hard"
 
-    def __init__(self, a=2., b=4., c=8.):
+    def __init__(self, a=2.0, b=4.0, c=8.0):
         self.a = a
         self.b = b
         self.c = c
@@ -1158,14 +1155,14 @@ class Hampel(RobustNorm):
         The robust criterion function for Hampel's estimator
 
         .. math::
-        
+
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = \begin{cases}
                           \frac{z^2}{2} & \text{if } \lvert z \rvert \le a \\
                           a \lvert z \rvert - \frac{a^2}{2} & \text{if } a < \lvert z \rvert \le b \\
                           \frac{a}{2(c - b)} \cdot (c - \lvert z \rvert)^2  & \text{if } b < \lvert z \rvert \le c \\
-                          \frac{a}{2} \cdot (b + c - a) & \text{if } \lvert z \rvert > c                             
+                          \frac{a}{2} \cdot (b + c - a) & \text{if } \lvert z \rvert > c
                       \end{cases}
 
         Parameters
@@ -1188,10 +1185,10 @@ class Hampel(RobustNorm):
         dt = np.promote_types(z.dtype, "float")
         v = np.zeros(z.shape, dtype=dt)
         z = np.abs(z)
-        v[t1] = z[t1]**2 * 0.5
+        v[t1] = z[t1] ** 2 * 0.5
         # v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
-        v[t2] = (a * z[t2] - a**2 * 0.5)
-        v[t3] = a * (c - z[t3])**2 / (c - b) * (-0.5)
+        v[t2] = a * z[t2] - a**2 * 0.5
+        v[t3] = a * (c - z[t3]) ** 2 / (c - b) * (-0.5)
         v[t34] += a * (b + c - a) * 0.5
 
         if z_isscalar:
@@ -1215,16 +1212,16 @@ class Hampel(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = \begin{cases}
                           z & \text{if } \lvert z \rvert \le a \\
                           a \cdot \text{sign}(z) & \text{if } a < \lvert z \rvert \le b \\
                           \frac{a}{c - b} \cdot \text{sign}(z) \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
-                          0 & \text{if } \lvert z \rvert > c \\                              
+                          0 & \text{if } \lvert z \rvert > c \\
                       \end{cases}
-                      
+
         Parameters
         ----------
         z : array_like
@@ -1270,16 +1267,16 @@ class Hampel(RobustNorm):
             \end{cases}
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \begin{cases}
                                     1 & \text{if } \lvert z \rvert \le a \\
                                     \frac{a}{\lvert z \rvert} & \text{if } a < \lvert z \rvert \le b \\
                                     \frac{a}{\lvert z \rvert (c - b)} \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
-                                    0 & \text{if } \lvert z \rvert > c \\                              
+                                    0 & \text{if } \lvert z \rvert > c \\
                                 \end{cases}
-                      
+
         Parameters
         ----------
         z : array_like
@@ -1390,8 +1387,7 @@ class TukeyBiweight(RobustNorm):
         float
             The tuning parameter.
         """
-        if ((bp is None and eff is None) or
-                (bp is not None and eff is not None)):
+        if (bp is None and eff is None) or (bp is not None and eff is not None):
             raise ValueError("exactly one of bp and eff needs to be provided")
 
         if bp is not None:
@@ -1454,14 +1450,14 @@ class TukeyBiweight(RobustNorm):
         The robust criterion function for Tukey's biweight estimator
 
         .. math::
-        
+
             \rho: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \rho(z) = \begin{cases}
                           -(1 - (\frac{z}{c})^2)^3 \cdot \frac{c^2}{6} & \text{if } \lvert z \rvert \le R \\
                           0 & \text{if } \lvert z \rvert > R
                       \end{cases}
-                        
+
         Parameters
         ----------
         z : array_like
@@ -1475,8 +1471,8 @@ class TukeyBiweight(RobustNorm):
             rho(z) = c**2 / 6                               for \|z\| > c
         """
         subset = self._subset(z)
-        factor = self.c**2 / 6.
-        return -(1 - (z / self.c)**2)**3 * subset * factor + factor
+        factor = self.c**2 / 6.0
+        return -((1 - (z / self.c) ** 2) ** 3) * subset * factor + factor
 
     def psi(self, z):
         r"""
@@ -1485,14 +1481,14 @@ class TukeyBiweight(RobustNorm):
         The analytic derivative of rho
 
         .. math::
-                
+
             \psi: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \psi(z) = \begin{cases}
                           z \cdot (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le R \\
                           0 & \text{if } \lvert z \rvert > R
                       \end{cases}
-            
+
         Parameters
         ----------
         z : array_like
@@ -1508,7 +1504,7 @@ class TukeyBiweight(RobustNorm):
 
         z = np.asarray(z)
         subset = self._subset(z)
-        return z * (1 - (z / self.c)**2)**2 * subset
+        return z * (1 - (z / self.c) ** 2) ** 2 * subset
 
     def weights(self, z):
         r"""
@@ -1517,14 +1513,14 @@ class TukeyBiweight(RobustNorm):
         The psi function scaled by z
 
         .. math::
-                
+
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
-            
+
             \text{weights}(z) = \begin{cases}
                                     (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le R \\
                                     0 & \text{if } \lvert z \rvert > R
                                 \end{cases}
-                                
+
         Parameters
         ----------
         z : array_like
@@ -1539,7 +1535,7 @@ class TukeyBiweight(RobustNorm):
         """
         z = np.asarray(z)
         subset = self._subset(z)
-        return (1 - (z / self.c)**2)**2 * subset
+        return (1 - (z / self.c) ** 2) ** 2 * subset
 
     def psi_deriv(self, z):
         """
@@ -1560,8 +1556,10 @@ class TukeyBiweight(RobustNorm):
         Used to estimate the robust covariance matrix.
         """
         subset = self._subset(z)
-        return subset * ((1 - (z/self.c)**2)**2
-                         - (4*z**2/self.c**2) * (1-(z/self.c)**2))
+        return subset * (
+            (1 - (z / self.c) ** 2) ** 2
+            - (4 * z**2 / self.c**2) * (1 - (z / self.c) ** 2)
+        )
 
 
 class TukeyQuartic(RobustNorm):
@@ -1705,7 +1703,7 @@ class TukeyQuartic(RobustNorm):
         k = self.k
         z = np.asarray(z)
         subset = self._subset(z)
-        return z * (1 - (z / self.c)**k)**2 * subset
+        return z * (1 - (z / self.c) ** k) ** 2 * subset
 
     def weights(self, z):
         r"""
@@ -1728,7 +1726,7 @@ class TukeyQuartic(RobustNorm):
         k = self.k
         z = np.asarray(z)
         subset = self._subset(z)
-        return (1 - (z / self.c)**k)**2 * subset
+        return (1 - (z / self.c) ** k) ** 2 * subset
 
     def psi_deriv(self, z):
         """
@@ -1837,8 +1835,8 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         z = np.asarray(z)
-        const = (c**2 * df / 2.) * np.log(df) if df != 0 else 0
-        return (c**2 * df / 2.) * np.log(df + (z / c)**2) - const
+        const = (c**2 * df / 2.0) * np.log(df) if df != 0 else 0
+        return (c**2 * df / 2.0) * np.log(df + (z / c) ** 2) - const
 
     def psi(self, z):
         """
@@ -1860,7 +1858,7 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         z = np.asarray(z)
-        return z * df / (df + (z / c)**2)
+        return z * df / (df + (z / c) ** 2)
 
     def weights(self, z):
         """
@@ -1882,7 +1880,7 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         z = np.asarray(z)
-        return df / (df + (z / c)**2)
+        return df / (df + (z / c) ** 2)
 
     def psi_deriv(self, z):
         """
@@ -1906,7 +1904,7 @@ class StudentT(RobustNorm):
         c = self.c
         df = self.df
         x = np.asarray(z) / c
-        return - 2 * df * x**2 / (df + x**2)**2 + df / (df + x**2)
+        return -2 * df * x**2 / (df + x**2) ** 2 + df / (df + x**2)
 
 
 class MQuantileNorm(RobustNorm):
@@ -1968,7 +1966,7 @@ class MQuantileNorm(RobustNorm):
     def _get_q(self, z):
 
         nobs = len(z)
-        mask_neg = (z < 0)  # if self.q < 0.5 else (z <= 0)  # maybe symmetric
+        mask_neg = z < 0  # if self.q < 0.5 else (z <= 0)  # maybe symmetric
         qq = np.empty(nobs)
         qq[mask_neg] = 1 - self.q
         qq[~mask_neg] = self.q
@@ -2067,8 +2065,9 @@ class MQuantileNorm(RobustNorm):
         return self.rho(z)
 
 
-def estimate_location(a, scale, norm=None, axis=0, initial=None,
-                      maxiter=30, tol=1.0e-06):
+def estimate_location(
+    a, scale, norm=None, axis=0, initial=None, maxiter=30, tol=1.0e-06
+):
     """
     Estimate a robust location parameter using an M-estimator.
 
@@ -2109,7 +2108,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
         mu = initial
 
     for _ in range(maxiter):
-        W = norm.weights((a-mu)/scale)
+        W = norm.weights((a - mu) / scale)
         denom = np.sum(W, axis)
         if np.any(denom <= 0):
             return mu
