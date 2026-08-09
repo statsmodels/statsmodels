@@ -1640,7 +1640,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         distance to the exog centroid (the multivariate mean). This makes the
         test invariant to the order of the observations; see the Notes for the
         precise statement.
-    center : {float, int}, default None
+    center : float, default None
         Deprecated and ignored. The center used to order the observations
         when ``use_distance`` is True is always the exog centroid (the
         multivariate mean). Passing a value emits a ``FutureWarning``.
@@ -1717,7 +1717,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     if use_distance:
         if center is not None:
             warnings.warn(
-                "The center keyword is deprecated and no longer has any "
+                "The center parameter is deprecated and no longer has any "
                 "effect. The Mahalanobis distances used to order the "
                 "observations are now measured from the exog centroid (the "
                 "multivariate mean) rather than from an individual "

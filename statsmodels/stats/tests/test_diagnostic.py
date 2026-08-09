@@ -2029,7 +2029,8 @@ def test_rainbow_use_distance_matches_manual_ordering():
     assert_allclose(dist, manual)
 
 
-def test_rainbow_center_deprecated():
+@pytest.mark.parametrize("center", [0.33, 300])
+def test_rainbow_center_deprecated(center):
     # GH#9103: the center keyword no longer has any effect and is deprecated.
     rs = np.random.RandomState(38342096)
     x = rs.standard_normal((500, 3))
@@ -2037,10 +2038,9 @@ def test_rainbow_center_deprecated():
     res = OLS(y, x).fit()
 
     ref = smsdia.linear_rainbow(res, use_distance=True)
-    for center in (0.33, 300):
-        with pytest.warns(FutureWarning, match="center keyword is deprecated"):
-            stat = smsdia.linear_rainbow(res, use_distance=True, center=center)
-        assert_allclose(stat, ref)
+    with pytest.warns(FutureWarning, match="The center parameter is deprecated"):
+        stat = smsdia.linear_rainbow(res, 0.5, None, True, center)
+    assert_allclose(stat, ref)
 
 
 def test_rainbow_exception():

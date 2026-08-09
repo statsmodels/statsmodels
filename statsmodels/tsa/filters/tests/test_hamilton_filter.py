@@ -6,7 +6,6 @@ Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 Review of Economics and Statistics, 100(5), 831-843.
 """
 
-from statsmodels.compat.pandas import QUARTER_END
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -155,7 +154,7 @@ def test_pandas_name_suffix():
 
 
 def test_pandas_index_preserved():
-    idx = pd.date_range("2000Q1", periods=len(_QUARTERLY), freq=QUARTER_END)
+    idx = pd.period_range("2000Q1", periods=len(_QUARTERLY), freq="Q").to_timestamp()
     s = pd.Series(_QUARTERLY, index=idx, name="gdp")
     cycle, _ = hamilton_filter(s)
     assert (cycle.index == idx).all()

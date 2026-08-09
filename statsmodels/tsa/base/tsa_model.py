@@ -182,6 +182,11 @@ def get_index_loc(key, index):
     # Get the location
     if date_index:
         # (note that get_loc will throw a KeyError if key is invalid)
+        if isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
+            # Handle future changes in pandas 4
+            key = pd.Period(key)
+            if isinstance(index, pd.DatetimeIndex):
+                key = key.to_timestamp(freq="Q")
         loc = index.get_loc(key)
     elif int_index or range_index:
         # For NumericIndex and RangeIndex, key is assumed to be the location
