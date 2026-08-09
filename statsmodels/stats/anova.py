@@ -55,15 +55,21 @@ def anova_single(model, **kwargs):
     -----
     Use of this function is discouraged. Use anova_lm instead.
 
-    Type I: Sequential sum of squares. When the data is unbalanced,
-    this type of sums of squares will give different results
-    depending on which main effect is considered first.
+    **Type I**: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
 
-    Type II: Sum of Squares compares marginal contribution of terms.
-    Thus, it is not particularly useful for models with significant interaction terms.
+    **Type II**: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
 
-    Type III: Sums of squares for a term are calculated with all other terms in the model.
-    It is useful when the model has interaction terms.
+    **Type III**: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
     """
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
