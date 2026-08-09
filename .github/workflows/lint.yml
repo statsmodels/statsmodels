@@ -42,8 +42,4 @@ jobs:
         run: ruff check statsmodels docs tools
 
       - name: flake8
-        run: |
-          # .flake8's [exclude] drops docs/ (it's excluded from the normal
-          # build/test workflow); override it here so docs/ is linted too,
-          # per this workflow's scope of statsmodels + docs + tools.
-          flake8 --exclude=.git,build,archive statsmodels docs tools
+        run: flake8 statsmodels docs tools
