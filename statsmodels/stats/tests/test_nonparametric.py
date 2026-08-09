@@ -33,6 +33,7 @@ from statsmodels.stats.contingency_tables import (
     mcnemar,
 )
 from statsmodels.stats.nonparametric import (
+    JonckheereTerpstraResult,
     _compute_rank_placements,
     cohensd2problarger,
     jonckheere_terpstra,
@@ -540,6 +541,16 @@ def _jt_statistic_bruteforce(samples):
     return statistic
 
 
+def test_jonckheere_terpstra_exceptions():
+    samples = [
+        np.array([1, 2, 2, np.nan]),
+        np.array([2, 3, 4]),
+        np.array([3, 4, 5, 6]),
+    ]
+    with pytest.raises(ValueError, match="All observations must be finite"):
+        jonckheere_terpstra(samples, alternative="larger")
+
+
 def test_jonckheere_terpstra_larger_matches_kendalltau():
     samples = [
         np.array([1, 2, 2, 4]),
@@ -604,6 +615,44 @@ def test_jonckheere_terpstra_known_extreme_statistic():
     assert_(res.zstat > 0)
 
 
+def test_jonckheere_terpstra_result_type():
+    samples = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
+    res = jonckheere_terpstra(samples)
+
+    assert isinstance(res, JonckheereTerpstraResult)
+    # positional unpacking follows the documented field order
+    assert res[0] == res.statistic
+    assert res[1] == res.pvalue
+    statistic, pvalue, *_ = res
+    assert statistic == res.statistic
+    assert pvalue == res.pvalue
+
+
+def test_jonckheere_terpstra_many_unequal_groups():
+    rng = np.random.default_rng(1234)
+    sizes = [2, 5, 3, 7, 4]
+    samples = [
+        rng.integers(0, 6, size=size).astype(float) for size in sizes
+    ]
+    res = jonckheere_terpstra(samples, alternative="two-sided")
+
+    expected_stat = _jt_statistic_bruteforce(samples)
+    group = np.repeat(np.arange(len(samples)), sizes)
+    pooled = np.concatenate(samples)
+    expected = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="two-sided",
+    )
+
+    assert res.k_groups == len(samples)
+    assert res.nobs == sum(sizes)
+    assert_allclose(res.statistic, expected_stat, rtol=1e-13)
+    assert_allclose(res.tau, expected.statistic, rtol=1e-13)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
+
+
 def test_jonckheere_terpstra_stats_api_export():
     from statsmodels.stats import api as sms
 
@@ -620,6 +669,11 @@ def test_jonckheere_terpstra_stats_api_export():
             [np.array([1, 1]), np.array([1, 1])],
             "larger",
             "variance is zero",
+        ),
+        (
+            [np.array([[1, 2], [3, 4]]), np.array([5, 6])],
+            "larger",
+            "one-dimensional",
         ),
     ],
 )
