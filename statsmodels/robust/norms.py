@@ -176,10 +176,6 @@ class LeastSquares(RobustNorm):
 
         .. math::
 
-            \rho(z) = \frac{1}{2} z^2
-
-        .. math::
-
             \rho: \mathbb{R}^n \to \mathbb{R}^n
             
             \rho(z) = \frac{z^2}{2}
@@ -202,7 +198,7 @@ class LeastSquares(RobustNorm):
         The psi function for the least squares estimator
 
         The analytic derivative of rho:
-        
+
         .. math::
                 
             \psi: \mathbb{R}^n \to \mathbb{R}^n
