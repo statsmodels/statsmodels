@@ -1,11 +1,13 @@
-from statsmodels.compat.pandas import PD_LT_2, Appender, is_numeric_dtype
+from __future__ import annotations
+
+from statsmodels.compat.pandas import PD_LT_2, is_numeric_dtype
 from statsmodels.compat.scipy import SP_LT_19
 
-from typing import Union
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 
 if PD_LT_2:
     from pandas.core.dtypes.common import is_categorical_dtype
@@ -14,18 +16,23 @@ else:
     def is_categorical_dtype(dtype):
         return isinstance(dtype, pd.CategoricalDtype)
 
+
 from scipy import stats
 
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.stats.stattools import jarque_bera
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
     float_like,
     int_like,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
 QUANTILES = np.array(PERCENTILES) / 100.0
@@ -44,7 +51,7 @@ def nanptp(arr, axis=0):
 
 
 def nanuss(arr, axis=0):
-    return np.nansum(arr ** 2, axis=axis)
+    return np.nansum(arr**2, axis=axis)
 
 
 def nanpercentile(arr, axis=0):
@@ -76,9 +83,23 @@ MISSING = {
 
 def _kurtosis(a):
     """
-    wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
+    Wrapper for scipy.stats.kurtosis that returns nan instead of raising
+    Error
 
-    missing options
+    Parameters
+    ----------
+    a : array_like
+        Data for which the kurtosis is computed.
+
+    Returns
+    -------
+    float
+        The kurtosis of `a`, or nan if scipy.stats.kurtosis raises a
+        ValueError.
+
+    Notes
+    -----
+    Missing options.
     """
     try:
         res = stats.kurtosis(a)
@@ -89,9 +110,22 @@ def _kurtosis(a):
 
 def _skew(a):
     """
-    wrapper for scipy.stats.skew that returns nan instead of raising Error
+    Wrapper for scipy.stats.skew that returns nan instead of raising Error
 
-    missing options
+    Parameters
+    ----------
+    a : array_like
+        Data for which the skewness is computed.
+
+    Returns
+    -------
+    float
+        The skewness of `a`, or nan if scipy.stats.skew raises a
+        ValueError.
+
+    Notes
+    -----
+    Missing options.
     """
     try:
         res = stats.skew(a)
@@ -114,8 +148,20 @@ def sign_test(samp, mu0=0):
 
     Returns
     -------
-    M
-    p-value
+    M : float
+        The test statistic for the sign test.
+    p : float
+        The p-value for the test.
+
+    Raises
+    ------
+    ValueError
+        If no observation differs from `mu0`. All values are then discarded
+        as ties and the test is not defined.
+
+    See Also
+    --------
+    scipy.stats.wilcoxon
 
     Notes
     -----
@@ -130,20 +176,18 @@ def sign_test(samp, mu0=0):
     and can be interpreted the same as for a t-test. The test-statistic
     is distributed Binom(min(N(+), N(-)), n_trials, .5) where n_trials
     equals N(+) + N(-).
-
-    See Also
-    --------
-    scipy.stats.wilcoxon
     """
     samp = np.asarray(samp)
     pos = np.sum(samp > mu0)
     neg = np.sum(samp < mu0)
+    if pos + neg == 0:
+        raise ValueError(
+            "The sign test is not defined when no observation differs from "
+            "mu0. Every value in samp is equal to mu0 (or samp is empty), and "
+            "tied values are discarded."
+        )
     M = (pos - neg) / 2.0
-    try:
-        p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
-    except AttributeError:
-        # Remove after min SciPy >= 1.7
-        p = stats.binom_test(min(pos, neg), pos + neg, 0.5)
+    p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
     return M, p
 
 
@@ -188,9 +232,9 @@ class Description:
         Statistics to include. If not provided the full set of statistics is
         computed. This list may evolve across versions to reflect best
         practices. Supported options are:
-        "nobs", "missing", "mean", "std_err", "ci", "ci", "std", "iqr",
+        "nobs", "missing", "mean", "std_err", "ci", "std", "iqr",
         "iqr_normal", "mad", "mad_normal", "coef_var", "range", "max",
-        "min", "skew", "kurtosis", "jarque_bera", "mode", "freq",
+        "min", "skew", "kurtosis", "jarque_bera", "mode",
         "median", "percentiles", "distinct", "top", and "freq". See Notes for
         details.
     numeric : bool, default True
@@ -206,7 +250,7 @@ class Description:
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
     ntop : int, default 5
-        The number of top categorical labels to report. Default is
+        The number of top categorical labels to report. Default is 5.
 
     Attributes
     ----------
@@ -247,34 +291,34 @@ class Description:
     * "kurtosis" - The kurtosis defined as the standardized 4th central moment
     * "jarque_bera" - The Jarque-Bera test statistic for normality based on
       the skewness and kurtosis. This option creates two entries, jarque_bera
-      and jarque_beta_pval.
+      and jarque_bera_pval.
     * "mode" - The mode of the data. This option creates two entries in all tables,
       mode and mode_freq which is the empirical frequency of the modal value.
     * "median" - The median of the data.
     * "percentiles" - The percentiles. Values included depend on the input value of
       ``percentiles``.
     * "distinct" - The number of distinct categories in a categorical.
-    * "top" - The mode common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
+    * "top" - The most common categories. Labeled top_n for n in 1, 2, ..., ``ntop``.
     * "freq" - The frequency of the common categories. Labeled freq_n for n in 1,
       2, ..., ``ntop``.
     """
 
-    _int_fmt = ["nobs", "missing", "distinct"]
+    _int_fmt = ("nobs", "missing", "distinct")
     numeric_statistics = NUMERIC_STATISTICS
     categorical_statistics = CATEGORICAL_STATISTICS
     default_statistics = DEFAULT_STATISTICS
 
     def __init__(
         self,
-        data: Union[np.ndarray, pd.Series, pd.DataFrame],
-        stats: Sequence[str] = None,
+        data: np.ndarray | pd.Series | pd.DataFrame,
+        stats: Sequence[str] | None = None,
         *,
         numeric: bool = True,
         categorical: bool = True,
         alpha: float = 0.05,
         use_t: bool = False,
-        percentiles: Sequence[Union[int, float]] = PERCENTILES,
-        ntop: bool = 5,
+        percentiles: Sequence[int | float] = PERCENTILES,
+        ntop: int = 5,
     ):
         data_arr = data
         if not isinstance(data, (pd.Series, pd.DataFrame)):
@@ -293,29 +337,19 @@ class Description:
             col_types += "and " if col_types != "" else ""
             col_types += "categorical"
         if not numeric and not categorical:
-            raise ValueError(
-                "At least one of numeric and categorical must be True"
-            )
+            raise ValueError("At least one of numeric and categorical must be True")
         self._data = pd.DataFrame(data).select_dtypes(include)
         if self._data.shape[1] == 0:
 
-            raise ValueError(
-                f"Selecting {col_types} results in an empty DataFrame"
-            )
+            raise ValueError(f"Selecting {col_types} results in an empty DataFrame")
         self._is_numeric = [is_numeric_dtype(dt) for dt in self._data.dtypes]
-        self._is_cat_like = [
-            is_categorical_dtype(dt) for dt in self._data.dtypes
-        ]
+        self._is_cat_like = [is_categorical_dtype(dt) for dt in self._data.dtypes]
 
         if stats is not None:
             undef = [stat for stat in stats if stat not in DEFAULT_STATISTICS]
             if undef:
-                raise ValueError(
-                    f"{', '.join(undef)} are not known statistics"
-                )
-        self._stats = (
-            list(DEFAULT_STATISTICS) if stats is None else list(stats)
-        )
+                raise ValueError(f"{', '.join(undef)} are not known statistics")
+        self._stats = list(DEFAULT_STATISTICS) if stats is None else list(stats)
         self._ntop = int_like(ntop, "ntop")
         self._compute_top = "top" in self._stats
         self._compute_freq = "freq" in self._stats
@@ -331,18 +365,12 @@ class Description:
             "freq": [f"freq_{i}" for i in range(1, self._ntop + 1)],
         }
 
-        for key in replacements:
+        for key, value in replacements.items():
             if key in self._stats:
                 idx = self._stats.index(key)
-                self._stats = (
-                    self._stats[:idx]
-                    + replacements[key]
-                    + self._stats[idx + 1 :]
-                )
+                self._stats = self._stats[:idx] + value + self._stats[idx + 1 :]
 
-        self._percentiles = array_like(
-            percentiles, "percentiles", maxdim=1, dtype="d"
-        )
+        self._percentiles = array_like(percentiles, "percentiles", maxdim=1, dtype="d")
         self._percentiles = np.sort(self._percentiles)
         if np.unique(self._percentiles).shape[0] != self._percentiles.shape[0]:
             raise ValueError("percentiles must be distinct")
@@ -400,7 +428,9 @@ class Description:
             q = stats.norm.ppf(1.0 - self._alpha / 2)
 
         def _mode(ser):
-            dtype = ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
+            dtype = (
+                ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
+            )
             ser_no_missing = ser.dropna().to_numpy(dtype=dtype)
             kwargs = {} if SP_LT_19 else {"keepdims": True}
             mode_res = stats.mode(ser_no_missing, **kwargs)
@@ -408,42 +438,32 @@ class Description:
             if np.isscalar(mode_res[0]):
                 return float(mode_res[0]), mode_res[1]
             if mode_res[0].shape[0] > 0:
-                return [float(val) for val in mode_res]
+                return [float(np.squeeze(val)) for val in mode_res]
             return np.nan, np.nan
 
-        mode_values = df.apply(_mode).T
-        if mode_values.size > 0:
-            if isinstance(mode_values, pd.DataFrame):
-                # pandas 1.0 or later
+        if df.shape[0] == 0:
+            # No observations: the mode is undefined. Skip the apply since
+            # pandas' empty-result path mis-sizes the output, raising
+            # "Length of values (2) does not match length of index" (GH#9891).
+            mode = np.full(k, np.nan)
+            mode_counts = np.full(k, np.nan)
+        else:
+            mode_values = df.apply(_mode).T
+            if mode_values.size > 0:
                 mode = np.asarray(mode_values[0], dtype=float)
                 mode_counts = np.asarray(mode_values[1], dtype=np.int64)
             else:
-                # pandas before 1.0 returns a Series of 2-elem list
-                mode = []
-                mode_counts = []
-                for idx in mode_values.index:
-                    val = mode_values.loc[idx]
-                    mode.append(val[0])
-                    mode_counts.append(val[1])
-                mode = np.atleast_1d(mode)
-                mode_counts = np.atleast_1d(mode_counts)
-        else:
-            mode = mode_counts = np.empty(0)
+                mode = mode_counts = np.empty(0)
         loc = count > 0
         mode_freq = np.full(mode.shape[0], np.nan)
         mode_freq[loc] = mode_counts[loc] / count.loc[loc]
         # TODO: Workaround for pandas AbstractMethodError in extension
         #  types. Remove when quantile is supported for these
-        _df = df
-        try:
-            from pandas.api.types import is_extension_array_dtype
-            _df = df.copy()
-            for col in df:
-                if is_extension_array_dtype(df[col].dtype):
-                    if _df[col].isnull().any():
-                        _df[col] = _df[col].fillna(np.nan)
-        except ImportError:
-            pass
+        _df = df.copy()
+        for col in df:
+            if is_extension_array_dtype(df[col].dtype):
+                if _df[col].isna().any():
+                    _df[col] = _df[col].fillna(np.nan)
 
         if df.shape[1] > 0:
             iqr = _df.quantile(0.75) - _df.quantile(0.25)
@@ -456,17 +476,23 @@ class Description:
                 return (np.nan,) * 4
             return jarque_bera(a)
 
-        jb = df.apply(
-            lambda x: list(_safe_jarque_bera(x.dropna())), result_type="expand"
-        ).T
+        if df.size:
+            jb = df.apply(
+                lambda x: list(_safe_jarque_bera(x.dropna())),
+                result_type="expand",
+            ).T
+        else:
+            # No observations (or no numeric columns): Jarque-Bera is
+            # undefined. Build a NaN frame with the expected four columns so
+            # the skew/kurtosis/JB lookups below do not raise KeyError
+            # (GH#9891).
+            jb = pd.DataFrame(np.nan, index=cols, columns=range(4))
         nan_mean = mean.copy()
         nan_mean.loc[nan_mean == 0] = np.nan
         coef_var = std / nan_mean
 
         results = {
-            "nobs": pd.Series(
-                np.ones(k, dtype=np.int64) * df.shape[0], index=cols
-            ),
+            "nobs": pd.Series(np.ones(k, dtype=np.int64) * df.shape[0], index=cols),
             "missing": df.shape[0] - count,
             "mean": mean,
             "std_err": std_err,
@@ -533,20 +559,17 @@ class Description:
             The statistics of the categorical columns
         """
 
-        df = self._data.loc[:, [col for col in self._is_cat_like]]
+        df = self._data.loc[:, list(self._is_cat_like)]
         k = df.shape[1]
         cols = df.columns
         vc = {col: df[col].value_counts(normalize=True) for col in df}
-        distinct = pd.Series(
-            {col: vc[col].shape[0] for col in vc}, dtype=np.int64
-        )
+        distinct = pd.Series({col: vc[col].shape[0] for col in vc}, dtype=np.int64)
         top = {}
         freq = {}
-        for col in vc:
-            single = vc[col]
+        for col, single in vc.items():
             if single.shape[0] >= self._ntop:
                 top[col] = single.index[: self._ntop]
-                freq[col] = np.asarray(single.iloc[:5])
+                freq[col] = np.asarray(single.iloc[: self._ntop])
             else:
                 val = list(single.index)
                 val += [None] * (self._ntop - len(val))
@@ -560,9 +583,7 @@ class Description:
         freq_df = pd.DataFrame(freq, dtype="object", index=index, columns=cols)
 
         results = {
-            "nobs": pd.Series(
-                np.ones(k, dtype=np.int64) * df.shape[0], index=cols
-            ),
+            "nobs": pd.Series(np.ones(k, dtype=np.int64) * df.shape[0], index=cols),
             "missing": df.shape[0] - df.count(),
             "distinct": distinct,
         }
@@ -590,13 +611,13 @@ class Description:
             A table instance supporting export to text, csv and LaTeX
         """
         df = self.frame.astype(object)
-        if df.isnull().any().any():
+        if df.isna().any().any():
             df = df.fillna("")
         cols = [str(col) for col in df.columns]
         stubs = [str(idx) for idx in df.index]
         data = []
         for _, row in df.iterrows():
-            data.append([v for v in row])
+            data.append(list(row))
 
         def _formatter(v):
             if isinstance(v, str):
@@ -619,9 +640,7 @@ class Description:
 
 
 ds = Docstring(Description.__doc__)
-ds.replace_block(
-    "Returns", Parameter(None, "DataFrame", ["Descriptive statistics"])
-)
+ds.replace_block("Returns", Parameter(None, "DataFrame", ["Descriptive statistics"]))
 ds.replace_block("Attributes", [])
 ds.replace_block(
     "See Also",
@@ -640,14 +659,14 @@ ds.replace_block(
 
 @Appender(str(ds))
 def describe(
-    data: Union[np.ndarray, pd.Series, pd.DataFrame],
-    stats: Sequence[str] = None,
+    data: np.ndarray | pd.Series | pd.DataFrame,
+    stats: Sequence[str] | None = None,
     *,
     numeric: bool = True,
     categorical: bool = True,
     alpha: float = 0.05,
     use_t: bool = False,
-    percentiles: Sequence[Union[int, float]] = PERCENTILES,
+    percentiles: Sequence[int | float] = PERCENTILES,
     ntop: bool = 5,
 ) -> pd.DataFrame:
     return Description(
@@ -663,9 +682,7 @@ def describe(
 
 
 class Describe:
-    """
-    Removed.
-    """
+    """Removed"""
 
     def __init__(self, dataset):
         raise NotImplementedError("Describe has been removed")

@@ -5,59 +5,58 @@ Created on Fri Jun 28 14:19:26 2013
 Author: Josef Perktold
 """
 
-
 import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal, assert_array_less
 from scipy import stats
-from statsmodels.base.model import GenericLikelihoodModel
 
-from numpy.testing import (assert_array_less, assert_almost_equal,
-                           assert_allclose)
+from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.iolib.summary import Summary
+
 
 class MyPareto(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation pareto distribution
+    """Maximum Likelihood Estimation pareto distribution
 
     first version: iid case, with constant parameters
-    '''
+    """
 
-    def initialize(self):   #TODO needed or not
+    def initialize(self):  # TODO needed or not
         super().initialize()
-        extra_params_names = ['shape', 'loc', 'scale']
+        extra_params_names = ["shape", "loc", "scale"]
         self._set_extra_params_names(extra_params_names)
 
-        #start_params needs to be attribute
-        self.start_params = np.array([1.5, self.endog.min() - 1.5, 1.])
+        # start_params needs to be attribute
+        self.start_params = np.array([1.5, self.endog.min() - 1.5, 1.0])
 
-
-    #copied from stats.distribution
     def pdf(self, x, b):
-        return b * x**(-b-1)
+        # copied from stats.distribution
+        return b * x ** (-b - 1)
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
 
     # TODO: design start_params needs to be an attribute,
     # so it can be overwritten
-#    @property
-#    def start_params(self):
-#        return np.array([1.5, self.endog.min() - 1.5, 1.])
+    #    @property
+    #    def start_params(self):
+    #        return np.array([1.5, self.endog.min() - 1.5, 1.])
 
     def nloglikeobs(self, params):
-        #print params.shape
+        # print params.shape
         if self.fixed_params is not None:
-            #print 'using fixed'
+            # print 'using fixed'
             params = self.expandparams(params)
         b = params[0]
         loc = params[1]
         scale = params[2]
-        #loc = np.dot(self.exog, beta)
+        # loc = np.dot(self.exog, beta)
         endog = self.endog
-        x = (endog - loc)/scale
-        logpdf = np.log(b) - (b+1.)*np.log(x)  #use np_log(1 + x) for Pareto II
+        x = (endog - loc) / scale
+        logpdf = np.log(b) - (b + 1.0) * np.log(x)  # use np_log(1 + x) for Pareto II
         logpdf -= np.log(scale)
-        #lb = loc + scale
-        #logpdf[endog<lb] = -inf
-        #import pdb; pdb.set_trace()
-        logpdf[x<1] = -10000 #-np.inf
+        # lb = loc + scale
+        # logpdf[endog<lb] = -inf
+        # import pdb; pdb.set_trace()
+        logpdf[x < 1] = -10000  # -np.inf
         return -logpdf
 
 
@@ -66,14 +65,14 @@ class CheckGenericMixin:
 
     def test_summary(self):
         summ = self.res1.summary()
-        check_str = 'P>|t|' if self.res1.use_t else 'P>|z|'
+        check_str = "P>|t|" if self.res1.use_t else "P>|z|"
         assert check_str in str(summ)
 
     def test_use_t_summary(self):
         orig_val = self.res1.use_t
         self.res1.use_t = True
         summ = self.res1.summary()
-        assert 'P>|t|' in str(summ)
+        assert "P>|t|" in str(summ)
         self.res1.use_t = orig_val
 
     def test_ttest(self):
@@ -82,7 +81,7 @@ class CheckGenericMixin:
     def test_params(self):
         params = self.res1.params
 
-        params_true = np.array([2,0,2])
+        params_true = np.array([2, 0, 2])
         if self.res1.model.fixed_paramsmask is not None:
             params_true = params_true[self.res1.model.fixed_paramsmask]
         assert_allclose(params, params_true, atol=1.5)
@@ -90,12 +89,10 @@ class CheckGenericMixin:
 
         assert_allclose(self.res1.bse, np.zeros(len(params)), atol=0.5)
         if not self.skip_bsejac:
-            assert_allclose(self.res1.bse, self.res1.bsejac, rtol=0.05,
-                            atol=0.15)
+            assert_allclose(self.res1.bse, self.res1.bsejac, rtol=0.05, atol=0.15)
             # bsejhj is very different from the other two
             # use huge atol as sanity check for availability
-            assert_allclose(self.res1.bsejhj, self.res1.bsejac,
-                            rtol=0.05, atol=1.5)
+            assert_allclose(self.res1.bsejhj, self.res1.bsejac, rtol=0.05, atol=1.5)
 
     def test_df(self):
         res = self.res1
@@ -117,16 +114,16 @@ class TestMyPareto1(CheckGenericMixin):
     def setup_class(cls):
         params = [2, 0, 2]
         nobs = 100
-        np.random.seed(1234)
-        rvs = stats.pareto.rvs(*params, **dict(size=nobs))
+        rs = np.random.RandomState(1234)
+        rvs = stats.pareto.rvs(*params, **dict(size=nobs), random_state=rs)
 
         mod_par = MyPareto(rvs)
         mod_par.fixed_params = None
         mod_par.fixed_paramsmask = None
         mod_par.df_model = 0
         mod_par.k_extra = k_extra = 3
-        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model -  k_extra
-        mod_par.data.xnames = ['shape', 'loc', 'scale']
+        mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
+        mod_par.data.xnames = ["shape", "loc", "scale"]
 
         cls.mod = mod_par
         cls.res1 = mod_par.fit(disp=None)
@@ -144,15 +141,15 @@ class TestMyPareto1(CheckGenericMixin):
         assert_array_less(p_min, x_min)
         assert_almost_equal(p_min, x_min, decimal=2)
 
-class TestMyParetoRestriction(CheckGenericMixin):
 
+class TestMyParetoRestriction(CheckGenericMixin):
 
     @classmethod
     def setup_class(cls):
         params = [2, 0, 2]
         nobs = 50
-        np.random.seed(1234)
-        rvs = stats.pareto.rvs(*params, **dict(size=nobs))
+        rs = np.random.RandomState(1234)
+        rvs = stats.pareto.rvs(*params, **dict(size=nobs), random_state=rs)
 
         mod_par = MyPareto(rvs)
         fixdf = np.nan * np.ones(3)
@@ -163,7 +160,7 @@ class TestMyParetoRestriction(CheckGenericMixin):
         mod_par.df_model = 0
         mod_par.k_extra = k_extra = 2
         mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
-        mod_par.data.xnames = ['shape', 'scale']
+        mod_par.data.xnames = ["shape", "scale"]
 
         cls.mod = mod_par
         cls.res1 = mod_par.fit(disp=None)
@@ -175,26 +172,22 @@ class TestMyParetoRestriction(CheckGenericMixin):
 
 class TwoPeakLLHNoExog(GenericLikelihoodModel):
     """Fit height of signal peak over background."""
-    start_params = [10, 1000]
-    cloneattr = ['start_params', 'signal', 'background']
-    exog_names = ['n_signal', 'n_background']
-    endog_names = ['alpha']
 
-    def __init__(self, endog, exog=None, signal=None, background=None,
-                 *args, **kwargs):
+    start_params = [10, 1000]
+    cloneattr = ["start_params", "signal", "background"]
+    exog_names = ["n_signal", "n_background"]
+    endog_names = ["alpha"]
+
+    def __init__(self, endog, exog=None, signal=None, background=None, *args, **kwargs):
         # assume we know the shape + location of the two components,
         # so we re-use their PDFs here
         self.signal = signal
         self.background = background
         super().__init__(
-            endog=endog,
-            exog=exog,
-            *args,
-            extra_params_names=self.exog_names,
-            **kwargs
-            )
+            endog, exog, *args, extra_params_names=self.exog_names, **kwargs
+        )
 
-    def loglike(self, params):        # pylint: disable=E0202
+    def loglike(self, params):  # pylint: disable=E0202
         return -self.nloglike(params)
 
     def nloglike(self, params):
@@ -219,7 +212,7 @@ class TestTwoPeakLLHNoExog:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(42)
+        rs = np.random.RandomState(42)
         pdf_a = stats.halfcauchy(loc=0, scale=1)
         pdf_b = stats.uniform(loc=0, scale=100)
 
@@ -227,26 +220,51 @@ class TestTwoPeakLLHNoExog:
         n_b = 200
         params = [n_a, n_b]
 
-        X = np.concatenate([pdf_a.rvs(size=n_a),
-                            pdf_b.rvs(size=n_b),
-                            ])[:, np.newaxis]
+        X = np.concatenate(
+            [
+                pdf_a.rvs(size=n_a, random_state=rs),
+                pdf_b.rvs(size=n_b, random_state=rs),
+            ]
+        )[:, np.newaxis]
         cls.X = X
         cls.params = params
         cls.pdf_a = pdf_a
         cls.pdf_b = pdf_b
 
     def test_fit(self):
-        np.random.seed(42)
-        llh_noexog = TwoPeakLLHNoExog(self.X,
-                                      signal=self.pdf_a,
-                                      background=self.pdf_b)
+        rs = np.random.RandomState(42)
+        llh_noexog = TwoPeakLLHNoExog(self.X, signal=self.pdf_a, background=self.pdf_b)
 
         res = llh_noexog.fit()
         assert_allclose(res.params, self.params, rtol=1e-1)
         # TODO: nan if exog is None,
         assert res.df_resid == 248
         assert res.df_model == 0
-        res_bs = res.bootstrap(nrep=50)
+        res_bs = res.bootstrap(nrep=50, rng=rs)
         assert_allclose(res_bs[2].mean(0), self.params, rtol=1e-1)
         # SMOKE test,
         res.summary()
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    # MyPareto does not set its own results_class, so fit() returns a plain
+    # GenericLikelihoodModelResults instance.
+    params = [2, 0, 2]
+    nobs = 100
+    rs = np.random.RandomState(1234)
+    rvs = stats.pareto.rvs(*params, **dict(size=nobs), random_state=rs)
+
+    mod_par = MyPareto(rvs)
+    mod_par.fixed_params = None
+    mod_par.fixed_paramsmask = None
+    mod_par.df_model = 0
+    mod_par.k_extra = k_extra = 3
+    mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
+    mod_par.data.xnames = ["shape", "loc", "scale"]
+
+    res = mod_par.fit(disp=None)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

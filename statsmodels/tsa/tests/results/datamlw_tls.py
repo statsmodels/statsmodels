@@ -3,8 +3,8 @@ from numpy import array
 from statsmodels.tools.testing import Holder
 
 mlpacf = Holder()
-mlpacf.comment = 'mlab.parcorr(x, [], 2, nout=3)'
-mlpacf.name = 'mlpacf'
+mlpacf.comment = "mlab.parcorr(x, [], 2, nout=3)"
+mlpacf.name = "mlpacf"
 mlpacf.lags1000 = array([
     [0.],
     [1.],
@@ -101,8 +101,8 @@ mlpacf.bounds100 = array([
     [-0.20306923]])
 
 mlacf = Holder()
-mlacf.comment = 'mlab.autocorr(x, [], 2, nout=3)'
-mlacf.name = 'mlacf'
+mlacf.comment = "mlab.autocorr(x, [], 2, nout=3)"
+mlacf.name = "mlacf"
 mlacf.acf1000 = array([
     [1.],
     [0.5291635],
@@ -199,8 +199,8 @@ mlacf.acf100 = array([
     [-0.09727938]])
 
 mlccf = Holder()
-mlccf.comment = 'mlab.crosscorr(x[4:], x[:-4], [], 2, nout=3)'
-mlccf.name = 'mlccf'
+mlccf.comment = "mlab.crosscorr(x[4:], x[:-4], [], 2, nout=3)"
+mlccf.name = "mlccf"
 mlccf.ccf100 = array([
     [0.20745123],
     [0.12351939],
@@ -388,4 +388,4 @@ mlywar.arcoef1000 = array([
     -0.06348611,  0.0609686,  -0.00717163, -0.0467326,  -0.00122755,
     0.06004768, -0.04893984,  0.00575949,  0.00249315, -0.00560358,
     0.01248498])
-mlywar.name = 'mlywar'
+mlywar.name = "mlywar"

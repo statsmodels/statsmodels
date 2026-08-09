@@ -1,9 +1,13 @@
+import numpy as np
+
 from statsmodels.base.elastic_net import RegularizedResults
-from statsmodels.stats.regularized_covariance import _calc_nodewise_row, \
-    _calc_nodewise_weight, _calc_approx_inv_cov
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
-import numpy as np
+from statsmodels.stats.regularized_covariance import (
+    _calc_approx_inv_cov,
+    _calc_nodewise_row,
+    _calc_nodewise_weight,
+)
 
 """
 Distributed estimation routines. Currently, we support several
@@ -62,7 +66,7 @@ debiasing procedure.
     approx_inv_cov
 
     This is the estimate of the approximate inverse covariance
-    matrix.  This is used to debiase the coefficient average
+    matrix.  This is used to debias the coefficient average
     along with the average gradient.  For the OLS case,
     approx_inv_cov is an approximation for
 
@@ -73,7 +77,8 @@ debiasing procedure.
 
 
 def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
-    """estimates the regularized fitted parameters.
+    """
+    Estimate the regularized fitted parameters
 
     Parameters
     ----------
@@ -88,18 +93,21 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the parameters for the regularized fit
+    ndarray
+        An array of the parameters for the regularized fit.
     """
 
     if fit_kwds is None:
-        raise ValueError("_est_regularized_naive currently " +
-                         "requires that fit_kwds not be None.")
+        raise ValueError(
+            "_est_regularized_naive currently " + "requires that fit_kwds not be None."
+        )
 
     return mod.fit_regularized(**fit_kwds).params
 
 
 def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
-    """estimates the unregularized fitted parameters.
+    """
+    Estimate the unregularized fitted parameters
 
     Parameters
     ----------
@@ -114,19 +122,22 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
 
     Returns
     -------
-    An array of the parameters for the fit
+    ndarray
+        An array of the parameters for the fit.
     """
 
     if fit_kwds is None:
-        raise ValueError("_est_unregularized_naive currently " +
-                         "requires that fit_kwds not be None.")
+        raise ValueError(
+            "_est_unregularized_naive currently requires that fit_kwds not be None."
+        )
 
     return mod.fit(**fit_kwds).params
 
 
 def _join_naive(params_l, threshold=0):
-    """joins the results from each run of _est_<type>_naive
-    and returns the mean estimate of the coefficients
+    """
+    Join the results from each run of _est_<type>_naive and return
+    the mean estimate of the coefficients
 
     Parameters
     ----------
@@ -134,6 +145,11 @@ def _join_naive(params_l, threshold=0):
         A list of arrays of coefficients.
     threshold : scalar
         The threshold at which the coefficients will be cut.
+
+    Returns
+    -------
+    ndarray
+        The mean estimate of the coefficients.
     """
 
     p = len(params_l[0])
@@ -150,7 +166,8 @@ def _join_naive(params_l, threshold=0):
 
 
 def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
-    """calculates the log-likelihood gradient for the debiasing
+    """
+    Calculate the log-likelihood gradient for the debiasing
 
     Parameters
     ----------
@@ -172,7 +189,8 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
 
     Returns
     -------
-    An array-like object of the same dimension as params
+    array_like
+        An array-like object of the same dimension as params.
 
     Notes
     -----
@@ -193,7 +211,8 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
 
 
 def _calc_wdesign_mat(mod, params, hess_kwds):
-    """calculates the weighted design matrix necessary to generate
+    """
+    Calculate the weighted design matrix necessary to generate
     the approximate inverse covariance matrix
 
     Parameters
@@ -207,18 +226,21 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
 
     Returns
     -------
-    An array-like object, updated design matrix, same dimension
-    as mod.exog
+    array_like
+        An array-like object, updated design matrix, same dimension
+        as mod.exog.
     """
 
     rhess = np.sqrt(mod.hessian_factor(np.asarray(params), **hess_kwds))
     return rhess[:, None] * mod.exog
 
 
-def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
-                              score_kwds=None, hess_kwds=None):
-    """estimates the regularized fitted parameters, is the default
-    estimation_method for class DistributedModel.
+def _est_regularized_debiased(
+    mod, mnum, partitions, fit_kwds=None, score_kwds=None, hess_kwds=None
+):
+    """
+    Estimate the regularized fitted parameters, the default
+    estimation_method for class DistributedModel
 
     Parameters
     ----------
@@ -237,19 +259,21 @@ def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
 
     Returns
     -------
-    A tuple of parameters for regularized fit
-        An array-like object of the fitted parameters, params
-        An array-like object for the gradient
-        A list of array like objects for nodewise_row
-        A list of array like objects for nodewise_weight
+    tuple
+        A tuple of parameters for regularized fit containing an
+        array-like object of the fitted parameters (params), an
+        array-like object for the gradient, a list of array-like
+        objects for nodewise_row, and a list of array-like objects
+        for nodewise_weight.
     """
 
     score_kwds = {} if score_kwds is None else score_kwds
     hess_kwds = {} if hess_kwds is None else hess_kwds
 
     if fit_kwds is None:
-        raise ValueError("_est_regularized_debiased currently " +
-                         "requires that fit_kwds not be None.")
+        raise ValueError(
+            "_est_regularized_debiased currently requires that fit_kwds not be None."
+        )
     else:
         alpha = fit_kwds["alpha"]
 
@@ -259,7 +283,7 @@ def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
         L1_wt = 1
 
     nobs, p = mod.exog.shape
-    p_part = int(np.ceil((1. * p) / partitions))
+    p_part = int(np.ceil((1.0 * p) / partitions))
 
     params = mod.fit_regularized(**fit_kwds).params
     grad = _calc_grad(mod, params, alpha, L1_wt, score_kwds) / nobs
@@ -273,16 +297,16 @@ def _est_regularized_debiased(mod, mnum, partitions, fit_kwds=None,
         nodewise_row = _calc_nodewise_row(wexog, idx, alpha)
         nodewise_row_l.append(nodewise_row)
 
-        nodewise_weight = _calc_nodewise_weight(wexog, nodewise_row, idx,
-                                                alpha)
+        nodewise_weight = _calc_nodewise_weight(wexog, nodewise_row, idx, alpha)
         nodewise_weight_l.append(nodewise_weight)
 
     return params, grad, nodewise_row_l, nodewise_weight_l
 
 
 def _join_debiased(results_l, threshold=0):
-    """joins the results from each run of _est_regularized_debiased
-    and returns the debiased estimate of the coefficients
+    """
+    Join the results from each run of _est_regularized_debiased and
+    return the debiased estimate of the coefficients
 
     Parameters
     ----------
@@ -291,6 +315,11 @@ def _join_debiased(results_l, threshold=0):
         nodewise_row and nodewise_weight values for each partition.
     threshold : scalar
         The threshold at which the coefficients will be cut.
+
+    Returns
+    -------
+    ndarray
+        The debiased estimate of the coefficients.
     """
 
     p = len(results_l[0][0])
@@ -314,7 +343,7 @@ def _join_debiased(results_l, threshold=0):
     nodewise_weight_l = np.array(nodewise_weight_l)
 
     params_mn /= partitions
-    grad_mn *= -1. / partitions
+    grad_mn *= -1.0 / partitions
 
     approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
 
@@ -325,11 +354,12 @@ def _join_debiased(results_l, threshold=0):
     return debiased_params
 
 
-def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
-                          init_kwds_e={}):
-    """handles the model fitting for each machine. NOTE: this
-    is primarily handled outside of DistributedModel because
-    joblib cannot handle class methods.
+def _helper_fit_partition(self, pnum, endog, exog, fit_kwds, init_kwds_e=None):
+    """
+    Handle the model fitting for each machine
+
+    NOTE: this is primarily handled outside of DistributedModel
+    because joblib cannot handle class methods.
 
     Parameters
     ----------
@@ -348,17 +378,18 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds,
 
     Returns
     -------
-    estimation_method result.  For the default,
-    _est_regularized_debiased, a tuple.
+    object
+        The estimation_method result.  For the default,
+        _est_regularized_debiased, a tuple.
     """
-
+    init_kwds_e = {} if init_kwds_e is None else init_kwds_e
     temp_init_kwds = self.init_kwds.copy()
     temp_init_kwds.update(init_kwds_e)
 
     model = self.model_class(endog, exog, **temp_init_kwds)
-    results = self.estimation_method(model, pnum, self.partitions,
-                                     fit_kwds=fit_kwds,
-                                     **self.estimation_kwds)
+    results = self.estimation_method(
+        model, pnum, self.partitions, fit_kwds=fit_kwds, **self.estimation_kwds
+    )
     return results
 
 
@@ -376,10 +407,6 @@ class DistributedModel:
     init_kwds : dict-like or None
         Keywords needed for initializing the model, in addition to
         endog and exog.
-    init_kwds_generator : generator or None
-        Additional keyword generator that produces model init_kwds
-        that may vary based on data partition.  The current usecase
-        is for WLS and GLS
     estimation_method : function or None
         The method that performs the estimation for each partition.
         If None this defaults to _est_regularized_debiased.
@@ -404,8 +431,6 @@ class DistributedModel:
         See Parameters.
     init_kwds : dict-like
         See Parameters.
-    init_kwds_generator : generator or None
-        See Parameters.
     estimation_method : function
         See Parameters.
     estimation_kwds : dict-like
@@ -426,10 +451,18 @@ class DistributedModel:
     --------
     """
 
-    def __init__(self, partitions, model_class=None,
-                 init_kwds=None, estimation_method=None,
-                 estimation_kwds=None, join_method=None, join_kwds=None,
-                 results_class=None, results_kwds=None):
+    def __init__(
+        self,
+        partitions,
+        model_class=None,
+        init_kwds=None,
+        estimation_method=None,
+        estimation_kwds=None,
+        join_method=None,
+        join_kwds=None,
+        results_class=None,
+        results_kwds=None,
+    ):
 
         self.partitions = partitions
 
@@ -473,8 +506,14 @@ class DistributedModel:
         else:
             self.results_kwds = results_kwds
 
-    def fit(self, data_generator, fit_kwds=None, parallel_method="sequential",
-            parallel_backend=None, init_kwds_generator=None):
+    def fit(
+        self,
+        data_generator,
+        fit_kwds=None,
+        parallel_method="sequential",
+        parallel_backend=None,
+        init_kwds_generator=None,
+    ):
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
@@ -499,25 +538,29 @@ class DistributedModel:
 
         Returns
         -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
+        Results
+            An instance of results_class (RegularizedResults by
+            default), initialized using the dummy result model and
+            the join_method result as params.
         """
 
         if fit_kwds is None:
             fit_kwds = {}
 
         if parallel_method == "sequential":
-            results_l = self.fit_sequential(data_generator, fit_kwds,
-                                            init_kwds_generator)
+            results_l = self.fit_sequential(
+                data_generator, fit_kwds, init_kwds_generator
+            )
 
         elif parallel_method == "joblib":
-            results_l = self.fit_joblib(data_generator, fit_kwds,
-                                        parallel_backend,
-                                        init_kwds_generator)
+            results_l = self.fit_joblib(
+                data_generator, fit_kwds, parallel_backend, init_kwds_generator
+            )
 
         else:
-            raise ValueError("parallel_method: %s is currently not supported"
-                             % parallel_method)
+            raise ValueError(
+                f"parallel_method: {parallel_method} is currently not supported"
+            )
 
         params = self.join_method(results_l, **self.join_kwds)
 
@@ -530,8 +573,7 @@ class DistributedModel:
 
         return self.results_class(res_mod, params, **self.results_kwds)
 
-    def fit_sequential(self, data_generator, fit_kwds,
-                       init_kwds_generator=None):
+    def fit_sequential(self, data_generator, fit_kwds, init_kwds_generator=None):
         """Sequentially performs the distributed estimation using
         the corresponding DistributedModel
 
@@ -550,8 +592,10 @@ class DistributedModel:
 
         Returns
         -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
+        list
+            A list of the estimation_method result for each partition.
+            For the default, _est_regularized_debiased, a list of
+            tuples.
         """
 
         results_l = []
@@ -560,25 +604,25 @@ class DistributedModel:
 
             for pnum, (endog, exog) in enumerate(data_generator):
 
-                results = _helper_fit_partition(self, pnum, endog, exog,
-                                                fit_kwds)
+                results = _helper_fit_partition(self, pnum, endog, exog, fit_kwds)
                 results_l.append(results)
 
         else:
 
-            tup_gen = enumerate(zip(data_generator,
-                                    init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
 
             for pnum, ((endog, exog), init_kwds_e) in tup_gen:
 
-                results = _helper_fit_partition(self, pnum, endog, exog,
-                                                fit_kwds, init_kwds_e)
+                results = _helper_fit_partition(
+                    self, pnum, endog, exog, fit_kwds, init_kwds_e
+                )
                 results_l.append(results)
 
         return results_l
 
-    def fit_joblib(self, data_generator, fit_kwds, parallel_backend,
-                   init_kwds_generator=None):
+    def fit_joblib(
+        self, data_generator, fit_kwds, parallel_backend, init_kwds_generator=None
+    ):
         """Performs the distributed estimation in parallel using joblib
 
         Parameters
@@ -599,8 +643,10 @@ class DistributedModel:
 
         Returns
         -------
-        join_method result.  For the default, _join_debiased, it returns a
-        p length array.
+        list
+            A list of the estimation_method result for each partition.
+            For the default, _est_regularized_debiased, a list of
+            tuples.
         """
 
         from statsmodels.tools.parallel import parallel_func
@@ -608,28 +654,32 @@ class DistributedModel:
         par, f, n_jobs = parallel_func(_helper_fit_partition, self.partitions)
 
         if parallel_backend is None and init_kwds_generator is None:
-            results_l = par(f(self, pnum, endog, exog, fit_kwds)
-                            for pnum, (endog, exog)
-                            in enumerate(data_generator))
+            results_l = par(
+                f(self, pnum, endog, exog, fit_kwds)
+                for pnum, (endog, exog) in enumerate(data_generator)
+            )
 
         elif parallel_backend is not None and init_kwds_generator is None:
             with parallel_backend:
-                results_l = par(f(self, pnum, endog, exog, fit_kwds)
-                                for pnum, (endog, exog)
-                                in enumerate(data_generator))
+                results_l = par(
+                    f(self, pnum, endog, exog, fit_kwds)
+                    for pnum, (endog, exog) in enumerate(data_generator)
+                )
 
         elif parallel_backend is None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
-            results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds)
-                            for pnum, ((endog, exog), init_kwds)
-                            in tup_gen)
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
+            results_l = par(
+                f(self, pnum, endog, exog, fit_kwds, init_kwds)
+                for pnum, ((endog, exog), init_kwds) in tup_gen
+            )
 
         elif parallel_backend is not None and init_kwds_generator is not None:
-            tup_gen = enumerate(zip(data_generator, init_kwds_generator))
+            tup_gen = enumerate(zip(data_generator, init_kwds_generator, strict=True))
             with parallel_backend:
-                results_l = par(f(self, pnum, endog, exog, fit_kwds, init_kwds)
-                                for pnum, ((endog, exog), init_kwds)
-                                in tup_gen)
+                results_l = par(
+                    f(self, pnum, endog, exog, fit_kwds, init_kwds)
+                    for pnum, ((endog, exog), init_kwds) in tup_gen
+                )
 
         return results_l
 
@@ -652,8 +702,10 @@ class DistributedResults(LikelihoodModelResults):
         super().__init__(model, params)
 
     def predict(self, exog, *args, **kwargs):
-        """Calls self.model.predict for the provided exog.  See
-        Results.predict.
+        """
+        Call self.model.predict for the provided exog
+
+        See Results.predict.
 
         Parameters
         ----------
@@ -670,8 +722,8 @@ class DistributedResults(LikelihoodModelResults):
 
         Returns
         -------
-            prediction : ndarray, pandas.Series or pandas.DataFrame
-            See self.model.predict
+        ndarray, pandas.Series or pandas.DataFrame
+            See self.model.predict.
         """
 
         return self.model.predict(self.params, exog, *args, **kwargs)

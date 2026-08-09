@@ -1,33 +1,27 @@
+"""Typing aliases used by statsmodels"""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Union
-from collections.abc import Sequence
-
-from packaging.version import parse
-from pandas import DataFrame, Series
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import numpy as np
+    from collections.abc import Sequence
 
-    if parse(np.__version__) < parse("1.22.0"):
-        raise NotImplementedError(
-            "NumPy 1.22.0 or later required for type checking"
-        )
+    import numpy as np
     from numpy.typing import (
-        ArrayLike as ArrayLike,
+        ArrayLike,
         DTypeLike,
         NDArray,
         _FloatLike_co,
         _UIntLike_co,
     )
+    from pandas import DataFrame, Series
 
-    _ExtendedFloatLike_co = Union[_FloatLike_co, _UIntLike_co]
+    _ExtendedFloatLike_co = _FloatLike_co | _UIntLike_co
     NumericArray = NDArray[Any, np.dtype[_ExtendedFloatLike_co]]
     Float64Array = NDArray[Any, np.double]
-    ArrayLike1D = Union[Sequence[Union[float, int]], NumericArray, Series]
-    ArrayLike2D = Union[
-        Sequence[Sequence[Union[float, int]]], NumericArray, DataFrame
-    ]
+    ArrayLike1D = Sequence[float | int] | NumericArray | Series
+    ArrayLike2D = Sequence[Sequence[float | int]] | NumericArray | DataFrame
 else:
     ArrayLike = Any
     DTypeLike = Any
@@ -39,10 +33,10 @@ else:
 
 __all__ = [
     "ArrayLike",
-    "DTypeLike",
-    "Float64Array",
     "ArrayLike1D",
     "ArrayLike2D",
+    "DTypeLike",
+    "Float64Array",
     "NDArray",
     "NumericArray",
 ]

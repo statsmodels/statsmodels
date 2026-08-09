@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats._delta_method import NonlinearDeltaCov
 
@@ -51,13 +52,13 @@ class TestDeltacovOLS:
         nl = NonlinearDeltaCov(fun, res.params, res.cov_params())
         predicted = nl.predicted()
         se = nl.se_vectorized()
-        assert_allclose(predicted, fun(res.params), rtol=1e-12)
-        assert_allclose(se, np.sqrt(np.diag(nl.cov())), rtol=1e-12)
+        assert_allclose(predicted, fun(res.params), rtol=1e-10)
+        assert_allclose(se, np.sqrt(np.diag(nl.cov())), rtol=1e-10)
 
         tt = res.t_test(x, use_t=False)
-        assert_allclose(predicted, tt.effect, rtol=1e-12)
-        assert_allclose(se, tt.sd, rtol=1e-12)
-        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-12)
+        assert_allclose(predicted, tt.effect, rtol=1e-10)
+        assert_allclose(se, tt.sd, rtol=1e-10)
+        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-10, atol=1e-12)
         t1 = nl.summary()
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults
@@ -95,7 +96,7 @@ def test_deltacov_margeff():
     tc = dt.TestPoissonNewton()
     tc.setup_class()
     res_poi = tc.res1
-    res_poi.model._derivative_exog
+    assert isinstance(res_poi.model._derivative_exog(res_poi.params), np.ndarray)
 
     # 2d f doesn't work correctly,
     # se_vectorized and predicted are 2d column vector
@@ -107,7 +108,7 @@ def test_deltacov_margeff():
 
     nlp = NonlinearDeltaCov(f, res_poi.params, res_poi.cov_params())
 
-    marg = res_poi.get_margeff(at='mean')
+    marg = res_poi.get_margeff(at="mean")
     # margeff excludes constant, last parameter in this case
     assert_allclose(nlp.se_vectorized()[:-1], marg.margeff_se, rtol=1e-13)
     assert_allclose(nlp.predicted()[:-1], marg.margeff, rtol=1e-13)

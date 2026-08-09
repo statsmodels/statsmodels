@@ -5,7 +5,6 @@ from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
 import pandas as pd
 import pytest
@@ -417,10 +416,11 @@ class TestDecompose:
             res_mult.seasonal.values.squeeze(), res_mult_pi.seasonal.values.squeeze(), 4
         )
 
-    def test_pandas_nofreq(self, reset_randomstate):
+    def test_pandas_nofreq(self):
         # issue #3503
+        rs = np.random.RandomState(32132100)
         nobs = 100
-        dta = pd.Series([x % 3 for x in range(nobs)] + np.random.randn(nobs))
+        dta = pd.Series([x % 3 for x in range(nobs)] + rs.randn(nobs))
         res_np = seasonal_decompose(dta.values, period=3)
         res = seasonal_decompose(dta, period=3)
 
@@ -795,46 +795,50 @@ class TestDecompose:
 
     def test_interpolate_trend(self):
         x = np.arange(12)
-        freq = 4
-        trend = seasonal_decompose(x, period=freq).trend
+        period = 4
+        trend = seasonal_decompose(x, period=period).trend
         assert_equal(trend[0], np.nan)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend=5).trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend=5).trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend="freq").trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x[:, None], period=freq, extrapolate_trend=5).trend
+        trend = seasonal_decompose(x[:, None], period=period, extrapolate_trend=5).trend
         assert_almost_equal(trend, x)
 
         # 2d case
         x = np.tile(np.arange(12), (2, 1)).T
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend=1).trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend=1).trend
         assert_almost_equal(trend, x)
 
-        trend = seasonal_decompose(x, period=freq, extrapolate_trend="freq").trend
+        trend = seasonal_decompose(x, period=period, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
     def test_raises(self):
-        assert_raises(ValueError, seasonal_decompose, self.data.values)
-        assert_raises(ValueError, seasonal_decompose, self.data, "m", period=4)
+        with pytest.raises(ValueError):
+            seasonal_decompose(self.data.values)
+        with pytest.raises(ValueError):
+            seasonal_decompose(self.data, "m", period=4)
         x = self.data.astype(float).copy()
         x.iloc[2] = np.nan
-        assert_raises(ValueError, seasonal_decompose, x)
+        with pytest.raises(ValueError):
+            seasonal_decompose(x)
 
 
-def test_seasonal_decompose_too_short(reset_randomstate):
+def test_seasonal_decompose_too_short():
+    rs = np.random.RandomState(43437241)
     dates = pd.date_range("2000-01-31", periods=4, freq=QUARTER_END)
     y = np.sin(np.arange(4) / 4 * 2 * np.pi)
-    y += np.random.standard_normal(y.size)
+    y += rs.standard_normal(y.size)
     y = pd.Series(y, name="y", index=dates)
     with pytest.raises(ValueError):
         seasonal_decompose(y)
 
     dates = pd.date_range("2000-01-31", periods=12, freq=MONTH_END)
     y = np.sin(np.arange(12) / 12 * 2 * np.pi)
-    y += np.random.standard_normal(y.size)
+    y += rs.standard_normal(y.size)
     y = pd.Series(y, name="y", index=dates)
     with pytest.raises(ValueError):
         seasonal_decompose(y)
@@ -933,13 +937,14 @@ def test_seasonal_decompose_multiple():
     assert_allclose(res.resid[:, 0], res.resid[:, 1])
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("model", ["additive", "multiplicative"])
-@pytest.mark.parametrize("freq", [4, 12])
+@pytest.mark.parametrize("period", [4, 12])
 @pytest.mark.parametrize("two_sided", [True, False])
 @pytest.mark.parametrize("extrapolate_trend", [True, False])
 def test_seasonal_decompose_plot(
-    model, freq, two_sided, extrapolate_trend, close_figures
+    model, period, two_sided, extrapolate_trend, close_figures
 ):
     x = np.array(
         [
@@ -981,7 +986,7 @@ def test_seasonal_decompose_plot(
     x2 = np.r_[x[12:], x[:12]]
     x = np.c_[x, x2]
     res = seasonal_decompose(
-        x, period=freq, two_sided=two_sided, extrapolate_trend=extrapolate_trend
+        x, period=period, two_sided=two_sided, extrapolate_trend=extrapolate_trend
     )
     fig = res.plot()
 

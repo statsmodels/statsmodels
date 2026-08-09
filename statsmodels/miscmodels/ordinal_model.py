@@ -5,8 +5,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from statsmodels.compat.pandas import Appender
 
+from itertools import pairwise
 import warnings
 
 import numpy as np
@@ -22,13 +22,17 @@ from statsmodels.base.model import (
 )
 import statsmodels.base.wrapper as wrap
 from statsmodels.formula.formulatools import advance_eval_env
+
 # for results wrapper:
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 
 class OrderedModel(GenericLikelihoodModel):
-    """Ordinal Model based on logistic or normal distribution
+    """
+    Ordinal Model based on logistic or normal distribution
 
     The parameterization corresponds to the proportional odds model in the
     logistic case.
@@ -43,7 +47,7 @@ class OrderedModel(GenericLikelihoodModel):
     The observed variable is defined by the interval
 
     y = {0 if y_latent <= cut_0
-         1 of cut_0 < y_latent <= cut_1
+         1 if cut_0 < y_latent <= cut_1
          ...
          K if cut_K < y_latent
 
@@ -73,7 +77,7 @@ class OrderedModel(GenericLikelihoodModel):
         Exogenous, explanatory variables. This should not include an intercept.
         pd.DataFrame are also accepted.
         see Notes about constant when using formulas
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
     distr : string 'probit' or 'logit', or a distribution instance
         The default is currently 'probit' which uses the normal distribution
@@ -81,6 +85,9 @@ class OrderedModel(GenericLikelihoodModel):
         assumed to have the main methods of scipy.stats distributions, mainly
         cdf, pdf and ppf. The inverse cdf, ppf, is only use to calculate
         starting values.
+    **kwds
+        Extra keyword arguments passed to the model, for example
+        ``missing``.
 
     Notes
     -----
@@ -112,13 +119,14 @@ class OrderedModel(GenericLikelihoodModel):
     The model will raise a ValueError if a remaining constant is detected.
 
     """
+
     _formula_max_endog = np.inf
 
-    def __init__(self, endog, exog, offset=None, distr='probit', **kwds):
+    def __init__(self, endog, exog, offset=None, distr="probit", **kwds):
 
-        if distr == 'probit':
+        if distr == "probit":
             self.distr = stats.norm
-        elif distr == 'logit':
+        elif distr == "logit":
             self.distr = stats.logistic
         else:
             self.distr = distr
@@ -138,8 +146,10 @@ class OrderedModel(GenericLikelihoodModel):
                 self.endog = index
                 labels = unique
                 if np.isnan(labels).any():
-                    msg = ("NaN in dependent variable detected. "
-                           "Missing values need to be removed.")
+                    msg = (
+                        "NaN in dependent variable detected. "
+                        "Missing values need to be removed."
+                    )
                     raise ValueError(msg)
             elif self.endog.ndim == 2:
                 if not hasattr(self, "model_spec"):
@@ -164,7 +174,8 @@ class OrderedModel(GenericLikelihoodModel):
         self.results_class = OrderedResults
 
     def _check_inputs(self, endog, exog):
-        """Handle endog that is pandas Categorical.
+        """
+        Handle endog that is pandas Categorical
 
         Checks if self.distrib is legal and provides Pandas ordered Categorical
         support for endog.
@@ -182,44 +193,56 @@ class OrderedModel(GenericLikelihoodModel):
         endog : array_like or pandas Series
             If the original endog is a pandas ordered Categorical Series,
             then the returned endog are the ``codes``, i.e. integer
-            representation of ordere categorical variable
+            representation of ordered categorical variable
         labels : None or list
             If original endog is pandas ordered Categorical Series, then the
             categories are returned. Otherwise ``labels`` is None.
         is_pandas : bool
             This is True if original endog is a pandas ordered Categorical
             Series and False otherwise.
-
         """
 
         if not isinstance(self.distr, stats.rv_continuous):
-            msg = (
-                f"{self.distr.name} is not a scipy.stats distribution."
-            )
-            warnings.warn(msg)
+            msg = f"{self.distr.name} is not a scipy.stats distribution."
+            warnings.warn(msg, RuntimeWarning, stacklevel=2)
 
         labels = None
         is_pandas = False
         if isinstance(endog, pd.Series):
             if isinstance(endog.dtypes, CategoricalDtype):
                 if not endog.dtype.ordered:
-                    warnings.warn("the endog has ordered == False, "
-                                  "risk of capturing a wrong order for the "
-                                  "categories. ordered == True preferred.",
-                                  Warning)
+                    warnings.warn(
+                        "the endog has ordered == False, "
+                        "risk of capturing a wrong order for the "
+                        "categories. ordered == True preferred.",
+                        SpecificationWarning,
+                        stacklevel=2,
+                    )
 
                 endog_name = endog.name
                 labels = endog.values.categories
                 endog = endog.cat.codes
                 if endog.min() == -1:  # means there is a missing value
-                    raise ValueError("missing values in categorical endog are "
-                                     "not supported")
+                    raise ValueError(
+                        "missing values in categorical endog are not supported"
+                    )
                 endog.name = endog_name
                 is_pandas = True
 
         return endog, labels, is_pandas
 
     def _initialize_labels(self, labels, k_levels=None):
+        """
+        Set up category labels, level count, and threshold names
+
+        Parameters
+        ----------
+        labels : array_like
+            The category labels of the ordered endogenous variable.
+        k_levels : int, optional
+            The number of levels/categories. If None, it is inferred from
+            the length of `labels`.
+        """
         self.labels = labels
         if k_levels is None:
             self.k_levels = len(labels)
@@ -231,8 +254,7 @@ class OrderedModel(GenericLikelihoodModel):
         else:  # no exog in model
             self.nobs, self.k_vars = self.endog.shape[0], 0
 
-        threshold_names = [str(x) + '/' + str(y)
-                           for x, y in zip(labels[:-1], labels[1:])]
+        threshold_names = [str(x) + "/" + str(y) for x, y in pairwise(labels)]
 
         # from GenericLikelihoodModel.fit
         if self.exog is not None:
@@ -244,8 +266,7 @@ class OrderedModel(GenericLikelihoodModel):
             self.data.xnames = threshold_names
 
     @classmethod
-    def from_formula(cls, formula, data, subset=None, drop_cols=None,
-                     *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
 
         # we want an explicit Intercept in the model that we can remove
         # Removing constant with "0 +" or "- 1" does not work for categ. exog
@@ -254,13 +275,18 @@ class OrderedModel(GenericLikelihoodModel):
         original_endog = data[endog_name]
         advance_eval_env(kwargs)
         model = super().from_formula(
-            formula, data=data, drop_cols=["Intercept"], *args, **kwargs)
+            formula, data, *args, drop_cols=["Intercept"], **kwargs
+        )
 
         if model.endog.ndim == 2:
-            if not (isinstance(original_endog.dtype, CategoricalDtype)
-                    and original_endog.dtype.ordered):
-                msg = ("Only ordered pandas Categorical are supported as "
-                       "endog in formulas")
+            if not (
+                isinstance(original_endog.dtype, CategoricalDtype)
+                and original_endog.dtype.ordered
+            ):
+                msg = (
+                    "Only ordered pandas Categorical are supported as "
+                    "endog in formulas"
+                )
                 raise ValueError(msg)
 
             labels = original_endog.values.categories
@@ -273,7 +299,8 @@ class OrderedModel(GenericLikelihoodModel):
     from_formula.__func__.__doc__ = Model.from_formula.__doc__
 
     def cdf(self, x):
-        """Cdf evaluated at x.
+        """
+        Cdf evaluated at x
 
         Parameters
         ----------
@@ -283,13 +310,15 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        Value of the cumulative distribution function of the underlying latent
-        variable evaluated at x.
+        ndarray
+            Value of the cumulative distribution function of the underlying
+            latent variable evaluated at x.
         """
         return self.distr.cdf(x)
 
     def pdf(self, x):
-        """Pdf evaluated at x
+        """
+        Pdf evaluated at x
 
         Parameters
         ----------
@@ -299,13 +328,15 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        Value of the probability density function of the underlying latent
-        variable evaluated at x.
+        ndarray
+            Value of the probability density function of the underlying
+            latent variable evaluated at x.
         """
         return self.distr.pdf(x)
 
     def prob(self, low, upp):
-        """Interval probability.
+        """
+        Interval probability
 
         Probability that value is in interval (low, upp], computed as
 
@@ -314,24 +345,24 @@ class OrderedModel(GenericLikelihoodModel):
         Parameters
         ----------
         low : array_like
-            lower bound for interval
+            Lower bound for interval
         upp : array_like
-            upper bound for interval
+            Upper bound for interval
 
         Returns
         -------
         float or ndarray
             Probability that value falls in interval (low, upp]
-
         """
         return np.maximum(self.cdf(upp) - self.cdf(low), 0)
 
     def transform_threshold_params(self, params):
-        """transformation of the parameters in the optimization
+        """
+        Transformation of the parameters in the optimization
 
         Parameters
         ----------
-        params : nd_array
+        params : ndarray
             Contains (exog_coef, transformed_thresholds) where exog_coef are
             the coefficient for the explanatory variables in the linear term,
             transformed threshold or cutoff points. The first, lowest threshold
@@ -340,18 +371,17 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        thresh : nd_array
+        thresh : ndarray
             Thresh are the thresholds or cutoff constants for the intervals.
-
         """
-        th_params = params[-(self.k_levels - 1):]
-        thresh = np.concatenate((th_params[:1],
-                                 np.exp(th_params[1:]))).cumsum()
+        th_params = params[-(self.k_levels - 1) :]
+        thresh = np.concatenate((th_params[:1], np.exp(th_params[1:]))).cumsum()
         thresh = np.concatenate(([-np.inf], thresh, [np.inf]))
         return thresh
 
     def transform_reverse_threshold_params(self, params):
-        """obtain transformed thresholds from original thresholds or cutoffs
+        """
+        Obtain transformed thresholds from original thresholds or cutoffs
 
         Parameters
         ----------
@@ -361,20 +391,18 @@ class OrderedModel(GenericLikelihoodModel):
 
         Returns
         -------
-        thresh_params : ndarrray
+        thresh_params : ndarray
             Transformed threshold parameter.
             The first, lowest threshold is unchanged, all other thresholds are
             in terms of exponentiated increments.
             Transformed parameters can be any real number without restrictions.
-
         """
-        thresh_params = np.concatenate((params[:1],
-                                        np.log(np.diff(params[:-1]))))
+        thresh_params = np.concatenate((params[:1], np.log(np.diff(params[:-1]))))
         return thresh_params
 
     def predict(self, params, exog=None, offset=None, which="prob"):
         """
-        Predicted probabilities for each level of the ordinal endog.
+        Predicted probabilities for each level of the ordinal endog
 
         Parameters
         ----------
@@ -387,14 +415,14 @@ class OrderedModel(GenericLikelihoodModel):
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
-        which : {"prob", "linpred", "cumprob"}
+        which : {"prob", "linpred", "cum", "cumprob"}
             Determines which statistic is predicted.
 
             - prob : predicted probabilities to be in each choice. 2-dim.
-            - linear : 1-dim linear prediction of the latent variable
+            - linpred : 1-dim linear prediction of the latent variable
               ``x b + offset``
-            - cumprob : predicted cumulative probability to be in choice k or
-              lower
+            - cum or cumprob : predicted cumulative probability to be in
+              choice k or lower
 
         Returns
         -------
@@ -402,7 +430,7 @@ class OrderedModel(GenericLikelihoodModel):
             If which is "prob", then 2-dim predicted probabilities with
             observations in rows and one column for each category or level of
             the categorical dependent variable.
-            If which is "cumprob", then "prob" ar cumulatively added to get the
+            If which is "cumprob", then "prob" are cumulatively added to get the
             cdf at k, i.e. probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is
@@ -427,14 +455,15 @@ class OrderedModel(GenericLikelihoodModel):
             raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
-        """Linear prediction of latent variable `x b + offset`.
+        """
+        Linear prediction of latent variable `x b + offset`
 
         Parameters
         ----------
         params : ndarray
             Parameters for the model, (exog_coef, transformed_thresholds)
         exog : array_like, optional
-            Design / exogenous data. Is exog is None, model exog is used.
+            Design / exogenous data. If exog is None, model exog is used.
         offset : array_like, optional
             Offset is added to the linear prediction with coefficient
             equal to 1. If offset is not provided and exog
@@ -447,15 +476,13 @@ class OrderedModel(GenericLikelihoodModel):
             1-dim linear prediction given by exog times linear params plus
             offset. This is the prediction for the underlying latent variable.
             If exog and offset are None, then the predicted values are zero.
-
         """
         if exog is None:
             exog = self.exog
             if offset is None:
                 offset = self.offset
-        else:
-            if offset is None:
-                offset = 0
+        elif offset is None:
+            offset = 0
 
         if offset is not None:
             offset = np.asarray(offset)
@@ -463,7 +490,7 @@ class OrderedModel(GenericLikelihoodModel):
         if exog is not None:
             _exog = np.asarray(exog)
             _params = np.asarray(params)
-            linpred = _exog.dot(_params[:-(self.k_levels - 1)])
+            linpred = _exog.dot(_params[: -(self.k_levels - 1)])
         else:  # means self.exog is also None
             linpred = np.zeros(self.nobs)
         if offset is not None:
@@ -471,7 +498,8 @@ class OrderedModel(GenericLikelihoodModel):
         return linpred
 
     def _bounds(self, params):
-        """Integration bounds for the observation specific interval.
+        """
+        Integration bounds for the observation specific interval
 
         This defines the lower and upper bounds for the intervals of the
         choices of all observations.
@@ -490,15 +518,14 @@ class OrderedModel(GenericLikelihoodModel):
         params : ndarray
             Parameters for the model, (exog_coef, transformed_thresholds)
 
-        Return
-        ------
+        Returns
+        -------
         low : ndarray
             Lower bounds for choice intervals of each observation,
             1-dim with length nobs
         upp : ndarray
             Upper bounds for choice intervals of each observation,
             1-dim with length nobs.
-
         """
         thresh = self.transform_threshold_params(params)
 
@@ -516,7 +543,7 @@ class OrderedModel(GenericLikelihoodModel):
 
     def loglikeobs(self, params):
         """
-        Log-likelihood of OrderdModel for all observations.
+        Log-likelihood of OrderedModel for all observations
 
         Parameters
         ----------
@@ -534,11 +561,23 @@ class OrderedModel(GenericLikelihoodModel):
         return np.log(prob + 1e-20)
 
     def score_obs_(self, params):
-        """score, first derivative of loglike for each observations
+        """
+        Score, first derivative of loglike for each observation
 
         This currently only implements the derivative with respect to the
         exog parameters, but not with respect to threshold parameters.
 
+        Parameters
+        ----------
+        params : ndarray
+            Parameters for the model, (exog_coef, transformed_thresholds)
+
+        Returns
+        -------
+        ndarray
+            The score for each observation with respect to the exog
+            parameters and the transformed threshold parameters, 2-dim
+            with shape (nobs, k_vars + k_levels - 1).
         """
         low, upp = self._bounds(params)
 
@@ -561,17 +600,22 @@ class OrderedModel(GenericLikelihoodModel):
         score_factor = (pdf_upp - pdf_low)[:, None]
         score_factor /= prob[:, None]
 
-        so = np.column_stack((-score_factor[:, :1] * self.exog,
-                              score_factor[:, 1:]))
+        so = np.column_stack((-score_factor[:, :1] * self.exog, score_factor[:, 1:]))
         return so
 
     @property
     def start_params(self):
-        """Start parameters for the optimization corresponding to null model.
+        """
+        Start parameters for the optimization corresponding to null model
 
         The threshold are computed from the observed frequencies and
         transformed to the exponential increments parameterization.
         The parameters for explanatory variables are set to zero.
+
+        Returns
+        -------
+        ndarray
+            Starting values for the parameters, (exog_coef, threshold).
         """
         # start params based on model without exog
         freq = np.bincount(self.endog) / len(self.endog)
@@ -581,14 +625,28 @@ class OrderedModel(GenericLikelihoodModel):
         return start_params
 
     @Appender(LikelihoodModel.fit.__doc__)
-    def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
-            disp=1, callback=None, retall=0, **kwargs):
+    def fit(
+        self,
+        start_params=None,
+        method="nm",
+        maxiter=500,
+        full_output=1,
+        disp=1,
+        callback=None,
+        retall=0,
+        **kwargs,
+    ):
 
         fit_method = super().fit
-        mlefit = fit_method(start_params=start_params,
-                            method=method, maxiter=maxiter,
-                            full_output=full_output,
-                            disp=disp, callback=callback, **kwargs)
+        mlefit = fit_method(
+            start_params=start_params,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=disp,
+            callback=callback,
+            **kwargs,
+        )
         # use the proper result class
         ordmlefit = OrderedResults(self, mlefit)
 
@@ -601,28 +659,32 @@ class OrderedModel(GenericLikelihoodModel):
 
 
 class OrderedResults(GenericLikelihoodModelResults):
-    """Results class for OrderedModel
+    """
+    Results class for OrderedModel
 
     This class inherits from GenericLikelihoodModelResults and not all
     inherited methods might be appropriate in this case.
     """
 
     def pred_table(self):
-        """prediction table
+        """
+        Prediction table
 
-        returns pandas DataFrame
-
+        Returns
+        -------
+        DataFrame
+            Table with observed and predicted counts, cross-tabulated by
+            category, with margins.
         """
         # todo: add category labels
         categories = np.arange(self.model.k_levels)
-        observed = pd.Categorical(self.model.endog,
-                                  categories=categories, ordered=True)
-        predicted = pd.Categorical(self.predict().argmax(1),
-                                   categories=categories, ordered=True)
-        table = pd.crosstab(predicted,
-                            observed.astype(int),
-                            margins=True,
-                            dropna=False).T.fillna(0)
+        observed = pd.Categorical(self.model.endog, categories=categories, ordered=True)
+        predicted = pd.Categorical(
+            self.predict().argmax(1), categories=categories, ordered=True
+        )
+        table = pd.crosstab(
+            predicted, observed.astype(int), margins=True, dropna=False
+        ).T.fillna(0)
         return table
 
     @cache_readonly
@@ -639,14 +701,14 @@ class OrderedResults(GenericLikelihoodModelResults):
         """
         McFadden's pseudo-R-squared. `1 - (llf / llnull)`
         """
-        return 1 - self.llf/self.llnull
+        return 1 - self.llf / self.llnull
 
     @cache_readonly
     def llr(self):
         """
         Likelihood ratio chi-squared statistic; `-2*(llnull - llf)`
         """
-        return -2*(self.llnull - self.llf)
+        return -2 * (self.llnull - self.llf)
 
     @cache_readonly
     def llr_pvalue(self):
@@ -660,23 +722,25 @@ class OrderedResults(GenericLikelihoodModelResults):
 
     @cache_readonly
     def resid_prob(self):
-        """probability residual
+        """
+        Probability residual
 
         Probability-scale residual is ``P(Y < y) − P(Y > y)`` where `Y` is the
         observed choice and ``y`` is a random variable corresponding to the
         predicted distribution.
 
-        References
-        ----------
+        Calculations based on work by:
+
         Shepherd BE, Li C, Liu Q (2016) Probability-scale residuals for
         continuous, discrete, and censored data.
-        The Canadian Journal of Statistics. 44:463–476.
+        The Canadian Journal of Statistics. 44:463-476.
 
         Li C and Shepherd BE (2012) A new residual for ordinal outcomes.
-        Biometrika. 99: 473–480
+        Biometrika. 99: 473-480
 
         """
         from statsmodels.stats.diagnostic_gen import prob_larger_ordinal_choice
+
         endog = self.model.endog
         fitted = self.predict()
         r = prob_larger_ordinal_choice(fitted)[1]

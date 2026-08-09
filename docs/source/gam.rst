@@ -54,9 +54,11 @@ We can load a dataframe with selected columns from the unit test module.
     # Optimal penalization weights alpha can be obtained through generalized
     # cross-validation or k-fold cross-validation.
     # The alpha above are from the unit tests against the R mgcv package.
+    # The rng provided ensures reproducibility of the k-fold cross-validation results.
 
     gam_bs.select_penweight()[0]
-    gam_bs.select_penweight_kfold()[0]
+    rng = np.random.default_rng(20260709)
+    gam_bs.select_penweight_kfold(rng=rng)[0]
 
 
 References
@@ -110,7 +112,18 @@ Currently there is verified support for two spline bases
 `statsmodels.gam.smooth_basis` includes additional splines and a (global)
 polynomial smoother basis but those have not been verified yet.
 
+Cross-Validation
+^^^^^^^^^^^^^^^^
 
+.. module:: statsmodels.gam.gam_cross_validation.gam_cross_validation
+   :synopsis: K-fold cross-validation for GAM smoothing parameters
+
+.. currentmodule:: statsmodels.gam.gam_cross_validation.gam_cross_validation
+
+.. autosummary::
+   :toctree: generated/
+
+   MultivariateGAMCVPath
 
 Families and Link Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

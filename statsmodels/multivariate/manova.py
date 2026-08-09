@@ -16,7 +16,7 @@ from .multivariate_ols import (
     _multivariate_ols_test,
 )
 
-__docformat__ = 'restructuredtext en'
+__docformat__ = "restructuredtext en"
 
 
 class MANOVA(Model):
@@ -65,14 +65,14 @@ class MANOVA(Model):
     def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
             raise ValueError(
-                "There must be more than one dependent variable" " to fit MANOVA!"
+                "There must be more than one dependent variable to fit MANOVA!"
             )
         super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 
     def fit(self):
-        raise NotImplementedError('fit is not needed to use MANOVA. Call'
-                                  'mv_test directly on a MANOVA instance.')
+        raise NotImplementedError("fit is not needed to use MANOVA. Call"
+                                  "mv_test directly on a MANOVA instance.")
 
     @Substitution(hypotheses_doc=_hypotheses_doc)
     def mv_test(self, hypotheses=None, skip_intercept_test=False):
@@ -86,12 +86,13 @@ class MANOVA(Model):
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns
         -------
-        results: MultivariateTestResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
         Notes
         -----
@@ -102,7 +103,7 @@ class MANOVA(Model):
         where `params` is the regression coefficient matrix for the
         linear model y = x * params
 
-        If the model is not specified using the formula interfact, then the
+        If the model is not specified using the formula interface, then the
         hypotheses test each included exogenous variable, one at a time. In
         most applications with categorical variables, the ``from_formula``
         interface should be preferred when specifying a model since it
@@ -133,7 +134,7 @@ class MANOVA(Model):
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):
-                    name = "x%d" % (i)
+                    name = f"x{i:d}"
                     L = np.zeros([1, self.exog.shape[1]])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])

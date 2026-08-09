@@ -199,6 +199,7 @@ Filters and Decompositions
    ~statsmodels.tsa.seasonal.MSTL
    ~statsmodels.tsa.filters.bk_filter.bkfilter
    ~statsmodels.tsa.filters.cf_filter.cffilter
+   ~statsmodels.tsa.filters.hamilton_filter.hamilton_filter
    ~statsmodels.tsa.filters.hp_filter.hpfilter
 
 Markov Regime Switching Models

@@ -1,6 +1,5 @@
 from statsmodels.compat.pandas import (
     MONTH_END,
-    PD_LT_1_0_0,
     QUARTER_END,
     YEAR_END,
     is_int_index,
@@ -30,9 +29,7 @@ def time_index(request):
     return pd.date_range("2000-01-01", periods=833, freq="B")
 
 
-@pytest.fixture(
-    scope="module", params=["range", "period", "datetime", "fib", "int64"]
-)
+@pytest.fixture(scope="module", params=["range", "period", "datetime", "fib", "int64"])
 def index(request):
     param = request.param
     if param in ("period", "datetime"):
@@ -49,7 +46,7 @@ def index(request):
             fib.append(fib[-2] + fib[-1])
         idx = pd.Index(fib)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError
     return idx
 
 
@@ -69,14 +66,8 @@ def test_time_trend_smoke(index, forecast_index):
     tt.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2**63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -101,14 +92,8 @@ def test_seasonality_smoke(index, forecast_index):
     s.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2**63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -129,14 +114,8 @@ def test_fourier_smoke(index, forecast_index):
     f.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2**63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -289,9 +268,7 @@ def test_time_trend(index):
     short = tt.in_sample(index[:-50])
     with pytest_warns(warn):
         remainder = tt.out_of_sample(50, index[:-50])
-    direct = tt.out_of_sample(
-        steps=50, index=index[:-50], forecast_index=index[-50:]
-    )
+    direct = tt.out_of_sample(steps=50, index=index[:-50], forecast_index=index[-50:])
     combined = pd.concat([short, remainder], axis=0)
     if isinstance(index, (pd.DatetimeIndex, pd.RangeIndex)):
         pd.testing.assert_frame_equal(combined, final)
@@ -360,15 +337,15 @@ def test_fourier(index):
     assert list(terms.columns) == cols
 
 
-@pytest.mark.skipif(PD_LT_1_0_0, reason="bug in old pandas")
 def test_index_like():
     idx = np.empty((100, 2))
     with pytest.raises(TypeError, match="index must be a pandas"):
         DeterministicTerm._index_like(idx)
 
 
-def test_calendar_fourier(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+def test_calendar_fourier():
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -396,8 +373,9 @@ def test_calendar_fourier(reset_randomstate):
     np.testing.assert_allclose(expected, terms.values)
 
 
-def test_calendar_time_trend(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+def test_calendar_time_trend():
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -412,9 +390,7 @@ def test_calendar_time_trend(reset_randomstate):
     assert list(terms.columns) == cols
 
     inc = 1 + offset / (24 * 3600)
-    expected = []
-    for i in range(4):
-        expected.append(inc**i)
+    expected = [inc**i for i in range(4)]
     expected = np.column_stack(expected)
     np.testing.assert_allclose(expected, terms.values)
 
@@ -519,6 +495,20 @@ def test_deterministic_process(
     assert isinstance(terms, pd.DataFrame)
 
 
+@pytest.mark.parametrize("drop", [True, False])
+def test_out_of_sample_without_in_sample(drop):
+    # GH: out_of_sample()/range() on a fresh DeterministicProcess used to raise
+    # a bare ``AssertionError`` when drop=False, because the lazy in_sample()
+    # call that populates _retain_cols was gated on self._drop.
+    idx = pd.RangeIndex(0, 10)
+    fresh = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed.in_sample()
+    pd.testing.assert_frame_equal(fresh.out_of_sample(5), primed.out_of_sample(5))
+    fresh2 = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
+
+
 def test_deterministic_process_errors(time_index):
     with pytest.raises(ValueError, match="seasonal and fourier"):
         DeterministicProcess(time_index, seasonal=True, fourier=2, period=5)
@@ -528,9 +518,7 @@ def test_deterministic_process_errors(time_index):
 
 def test_range_error():
     idx = pd.Index([0, 1, 1, 2, 3, 5, 8, 13])
-    dp = DeterministicProcess(
-        idx, constant=True, order=2, seasonal=True, period=2
-    )
+    dp = DeterministicProcess(idx, constant=True, order=2, seasonal=True, period=2)
     with pytest.raises(TypeError, match="The index in the deterministic"):
         dp.range(0, 12)
 
@@ -560,9 +548,7 @@ def test_range_index_basic():
     dp.range(130, 150)
 
     idx = pd.RangeIndex(0, 120)
-    dp = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     dp.range(0, 100)
     dp.range(100, 150)
     dp.range(120, 150)
@@ -573,13 +559,9 @@ def test_range_index_basic():
 
 def test_range_casting():
     idx = np.arange(120).astype(np.int64)
-    dp = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     idx = pd.RangeIndex(0, 120)
-    dp2 = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp2 = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     pd.testing.assert_frame_equal(dp.in_sample(), dp2.in_sample())
     pd.testing.assert_frame_equal(dp.range(100, 150), dp2.range(100, 150))
 
@@ -596,15 +578,9 @@ def test_additional_terms(time_index):
     dp = DeterministicProcess(time_index, additional_terms=add_terms)
     dp2 = DeterministicProcess(time_index, constant=True, order=1)
     pd.testing.assert_frame_equal(dp.in_sample(), dp2.in_sample())
-    with pytest.raises(
-        ValueError, match="One or more terms in additional_terms"
-    ):
-        DeterministicProcess(
-            time_index, additional_terms=add_terms + add_terms
-        )
-    with pytest.raises(
-        ValueError, match="One or more terms in additional_terms"
-    ):
+    with pytest.raises(ValueError, match="One or more terms in additional_terms"):
+        DeterministicProcess(time_index, additional_terms=add_terms + add_terms)
+    with pytest.raises(ValueError, match="One or more terms in additional_terms"):
         DeterministicProcess(
             time_index, constant=True, order=1, additional_terms=add_terms
         )
@@ -665,13 +641,14 @@ class DummyTerm(DeterministicTerm):
     def in_sample(self, index: pd.Index) -> pd.DataFrame:
         nobs = index.shape[0]
         terms = np.empty((index.shape[0], 12))
+        rs = np.random.RandomState(43437243)
         for i in range(0, 12, 2):
             if i == 0:
                 value = 1
             elif i == 2:
                 value = np.arange(nobs)
             elif i == 4:
-                value = np.random.standard_normal(nobs)
+                value = rs.standard_normal(nobs)
             elif i == 6:
                 value = np.zeros(nobs)
                 value[::2] = 1
@@ -690,7 +667,8 @@ class DummyTerm(DeterministicTerm):
         forecast_index: pd.Index = None,
     ) -> pd.DataFrame:
         fcast_index = self._extend_index(index, steps, forecast_index)
-        terms = np.random.standard_normal((steps, 12))
+        rs = np.random.RandomState(4343)
+        terms = rs.standard_normal((steps, 12))
 
         return pd.DataFrame(terms, columns=self.columns, index=fcast_index)
 

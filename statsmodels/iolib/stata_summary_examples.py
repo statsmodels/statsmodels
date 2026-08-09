@@ -21,7 +21,7 @@
 """
 
 
-#From Stata using Longley dataset as in the test and example for GLM
+# From Stata using Longley dataset as in the test and example for GLM
 """
 . glm totemp gnpdefl gnp unemp armed pop year
 
@@ -53,7 +53,7 @@ Log likelihood   = -109.6174355                    BIC             =  836399.2
 ------------------------------------------------------------------------------
 """
 
-#RLM Example
+# RLM Example
 
 """
 . rreg stackloss airflow watertemp acidconc

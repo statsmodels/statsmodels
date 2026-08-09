@@ -11,8 +11,7 @@ Statistical Software Components. Boston College Department of Economics.
 http://ideas.repec.org/c/boc/bocode/t871803.html.
 
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -28,11 +27,11 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-data_file = os.path.join(curdir, "results", "bds_data.csv")
+curdir = Path(__file__).resolve().parent
+data_file = Path(curdir).joinpath("results", "bds_data.csv")
 data = pd.read_csv(data_file, header=None)
 
-res_file = os.path.join(curdir, "results", "bds_results.csv")
+res_file = Path(curdir).joinpath("results", "bds_results.csv")
 results = pd.read_csv(res_file, header=None)
 
 
@@ -59,7 +58,7 @@ class TestBDSSequence(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[0][data[0].notnull()]
+        cls.data = data[0][data[0].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -73,7 +72,7 @@ class TestBDSNormal(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[1][data[1].notnull()]
+        cls.data = data[1][data[1].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -87,7 +86,7 @@ class TestBDSCombined(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[2][data[2].notnull()]
+        cls.data = data[2][data[2].notna()]
         cls.res = bds(cls.data, 5)
 
 
@@ -105,5 +104,5 @@ class TestBDSGDPC1(CheckBDS):
         cls.bds_stats = np.array(cls.results[2].iloc[1:])
         cls.pvalues = np.array(cls.results[3].iloc[1:])
 
-        cls.data = data[3][data[3].notnull()]
+        cls.data = data[3][data[3].notna()]
         cls.res = bds(cls.data, 5)

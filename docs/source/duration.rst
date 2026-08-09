@@ -222,6 +222,14 @@ The class for working with survival distributions is:
    :toctree: generated/
 
    SurvfuncRight
+   CumIncidenceRight
+
+``survdiff`` formally compares two or more survival distributions:
+
+.. autosummary::
+   :toctree: generated/
+
+   survdiff
 
 .. module:: statsmodels.duration.hazard_regression
    :synopsis: Proportional hazards model for Survival Analysis
