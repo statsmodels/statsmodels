@@ -8,6 +8,7 @@ from statsmodels.compat.pandas import (
 )
 
 import numbers
+import re
 import warnings
 
 import numpy as np
@@ -152,6 +153,10 @@ def get_index_loc(key, index):
             # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
+            elif isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
+                # Special case dates with a format like
+                # 2026Q2
+                date_key = pd.Period(key).to_timestamp()
             else:
                 date_key = Timestamp(key)
 
