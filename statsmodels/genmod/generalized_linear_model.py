@@ -2070,7 +2070,7 @@ class GLMResults(base.LikelihoodModelResults):
     def llf(self):
         """
         Value of the log-likelihood function evaluated at params.
-        See statsmodels.families.family for distribution-specific
+        See sm.families.family for distribution-specific
         log-likelihoods.  The result uses the concentrated
         log-likelihood if the family is Gaussian and the link is linear,
         otherwise it uses the non-concentrated log-likelihood evaluated
