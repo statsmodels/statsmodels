@@ -350,18 +350,11 @@ class HuberT(RobustNorm):
 
         .. math::
 
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le t \\
-            t|z| - \frac{1}{2} t^2 & \text{for } |z| > t
-            \end{cases}
-
-        .. math::
-
             \rho: \mathbb{R}^n \to \mathbb{R}^n
             
             \rho(z) = \begin{cases}
                           \frac{z^2}{2} & \text{if } \lvert z \rvert \le t \\
-                          \lvert z \rvert t - \frac{z^2}{2} & \text{if } \lvert z \rvert \le t
+                          \lvert z \rvert t - \frac{t^2}{2} & \text{if } \lvert z \rvert > t
                       \end{cases}
 
         Parameters
@@ -386,19 +379,12 @@ class HuberT(RobustNorm):
         The analytic derivative of rho.
 
         .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le t \\
-            \text{sign}(z) \cdot t & \text{for } |z| > t
-            \end{cases}
-
-        .. math::
                 
             \psi: \mathbb{R}^n \to \mathbb{R}^n
             
             \psi(z) = \begin{cases}
                           z & \text{if } \lvert z \rvert \le t \\
-                          \text{sign}(z) \cdot t & \text{if } \lvert z \rvert \le t
+                          \text{sign}(z) \cdot t & \text{if } \lvert z \rvert > t
                       \end{cases}
             
         Parameters
@@ -422,19 +408,12 @@ class HuberT(RobustNorm):
         The psi function scaled by z.
 
         .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le t \\
-            t/|z| & \text{for } |z| > t
-            \end{cases}
-
-        .. math::
                 
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
             
             \text{weights}(z) = \begin{cases}
                                     1 & \text{if } \lvert z \rvert \le t \\
-                                    \frac{t}{\lvert z \rvert} & \text{if } \lvert z \rvert \le t
+                                    \frac{t}{\lvert z \rvert} & \text{if } \lvert z \rvert > t
                                 \end{cases}
             
         Parameters
@@ -540,13 +519,9 @@ class RamsayE(RobustNorm):
 
         .. math::
 
-            \rho(z) = a^{-2} (1 - \exp(-a|z|)(1 + a|z|))
-
-        .. math::
-
             \rho: \mathbb{R}^n \to \mathbb{R}^n
             
-            \rho(z) = a^{-2} \cdot (1 - \exp(-1 \lvert z \rvert ) \cdot (1 + a \lvert z \rvert))
+            \rho(z) = a^{-2} \cdot (1 - \exp(-a \lvert z \rvert ) \cdot (1 + a \lvert z \rvert))
         
         Parameters
         ----------
@@ -567,10 +542,6 @@ class RamsayE(RobustNorm):
         The psi function for Ramsay's Ea estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = z \exp(-a|z|)
 
         .. math::
                 
@@ -596,10 +567,6 @@ class RamsayE(RobustNorm):
         Ramsay's Ea weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \exp(-a|z|)
 
         .. math::
                 
@@ -723,18 +690,11 @@ class AndrewWave(RobustNorm):
 
         .. math::
 
-            \rho(z) = \begin{cases}
-            a^2 (1 - \cos(z/a)) & \text{for } |z| \le a\pi \\
-            2a^2 & \text{for } |z| > a\pi
-            \end{cases}
-
-        .. math::
-
             \rho: \mathbb{R}^n \to \mathbb{R}^n
             
             \rho(z) = \begin{cases}
                           a^2 \cdot (1 - \cos(\frac{z}{a})) & \text{if } \lvert z \rvert \le a\pi \\
-                          2a & \text{if } \lvert z \rvert > a\pi
+                          2a^2 & \text{if } \lvert z \rvert > a\pi
                       \end{cases}
             
         Parameters
@@ -746,15 +706,6 @@ class AndrewWave(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
-        
-        Notes
-        -----
-        The elements of rho are defined as:
-
-        .. math::
-
-           rho(z) & = a^2 *(1-cos(z/a)), |z| \leq a\pi \\
-           rho(z) & = 2a, |z|>a\pi
         """
 
         a = self.a
@@ -768,13 +719,6 @@ class AndrewWave(RobustNorm):
         The psi function for Andrew's wave
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = \begin{cases}
-            a \sin(z/a) & \text{for } |z| \le a\pi \\
-            0 & \text{for } |z| > a\pi
-            \end{cases}
 
         .. math::
                 
@@ -806,13 +750,6 @@ class AndrewWave(RobustNorm):
         Andrew's wave weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            \sin(z/a) / (z/a) & \text{for } |z| \le a\pi \\
-            0 & \text{for } |z| > a\pi
-            \end{cases}
 
         .. math::
                 
@@ -946,13 +883,6 @@ class TrimmedMean(RobustNorm):
         The robust criterion function for least trimmed mean
 
         .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le c \\
-            \frac{1}{2} c^2 & \text{for } |z| > c
-            \end{cases}
-
-        .. math::
         
             \rho: \mathbb{R}^n \to \mathbb{R}^n
             
@@ -983,13 +913,6 @@ class TrimmedMean(RobustNorm):
         The analytic derivative of rho.
 
         .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
-
-        .. math::
                 
             \psi: \mathbb{R}^n \to \mathbb{R}^n
             
@@ -1017,13 +940,6 @@ class TrimmedMean(RobustNorm):
         Least trimmed mean weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         .. math::
                 
@@ -1164,7 +1080,7 @@ class Hampel(RobustNorm):
             \rho(z) = \begin{cases}
                           \frac{z^2}{2} & \text{if } \lvert z \rvert \le a \\
                           a \lvert z \rvert - \frac{a^2}{2} & \text{if } a < \lvert z \rvert \le b \\
-                          \frac{a}{2(c - b)} \cdot (c - \lvert z \rvert)^2  & \text{if } b < \lvert z \rvert \le c \\
+                          \frac{a}{2}(b + c - a) - \frac{a}{2(c - b)}(c - \lvert z \rvert)^2  & \text{if } b < \lvert z \rvert \le c \\
                           \frac{a}{2} \cdot (b + c - a) & \text{if } \lvert z \rvert > c                             
                       \end{cases}
 
@@ -1204,15 +1120,6 @@ class Hampel(RobustNorm):
         The psi function for Hampel's estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le a \\
-            a \cdot \text{sgn}(z) & \text{for } a < |z| \le b \\
-            a \cdot \text{sgn}(z) \frac{c - |z|}{c - b} & \text{for } b < |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         .. math::
                 
@@ -1259,15 +1166,6 @@ class Hampel(RobustNorm):
         Hampel weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le a \\
-            a/|z| & \text{for } a < |z| \le b \\
-            \frac{a(c - |z|)}{|z|(c - b)} & \text{for } b < |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         .. math::
                 
@@ -1458,8 +1356,8 @@ class TukeyBiweight(RobustNorm):
             \rho: \mathbb{R}^n \to \mathbb{R}^n
             
             \rho(z) = \begin{cases}
-                          -(1 - (\frac{z}{c})^2)^3 \cdot \frac{c^2}{6} & \text{if } \lvert z \rvert \le R \\
-                          0 & \text{if } \lvert z \rvert > R
+                          \frac{c^2}{6}\left(1 - \left(1 - (\frac{z}{c})^2\right)^3\right) & \text{if } \lvert z \rvert \le c \\
+                          \frac{c^2}{6} & \text{if } \lvert z \rvert > c
                       \end{cases}
                         
         Parameters
@@ -1489,8 +1387,8 @@ class TukeyBiweight(RobustNorm):
             \psi: \mathbb{R}^n \to \mathbb{R}^n
             
             \psi(z) = \begin{cases}
-                          z \cdot (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le R \\
-                          0 & \text{if } \lvert z \rvert > R
+                          z \cdot (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le c \\
+                          0 & \text{if } \lvert z \rvert > c
                       \end{cases}
             
         Parameters
@@ -1521,8 +1419,8 @@ class TukeyBiweight(RobustNorm):
             \text{weights}: \mathbb{R}^n \to \mathbb{R}^n
             
             \text{weights}(z) = \begin{cases}
-                                    (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le R \\
-                                    0 & \text{if } \lvert z \rvert > R
+                                    (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le c \\
+                                    0 & \text{if } \lvert z \rvert > c
                                 \end{cases}
                                 
         Parameters
