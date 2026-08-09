@@ -19,9 +19,8 @@ import importlib
 import inspect
 import json
 import logging
-import os
+from pathlib import Path
 from pkgutil import iter_modules
-import sys
 
 
 def find_modules(path):
@@ -29,16 +28,9 @@ def find_modules(path):
     for pkg in find_packages(path):
         modules.add(pkg)
         pkgpath = path + "/" + pkg.replace(".", "/")
-        if sys.version_info.major == 2 or (
-            sys.version_info.major == 3 and sys.version_info.minor < 6
-        ):
-            for _, name, ispkg in iter_modules([pkgpath]):
-                if not ispkg:
-                    modules.add(pkg + "." + name)
-        else:
-            for info in iter_modules([pkgpath]):
-                if not info.ispkg:
-                    modules.add(pkg + "." + info.name)
+        for info in iter_modules([pkgpath]):
+            if not info.ispkg:
+                modules.add(pkg + "." + info.name)
     return modules
 
 
@@ -77,11 +69,7 @@ def walk_modules(path):
     for mod in modules:
         module = f"statsmodels.{mod}"
         logger.info(module)
-        if (
-            ".sandbox" in module
-            or module.endswith(".tests")
-            or ".tests." in module
-        ):
+        if ".sandbox" in module or module.endswith(".tests") or ".tests." in module:
             continue
         try:
             lib = importlib.import_module(module)
@@ -109,7 +97,7 @@ def walk_modules(path):
                 d[name] = tuple()
             if inspect.isclass(func):
                 update_class(func, api["classes"], v, name)
-            logger.info(f"{module}.{v}")
+            logger.info("%s.%s", module, v)
     return api
 
 
@@ -134,15 +122,13 @@ def generate_diff(api, other):
         removed = set(other_class.keys()).difference(current_class.keys())
         for meth in removed:
             removed_methods[meth] = tuple(other_class[meth])
-        common_methods = set(other_class.keys()).intersection(
-            current_class.keys()
-        )
+        common_methods = set(other_class.keys()).intersection(current_class.keys())
         for meth in common_methods:
             if current_class[meth] != tuple(other_class[meth]):
                 if set(current_class[meth]).issuperset(other_class[meth]):
-                    expanded_methods[key] = set(
-                        current_class[meth]
-                    ).difference(other_class[meth])
+                    expanded_methods[key] = set(current_class[meth]).difference(
+                        other_class[meth]
+                    )
                 else:
                     changed_methods[key] = {
                         "current": current_class[meth],
@@ -170,25 +156,21 @@ def generate_diff(api, other):
     def header(v, first=False):
         return "\n\n" * (not first) + f"\n{v}\n" + "-" * len(v) + "\n"
 
-    with open("api-differences.rst", "w", encoding="utf-8") as rst:
+    with Path("api-differences.rst").open("w", encoding="utf-8") as rst:
         rst.write(header("New Classes", first=True))
-        for val in sorted(new_classes):
-            rst.write(f"* :class:`{val}`\n")
+        rst.writelines(f"* :class:`{val}`\n" for val in sorted(new_classes))
         rst.write(header("Removed Classes"))
-        for val in sorted(removed_classes):
-            rst.write(f"* ``{val}``\n")
+        rst.writelines(f"* ``{val}``\n" for val in sorted(removed_classes))
 
         rst.write(header("New Methods"))
-        for val in sorted(new_methods):
-            rst.write(f"* :meth:`{val}`\n")
+        rst.writelines(f"* :meth:`{val}`\n" for val in sorted(new_methods))
 
         rst.write(header("Removed Methods"))
-        for val in sorted(removed_methods):
-            rst.write(f"* ``{val}``\n")
+        rst.writelines(f"* ``{val}``\n" for val in sorted(removed_methods))
 
         rst.write(header("Methods with New Arguments"))
         for val in sorted(expanded_methods):
-            args = map(lambda v: f"``{v}``", expanded_methods[val])
+            args = (f"``{v}``" for v in expanded_methods[val])
             rst.write(f"* :meth:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Methods with Changed Arguments"))
@@ -198,14 +180,12 @@ def generate_diff(api, other):
             args = ", ".join(changed_methods[val]["current"])
             if args.startswith("self"):
                 args = args[4:]
-                if args.startswith(", "):
-                    args = args[2:]
+                args = args.removeprefix(", ")
             rst.write(f"   * New: ``{name}({args})``\n")
             args = ", ".join(changed_methods[val]["other"])
             if args.startswith("self"):
                 args = args[4:]
-                if args.startswith(", "):
-                    args = args[2:]
+                args = args.removeprefix(", ")
             rst.write(f"   * Old: ``{name}({args})``\n")
 
         rst.write(header("New Functions"))
@@ -217,7 +197,7 @@ def generate_diff(api, other):
 
         rst.write(header("Functions with New Arguments"))
         for val in sorted(expanded_funcs):
-            args = map(lambda v: f"``{v}``", expanded_funcs[val])
+            args = (f"``{v}``" for v in expanded_funcs[val])
             rst.write(f"* :func:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Functions with Changed Arguments"))
@@ -230,12 +210,10 @@ def generate_diff(api, other):
             rst.write(f"   * Old: ``{name}({args})``\n")
 
 
-parser = argparse.ArgumentParser(
-    description="""
+parser = argparse.ArgumentParser(description="""
 Store the current visible API as json, or read the API of any version into a
 JSON file, or compare the current API to a different version.
-"""
-)
+""")
 parser.add_argument(
     "--file-path",
     "-fp",
@@ -251,9 +229,7 @@ parser.add_argument(
     default=None,
     help="Name of output json file. Default is statsmodels-{version}-api.json",
 )
-parser.add_argument(
-    "--diff", "-d", type=str, default=None, help="json file to diff"
-)
+parser.add_argument("--diff", "-d", type=str, default=None, help="json file to diff")
 
 
 def main():
@@ -272,17 +248,17 @@ def main():
     if file_path is None:
         import statsmodels
 
-        file_path = os.path.dirname(statsmodels.__file__)
+        file_path = Path(statsmodels.__file__).parent
     current_api = walk_modules(file_path)
     out_file = args.out_file
     if out_file is None:
         import statsmodels
 
         out_file = f"statsmodels-{statsmodels.__version__}-api.json"
-    with open(out_file, "w", encoding="utf-8") as api:
+    with Path(out_file).open("w", encoding="utf-8") as api:
         json.dump(current_api, api, indent=2, sort_keys=True)
     if args.diff is not None:
-        with open(args.diff, encoding="utf-8") as other:
+        with Path(args.diff).open(encoding="utf-8") as other:
             other_api = json.load(other)
         generate_diff(current_api, other_api)
 

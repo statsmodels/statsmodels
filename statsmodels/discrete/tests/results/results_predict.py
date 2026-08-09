@@ -7,7 +7,6 @@ edits
 note seond `_cons` in params_table rownames is lnalpha
 
 """
-# flake8: noqa
 
 import numpy as np
 import pandas as pd
@@ -78,10 +77,10 @@ params_table = np.array([
      .80856873785576, np.nan,  1.9599639845401,                0,
     -.48341499971517,  .03134835693943, -15.420744399751,  1.187278967e-53,
     -.54485665029097, -.42197334913938, np.nan,  1.9599639845401,
-                   0]).reshape(9,9)
+                   0]).reshape(9, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
-params_table_rownames = 'private medicaid aget aget2 educyr actlim totchr _cons _cons'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
+params_table_rownames = "private medicaid aget aget2 educyr actlim totchr _cons _cons".split()
 
 # results for
 # margins , predict(n) predict(pr(0)) predict(pr(1)) predict(pr(0, 1)) predict(pr(2, .)) atmeans
@@ -97,10 +96,10 @@ table = np.array([
      .19036610206727, np.nan,  1.9599639845401,                0,
      .82049062250845,  .00553924699078,  148.12313368113,                0,
      .80963389790505,  .83134734711186, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
-table_colnames = 'b se z pvalue ll ul df crit eform'.split()
-table_rownames = '1bn._predict 2._predict 3._predict 4._predict 5._predict'.split()
+table_colnames = "b se z pvalue ll ul df crit eform".split()
+table_rownames = "1bn._predict 2._predict 3._predict 4._predict 5._predict".split()
 dframe_atmeans = pd.DataFrame(table, index=table_rownames, columns=table_colnames)
 
 # result for
@@ -117,10 +116,10 @@ table = np.array([
       .2061523877941, np.nan,  1.9599639845401,                0,
      .80453375409553,  .00545221340471,  147.56094348787,                0,
      .79384761218628,  .81521989600478, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
-table_colnames = 'b se z pvalue ll ul df crit eform'.split()
-table_rownames = '1bn._predict 2._predict 3._predict 4._predict 5._predict'.split()
+table_colnames = "b se z pvalue ll ul df crit eform".split()
+table_rownames = "1bn._predict 2._predict 3._predict 4._predict 5._predict".split()
 dframe_mean = pd.DataFrame(table, index=table_rownames, columns=table_colnames)
 
 results_nb_docvis = ParamsTableTestBunch(
@@ -198,10 +197,10 @@ params_table = np.array([
      .62205104781253, -32.636654502503,  19.519094418521, np.nan,
      1.9599639845401,                0,  -.4845756474516,  .03531398529193,
     -13.721919048382,  7.505227546e-43, -.55378978677435, -.41536150812884,
-    np.nan,  1.9599639845401,                0]).reshape(11,9)
+    np.nan,  1.9599639845401,                0]).reshape(11, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
-params_table_rownames = 'private medicaid aget aget2 educyr actlim totchr _cons aget _cons _cons'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
+params_table_rownames = "private medicaid aget aget2 educyr actlim totchr _cons aget _cons _cons".split()
 
 # results for
 # margins , predict(n) predict(pr(0)) predict(pr(1)) predict(pr(0, 1)) predict(pr(2, .)) atmeans
@@ -217,10 +216,10 @@ table = np.array([
      .19086848857879, np.nan,  1.9599639845401,                0,
      .82062252937407,  .00586287199668,  139.96937505016,                0,
      .80913151141461,  .83211354733353, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
-table_colnames = 'b se z pvalue ll ul df crit eform'.split()
-table_rownames = '1bn._predict 2._predict 3._predict 4._predict 5._predict'.split()
+table_colnames = "b se z pvalue ll ul df crit eform".split()
+table_rownames = "1bn._predict 2._predict 3._predict 4._predict 5._predict".split()
 dframe_atmeans = pd.DataFrame(table, index=table_rownames, columns=table_colnames)
 
 # result for
@@ -237,10 +236,10 @@ table = np.array([
      .20619231641428, np.nan,  1.9599639845401,                0,
      .80450446438342,   .0054576415014,  147.40881462742,                0,
      .79380768360013,   .8152012451667, np.nan,  1.9599639845401,
-                   0]).reshape(5,9)
+                   0]).reshape(5, 9)
 
-table_colnames = 'b se z pvalue ll ul df crit eform'.split()
-table_rownames = '1bn._predict 2._predict 3._predict 4._predict 5._predict'.split()
+table_colnames = "b se z pvalue ll ul df crit eform".split()
+table_rownames = "1bn._predict 2._predict 3._predict 4._predict 5._predict".split()
 dframe_mean = pd.DataFrame(table, index=table_rownames, columns=table_colnames)
 
 results_zinb_docvis = ParamsTableTestBunch(

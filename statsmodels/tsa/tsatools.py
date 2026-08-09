@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from statsmodels.compat.python import Literal, lrange
+from statsmodels.compat.python import lrange
 
+from typing import TYPE_CHECKING, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -12,7 +13,6 @@ from pandas.tseries.frequencies import to_offset
 
 from statsmodels.tools.data import _is_recarray, _is_using_pandas
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.typing import NDArray
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -20,24 +20,28 @@ from statsmodels.tools.validation import (
     string_like,
 )
 
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import NDArray
+
 __all__ = [
-    "lagmat",
-    "lagmat2ds",
+    "LagmatResult",
     "add_trend",
+    "commutation_matrix",
     "duplication_matrix",
     "elimination_matrix",
-    "commutation_matrix",
-    "vec",
-    "vech",
+    "freq_to_period",
+    "lagmat",
+    "lagmat2ds",
     "unvec",
     "unvech",
-    "freq_to_period",
+    "vec",
+    "vech",
 ]
 
 
 def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     """
-    Add a trend and/or constant to an array.
+    Add a trend and/or constant to an array
 
     Parameters
     ----------
@@ -111,9 +115,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         x = np.asanyarray(x)
 
     nobs = len(x)
-    trendarr = np.vander(
-        np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1
-    )
+    trendarr = np.vander(np.arange(1, nobs + 1, dtype=np.float64), trendorder + 1)
     # put in order ctt
     trendarr = np.fliplr(trendarr)
     if trend == "t":
@@ -125,7 +127,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
             def safe_is_const(s):
                 try:
                     return np.ptp(s) == 0.0 and np.any(s != 0.0)
-                except:
+                except Exception:
                     return False
 
             col_const = x.apply(safe_is_const, 0)
@@ -142,14 +144,16 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
                 else:
                     columns = np.arange(x.shape[1])[col_const]
                     if isinstance(x, pd.DataFrame):
-                        columns = x.columns
+                        columns = x.columns[col_const]
                     const_cols = ", ".join([str(c) for c in columns])
                     base_err = (
                         "x contains one or more constant columns. Column(s) "
                         f"{const_cols} are constant."
                     )
-                msg = f"{base_err} Adding a constant with trend='{trend}' is not allowed."
-                raise ValueError(msg)
+                raise ValueError(
+                    f"{base_err} Adding a constant with trend='{trend}' is "
+                    "not allowed."
+                )
             elif has_constant == "skip":
                 columns = columns[1:]
                 trendarr = trendarr[:, 1:]
@@ -168,7 +172,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
 
 def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
-    Returns an array with lags included given an array.
+    Returns an array with lags included given an array
 
     Parameters
     ----------
@@ -191,19 +195,18 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     array : ndarray
         Array with lags
 
+    Notes
+    -----
+    Trims the array both forward and backward, so that the length of the
+    returned array is len(`X`) - lags. The lags are returned in increasing
+    order, i.e., t-1,t-2,...,t-lags
+
     Examples
     --------
-
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.macrodata.load()
     >>> data = data.data[['year','quarter','realgdp','cpi']]
     >>> data = sm.tsa.add_lag(data, 'realgdp', lags=2)
-
-    Notes
-    -----
-    Trims the array both forward and backward, so that the array returned
-    so that the length of the returned array is len(`X`) - lags. The lags are
-    returned in increasing order, ie., t-1,t-2,...,t-lags
     """
     lags = int_like(lags, "lags")
     drop = bool_like(drop, "drop")
@@ -229,9 +232,9 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             insert = x.shape[1]
 
             warnings.warn(
-                "insert > number of variables, inserting at the"
-                " last position",
+                "insert > number of variables, inserting at the last position",
                 ValueWarning,
+                stacklevel=2,
             )
         ins_idx = insert
 
@@ -248,7 +251,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
 
 def detrend(x, order=1, axis=0):
     """
-    Detrend an array with a trend of given order along axis 0 or 1.
+    Detrend an array with a trend of given order along axis 0 or 1
 
     Parameters
     ----------
@@ -274,9 +277,7 @@ def detrend(x, order=1, axis=0):
     if x.ndim == 2 and int(axis) == 1:
         x = x.T
     elif x.ndim > 2:
-        raise NotImplementedError(
-            "x.ndim > 2 is not implemented until it is needed"
-        )
+        raise NotImplementedError("x.ndim > 2 is not implemented until it is needed")
 
     nobs = x.shape[0]
     if order == 0:
@@ -293,21 +294,45 @@ def detrend(x, order=1, axis=0):
     return resid
 
 
-def lagmat(x,
-           maxlag: int,
-           trim: Literal["forward", "backward", "both", "none"]='forward',
-           original: Literal["ex", "sep", "in"]="ex",
-           use_pandas: bool=False
-           )-> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
+class LagmatResult(NamedTuple):
     """
-    Create 2d array of lags.
+    Result of :func:`lagmat`.
+
+    Parameters
+    ----------
+    lags : ndarray or DataFrame
+        The array with lagged observations.
+    leads : ndarray or DataFrame
+        The original (unlagged) array, truncated to have the same number
+        of rows as ``lags``.
+    """
+
+    lags: NDArray | DataFrame
+    leads: NDArray | DataFrame
+
+
+def lagmat(
+    x,
+    maxlag: int | list[int] | NDArray,
+    trim: Literal["forward", "backward", "both", "none"] = "forward",
+    original: Literal["ex", "sep", "in"] = "ex",
+    use_pandas: bool = False,
+    *,
+    use_namedtuple: bool | None = None,
+) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
+    """
+    Create 2d array of lags
 
     Parameters
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : int
-        All lags from zero to maxlag are included.
+    maxlag : {int, list[int], array_like[int]}
+        The lags to be applied.
+
+        * int : All lags from zero to maxlag are included.
+        * array_like : All lags associated to the values in the array.
+            Must contain non-negative integers.
     trim : {'forward', 'backward', 'both', 'none', None}
         The trimming method to use.
 
@@ -327,13 +352,35 @@ def lagmat(x,
     use_pandas : bool
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``LagmatResult`` NamedTuple is
+        returned. When ``original="sep"`` a ``LagmatResult`` is always
+        returned; it holds the same two elements as the legacy tuple, so
+        it unpacks and indexes identically. For other values of
+        ``original`` a bare array is returned unless
+        ``use_namedtuple=True``, which additionally yields a
+        ``LagmatResult`` with ``leads`` set to ``None``.
 
     Returns
     -------
-    lagmat : ndarray
-        The array with lagged observations.
-    y : ndarray, optional
-        Only returned if original == 'sep'.
+    LagmatResult or ndarray
+        When ``original="sep"`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        lags : ndarray
+            The array with lagged observations.
+        leads : ndarray or None
+            The original (unlagged) array, truncated to have the same
+            number of rows as ``lags``. ``None`` for other values of
+            ``original``, where the original series was either excluded
+            ("ex") or folded into ``lags`` ("in").
+
+        ``LagmatResult`` has the same length and contents as the plain
+        ``(lags, leads)`` tuple it replaces, so it unpacks and indexes
+        identically. See :class:`~statsmodels.tsa.tsatools.LagmatResult`.
+
+        For other values of ``original`` a bare array of lagged
+        observations is returned instead.
 
     Notes
     -----
@@ -365,9 +412,39 @@ def lagmat(x,
        [ 5.,  6.,  3.,  4.,  1.,  2.],
        [ 0.,  0.,  5.,  6.,  3.,  4.],
        [ 0.,  0.,  0.,  0.,  5.,  6.]])
+
+    >>> lagmat(X, maxlag=[1, 3], trim="forward", original='ex')
+    array([[ 1.,  2.,  0.,  0.,  0.,  0.],
+       [ 3.,  4.,  1.,  2.,  0.,  0.],
+       [ 5.,  6.,  3.,  4.,  1.,  2.]])
+
     """
-    maxlag = int_like(maxlag, "maxlag")
+    if np.isscalar(maxlag):
+        maxlag = int_like(maxlag, "maxlag")
+        if maxlag < 0:
+            raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
+        # Convert to array to simplify and use only array path
+        lag_indices = np.arange(1, maxlag + 1, dtype=int)
+    else:
+        lag_indices = array_like(maxlag, "maxlag", dtype=int, ndim=1, maxdim=1)
+        if not np.all(lag_indices >= 0):
+            raise ValueError(
+                f"All values in `maxlag` must be >=  0. Found {lag_indices[lag_indices < 0]}."
+            )
+        if len(np.unique(lag_indices)) != len(lag_indices):
+            from collections import Counter
+
+            bad_lags = [
+                int(key) for key, val in Counter(lag_indices).items() if val > 1
+            ]
+            raise ValueError(
+                f"`maxlag` must contain unique values. maxlag contains the following "
+                f"duplicate values: {bad_lags}."
+            )
+        # Special case for lag_indices = [0] to empty to match above
+        lag_indices = lag_indices[lag_indices > 0]
     use_pandas = bool_like(use_pandas, "use_pandas")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     trim = string_like(
         trim,
         "trim",
@@ -376,7 +453,6 @@ def lagmat(x,
     )
     original = string_like(original, "original", options=("ex", "sep", "in"))
 
-    # TODO:  allow list of lags additional to maxlag
     orig = x
     x = array_like(x, "x", ndim=2, dtype=None)
     is_pandas = _is_using_pandas(orig, None) and use_pandas
@@ -384,29 +460,26 @@ def lagmat(x,
     trim = trim.lower()
     if is_pandas and trim in ("none", "backward"):
         raise ValueError(
-            "trim cannot be 'none' or 'backward' when used on "
-            "Series or DataFrames"
+            "trim cannot be 'none' or 'backward' when used on Series or DataFrames"
         )
 
     dropidx = 0
     nobs, nvar = x.shape
     if original in ["ex", "sep"]:
         dropidx = nvar
-    if maxlag >= nobs:
-        raise ValueError("maxlag should be < nobs")
-    lm = np.zeros((nobs + maxlag, nvar * (maxlag + 1)))
-    for k in range(0, int(maxlag + 1)):
-        lm[
-        maxlag - k: nobs + maxlag - k,
-        nvar * (maxlag - k): nvar * (maxlag - k + 1),
-        ] = x
+
+    nlags = lag_indices.shape[0]
+    max_lag_value = lag_indices.max() if nlags else 0
+    if max_lag_value >= nobs:
+        raise ValueError("maximum of maxlag should be < nobs")
+    lm = np.zeros((nobs + max_lag_value, nvar * (nlags + 1)))
+    for i, k in enumerate([0] + lag_indices.tolist()):
+        lm[k : nobs + k, nvar * (i) : nvar * (i + 1)] = x
 
     if trim in ("none", "forward"):
         startobs = 0
-    elif trim in ("backward", "both"):
-        startobs = maxlag
-    else:
-        raise ValueError("trim option not valid")
+    else:  # trim in ("backward", "both")
+        startobs = max_lag_value
 
     if trim in ("none", "backward"):
         stopobs = len(lm)
@@ -425,8 +498,8 @@ def lagmat(x,
         else:
             x_columns = [str(x.name)]
         columns = [str(col) for col in x_columns]
-        for lag in range(maxlag):
-            lag_str = str(lag + 1)
+        for lag in lag_indices:
+            lag_str = str(lag)
             columns.extend([str(col) + ".L." + lag_str for col in x_columns])
         lm = DataFrame(lm[:stopobs], index=x.index, columns=columns)
         lags = lm.iloc[startobs:]
@@ -438,17 +511,21 @@ def lagmat(x,
         if original == "sep":
             leads = lm[startobs:stopobs, :dropidx]
 
-    if original == "sep":
-        return lags, leads
-    else:
-        return lags
+    # LagmatResult has exactly the same length and contents as the legacy
+    # (lags, leads) tuple, so it unpacks and indexes identically and is
+    # always used when original="sep".  For other values of `original` a
+    # bare array is returned, as before; pass use_namedtuple=True to always
+    # get a LagmatResult.  `leads` is only meaningful for "sep" -- for "ex"
+    # the caller asked for it to be excluded and for "in" it is part of
+    # `lags`.
+    if use_namedtuple or original == "sep":
+        return LagmatResult(lags, leads if original == "sep" else None)
+    return lags
 
 
-def lagmat2ds(
-    x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False
-):
+def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=False):
     """
-    Generate lagmatrix for 2d array, columns arranged by variables.
+    Generate lagmatrix for 2d array, columns arranged by variables
 
     Parameters
     ----------
@@ -506,9 +583,7 @@ def lagmat2ds(
     nobs, nvar = x.shape
 
     if is_pandas and use_pandas:
-        lags = lagmat(
-            x.iloc[:, 0], maxlag, trim=trim, original="in", use_pandas=True
-        )
+        lags = lagmat(x.iloc[:, 0], maxlag, trim=trim, original="in", use_pandas=True)
         lagsli = [lags.iloc[:, : maxlag0 + 1]]
         for k in range(1, nvar):
             lags = lagmat(
@@ -519,14 +594,10 @@ def lagmat2ds(
     elif is_pandas:
         x = np.asanyarray(x)
 
-    lagsli = [
-        lagmat(x[:, 0], maxlag, trim=trim, original="in")[:, : maxlag0 + 1]
-    ]
+    lagsli = [lagmat(x[:, 0], maxlag, trim=trim, original="in")[:, : maxlag0 + 1]]
     for k in range(1, nvar):
         lagsli.append(
-            lagmat(x[:, k], maxlag, trim=trim, original="in")[
-                :, dropex : maxlagex + 1
-            ]
+            lagmat(x[:, k], maxlag, trim=trim, original="in")[:, dropex : maxlagex + 1]
         )
     return np.column_stack(lagsli)
 
@@ -584,9 +655,15 @@ def duplication_matrix(n):
     Create duplication matrix D_n which satisfies vec(S) = D_n vech(S) for
     symmetric matrix S
 
+    Parameters
+    ----------
+    n : int
+        The number of rows/columns of the symmetric matrix S.
+
     Returns
     -------
     D_n : ndarray
+        The duplication matrix.
     """
     n = int_like(n, "n")
     tmp = np.eye(n * (n + 1) // 2)
@@ -600,9 +677,13 @@ def elimination_matrix(n):
 
     Parameters
     ----------
+    n : int
+        The number of rows/columns of the matrix M.
 
     Returns
     -------
+    L_n : ndarray
+        The elimination matrix.
     """
     n = int_like(n, "n")
     vech_indices = vec(np.tril(np.ones((n, n))))
@@ -616,7 +697,9 @@ def commutation_matrix(p, q):
     Parameters
     ----------
     p : int
+        Number of rows of A.
     q : int
+        Number of columns of A.
 
     Returns
     -------
@@ -632,15 +715,15 @@ def commutation_matrix(p, q):
 
 def _ar_transparams(params):
     """
-    Transforms params to induce stationarity/invertability.
+    Transforms params to induce stationarity/invertibility
 
     Parameters
     ----------
     params : array_like
         The AR coefficients
 
-    Reference
-    ---------
+    References
+    ----------
     Jones(1980)
     """
     newparams = np.tanh(params / 2)
@@ -667,9 +750,7 @@ def _ar_invtransparams(params):
     for j in range(len(params) - 1, 0, -1):
         a = params[j]
         for kiter in range(j):
-            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (
-                1 - a ** 2
-            )
+            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (1 - a**2)
         params[:j] = tmp[:j]
     invarcoefs = 2 * np.arctanh(params)
     return invarcoefs
@@ -677,15 +758,15 @@ def _ar_invtransparams(params):
 
 def _ma_transparams(params):
     """
-    Transforms params to induce stationarity/invertability.
+    Transforms params to induce stationarity/invertibility
 
     Parameters
     ----------
     params : ndarray
-        The ma coeffecients of an (AR)MA model.
+        The ma coefficients of an (AR)MA model.
 
-    Reference
-    ---------
+    References
+    ----------
     Jones(1980)
     """
     newparams = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
@@ -706,16 +787,14 @@ def _ma_invtransparams(macoefs):
 
     Parameters
     ----------
-    params : ndarray
+    macoefs : ndarray
         The transformed MA coefficients
     """
     tmp = macoefs.copy()
     for j in range(len(macoefs) - 1, 0, -1):
         b = macoefs[j]
         for kiter in range(j):
-            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (
-                1 - b ** 2
-            )
+            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (1 - b**2)
         macoefs[:j] = tmp[:j]
     invmacoefs = -np.log((1 - macoefs) / (1 + macoefs))
     return invmacoefs
@@ -723,7 +802,7 @@ def _ma_invtransparams(macoefs):
 
 def unintegrate_levels(x, d):
     """
-    Returns the successive differences needed to unintegrate the series.
+    Returns the successive differences needed to unintegrate the series
 
     Parameters
     ----------
@@ -799,9 +878,9 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     -----
     Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
     """
-    if not isinstance(freq, offsets.DateOffset):
+    if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
-    assert isinstance(freq, offsets.DateOffset)
+    assert isinstance(freq, offsets.BaseOffset)
     freq = freq.rule_code.upper()
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
@@ -821,6 +900,6 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
         return 24
     else:  # pragma : no cover
         raise ValueError(
-            "freq {} not understood. Please report if you "
-            "think this is in error.".format(freq)
+            f"freq {freq} not understood. Please report if you "
+            "think this is in error."
         )

@@ -3,8 +3,8 @@ from numpy import array
 from statsmodels.tools.testing import Holder
 
 armarep = Holder()
-armarep.comment = ('mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)'
-                   'mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)')
+armarep.comment = ("mlab.garchma(-res_armarep.ar[1:], res_armarep.ma[1:], 20)"
+                   "mlab.garchar(-res_armarep.ar[1:], res_armarep.ma[1:], 20)")
 armarep.marep = array([
     [-0.1],
     [-0.77],
@@ -28,7 +28,7 @@ armarep.marep = array([
     [0.05525925023373]])
 armarep.ar = array([1., -0.5,  0.8])
 armarep.ma = array([1., -0.6,  0.08])
-armarep.name = 'armarep'
+armarep.name = "armarep"
 armarep.arrep = array([
     [-1.00000000000000e-01],
     [-7.80000000000000e-01],

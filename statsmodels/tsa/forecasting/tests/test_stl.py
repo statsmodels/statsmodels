@@ -42,8 +42,9 @@ def test_smoke(data):
     assert hasattr(res.model_result, "forecast")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_sharex(data):
+def test_sharex(data, close_figures):
     stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 0, 0)})
     res = stlf.fit(fit_kwargs={})
     plt = res.result.plot()
@@ -55,7 +56,7 @@ def test_sharex(data):
 MODELS = [
     (ARIMA, {"order": (2, 0, 0), "trend": "c"}),
     (ExponentialSmoothing, {"trend": True}),
-    (AutoReg, {"lags": 2, "old_names": False}),
+    (AutoReg, {"lags": 2}),
     (ETSModel, {}),
 ]
 MODELS = MODELS[-1:]
@@ -64,7 +65,7 @@ IDS = [str(c[0]).split(".")[-1][:-2] for c in MODELS]
 
 @pytest.mark.parametrize("config", MODELS, ids=IDS)
 @pytest.mark.parametrize("horizon", [1, 7, 23])
-def test_equivalence_forecast(data, config, horizon):
+def test_equivalence_forecast(data, config, horizon, close_figures):
     model, kwargs = config
 
     stl = STL(data)
@@ -75,9 +76,7 @@ def test_equivalence_forecast(data, config, horizon):
     if model is ETSModel:
         fit_kwarg["disp"] = False
     res = mod.fit(**fit_kwarg)
-    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(
-        fit_kwargs=fit_kwarg
-    )
+    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 
     seasonal = np.asarray(stl_fit.seasonal)[-12:]
     seasonal = np.tile(seasonal, 1 + horizon // 12)
@@ -145,7 +144,7 @@ def test_exceptions(data):
         STLForecast(data, FakeModelSummary).fit().summary()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def sunspots():
     df = statsmodels.datasets.sunspots.load_pandas().data
     df.index = np.arange(df.shape[0])
@@ -164,7 +163,7 @@ def test_get_prediction(sunspots):
 
 
 @pytest.mark.parametrize("not_implemented", [True, False])
-def test_no_var_pred(sunspots, not_implemented):
+def test_no_var_pred(sunspots, not_implemented, close_figures):
     class DummyPred:
         def __init__(self, predicted_mean, row_labels):
             self.predicted_mean = predicted_mean

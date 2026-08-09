@@ -4,7 +4,6 @@ Created on Wed Jul 28 08:28:04 2010
 Author: josef-pktd
 """
 
-
 import numpy as np
 from scipy import special
 
@@ -12,7 +11,7 @@ import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.tools.numdiff import approx_hess
 
-#redefine some shortcuts
+# redefine some shortcuts
 np_log = np.log
 np_pi = np.pi
 sps_gamln = special.gammaln
@@ -21,13 +20,13 @@ sps_gamln = special.gammaln
 def maxabs(arr1, arr2):
     return np.max(np.abs(arr1 - arr2))
 
+
 def maxabsrel(arr1, arr2):
     return np.max(np.abs(arr2 / arr1 - 1))
 
 
-
 class MyT(GenericLikelihoodModel):
-    '''Maximum Likelihood Estimation of Poisson Model
+    """Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson.
@@ -37,7 +36,7 @@ class MyT(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
-    '''
+    """
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
@@ -60,44 +59,44 @@ class MyT(GenericLikelihoodModel):
         -----
         .. math:: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
         """
-        #print len(params),
+        # print len(params),
         beta = params[:-2]
         df = params[-2]
         scale = params[-1]
         loc = np.dot(self.exog, beta)
         endog = self.endog
-        x = (endog - loc)/scale
-        #next part is stats.t._logpdf
-        lPx = sps_gamln((df+1)/2) - sps_gamln(df/2.)
-        lPx -= 0.5*np_log(df*np_pi) + (df+1)/2.*np_log(1+(x**2)/df)
+        x = (endog - loc) / scale
+        # next part is stats.t._logpdf
+        lPx = sps_gamln((df + 1) / 2) - sps_gamln(df / 2.0)
+        lPx -= 0.5 * np_log(df * np_pi) + (df + 1) / 2.0 * np_log(1 + (x**2) / df)
         lPx -= np_log(scale)  # correction for scale
         return -lPx
 
 
-#Example:
+# Example:
 np.random.seed(98765678)
 nobs = 1000
-rvs = np.random.randn(nobs,5)
+rvs = np.random.randn(nobs, 5)
 data_exog = sm.add_constant(rvs, prepend=False)
-xbeta = 0.9 + 0.1*rvs.sum(1)
-data_endog = xbeta + 0.1*np.random.standard_t(5, size=nobs)
-#print data_endog
+xbeta = 0.9 + 0.1 * rvs.sum(1)
+data_endog = xbeta + 0.1 * np.random.standard_t(5, size=nobs)
+# print data_endog
 
 modp = MyT(data_endog, data_exog)
-modp.start_value = np.ones(data_exog.shape[1]+2)
+modp.start_value = np.ones(data_exog.shape[1] + 2)
 modp.start_value[-2] = 10
 modp.start_params = modp.start_value
-resp = modp.fit(start_params = modp.start_value)
+resp = modp.fit(start_params=modp.start_value)
 print(resp.params)
 print(resp.bse)
 
 
-hb=-approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)
+hb = -approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_value)
 print(tmp.shape)
 
 
-'''
+"""
 >>> tmp = modp.loglike(modp.start_value)
 8
 >>> tmp.shape
@@ -120,9 +119,9 @@ print(tmp.shape)
 >>> xbeta.shape
 (100,)
 >>>
-'''
+"""
 
-'''
+"""
 repr(start_params) array([ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.])
 Optimization terminated successfully.
          Current function value: 91.897859
@@ -256,4 +255,4 @@ array([  1.58253308e-01,   1.73188603e-01,   1.77357447e-01,
          2.06707494e-02,  -1.31174789e-01,   8.79915580e-01,
          6.47663840e+03,   6.73457641e+02])
 >>>
-'''
+"""

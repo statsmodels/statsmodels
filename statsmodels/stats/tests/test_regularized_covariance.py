@@ -1,31 +1,35 @@
 import numpy as np
-from numpy.testing import assert_equal, assert_
+from numpy.testing import assert_, assert_equal
+
 from statsmodels.stats.regularized_covariance import (
-    _calc_nodewise_row, _calc_nodewise_weight,
-    _calc_approx_inv_cov, RegularizedInvCovariance)
+    RegularizedInvCovariance,
+    _calc_approx_inv_cov,
+    _calc_nodewise_row,
+    _calc_nodewise_weight,
+)
 
 
 def test_calc_nodewise_row():
 
-    np.random.seed(435265)
-    X = np.random.normal(size=(50, 3))
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
     ghat = _calc_nodewise_row(X, 0, 0.01)
     assert_equal(ghat.shape, (2,))
 
 
 def test_calc_nodewise_weight():
 
-    np.random.seed(435265)
-    X = np.random.normal(size=(50, 3))
-    ghat = np.random.normal(size=2)
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
+    ghat = rs.normal(size=2)
     that = _calc_nodewise_weight(X, ghat, 0, 0.01)
     assert_(isinstance(that, float))
 
 
 def test_calc_approx_inv_cov():
 
-    np.random.seed(435265)
-    X = np.random.normal(size=(50, 3))
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
     ghat_l = []
     that_l = []
     for i in range(3):
@@ -39,8 +43,8 @@ def test_calc_approx_inv_cov():
 
 def test_fit():
 
-    np.random.seed(435265)
-    X = np.random.normal(size=(50, 3))
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
     inv = np.linalg.inv(np.cov(X.T))
     regcov = RegularizedInvCovariance(exog=X)
     regcov.fit()

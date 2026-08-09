@@ -1,4 +1,6 @@
 """
+Holt-Winters exponential smoothing models
+
 Notes
 -----
 Code written using below textbook as a reference.
@@ -11,11 +13,10 @@ practice. OTexts, 2014.
 Author: Terence L van Zyl
 Modified: Kevin Sheppard
 """
-from statsmodels.compat.pandas import deprecate_kwarg
 
+from collections.abc import Hashable, Sequence
 import contextlib
 from typing import Any
-from collections.abc import Hashable, Sequence
 import warnings
 
 import numpy as np
@@ -114,7 +115,7 @@ class _OptConfig:
 
 class ExponentialSmoothing(TimeSeriesModel):
     """
-    Holt Winter's Exponential Smoothing
+    Holt Winters' Exponential Smoothing
 
     Parameters
     ----------
@@ -170,7 +171,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         Should the Box-Cox transform be applied to the data first? If 'log'
         then apply the log. If float then use the value as lambda.
     bounds : dict[str, tuple[float, float]], optional
-        An dictionary containing bounds for the parameters in the model,
+        A dictionary containing bounds for the parameters in the model,
         excluding the initial values if estimated. The keys of the dictionary
         are the variable names, e.g., smoothing_level or initial_slope.
         The initial seasonal variables are labeled initial_seasonal.<j>
@@ -205,7 +206,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         and practice. OTexts, 2014.
     """
 
-    @deprecate_kwarg("damped", "damped_trend")
     def __init__(
         self,
         endog,
@@ -234,9 +234,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             trend = {"additive": "add", "multiplicative": "mul"}[trend]
         self.trend = trend
         self.damped_trend = bool_like(damped_trend, "damped_trend")
-        seasonal = string_like(
-            seasonal, "seasonal", options=options, optional=True
-        )
+        seasonal = string_like(seasonal, "seasonal", options=options, optional=True)
         if seasonal in ["additive", "multiplicative"]:
             seasonal = {"additive": "add", "multiplicative": "mul"}[seasonal]
         self.seasonal = seasonal
@@ -258,12 +256,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             if seasonal_periods is None:
                 try:
                     self.seasonal_periods = freq_to_period(self._index_freq)
-                except Exception:
+                except Exception as exc:
                     raise ValueError(
                         "seasonal_periods has not been provided and index "
                         "does not have a known freq. You must provide "
                         "seasonal_periods"
-                    )
+                    ) from exc
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
             assert self.seasonal_periods is not None
@@ -277,12 +275,8 @@ class ExponentialSmoothing(TimeSeriesModel):
             optional=False,
             options=options,
         )
-        self._initial_level = float_like(
-            initial_level, "initial_level", optional=True
-        )
-        self._initial_trend = float_like(
-            initial_trend, "initial_trend", optional=True
-        )
+        self._initial_level = float_like(initial_level, "initial_level", optional=True)
+        self._initial_trend = float_like(initial_trend, "initial_trend", optional=True)
         self._initial_seasonal = array_like(
             initial_seasonal, "initial_seasonal", optional=True
         )
@@ -324,9 +318,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             if ("smoothing" in key or "damp" in key) and (
                 bound[0] < 0.0 or bound[1] > 1.0
             ):
-                raise ValueError(
-                    f"{key} must have a lower bound >= 0.0 and <= 1.0"
-                )
+                raise ValueError(f"{key} must have a lower bound >= 0.0 and <= 1.0")
         return bounds
 
     def _boxcox(self):
@@ -345,7 +337,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     @contextlib.contextmanager
     def fix_params(self, values):
         """
-        Temporarily fix parameters for estimation.
+        Temporarily fix parameters for estimation
 
         Parameters
         ----------
@@ -403,9 +395,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 raise ValueError("smoothing_trend must be <= smoothing_level")
             gamma = values.get("smoothing_seasonal", 0.0)
             if gamma > 1 - alpha:
-                raise ValueError(
-                    "smoothing_seasonal must be <= 1 - smoothing_level"
-                )
+                raise ValueError("smoothing_seasonal must be <= 1 - smoothing_level")
 
         try:
             self._fixed_parameters = values
@@ -478,7 +468,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
     def predict(self, params, start=None, end=None):
         """
-        In-sample and out-of-sample prediction.
+        In-sample and out-of-sample prediction
 
         Parameters
         ----------
@@ -490,7 +480,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             parse or a datetime type.
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            the last forecast is end. Can also be a date string to
             parse or a datetime type.
 
         Returns
@@ -504,9 +494,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 start = self._index.shape[0]
             else:
                 start = self._index[-1] + freq
-        start, end, out_of_sample, _ = self._get_prediction_index(
-            start=start, end=end
-        )
+        start, end, out_of_sample, _ = self._get_prediction_index(start=start, end=end)
         if out_of_sample > 0:
             res = self._predict(h=out_of_sample, **params)
         else:
@@ -532,9 +520,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         return initial_p
 
     @staticmethod
-    def _check_blocked_keywords(
-        d: dict, keys: Sequence[Hashable], name="kwargs"
-    ):
+    def _check_blocked_keywords(d: dict, keys: Sequence[Hashable], name="kwargs"):
         for key in keys:
             if key in d:
                 raise ValueError(f"{name} must not contain '{key}'")
@@ -649,7 +635,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             not_fixed = np.array([name not in fixed for name in names])
             if (~sel[~not_fixed]).any():
                 invalid = []
-                for name, s, nf in zip(names, sel, not_fixed):
+                for name, s, nf in zip(names, sel, not_fixed, strict=True):
                     if not s and not nf:
                         invalid.append(name)
                 invalid_names = ", ".join(invalid)
@@ -737,7 +723,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             sv_sel = np.array([False] * (6 + m))
             sv_sel[:3] = True
             sv_sel &= sel
-            hw_args.xi = sv_sel.astype(int)
+            hw_args.xi = sv_sel.astype(np.int64)
             hw_args.transform = False
             # Setup the grid points, respecting constraints
             points = self._setup_brute(sv_sel, bounds, alpha)
@@ -834,9 +820,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         orig_bounds = self._construct_bounds()
 
         bounds = np.array(orig_bounds[:3], dtype=float)
-        hw_args = HoltWintersArgs(
-            sel.astype(int), params, bounds, y, m, self.nobs
-        )
+        hw_args = HoltWintersArgs(sel.astype(np.int64), params, bounds, y, m, self.nobs)
         params = self._get_starting_values(
             params,
             start_params,
@@ -850,12 +834,12 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         # We always use [0, 1] for a, b and g and handle transform inside
         mod_bounds = [(0, 1)] * 3 + orig_bounds[3:]
-        relevant_bounds = [bnd for bnd, flag in zip(mod_bounds, sel) if flag]
+        relevant_bounds = [bnd for bnd, flag in zip(mod_bounds, sel, strict=True) if flag]
         bounds = np.array(relevant_bounds, dtype=float)
         lb, ub = bounds.T
         lb[np.isnan(lb)] = -np.inf
         ub[np.isnan(ub)] = np.inf
-        hw_args.xi = sel.astype(int)
+        hw_args.xi = sel.astype(np.int64)
 
         # Ensure strictly inbounds
         initial_p = self._enforce_bounds(params, sel, lb, ub)
@@ -918,6 +902,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             warnings.warn(
                 "Optimization failed to converge. Check mle_retvals.",
                 ConvergenceWarning,
+                stacklevel=2,
             )
         params[sel] = res.x
 
@@ -928,9 +913,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         return data
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("initial_slope", "initial_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def fit(
         self,
         smoothing_level=None,
@@ -944,10 +926,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         method=None,
         minimize_kwargs=None,
         use_brute=True,
-        use_boxcox=None,
-        use_basinhopping=None,
-        initial_level=None,
-        initial_trend=None,
     ):
         """
         Fit the model
@@ -957,7 +935,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         smoothing_level : float, optional
             The alpha value of the simple exponential smoothing, if the value
             is set then this value will be used as the value.
-        smoothing_trend :  float, optional
+        smoothing_trend : float, optional
             The beta value of the Holt's trend method, if the value is
             set then this value will be used as the value.
         smoothing_seasonal : float, optional
@@ -976,9 +954,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data. See
             the notes for the structure of the model parameters.
-        method : str, default "L-BFGS-B"
-            The minimizer used. Valid options are "L-BFGS-B" , "TNC",
-            "SLSQP" (default), "Powell", "trust-constr", "basinhopping" (also
+        method : str, optional
+            The minimizer used. Valid options are "L-BFGS-B" (default),
+            "TNC", "SLSQP", "Powell", "trust-constr", "basinhopping" (also
             "bh") and "least_squares" (also "ls"). basinhopping tries multiple
             starting values in an attempt to find a global minimizer in
             non-convex problems, and so is slower than the others.
@@ -992,36 +970,6 @@ class ExponentialSmoothing(TimeSeriesModel):
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
-        use_boxcox : {True, False, 'log', float}, optional
-            Should the Box-Cox transform be applied to the data first? If 'log'
-            then apply the log. If float then use the value as lambda.
-
-            .. deprecated:: 0.12
-
-               Set use_boxcox when constructing the model
-
-        use_basinhopping : bool, optional
-            Deprecated. Using Basin Hopping optimizer to find optimal values.
-            Use ``method`` instead.
-
-            .. deprecated:: 0.12
-
-               Use ``method`` instead.
-
-        initial_level : float, optional
-            Value to use when initializing the fitted level.
-
-            .. deprecated:: 0.12
-
-               Set initial_level when constructing the model
-
-        initial_trend : float, optional
-            Value to use when initializing the fitted trend.
-
-            .. deprecated:: 0.12
-
-               Set initial_trend when constructing the model
-               or set initialization_method.
 
         Returns
         -------
@@ -1031,7 +979,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         Notes
         -----
         This is a full implementation of the holt winters exponential smoothing
-        as per [1]. This includes all the unstable methods as well as the
+        as per [1]_. This includes all the unstable methods as well as the
         stable methods. The implementation of the library covers the
         functionality of the R library as much as possible whilst still
         being Pythonic.
@@ -1052,7 +1000,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
         # Variable renames to alpha,beta, etc as this helps with following the
@@ -1061,16 +1009,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = float_like(smoothing_trend, "smoothing_trend", True)
         gamma = float_like(smoothing_seasonal, "smoothing_seasonal", True)
         phi = float_like(damping_trend, "damping_trend", True)
-        initial_level = float_like(initial_level, "initial_level", True)
-        initial_trend = float_like(initial_trend, "initial_trend", True)
         start_params = array_like(start_params, "start_params", optional=True)
-        minimize_kwargs = dict_like(
-            minimize_kwargs, "minimize_kwargs", optional=True
-        )
+        minimize_kwargs = dict_like(minimize_kwargs, "minimize_kwargs", optional=True)
         minimize_kwargs = {} if minimize_kwargs is None else minimize_kwargs
-        use_basinhopping = bool_like(
-            use_basinhopping, "use_basinhopping", optional=True
-        )
         supported_methods = ("basinhopping", "bh")
         supported_methods += ("least_squares", "ls")
         supported_methods += (
@@ -1087,32 +1028,12 @@ class ExponentialSmoothing(TimeSeriesModel):
             lower=False,
             optional=True,
         )
-        # TODO: Deprecate initial_level and related parameters from fit
-        if initial_level is not None or initial_trend is not None:
-            raise ValueError(
-                "Initial values were set during model construction. These "
-                "cannot be changed during fit."
-            )
-        if use_boxcox is not None:
-            raise ValueError(
-                "use_boxcox was set at model initialization and cannot "
-                "be changed"
-            )
-        elif self._use_boxcox is None:
-            use_boxcox = False
-        else:
-            use_boxcox = self._use_boxcox
-
-        if use_basinhopping is not None:
-            raise ValueError(
-                "use_basinhopping is deprecated. Set optimization method "
-                "using 'method'."
-            )
+        use_boxcox = False if self._use_boxcox is None else self._use_boxcox
 
         data = self._data
         damped = self.damped_trend
         phi = phi if damped else 1.0
-        if self._use_boxcox is None:
+        if self._use_boxcox is not None:
             if use_boxcox == "log":
                 lamda = 0.0
                 y = boxcox(data, lamda)
@@ -1133,21 +1054,17 @@ class ExponentialSmoothing(TimeSeriesModel):
         res.beta = beta
         res.phi = phi
         res.gamma = gamma
-        res.level = initial_level
-        res.trend = initial_trend
+        res.level = None
+        res.trend = None
         res.seasonal = None
         res.y = y
         res.params = start_params
         res.mle_retvals = res.mask = None
-        method = "SLSQP" if method is None else method
+        method = "L-BFGS-B" if method is None else method
         if optimized:
-            res = self._optimize_parameters(
-                res, use_brute, method, minimize_kwargs
-            )
+            res = self._optimize_parameters(res, use_brute, method, minimize_kwargs)
         else:
-            l0, b0, s0 = self.initial_values(
-                initial_level=initial_level, initial_trend=initial_trend
-            )
+            l0, b0, s0 = self.initial_values()
             res.level = l0
             res.trend = b0
             res.seasonal = s0
@@ -1177,11 +1094,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         hwfit._results.mle_retvals = res.mle_retvals
         return hwfit
 
-    def initial_values(
-        self, initial_level=None, initial_trend=None, force=False
-    ):
+    def initial_values(self, initial_level=None, initial_trend=None, force=False):
         """
-        Compute initial values used in the exponential smoothing recursions.
+        Compute initial values used in the exponential smoothing recursions
 
         Parameters
         ----------
@@ -1252,8 +1167,6 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         return l0, b0, s0
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def _predict(
         self,
         h=None,
@@ -1276,6 +1189,31 @@ class ExponentialSmoothing(TimeSeriesModel):
         ----------
         h : int, optional
             The number of time steps to forecast ahead.
+        smoothing_level : float, optional
+            The alpha value of the simple exponential smoothing.
+        smoothing_trend : float, optional
+            The beta value of the Holt's trend method.
+        smoothing_seasonal : float, optional
+            The gamma value of the holt winters seasonal method.
+        initial_level : float, optional
+            The initial value used for the level component.
+        initial_trend : float, optional
+            The initial value used for the trend component.
+        damping_trend : float, optional
+            The phi value of the damped method.
+        initial_seasons : array_like, optional
+            The initial values used for the seasonal components.
+        use_boxcox : {True, False, 'log', float}, optional
+            Should the Box-Cox transform be applied to the data first? If
+            'log' then apply the log. If float then use the value as lambda.
+        lamda : float, optional
+            The Box-Cox transformation parameter to use if `use_boxcox` is
+            a float.
+        remove_bias : bool, optional
+            Remove bias from forecast values and fitted values by enforcing
+            that the average residual is equal to zero.
+        is_optimized : ndarray, optional
+            Boolean array indicating which parameters were optimized.
         """
         # Variable renames to alpha, beta, etc as this helps with following the
         # mathematical notation in general
@@ -1325,15 +1263,9 @@ class ExponentialSmoothing(TimeSeriesModel):
             if damped
             else np.arange(1, h + 1 + 1)
         )
-        trended = {"mul": np.multiply, "add": np.add, None: lambda l, b: l}[
-            trend
-        ]
-        detrend = {"mul": np.divide, "add": np.subtract, None: lambda l, b: 0}[
-            trend
-        ]
-        dampen = {"mul": np.power, "add": np.multiply, None: lambda b, phi: 0}[
-            trend
-        ]
+        trended = {"mul": np.multiply, "add": np.add, None: lambda lvl, b: lvl}[trend]
+        detrend = {"mul": np.divide, "add": np.subtract, None: lambda lvl, b: 0}[trend]
+        dampen = {"mul": np.power, "add": np.multiply, None: lambda b, phi: 0}[trend]
         nobs = self.nobs
         if seasonal == "mul":
             for i in range(1, nobs + 1):
@@ -1354,9 +1286,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(lvls, b)
-            s[nobs + m - 1 :] = [
-                s[(nobs - 1) + j % m] for j in range(h + 1 + 1)
-            ]
+            s[nobs + m - 1 :] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend * s[:-m]
         elif seasonal == "add":
             for i in range(1, nobs + 1):
@@ -1381,9 +1311,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(lvls, b)
-            s[nobs + m - 1 :] = [
-                s[(nobs - 1) + j % m] for j in range(h + 1 + 1)
-            ]
+            s[nobs + m - 1 :] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
             fitted = trend + s[:-m]
         else:
             for i in range(1, nobs + 1):
@@ -1448,7 +1376,7 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
         formatted += s[:m].tolist()
-        formatted = list(map(lambda v: np.nan if v is None else v, formatted))
+        formatted = [np.nan if v is None else v for v in formatted]
         formatted = np.array(formatted)
         if is_optimized is None:
             optimized = np.zeros(len(codes), dtype=bool)
@@ -1457,7 +1385,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         included = [True, has_trend, has_seasonal, True, has_trend, damped]
         included += [True] * m
         formatted = pd.DataFrame(
-            [[c, f, o] for c, f, o in zip(codes, formatted, optimized)],
+            [[c, f, o] for c, f, o in zip(codes, formatted, optimized, strict=True)],
             columns=["name", "param", "optimized"],
             index=idx,
         )
@@ -1556,9 +1484,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         *,
         optimized=True,
         start_params=None,
-        initial_level=None,
         use_brute=True,
-        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1577,14 +1503,9 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data.
-        initial_level : float, optional
-            Value to use when initializing the fitted level.
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
-        use_boxcox : {True, False, 'log', float}, optional
-            Should the Box-Cox transform be applied to the data first? If 'log'
-            then apply the log. If float then use the value as lambda.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
@@ -1609,21 +1530,19 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         Notes
         -----
         This is a full implementation of the simple exponential smoothing as
-        per [1].
+        per [1]_.
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
         return super().fit(
             smoothing_level=smoothing_level,
             optimized=optimized,
             start_params=start_params,
-            initial_level=initial_level,
             use_brute=use_brute,
             remove_bias=remove_bias,
-            use_boxcox=use_boxcox,
             method=method,
             minimize_kwargs=minimize_kwargs,
         )
@@ -1692,7 +1611,6 @@ class Holt(ExponentialSmoothing):
         and practice. OTexts, 2014.
     """
 
-    @deprecate_kwarg("damped", "damped_trend")
     def __init__(
         self,
         endog,
@@ -1712,9 +1630,6 @@ class Holt(ExponentialSmoothing):
             initial_trend=initial_trend,
         )
 
-    @deprecate_kwarg("smoothing_slope", "smoothing_trend")
-    @deprecate_kwarg("initial_slope", "initial_trend")
-    @deprecate_kwarg("damping_slope", "damping_trend")
     def fit(
         self,
         smoothing_level=None,
@@ -1723,10 +1638,7 @@ class Holt(ExponentialSmoothing):
         damping_trend=None,
         optimized=True,
         start_params=None,
-        initial_level=None,
-        initial_trend=None,
         use_brute=True,
-        use_boxcox=None,
         remove_bias=False,
         method=None,
         minimize_kwargs=None,
@@ -1739,7 +1651,7 @@ class Holt(ExponentialSmoothing):
         smoothing_level : float, optional
             The alpha value of the simple exponential smoothing, if the value
             is set then this value will be used as the value.
-        smoothing_trend :  float, optional
+        smoothing_trend : float, optional
             The beta value of the Holt's trend method, if the value is
             set then this value will be used as the value.
         damping_trend : float, optional
@@ -1751,26 +1663,9 @@ class Holt(ExponentialSmoothing):
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data.
-        initial_level : float, optional
-            Value to use when initializing the fitted level.
-
-            .. deprecated:: 0.12
-
-               Set initial_level when constructing the model
-
-        initial_trend : float, optional
-            Value to use when initializing the fitted trend.
-
-            .. deprecated:: 0.12
-
-               Set initial_trend when constructing the model
-
         use_brute : bool, optional
             Search for good starting values using a brute force (grid)
             optimizer. If False, a naive set of starting values is used.
-        use_boxcox : {True, False, 'log', float}, optional
-            Should the Box-Cox transform be applied to the data first? If 'log'
-            then apply the log. If float then use the value as lambda.
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
@@ -1795,11 +1690,11 @@ class Holt(ExponentialSmoothing):
         Notes
         -----
         This is a full implementation of the Holt's exponential smoothing as
-        per [1].
+        per [1]_.
 
         References
         ----------
-        [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
+        .. [1] Hyndman, Rob J., and George Athanasopoulos. Forecasting: principles
             and practice. OTexts, 2014.
         """
         return super().fit(
@@ -1808,10 +1703,7 @@ class Holt(ExponentialSmoothing):
             damping_trend=damping_trend,
             optimized=optimized,
             start_params=start_params,
-            initial_level=initial_level,
-            initial_trend=initial_trend,
             use_brute=use_brute,
-            use_boxcox=use_boxcox,
             remove_bias=remove_bias,
             method=method,
             minimize_kwargs=minimize_kwargs,

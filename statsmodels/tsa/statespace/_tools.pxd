@@ -9,15 +9,26 @@ License: Simplified-BSD
 """
 
 cimport numpy as np
-from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace
-)
+
 from statsmodels.tsa.statespace._kalman_filter cimport (
-    sKalmanFilter, dKalmanFilter, cKalmanFilter, zKalmanFilter
+    cKalmanFilter,
+    dKalmanFilter,
+    sKalmanFilter,
+    zKalmanFilter,
 )
 from statsmodels.tsa.statespace._kalman_smoother cimport (
-    sKalmanSmoother, dKalmanSmoother, cKalmanSmoother, zKalmanSmoother
+    cKalmanSmoother,
+    dKalmanSmoother,
+    sKalmanSmoother,
+    zKalmanSmoother,
 )
+from statsmodels.tsa.statespace._representation cimport (
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
+)
+
 
 cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, object nobs=*)
 
