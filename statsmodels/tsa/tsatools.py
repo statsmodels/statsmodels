@@ -878,9 +878,9 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     -----
     Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
     """
-    if not isinstance(freq, offsets.DateOffset):
+    if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
-    assert isinstance(freq, offsets.DateOffset)
+    assert isinstance(freq, offsets.BaseOffset)
     freq = freq.rule_code.upper()
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
