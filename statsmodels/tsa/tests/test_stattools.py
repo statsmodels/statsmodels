@@ -1962,18 +1962,29 @@ def test_diebold_mariano_test():
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
 
     assert_almost_equal(res1.dm_stat, res.tvalues[0], DECIMAL_3)
-    assert_almost_equal(res1.pval, res.pvalues[0], DECIMAL_3)
+    assert_almost_equal(res1.pvalue, res.pvalues[0], DECIMAL_3)
 
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
 
     assert_almost_equal(res2.dm_stat, res.tvalues[0], DECIMAL_3)
-    assert_almost_equal(res2.pval, res.pvalues[0], DECIMAL_3)
+    assert_almost_equal(res2.pvalue, res.pvalues[0], DECIMAL_3)
 
     d = np.abs(y - f1) - np.abs(y - f2)
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
 
     assert_almost_equal(res3.dm_stat, res.tvalues[0], DECIMAL_3)
-    assert_almost_equal(res3.pval, res.pvalues[0], DECIMAL_3)
+    assert_almost_equal(res3.pvalue, res.pvalues[0], DECIMAL_3)
+
+
+def test_diebold_mariano_exceptions():
+    rs = np.random.default_rng()
+    y, f1, f2 = rs.standard_normal((3, 100))
+    with pytest.raises(ValueError, match="lags must be a non-negative integer"):
+        diebold_mariano_test(y, f1, f2, lags=-1)
+    with pytest.raises(ValueError, match="y, forecast1 and forecast2 must all"):
+        diebold_mariano_test(y, f1, f2[::2])
+    with pytest.raises(ValueError, match="horizon must be a positive integer"):
+        diebold_mariano_test(y, f1, f2, horizon=0)
 
 
 def test_arma_order_select_ic_failure():

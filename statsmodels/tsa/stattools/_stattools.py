@@ -2701,27 +2701,28 @@ def coint(
     return CointResult(res_adf[0], pval_asy, crit)
 
 
-class DieoldMarianoResult(NamedTuple):
+class DieboldMarianoResult(NamedTuple):
     """
-    Results class for Diebold-Mariano tests
-
-    Produced by func:`diebold_mariano_test`
+    Result of :func:`diebold_mariano_test`.
 
     Parameters
     ----------
     dm_stat : float
-        The Diebold-Mariano test statistic.
+        The Diebold-Mariano test statistic. Asymptotically standard normal
+        under the null of equal predictive accuracy, or Student's t with
+        ``nobs - 1`` degrees of freedom when the Harvey et al. (1997)
+        small-sample correction is applied.
     pvalue : float
-        The p-value for the null of equal predictave accuracy.
-    harvey_adj : float or None
-        The adjustment factor using Harvey et. al. (1997)'s finite
-        sample correction. Not computed if parameter ``harvey_adj``
-        is False (default).
+        The two-sided p-value for the null of equal predictive accuracy.
+    harvey_adj_factor : float or None
+        The finite-sample adjustment factor of Harvey et al. (1997) that
+        was applied to ``dm_stat``. ``None`` unless ``harvey_adj`` was
+        True.
     """
 
     dm_stat: float
-    pval: float
-    harvey_adj: float | None
+    pvalue: float
+    harvey_adj_factor: float | None
 
 
 def diebold_mariano_test(
@@ -2744,50 +2745,146 @@ def diebold_mariano_test(
     y : array_like
         Array of the observed variable.
     forecast1 : array_like
-        Array of the forecasted values.
+        Array of forecasted values from the first model.
     forecast2 : array_like
-        Array of the forecasted values.
+        Array of forecasted values from the second model.
     lags : int, optional
-        The number of lags to include in the Newey-West variance
-        estimator of the difference. Must be non-negative if provided.
-        If not provided, the rule of thumb of lags = ceil(nobs^(1/3)) is used.
-    criterion : {str, Callable[[ndarray, ndarray], ndarray]}
-        Criterion for the difference of residuals. Default is 'mse'.
-        Implemented criterion are 'mse', 'mad', 'mae', 'mape', 'poly'.
-        Alternatively can be a callable function that accepts two
-        ndarrays and returns an ndarray of losses.  The function
-        signature should be `loss = criterion(y, forecast)`.
-    power : int, optional
-        Keyword arguments to be passed when criterion='poly'.
+        The number of lags to include in the Newey-West (HAC) variance
+        estimator used for the loss differential. Must be non-negative if
+        provided. If not provided, ``max(horizon - 1, ceil(nobs ** (1/3)))``
+        is used, so this also depends on ``horizon`` even when
+        ``harvey_adj`` is False. See the Notes for details.
+    criterion : str or Callable[[array_like, array_like], array_like]
+        The loss function used to score each forecast. Default is 'mse'.
+        Implemented criteria are 'mse', 'mad' (equivalently 'mae') and
+        'mape'; 'poly' selects a generalized power loss whose exponent is
+        set with ``power``. See the Notes for the definition of each
+        criterion. Alternatively, ``criterion`` can be a callable that
+        accepts two array_like arguments and returns an array of losses
+        with signature ``loss = criterion(y, forecast)``, allowing
+        problem-specific loss functions (e.g. QLIKE, see Examples).
+    power : float, optional
+        The exponent used to compute the loss when ``criterion='poly'``,
+        i.e. the loss is ``|y - forecast| ** power``. Default is 2, which
+        reproduces 'mse'. Ignored unless ``criterion='poly'``.
     harvey_adj : bool
-        indicates if Harvey-Leybourne-Newbold correction for small samples
-        should be used. Default is False. When True, the p-value is computed
-        from a student's t distribution with nobs - 1 defrees of freedom.
+        Indicates if the Harvey-Leybourne-Newbold (1997) correction for
+        small samples should be applied. Default is False. When True, the
+        test statistic is rescaled and the p-value is computed from a
+        Student's t distribution with ``nobs - 1`` degrees of freedom
+        instead of the standard normal.
     horizon : int
-        The forecast horizon. Only used if harvey_adj is True. Default is 1.
+        The forecast horizon used to (1) form the default number of HAC
+        lags and (2) compute the Harvey et al. (1997) adjustment when
+        ``harvey_adj`` is True. Must be a positive integer. Default is 1.
 
     Returns
     -------
-    DiebolaMarianoResult
-        A namedTuple containing the the DM test statistic and p-values with
-        adjustments based on Harvey et. al (1997).
+    DieboldMarianoResult
+        A named tuple containing the DM test statistic, its p-value, and
+        the Harvey et al. (1997) adjustment factor, if applicable.
 
     Notes
     -----
-    The default implemention in uses a Newwy-West variance estimator for the
-    difference in the losses with a bandwith of
-    max(horizon - 1, ceil(nobs ** (1/3))). This differs from some versions of
-    the DM test that use horizon - l lags. Set lags = horizon - 1 to get
-    the alternative parameterization.
+    The Diebold-Mariano (1995) test compares the predictive accuracy of two
+    competing forecasts, ``forecast1`` and ``forecast2``, of the same
+    series ``y``. Accuracy is measured with a loss function :math:`g(y, f)`
+    (chosen via ``criterion``), and the test is based on the loss
+    differential
+
+    .. math::
+
+        d_t = g(y_t, \\text{forecast1}_t) - g(y_t, \\text{forecast2}_t).
+
+    Under the null hypothesis of equal predictive accuracy,
+    :math:`E[d_t] = 0`. The test statistic is the t-statistic from
+    regressing :math:`d_t` on a constant using a Newey-West (HAC)
+    covariance estimator with ``lags`` lags, i.e.
+
+    .. math::
+
+        DM = \\frac{\\bar{d}}{\\sqrt{\\widehat{\\mathrm{avar}}(\\bar{d})}},
+
+    where :math:`\\bar{d}` is the sample mean of :math:`d_t` and
+    :math:`\\widehat{\\mathrm{avar}}` is the HAC long-run variance
+    estimator. When ``lags`` is not supplied, a bandwidth of
+    ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used. This differs from
+    some presentations of the DM test that always use ``horizon - 1``
+    lags; pass ``lags=horizon - 1`` explicitly to reproduce that
+    parameterization. Under the null, ``dm_stat`` is asymptotically
+    standard normal.
+
+    Because ``forecast1`` and ``forecast2`` are typically generated from
+    overlapping information sets (e.g. multi-step-ahead forecasts), the
+    loss differential is often serially correlated even under the null,
+    which is why a HAC estimator rather than the usual OLS standard error
+    is used.
+
+    For small samples, Harvey, Leybourne and Newbold (1997) propose
+    rescaling the statistic by
+
+    .. math::
+
+        DM^{HLN} = \\sqrt{\\frac{T + 1 - 2h + h(h - 1) / T}{T}}\\, DM,
+
+    where :math:`T` is the number of observations and :math:`h` is the
+    forecast ``horizon``, and comparing ``DM^{HLN}`` to a Student's t
+    distribution with :math:`T - 1` degrees of freedom rather than the
+    standard normal. This correction is enabled with ``harvey_adj=True``.
+
+    The built-in criteria are:
+
+    * ``'mse'``: squared error loss, :math:`g(y, f) = (y - f)^2`. Penalizes
+      large errors more heavily than small ones; the corresponding DM test
+      answers "which forecast has lower mean squared error?"
+    * ``'mad'`` / ``'mae'``: mean absolute (deviation) error loss,
+      :math:`g(y, f) = |y - f|`. More robust to outliers than 'mse' since
+      errors are not squared.
+    * ``'mape'``: mean absolute percentage error loss,
+      :math:`g(y, f) = |(y - f) / y|`. Expresses errors relative to the
+      level of ``y``, which is useful when comparing series of different
+      scales, but is undefined when any element of ``y`` is zero and can
+      be dominated by observations where ``y`` is close to zero.
+    * ``'poly'``: generalized power loss, :math:`g(y, f) = |y - f|^p`
+      where :math:`p` is set with ``power``. Setting ``power=2`` is
+      equivalent to 'mse' and ``power=1`` is equivalent to 'mad'.
+
+    Any other loss can be supplied directly through ``criterion`` as a
+    callable, for example an asymmetric loss or a loss appropriate for
+    strictly positive series such as QLIKE (see Examples).
 
     References
-    -----
-    1. Diebold, Francis X. "Comparing predictive accuracy, twenty years later:
-       A personal perspective on the use and abuse of Diebold–Mariano tests."
-       Journal of Business & Economic Statistics 33, no. 1 (2015): 1-1.
-    2. Harvey, David, Stephen Leybourne, and Paul Newbold. "Testing the equality
-       of prediction mean squared errors." International Journal of forecasting 13,
-       no. 2 (1997): 281-291.
+    ----------
+
+    .. [1] Diebold, Francis X., and Roberto S. Mariano. "Comparing predictive
+       accuracy." Journal of Business & Economic Statistics 13, no. 3
+       (1995): 253-263.
+    .. [2] Harvey, David, Stephen Leybourne, and Paul Newbold. "Testing the
+       equality of prediction mean squared errors." International Journal
+       of Forecasting 13, no. 2 (1997): 281-291.
+
+    Examples
+    --------
+    Comparing two forecasts of a strictly positive series (e.g. realized
+    variance) using the QLIKE loss, which is standard in the volatility
+    forecasting literature and only defined for non-negative ``y`` and
+    strictly positive forecasts:
+
+    >>> import numpy as np
+    >>> from statsmodels.tsa.stattools import diebold_mariano_test
+    >>> rng = np.random.default_rng(0)
+    >>> y = np.abs(rng.standard_normal(200)) + 0.5
+    >>> forecast1 = y + 0.1 * rng.standard_normal(200)
+    >>> forecast2 = y + 0.3 * rng.standard_normal(200)
+    >>> forecast1 = np.abs(forecast1) + 0.1
+    >>> forecast2 = np.abs(forecast2) + 0.1
+
+    >>> def qlike(y, forecast):
+    ...     ratio = y / forecast
+    ...     return ratio - np.log(ratio) - 1
+
+    >>> res = diebold_mariano_test(y, forecast1, forecast2, criterion=qlike)
+    >>> res.dm_stat, res.pvalue  # doctest: +SKIP
     """
 
     y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
@@ -2796,19 +2893,23 @@ def diebold_mariano_test(
     lags = int_like(lags, "lags", optional=True)
     harvey_adj = bool_like(harvey_adj, "harvey_adj")
     power = float_like(power, "power", optional=True)
+    horizon = int_like(horizon, "horizon")
+
+    if horizon < 1:
+        raise ValueError("horizon must be a positive integer.")
+    if lags is not None and lags < 0:
+        raise ValueError("lags must be a non-negative integer.")
 
     t = len(y)
+    if forecast1.shape[0] != t or forecast2.shape[0] != t:
+        raise ValueError("y, forecast1 and forecast2 must all have equal length.")
 
     if lags is None:
         lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
-    elif lags < 0:
-        raise ValueError("lags must be positive.")
 
-    if forecast1.shape[0] != t or forecast2.shape[0] != t:
-        raise ValueError("All arrays must be of equal length.")
     if isinstance(criterion, str):
         criterion = string_like(
-            criterion, "criterion", options=("mse", "mad", "mape", "poly")
+            criterion, "criterion", options=("mse", "mad", "mae", "mape", "poly")
         )
         if criterion == "mse":
 
@@ -2825,10 +2926,10 @@ def diebold_mariano_test(
             def criterion_func(y, f):
                 return np.abs(y - f)
 
-        else:
+        else:  # criterion == "poly"
 
             def criterion_func(y, f):
-                return np.abs(y - f) ** float(power)
+                return np.abs(y - f) ** power
 
     else:
         criterion_func = criterion
@@ -2838,26 +2939,20 @@ def diebold_mariano_test(
     loss_2 = criterion_func(y, forecast2)
     d = loss_1 - loss_2
 
-    # calculate test statistics
-    from statsmodels.regression.linear_model import OLS
-
+    # calculate test statistic as the t-stat of a constant-only HAC regression
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
     dm_stat = float(res.tvalues[0])
 
-    # Harvey adjustment based on Harvey et. al (1997)
+    # Harvey et. al (1997) small-sample adjustment
     if harvey_adj:
-        adj = (t + 1 - 2 * horizon + horizon * (horizon - 1) / t) / t
-        dm_stat = np.sqrt(adj) * dm_stat
-    else:
-        adj = None
-
-    # Find p-value & format output
-    if harvey_adj:
+        adj_factor = (t + 1 - 2 * horizon + horizon * (horizon - 1) / t) / t
+        dm_stat = np.sqrt(adj_factor) * dm_stat
         p_value = 2 * stats.t.cdf(-np.abs(dm_stat), df=t - 1)
     else:
+        adj_factor = None
         p_value = 2 * stats.norm.cdf(-np.abs(dm_stat))
 
-    return DieoldMarianoResult(dm_stat, p_value, adj)
+    return DieboldMarianoResult(dm_stat, p_value, adj_factor)
 
 
 def has_missing(data):
