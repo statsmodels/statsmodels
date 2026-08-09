@@ -6,12 +6,16 @@
 
 #### AI Disclosure
 
-Contributions must comply with the statsmodels
-[AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html). Please complete
-**one** of the following:
+Contributions must comply with the statsmodels [AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html).
+
+If using AI tools, edit the second option to explain which tool was selected and
+how the tool's output was used.
+
+Please complete **one** of the following:
 
 - [ ] No AI tools were used to develop this pull request.
-- [ ] AI tools were used. Tool(s): `<name(s), e.g. Copilot, Claude, ChatGPT>`.
+- [ ] AI tools were used.
+      Tool(s): `<name(s), e.g. Copilot, Claude, ChatGPT>`.
       Used for: `<e.g. drafting an implementation, writing tests, debugging, editing docstrings>`.
       I have personally read, understood, and can explain every line of this diff, and
       have verified the statistical/numerical correctness of the change.
