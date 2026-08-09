@@ -2038,8 +2038,8 @@ def test_rainbow_center_deprecated(center):
     res = OLS(y, x).fit()
 
     ref = smsdia.linear_rainbow(res, use_distance=True)
-    with pytest.warns(FutureWarning, match="the 'center' keyword is deprecated"):
-        stat = smsdia.linear_rainbow(res, use_distance=True, center=center)
+    with pytest.warns(FutureWarning, match="The center parameter is deprecated"):
+        stat = smsdia.linear_rainbow(res, 0.5, None, True, center)
     assert_allclose(stat, ref)
 
 
