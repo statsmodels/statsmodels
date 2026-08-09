@@ -5,18 +5,19 @@ distributions.
 
 author: George Panterov
 """
-import numpy as np
-import matplotlib.pyplot as plt
+
 from matplotlib import cm
+import matplotlib.pyplot as plt
+import numpy as np
 
 import statsmodels.api as sm
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     np.random.seed(123456)
 
     # generate the data
     nobs = 500
-    BW = 'cv_ml'
+    BW = "cv_ml"
 
     mu1 = [3, 4]
     mu2 = [6, 1]
@@ -30,8 +31,12 @@ if __name__ == '__main__':
     x = V[:, 0]
     y = V[:, 1]
 
-    dens = sm.nonparametric.KDEMultivariate(data=[x, y], var_type='cc', bw=BW,
-                                            defaults=sm.nonparametric.EstimatorSettings(efficient=True))
+    dens = sm.nonparametric.KDEMultivariate(
+        data=[x, y],
+        var_type="cc",
+        bw=BW,
+        defaults=sm.nonparametric.EstimatorSettings(efficient=True),
+    )
 
     supportx = np.linspace(min(x), max(x), 60)
     supporty = np.linspace(min(y), max(y), 60)
@@ -42,9 +47,10 @@ if __name__ == '__main__':
 
     # plot
     fig = plt.figure(1)
-    ax = fig.gca(projection='3d')
-    surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.jet,
-            linewidth=0, antialiased=False)
+    ax = fig.gca(projection="3d")
+    surf = ax.plot_surface(
+        X, Y, Z, rstride=1, cstride=1, cmap=cm.jet, linewidth=0, antialiased=False
+    )
 
     fig.colorbar(surf, shrink=0.5, aspect=5)
     plt.figure(2)

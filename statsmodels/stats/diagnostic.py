@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Various Statistical Tests
 
@@ -8,7 +7,7 @@ License: BSD-3
 Notes
 -----
 Almost fully verified against R or Gretl, not all options are the same.
-In many cases of Lagrange multiplier tests both the LM test and the F test is
+In many cases of Lagrange multiplier tests both the LM test and the F test are
 returned. In some but not all cases, R has the option to choose the test
 statistic. Some alternative test statistic results have not been verified.
 
@@ -23,27 +22,64 @@ missing:
   - breaks_ap, more recent breaks tests
   - specification tests against nonparametric alternatives
 """
+
+from __future__ import annotations
+
 from statsmodels.compat.pandas import deprecate_kwarg
 
 from collections.abc import Iterable
+from typing import NamedTuple
+import warnings
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS, RegressionResultsWrapper
+from statsmodels.stats._adnorm import anderson_statistic, normal_ad
+from statsmodels.stats._lilliefors import (
+    kstest_exponential,
+    kstest_fit,
+    kstest_normal,
+    lilliefors,
+)
+from statsmodels.stats._results_store import ResultsStore
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    dict_like,
+    float_like,
+    int_like,
+    string_like,
+)
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tools.validation import (array_like, int_like, bool_like,
-                                          string_like, dict_like, float_like)
-from statsmodels.stats._lilliefors import (kstest_fit, lilliefors,
-                                           kstest_normal, kstest_exponential)
-from statsmodels.stats._adnorm import normal_ad, anderson_statistic
 
-__all__ = ["kstest_fit", "lilliefors", "kstest_normal", "kstest_exponential",
-           "normal_ad", "compare_cox", "compare_j", "acorr_breusch_godfrey",
-           "acorr_ljungbox", "acorr_lm", "het_arch", "het_breuschpagan",
-           "het_goldfeldquandt", "het_white", "spec_white", "linear_lm",
-           "linear_rainbow", "linear_harvey_collier", "anderson_statistic"]
+__all__ = [
+    "GoldfeldQuandtResult",
+    "LMTestResult",
+    "NonNestedTestResult",
+    "PesaranTimmermannResult",
+    "acorr_breusch_godfrey",
+    "acorr_ljungbox",
+    "acorr_lm",
+    "anderson_statistic",
+    "compare_cox",
+    "compare_j",
+    "het_arch",
+    "het_breuschpagan",
+    "het_goldfeldquandt",
+    "het_white",
+    "kstest_exponential",
+    "kstest_fit",
+    "kstest_normal",
+    "lilliefors",
+    "linear_harvey_collier",
+    "linear_lm",
+    "linear_rainbow",
+    "normal_ad",
+    "pesaran_timmermann",
+    "spec_white",
+]
 
 
 NESTED_ERROR = """\
@@ -95,12 +131,17 @@ def _check_nested_results(results_x, results_z):
     return nested
 
 
-class ResultsStore:
-    def __str__(self):
-        return getattr(self, '_str', self.__class__.__name__)
+class NonNestedTestResult(NamedTuple):
+    """Result of :func:`compare_cox` and :func:`compare_j`."""
+
+    tstat: float
+    pvalue: float
+    res_store: ResultsStore | None
 
 
-def compare_cox(results_x, results_z, store=False):
+def compare_cox(
+    results_x, results_z, store=False, *, use_namedtuple: bool | None = None
+):
     """
     Compute the Cox test for non-nested models
 
@@ -112,9 +153,31 @@ def compare_cox(results_x, results_z, store=False):
         result instance of second model
     store : bool, default False
         If true, then the intermediate results are returned.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``NonNestedTestResult`` NamedTuple instead of a plain tuple. When
+        ``store=True`` the NamedTuple holds the same three elements as the
+        legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy two-element tuple
+        is returned by default and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return a
+            ``NonNestedTestResult``. Set ``use_namedtuple=True`` to opt in
+            now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
+    NonNestedTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``tstat``,
+        ``pvalue``, and ``res_store`` (``res_store`` is ``None`` when not
+        computed). See
+        :class:`~statsmodels.stats.diagnostic.NonNestedTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     tstat : float
         t statistic for the test that including the fitted values of the
         first model in the second model has no effect.
@@ -127,7 +190,7 @@ def compare_cox(results_x, results_z, store=False):
     -----
     Tests of non-nested hypothesis might not provide unambiguous answers.
     The test should be performed in both directions and it is possible
-    that both or neither test rejects. see [1]_ for more information.
+    that both or neither test rejects. See [1]_ for more information.
 
     Formulas from [1]_, section 8.3.4 translated to code
 
@@ -138,6 +201,7 @@ def compare_cox(results_x, results_z, store=False):
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
        5th edition. (2002).
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     if _check_nested_results(results_x, results_z):
         raise ValueError(NESTED_ERROR.format(test="Cox comparison"))
     x = results_x.model.exog
@@ -152,8 +216,8 @@ def compare_cox(results_x, results_z, store=False):
     err_xzx = res_xzx.resid
 
     sigma2_zx = sigma2_x + np.dot(err_zx.T, err_zx) / nobs
-    c01 = nobs / 2. * (np.log(sigma2_z) - np.log(sigma2_zx))
-    v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx ** 2
+    c01 = nobs / 2.0 * (np.log(sigma2_z) - np.log(sigma2_zx))
+    v01 = sigma2_x * np.dot(err_xzx.T, err_xzx) / sigma2_zx**2
     q = c01 / np.sqrt(v01)
     pval = 2 * stats.norm.sf(np.abs(q))
 
@@ -166,12 +230,27 @@ def compare_cox(results_x, results_z, store=False):
         res.q = q
         res.pvalue = pval
         res.dist = stats.norm
-        return q, pval, res
+    else:
+        res = None
 
+    if use_namedtuple is None and not store:
+        warnings.warn(
+            "compare_cox currently returns a plain tuple whose length "
+            "depends on the store argument. In release 0.16 or after "
+            "July 2027, whichever is later, the default behavior will "
+            "switch to always returning a NonNestedTestResult NamedTuple. "
+            "Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or store:
+        return NonNestedTestResult(q, pval, res)
     return q, pval
 
 
-def compare_j(results_x, results_z, store=False):
+def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None = None):
     """
     Compute the J-test for non-nested models
 
@@ -183,9 +262,31 @@ def compare_j(results_x, results_z, store=False):
         The result instance of second model.
     store : bool, default False
         If true, then the intermediate results are returned.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``NonNestedTestResult`` NamedTuple instead of a plain tuple. When
+        ``store=True`` the NamedTuple holds the same three elements as the
+        legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy two-element tuple
+        is returned by default and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return a
+            ``NonNestedTestResult``. Set ``use_namedtuple=True`` to opt in
+            now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
+    NonNestedTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``tstat``,
+        ``pvalue``, and ``res_store`` (``res_store`` is ``None`` when not
+        computed). See
+        :class:`~statsmodels.stats.diagnostic.NonNestedTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     tstat : float
         t statistic for the test that including the fitted values of the
         first model in the second model has no effect.
@@ -201,7 +302,7 @@ def compare_j(results_x, results_z, store=False):
 
     Tests of non-nested hypothesis might not provide unambiguous answers.
     The test should be performed in both directions and it is possible
-    that both or neither test rejects. see Greene for more information.
+    that both or neither test rejects. See Greene for more information.
 
     References
     ----------
@@ -209,6 +310,7 @@ def compare_j(results_x, results_z, store=False):
        5th edition. (2002).
     """
     # TODO: Allow cov to be specified
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     if _check_nested_results(results_x, results_z):
         raise ValueError(NESTED_ERROR.format(test="J comparison"))
     y = results_x.model.endog
@@ -223,13 +325,187 @@ def compare_j(results_x, results_z, store=False):
         res.dist = stats.t(res_zx.df_resid)
         res.teststat = tstat
         res.pvalue = pval
-        return tstat, pval, res
+    else:
+        res = None
 
+    if use_namedtuple is None and not store:
+        warnings.warn(
+            "compare_j currently returns a plain tuple whose length "
+            "depends on the store argument. In release 0.16 or after "
+            "July 2027, whichever is later, the default behavior will "
+            "switch to always returning a NonNestedTestResult NamedTuple. "
+            "Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or store:
+        return NonNestedTestResult(tstat, pval, res)
     return tstat, pval
 
 
-def compare_encompassing(results_x, results_z, cov_type="nonrobust",
-                         cov_kwargs=None):
+class PesaranTimmermannResult(NamedTuple):
+    """
+    Result of :func:`pesaran_timmermann`.
+
+    Parameters
+    ----------
+    statistic : float
+        Normal test statistic.
+    pvalue : float
+        P-value for the chosen alternative.
+    res_store : ResultsStore or None
+        An instance of a dummy class with intermediate results attached as
+        attributes, if ``store`` was True, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    res_store: ResultsStore | None
+
+
+def pesaran_timmermann(actual, predicted, alternative="two-sided"):
+    r"""
+    Pesaran-Timmermann test of directional predictive accuracy.
+
+    Parameters
+    ----------
+    actual : array_like
+        Realized values. The direction is classified by ``actual > 0``.
+    predicted : array_like
+        Forecasted or predicted values. The direction is classified by
+        ``predicted > 0``.
+    alternative : {"two-sided", "larger", "smaller"}
+        Alternative hypothesis for the directional accuracy statistic.
+
+    Returns
+    -------
+    PesaranTimmermannResult
+        A NamedTuple with fields:
+
+        statistic : float
+            Normal test statistic.
+        pvalue : float
+            P-value for the chosen alternative.
+        res_store : ResultsStore or None
+            Intermediate results.
+
+    Notes
+    -----
+    The Pesaran-Timmermann test evaluates whether the realized and predicted
+    signs are independent. Let
+
+    .. math::
+
+       \hat{p} = n^{-1}\sum_{t=1}^n 1\{\operatorname{sign}(y_t)
+       = \operatorname{sign}(\hat{y}_t)\}
+
+    be the observed success rate, and let
+
+    .. math::
+
+       \hat{p}_* = \hat{p}_y \hat{p}_z + (1 - \hat{p}_y)(1 - \hat{p}_z)
+
+    denote the success rate implied by independence, where
+    :math:`\hat{p}_y` and :math:`\hat{p}_z` are the sample proportions of
+    positive realizations and positive predictions. The test statistic is
+
+    .. math::
+
+       S_n = \frac{\hat{p} - \hat{p}_*} {\sqrt{\hat{v} - \hat{w}}},
+
+    where
+
+    .. math::
+
+       \hat{v} = \hat{p}_* (1 - \hat{p}_*) / n
+
+    and
+
+    .. math::
+
+       \hat{w} = \left[(2\hat{p}_y - 1)^2 \hat{p}_z (1 - \hat{p}_z)
+       + (2\hat{p}_z - 1)^2 \hat{p}_y (1 - \hat{p}_y)\right] / n.
+
+    Under the null of no directional predictive ability, the statistic is
+    asymptotically standard normal.
+
+    References
+    ----------
+    .. [1] Pesaran, M. H., and Timmermann, A. "A Simple Nonparametric Test
+       of Predictive Performance." Journal of Business & Economic Statistics
+       10, no. 4 (1992): 461-465.
+    """
+    actual = array_like(actual, "actual", ndim=1)
+    predicted = array_like(predicted, "predicted", ndim=1)
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+    )
+
+    if actual.shape[0] != predicted.shape[0]:
+        raise ValueError("actual and predicted must have the same length")
+    if actual.shape[0] < 2:
+        raise ValueError("actual and predicted must contain at least 2 values")
+    if not np.all(np.isfinite(actual)) or not np.all(np.isfinite(predicted)):
+        raise ValueError("actual and predicted must contain only finite values")
+
+    nobs = actual.shape[0]
+    realized_pos = (actual > 0).astype(float)
+    predicted_pos = (predicted > 0).astype(float)
+
+    p_y = realized_pos.mean()
+    p_z = predicted_pos.mean()
+    p_hat = np.mean(realized_pos == predicted_pos)
+    p_ind = p_y * p_z + (1 - p_y) * (1 - p_z)
+
+    v_hat = p_ind * (1 - p_ind) / nobs
+    w_hat = (
+        ((2 * p_y - 1) ** 2) * p_z * (1 - p_z) + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    ) / nobs
+    variance = v_hat - w_hat
+    # An alternative exact estimator that includes terms of order n^2.
+    # Retailed but not what was used in P-T
+    # w_hat = (
+    #     ((2 * p_y - 1) ** 2) * p_z * (1 - p_z)
+    #     + ((2 * p_z - 1) ** 2) * p_y * (1 - p_y)
+    # ) / nobs + 4 * p_y * (1 - p_y) * p_z * (1 - p_z) / nobs**2
+
+    if variance <= 0:
+        raise ValueError(
+            "Pesaran-Timmermann test is undefined when the estimated "
+            "variance is non-positive."
+        )
+
+    statistic = (p_hat - p_ind) / np.sqrt(variance)
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(statistic))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(statistic)
+    else:
+        pvalue = stats.norm.cdf(statistic)
+
+    res_store = ResultsStore()
+    res_store.statistic = statistic
+    res_store.pvalue = pvalue
+    res_store.dist = stats.norm
+    res_store.alternative = alternative
+    res_store.nobs = nobs
+    res_store.p_hat = p_hat
+    res_store.p_ind = p_ind
+    res_store.p_y = p_y
+    res_store.p_z = p_z
+    res_store.v_hat = v_hat
+    res_store.w_hat = w_hat
+    res_store.variance = variance
+
+    return PesaranTimmermannResult(statistic, pvalue, res_store)
+
+
+@deprecate_kwarg("cov_kwargs", "cov_kwds")
+def compare_encompassing(results_x, results_z, cov_type="nonrobust", cov_kwds=None):
     r"""
     Davidson-MacKinnon encompassing test for comparing non-nested models
 
@@ -239,12 +515,12 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         result instance of first model
     results_z : Result instance
         result instance of second model
-    cov_type : str, default "nonrobust
-        Covariance type. The default is "nonrobust` which uses the classic
+    cov_type : str, default "nonrobust"
+        Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
@@ -277,7 +553,7 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
     :math:`X`. The null is :math:`H_0:\gamma=0`. When testing whether z is
     encompassed, the roles of :math:`X` and :math:`Z` are reversed.
 
-    Implementation of  Davidson and MacKinnon (1993)'s encompassing test.
+    Implementation of Davidson and MacKinnon (1993)'s encompassing test.
     Performs two Wald tests where models x and z are compared to a model
     that nests the two. The Wald tests are performed by using an OLS
     regression.
@@ -308,17 +584,26 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust",
         df_num, df_denom = int(test.df_num), int(test.df_denom)
         return stat, pvalue, df_num, df_denom
 
-    x_nested = _test_nested(y, x, z, cov_type, cov_kwargs)
-    z_nested = _test_nested(y, z, x, cov_type, cov_kwargs)
-    return pd.DataFrame([x_nested, z_nested],
-                        index=["x", "z"],
-                        columns=["stat", "pvalue", "df_num", "df_denom"])
+    x_nested = _test_nested(y, x, z, cov_type, cov_kwds)
+    z_nested = _test_nested(y, z, x, cov_type, cov_kwds)
+    return pd.DataFrame(
+        [x_nested, z_nested],
+        index=["x", "z"],
+        columns=["stat", "pvalue", "df_num", "df_denom"],
+    )
 
 
-def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
-                   return_df=True, auto_lag=False):
+def acorr_ljungbox(
+    x,
+    lags=None,
+    boxpierce=False,
+    model_df=0,
+    period=None,
+    return_df=True,
+    auto_lag=False,
+):
     """
-    Ljung-Box test of autocorrelation in residuals.
+    Ljung-Box test of autocorrelation in residuals
 
     Parameters
     ----------
@@ -347,6 +632,10 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
+    return_df : bool, default True
+        Flag indicating whether to return the results as a DataFrame. This
+        parameter is retained for backward compatibility; a DataFrame is
+        always returned.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
@@ -380,14 +669,14 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     Notes
     -----
     Ljung-Box and Box-Pierce statistic differ in their scaling of the
-    autocorrelation function. Ljung-Box test is has better finite-sample
+    autocorrelation function. Ljung-Box test has better finite-sample
     properties.
 
     References
     ----------
-    .. [*] Green, W. "Econometric Analysis," 5th ed., Pearson, 2003.
+    .. [*] Greene, W. "Econometric Analysis," 5th ed., Pearson, 2003.
     .. [*] J. Carlos Escanciano, Ignacio N. Lobato
-          "An automatic Portmanteau test for serial correlation".,
+          "An automatic Portmanteau test for serial correlation".
           Volume 151, 2009.
 
     Examples
@@ -400,7 +689,8 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     10  214.106992  1.827374e-40
     """
     # Avoid cyclic import
-    from statsmodels.tsa.stattools import acf
+    from statsmodels.tsa.stattools._stattools import acf
+
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)
@@ -416,11 +706,15 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         sacf = acf(x, nlags=maxlag, fft=False)
 
         if not boxpierce:
-            q_sacf = (nobs * (nobs + 2) *
-                      np.cumsum(sacf[1:maxlag + 1] ** 2
-                                / (nobs - np.arange(1, maxlag + 1))))
+            q_sacf = (
+                nobs
+                * (nobs + 2)
+                * np.cumsum(
+                    sacf[1 : maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+                )
+            )
         else:
-            q_sacf = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)
+            q_sacf = nobs * np.cumsum(sacf[1 : maxlag + 1] ** 2)
 
         # obtain thresholds
         q = 2.4
@@ -428,7 +722,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
         threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
 
         # compute penalized sum of squared autocorrelations
-        if (threshold_metric <= threshold):
+        if threshold_metric <= threshold:
             q_sacf = q_sacf - (np.arange(1, nobs) * np.log(nobs))
         else:
             q_sacf = q_sacf - (2 * np.arange(1, nobs))
@@ -451,7 +745,7 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
     sacf = acf(x, nlags=maxlag, fft=False)
-    sacf2 = sacf[1:maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
+    sacf2 = sacf[1 : maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
     qljungbox = nobs * (nobs + 2) * np.cumsum(sacf2)[lags - 1]
     adj_lags = lags - model_df
     pval = np.full_like(qljungbox, np.nan)
@@ -459,22 +753,47 @@ def acorr_ljungbox(x, lags=None, boxpierce=False, model_df=0, period=None,
     pval[loc] = stats.chi2.sf(qljungbox[loc], adj_lags[loc])
 
     if not boxpierce:
-        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval},
-                            index=lags)
+        return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval}, index=lags)
 
-    qboxpierce = nobs * np.cumsum(sacf[1:maxlag + 1] ** 2)[lags - 1]
+    qboxpierce = nobs * np.cumsum(sacf[1 : maxlag + 1] ** 2)[lags - 1]
     pvalbp = np.full_like(qljungbox, np.nan)
     pvalbp[loc] = stats.chi2.sf(qboxpierce[loc], adj_lags[loc])
-    return pd.DataFrame({"lb_stat": qljungbox, "lb_pvalue": pval,
-                         "bp_stat": qboxpierce, "bp_pvalue": pvalbp},
-                        index=lags)
+    return pd.DataFrame(
+        {
+            "lb_stat": qljungbox,
+            "lb_pvalue": pval,
+            "bp_stat": qboxpierce,
+            "bp_pvalue": pvalbp,
+        },
+        index=lags,
+    )
 
 
-@deprecate_kwarg("maxlag", "nlags")
-def acorr_lm(resid, nlags=None, store=False, *, period=None,
-             ddof=0, cov_type="nonrobust", cov_kwargs=None):
+class LMTestResult(NamedTuple):
     """
-    Lagrange Multiplier tests for autocorrelation.
+    Result of :func:`acorr_lm`, :func:`het_arch`, and  :func:`acorr_breusch_godfrey`.
+    """
+
+    lm: float
+    lmpval: float
+    fval: float
+    fpval: float
+    res_store: ResultsStore | None
+
+
+def acorr_lm(
+    resid,
+    nlags=None,
+    store=False,
+    *,
+    period=None,
+    ddof=0,
+    cov_type="nonrobust",
+    cov_kwds=None,
+    use_namedtuple: bool | None = None,
+):
+    """
+    Lagrange Multiplier tests for autocorrelation
 
     This is a generic Lagrange Multiplier test for autocorrelation. Returns
     Engle's ARCH test if resid is the squared residual array. Breusch-Godfrey
@@ -488,7 +807,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         Highest lag to use.
     store : bool, default False
         If true then the intermediate results are also returned.
-    period : int, default none
+    period : int, default None
         The period of a Seasonal time series.  Used to compute the max lag
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
@@ -497,16 +816,39 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         The number of degrees of freedom consumed by the model used to
         produce resid. The default value is 0.
     cov_type : str, default "nonrobust"
-        Covariance type. The default is "nonrobust` which uses the classic
+        Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
         more details.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an ``LMTestResult``
+        NamedTuple instead of a plain tuple. When ``store=True`` the
+        NamedTuple holds the same five elements as the legacy tuple, so it
+        unpacks identically and is always returned, with no warning.
+        When ``store=False`` the legacy four-element tuple is returned by
+        default and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return an ``LMTestResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    LMTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``lm``,
+        ``lmpval``, ``fval``, ``fpval``, and ``res_store`` (``res_store``
+        is ``None`` when not computed). See
+        :class:`~statsmodels.stats.diagnostic.LMTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     lm : float
         Lagrange multiplier test statistic.
     lmpval : float
@@ -525,7 +867,7 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
         Conditional heteroskedasticity testing.
     acorr_breusch_godfrey
         Breusch-Godfrey test for serial correlation.
-    acorr_ljung_box
+    acorr_ljungbox
         Ljung-Box test for serial correlation.
 
     Notes
@@ -536,8 +878,9 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     """
     resid = array_like(resid, "resid", ndim=1)
     cov_type = string_like(cov_type, "cov_type")
-    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
-    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs")
+    cov_kwds = {} if cov_kwds is None else cov_kwds
+    cov_kwds = dict_like(cov_kwds, "cov_kwds")
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     nobs = resid.shape[0]
     if period is not None and nlags is None:
         maxlag = min(nobs // 5, 2 * period)
@@ -553,8 +896,9 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     res_store = ResultsStore()
     usedlag = maxlag
 
-    resols = OLS(xshort, xdall[:, :usedlag + 1]).fit(cov_type=cov_type,
-                                                     cov_kwargs=cov_kwargs)
+    resols = OLS(xshort, xdall[:, : usedlag + 1]).fit(
+        cov_type=cov_type, cov_kwds=cov_kwds
+    )
     fval = float(resols.fvalue)
     fpval = float(resols.f_pvalue)
     if cov_type == "nonrobust":
@@ -570,15 +914,30 @@ def acorr_lm(resid, nlags=None, store=False, *, period=None,
     if store:
         res_store.resols = resols
         res_store.usedlag = usedlag
-        return lm, lmpval, fval, fpval, res_store
     else:
-        return lm, lmpval, fval, fpval
+        res_store = None
+
+    if use_namedtuple is None and not store:
+        warnings.warn(
+            "acorr_lm currently returns a plain tuple whose length "
+            "depends on the store argument. In release 0.16 or after "
+            "July 2027, whichever is later, the default behavior will "
+            "switch to always returning an LMTestResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or store:
+        return LMTestResult(lm, lmpval, fval, fpval, res_store)
+    return lm, lmpval, fval, fpval
 
 
-@deprecate_kwarg("maxlag", "nlags")
-def het_arch(resid, nlags=None, store=False, ddof=0):
+def het_arch(
+    resid, nlags=None, store=False, ddof=0, *, use_namedtuple: bool | None = None
+):
     """
-    Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH).
+    Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
 
     Parameters
     ----------
@@ -593,9 +952,32 @@ def het_arch(resid, nlags=None, store=False, ddof=0):
         are recommendations to correct the degrees of freedom by the number
         of parameters that have been estimated, for example ddof=p+q for an
         ARMA(p,q).
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an ``LMTestResult``
+        NamedTuple instead of a plain tuple. When ``store=True`` the
+        NamedTuple holds the same five elements as the legacy tuple, so it
+        unpacks identically and is always returned, with no warning.
+        When ``store=False`` the legacy four-element tuple is returned by
+        default and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return an ``LMTestResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    LMTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``lm``,
+        ``lmpval``, ``fval``, ``fpval``, and ``res_store`` (``res_store``
+        is ``None`` when not computed). See
+        :class:`~statsmodels.stats.diagnostic.LMTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     lm : float
         Lagrange multiplier test statistic
     lmpval : float
@@ -612,13 +994,16 @@ def het_arch(resid, nlags=None, store=False, ddof=0):
     -----
     verified against R:FinTS::ArchTest
     """
-    return acorr_lm(resid ** 2, nlags=nlags, store=store, ddof=ddof)
+    return acorr_lm(
+        resid**2, nlags=nlags, store=store, ddof=ddof, use_namedtuple=use_namedtuple
+    )
 
 
-@deprecate_kwarg("results", "res")
-def acorr_breusch_godfrey(res, nlags=None, store=False):
+def acorr_breusch_godfrey(
+    res, nlags=None, store=False, *, use_namedtuple: bool | None = None
+):
     """
-    Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation.
+    Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation
 
     Parameters
     ----------
@@ -631,9 +1016,32 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
     store : bool, default False
         If store is true, then an additional class instance that contains
         intermediate results is returned.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as an ``LMTestResult``
+        NamedTuple instead of a plain tuple. When ``store=True`` the
+        NamedTuple holds the same five elements as the legacy tuple, so it
+        unpacks identically and is always returned, with no warning.
+        When ``store=False`` the legacy four-element tuple is returned by
+        default and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return an ``LMTestResult``. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
 
     Returns
     -------
+    LMTestResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``lm``,
+        ``lmpval``, ``fval``, ``fpval``, and ``res_store`` (``res_store``
+        is ``None`` when not computed). See
+        :class:`~statsmodels.stats.diagnostic.LMTestResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     lm : float
         Lagrange multiplier test statistic.
     lmpval : float
@@ -657,11 +1065,12 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
       5th edition. (2002).
     """
-
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(res.resid).squeeze()
     if x.ndim != 1:
-        raise ValueError("Model resid must be a 1d array. Cannot be used on"
-                         " multivariate models.")
+        raise ValueError(
+            "Model resid must be a 1d array. Cannot be used on multivariate models."
+        )
     exog_old = res.model.exog
     nobs = x.shape[0]
     if nlags is None:
@@ -693,9 +1102,24 @@ def acorr_breusch_godfrey(res, nlags=None, store=False):
         res_store = ResultsStore()
         res_store.resols = resols
         res_store.usedlag = nlags
-        return lm, lmpval, fval, fpval, res_store
     else:
-        return lm, lmpval, fval, fpval
+        res_store = None
+
+    if use_namedtuple is None and not store:
+        warnings.warn(
+            "acorr_breusch_godfrey currently returns a plain tuple whose "
+            "length depends on the store argument. In release 0.16 or "
+            "after July 2027, whichever is later, the default behavior "
+            "will switch to always returning an LMTestResult NamedTuple. "
+            "Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or store:
+        return LMTestResult(lm, lmpval, fval, fpval, res_store)
+    return lm, lmpval, fval, fpval
 
 
 def _check_het_test(x: np.ndarray, test_name: str) -> None:
@@ -710,10 +1134,7 @@ def _check_het_test(x: np.ndarray, test_name: str) -> None:
         The test name for the exception
     """
     x_max = x.max(axis=0)
-    if (
-        not np.any(((x_max - x.min(axis=0)) == 0) & (x_max != 0))
-        or x.shape[1] < 2
-    ):
+    if not np.any(((x_max - x.min(axis=0)) == 0) & (x_max != 0)) or x.shape[1] < 2:
         raise ValueError(
             f"{test_name} test requires exog to have at least "
             "two columns where one is a constant."
@@ -784,9 +1205,9 @@ def het_breuschpagan(resid, exog_het, robust=True):
        5th edition. (2002).
     .. [2]  Breusch, T. S.; Pagan, A. R. (1979). "A Simple Test for
        Heteroskedasticity and Random Coefficient Variation". Econometrica.
-       47 (5): 1287–1294.
+       47 (5): 1287-1294.
     .. [3] Koenker, R. (1981). "A note on studentizing a test for
-       heteroskedasticity". Journal of Econometrics 17 (1): 107–112.
+       heteroskedasticity". Journal of Econometrics 17 (1): 107-112.
     """
     x = array_like(exog_het, "exog_het", ndim=2)
     _check_het_test(x, "The Breusch-Pagan")
@@ -802,9 +1223,9 @@ def het_breuschpagan(resid, exog_het, robust=True):
     return lm, stats.chi2.sf(lm, nvars - 1), fval, fpval
 
 
-def het_white(resid, exog):
+def het_white(resid, exog, interaction_terms=True):
     """
-    White's Lagrange Multiplier Test for Heteroscedasticity.
+    White's Lagrange Multiplier Test for Heteroscedasticity
 
     Parameters
     ----------
@@ -812,14 +1233,16 @@ def het_white(resid, exog):
         The residuals. The squared residuals are used as the endogenous
         variable.
     exog : array_like
-        The explanatory variables for the variance. Squares and interaction
-        terms are automatically included in the auxiliary regression.
+        The explanatory variables for the variance. Squares and, by default,
+        interaction terms are automatically included in the auxiliary regression.
+    interaction_terms : bool, default True
+        Flag indicating whether to include interaction terms (x1*x2, x1*x3,...).
 
     Returns
     -------
     lm : float
         The lagrange multiplier statistic.
-    lm_pvalue :float
+    lm_pvalue : float
         The p-value of lagrange multiplier test.
     fvalue : float
         The f-statistic of the hypothesis that the error variance does not
@@ -832,38 +1255,51 @@ def het_white(resid, exog):
     -----
     Assumes x contains constant (for counting dof).
 
-    question: does f-statistic make sense? constant ?
-
     References
     ----------
-    Greene section 11.4.1 5th edition p. 222. Test statistic reproduces
-    Greene 5th, example 11.3.
+    .. [1] Greene, William H. Econometric analysis. 5th Edition. Pearson Education, 2002.
+    .. [2] Damodar N. Gujarati, Basic Econometrics, section 11.5. Pg 387.
     """
     x = array_like(exog, "exog", ndim=2)
     y = array_like(resid, "resid", ndim=2, shape=(x.shape[0], 1))
     _check_het_test(x, "White's heteroskedasticity")
     nobs, nvars0 = x.shape
-    i0, i1 = np.triu_indices(nvars0)
-    exog = x[:, i0] * x[:, i1]
-    nobs, nvars = exog.shape
-    assert nvars == nvars0 * (nvars0 - 1) / 2. + nvars0
-    resols = OLS(y ** 2, exog).fit()
+    if not interaction_terms:
+        exog = x**2
+    else:
+        i0, i1 = np.triu_indices(nvars0)
+        exog = x[:, i0] * x[:, i1]
+        nobs, nvars = exog.shape
+    resols = OLS(y**2, exog).fit()
     fval = resols.fvalue
     fpval = resols.f_pvalue
     lm = nobs * resols.rsquared
-    # Note: degrees of freedom for LM test is nvars minus constant
-    # degrees of freedom take possible reduced rank in exog into account
-    # df_model checks the rank to determine df
-    # extra calculation that can be removed:
-    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 
 
-def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
-                       alternative="increasing", store=False):
+class GoldfeldQuandtResult(NamedTuple):
+    """Result of :func:`het_goldfeldquandt`."""
+
+    fval: float
+    pval: float
+    ordering: str
+    res_store: ResultsStore | None
+
+
+def het_goldfeldquandt(
+    y,
+    x,
+    idx=None,
+    split=None,
+    drop=None,
+    alternative="increasing",
+    store=False,
+    *,
+    use_namedtuple: bool | None = None,
+):
     """
-    Goldfeld-Quandt homoskedasticity test.
+    Goldfeld-Quandt homoskedasticity test
 
     This test examines whether the residual variance is the same in 2
     subsamples.
@@ -882,7 +1318,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         If a float in 0<split<1 then split is interpreted as fraction
         of the observations in the first sample. If None, uses nobs//2.
     drop : {int, float}, default None
-        If this is not None, then observation are dropped from the middle
+        If this is not None, then observations are dropped from the middle
         part of the sorted series. If 0<split<1 then split is interpreted
         as fraction of the number of observations to be dropped.
         Note: Currently, observations are dropped between split and
@@ -894,9 +1330,31 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         p-value calculation.
     store : bool, default False
         Flag indicating to return the regression results
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``GoldfeldQuandtResult`` NamedTuple instead of a plain tuple. When
+        ``store=True`` the NamedTuple holds the same four elements as the
+        legacy tuple, so it unpacks identically and is always returned, with no warning. When ``store=False`` the legacy three-element
+        tuple is returned by default and a ``FutureWarning`` is issued.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to always return a
+            ``GoldfeldQuandtResult``. Set ``use_namedtuple=True`` to opt
+            in now, or ``use_namedtuple=False`` to silence the warning and
+            keep the current return type.
 
     Returns
     -------
+    GoldfeldQuandtResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``fval``,
+        ``pval``, ``ordering``, and ``res_store`` (``res_store`` is
+        ``None`` when not computed). See
+        :class:`~statsmodels.stats.diagnostic.GoldfeldQuandtResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     fval : float
         value of the F-statistic
     pval : float
@@ -914,20 +1372,21 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
     in the second sample is larger than in the first, or decreasing or
     two-sided.
 
-    Results are identical R, but the drop option is defined differently.
+    Results are identical to R, but the drop option is defined differently.
     (sorting by idx not tested yet)
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     x = np.asarray(x)
     y = np.asarray(y)  # **2
     nobs, nvars = x.shape
     if split is None:
         split = nobs // 2
-    elif (0 < split) and (split < 1):
+    elif 0 < split < 1:
         split = int(nobs * split)
 
     if drop is None:
         start2 = split
-    elif (0 < drop) and (drop < 1):
+    elif 0 < drop < 1:
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
@@ -945,7 +1404,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = "increasing"
     elif alternative.lower() in ["d", "dec", "decreasing"]:
-        fpval = stats.f.sf(1. / fval, resols2.df_resid, resols1.df_resid)
+        fpval = stats.f.sf(1.0 / fval, resols2.df_resid, resols1.df_resid)
         ordering = "decreasing"
     elif alternative.lower() in ["2", "2-sided", "two-sided"]:
         fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
@@ -957,8 +1416,7 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
 
     if store:
         res = ResultsStore()
-        res.__doc__ = "Test Results for Goldfeld-Quandt test of" \
-                      "heterogeneity"
+        res.__doc__ = "Test Results for Goldfeld-Quandt test of heterogeneity"
         res.fval = fval
         res.fpval = fpval
         res.df_fval = (resols2.df_resid, resols1.df_resid)
@@ -966,19 +1424,33 @@ def het_goldfeldquandt(y, x, idx=None, split=None, drop=None,
         res.resols2 = resols2
         res.ordering = ordering
         res.split = split
-        res._str = """\
+        res._str = f"""\
 The Goldfeld-Quandt test for null hypothesis that the variance in the second
-subsample is %s than in the first subsample:
-F-statistic =%8.4f and p-value =%8.4f""" % (ordering, fval, fpval)
+subsample is {ordering} than in the first subsample:
+F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
+    else:
+        res = None
 
-        return fval, fpval, ordering, res
-
+    if use_namedtuple is None and not store:
+        warnings.warn(
+            "het_goldfeldquandt currently returns a plain tuple whose "
+            "length depends on the store argument. In release 0.16 or "
+            "after July 2027, whichever is later, the default behavior "
+            "will switch to always returning a GoldfeldQuandtResult "
+            "NamedTuple. Set use_namedtuple=True to switch now, or "
+            "use_namedtuple=False to keep the current behavior and "
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or store:
+        return GoldfeldQuandtResult(fval, fpval, ordering, res)
     return fval, fpval, ordering
 
 
-@deprecate_kwarg("result", "res")
-def linear_reset(res, power=3, test_type="fitted", use_f=False,
-                 cov_type="nonrobust", cov_kwargs=None):
+def linear_reset(
+    res, power=3, test_type="fitted", use_f=False, cov_type="nonrobust", cov_kwds=None
+):
     r"""
     Ramsey's RESET test for neglected nonlinearity
 
@@ -1001,12 +1473,12 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     use_f : bool, default False
         Flag indicating whether an F-test should be used (True) or a
         chi-square test (False).
-    cov_type : str, default "nonrobust
-        Covariance type. The default is "nonrobust` which uses the classic
+    cov_type : str, default "nonrobust"
+        Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
         to use White's covariance estimator. All covariance types supported
         by ``OLS.fit`` are accepted.
-    cov_kwargs : dict, default None
+    cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit
         for more details.
 
@@ -1041,12 +1513,15 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     if not isinstance(res, RegressionResultsWrapper):
         raise TypeError("result must come from a linear regression model")
     if bool(res.model.k_constant) and res.model.exog.shape[1] == 1:
-        raise ValueError("exog contains only a constant column. The RESET "
-                         "test requires exog to have at least 1 "
-                         "non-constant column.")
-    test_type = string_like(test_type, "test_type",
-                            options=("fitted", "exog", "princomp"))
-    cov_kwargs = dict_like(cov_kwargs, "cov_kwargs", optional=True)
+        raise ValueError(
+            "exog contains only a constant column. The RESET "
+            "test requires exog to have at least 1 "
+            "non-constant column."
+        )
+    test_type = string_like(
+        test_type, "test_type", options=("fitted", "exog", "princomp")
+    )
+    cov_kwds = dict_like(cov_kwds, "cov_kwds", optional=True)
     use_f = bool_like(use_f, "use_f")
     if isinstance(power, int):
         if power < 2:
@@ -1055,40 +1530,45 @@ def linear_reset(res, power=3, test_type="fitted", use_f=False,
     else:
         try:
             power = np.array(power, dtype=int)
-        except Exception:
-            raise ValueError("power must be an integer or list of integers")
-        if power.ndim != 1 or len(set(power)) != power.shape[0] or \
-                (power < 2).any():
+        except Exception as exc:
+            raise ValueError("power must be an integer or list of integers") from exc
+        if power.ndim != 1 or len(set(power)) != power.shape[0] or (power < 2).any():
             raise ValueError("power must contains distinct integers all >= 2")
     exog = res.model.exog
     if test_type == "fitted":
-        aug = res.fittedvalues[:, None]
+        aug = np.asarray(res.fittedvalues)[:, None]
     elif test_type == "exog":
         # Remove constant and binary
         aug = res.model.exog
-        binary = ((exog == exog.max(axis=0)) | (exog == exog.min(axis=0)))
+        binary = (exog == exog.max(axis=0)) | (exog == exog.min(axis=0))
         binary = binary.all(axis=0)
         if binary.all():
             raise ValueError("Model contains only constant or binary data")
         aug = aug[:, ~binary]
     else:
         from statsmodels.multivariate.pca import PCA
+
         aug = exog
         if res.k_constant:
             retain = np.arange(aug.shape[1]).tolist()
             retain.pop(int(res.model.data.const_idx))
             aug = aug[:, retain]
-        pca = PCA(aug, ncomp=1, standardize=bool(res.k_constant),
-                  demean=bool(res.k_constant), method="nipals")
+        pca = PCA(
+            aug,
+            ncomp=1,
+            standardize=bool(res.k_constant),
+            demean=bool(res.k_constant),
+            method="nipals",
+        )
         aug = pca.factors[:, :1]
-    aug_exog = np.hstack([exog] + [aug ** p for p in power])
+    aug_exog = np.hstack([exog] + [aug**p for p in power])
     mod_class = res.model.__class__
     mod = mod_class(res.model.data.endog, aug_exog)
-    cov_kwargs = {} if cov_kwargs is None else cov_kwargs
-    res = mod.fit(cov_type=cov_type, cov_kwargs=cov_kwargs)
+    cov_kwds = {} if cov_kwds is None else cov_kwds
+    res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     nrestr = aug_exog.shape[1] - exog.shape[1]
     nparams = aug_exog.shape[1]
-    r_mat = np.eye(nrestr, nparams, k=nparams-nrestr)
+    r_mat = np.eye(nrestr, nparams, k=nparams - nrestr)
     return res.wald_test(r_mat, use_f=use_f, scalar=True)
 
 
@@ -1119,7 +1599,7 @@ def linear_harvey_collier(res, order_by=None, skip=None):
 
     See Also
     --------
-    statsmodels.stats.diadnostic.recursive_olsresiduals
+    statsmodels.stats.diagnostic.recursive_olsresiduals
         Recursive OLS residual calculation used in the test.
 
     Notes
@@ -1135,13 +1615,13 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     return stats.ttest_1samp(rr[3][3:], 0)
 
 
-def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
-                   center=None):
+@deprecate_kwarg("center", None)
+def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None):
     """
     Rainbow test for linearity
 
     The null hypothesis is the fit of the model using full sample is the same
-    as using a central subset. The alternative is that the fits are difference.
+    as using a central subset. The alternative is that the fits are different.
     The rainbow test has power against many different forms of nonlinearity.
 
     Parameters
@@ -1150,18 +1630,26 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
         A results instance from a linear regression.
     frac : float, default 0.5
         The fraction of the data to include in the center model.
-    order_by : {ndarray, str, List[str]}, default None
+    order_by : {ndarray, str, list[str]}, optional
         If an ndarray, the values in the array are used to sort the
         observations. If a string or a list of strings, these are interpreted
         as column name(s) which are then used to lexicographically sort the
         data.
     use_distance : bool, default False
-        Flag indicating whether data should be ordered by the Mahalanobis
-        distance to the center.
+        Flag indicating whether the data should be ordered by the Mahalanobis
+        distance to the exog centroid (the multivariate mean). This makes the
+        test invariant to the order of the observations; see the Notes for the
+        precise statement.
     center : {float, int}, default None
-        If a float, the value must be in [0, 1] and the center is center *
-        nobs of the ordered data.  If an integer, must be in [0, nobs) and
-        is interpreted as the observation of the ordered data to use.
+        Deprecated and ignored. The center used to order the observations
+        when ``use_distance`` is True is always the exog centroid (the
+        multivariate mean). Passing a value emits a ``FutureWarning``.
+
+        .. deprecated:: 0.15.0
+
+            ``center`` has no effect. ``center`` previously was a fraction
+            of the sample and so was not well-defined for regression with
+            more than 1 regressor.
 
     Returns
     -------
@@ -1174,6 +1662,25 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
     -----
     This test assumes residuals are homoskedastic and may reject a correct
     linear specification if the residuals are heteroskedastic.
+
+    When ``use_distance`` is True the observations are ordered by their
+    Mahalanobis distance to the centroid of ``exog``. Using the centroid (the
+    multivariate mean) as the center follows Utts (1982) [1]_; the subset used
+    is the middle band of the distance ranks (the same slicing as the
+    ``order_by`` path), not the "closest ``frac``" subset of Utts. Because the
+    centroid is order invariant and exact ties in distance are broken
+    deterministically using the exog values, the returned statistic does not
+    depend on the order of the rows of the data. The one exception is a pair of
+    observations with identical exog rows but different ``endog`` values that
+    fall on opposite sides of the subset boundary: resolving such a tie would
+    require ordering by the response, which would make the subset depend on
+    ``endog``, so these are left in their input order.
+
+    References
+    ----------
+    .. [1] Utts, J. M. (1982). The rainbow test for lack of fit in
+       regression. Communications in Statistics - Theory and Methods,
+       11(24), 2801-2815.
     """
     if not isinstance(res, RegressionResultsWrapper):
         raise TypeError("res must be a results instance from a linear model.")
@@ -1184,8 +1691,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
     endog = res.model.endog
     exog = res.model.exog
     if order_by is not None and use_distance:
-        raise ValueError("order_by and use_distance cannot be simultaneously"
-                         "used.")
+        raise ValueError("order_by and use_distance cannot be simultaneously used.")
     if order_by is not None:
         if isinstance(order_by, np.ndarray):
             order_by = array_like(order_by, "order_by", ndim=1, dtype="int")
@@ -1194,47 +1700,55 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False,
                 order_by = [order_by]
             try:
                 cols = res.model.data.orig_exog[order_by].copy()
-            except (IndexError, KeyError):
-                raise TypeError("order_by must contain valid column names "
-                                "from the exog data used to construct res,"
-                                "and exog must be a pandas DataFrame.")
+            except (IndexError, KeyError) as exc:
+                raise TypeError(
+                    "order_by must contain valid column names "
+                    "from the exog data used to construct res,"
+                    "and exog must be a pandas DataFrame."
+                ) from exc
             name = "__index__"
             while name in cols:
-                name += '_'
+                name += "_"
             cols[name] = np.arange(cols.shape[0])
             cols = cols.sort_values(order_by)
             order_by = np.asarray(cols[name])
         endog = endog[order_by]
         exog = exog[order_by]
     if use_distance:
-        center = int(nobs) // 2 if center is None else center
-        if isinstance(center, float):
-            if not 0.0 <= center <= 1.0:
-                raise ValueError("center must be in (0, 1) when a float.")
-            center = int(center * (nobs-1))
-        else:
-            center = int_like(center, "center")
-            if not 0 < center < nobs - 1:
-                raise ValueError("center must be in [0, nobs) when an int.")
-        center_obs = exog[center:center+1]
+        if center is not None:
+            warnings.warn(
+                "The center keyword is deprecated and no longer has any "
+                "effect. The Mahalanobis distances used to order the "
+                "observations are now measured from the exog centroid (the "
+                "multivariate mean) rather than from an individual "
+                "observation, so that the rainbow test no longer depends on "
+                "the order of the observations (Utts, 1982).",
+                FutureWarning,
+                stacklevel=2,
+            )
         from scipy.spatial.distance import cdist
-        try:
-            err = exog - center_obs
-            vi = np.linalg.inv(err.T @ err / nobs)
-        except np.linalg.LinAlgError:
-            err = exog - exog.mean(0)
-            vi = np.linalg.inv(err.T @ err / nobs)
-        dist = cdist(exog, center_obs, metric='mahalanobis', VI=vi)
-        idx = np.argsort(dist.ravel())
+
+        center_obs = exog.mean(0, keepdims=True)
+        err = exog - center_obs
+        vi = np.linalg.pinv(err.T @ err / nobs)
+        dist = cdist(exog, center_obs, metric="mahalanobis", VI=vi)
+        # Order by distance, breaking exact ties deterministically using the
+        # exog values (never endog, which would make the subset depend on the
+        # response) so that the ordering, and hence the statistic, does not
+        # depend on the input row order even when distances tie (e.g. discrete
+        # or duplicated regressors). lexsort uses the last key as primary.
+        idx = np.lexsort((*exog.T[::-1], dist.ravel()))
         endog = endog[idx]
         exog = exog[idx]
 
     lowidx = np.ceil(0.5 * (1 - frac) * nobs).astype(int)
     uppidx = np.floor(lowidx + frac * nobs).astype(int)
     if uppidx - lowidx < exog.shape[1]:
-        raise ValueError("frac is too small to perform test. frac * nobs"
-                         "must be greater than the number of exogenous"
-                         "variables in the model.")
+        raise ValueError(
+            "frac is too small to perform test. frac * nobs"
+            "must be greater than the number of exogenous"
+            "variables in the model."
+        )
     mi_sl = slice(lowidx, uppidx)
     res_mi = OLS(endog[mi_sl], exog[mi_sl]).fit()
     nobs_mi = res_mi.model.endog.shape[0]
@@ -1269,7 +1783,7 @@ def linear_lm(resid, exog, func=None):
     lm : float
        Lagrange multiplier test statistic
     lm_pval : float
-       p-value of Lagrange multiplier tes
+       p-value of Lagrange multiplier test
     ftest : ContrastResult instance
        the results from the F test variant of this test
 
@@ -1281,9 +1795,11 @@ def linear_lm(resid, exog, func=None):
     correct.
     """
     if func is None:
+
         def func(x):
             return np.power(x, 2)
 
+    exog = np.asarray(exog)
     exog_aux = np.column_stack((exog, func(exog[:, 1:])))
 
     nobs, k_vars = exog.shape
@@ -1347,8 +1863,10 @@ def spec_white(resid, exog):
     x = array_like(exog, "exog", ndim=2)
     e = array_like(resid, "resid", ndim=1)
     if x.shape[1] < 2 or not np.any(np.ptp(x, 0) == 0.0):
-        raise ValueError("White's specification test requires at least two"
-                         "columns where one is a constant.")
+        raise ValueError(
+            "White's specification test requires at least two"
+            "columns where one is a constant."
+        )
 
     # add interaction terms
     i0, i1 = np.triu_indices(x.shape[1])
@@ -1377,9 +1895,7 @@ def spec_white(resid, exog):
     return stat, pval, dof
 
 
-@deprecate_kwarg("olsresults", "res")
-def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
-                           order_by=None):
+def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None):
     """
     Calculate recursive ols with residuals and Cusum test statistic
 
@@ -1409,10 +1925,10 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
     rypred : ndarray
         The recursive prediction of endogenous variable.
     rresid_standardized : ndarray
-        The recursive residuals standardized so that N(0,sigma2) distributed,
-        where sigma2 is the error variance.
+        The recursive residuals standardized so that N(0,1) distributed.
     rresid_scaled : ndarray
-        The recursive residuals normalize so that N(0,1) distributed.
+        The recursive residuals scaled so that N(0,sigma2) distributed,
+        where sigma2 is the error variance.
     rcusum : ndarray
         The cumulative residuals for cusum test.
     rcusumci : ndarray
@@ -1442,8 +1958,9 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95,
         raise TypeError("res a regression results instance")
     y = res.model.endog
     x = res.model.exog
-    order_by = array_like(order_by, "order_by", dtype="int", optional=True,
-                          ndim=1, shape=(y.shape[0],))
+    order_by = array_like(
+        order_by, "order_by", dtype="int", optional=True, ndim=1, shape=(y.shape[0],)
+    )
     # intialize with skip observations
     if order_by is not None:
         x = x[order_by]
@@ -1467,7 +1984,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
     y0 = y[:skip]
     # add Ridge to start (not in jplv)
     xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
-    xty = np.dot(x0.T, y0)  # xi * y   #np.dot(xi, y)
+    xty = np.dot(x0.T, y0)  # xi * y   # np.dot(xi, y)
     beta = np.dot(xtxi, xty)
     rparams[skip - 1] = beta
     yipred = np.dot(x[skip - 1], beta)
@@ -1475,7 +1992,7 @@ skip large enough to ensure that the first OLS estimator is well-defined.
     rresid[skip - 1] = y[skip - 1] - yipred
     rvarraw[skip - 1] = 1 + np.dot(x[skip - 1], np.dot(xtxi, x[skip - 1]))
     for i in range(skip, nobs):
-        xi = x[i:i + 1, :]
+        xi = x[i : i + 1, :]
         yi = y[i]
 
         # get prediction error with previous beta
@@ -1496,12 +2013,12 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
     rresid_scaled = rresid / np.sqrt(rvarraw)  # N(0,sigma2) distributed
     nrr = nobs - skip
-    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  #var or sum of squares ?
+    # sigma2 = rresid_scaled[skip-1:].var(ddof=1)  # var or sum of squares ?
     # Greene has var, jplv and Ploberger have sum of squares (Ass.:mean=0)
     # Gretl uses: by reverse engineering matching their numbers
     sigma2 = rresid_scaled[skip:].var(ddof=1)
     rresid_standardized = rresid_scaled / np.sqrt(sigma2)  # N(0,1) distributed
-    rcusum = rresid_standardized[skip - 1:].cumsum()
+    rcusum = rresid_standardized[skip - 1 :].cumsum()
     # confidence interval points in Greene p136 looks strange. Cleared up
     # this assumes sum of independent standard normal, which does not take into
     # account that we make many tests at the same time
@@ -1516,10 +2033,18 @@ skip large enough to ensure that the first OLS estimator is well-defined.
 
     # following taken from Ploberger,
     # crit = a * np.sqrt(nrr)
-    rcusumci = (a * np.sqrt(nrr) + 2 * a * np.arange(0, nobs - skip) / np.sqrt(
-        nrr)) * np.array([[-1.], [+1.]])
-    return (rresid, rparams, rypred, rresid_standardized, rresid_scaled,
-            rcusum, rcusumci)
+    rcusumci = (
+        a * np.sqrt(nrr) + 2 * a * np.arange(0, nobs - skip) / np.sqrt(nrr)
+    ) * np.array([[-1.0], [+1.0]])
+    return (
+        rresid,
+        rparams,
+        rypred,
+        rresid_standardized,
+        rresid_scaled,
+        rcusum,
+        rcusumci,
+    )
 
 
 def breaks_hansen(olsresults):
@@ -1553,23 +2078,25 @@ def breaks_hansen(olsresults):
     Greene section 7.5.1, notation follows Greene
     """
     x = olsresults.model.exog
-    resid = array_like(olsresults.resid, "resid", shape=(x.shape[0], 1))
+    resid = array_like(olsresults.resid, "resid", ndim=1, shape=(x.shape[0],))
     nobs, nvars = x.shape
-    resid2 = resid ** 2
+    resid2 = resid**2
     ft = np.c_[x * resid[:, None], (resid2 - resid2.mean())]
     score = ft.cumsum(0)
     f = nobs * (ft[:, :, None] * ft[:, None, :]).sum(0)
     s = (score[:, :, None] * score[:, None, :]).sum(0)
     h = np.trace(np.dot(np.linalg.inv(f), s))
-    crit95 = np.array([(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
-                      dtype=[("nobs", int), ("crit", float)])
+    crit95 = np.array(
+        [(2, 1.01), (6, 1.9), (15, 3.75), (19, 4.52)],
+        dtype=[("nobs", int), ("crit", float)],
+    )
     # TODO: get critical values from Bruce Hansen's 1992 paper
     return h, crit95
 
 
 def breaks_cusumolsresid(resid, ddof=0):
     """
-    Cusum test for parameter stability based on ols residuals.
+    Cusum test for parameter stability based on ols residuals
 
     Parameters
     ----------
@@ -1609,9 +2136,9 @@ def breaks_cusumolsresid(resid, ddof=0):
     Ploberger, Werner, and Walter Kramer. “The Cusum Test with OLS Residuals.”
     Econometrica 60, no. 2 (March 1992): 271-285.
     """
-    resid = resid.ravel()
+    resid = np.asarray(resid).ravel()
     nobs = len(resid)
-    nobssigma2 = (resid ** 2).sum()
+    nobssigma2 = (resid**2).sum()
     if ddof > 0:
         nobssigma2 = nobssigma2 / (nobs - ddof) * nobs
     # b is asymptotically a Brownian Bridge
@@ -1625,6 +2152,7 @@ def breaks_cusumolsresid(resid, ddof=0):
     # array([ 1.62762361,  1.35809864,  1.22384787])
     pval = stats.kstwobign.sf(sup_b)
     return sup_b, pval, crit
+
 
 # def breaks_cusum(recolsresid):
 #    """renormalized cusum test for parameter stability based on recursive
@@ -1646,16 +2174,16 @@ def breaks_cusumolsresid(resid, ddof=0):
 #    """
 #    resid = recolsresid.ravel()
 #    nobssigma2 = (resid**2).sum()
-#    #B is asymptotically a Brownian Bridge
+#    # B is asymptotically a Brownian Bridge
 #    B = resid.cumsum()/np.sqrt(nobssigma2) # use T*sigma directly
 #    nobs = len(resid)
-#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) #not sure about limits
+#    denom = 1. + 2. * np.arange(nobs)/(nobs-1.) # not sure about limits
 #    sup_b = np.abs(B/denom).max()
-#    #asymptotically distributed as standard Brownian Bridge
+#    # asymptotically distributed as standard Brownian Bridge
 #    crit = [(1,1.63), (5, 1.36), (10, 1.22)]
-#    #Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
+#    # Note stats.kstwobign.isf(0.1) is distribution of sup.abs of Brownian
 #    Bridge
 #    #>>> stats.kstwobign.isf([0.01,0.05,0.1])
-#    #array([ 1.62762361,  1.35809864,  1.22384787])
+#    # array([ 1.62762361,  1.35809864,  1.22384787])
 #    pval = stats.kstwobign.sf(sup_b)
 #    return sup_b, pval, crit

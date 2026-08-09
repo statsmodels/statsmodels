@@ -6,7 +6,7 @@
 
 
 
-.. _othermod:
+.. _treatment:
 
 
 Treatment Effects :mod:`treatment`
@@ -24,7 +24,6 @@ for some methods optionally average treatment effect on the treated ATT.
 See also overview notebook in
 `Treatment Effect <examples/notebooks/generated/treatment_effect.ipynb>`_
 
-.. module:: statsmodels.treatment
 .. currentmodule:: statsmodels.treatment
 
 

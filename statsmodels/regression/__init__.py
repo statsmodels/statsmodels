@@ -1,7 +1,9 @@
+"""Regression models and results"""
+
+from statsmodels.tools._test_runner import PytestTester
+
 from .linear_model import yule_walker
 
-from statsmodels.tools._testing import PytestTester
-
-__all__ = ['yule_walker', 'test']
+__all__ = ["test", "yule_walker"]
 
 test = PytestTester()

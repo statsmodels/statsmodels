@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu May 15 16:36:05 2014
 
@@ -13,7 +12,7 @@ import numpy as np
 class LinearConstraints:
     """Class to hold linear constraints information
 
-    Affine constraints are defined as ``R b = q` where `R` is the constraints
+    Affine constraints are defined as ``R b = q`` where `R` is the constraints
     matrix and `q` are the constraints values and `b` are the parameters.
 
     This is in analogy to patsy's LinearConstraints class but can be pickled.
@@ -24,12 +23,11 @@ class LinearConstraints:
         R matrix, 2-dim with number of columns equal to the number of
         parameters. Each row defines one constraint.
     constraint_values : ndarray
-        1-dim array of constant values
+        1-dim array of constant values.
     variable_names : list of strings
-        parameter names, used only for display
+        Parameter names, used only for display.
     kwds : keyword arguments
-        keywords are attached to the instance.
-
+        Keywords are attached to the instance.
     """
 
     def __init__(self, constraint_matrix, constraint_values,
@@ -62,9 +60,9 @@ class LinearConstraints:
             return ss
 
         constraints_strings = []
-        for r, q in zip(*self):
+        for r, q in zip(*self, strict=True):
             ss = []
-            for v, name in zip(r, self.variable_names):
+            for v, name in zip(r, self.variable_names, strict=True):
                 if v != 0 and ss == []:
                     ss += prod_string(v, name)
                 elif v > 0:
@@ -72,26 +70,29 @@ class LinearConstraints:
                 elif v < 0:
                     ss += " - " + prod_string(np.abs(v), name)
             ss += " = " + str(q.item())
-            constraints_strings.append(''.join(ss))
+            constraints_strings.append("".join(ss))
 
-        return '\n'.join(constraints_strings)
+        return "\n".join(constraints_strings)
 
     @classmethod
-    def from_patsy(cls, lc):
-        """class method to create instance from patsy instance
+    def from_formula_parser(cls, lc):
+        """Class method to create instance from patsy instance
 
         Parameters
         ----------
         lc : instance
-            instance of patsy LinearConstraint, or other instances that have
-            attributes ``lc.coefs, lc.constants, lc.variable_names``
+            Instance of patsy LinearConstraint, or other instances that have
+            attributes ``lc.coefs, lc.constants, lc.variable_names``.
 
         Returns
         -------
-        instance of this class
-
+        LinearConstraints
+            Instance of this class.
         """
-        return cls(lc.coefs, lc.constants, lc.variable_names)
+        try:
+            return cls(lc.constraint_matrix, lc.constraint_values, lc.variable_names)
+        except AttributeError:
+            return cls(lc.coefs, lc.constants, lc.variable_names)
 
 
 class TransformRestriction:
@@ -100,14 +101,12 @@ class TransformRestriction:
     Note, the transformation from the reduced to the full parameters is an
     affine and not a linear transformation if q is not zero.
 
-
     Parameters
     ----------
     R : array_like
-        Linear restriction matrix
+        Linear restriction matrix.
     q : arraylike or None
-        values of the linear restrictions
-
+        Values of the linear restrictions.
 
     Notes
     -----
@@ -116,16 +115,15 @@ class TransformRestriction:
     TODO: error checking, eg. inconsistent constraints, how?
 
     Inconsistent constraints will raise an exception in the calculation of
-    the constant or offset. However, homogeneous constraints, where q=0, will
-    can have a solution where the relevant parameters are constraint to be
+    the constant or offset. However, homogeneous constraints, where q=0, can
+    have a solution where the relevant parameters are constraint to be
     zero, as in the following example::
 
         b1 + b2 = 0 and b1 + 2*b2 = 0, implies that b2 = 0.
 
     The transformation applied from full to reduced parameter space does not
-    raise and exception if the constraint does not hold.
+    raise an exception if the constraint does not hold.
     TODO: maybe change this, what's the behavior in this case?
-
 
     The `reduce` transform is applied to the array of explanatory variables,
     `exog`, when transforming a linear model to impose the constraints.
@@ -149,37 +147,38 @@ class TransformRestriction:
         # It makes it easier to interpret simple restrictions, e.g. b1 + b2 = 0
         # TODO: make this work, there is something wrong, does not round-trip
         #       need to adjust constant
-        #evecs_maxabs = np.max(np.abs(evecs), 0)
-        #evecs = evecs / evecs_maxabs
+        # evecs_maxabs = np.max(np.abs(evecs), 0)
+        # evecs = evecs / evecs_maxabs
 
         self.evals = evals
-        self.evecs = evecs # temporarily attach as attribute
+        self.evecs = evecs  # temporarily attach as attribute
         L = self.L = evecs[:, :k_constr]
         self.transf_mat = evecs[:, k_constr:]
 
         if q is not None:
             # use solve instead of inv
-            #self.constant = q.T.dot(np.linalg.inv(L.T.dot(R.T)).dot(L.T))
+            # self.constant = q.T.dot(np.linalg.inv(L.T.dot(R.T)).dot(L.T))
             try:
                 self.constant = q.T.dot(np.linalg.solve(L.T.dot(R.T), L.T))
-            except np.linalg.linalg.LinAlgError as e:
-                raise ValueError('possibly inconsistent constraints. error '
-                                 'generated by\n%r' % (e, ))
+            except (np.linalg.LinAlgError, ValueError) as e:
+                # ValueError on WASM
+                raise ValueError("possibly inconsistent constraints. error "
+                                 f"generated by\n{e!r}") from e
         else:
             self.constant = 0
 
     def expand(self, params_reduced):
-        """transform from the reduced to the full parameter space
+        """Transform from the reduced to the full parameter space
 
         Parameters
         ----------
         params_reduced : array_like
-            parameters in the transformed space
+            Parameters in the transformed space.
 
         Returns
         -------
         params : array_like
-            parameters in the original space
+            Parameters in the original space.
 
         Notes
         -----
@@ -190,45 +189,45 @@ class TransformRestriction:
         return self.transf_mat.dot(params_reduced.T).T + self.constant
 
     def reduce(self, params):
-        """transform from the full to the reduced parameter space
+        """Transform from the full to the reduced parameter space
+
+        This transform can be applied to the original parameters as well
+        as to the data. If params is 2-d, then each row is transformed.
 
         Parameters
         ----------
         params : array_like
-            parameters or data in the original space
+            Parameters or data in the original space.
 
         Returns
         -------
         params_reduced : array_like
-            parameters in the transformed space
-
-        This transform can be applied to the original parameters as well
-        as to the data. If params is 2-d, then each row is transformed.
+            Parameters in the transformed space.
         """
         params = np.asarray(params)
         return params.dot(self.transf_mat)
 
 
 def transform_params_constraint(params, Sinv, R, q):
-    """find the parameters that statisfy linear constraint from unconstrained
+    """Find the parameters that satisfy linear constraint from unconstrained
 
     The linear constraint R params = q is imposed.
 
     Parameters
     ----------
     params : array_like
-        unconstrained parameters
+        Unconstrained parameters.
     Sinv : ndarray, 2d, symmetric
-        covariance matrix of the parameter estimate
+        Covariance matrix of the parameter estimate.
     R : ndarray, 2d
-        constraint matrix
+        Constraint matrix.
     q : ndarray, 1d
-        values of the constraint
+        Values of the constraint.
 
     Returns
     -------
     params_constraint : ndarray
-        parameters of the same length as params satisfying the constraint
+        Parameters of the same length as params satisfying the constraint.
 
     Notes
     -----
@@ -251,7 +250,7 @@ def transform_params_constraint(params, Sinv, R, q):
 def fit_constrained(model, constraint_matrix, constraint_values,
                     start_params=None, fit_kwds=None):
     # note: self is model instance
-    """fit model subject to linear equality constraints
+    """Fit model subject to linear equality constraints
 
     The constraints are of the form   `R params = q`
     where R is the constraint_matrix and q is the vector of constraint_values.
@@ -259,43 +258,41 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     The estimation creates a new model with transformed design matrix,
     exog, and converts the results back to the original parameterization.
 
-
     Parameters
     ----------
-    model: model instance
-        An instance of a model, see limitations in Notes section
+    model : model instance
+        An instance of a model, see limitations in Notes section.
     constraint_matrix : array_like, 2D
         This is R in the linear equality constraint `R params = q`.
         The number of columns needs to be the same as the number of columns
         in exog.
-    constraint_values :
-        This is `q` in the linear equality constraint `R params = q`
+    constraint_values : array_like
+        This is `q` in the linear equality constraint `R params = q`.
         If it is a tuple, then the constraint needs to be given by two
         arrays (constraint_matrix, constraint_value), i.e. (R, q).
         Otherwise, the constraints can be given as strings or list of
         strings.
-        see t_test for details
+        See t_test for details.
     start_params : None or array_like
-        starting values for the optimization. `start_params` needs to be
+        Starting values for the optimization. `start_params` needs to be
         given in the original parameter space and are internally
         transformed.
-    **fit_kwds : keyword arguments
+    fit_kwds : dict, optional
         fit_kwds are used in the optimization of the transformed model.
 
     Returns
     -------
-    params : ndarray ?
-        estimated parameters (in the original parameterization
+    params : ndarray
+        Estimated parameters (in the original parameterization).
     cov_params : ndarray
-        covariance matrix of the parameter estimates. This is a reverse
+        Covariance matrix of the parameter estimates. This is a reverse
         transformation of the covariance matrix of the transformed model given
-        by `cov_params()`
+        by `cov_params()`.
         Note: `fit_kwds` can affect the choice of covariance, e.g. by
         specifying `cov_type`, which will be reflected in the returned
         covariance.
     res_constr : results instance
         This is the results instance for the created transformed model.
-
 
     Notes
     -----
@@ -318,19 +315,19 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     exogp_st = transf.reduce(exog)
 
     offset = exog.dot(transf.constant.squeeze())
-    if hasattr(self, 'offset'):
+    if getattr(self, "offset", None) is not None:
         offset += self.offset
 
     if start_params is not None:
-        start_params =  transf.reduce(start_params)
+        start_params = transf.reduce(start_params)
 
-    #need copy, because we do not want to change it, we do not need deepcopy
+    # need copy, because we do not want to change it, we do not need deepcopy
     import copy
     init_kwds = copy.copy(self._get_init_kwds())
 
     # TODO: refactor to combine with above or offset_all
-    if 'offset' in init_kwds:
-        del init_kwds['offset']
+    if "offset" in init_kwds:
+        del init_kwds["offset"]
 
     # using offset as keywords is not supported in all modules
     mod_constr = self.__class__(endog, exogp_st, offset=offset, **init_kwds)
@@ -342,45 +339,67 @@ def fit_constrained(model, constraint_matrix, constraint_values,
 
 
 def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
-    """fit_constraint that returns a results instance
+    """Fit a constrained model and return a results instance
 
     This is a development version for fit_constrained methods or
     fit_constrained as standalone function.
 
     It will not work correctly for all models because creating a new
     results instance is not standardized for use outside the `fit` methods,
-    and might need adjustements for this.
+    and might need adjustments for this.
 
     This is the prototype for the fit_constrained method that has been added
     to Poisson and GLM.
+
+    Parameters
+    ----------
+    model : model instance
+        An instance of a model that supports `fit_constrained`.
+    constraints : str, tuple or array_like
+        Constraints as accepted by
+        ``FormulaManager.get_linear_constraints``, e.g. a string, a
+        sequence of strings, or a tuple (R, q).
+    start_params : None or array_like
+        Starting values for the optimization, in the original parameter
+        space.
+    **fit_kwds : keyword arguments
+        Keyword arguments used in the optimization of the transformed
+        model.
+
+    Returns
+    -------
+    Results
+        A results wrapper instance with the constrained parameter
+        estimates and covariance.
     """
 
     self = model  # alias for use as method
 
-    #constraints = (R, q)
+    # constraints = (R, q)
     # TODO: temporary trailing underscore to not overwrite the monkey
     #       patched version
     # TODO: decide whether to move the imports
-    from patsy import DesignInfo
-    # we need this import if we copy it to a different module
-    #from statsmodels.base._constraints import fit_constrained
+    from statsmodels.formula._manager import FormulaManager
 
+    # we need this import if we copy it to a different module
+    # from statsmodels.base._constraints import fit_constrained
     # same pattern as in base.LikelihoodModel.t_test
-    lc = DesignInfo(self.exog_names).linear_constraint(constraints)
-    R, q = lc.coefs, lc.constants
+    mgr = FormulaManager()
+    lc = mgr.get_linear_constraints(constraints, self.exog_names)
+    R, q = lc.constraint_matrix, lc.constraint_values
 
     # TODO: add start_params option, need access to tranformation
     #       fit_constrained needs to do the transformation
     params, cov, res_constr = fit_constrained(self, R, q,
                                               start_params=start_params,
                                               fit_kwds=fit_kwds)
-    #create dummy results Instance, TODO: wire up properly
+    # create dummy results Instance, TODO: wire up properly
     res = self.fit(start_params=params, maxiter=0,
                    warn_convergence=False)  # we get a wrapper back
     res._results.params = params
     res._results.cov_params_default = cov
-    cov_type = fit_kwds.get('cov_type', 'nonrobust')
-    if cov_type == 'nonrobust':
+    cov_type = fit_kwds.get("cov_type", "nonrobust")
+    if cov_type == "nonrobust":
         res._results.normalized_cov_params = cov / res_constr.scale
     else:
         res._results.normalized_cov_params = None
@@ -388,7 +407,7 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
     k_constr = len(q)
     res._results.df_resid += k_constr
     res._results.df_model -= k_constr
-    res._results.constraints = LinearConstraints.from_patsy(lc)
+    res._results.constraints = LinearConstraints.from_formula_parser(lc)
     res._results.k_constr = k_constr
     res._results.results_constrained = res_constr
     return res

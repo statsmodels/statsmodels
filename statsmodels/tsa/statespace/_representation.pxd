@@ -4,11 +4,12 @@
 """
 State Space Models declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton 
 License: Simplified-BSD
 """
 
 cimport numpy as np
+
 
 cdef class sStatespace(object):
     # Statespace dimensions

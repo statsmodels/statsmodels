@@ -9,7 +9,7 @@ The delta tests utilize Silverman's motorcycle collision data,
 available in R's MASS package.
 """
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -17,17 +17,16 @@ from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_equal,
-    assert_raises,
 )
+import pandas as pd
 import pytest
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
-import pandas as pd
 
 # Number of decimals to test equality with.
 # The default is 7.
-curdir = os.path.dirname(os.path.abspath(__file__))
-rpath = os.path.join(curdir, "results")
+curdir = Path(__file__).resolve().parent
+rpath = Path(curdir).joinpath("results")
 
 
 class TestLowess:
@@ -39,7 +38,7 @@ class TestLowess:
         lowess1 = sm.nonparametric.lowess
         assert_(lowess is lowess1)
 
-    @pytest.mark.parametrize("use_pandas",[False, True])
+    @pytest.mark.parametrize("use_pandas", [False, True])
     def test_flat(self, use_pandas):
         test_data = {
             "x": np.arange(20),
@@ -65,9 +64,7 @@ class TestLowess:
     @staticmethod
     def generate(name, fname, x="x", y="y", out="out", kwargs=None, decimal=7):
         kwargs = {} if kwargs is None else kwargs
-        data = np.genfromtxt(
-            os.path.join(rpath, fname), delimiter=",", names=True
-        )
+        data = pd.read_csv(Path(rpath).joinpath(fname))
         assert_almost_equal.description = name
         if callable(kwargs):
             kwargs = kwargs(data)
@@ -140,12 +137,14 @@ class TestLowess:
         )
 
     def test_options(self):
-        rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
-        y, x = test_data["y"], test_data["x"]
-        res1_fitted = test_data["out"]
-        expected_lowess = np.array([test_data["x"], test_data["out"]]).T
-
+        rs = np.random.RandomState(8437973)
+        rfile = Path(rpath).joinpath("test_lowess_simple.csv")
+        test_data = pd.read_csv(rfile, dtype=float)
+        y = np.require(test_data["y"], requirements="W")
+        x = np.require(test_data["x"], requirements="W")
+        expected_lowess = np.column_stack(
+            [test_data["x"].to_numpy(), test_data["out"].to_numpy()]
+        )
         # check skip sorting
         actual_lowess1 = lowess(y, x, is_sorted=True)
         assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
@@ -182,11 +181,9 @@ class TestLowess:
 
         # Test specifying xvals explicitly
         perm_idx = np.arange(len(x) // 2)
-        np.random.shuffle(perm_idx)
+        rs.shuffle(perm_idx)
         actual_lowess2 = lowess(y, x, xvals=x[perm_idx], return_sorted=False)
-        assert_almost_equal(
-            actual_lowess[perm_idx, 1], actual_lowess2, decimal=13
-        )
+        assert_almost_equal(actual_lowess[perm_idx, 1], actual_lowess2, decimal=13)
 
         # check with nans,  this changes the arrays
         y[[5, 6]] = np.nan
@@ -196,18 +193,17 @@ class TestLowess:
         actual_lowess = lowess(y, x, is_sorted=True)
         actual_lowess1 = lowess(y[mask_valid], x[mask_valid], is_sorted=True)
         assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
-        assert_raises(ValueError, lowess, y, x, missing="raise")
+        with pytest.raises(ValueError):
+            lowess(y, x, missing="raise")
 
         perm_idx = np.arange(len(x))
-        np.random.shuffle(perm_idx)
+        rs.shuffle(perm_idx)
         yperm = y[perm_idx]
         xperm = x[perm_idx]
         actual_lowess2 = lowess(yperm, xperm, is_sorted=False)
         assert_almost_equal(actual_lowess, actual_lowess2, decimal=13)
 
-        actual_lowess3 = lowess(
-            yperm, xperm, is_sorted=False, return_sorted=False
-        )
+        actual_lowess3 = lowess(yperm, xperm, is_sorted=False, return_sorted=False)
         mask_valid = np.isfinite(xperm) & np.isfinite(yperm)
         assert_equal(np.isnan(actual_lowess3), ~mask_valid)
         # get valid sorted smoothed y from actual_lowess3
@@ -221,15 +217,14 @@ class TestLowess:
         actual_lowess4 = lowess(
             y, x, xvals=actual_lowess[perm_idx, 0], return_sorted=False
         )
-        assert_almost_equal(
-            actual_lowess[perm_idx, 1], actual_lowess4, decimal=13
-        )
+        assert_almost_equal(actual_lowess[perm_idx, 1], actual_lowess4, decimal=13)
 
     def test_duplicate_xs(self):
         # see 2449
         # Generate cases with many duplicate x values
+        rs = np.random.RandomState(8437972)
         x = [0] + [1] * 100 + [2] * 100 + [3]
-        y = x + np.random.normal(size=len(x)) * 1e-8
+        y = x + rs.normal(size=len(x)) * 1e-8
         result = lowess(y, x, frac=50 / len(x), it=1)
         # fit values should be approximately averages of values at
         # a particular fit, which in this case are just equal to x
@@ -241,20 +236,21 @@ class TestLowess:
         # harder further along.
         # This used to give an outlier bad fit at position 961
         x = np.linspace(0, 10, 1001)
-        y = np.cos(x ** 2 / 5)
+        y = np.cos(x**2 / 5)
         result = lowess(y, x, frac=11 / len(x), it=1)
         assert_(np.all(result[:, 1] > np.min(y) - 0.1))
         assert_(np.all(result[:, 1] < np.max(y) + 0.1))
 
     def test_exog_predict(self):
-        rfile = os.path.join(rpath, "test_lowess_simple.csv")
-        test_data = np.genfromtxt(open(rfile, "rb"), delimiter=",", names=True)
+        rs = np.random.RandomState(8437971)
+        rfile = Path(rpath).joinpath("test_lowess_simple.csv")
+        test_data = pd.read_csv(rfile)
         y, x = test_data["y"], test_data["x"]
         target = lowess(y, x, is_sorted=True)
 
         # Test specifying exog_predict explicitly
         perm_idx = np.arange(len(x) // 2)
-        np.random.shuffle(perm_idx)
+        rs.shuffle(perm_idx)
         actual_lowess = lowess(y, x, xvals=x[perm_idx], missing="none")
         assert_almost_equal(target[perm_idx, 1], actual_lowess, decimal=13)
 
@@ -298,7 +294,7 @@ def test_returns_inputs():
     assert_almost_equal(result, np.column_stack((x, y)))
 
 
-def test_xvals_dtype(reset_randomstate):
+def test_xvals_dtype():
     y = [0] * 10 + [1] * 10
     x = np.arange(20)
     # Previously raised ValueError: Buffer dtype mismatch

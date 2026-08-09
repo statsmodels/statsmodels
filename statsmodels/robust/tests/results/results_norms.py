@@ -1,5 +1,3 @@
-
-
 from statsmodels.tools.testing import Holder
 
 res_hampel = Holder(

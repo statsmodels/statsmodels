@@ -1,22 +1,31 @@
-# -*- coding: utf-8 -*-
-"""Base classes for statistical test results
+"""
+Base classes for statistical test results
 
 Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat.python import lzip
 import numpy as np
+
 from statsmodels.tools.testing import Holder
 
 
 class HolderTuple(Holder):
-    """Holder class with indexing
+    """
+    Holder class with indexing
 
+    Parameters
+    ----------
+    tuple_ : tuple of str, optional
+        Names of the attributes, in order, that should be collected into
+        ``self.tuple``. If None, ``self.tuple`` is set to
+        ``(self.statistic, self.pvalue)``.
+    **kwds : dict
+        Keyword arguments that are set as attributes, as in ``Holder``.
     """
 
     def __init__(self, tuple_=None, **kwds):
-        super(HolderTuple, self).__init__(**kwds)
+        super().__init__(**kwds)
         if tuple_ is not None:
             self.tuple = tuple(getattr(self, att) for att in tuple_)
         else:
@@ -31,12 +40,14 @@ class HolderTuple(Holder):
     def __len__(self):
         return len(self.tuple)
 
-    def __array__(self, dtype=None):
-        return np.asarray(list(self.tuple), dtype=dtype)
+    def __array__(self, dtype=None, copy=None):
+        copy = copy if copy is not None else True
+        return np.array(list(self.tuple), dtype=dtype, copy=copy)
 
 
 class AllPairsResults:
-    '''Results class for pairwise comparisons, based on p-values
+    """
+    Results class for pairwise comparisons, based on p-values
 
     Parameters
     ----------
@@ -60,9 +71,9 @@ class AllPairsResults:
     This class can also be used for other pairwise comparisons, for example
     comparing several treatments to a control (as in Dunnet's test).
 
-    '''
+    """
 
-    def __init__(self, pvals_raw, all_pairs, multitest_method='hs',
+    def __init__(self, pvals_raw, all_pairs, multitest_method="hs",
                  levels=None, n_levels=None):
         self.pvals_raw = pvals_raw
         self.all_pairs = all_pairs
@@ -75,19 +86,29 @@ class AllPairsResults:
         self.multitest_method = multitest_method
         self.levels = levels
         if levels is None:
-            self.all_pairs_names = ['%r' % (pairs,) for pairs in all_pairs]
+            self.all_pairs_names = [f"{pairs}" for pairs in all_pairs]
         else:
-            self.all_pairs_names = ['%s-%s' % (levels[pairs[0]],
-                                               levels[pairs[1]])
+            self.all_pairs_names = [f"{levels[pairs[0]]}-{levels[pairs[1]]}"
                                     for pairs in all_pairs]
 
     def pval_corrected(self, method=None):
-        '''p-values corrected for multiple testing problem
+        """
+        p-values corrected for multiple testing problem
 
         This uses the default p-value correction of the instance stored in
         ``self.multitest_method`` if method is None.
 
-        '''
+        Parameters
+        ----------
+        method : str, optional
+            p-value correction method to use. If None, the default method
+            stored in ``self.multitest_method`` is used.
+
+        Returns
+        -------
+        ndarray
+            Corrected p-values.
+        """
         import statsmodels.stats.multitest as smt
         if method is None:
             method = self.multitest_method
@@ -98,28 +119,39 @@ class AllPairsResults:
         return self.summary()
 
     def pval_table(self):
-        '''create a (n_levels, n_levels) array with corrected p_values
+        """
+        create a (n_levels, n_levels) array with corrected p_values
 
         this needs to improve, similar to R pairwise output
-        '''
+
+        Returns
+        -------
+        ndarray
+            Array of shape (n_levels, n_levels) with corrected p-values.
+        """
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we do not assume we have all pairs
-        pvals_mat[lzip(*self.all_pairs)] = self.pval_corrected()
+        pvals_mat[list(zip(*self.all_pairs, strict=True))] = self.pval_corrected()
         return pvals_mat
 
     def summary(self):
-        '''returns text summarizing the results
+        """
+        returns text summarizing the results
 
         uses the default pvalue correction of the instance stored in
         ``self.multitest_method``
-        '''
-        import statsmodels.stats.multitest as smt
-        maxlevel = max((len(ss) for ss in self.all_pairs_names))
 
-        text = ('Corrected p-values using %s p-value correction\n\n'
-                % smt.multitest_methods_names[self.multitest_method])
-        text += 'Pairs' + (' ' * (maxlevel - 5 + 1)) + 'p-values\n'
-        text += '\n'.join(('%s  %6.4g' % (pairs, pv) for (pairs, pv) in
-                          zip(self.all_pairs_names, self.pval_corrected())))
+        Returns
+        -------
+        str
+            Summary text of the pairwise comparison results.
+        """
+        import statsmodels.stats.multitest as smt
+        maxlevel = max(len(ss) for ss in self.all_pairs_names)
+
+        text = (f"Corrected p-values using {smt.multitest_methods_names[self.multitest_method]} p-value correction\n\n")
+        text += "Pairs" + (" " * (maxlevel - 5 + 1)) + "p-values\n"
+        text += "\n".join(f"{pairs}  {pv:6.4g}" for (pairs, pv) in
+                          zip(self.all_pairs_names, self.pval_corrected(), strict=True))
         return text

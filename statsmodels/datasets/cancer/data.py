@@ -1,22 +1,22 @@
 """Breast Cancer Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """???"""
-TITLE       = """Breast Cancer Data"""
-SOURCE      = """
+COPYRIGHT = """???"""
+TITLE = """Breast Cancer Data"""
+SOURCE = """
 This is the breast cancer data used in Owen's empirical likelihood.  It is taken from
 Rice, J.A. Mathematical Statistics and Data Analysis.
 http://www.cengage.com/statistics/discipline_content/dataLibrary.html
 """
 
-DESCRSHORT  = """Breast Cancer and county population"""
+DESCRSHORT = """Breast Cancer and county population"""
 
-DESCRLONG   = """The number of breast cancer observances in various counties"""
+DESCRLONG = """The number of breast cancer observances in various counties"""
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations: 301
     Number of variables: 2
@@ -46,4 +46,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'cancer.csv', convert_float=True)
+    return du.load_csv(__file__, "cancer.csv", convert_float=True)

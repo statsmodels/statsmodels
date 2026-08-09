@@ -7,7 +7,7 @@
 
 
 Other Models :mod:`othermod`
-==============================
+============================
 
 :mod:`statsmodels.othermod` contains model classes that do not fit into
 any other category, for example models for a response variable ``endog`` that
@@ -26,8 +26,8 @@ Interval Models :mod:`betareg`
 ------------------------------
 
 Models for continuous dependent variables that are in the unit interval such
-as fractions. These Models are estimated by full Maximum Likelihood. 
-Dependent variables on the unit interval can also be estimate by 
+as fractions. These Models are estimated by full Maximum Likelihood.
+Dependent variables on the unit interval can also be estimate by
 Quasi Maximum Likelihood using models for binary endog, such as Logit and
 GLM-Binomial. (The implementation of discrete.Probit assumes binary endog and
 cannot estimate a QMLE for continuous dependent variable.)

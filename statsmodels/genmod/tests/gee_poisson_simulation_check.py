@@ -5,12 +5,15 @@ This script checks Poisson models.
 
 See the generated file "gee_poisson_simulation_check.txt" for results.
 """
+from pathlib import Path
 
 import numpy as np
+
+from statsmodels.genmod.cov_struct import Exchangeable, Independence
 from statsmodels.genmod.families import Poisson
-from .gee_gaussian_simulation_check import GEE_simulator
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.cov_struct import Exchangeable,Independence
+
+from .gee_gaussian_simulation_check import GEE_simulator
 
 
 class Exchangeable_simulator(GEE_simulator):
@@ -35,16 +38,11 @@ class Exchangeable_simulator(GEE_simulator):
     scale_inv = 1.
 
     def print_dparams(self, dparams_est):
-        OUT.write("Estimated common pairwise correlation:   %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("True common pairwise correlation:        %8.4f\n" %
-                  self.dparams[0])
-        OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
-                  dparams_est[1])
-        OUT.write("True inverse scale parameter:            %8.4f\n" %
-                  self.scale_inv)
+        OUT.write(f"Estimated common pairwise correlation:   {dparams_est[0]:8.4f}\n")
+        OUT.write(f"True common pairwise correlation:        {self.dparams[0]:8.4f}\n")
+        OUT.write(f"Estimated inverse scale parameter:       {dparams_est[1]:8.4f}\n")
+        OUT.write(f"True inverse scale parameter:            {self.scale_inv:8.4f}\n")
         OUT.write("\n")
-
 
     def simulate(self):
 
@@ -52,9 +50,10 @@ class Exchangeable_simulator(GEE_simulator):
 
         # Get a basis for the orthogonal complement to params.
         f = np.sum(self.params**2)
-        u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
-                               np.outer(self.params, self.params) / f)
-        params0 = u[:,np.flatnonzero(s > 1e-6)]
+        u, s, vt = np.linalg.svd(
+            np.eye(len(self.params)) - np.outer(self.params, self.params) / f
+        )
+        params0 = u[:, np.flatnonzero(s > 1e-6)]
 
         for i in range(self.ngroups):
 
@@ -107,24 +106,21 @@ class Overdispersed_simulator(GEE_simulator):
     dparams[0] is the common correlation coefficient
     """
 
-
     def print_dparams(self, dparams_est):
-        OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("True inverse scale parameter:            %8.4f\n" %
-                  self.scale_inv)
+        OUT.write(f"Estimated inverse scale parameter:       {dparams_est[0]:8.4f}\n")
+        OUT.write(f"True inverse scale parameter:            {self.scale_inv:8.4f}\n")
         OUT.write("\n")
-
 
     def simulate(self):
 
         endog, exog, group, time = [], [], [], []
 
         # Get a basis for the orthogonal complement to params.
-        f = np.sum(self.params**2)
-        u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
-                               np.outer(self.params, self.params) / f)
-        params0 = u[:,np.flatnonzero(s > 1e-6)]
+        # Unused, commented out
+        # f = np.sum(self.params**2)
+        # u,s,vt = np.linalg.svd(np.eye(len(self.params)) -
+        #                       np.outer(self.params, self.params) / f)
+        # params0 = u[:,np.flatnonzero(s > 1e-6)]
 
         for i in range(self.ngroups):
 
@@ -154,7 +150,6 @@ class Overdispersed_simulator(GEE_simulator):
         self.group = np.concatenate(group)
 
 
-
 def gendat_exchangeable():
     exs = Exchangeable_simulator()
     exs.params = np.r_[2., 0.2, 0.2, -0.1, -0.2]
@@ -162,6 +157,7 @@ def gendat_exchangeable():
     exs.dparams = [0.3,]
     exs.simulate()
     return exs, Exchangeable()
+
 
 def gendat_overdispersed():
     exs = Overdispersed_simulator()
@@ -175,10 +171,10 @@ def gendat_overdispersed():
 
 if __name__ == "__main__":
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                         suppress=True)
 
-    OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
+    OUT = Path("gee_poisson_simulation_check.txt").open("w", encoding="utf-8")
 
     nrep = 100
 
@@ -195,7 +191,7 @@ if __name__ == "__main__":
         std_errors = []
         dparams = []
 
-        for j in range(nrep):
+        for _ in range(nrep):
 
             da, va = gendat()
             ga = Poisson()
@@ -207,7 +203,7 @@ if __name__ == "__main__":
             mdf = md.fit()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
-            mdf = md.fit(start_params = mdf.params)
+            mdf = md.fit(start_params=mdf.params)
             if mdf is None or (not mdf.converged):
                 print("Failed to converge")
                 continue
@@ -217,7 +213,7 @@ if __name__ == "__main__":
             params.append(np.asarray(mdf.params))
             std_errors.append(np.asarray(mdf.standard_errors))
 
-            da,va = gendat()
+            da, va = gendat()
             ga = Poisson()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
@@ -232,8 +228,7 @@ if __name__ == "__main__":
             pvalues.append(pvalue)
 
         dparams_mean = np.array(sum(dparams) / len(dparams))
-        OUT.write("Results based on %d successful fits out of %d data sets.\n\n"
-                  % (len(dparams), nrep))
+        OUT.write(f"Results based on {len(dparams):d} successful fits out of {nrep:d} data sets.\n\n")
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
 
@@ -274,9 +269,7 @@ if __name__ == "__main__":
         OUT.write("Right hand side:\n")
         OUT.write(np.array_str(rhs) + "\n")
         OUT.write("Observed p-values   Expected Null p-values\n")
-        for q in np.arange(0.1, 0.91, 0.1):
-            OUT.write("%20.3f %20.3f\n" %
-                      (pvalues[int(q*len(pvalues))], q))
+        OUT.writelines(f"{pvalues[int(q*len(pvalues))]:20.3f} {q:20.3f}\n" for q in np.arange(0.1, 0.91, 0.1))
 
         OUT.write("=" * 80 + "\n\n")
 

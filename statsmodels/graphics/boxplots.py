@@ -1,4 +1,4 @@
-"""Variations on boxplots."""
+"""Variations on boxplots"""
 
 # Author: Ralf Gommers
 # Based on code by Flavio Coelho and Teemu Ikonen.
@@ -6,15 +6,24 @@
 import numpy as np
 from scipy.stats import gaussian_kde
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 from . import utils
 
-__all__ = ['violinplot', 'beanplot']
+__all__ = ["beanplot", "violinplot"]
 
 
-def violinplot(data, ax=None, labels=None, positions=None, side='both',
-               show_boxplot=True, plot_opts=None):
+def violinplot(
+    data,
+    ax=None,
+    labels=None,
+    positions=None,
+    side="both",
+    show_boxplot=True,
+    plot_opts=None,
+):
     """
-    Make a violin plot of each dataset in the `data` sequence.
+    Make a violin plot of each dataset in the `data` sequence
 
     A violin plot is a boxplot combined with a kernel density estimate of the
     probability density function per point.
@@ -45,7 +54,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
           - 'violin_fc', MPL color.  Fill color for violins.  Default is 'y'.
           - 'violin_ec', MPL color.  Edge color for violins.  Default is 'k'.
           - 'violin_lw', scalar.  Edge linewidth for violins.  Default is 1.
-          - 'violin_alpha', float.  Transparancy of violins.  Default is 0.5.
+          - 'violin_alpha', float.  Transparency of violins.  Default is 0.5.
           - 'cutoff', bool.  If True, limit violin range to data range.
                 Default is False.
           - 'cutoff_val', scalar.  Where to cut off violins if `cutoff` is
@@ -104,7 +113,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     >>> data = sm.datasets.anes96.load_pandas()
     >>> party_ID = np.arange(7)
     >>> labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",
-    ...           "Independent-Indpendent", "Independent-Republican",
+    ...           "Independent-Independent", "Independent-Republican",
     ...           "Weak Republican", "Strong Republican"]
 
     Group age by party ID, and create a violin plot with it:
@@ -136,15 +145,20 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
     # Determine available horizontal space for each individual violin.
     pos_span = np.max(positions) - np.min(positions)
-    width = np.min([0.15 * np.max([pos_span, 1.]),
-                    plot_opts.get('violin_width', 0.8) / 2.])
+    width = np.min(
+        [0.15 * np.max([pos_span, 1.0]), plot_opts.get("violin_width", 0.8) / 2.0]
+    )
 
     # Plot violins.
-    for pos_data, pos in zip(data, positions):
+    for pos_data, pos in zip(data, positions, strict=True):
         _single_violin(ax, pos, pos_data, width, side, plot_opts)
 
     if show_boxplot:
-        ax.boxplot(data, notch=1, positions=positions, vert=1)
+        try:
+            ax.boxplot(data, notch=1, positions=positions, orientation="vertical")
+        except TypeError:
+            # Remove after Matplotlib 3.10 is the minimum
+            ax.boxplot(data, notch=1, positions=positions, vert=1)
 
     # Set ticks and tick labels of horizontal axis.
     _set_ticks_labels(ax, data, labels, positions, plot_opts)
@@ -153,18 +167,18 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
 
 
 def _single_violin(ax, pos, pos_data, width, side, plot_opts):
-    """"""
-    bw_factor = plot_opts.get('bw_factor', None)
+    """Draw a single violin onto `ax` at position `pos`"""
+    bw_factor = plot_opts.get("bw_factor", None)
 
     def _violin_range(pos_data, plot_opts):
-        """Return array with correct range, with which violins can be plotted."""
-        cutoff = plot_opts.get('cutoff', False)
-        cutoff_type = plot_opts.get('cutoff_type', 'std')
-        cutoff_val = plot_opts.get('cutoff_val', 1.5)
+        """Return array with correct range, with which violins can be plotted"""
+        cutoff = plot_opts.get("cutoff", False)
+        cutoff_type = plot_opts.get("cutoff_type", "std")
+        cutoff_val = plot_opts.get("cutoff_val", 1.5)
 
         s = 0.0
         if not cutoff:
-            if cutoff_type == 'std':
+            if cutoff_type == "std":
                 s = cutoff_val * np.std(pos_data)
             else:
                 s = cutoff_val
@@ -182,35 +196,39 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
     violin = kde.evaluate(xvals)
     violin = width * violin / violin.max()
 
-    if side == 'both':
+    if side == "both":
         envelope_l, envelope_r = (-violin + pos, violin + pos)
-    elif side == 'right':
+    elif side == "right":
         envelope_l, envelope_r = (pos, violin + pos)
-    elif side == 'left':
+    elif side == "left":
         envelope_l, envelope_r = (-violin + pos, pos)
     else:
         msg = "`side` parameter should be one of {'left', 'right', 'both'}."
         raise ValueError(msg)
 
     # Draw the violin.
-    ax.fill_betweenx(xvals, envelope_l, envelope_r,
-                     facecolor=plot_opts.get('violin_fc', '#66c2a5'),
-                     edgecolor=plot_opts.get('violin_ec', 'k'),
-                     lw=plot_opts.get('violin_lw', 1),
-                     alpha=plot_opts.get('violin_alpha', 0.5))
+    ax.fill_betweenx(
+        xvals,
+        envelope_l,
+        envelope_r,
+        facecolor=plot_opts.get("violin_fc", "#66c2a5"),
+        edgecolor=plot_opts.get("violin_ec", "k"),
+        lw=plot_opts.get("violin_lw", 1),
+        alpha=plot_opts.get("violin_alpha", 0.5),
+    )
 
     return xvals, violin
 
 
 def _set_ticks_labels(ax, data, labels, positions, plot_opts):
-    """Set ticks and labels on horizontal axis."""
+    """Set ticks and labels on horizontal axis"""
 
     # Set xticks and limits.
     ax.set_xlim([np.min(positions) - 0.5, np.max(positions) + 0.5])
     ax.set_xticks(positions)
 
-    label_fontsize = plot_opts.get('label_fontsize')
-    label_rotation = plot_opts.get('label_rotation')
+    label_fontsize = plot_opts.get("label_fontsize")
+    label_rotation = plot_opts.get("label_rotation")
     if label_fontsize or label_rotation:
         from matplotlib.artist import setp
 
@@ -226,13 +244,20 @@ def _set_ticks_labels(ax, data, labels, positions, plot_opts):
         if label_rotation:
             setp(xticknames, rotation=label_rotation)
 
-    return
 
-
-def beanplot(data, ax=None, labels=None, positions=None, side='both',
-             jitter=False, plot_opts={}):
+def beanplot(
+    data,
+    ax=None,
+    labels=None,
+    positions=None,
+    side="both",
+    jitter=False,
+    plot_opts=None,
+    *,
+    rng=None,
+):
     """
-    Bean plot of each dataset in a sequence.
+    Bean plot of each dataset in a sequence
 
     A bean plot is a combination of a `violinplot` (kernel density estimate of
     the probability density function per point) with a line-scatter plot of all
@@ -242,7 +267,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
     ----------
     data : sequence[array_like]
         Data arrays, one array per value in `positions`.
-    ax : AxesSubplot
+    ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     labels : list[str], optional
@@ -284,6 +309,12 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
           - 'jitter_marker_size', int.  Marker size.  Default is 4.
           - 'jitter_fc', MPL color.  Jitter marker face color.  Default is None.
           - 'bean_legend_text', str.  If given, add a legend with given text.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -310,7 +341,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
     >>> data = sm.datasets.anes96.load_pandas()
     >>> party_ID = np.arange(7)
     >>> labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",
-    ...           "Independent-Indpendent", "Independent-Republican",
+    ...           "Independent-Independent", "Independent-Republican",
     ...           "Weak Republican", "Strong Republican"]
 
     Group age by party ID, and create a violin plot with it:
@@ -329,6 +360,7 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
     .. plot:: plots/graphics_boxplot_beanplot.py
     """
+    plot_opts = {} if plot_opts is None else plot_opts
     fig, ax = utils.create_mpl_ax(ax)
 
     data = list(map(np.asarray, data))
@@ -337,33 +369,46 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
 
     # Determine available horizontal space for each individual violin.
     pos_span = np.max(positions) - np.min(positions)
-    violin_width = np.min([0.15 * np.max([pos_span, 1.]),
-                    plot_opts.get('violin_width', 0.8) / 2.])
-    bean_width = np.min([0.15 * np.max([pos_span, 1.]),
-                    plot_opts.get('bean_size', 0.5) / 2.])
-    bean_mean_width = np.min([0.15 * np.max([pos_span, 1.]),
-                    plot_opts.get('bean_mean_size', 0.5) / 2.])
+    violin_width = np.min(
+        [0.15 * np.max([pos_span, 1.0]), plot_opts.get("violin_width", 0.8) / 2.0]
+    )
+    bean_width = np.min(
+        [0.15 * np.max([pos_span, 1.0]), plot_opts.get("bean_size", 0.5) / 2.0]
+    )
+    bean_mean_width = np.min(
+        [0.15 * np.max([pos_span, 1.0]), plot_opts.get("bean_mean_size", 0.5) / 2.0]
+    )
 
-    legend_txt = plot_opts.get('bean_legend_text', None)
-    for pos_data, pos in zip(data, positions):
+    legend_txt = plot_opts.get("bean_legend_text", None)
+    for pos_data, pos in zip(data, positions, strict=True):
         # Draw violins.
         xvals, violin = _single_violin(ax, pos, pos_data, violin_width, side, plot_opts)
 
         if jitter:
             # Draw data points at random coordinates within violin envelope.
-            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side)
-            ax.plot(jitter_coord, pos_data, ls='',
-                    marker=plot_opts.get('jitter_marker', 'o'),
-                    ms=plot_opts.get('jitter_marker_size', 4),
-                    mec=plot_opts.get('bean_color', 'k'),
-                    mew=1, mfc=plot_opts.get('jitter_fc', 'none'),
-                    label=legend_txt)
+            rng = check_random_state(rng)
+            jitter_coord = pos + _jitter_envelope(pos_data, xvals, violin, side, rng)
+            ax.plot(
+                jitter_coord,
+                pos_data,
+                ls="",
+                marker=plot_opts.get("jitter_marker", "o"),
+                ms=plot_opts.get("jitter_marker_size", 4),
+                mec=plot_opts.get("bean_color", "k"),
+                mew=1,
+                mfc=plot_opts.get("jitter_fc", "none"),
+                label=legend_txt,
+            )
         else:
             # Draw bean lines.
-            ax.hlines(pos_data, pos - bean_width, pos + bean_width,
-                      lw=plot_opts.get('bean_lw', 0.5),
-                      color=plot_opts.get('bean_color', 'k'),
-                      label=legend_txt)
+            ax.hlines(
+                pos_data,
+                pos - bean_width,
+                pos + bean_width,
+                lw=plot_opts.get("bean_lw", 0.5),
+                color=plot_opts.get("bean_color", "k"),
+                label=legend_txt,
+            )
 
         # Show legend if required.
         if legend_txt is not None:
@@ -371,16 +416,23 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
             legend_txt = None  # ensure we get one entry per call to beanplot
 
         # Draw mean line.
-        if plot_opts.get('bean_show_mean', True):
-            ax.hlines(np.mean(pos_data), pos - bean_mean_width, pos + bean_mean_width,
-                      lw=plot_opts.get('bean_mean_lw', 2.),
-                      color=plot_opts.get('bean_mean_color', 'b'))
+        if plot_opts.get("bean_show_mean", True):
+            ax.hlines(
+                np.mean(pos_data),
+                pos - bean_mean_width,
+                pos + bean_mean_width,
+                lw=plot_opts.get("bean_mean_lw", 2.0),
+                color=plot_opts.get("bean_mean_color", "b"),
+            )
 
         # Draw median marker.
-        if plot_opts.get('bean_show_median', True):
-            ax.plot(pos, np.median(pos_data),
-                    marker=plot_opts.get('bean_median_marker', '+'),
-                    color=plot_opts.get('bean_median_color', 'r'))
+        if plot_opts.get("bean_show_median", True):
+            ax.plot(
+                pos,
+                np.median(pos_data),
+                marker=plot_opts.get("bean_median_marker", "+"),
+                color=plot_opts.get("bean_median_color", "r"),
+            )
 
     # Set ticks and tick labels of horizontal axis.
     _set_ticks_labels(ax, data, labels, positions, plot_opts)
@@ -388,32 +440,31 @@ def beanplot(data, ax=None, labels=None, positions=None, side='both',
     return fig
 
 
-def _jitter_envelope(pos_data, xvals, violin, side):
-    """Determine envelope for jitter markers."""
-    if side == 'both':
-        low, high = (-1., 1.)
-    elif side == 'right':
-        low, high = (0, 1.)
-    elif side == 'left':
-        low, high = (-1., 0)
+def _jitter_envelope(pos_data, xvals, violin, side, rng):
+    """Determine envelope for jitter markers"""
+    if side == "both":
+        low, high = (-1.0, 1.0)
+    elif side == "right":
+        low, high = (0, 1.0)
+    elif side == "left":
+        low, high = (-1.0, 0)
     else:
-        raise ValueError("`side` input incorrect: %s" % side)
+        raise ValueError(f"`side` input incorrect: {side}")
 
     jitter_envelope = np.interp(pos_data, xvals, violin)
-    jitter_coord = jitter_envelope * np.random.uniform(low=low, high=high,
-                                                       size=pos_data.size)
+    jitter_coord = jitter_envelope * rng.uniform(low=low, high=high, size=pos_data.size)
 
     return jitter_coord
 
 
 def _show_legend(ax):
-    """Utility function to show legend."""
-    leg = ax.legend(loc=1, shadow=True, fancybox=True, labelspacing=0.2,
-                    borderpad=0.15)
-    ltext  = leg.get_texts()
+    """Utility function to show legend"""
+    leg = ax.legend(loc=1, shadow=True, fancybox=True, labelspacing=0.2, borderpad=0.15)
+    ltext = leg.get_texts()
     llines = leg.get_lines()
-    frame  = leg.get_frame()
+    leg.get_frame()
 
     from matplotlib.artist import setp
-    setp(ltext, fontsize='small')
+
+    setp(ltext, fontsize="small")
     setp(llines, linewidth=1)

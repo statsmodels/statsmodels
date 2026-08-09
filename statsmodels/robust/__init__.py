@@ -1,10 +1,8 @@
-"""
-Robust statistical models
-"""
-__all__ = ["norms", "mad", "Huber", "HuberScale", "hubers_scale", "test"]
-from . import norms
-from .scale import mad, Huber, HuberScale, hubers_scale
+"""Robust statistical models"""
+__all__ = ["Huber", "HuberScale", "hubers_scale", "mad", "norms", "test"]
+from statsmodels.tools._test_runner import PytestTester
 
-from statsmodels.tools._testing import PytestTester
+from . import norms
+from .scale import Huber, HuberScale, hubers_scale, mad
 
 test = PytestTester()

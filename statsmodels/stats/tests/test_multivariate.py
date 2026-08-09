@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Nov  5 14:48:19 2017
 
@@ -6,7 +5,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal  #noqa
+from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.stats import weightstats
 import statsmodels.stats.multivariate as smmv  # pytest cannot import test_xxx
