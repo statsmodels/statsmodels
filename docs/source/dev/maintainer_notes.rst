@@ -16,7 +16,7 @@ Grabbing Changes from Others
 If you need to push changes from others, you can link to their repository by doing::
 
     git remote add contrib-name git://github.com/contrib-name/statsmodels.git
-    get fetch contrib-name
+    git fetch contrib-name
     git branch shiny-new-feature --track contrib-name/shiny-new-feature
     git checkout shiny-new-feature
 
@@ -174,7 +174,7 @@ Releasing
 
 5. Build a sdist to ensure that that the build is clean::
 
-    python setup.py sdist --formats=gztar
+    python -m build --sdist .
 
    It is important that the build on the tar.gz file is the same as the tag. It must not be **dirty**
 
@@ -238,7 +238,7 @@ Once any patches have been backported to a maintenance branch, the release steps
 
 5. Build a sdist to ensure that that the build is clean::
 
-    python setup.py sdist --formats=gztar
+    python -m build --sdist .
 
    It is important that the build on the tar.gz file is the same as the tag. It must not be **dirty**.
 

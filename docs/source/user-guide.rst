@@ -27,6 +27,7 @@ Regression and Linear Models
    discretemod
    mixed_glm
    anova
+   other_models
 
 Time Series Analysis
 --------------------
@@ -59,6 +60,7 @@ Statistics and Tools
    stats
    contingency_tables
    imputation
+   treatment
    emplike
    distributions
    graphics

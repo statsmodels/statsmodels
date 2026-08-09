@@ -36,8 +36,8 @@ Examples
 Detailed examples can be found here:
 
 
-* `Overview <examples/notebooks/generated/discrete_choice_overview.html>`__
-* `Examples <examples/notebooks/generated/discrete_choice_example.html>`__
+* `Overview <examples/notebooks/generated/discrete_choice_overview.ipynb>`_
+* `Examples <examples/notebooks/generated/discrete_choice_example.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -93,6 +93,16 @@ The specific model classes are:
    ZeroInflatedNegativeBinomialP
    ZeroInflatedGeneralizedPoisson
 
+.. currentmodule:: statsmodels.discrete.truncated_model
+.. module:: statsmodels.discrete.truncated_model
+
+.. autosummary::
+   :toctree: generated/
+
+   HurdleCountModel
+   TruncatedLFNegativeBinomialP
+   TruncatedLFPoisson
+
 .. currentmodule:: statsmodels.discrete.conditional_models
 .. module:: statsmodels.discrete.conditional_models
 
@@ -126,7 +136,9 @@ The specific result classes are:
    ProbitResults
    CountResults
    MultinomialResults
+   PoissonResults
    NegativeBinomialResults
+   NegativeBinomialPResults
    GeneralizedPoissonResults
 
 .. currentmodule:: statsmodels.discrete.count_model
@@ -137,7 +149,23 @@ The specific result classes are:
    ZeroInflatedPoissonResults
    ZeroInflatedNegativeBinomialResults
    ZeroInflatedGeneralizedPoissonResults
-   
+
+.. currentmodule:: statsmodels.discrete.truncated_model
+
+.. autosummary::
+   :toctree: generated/
+
+   HurdleCountResults
+   TruncatedLFPoissonResults
+   TruncatedNegativeBinomialResults
+
+.. currentmodule:: statsmodels.discrete.conditional_models
+
+.. autosummary::
+   :toctree: generated/
+
+   ConditionalResults
+
 .. currentmodule:: statsmodels.miscmodels.ordinal_model
 
 .. autosummary::

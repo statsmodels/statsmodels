@@ -1,14 +1,20 @@
-from statsmodels.compat.pandas import is_numeric_dtype
+from __future__ import annotations
+
+from statsmodels.compat.pandas import (
+    _infer_freq_returns_offset,
+    is_float_index,
+    is_int_index,
+    is_numeric_dtype,
+)
 
 import numbers
 import warnings
 
 import numpy as np
+import pandas as pd
 from pandas import (
     DatetimeIndex,
-    Float64Index,
     Index,
-    Int64Index,
     Period,
     PeriodIndex,
     RangeIndex,
@@ -55,7 +61,7 @@ def get_index_loc(key, index):
     key : label
         The key for which to find the location if the underlying index is
         a DateIndex or a location if the underlying index is a RangeIndex
-        or an Int64Index.
+        or an Index with an integer dtype.
     index : pd.Index
         The index to search.
 
@@ -71,15 +77,16 @@ def get_index_loc(key, index):
 
     Notes
     -----
-    If `key` is past the end of of the given index, and the index is either
-    an Int64Index or a date index, this function extends the index up to
-    and including key, and then returns the location in the new index.
+    If `key` is past the end of the given index, and the index is either
+    an Index with an integral dtype or a date index, this function extends
+    the index up to and including key, and then returns the location in the
+    new index.
     """
     base_index = index
 
     index = base_index
     date_index = isinstance(base_index, (PeriodIndex, DatetimeIndex))
-    int_index = isinstance(base_index, Int64Index)
+    int_index = is_int_index(base_index)
     range_index = isinstance(base_index, RangeIndex)
     index_class = type(base_index)
     nobs = len(index)
@@ -99,19 +106,23 @@ def get_index_loc(key, index):
                 base_index_start = base_index._start
                 base_index_step = base_index._step
             stop = base_index_start + (key + 1) * base_index_step
-            index = RangeIndex(start=base_index_start,
-                               stop=stop,
-                               step=base_index_step)
+            index = RangeIndex(
+                start=base_index_start, stop=stop, step=base_index_step
+            )
 
-    # Special handling for Int64Index
-    if (not range_index and int_index and not date_index and
-            isinstance(key, (int, np.integer))):
+    # Special handling for NumericIndex
+    if (
+        not range_index
+        and int_index
+        and not date_index
+        and isinstance(key, (int, np.integer))
+    ):
         # Negative indices (that lie in the Index)
         if key < 0 and -key <= nobs:
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            index = Int64Index(np.arange(base_index[0], int(key + 1)))
+            index = Index(np.arange(base_index[0], int(key + 1)))
 
     # Special handling for date indexes
     if date_index:
@@ -128,15 +139,17 @@ def get_index_loc(key, index):
             # Out-of-sample (note that we include key itself in the new
             # index)
             elif key > len(base_index) - 1:
-                index = index_fn(start=base_index[0],
-                                 periods=int(key + 1),
-                                 freq=base_index.freq)
+                index = index_fn(
+                    start=base_index[0],
+                    periods=int(key + 1),
+                    freq=base_index.freq,
+                )
                 key = index[-1]
             else:
                 key = index[key]
         # Other key types (i.e. string date or some datetime-like object)
         else:
-            # Covert the key to the appropriate date-like object
+            # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
             else:
@@ -145,14 +158,17 @@ def get_index_loc(key, index):
             # Out-of-sample
             if date_key > base_index[-1]:
                 # First create an index that may not always include `key`
-                index = index_fn(start=base_index[0], end=date_key,
-                                 freq=base_index.freq)
+                index = index_fn(
+                    start=base_index[0], end=date_key, freq=base_index.freq
+                )
 
                 # Now make sure we include `key`
-                if not index[-1] == date_key:
-                    index = index_fn(start=base_index[0],
-                                     periods=len(index) + 1,
-                                     freq=base_index.freq)
+                if index[-1] != date_key:
+                    index = index_fn(
+                        start=base_index[0],
+                        periods=len(index) + 1,
+                        freq=base_index.freq,
+                    )
 
                 # To avoid possible inconsistencies with `get_loc` below,
                 # set the key directly equal to the last index location
@@ -163,7 +179,7 @@ def get_index_loc(key, index):
         # (note that get_loc will throw a KeyError if key is invalid)
         loc = index.get_loc(key)
     elif int_index or range_index:
-        # For Int64Index and RangeIndex, key is assumed to be the location
+        # For NumericIndex and RangeIndex, key is assumed to be the location
         # and not an index value (this assumption is required to support
         # RangeIndex)
         try:
@@ -177,8 +193,8 @@ def get_index_loc(key, index):
         #   (e.g. a non-numeric string) will raise a ValueError if the
         #   index is RangeIndex (otherwise will raise an IndexError)
         #   (as of Pandas 0.22)
-        except (IndexError, ValueError) as e:
-            raise KeyError(str(e))
+        except (IndexError, ValueError) as exc:
+            raise KeyError(str(exc)) from exc
         loc = key
     else:
         loc = index.get_loc(key)
@@ -192,7 +208,7 @@ def get_index_loc(key, index):
     else:
         end = loc
 
-    return loc, index[:end + 1], index_was_expanded
+    return loc, index[: end + 1], index_was_expanded
 
 
 def get_index_label_loc(key, index, row_labels):
@@ -204,7 +220,7 @@ def get_index_label_loc(key, index, row_labels):
     key : label
         The key for which to find the location if the underlying index is
         a DateIndex or is only being used as row labels, or a location if
-        the underlying index is a RangeIndex or an Int64Index.
+        the underlying index is a RangeIndex or a NumericIndex.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -229,49 +245,56 @@ def get_index_label_loc(key, index, row_labels):
     """
     try:
         loc, index, index_was_expanded = get_index_loc(key, index)
-    except KeyError as e:
-        try:
-            if not isinstance(key, (int, np.integer)):
-                loc = row_labels.get_loc(key)
+    except KeyError:
+        if not isinstance(key, (int, np.integer)):
+            loc = row_labels.get_loc(key)
+        else:
+            raise
+        # Require scalar
+        # Pandas may return a slice if there are multiple matching
+        # locations that are monotonic increasing (otherwise it may
+        # return an array of integer locations, see below).
+        if isinstance(loc, slice):
+            loc = loc.start
+        if isinstance(loc, np.ndarray):
+            # Pandas may return a mask (boolean array), for e.g.:
+            # pd.Index(list('abcb')).get_loc('b')
+            if loc.dtype == bool:
+                # Return the first True value
+                # (we know there is at least one True value if we're
+                # here because otherwise the get_loc call would have
+                # raised an exception)
+                loc = np.argmax(loc)
+            # Finally, Pandas may return an integer array of
+            # locations that match the given value, for e.g.
+            # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
+            # (this appears to be slightly undocumented behavior, since
+            # only int, slice, and mask are mentioned in docs for
+            # pandas.Index.get_loc as of 0.23.4)
             else:
-                raise
-            # Require scalar
-            # Pandas may return a slice if there are multiple matching
-            # locations that are monotonic increasing (otherwise it may
-            # return an array of integer locations, see below).
-            if isinstance(loc, slice):
-                loc = loc.start
-            if isinstance(loc, np.ndarray):
-                # Pandas may return a mask (boolean array), for e.g.:
-                # pd.Index(list('abcb')).get_loc('b')
-                if loc.dtype == bool:
-                    # Return the first True value
-                    # (we know there is at least one True value if we're
-                    # here because otherwise the get_loc call would have
-                    # raised an exception)
-                    loc = np.argmax(loc)
-                # Finally, Pandas may return an integer array of
-                # locations that match the given value, for e.g.
-                # pd.DatetimeIndex(['2001-02', '2001-01']).get_loc('2001')
-                # (this appears to be slightly undocumented behavior, since
-                # only int, slice, and mask are mentioned in docs for
-                # pandas.Index.get_loc as of 0.23.4)
-                else:
-                    loc = loc[0]
-            if not isinstance(loc, numbers.Integral):
-                raise
+                loc = loc[0]
+        if not isinstance(loc, numbers.Integral):
+            raise
 
-            index = row_labels[:loc + 1]
-            index_was_expanded = False
-        except:
-            raise e
+        index = row_labels[: loc + 1]
+        index_was_expanded = False
+
     return loc, index, index_was_expanded
 
 
-def get_prediction_index(start, end, nobs, base_index, index=None, silent=False, index_none=False,
-                         index_generated=None, data=None):
+def get_prediction_index(
+    start,
+    end,
+    nobs,
+    base_index,
+    index=None,
+    silent=False,
+    index_none=False,
+    index_generated=None,
+    data=None,
+) -> tuple[int, int, int, Index | None]:
     """
-    Get the location of a specific key in an index or model row labels
+    Get the location of the start and end of prediction, and the associated index
 
     Parameters
     ----------
@@ -287,14 +310,26 @@ def get_prediction_index(start, end, nobs, base_index, index=None, silent=False,
         pd.Timestamp, or pd.Period object), or some other object in the
         model's row labels.
     nobs : int
+        The number of observations in the model.
     base_index : pd.Index
-
+        The base index of the model, against which `start` and `end` are
+        resolved.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
         from the model's index or model's row labels.
     silent : bool, optional
         Argument to silence warnings.
+    index_none : bool, optional
+        Whether the returned prediction index should be forced to None
+        even if a supported index would otherwise be available. Default
+        is False.
+    index_generated : bool, optional
+        Whether the model's underlying index was internally generated
+        rather than taken directly from `endog` / `exog`. Default is None.
+    data : statsmodels.base.data.ModelData
+        The model's data object, used to obtain row labels and to set the
+        `predict_start`, `predict_end`, and `predict_dates` attributes.
 
     Returns
     -------
@@ -325,24 +360,32 @@ def get_prediction_index(start, end, nobs, base_index, index=None, silent=False,
 
     This difference in behavior is necessary to support `RangeIndex`. This
     is because integers for a RangeIndex could refer either to index values
-    or to index locations in an ambiguous way (while for `Int64Index`,
+    or to index locations in an ambiguous way (while for `NumericIndex`,
     since we have required them to be full indexes, there is no ambiguity).
     """
 
     # Convert index keys (start, end) to index locations and get associated
     # indexes.
     try:
-        start, _, start_oos = get_index_label_loc(start, base_index, data.row_labels)
-    except KeyError:
-        raise KeyError('The `start` argument could not be matched to a'
-                       ' location related to the index of the data.')
+        start, _, start_oos = get_index_label_loc(
+            start, base_index, data.row_labels
+        )
+    except KeyError as exc:
+        raise KeyError(
+            "The `start` argument could not be matched to a"
+            " location related to the index of the data."
+        ) from exc
     if end is None:
         end = max(start, len(base_index) - 1)
     try:
-        end, end_index, end_oos = get_index_label_loc(end, base_index, data.row_labels)
-    except KeyError:
-        raise KeyError('The `end` argument could not be matched to a'
-                       ' location related to the index of the data.')
+        end, end_index, end_oos = get_index_label_loc(
+            end, base_index, data.row_labels
+        )
+    except KeyError as exc:
+        raise KeyError(
+            "The `end` argument could not be matched to a"
+            " location related to the index of the data."
+        ) from exc
 
     # Handle slices (if the given index keys cover more than one date)
     if isinstance(start, slice):
@@ -355,43 +398,41 @@ def get_prediction_index(start, end, nobs, base_index, index=None, silent=False,
 
     # Validate prediction options
     if end < start:
-        raise ValueError('Prediction must have `end` after `start`.')
+        raise ValueError("Prediction must have `end` after `start`.")
 
     # Handle custom prediction index
     # First, if we were given an index, check that it's the right size and
     # use it if so
     if index is not None:
         if not len(prediction_index) == len(index):
-            raise ValueError('Invalid `index` provided in prediction.'
-                             ' Must have length consistent with `start`'
-                             ' and `end` arguments.')
+            raise ValueError(
+                "Invalid `index` provided in prediction."
+                " Must have length consistent with `start`"
+                " and `end` arguments."
+            )
         # But if we weren't given Pandas input, this index will not be
         # used because the data will not be wrapped; in that case, issue
         # a warning
         if not isinstance(data, PandasData) and not silent:
-            warnings.warn('Because the model data (`endog`, `exog`) were'
-                          ' not given as Pandas objects, the prediction'
-                          ' output will be Numpy arrays, and the given'
-                          ' `index` argument will only be used'
-                          ' internally.', ValueWarning)
+            warnings.warn(
+                "Because the model data (`endog`, `exog`) were"
+                " not given as Pandas objects, the prediction"
+                " output will be Numpy arrays, and the given"
+                " `index` argument will only be used"
+                " internally.",
+                ValueWarning,
+                stacklevel=2,
+            )
         prediction_index = Index(index)
     # Now, if we *do not* have a supported index, but we were given some
     # kind of index...
     elif index_generated and not index_none:
         # If we are in sample, and have row labels, use them
         if data.row_labels is not None and not (start_oos or end_oos):
-            prediction_index = data.row_labels[start:end + 1]
-        # Otherwise, warn the user that they will get an Int64Index
+            prediction_index = data.row_labels[start : end + 1]
+        # Otherwise, warn the user that they will get an NumericIndex
         else:
-            if not silent:
-                warnings.warn('No supported index is available.'
-                              ' Prediction results will be given with'
-                              ' an integer index beginning at `start`.',
-                              ValueWarning)
-            warnings.warn('No supported index is available. In the next'
-                          ' version, calling this method in a model'
-                          ' without a supported index will result in an'
-                          ' exception.', DeprecationWarning)
+            raise ValueError("No supported index is available.")
     elif index_none:
         prediction_index = None
 
@@ -413,14 +454,17 @@ def get_prediction_index(start, end, nobs, base_index, index=None, silent=False,
 
 
 class TimeSeriesModel(base.LikelihoodModel):
-    __doc__ = _tsa_doc % {"model": _model_doc, "params": _generic_params,
-                          "extra_params": _missing_param_doc,
-                          "extra_sections": ""}
+    __doc__ = _tsa_doc % {
+        "model": _model_doc,
+        "params": _generic_params,
+        "extra_params": _missing_param_doc,
+        "extra_sections": "",
+    }
 
-    def __init__(self, endog, exog=None, dates=None, freq=None,
-                 missing='none', **kwargs):
-        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing,
-                                              **kwargs)
+    def __init__(
+        self, endog, exog=None, dates=None, freq=None, missing="none", **kwargs
+    ):
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         # Date handling in indexes
         self._init_dates(dates, freq)
@@ -440,11 +484,11 @@ class TimeSeriesModel(base.LikelihoodModel):
         Notes
         -----
         Creates `self._index` and related attributes. `self._index` is always
-        a Pandas index, and it is always Int64Index, DatetimeIndex, or
+        a Pandas index, and it is always NumericIndex, DatetimeIndex, or
         PeriodIndex.
 
         If Pandas objects, endog / exog may have any type of index. If it is
-        an Int64Index with values 0, 1, ..., nobs-1 or if it is (coerceable to)
+        a NumericIndex with values 0, 1, ..., nobs-1 or if it is (coercible to)
         a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
         is called a "supported" index. Otherwise it is called an "unsupported"
         index.
@@ -452,7 +496,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         Supported indexes are standardized (i.e. a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
 
-        Unsupported indexes are ignored, and a supported Int64Index is
+        Unsupported indexes are ignored, and a supported NumericIndex is
         generated and put in `self._index`. Warnings are issued in this case
         to alert the user if the returned index from some operation (e.g.
         forecasting) is different from the original data's index. However,
@@ -462,7 +506,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         The benefit of supported indexes is that they allow *forecasting*, i.e.
         it is possible to extend them in a reasonable way. Thus every model
         must have an underlying supported index, even if it is just a generated
-        Int64Index.
+        NumericIndex.
         """
 
         # Get our index from `dates` if available, otherwise from whatever
@@ -474,7 +518,7 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         # Sanity check that we do not have a `freq` without an index
         if index is None and freq is not None:
-            raise ValueError('Frequency provided without associated index.')
+            raise ValueError("Frequency provided without associated index.")
 
         # If an index is available, see if it is a date-based index or if it
         # can be coerced to one. (If it cannot we'll fall back, below, to an
@@ -494,11 +538,12 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # statsmodels compat makes it an empty tuple, so in that
                     # case also check if the first element is a float.
                     _index = np.asarray(index)
-                    if (is_numeric_dtype(_index) or
-                            isinstance(index, Float64Index) or
-                            (Float64Index == tuple() and
-                             isinstance(_index[0], float))):
-                        raise ValueError('Numeric index given')
+                    if (
+                        is_numeric_dtype(_index)
+                        or is_float_index(index)
+                        or (isinstance(_index[0], float))
+                    ):
+                        raise ValueError("Numeric index given")
                     # If a non-index Pandas series was given, only keep its
                     # values (because we must have a pd.Index type, below, and
                     # pd.to_datetime will return a Series when passed
@@ -512,30 +557,39 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # Older versions of Pandas can sometimes fail here and
                     # return a numpy array - check to make sure it's an index
                     if not isinstance(_index, Index):
-                        raise ValueError('Could not coerce to date index')
+                        raise ValueError("Could not coerce to date index")
                     index = _index
-                except:
+                except Exception as exc:
                     # Only want to actually raise an exception if `dates` was
                     # provided but cannot be coerced. If we got the index from
                     # the row_labels, we'll just ignore it and use the integer
                     # index below
                     if dates is not None:
-                        raise ValueError('Non-date index index provided to'
-                                         ' `dates` argument.')
+                        raise ValueError(
+                            "Non-date index provided to"
+                            " `dates` argument."
+                        ) from exc
             # Now, if we were given, or coerced, a date-based index, make sure
             # it has an associated frequency
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
                 # If no frequency, try to get an inferred frequency
                 if freq is None and index.freq is None:
-                    freq = index.inferred_freq
+                    with _infer_freq_returns_offset():
+                        freq = index.inferred_freq
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
                         inferred_freq = True
                         if freq is not None:
-                            warnings.warn('No frequency information was'
-                                          ' provided, so inferred frequency %s'
-                                          ' will be used.'
-                                          % freq, ValueWarning)
+                            if isinstance(freq, pd.tseries.offsets.BaseOffset):
+                                freqstr = freq.freqstr
+                            else:
+                                freqstr = str(freq)
+                            warnings.warn(
+                                "No frequency information was provided, so inferred "
+                                f"frequency {freqstr} will be used.",
+                                ValueWarning,
+                                stacklevel=2,
+                            )
 
                 # Convert the passed freq to a pandas offset object
                 if freq is not None:
@@ -547,60 +601,90 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # But again, only want to raise the exception if `dates`
                     # was provided.
                     if dates is not None:
-                        raise ValueError('No frequency information was'
-                                         ' provided with date index and no'
-                                         ' frequency could be inferred.')
+                        raise ValueError(
+                            "No frequency information was"
+                            " provided with date index and no"
+                            " frequency could be inferred."
+                        )
                 # However, if the index itself has no frequency information but
                 # the `freq` argument is available (or was inferred), construct
                 # a new index with an associated frequency
                 elif freq is not None and index.freq is None:
                     resampled_index = date_range(
-                        start=index[0], end=index[-1], freq=freq)
-                    if not inferred_freq and not resampled_index.equals(index):
-                        raise ValueError('The given frequency argument could'
-                                         ' not be matched to the given index.')
+                        start=index[0], end=index[-1], freq=freq
+                    )
+                    if not inferred_freq and not (resampled_index == index).all():
+                        raise ValueError(
+                            "The given frequency argument could"
+                            " not be matched to the given index."
+                        )
                     index = resampled_index
                 # Finally, if the index itself has a frequency and there was
                 # also a given frequency, raise an exception if they are not
                 # equal
-                elif (freq is not None and not inferred_freq and
-                        not (index.freq == freq)):
-                    raise ValueError('The given frequency argument is'
-                                     ' incompatible with the given index.')
+                elif (
+                    freq is not None
+                    and not inferred_freq
+                    and index.freq != freq
+                ):
+                    raise ValueError(
+                        "The given frequency argument is"
+                        " incompatible with the given index."
+                    )
             # Finally, raise an exception if we could not coerce to date-based
             # but we were given a frequency argument
             elif freq is not None:
-                raise ValueError('Given index could not be coerced to dates'
-                                 ' but `freq` argument was provided.')
+                raise ValueError(
+                    "Given index could not be coerced to dates"
+                    " but `freq` argument was provided."
+                )
 
         # Get attributes of the index
         has_index = index is not None
         date_index = isinstance(index, (DatetimeIndex, PeriodIndex))
-        period_index = isinstance(index, PeriodIndex)
-        int_index = isinstance(index, Int64Index)
+        int_index = is_int_index(index)
         range_index = isinstance(index, RangeIndex)
         has_freq = index.freq is not None if date_index else None
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
-        is_monotonic = index.is_monotonic if date_index else None
+        if date_index:
+            is_monotonic = index.is_monotonic_increasing
+        else:
+            is_monotonic = None
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
-            warnings.warn('An unsupported index was provided and will be'
-                          ' ignored when e.g. forecasting.', ValueWarning)
+            warnings.warn(
+                "An unsupported index was provided. As a result, forecasts "
+                "cannot be generated. To use the model for forecasting, use on the "
+                "supported classes of index.",
+                ValueWarning,
+                stacklevel=2,
+            )
         if date_index and not has_freq:
-            warnings.warn('A date index has been provided, but it has no'
-                          ' associated frequency information and so will be'
-                          ' ignored when e.g. forecasting.', ValueWarning)
+            warnings.warn(
+                "A date index has been provided, but it has no"
+                " associated frequency information and so will be"
+                " ignored when e.g. forecasting.",
+                ValueWarning,
+                stacklevel=2,
+            )
         if date_index and not is_monotonic:
-            warnings.warn('A date index has been provided, but it is not'
-                          ' monotonic and so will be ignored when e.g.'
-                          ' forecasting.', ValueWarning)
+            warnings.warn(
+                "A date index has been provided, but it is not"
+                " monotonic and so will be ignored when e.g."
+                " forecasting.",
+                ValueWarning,
+                stacklevel=2,
+            )
 
         # Construct the internal index
         index_generated = False
-        valid_index = ((date_index and has_freq and is_monotonic) or
-                       (int_index and is_increment) or range_index)
+        valid_index = (
+            (date_index and has_freq and is_monotonic)
+            or (int_index and is_increment)
+            or range_index
+        )
 
         if valid_index:
             _index = index
@@ -628,7 +712,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or a location if the underlying index is a RangeIndex
-            or an Int64Index.
+            or a NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -645,8 +729,8 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        If `key` is past the end of of the given index, and the index is either
-        an Int64Index or a date index, this function extends the index up to
+        If `key` is past the end of the given index, and the index is either
+        a NumericIndex or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
 
@@ -663,7 +747,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or is only being used as row labels, or a location if
-            the underlying index is a RangeIndex or an Int64Index.
+            the underlying index is a RangeIndex or a NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -689,9 +773,11 @@ class TimeSeriesModel(base.LikelihoodModel):
             base_index = self._index
         return get_index_label_loc(key, base_index, self.data.row_labels)
 
-    def _get_prediction_index(self, start, end, index=None, silent=False):
+    def _get_prediction_index(
+        self, start, end, index=None, silent=False
+    ) -> tuple[int, int, int, Index | None]:
         """
-        Get the location of a specific key in an index or model row labels
+        Get the location of the start and end of prediction, and the associated index
 
         Parameters
         ----------
@@ -742,19 +828,21 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         This difference in behavior is necessary to support `RangeIndex`. This
         is because integers for a RangeIndex could refer either to index values
-        or to index locations in an ambiguous way (while for `Int64Index`,
+        or to index locations in an ambiguous way (while for `NumericIndex`,
         since we have required them to be full indexes, there is no ambiguity).
         """
         nobs = len(self.endog)
-        return get_prediction_index(start,
-                                    end,
-                                    nobs,
-                                    base_index=self._index,
-                                    index=index,
-                                    silent=silent,
-                                    index_none=self._index_none,
-                                    index_generated=self._index_generated,
-                                    data=self.data)
+        return get_prediction_index(
+            start,
+            end,
+            nobs,
+            base_index=self._index,
+            index=index,
+            silent=silent,
+            index_none=self._index_none,
+            index_generated=self._index_generated,
+            data=self.data,
+        )
 
     def _get_exog_names(self):
         return self.data.xnames
@@ -764,24 +852,33 @@ class TimeSeriesModel(base.LikelihoodModel):
             vals = [vals]
         self.data.xnames = vals
 
+    # TODO: This is an antipattern, fix/remove with VAR
     # overwrite with writable property for (V)AR models
-    exog_names = property(_get_exog_names, _set_exog_names, None,
-                          'The names of the exogenous variables.')
+    exog_names = property(
+        _get_exog_names,
+        _set_exog_names,
+        None,
+        "The names of the exogenous variables.",
+    )
 
 
 class TimeSeriesModelResults(base.LikelihoodModelResults):
-    def __init__(self, model, params, normalized_cov_params, scale=1.):
+    def __init__(self, model, params, normalized_cov_params, scale=1.0):
         self.data = model.data
-        super(TimeSeriesModelResults,
-                self).__init__(model, params, normalized_cov_params, scale)
+        super().__init__(model, params, normalized_cov_params, scale)
 
 
 class TimeSeriesResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
-    _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_attrs,
-                                    _attrs)
-    _methods = {'predict' : 'dates'}
-    _wrap_methods = wrap.union_dicts(base.LikelihoodResultsWrapper._wrap_methods,
-                                     _methods)
-wrap.populate_wrapper(TimeSeriesResultsWrapper,  # noqa:E305
-                      TimeSeriesModelResults)
+    _wrap_attrs = wrap.union_dicts(
+        base.LikelihoodResultsWrapper._wrap_attrs, _attrs
+    )
+    _methods = {"predict": "dates"}
+    _wrap_methods = wrap.union_dicts(
+        base.LikelihoodResultsWrapper._wrap_methods, _methods
+    )
+
+
+wrap.populate_wrapper(
+    TimeSeriesResultsWrapper, TimeSeriesModelResults
+)

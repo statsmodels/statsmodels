@@ -1,74 +1,89 @@
-# -*- coding: utf-8 -*-
-# flake8: noqa
-
 __all__ = [
-    "iolib",
-    "datasets",
-    "tools",
-    "add_constant",
-    "categorical",
-    "regression",
-    "OLS",
-    "GLS",
-    "WLS",
-    "GLSAR",
-    "RecursiveLS",
-    "QuantReg",
-    "MixedLM",
-    "genmod",
-    "GLM",
     "GEE",
-    "OrdinalGEE",
-    "NominalGEE",
-    "families",
-    "cov_struct",
-    "BinomialBayesMixedGLM",
-    "PoissonBayesMixedGLM",
-    "robust",
+    "GLM",
+    "GLS",
+    "GLSAR",
+    "MANOVA",
+    "MI",
+    "MICE",
+    "OLS",
+    "PCA",
     "RLM",
-    "Poisson",
-    "Logit",
-    "Probit",
-    "MNLogit",
-    "NegativeBinomial",
+    "WLS",
+    "BayesGaussMI",
+    "BinomialBayesMixedGLM",
+    "ConditionalLogit",
+    "ConditionalMNLogit",
+    "ConditionalPoisson",
+    "Factor",
+    "GLMGam",
     "GeneralizedPoisson",
+    "HurdleCountModel",
+    "Logit",
+    "MICEData",
+    "MNLogit",
+    "MixedLM",
+    "NegativeBinomial",
     "NegativeBinomialP",
+    "NominalGEE",
+    "OrdinalGEE",
+    "PHReg",
+    "Poisson",
+    "PoissonBayesMixedGLM",
+    "ProbPlot",
+    "Probit",
+    "QuantReg",
+    "RecursiveLS",
+    "SurvfuncRight",
+    "TruncatedLFNegativeBinomialP",
+    "TruncatedLFPoisson",
+    "ZeroInflatedGeneralizedPoisson",
     "ZeroInflatedNegativeBinomialP",
     "ZeroInflatedPoisson",
-    "ZeroInflatedGeneralizedPoisson",
-    "tsa",
-    "SurvfuncRight",
-    "PHReg",
-    "MICE",
-    "MICEData",
-    "BayesGaussMI",
-    "MI",
-    "nonparametric",
-    "distributions",
-    "test",
-    "GLMGam",
-    "gam",
-    "show_versions",
-    "webdoc",
-    "qqplot",
-    "stats",
-    "graphics",
-    "emplike",
-    "PCA",
-    "MANOVA",
-    "formula",
-    "multivariate",
-    "Factor",
-    "qqplot_2samples",
-    "qqline",
-    "ProbPlot",
-    "duration",
     "__version__",
+    "__version_info__",
+    "add_constant",
+    "cov_struct",
+    "datasets",
+    "distributions",
+    "duration",
+    "emplike",
+    "families",
+    "formula",
+    "gam",
+    "genmod",
+    "graphics",
+    "iolib",
+    "load",
+    "load_pickle",
+    "multivariate",
+    "nonparametric",
+    "qqline",
+    "qqplot",
+    "qqplot_2samples",
+    "regression",
+    "robust",
+    "show_versions",
+    "stats",
+    "test",
+    "tools",
+    "tsa",
+    "webdoc"
 ]
 
 
+from statsmodels._version import (
+    version as __version__,
+    version_tuple as __version_info__,
+)
+
 from . import datasets, distributions, iolib, regression, robust, tools
 from .__init__ import test
+from .discrete.conditional_models import (
+    ConditionalLogit,
+    ConditionalMNLogit,
+    ConditionalPoisson,
+)
 from .discrete.count_model import (
     ZeroInflatedGeneralizedPoisson,
     ZeroInflatedNegativeBinomialP,
@@ -82,6 +97,11 @@ from .discrete.discrete_model import (
     NegativeBinomialP,
     Poisson,
     Probit,
+)
+from .discrete.truncated_model import (
+    HurdleCountModel,
+    TruncatedLFNegativeBinomialP,
+    TruncatedLFPoisson,
 )
 from .duration import api as duration
 from .duration.hazard_regression import PHReg
@@ -118,13 +138,8 @@ from .regression.recursive_ls import RecursiveLS
 from .robust.robust_linear_model import RLM
 from .stats import api as stats
 from .tools.print_version import show_versions
-from .tools.tools import add_constant, categorical
+from .tools.tools import add_constant
 from .tools.web import webdoc
 from .tsa import api as tsa
 
 load = load_pickle
-
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions

@@ -1,5 +1,4 @@
-# pylint: disable=W0611
-__all__ = ["VAR", "SVAR"]
+__all__ = ["SVAR", "VAR"]
 
 from .svar_model import SVAR
 from .var_model import VAR

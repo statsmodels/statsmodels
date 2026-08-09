@@ -1,6 +1,5 @@
-import pandas
 import numpy as np
-import pytest
+import pandas as pd
 
 from statsmodels.tools import data
 
@@ -9,46 +8,50 @@ def test_missing_data_pandas():
     """
     Fixes GH: #144
     """
-    X = np.random.random((10,5))
-    X[1,2] = np.nan
-    df = pandas.DataFrame(X)
+    rs = np.random.RandomState(89099431)
+    X = rs.random((10, 5))
+    X[1, 2] = np.nan
+    df = pd.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
-    np.testing.assert_equal(rnames.tolist(), [0,2,3,4,5,6,7,8,9])
-
-def test_structarray():
-    X = np.random.random((9,)).view([('var1', 'f8'),
-                                        ('var2', 'f8'),
-                                        ('var3', 'f8')])
-    with pytest.warns(FutureWarning, match="recarray support"):
-        vals, cnames, rnames = data.interpret_data(X)
-    np.testing.assert_equal(cnames, X.dtype.names)
-    np.testing.assert_equal(vals, X.view((float,3)))
-    np.testing.assert_equal(rnames, None)
-
-def test_recarray():
-    X = np.random.random((9,)).view([('var1', 'f8'),
-                                        ('var2', 'f8'),
-                                        ('var3', 'f8')])
-    with pytest.warns(FutureWarning, match="recarray support"):
-        vals, cnames, rnames = data.interpret_data(X.view(np.recarray))
-    np.testing.assert_equal(cnames, X.dtype.names)
-    np.testing.assert_equal(vals, X.view((float,3)))
-    np.testing.assert_equal(rnames, None)
+    np.testing.assert_equal(rnames.tolist(), [0, 2, 3, 4, 5, 6, 7, 8, 9])
 
 
 def test_dataframe():
-    X = np.random.random((10,5))
-    df = pandas.DataFrame(X)
+    rs = np.random.RandomState(89099431)
+    X = rs.random((10, 5))
+    df = pd.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
     np.testing.assert_equal(vals, df.values)
     np.testing.assert_equal(rnames.tolist(), df.index.tolist())
     np.testing.assert_equal(cnames, df.columns.tolist())
 
-def test_patsy_577():
-    X = np.random.random((10, 2))
-    df = pandas.DataFrame(X, columns=["var1", "var2"])
-    from patsy import dmatrix
-    endog = dmatrix("var1 - 1", df)
-    np.testing.assert_(data._is_using_patsy(endog, None))
-    exog = dmatrix("var2 - 1", df)
-    np.testing.assert_(data._is_using_patsy(endog, exog))
+
+def test_formula_engine_use_detection_577():
+    rs = np.random.RandomState(89099431)
+    x = rs.random((10, 2))
+    df = pd.DataFrame(x, columns=["var1", "var2"])
+    from statsmodels.formula._manager import FormulaManager
+
+    mgr = FormulaManager()
+    if mgr.engine == "patsy":
+        test_func = data._is_using_patsy
+    else:
+        test_func = data._is_using_formulaic
+    endog = mgr.get_matrices("var1 - 1", df, pandas=False)
+    assert test_func(endog, None)
+
+    exog = mgr.get_matrices("var2 - 1", df, pandas=False)
+    assert test_func(endog, exog)
+
+
+def test_as_array_with_name_series():
+    s = pd.Series([1], name="hello")
+    arr, name = data._as_array_with_name(s, "not_used")
+    np.testing.assert_array_equal(np.array([1]), arr)
+    assert name == "hello"
+
+
+def test_as_array_with_name_array():
+    arr, name = data._as_array_with_name(np.array([1]), "default")
+    np.testing.assert_array_equal(np.array([1]), arr)
+    assert name == "default"

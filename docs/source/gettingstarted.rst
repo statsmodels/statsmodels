@@ -180,7 +180,7 @@ plot of partial regression for a set of regressors by:
 
     @savefig gettingstarted_0.png
     sm.graphics.plot_partregress('Lottery', 'Wealth', ['Region', 'Literacy'],
-                                 data=df, obs_labels=False)
+                                 data=df, obs_labels=False, use_namedtuple=True)
 
 Documentation
 -------------

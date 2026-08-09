@@ -1,0 +1,171 @@
+"""
+Test functions for genmod.families.family
+"""
+import warnings
+
+import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal
+import pytest
+from scipy import integrate
+
+import statsmodels.genmod.families as F
+from statsmodels.genmod.families.family import Binomial, Tweedie
+import statsmodels.genmod.families.links as L
+from statsmodels.tools.sm_exceptions import ValueWarning
+
+all_links = {
+    L.Logit,
+    L.logit,
+    L.Power,
+    L.inverse_power,
+    L.sqrt,
+    L.inverse_squared,
+    L.identity,
+    L.Log,
+    L.log,
+    L.CDFLink,
+    L.probit,
+    L.cauchy,
+    L.LogLog,
+    L.loglog,
+    L.CLogLog,
+    L.cloglog,
+    L.NegativeBinomial,
+    L.nbinom,
+}
+poisson_links = {L.Log, L.log, L.identity, L.sqrt}
+gaussian_links = {L.Log, L.log, L.identity, L.inverse_power}
+gamma_links = {L.Log, L.log, L.identity, L.inverse_power}
+binomial_links = {
+    L.Logit,
+    L.logit,
+    L.probit,
+    L.cauchy,
+    L.Log,
+    L.log,
+    L.CLogLog,
+    L.cloglog,
+    L.LogLog,
+    L.loglog,
+    L.identity,
+}
+inverse_gaussian_links = {L.inverse_squared, L.inverse_power, L.identity, L.Log, L.log}
+negative_binomial_links = {
+    L.Log,
+    L.log,
+    L.CLogLog,
+    L.cloglog,
+    L.identity,
+    L.NegativeBinomial,
+    L.nbinom,
+    L.Power,
+}
+tweedie_links = {L.Log, L.log, L.Power}
+
+link_cases = [
+    (F.Poisson, poisson_links),
+    (F.Gaussian, gaussian_links),
+    (F.Gamma, gamma_links),
+    (F.Binomial, binomial_links),
+    (F.InverseGaussian, inverse_gaussian_links),
+    (F.NegativeBinomial, negative_binomial_links),
+    (F.Tweedie, tweedie_links),
+]
+
+
+@pytest.mark.parametrize("family, links", link_cases)
+def test_invalid_family_link(family, links):
+    """Assert that invalid links for a family raise a ValueError."""
+    invalid_links = all_links - links
+    with pytest.raises(ValueError):
+        with warnings.catch_warnings():
+            msg = (
+                "Negative binomial dispersion parameter alpha not set. "
+                "Using default value alpha=1.0."
+            )
+            warnings.filterwarnings("ignore", message=msg, category=UserWarning)
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            for link in invalid_links:
+                family(link())
+
+
+@pytest.mark.parametrize("family, links", link_cases)
+def test_family_link(family, links):
+    """Assert that valid links for a family do not raise a ValueError."""
+    with warnings.catch_warnings():
+        msg = (
+            "Negative binomial dispersion parameter alpha not set. "
+            "Using default value alpha=1.0."
+        )
+        warnings.filterwarnings("ignore", message=msg, category=ValueWarning)
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        for link in links:
+            assert family(link())
+
+
+@pytest.mark.parametrize("family, links", link_cases)
+def test_family_link_check(family, links):
+    """Check that we can turn off all link checks."""
+
+    class Hugo:
+        pass
+
+    with warnings.catch_warnings():
+        msg = (
+            "Negative binomial dispersion parameter alpha not set. "
+            "Using default value alpha=1.0."
+        )
+        warnings.filterwarnings("ignore", message=msg, category=ValueWarning)
+        assert family(Hugo(), check_link=False)
+
+
+@pytest.mark.parametrize("power", [1.1, 1.5, 1.9])
+def test_tweedie_loglike_obs(power):
+    """Test that Tweedie loglike is normalized to 1."""
+    tweedie = Tweedie(var_power=power, eql=False)
+    mu = 2.0
+    scale = 2.9
+
+    def pdf(y):
+        return np.squeeze(np.exp(tweedie.loglike_obs(endog=y, mu=mu, scale=scale)))
+
+    assert_allclose(pdf(0) + integrate.quad(pdf, 0, 1e2)[0], 1, atol=1e-4)
+
+
+@pytest.mark.parametrize("mu", [0, 1])
+@pytest.mark.parametrize("endog", [0, 1])
+def test_binomial_loglike_obs(mu, endog):
+    """Test Binomial loglike with extreme values"""
+    ll = Binomial().loglike_obs(endog=endog, mu=mu)
+    if mu == endog:
+        assert_almost_equal(ll, 0)
+    else:
+        # For our purposes, -40 is "approximately" -inf
+        assert ll < -40
+
+
+def test_binomial_varfunc_deriv():
+    """
+    Regression: Binomial.deriv should return 1 - 2*p where p = _clean(mu/n).
+
+    Prior to the fix, deriv returned 1 - 2*mu (correct only for n=1).
+    For n > 1 the formula was wrong; this test covers the general case.
+    """
+    from statsmodels.genmod.families.varfuncs import Binomial as BinomialVar
+
+    # n=10: deriv(mu) = 1 - 2*_clean(mu/10)
+    bv = BinomialVar(n=10)
+    mu_vals = np.array([1.0, 2.0, 5.0, 8.0])
+    expected = 1 - 2 * bv._clean(mu_vals / 10)
+    assert_allclose(bv.deriv(mu_vals), expected)
+
+    # n=1 (Bernoulli): old and new formula agree
+    bv1 = BinomialVar(n=1)
+    mu_01 = np.array([0.1, 0.3, 0.7, 0.9])
+    assert_allclose(bv1.deriv(mu_01), 1 - 2 * mu_01, rtol=1e-10)
+
+    # Finite-difference numerical check against V'(mu)
+    h = 1e-5
+    mu0 = 3.0
+    numerical = (bv(mu0 + h) - bv(mu0 - h)) / (2 * h)
+    assert_allclose(bv.deriv(mu0), numerical, rtol=1e-4)

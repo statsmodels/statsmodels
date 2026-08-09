@@ -14,7 +14,7 @@ SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
 def data(request):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     scale = 0.01 if request.param[1] else 1
-    y = np.cumsum(scale + scale * rs.standard_normal((300)))
+    y = np.cumsum(scale + scale * rs.standard_normal(300))
     if request.param[1]:
         y = np.exp(y)
     index = pd.date_range("2000-01-01", periods=300)
@@ -30,7 +30,7 @@ def data(request):
 def indexed_data(request):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     scale = 0.01
-    y = np.cumsum(scale + scale * rs.standard_normal((300)))
+    y = np.cumsum(scale + scale * rs.standard_normal(300))
     y = np.exp(y)
     if request.param == "datetime":
         index = pd.date_range("2000-1-1", periods=300)
@@ -77,9 +77,9 @@ def test_alt_index(indexed_data):
     period = 12 if date_like else None
     res = ThetaModel(indexed_data, period=period).fit()
     if hasattr(idx, "freq") and idx.freq is None:
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast_components(37)
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast(23)
     else:
         res.forecast_components(37)
@@ -87,11 +87,12 @@ def test_alt_index(indexed_data):
 
 
 def test_no_freq():
+    rs = np.random.RandomState(3231298)
     idx = pd.date_range("2000-1-1", periods=300)
     locs = []
     for i in range(100):
         locs.append(2 * i + int((i % 2) == 1))
-    y = pd.Series(np.random.standard_normal(100), index=idx[locs])
+    y = pd.Series(rs.standard_normal(100), index=idx[locs])
     with pytest.raises(ValueError, match="You must specify a period or"):
         ThetaModel(y)
 
@@ -133,3 +134,30 @@ def test_forecast_seasonal_alignment(data, period):
     index = np.arange(data.shape[0], data.shape[0] + comp.shape[0])
     expected = seasonal[index % period]
     np.testing.assert_allclose(comp.seasonal, expected)
+
+
+def test_auto():
+    rs = np.random.RandomState(232387289)
+    m = 250
+    e = rs.standard_normal(m)
+    s = 10 * np.sin(np.linspace(0, np.pi, 12))
+    s = np.tile(s, (m // 12 + 1))[:m]
+    idx = pd.period_range("2000-01-01", freq="M", periods=m)
+    x = e + s
+    y = pd.DataFrame(10 + x - x.min(), index=idx)
+
+    tm = ThetaModel(y, method="auto")
+    assert tm.method == "mul"
+    res = tm.fit()
+
+    tm = ThetaModel(y, method="mul")
+    assert tm.method == "mul"
+    res2 = tm.fit()
+
+    np.testing.assert_allclose(res.params, res2.params, rtol=1e-4)
+
+    tm = ThetaModel(y - y.mean(), method="auto")
+    assert tm.method == "add"
+    res3 = tm.fit()
+
+    assert not np.allclose(res.params, res3.params)

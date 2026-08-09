@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Pickand's dependence functions as generators for EV-copulas
 
 
@@ -11,10 +10,11 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
+
+from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
-class PickandDependence(object):
+class PickandDependence:
 
     def __call__(self, *args, **kwargs):
         return self.evaluate(*args, **kwargs)
@@ -27,17 +27,14 @@ class PickandDependence(object):
 
         implemented through numerical differentiation
         """
-        # TODO: workaround proplem with numdiff for 1d
         t = np.atleast_1d(t)
-        # return np.diag(approx_fprime(t, self.evaluate, args=args))
-        return np.diag(approx_fprime_cs(t, self.evaluate, args=args))
+        return _approx_fprime_cs_scalar(t, self.evaluate)
 
     def deriv2(self, t, *args):
-        """First derivative of the dependence function
+        """Second derivative of the dependence function
 
         implemented through numerical differentiation
         """
-        # TODO: workaround proplem with numdiff for 1d
         if np.size(t) == 1:
             d2 = approx_hess([t], self.evaluate, args=args)[0]
         else:
@@ -47,14 +44,15 @@ class PickandDependence(object):
 
 
 class AsymLogistic(PickandDependence):
-    '''asymmetric logistic model of Tawn 1988
+    """asymmetric logistic model of Tawn 1988
 
     special case: a1=a2=1 : Gumbel
 
     restrictions:
      - theta in (0,1]
      - a1, a2 in [0,1]
-    '''
+    """
+    k_args = 3
 
     def _check_args(self, a1, a2, theta):
         condth = (theta > 0) and (theta <= 1)
@@ -92,14 +90,15 @@ transform_tawn = AsymLogistic()
 
 
 class AsymNegLogistic(PickandDependence):
-    '''asymmetric negative logistic model of Joe 1990
+    """asymmetric negative logistic model of Joe 1990
 
     special case:  a1=a2=1 : symmetric negative logistic of Galambos 1978
 
     restrictions:
      - theta in (0,inf)
      - a1, a2 in (0,1]
-    '''
+    """
+    k_args = 3
 
     def _check_args(self, a1, a2, theta):
         condth = (theta > 0)
@@ -146,7 +145,7 @@ transform_joe = AsymNegLogistic()
 
 
 class AsymMixed(PickandDependence):
-    '''asymmetric mixed model of Tawn 1988
+    """asymmetric mixed model of Tawn 1988
 
     special case:  k=0, theta in [0,1] : symmetric mixed model of
         Tiago de Oliveira 1980
@@ -156,7 +155,8 @@ class AsymMixed(PickandDependence):
      - theta + 3*k > 0
      - theta + k <= 1
      - theta + 2*k <= 1
-    '''
+    """
+    k_args = 2
 
     def _check_args(self, theta, k):
         condth = (theta >= 0)
@@ -181,14 +181,15 @@ transform_tawn2 = AsymMixed()
 
 
 class AsymBiLogistic(PickandDependence):
-    '''bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
+    """bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
 
     restrictions:
      - (beta, delta) in (0,1)^2 or
      - (beta, delta) in (-inf,0)^2
 
     not vectorized because of numerical integration
-    '''
+    """
+    k_args = 2
 
     def _check_args(self, beta, delta):
         cond1 = (beta > 0) and (beta <= 1) and (delta > 0) and (delta <= 1)
@@ -213,13 +214,14 @@ transform_bilogistic = AsymBiLogistic()
 
 
 class HR(PickandDependence):
-    '''model of Huesler Reiss 1989
+    """model of Huesler Reiss 1989
 
     special case:  a1=a2=1 : symmetric negative logistic of Galambos 1978
 
     restrictions:
      - lambda in (0,inf)
-    '''
+    """
+    k_args = 1
 
     def _check_args(self, lamda):
         cond = (lamda > 0)
@@ -232,6 +234,7 @@ class HR(PickandDependence):
         term = np.log((1. - t) / t) * 0.5 / lamda
 
         from scipy.stats import norm
+
         # use special if I want to avoid stats import
         transf = ((1 - t) * norm._cdf(lamda + term) +
                   t * norm._cdf(lamda - term))
@@ -243,7 +246,7 @@ class HR(PickandDependence):
                 order = -1
             else:
                 raise ValueError("order should be 1, 2, or (1,2)")
-        lamda = 2
+
         dn = 1 / np.sqrt(2 * np.pi)
         a = lamda
         g = np.log((1. - t) / t) * 0.5 / a
@@ -293,12 +296,13 @@ transform_hr = HR()
 
 # def transform_tev(t, rho, df):
 class TEV(PickandDependence):
-    '''t-EV model of Demarta and McNeil 2005
+    """t-EV model of Demarta and McNeil 2005
 
     restrictions:
      - rho in (-1,1)
      - x > 0
-    '''
+    """
+    k_args = 2
 
     def _check_args(self, rho, df):
         x = df  # alias, Genest and Segers use chi, copual package uses df
@@ -312,6 +316,7 @@ class TEV(PickandDependence):
         #    raise ValueError('invalid args')
 
         from scipy.stats import t as stats_t
+
         # use special if I want to avoid stats import
 
         term1 = (np.power(t/(1.-t), 1./x) - rho)  # for t

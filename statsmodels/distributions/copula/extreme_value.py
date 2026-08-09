@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Extreme Value Copulas
 Created on Fri Jan 29 19:19:45 2021
 
@@ -9,15 +8,17 @@ License: BSD-3
 
 import numpy as np
 
+from .copulas import Copula
+
 
 def copula_bv_ev(u, transform, args=()):
-    '''generic bivariate extreme value copula
-    '''
+    """generic bivariate extreme value copula
+    """
     u, v = u
     return np.exp(np.log(u * v) * (transform(np.log(u)/np.log(u*v), *args)))
 
 
-class ExtremeValueCopula(object):
+class ExtremeValueCopula(Copula):
     """Extreme value copula constructed from Pickand's dependence function.
 
     Currently only bivariate copulas are available.
@@ -27,6 +28,11 @@ class ExtremeValueCopula(object):
     transform: instance of transformation class
         Pickand's dependence function with required methods including first
         and second derivatives
+    args : tuple
+        Optional copula parameters. Copula parameters can be either provided
+        when creating the instance or as arguments when calling methods.
+    k_dim : int
+        Currently only bivariate extreme value copulas are supported.
 
     Notes
     -----
@@ -37,7 +43,7 @@ class ExtremeValueCopula(object):
     - AsymMixed
     - HR
 
-    TEV and AsymBiLogistic currently do not have required derivaties.
+    TEV and AsymBiLogistic currently do not have required derivatives for pdf.
 
     See Also
     --------
@@ -45,8 +51,25 @@ class ExtremeValueCopula(object):
 
     """
 
-    def __init__(self, transform):
+    def __init__(self, transform, args=(), k_dim=2):
+        super().__init__(k_dim=k_dim)
         self.transform = transform
+        self.k_args = transform.k_args
+        self.args = args
+        if k_dim != 2:
+            raise ValueError("Only bivariate EV copulas are available.")
+
+    def _handle_args(self, args):
+        # TODO: how to we handle non-tuple args? two we allow single values?
+        # Model fit might give an args that can be empty
+        if isinstance(args, np.ndarray):
+            args = tuple(args)  # handles empty arrays, unpacks otherwise
+        if args == () or args is None:
+            args = self.args
+        if not isinstance(args, tuple):
+            args = (args,)
+
+        return args
 
     def cdf(self, u, args=()):
         """Evaluate cdf of bivariate extreme value copula.
@@ -68,6 +91,7 @@ class ExtremeValueCopula(object):
         """
         # currently only Bivariate
         u, v = np.asarray(u).T
+        args = self._handle_args(args)
         cdfv = np.exp(np.log(u * v) *
                       self.transform(np.log(u)/np.log(u*v), *args))
         return cdfv
@@ -92,6 +116,7 @@ class ExtremeValueCopula(object):
         """
         tr = self.transform
         u1, u2 = np.asarray(u).T
+        args = self._handle_args(args)
 
         log_u12 = np.log(u1 * u2)
         t = np.log(u1) / log_u12
@@ -133,4 +158,7 @@ class ExtremeValueCopula(object):
 
         where t = np.log(v)/np.log(u*v)
         """
+        raise NotImplementedError
+
+    def fit_corr_param(self, data):
         raise NotImplementedError

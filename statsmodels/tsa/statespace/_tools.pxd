@@ -4,11 +4,31 @@
 """
 State Space Models - Cython Tools declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
 cimport numpy as np
+
+from statsmodels.tsa.statespace._kalman_filter cimport (
+    cKalmanFilter,
+    dKalmanFilter,
+    sKalmanFilter,
+    zKalmanFilter,
+)
+from statsmodels.tsa.statespace._kalman_smoother cimport (
+    cKalmanSmoother,
+    dKalmanSmoother,
+    sKalmanSmoother,
+    zKalmanSmoother,
+)
+from statsmodels.tsa.statespace._representation cimport (
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
+)
+
 
 cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, object nobs=*)
 
@@ -83,3 +103,18 @@ cdef int _zselect_cov(int k_states, int k_posdef, int k_states_total,
                            np.complex128_t * cov,
                            np.complex128_t * selected_cov)
 
+cpdef _scompute_smoothed_state_weights(
+    sKalmanSmoother smoother, sKalmanFilter kfilter, sStatespace model,
+    np.int32_t [:] compute_t, np.int32_t [:] compute_j, np.float32_t scale)
+
+cpdef _dcompute_smoothed_state_weights(
+    dKalmanSmoother smoother, dKalmanFilter kfilter, dStatespace model,
+    np.int32_t [:] compute_t, np.int32_t [:] compute_j, np.float64_t scale)
+
+cpdef _ccompute_smoothed_state_weights(
+    cKalmanSmoother smoother, cKalmanFilter kfilter, cStatespace model,
+    np.int32_t [:] compute_t, np.int32_t [:] compute_j, np.complex64_t scale)
+
+cpdef _zcompute_smoothed_state_weights(
+    zKalmanSmoother smoother, zKalmanFilter kfilter, zStatespace model,
+    np.int32_t [:] compute_t, np.int32_t [:] compute_j, np.complex128_t scale)

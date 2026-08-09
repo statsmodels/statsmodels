@@ -31,8 +31,7 @@ structure is within statsmodels.tsa is
   adf unit root test, kpss test, bds test, ljung-box test and others.
 - ar_model : univariate autoregressive process, estimation with conditional
   and exact maximum likelihood and conditional least-squares
-- arima_model : univariate ARMA process, estimation with conditional
-  and exact maximum likelihood and conditional least-squares
+- arima.model : univariate ARIMA process, estimation with alternative methods
 - statespace : Comprehensive statespace model specification and estimation. See
   the :ref:`statespace documentation <statespace>`.
 - vector_ar, var : vector autoregressive process (VAR) and vector error correction
@@ -67,24 +66,42 @@ Descriptive Statistics and Tests
 
    stattools.acovf
    stattools.acf
+   stattools.AcfResult
    stattools.pacf
+   stattools.PacfResult
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
+   stattools.PacfBurgResult
    stattools.ccovf
    stattools.ccf
+   stattools.CcfResult
+   stattools.pccf
+   stattools.PccfResult
    stattools.adfuller
+   stattools.ADFullerResult
    stattools.kpss
+   stattools.KpssResult
+   stattools.leybourne
+   stattools.range_unit_root_test
+   stattools.RangeUnitRootTestResult
    stattools.zivot_andrews
    stattools.coint
+   stattools.CointResult
    stattools.bds
+   stattools.block_jackknife
+   stattools.JackknifeResult
    stattools.q_stat
+   stattools.QStatResult
    stattools.breakvar_heteroskedasticity_test
+   stattools.BreakvarHeteroskedasticityResult
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.LevinsonDurbinResult
    stattools.innovations_algo
    stattools.innovations_filter
    stattools.levinson_durbin_pacf
+   stattools.LevinsonDurbinPacfResult
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis
@@ -108,12 +125,16 @@ The basic autoregressive model in Statsmodels is:
    ar_model.AutoReg
    ar_model.AutoRegResults
    ar_model.ar_select_order
+   ar_model.InformationCriteria
 
 The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
 and supports exogenous regressors (an AR-X model) and seasonal effects.
 
 AR-X and related models can also be fitted with the `arima.ARIMA` class and the
 `SARIMAX` class (using full MLE via the Kalman Filter).
+
+See the notebook `Autoregressions
+<examples/notebooks/generated/autoregressions.ipynb>`_ for an overview.
 
 
 Autoregressive Moving-Average Processes (ARMA) and Kalman Filter
@@ -135,6 +156,28 @@ filter). It is a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
 impulse responses, etc.).
+
+See the notebooks `ARMA: Sunspots Data
+<examples/notebooks/generated/tsa_arma_0.ipynb>`_ and
+`ARMA: Artificial Data <examples/notebooks/generated/tsa_arma_1.ipynb>`_
+for an overview.
+
+The innovations algorithm provides a way to compute the likelihood, score, and
+related quantities for a given ARMA process without constructing a full state
+space representation; it is used internally by some of the Hannan-Rissanen and
+innovations-based ARMA parameter estimators.
+
+.. currentmodule:: statsmodels.tsa.innovations
+
+.. autosummary::
+   :toctree: generated/
+
+   arma_innovations.arma_innovations
+   arma_innovations.arma_loglike
+   arma_innovations.arma_loglikeobs
+   arma_innovations.arma_score
+   arma_innovations.arma_scoreobs
+
 
 Exponential Smoothing
 ~~~~~~~~~~~~~~~~~~~~~
@@ -181,6 +224,10 @@ and impulse responses, etc.).
    statespace.exponential_smoothing.ExponentialSmoothing
    statespace.exponential_smoothing.ExponentialSmoothingResults
 
+See the notebook `Exponential Smoothing
+<examples/notebooks/generated/exponential_smoothing.ipynb>`_
+for an overview.
+
 ARMA Process
 """"""""""""
 
@@ -216,6 +263,52 @@ process for given lag-polynomials.
 
 .. currentmodule:: statsmodels.tsa
 
+Autoregressive Distributed Lag (ARDL) Models
+""""""""""""""""""""""""""""""""""""""""""""
+Autoregressive Distributed Lag models span the space between
+autoregressive models (:class:`~statsmodels.tsa.ar_model.AutoReg`)
+and vector autoregressive models (:class:`~statsmodels.tsa.vector_ar.VAR`).
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   ardl.ARDL
+   ardl.ARDLResults
+   ardl.ardl_select_order
+   ardl.ARDLOrderSelectionResults
+
+The `ardl.ARDL` model estimates parameters using conditional MLE (OLS)
+and allows for both simple deterministic terms (trends and seasonal
+dummies) as well as complex deterministics using a
+:class:`~statsmodels.tsa.deterministic.DeterministicProcess`.
+
+AR-X and related models can also be fitted with
+:class:`~statsmodels.tsa.statespace.sarimax.SARIMAX` class (using full MLE via
+the Kalman Filter).
+
+See the notebook `Autoregressive Distributed Lag Models
+<examples/notebooks/generated/autoregressive_distributed_lag.ipynb>`_
+for an overview.
+
+Error Correction Models (ECM)
+"""""""""""""""""""""""""""""
+Error correction models are reparameterizations of ARDL models that
+regress the difference of the endogenous variable on the lagged levels
+of the endogenous variables and optional lagged differences of the
+exogenous variables.
+
+.. currentmodule:: statsmodels.tsa
+
+.. autosummary::
+   :toctree: generated/
+
+   ardl.UECM
+   ardl.UECMResults
+   ardl.BoundsTestResult
+
+
 Statespace Models
 """""""""""""""""
 See the :ref:`statespace documentation <statespace>`.
@@ -240,6 +333,11 @@ Regime switching models
 
    MarkovAutoregression
 
+See the notebooks `Markov switching dynamic regression
+<examples/notebooks/generated/markov_regression.ipynb>`_ and
+`Markov switching autoregression
+<examples/notebooks/generated/markov_autoregression.ipynb>`_
+for an overview.
 
 Time Series Filters
 """""""""""""""""""
@@ -262,10 +360,18 @@ Time Series Filters
 
    cffilter
 
+.. currentmodule:: statsmodels.tsa.filters.hamilton_filter
+.. autosummary::
+   :toctree: generated/
+
+   hamilton_filter
+
+
 .. currentmodule:: statsmodels.tsa.filters.filtertools
 .. autosummary::
    :toctree: generated/
 
+   CycleTrendResult
    convolution_filter
    recursive_filter
    miso_lfilter
@@ -279,7 +385,11 @@ Time Series Filters
 
    seasonal_decompose
    STL
+   MSTL
    DecomposeResult
+   
+See the notebook `Time Series Filters
+<examples/notebooks/generated/tsa_filters.ipynb>`_ for an overview.
 
 TSA Tools
 """""""""
@@ -293,6 +403,7 @@ TSA Tools
    add_trend
    detrend
    lagmat
+   LagmatResult
    lagmat2ds
 
 VARMA Process
@@ -340,14 +451,11 @@ deterministic dynamics and to forecast without constructing exogenous trends.
    FourierDeterministicTerm
    TimeTrendDeterministicTerm
 
-Users who wish to write custom deterministic terms must subclass
+Users who wish to write custom deterministic terms must use subclass
 :class:`~statsmodels.tsa.deterministic.DeterministicTerm`.
-
-.. currentmodule:: statsmodels.tsa.deterministic
-.. autosummary::
-   :toctree: generated/
-
-   DeterministicTerm
+   
+See the notebook `Deterministic Terms in Time Series Models
+<examples/notebooks/generated/deterministics.ipynb>`_ for an overview.
 
 Forecasting Models
 """"""""""""""""""
@@ -393,6 +501,9 @@ a random-walk model.
 
    STLForecast
    STLForecastResults
+
+See the notebook `Seasonal Decomposition
+<examples/notebooks/generated/stl_decomposition.ipynb>`_ for an overview.
 
 Prediction Results
 """"""""""""""""""

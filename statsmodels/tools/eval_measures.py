@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""some measures for evaluation of prediction, tests and model selection
+"""
+Some measures for evaluation of prediction, tests and model selection
 
 Created on Tue Nov 08 15:23:20 2011
 Updated on Wed Jun 03 10:42:20 2020
@@ -13,8 +13,22 @@ import numpy as np
 from statsmodels.tools.validation import array_like
 
 
+def _nan_reduction_result(arr, axis):
+    """Explicit nan with the shape a reduction of `arr` over `axis` would give.
+
+    Used for empty inputs, where the underlying numpy reduction has no
+    identity element. Returns a scalar when the reduction collapses the whole
+    array, otherwise an array of nan with the remaining shape.
+    """
+    if axis is None or arr.ndim <= 1:
+        return np.nan
+    axis = axis % arr.ndim
+    return np.full(arr.shape[:axis] + arr.shape[axis + 1 :], np.nan)
+
+
 def mse(x1, x2, axis=0):
-    """mean squared error
+    """
+    Mean squared error
 
     Parameters
     ----------
@@ -35,6 +49,7 @@ def mse(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass, for example
     numpy matrices will silently produce an incorrect result.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -42,7 +57,8 @@ def mse(x1, x2, axis=0):
 
 
 def rmse(x1, x2, axis=0):
-    """root mean squared error
+    """
+    Root mean squared error
 
     Parameters
     ----------
@@ -63,6 +79,7 @@ def rmse(x1, x2, axis=0):
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass, for example
     numpy matrices will silently produce an incorrect result.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -88,6 +105,7 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
     -------
     rmspe : ndarray or float
        Root Mean Squared Percentage Error along given axis.
+
     """
     y_hat = np.asarray(y_hat)
     y = np.asarray(y)
@@ -101,7 +119,8 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
 
 
 def maxabs(x1, x2, axis=0):
-    """maximum absolute error
+    """
+    Maximum absolute error
 
     Parameters
     ----------
@@ -121,14 +140,20 @@ def maxabs(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.max(np.abs(x1 - x2), axis=axis)
+    absdiff = np.abs(x1 - x2)
+    if absdiff.size == 0:
+        # np.max has no identity element for an empty input
+        return _nan_reduction_result(absdiff, axis)
+    return np.max(absdiff, axis=axis)
 
 
 def meanabs(x1, x2, axis=0):
-    """mean absolute error
+    """
+    Mean absolute error
 
     Parameters
     ----------
@@ -148,6 +173,7 @@ def meanabs(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -155,7 +181,8 @@ def meanabs(x1, x2, axis=0):
 
 
 def medianabs(x1, x2, axis=0):
-    """median absolute error
+    """
+    Median absolute error
 
     Parameters
     ----------
@@ -175,6 +202,7 @@ def medianabs(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -182,7 +210,8 @@ def medianabs(x1, x2, axis=0):
 
 
 def bias(x1, x2, axis=0):
-    """bias, mean error
+    """
+    bias, mean error
 
     Parameters
     ----------
@@ -202,6 +231,7 @@ def bias(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -209,7 +239,8 @@ def bias(x1, x2, axis=0):
 
 
 def medianbias(x1, x2, axis=0):
-    """median bias, median error
+    """
+    Median bias, median error
 
     Parameters
     ----------
@@ -229,6 +260,7 @@ def medianbias(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -236,13 +268,16 @@ def medianbias(x1, x2, axis=0):
 
 
 def vare(x1, x2, ddof=0, axis=0):
-    """variance of error
+    """
+    Variance of error
 
     Parameters
     ----------
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
+    ddof : int
+       Delta degrees of freedom used in the variance calculation.
     axis : int
        axis along which the summary statistic is calculated
 
@@ -256,6 +291,7 @@ def vare(x1, x2, ddof=0, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -263,13 +299,16 @@ def vare(x1, x2, ddof=0, axis=0):
 
 
 def stde(x1, x2, ddof=0, axis=0):
-    """standard deviation of error
+    """
+    Standard deviation of error
 
     Parameters
     ----------
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
+    ddof : int
+       Delta degrees of freedom used in the standard deviation calculation.
     axis : int
        axis along which the summary statistic is calculated
 
@@ -283,6 +322,7 @@ def stde(x1, x2, ddof=0, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they need to broadcast.
     This uses ``numpy.asanyarray`` to convert the input. Whether this is the
     desired result or not depends on the array subclass.
+
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
@@ -304,21 +344,25 @@ def iqr(x1, x2, axis=0):
 
     Returns
     -------
-    irq : {float, ndarray}
+    iqr : {float, ndarray}
        Interquartile range along given axis.
 
     Notes
     -----
     If ``x1`` and ``x2`` have different shapes, then they must broadcast.
+
     """
     x1 = array_like(x1, "x1", dtype=None, ndim=None)
-    x2 = array_like(x2, "x1", dtype=None, ndim=None)
+    x2 = array_like(x2, "x2", dtype=None, ndim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()
         axis = 0
     xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
+    if nobs == 0:
+        # no observations to take quantiles of
+        return _nan_reduction_result(xdiff, axis)
     idx = np.round((nobs - 1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
@@ -352,6 +396,7 @@ def aic(llf, nobs, df_modelwc):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion
+
     """
     return -2.0 * llf + 2.0 * df_modelwc
 
@@ -374,11 +419,21 @@ def aicc(llf, nobs, df_modelwc):
     aicc : float
         information criterion
 
+    Notes
+    -----
+    Returns +inf if the effective degrees of freedom, defined as
+    ``nobs - df_modelwc - 1.0``, is <= 0.
+
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
+
     """
-    return -2.0 * llf + 2.0 * df_modelwc * nobs / (nobs - df_modelwc - 1.0)
+    dof_eff = nobs - df_modelwc - 1.0
+    if dof_eff > 0:
+        return -2.0 * llf + 2.0 * df_modelwc * nobs / dof_eff
+    else:
+        return np.inf
 
 
 def bic(llf, nobs, df_modelwc):
@@ -402,6 +457,7 @@ def bic(llf, nobs, df_modelwc):
     References
     ----------
     https://en.wikipedia.org/wiki/Bayesian_information_criterion
+
     """
     return -2.0 * llf + np.log(nobs) * df_modelwc
 
@@ -427,6 +483,7 @@ def hqic(llf, nobs, df_modelwc):
     References
     ----------
     Wikipedia does not say much
+
     """
     return -2.0 * llf + 2 * np.log(np.log(nobs)) * df_modelwc
 
@@ -448,6 +505,8 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
+    islog : bool
+        If True, `sigma2` is already log-transformed.
 
     Returns
     -------
@@ -475,16 +534,12 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     Note: In our definition we do not divide by n in the log-likelihood
     version.
 
-    TODO: Latex math
-
-    reference for example lecture notes by Herman Bierens
-
-    See Also
-    --------
+    See, for example, lecture notes by Herman Bierens.
 
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion
+
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -492,7 +547,8 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 
 def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
-    """Akaike information criterion (AIC) with small sample correction
+    """
+    Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
@@ -504,6 +560,8 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
+    islog : bool
+        If True, `sigma2` is already log-transformed.
 
     Returns
     -------
@@ -519,6 +577,7 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
+
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -526,7 +585,8 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 
 def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    """Bayesian information criterion (BIC) or Schwarz criterion
+    """
+    Bayesian information criterion (BIC) or Schwarz criterion
 
     Parameters
     ----------
@@ -538,6 +598,8 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
+    islog : bool
+        If True, `sigma2` is already log-transformed.
 
     Returns
     -------
@@ -553,6 +615,7 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     https://en.wikipedia.org/wiki/Bayesian_information_criterion
+
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -560,7 +623,8 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 
 def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
-    """Hannan-Quinn information criterion (HQC)
+    """
+    Hannan-Quinn information criterion (HQC)
 
     Parameters
     ----------
@@ -572,6 +636,8 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
+    islog : bool
+        If True, `sigma2` is already log-transformed.
 
     Returns
     -------
@@ -587,6 +653,7 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     References
     ----------
     xxx
+
     """
     if not islog:
         sigma2 = np.log(sigma2)
@@ -599,23 +666,23 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 
 __all__ = [
-    maxabs,
-    meanabs,
-    medianabs,
-    medianbias,
-    mse,
-    rmse,
-    rmspe,
-    stde,
-    vare,
-    aic,
-    aic_sigma,
-    aicc,
-    aicc_sigma,
-    bias,
-    bic,
-    bic_sigma,
-    hqic,
-    hqic_sigma,
-    iqr,
+    "aic",
+    "aic_sigma",
+    "aicc",
+    "aicc_sigma",
+    "bias",
+    "bic",
+    "bic_sigma",
+    "hqic",
+    "hqic_sigma",
+    "iqr",
+    "maxabs",
+    "meanabs",
+    "medianabs",
+    "medianbias",
+    "mse",
+    "rmse",
+    "rmspe",
+    "stde",
+    "vare",
 ]

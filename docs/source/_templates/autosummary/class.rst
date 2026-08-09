@@ -3,7 +3,7 @@
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
-   :exclude-members:
+   :exclude-members: {% for item in methods %}{%- if not item.startswith('_') or item in ['__call__'] %}{{ item }},{% endif %}{%- endfor %}
 
    {% block methods %}
    {% if methods %}
@@ -18,6 +18,7 @@
    {%- endfor %}
    {% endif %}
    {% endblock %}
+
    {% block attributes %}
    {% if attributes %}
    .. rubric:: Properties

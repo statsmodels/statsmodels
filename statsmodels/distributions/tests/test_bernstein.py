@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Feb 17 23:44:18 2021
 
@@ -9,18 +8,27 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pytest
 from scipy import stats
 
-from statsmodels.distributions.copula.api import (
-        CopulaDistribution, ArchimedeanCopula)
-from statsmodels.distributions.copula.api import transforms as tra
-import statsmodels.distributions.tools as dt
 from statsmodels.distributions.bernstein import (
-    BernsteinDistribution, BernsteinDistributionBV, BernsteinDistributionUV)
+    BernsteinDistribution,
+    BernsteinDistributionBV,
+    BernsteinDistributionUV,
+)
+from statsmodels.distributions.copula.api import (
+    ArchimedeanCopula,
+    CopulaDistribution,
+    transforms as tra,
+)
+import statsmodels.distributions.tools as dt
 
 
 def test_bernstein_distribution_1d():
     grid = dt._Grid([501])
+    loc = grid.x_flat == 0
+    grid.x_flat[loc] = grid.x_flat[~loc].min() / 2
+    grid.x_flat[grid.x_flat == 1] = 1 - grid.x_flat.min()
 
     distr = stats.beta(3, 5)
     cdf_g = distr.cdf(np.squeeze(grid.x_flat))
@@ -55,8 +63,12 @@ def test_bernstein_distribution_1d():
 
     # check rvs
     # currently smoke test
-    rvs = bpd.rvs(100)
+    rs = np.random.RandomState(3382910)
+    rvs = bpd.rvs(100, rng=rs)
     assert len(rvs) == 100
+
+    with pytest.warns(FutureWarning):
+        bpd.rvs(100, random_state=rs)
 
 
 def test_bernstein_distribution_2d():
@@ -67,7 +79,7 @@ def test_bernstein_distribution_2d():
     ca = ArchimedeanCopula(cop_tr())
     distr1 = stats.uniform
     distr2 = stats.uniform
-    cad = CopulaDistribution([distr1, distr2], ca, copargs=args)
+    cad = CopulaDistribution(ca, [distr1, distr2], cop_args=args)
     cdfv = cad.cdf(grid.x_flat, args)
     cdf_g = cdfv.reshape(grid.k_grid)
 
@@ -107,7 +119,7 @@ def test_bernstein_distribution_2d():
     assert_allclose(pdf_m, np.ones(len(xx)), atol=1e-13)
 
 
-class TestBernsteinBeta2d(object):
+class TestBernsteinBeta2d:
 
     @classmethod
     def setup_class(cls):
@@ -118,7 +130,7 @@ class TestBernsteinBeta2d(object):
         ca = ArchimedeanCopula(cop_tr())
         distr1 = stats.beta(4, 3)
         distr2 = stats.beta(4, 4)  # (5, 2)
-        cad = CopulaDistribution([distr1, distr2], ca, copargs=args)
+        cad = CopulaDistribution(ca, [distr1, distr2], cop_args=args)
         cdfv = cad.cdf(grid.x_flat, args)
         cdf_g = cdfv.reshape(grid.k_grid)
 
@@ -127,6 +139,7 @@ class TestBernsteinBeta2d(object):
         cls.distr = cad
         cls.bpd = BernsteinDistributionBV(cdf_g)
 
+    @pytest.mark.high_memory
     def test_basic(self):
         bpd = self.bpd
         grid = self.grid
@@ -151,7 +164,8 @@ class TestBernsteinBeta2d(object):
 
     def test_rvs(self):
         # currently smoke test
-        rvs = self.bpd.rvs(100)
+        rs = np.random.RandomState(3283271)
+        rvs = self.bpd.rvs(100, rng=rs)
         assert len(rvs) == 100
 
 
@@ -166,7 +180,7 @@ class TestBernsteinBeta2dd(TestBernsteinBeta2d):
         ca = ArchimedeanCopula(cop_tr())
         distr1 = stats.beta(4, 3)
         distr2 = stats.beta(4, 4)  # (5, 2)
-        cad = CopulaDistribution([distr1, distr2], ca, copargs=args)
+        cad = CopulaDistribution(ca, [distr1, distr2], cop_args=args)
         cdfv = cad.cdf(grid.x_flat, args)
         cdf_g = cdfv.reshape(grid.k_grid)
 

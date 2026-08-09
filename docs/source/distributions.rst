@@ -24,6 +24,7 @@ Empirical Distributions
    :toctree: generated/
 
    ECDF
+   ECDFDiscrete
    StepFunction
    monotone_fn_inverter
 
@@ -31,7 +32,7 @@ Count Distributions
 -------------------
 
 The `discrete` module contains classes for count distributions that are based
-on discretizing a continouus distribution, and specific count distributions
+on discretizing a continuous distribution, and specific count distributions
 that are not available in scipy.distributions like generalized poisson and
 zero-inflated count models.
 
@@ -54,6 +55,31 @@ use potentially slow inherited generic methods.
    zinegbin
    zipoisson
 
+Copula
+------
+
+The `copula` sub-module provides classes to model the dependence between
+parameters. Copulae are used to construct a multivariate joint distribution and
+provide a set of functions like sampling, PDF, CDF.
+
+.. module:: statsmodels.distributions.copula.api
+   :synopsis: Copula for modeling parameter dependence
+
+.. currentmodule:: statsmodels.distributions.copula.api
+
+.. autosummary::
+   :toctree: generated/
+
+   CopulaDistribution
+   ArchimedeanCopula
+   FrankCopula
+   ClaytonCopula
+   GumbelCopula
+   GaussianCopula
+   StudentTCopula
+   ExtremeValueCopula
+   IndependenceCopula
+   rvs_kernel
 
 Distribution Extras
 -------------------
@@ -93,36 +119,16 @@ Distribution Extras
    mvstdnormcdf
    mvnormcdf
 
-Univariate Distributions by non-linear Transformations
-------------------------------------------------------
 
-Univariate distributions can be generated from a non-linear transformation of an
-existing univariate distribution. `Transf_gen` is a class that can generate a new
-distribution from a monotonic transformation, `TransfTwo_gen` can use hump-shaped
-or u-shaped transformation, such as abs or square. The remaining objects are
-special cases.
+Helper Functions
+----------------
 
-.. module:: statsmodels.sandbox.distributions.transformed
-   :synopsis: Experimental probability distributions and random number generators
+.. module:: statsmodels.tools.rng_qrng
+   :synopsis: Tools for working with random variable generation
 
-.. currentmodule:: statsmodels.sandbox.distributions.transformed
+.. currentmodule:: statsmodels.tools.rng_qrng
 
 .. autosummary::
    :toctree: generated/
 
-   TransfTwo_gen
-   Transf_gen
-
-   ExpTransf_gen
-   LogTransf_gen
-   SquareFunc
-
-   absnormalg
-   invdnormalg
-
-   loggammaexpg
-   lognormalg
-   negsquarenormalg
-
-   squarenormalg
-   squaretg
+   check_random_state

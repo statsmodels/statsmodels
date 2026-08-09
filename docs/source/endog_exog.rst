@@ -79,8 +79,9 @@ It is up to the user to know (or to consult a text book to find out) what the
 underlying statistical assumptions for the models are. As an example, ``exog``
 in ``OLS`` can have lagged dependent variables if the error or noise term is
 independently distributed over time (or uncorrelated over time). However, if
-the error terms are autocorrelated, then OLS does not have good statistical
-properties (is inconsistent) and the correct model will be ARMAX.
-``statsmodels`` has functions for regression diagnostics to test whether some of
-the assumptions are justified or not.
+the error terms are autocorrelated in the presense of lagged dependent
+variables, then OLS does not have good statistical properties (is inconsistent)
+and the correct model will be ARMAX. ``statsmodels`` has functions for
+regression diagnostics to test whether some of the assumptions are justified or
+not.
 

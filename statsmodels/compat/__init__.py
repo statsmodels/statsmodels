@@ -1,14 +1,18 @@
-from statsmodels.tools._testing import PytestTester
+from statsmodels.tools._test_runner import PytestTester
 
 from .python import (
-    PY37,
-    asunicode, asbytes, asstr,
-    lrange, lzip, lmap, lfilter,
+    asbytes,
+    lmap,
+    lrange,
+    lzip,
 )
 
-__all__ = ['PY37',
-           'asunicode', 'asbytes', 'asstr',
-           'lrange', 'lzip', 'lmap', 'lfilter',
-           'test']
+__all__ = [
+    "asbytes",
+    "lmap",
+    "lrange",
+    "lzip",
+    "test",
+]
 
 test = PytestTester()

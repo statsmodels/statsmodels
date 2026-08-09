@@ -1,7 +1,8 @@
 import numpy as np
+
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 """
 Elastic net regularization.
@@ -36,6 +37,31 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     All three functions have argument signature (x, model), where
     ``x`` is a point in the parameter space and ``model`` is an
     arbitrary statsmodels regression model.
+
+    Parameters
+    ----------
+    k : int
+        Index of the coefficient being optimized in the current
+        coordinate descent step.
+    L1_wt : scalar
+        The fraction of the penalty given to the L1 penalty term.
+    alpha : array_like
+        The penalty weight for each coefficient.
+    loglike_kwds : dict-like
+        Keyword arguments for the log-likelihood function.
+    score_kwds : dict-like
+        Keyword arguments for the score function.
+    hess_kwds : dict-like
+        Keyword arguments for the Hessian function.
+
+    Returns
+    -------
+    nploglike : function
+        The negative penalized log-likelihood function.
+    npscore : function
+        The derivative of `nploglike`.
+    nphess : function
+        The Hessian of `nploglike`.
     """
 
     def nploglike(params, model):
@@ -153,13 +179,13 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     init_args = model._get_init_kwds()
     # we do not need a copy of init_args b/c get_init_kwds provides new dict
-    init_args['hasconst'] = False
-    model_offset = init_args.pop('offset', None)
-    if 'exposure' in init_args and init_args['exposure'] is not None:
+    init_args["hasconst"] = False
+    model_offset = init_args.pop("offset", None)
+    if "exposure" in init_args and init_args["exposure"] is not None:
         if model_offset is None:
-            model_offset = np.log(init_args.pop('exposure'))
+            model_offset = np.log(init_args.pop("exposure"))
         else:
-            model_offset += np.log(init_args.pop('exposure'))
+            model_offset += np.log(init_args.pop("exposure"))
 
     fgh_list = [
         _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
@@ -221,7 +247,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     # post-estimation results.
     ii = np.flatnonzero(params)
     cov = np.zeros((k_exog, k_exog))
-    init_args = dict([(k, getattr(model, k, None)) for k in model._init_keys])
+    init_args = {k: getattr(model, k, None) for k in model._init_keys}
     if len(ii) > 0:
         model1 = model.__class__(
             model.endog, model.exog[:, ii], **init_args)
@@ -242,7 +268,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         klass = rslt.__class__
 
     # Not all models have a scale
-    if hasattr(rslt, 'scale'):
+    if hasattr(rslt, "scale"):
         scale = rslt.scale
     else:
         scale = 1.
@@ -261,7 +287,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     refit.regularized = True
     refit.converged = converged
     refit.method = method
-    refit.fit_history = {'iteration': itr + 1}
+    refit.fit_history = {"iteration": itr + 1}
 
     # Restore df in model class, see issue #1723 for discussion.
     model.df_model, model.df_resid = p, q
@@ -278,7 +304,7 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
     ----------
     func : function
         A smooth function of a single variable to be optimized
-        with L1 penaty.
+        with L1 penalty.
     grad : function
         The gradient of `func`.
     hess : function
@@ -308,7 +334,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
     Returns
     -------
-    The argmin of the objective function.
+    float
+        The argmin of the objective function.
     """
 
     # Overview:
@@ -367,22 +394,21 @@ class RegularizedResults(Results):
         The estimated (regularized) parameters.
     """
     def __init__(self, model, params):
-        super(RegularizedResults, self).__init__(model, params)
+        super().__init__(model, params)
 
     @cache_readonly
     def fittedvalues(self):
-        """
-        The predicted values from the model at the estimated parameters.
-        """
+        """The predicted values from the model at the estimated parameters"""
         return self.model.predict(self.params)
 
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'params': 'columns',
-        'resid': 'rows',
-        'fittedvalues': 'rows',
+        "params": "columns",
+        "resid": "rows",
+        "fittedvalues": "rows",
     }
     _wrap_attrs = _attrs
-wrap.populate_wrapper(RegularizedResultsWrapper,  # noqa:E305
-                      RegularizedResults)
+
+
+wrap.populate_wrapper(RegularizedResultsWrapper, RegularizedResults)
