@@ -267,6 +267,7 @@ Non-Parametric Tests
    rank_compare_2indep
    rank_compare_2ordinal
    samplesize_rank_compare_onetail
+   SamplesizeRankCompareResult
    RankCompareResult
    ProbSuperiorResult
    TostProbSuperiorResult

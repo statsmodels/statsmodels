@@ -21,7 +21,6 @@ from statsmodels.stats.weightstats import (
     _zconfint_generic,
     _zstat_generic,
 )
-from statsmodels.tools.testing import Holder
 
 
 def rankdata_2samp(x1, x2):
@@ -1016,7 +1015,44 @@ def cohensd2problarger(d):
     return stats.norm.cdf(d / np.sqrt(2))
 
 
-def _compute_rank_placements(x1, x2) -> Holder:
+class RankPlacementsResult(NamedTuple):
+    """
+    Result of :func:`_compute_rank_placements`.
+
+    Parameters
+    ----------
+    n_1 : int
+        Number of observations in the first sample.
+    n_2 : int
+        Number of observations in the second sample.
+    overall_ranks_pooled : ndarray
+        Ranks of the pooled sample.
+    overall_ranks_1 : ndarray
+        Ranks of the first sample in the pooled sample.
+    overall_ranks_2 : ndarray
+        Ranks of the second sample in the pooled sample.
+    within_group_ranks_1 : ndarray
+        Internal ranks of the first sample.
+    within_group_ranks_2 : ndarray
+        Internal ranks of the second sample.
+    placements_1 : ndarray
+        Placements of the first sample in the pooled sample.
+    placements_2 : ndarray
+        Placements of the second sample in the pooled sample.
+    """
+
+    n_1: int
+    n_2: int
+    overall_ranks_pooled: np.ndarray
+    overall_ranks_1: np.ndarray
+    overall_ranks_2: np.ndarray
+    within_group_ranks_1: np.ndarray
+    within_group_ranks_2: np.ndarray
+    placements_1: np.ndarray
+    placements_2: np.ndarray
+
+
+def _compute_rank_placements(x1, x2) -> RankPlacementsResult:
     """
     Compute ranks and placements for two samples
 
@@ -1031,27 +1067,9 @@ def _compute_rank_placements(x1, x2) -> Holder:
 
     Returns
     -------
-    res : Holder
-        An instance of Holder containing the following attributes:
-
-        n_1 : int
-            Number of observations in the first sample.
-        n_2 : int
-            Number of observations in the second sample.
-        overall_ranks_pooled : ndarray
-            Ranks of the pooled sample.
-        overall_ranks_1 : ndarray
-            Ranks of the first sample in the pooled sample.
-        overall_ranks_2 : ndarray
-            Ranks of the second sample in the pooled sample.
-        within_group_ranks_1 : ndarray
-            Internal ranks of the first sample.
-        within_group_ranks_2 : ndarray
-            Internal ranks of the second sample.
-        placements_1 : ndarray
-            Placements of the first sample in the pooled sample.
-        placements_2 : ndarray
-            Placements of the second sample in the pooled sample.
+    RankPlacementsResult
+        See :class:`RankPlacementsResult` for a description of the
+        attributes.
 
     Notes
     -----
@@ -1084,7 +1102,7 @@ def _compute_rank_placements(x1, x2) -> Holder:
     placements_1 = overall_ranks_1 - within_group_ranks_1
     placements_2 = overall_ranks_2 - within_group_ranks_2
 
-    return Holder(
+    return RankPlacementsResult(
         n_1=n_1,
         n_2=n_2,
         overall_ranks_pooled=overall_ranks_pooled,
@@ -1097,6 +1115,34 @@ def _compute_rank_placements(x1, x2) -> Holder:
     )
 
 
+class SamplesizeRankCompareResult(NamedTuple):
+    """
+    Result of :func:`samplesize_rank_compare_onetail`.
+
+    Parameters
+    ----------
+    nobs_total : float
+        The total sample size required for the experiment.
+    nobs_treat : float
+        Sample size for the treatment group.
+    nobs_ref : float
+        Sample size for the reference group.
+    relative_effect : float
+        The estimated relative effect size.
+    power : float
+        The desired power for the test.
+    alpha : float
+        The type I error rate for the test.
+    """
+
+    nobs_total: float
+    nobs_treat: float
+    nobs_ref: float
+    relative_effect: float
+    power: float
+    alpha: float
+
+
 def samplesize_rank_compare_onetail(
     synthetic_sample,
     reference_sample,
@@ -1104,7 +1150,7 @@ def samplesize_rank_compare_onetail(
     power,
     nobs_ratio=1,
     alternative="two-sided",
-) -> Holder:
+) -> SamplesizeRankCompareResult:
     """
     Compute sample size for the non-parametric Mann-Whitney U test
 
@@ -1133,21 +1179,9 @@ def samplesize_rank_compare_onetail(
 
     Returns
     -------
-    res : Holder
-        An instance of Holder containing the following attributes:
-
-        nobs_total : float
-            The total sample size required for the experiment.
-        nobs_treat : float
-            Sample size for the treatment group.
-        nobs_ref : float
-            Sample size for the reference group.
-        relative_effect : float
-            The estimated relative effect size.
-        power : float
-            The desired power for the test.
-        alpha : float
-            The type I error rate for the test.
+    SamplesizeRankCompareResult
+        See :class:`SamplesizeRankCompareResult` for a description of the
+        attributes.
 
     Notes
     -----
@@ -1327,7 +1361,7 @@ def samplesize_rank_compare_onetail(
     nobs_treat = nobs_total * (1 - prop_reference)
     nobs_ref = nobs_total * prop_reference
 
-    return Holder(
+    return SamplesizeRankCompareResult(
         nobs_total=nobs_total.item(),
         nobs_treat=nobs_treat.item(),
         nobs_ref=nobs_ref.item(),
