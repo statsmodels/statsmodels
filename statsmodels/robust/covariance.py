@@ -1632,6 +1632,61 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
     return idx_all
 
 
+class CovMResult(NamedTuple):
+    """
+    Result of :meth:`CovM.fit`, also used and extended by
+    :meth:`CovDetS.fit`.
+
+    Parameters
+    ----------
+    mean : ndarray
+        Estimated mean.
+    shape : ndarray
+        Estimated shape matrix, i.e. scatter matrix normalized to
+        det(shape) = 1.
+    scale : float
+        Estimated scale.
+    cov : ndarray
+        Estimated covariance, ``shape * scale**2``.
+    converged : bool
+        Whether the iteration converged before `maxiter` was reached.
+    n_iter : int
+        Number of iterations used.
+    mahalanobis : ndarray
+        Mahalanobis distances at the final mean and shape/scale estimate.
+    method : str or None
+        Label of the starting set that produced this fit. Only set by
+        :meth:`CovDetS.fit`.
+    scale_all : ndarray or None
+        Scale estimates of all starting sets. Only set on the final result
+        returned by :meth:`CovDetS.fit`.
+    idx_best : int or None
+        Index of the best starting set in `scale_all`. Only set on the
+        final result returned by :meth:`CovDetS.fit`.
+    tmean : ndarray or None
+        Location estimate used to standardize the data before computing
+        starting sets. Only set on the final result returned by
+        :meth:`CovDetS.fit`.
+    tscale : ndarray or None
+        Scale estimate used to standardize the data before computing
+        starting sets. Only set on the final result returned by
+        :meth:`CovDetS.fit`.
+    """
+
+    mean: np.ndarray
+    shape: np.ndarray
+    scale: float
+    cov: np.ndarray
+    converged: bool
+    n_iter: int
+    mahalanobis: np.ndarray
+    method: str | None = None
+    scale_all: np.ndarray | None = None
+    idx_best: int | None = None
+    tmean: np.ndarray | None = None
+    tscale: np.ndarray | None = None
+
+
 class CovM:
     """
     M-estimator for multivariate Mean and Scatter
@@ -1793,7 +1848,10 @@ class CovM:
 
         Returns
         -------
-        results instance with mean, shape, scale, cov and other attributes.
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov`, `converged`,
+            `n_iter`, and `mahalanobis`. See :class:`CovMResult` for
+            details.
 
         Notes
         -----
@@ -1846,7 +1904,7 @@ class CovM:
 
         maha = mahalanobis(self.data - mean, shape / scale, sqrt=True)
 
-        res = Holder(
+        res = CovMResult(
             mean=mean,
             shape=shape,
             scale=scale,
@@ -2294,7 +2352,10 @@ class CovDetS:
 
         Returns
         -------
-        Holder instance with results
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov` and extra
+            attributes `scale_all`, `idx_best`, `tmean`, `tscale` from the
+            starting-set search. See :class:`CovMResult` for details.
         """
 
         x = self.data
@@ -2330,8 +2391,7 @@ class CovDetS:
                 maxiter=maxiter_step,
             )
 
-            res_i.method = method
-            res[ii] = res_i
+            res[ii] = res_i._replace(method=method)
 
         scale_all = np.array([i.scale for i in res.values()])
         idx_best = np.argmin(scale_all)
@@ -2347,16 +2407,14 @@ class CovDetS:
                 shape=best.shape,
                 scale=best.scale,
                 maxiter=maxiter,
-            )
+            )._replace(method=best.method)
 
-        # include extra info in returned Holder instance
-        best.scale_all = scale_all
-        best.idx_best = idx_best
+        # include extra info in the returned CovMResult
+        best = best._replace(
+            scale_all=scale_all, idx_best=idx_best, tmean=m, tscale=s
+        )
 
-        best.tmean = m
-        best.tscale = s
-
-        return best  # is Holder instance already
+        return best
 
 
 class CovDetMM:
