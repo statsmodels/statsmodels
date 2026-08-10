@@ -574,7 +574,8 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     Use a Gaussian null distribution estimated from the data:
 
-    >>> null = EmpiricalNull(zscores)
+    >>> from statsmodels.stats.multitest import NullDistribution
+    >>> null = NullDistribution(zscores)
     >>> fdr = local_fdr(zscores, null_pdf=null.pdf)
     """
 
