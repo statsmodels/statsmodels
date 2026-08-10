@@ -6,12 +6,56 @@ License: BSD-3
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
-from statsmodels.stats.effect_size import _noncentrality_chisquare
+from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.effect_size import (
+    NoncentralityChisquareResult,
+    _noncentrality_chisquare,
+)
 from statsmodels.tools.sm_exceptions import ModelWarning
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class ChisquareBinningResult(NamedTuple):
+    """
+    Result of :func:`test_chisquare_binning`.
+
+    Parameters
+    ----------
+    statistic : float
+        Chisquare statistic of the goodness-of-fit test.
+    pvalue : float
+        p-value of the chisquare test.
+    df : int
+        Degrees of freedom of the test.
+    freqs : ndarray
+        Observed frequencies summed within each bin.
+    probs : ndarray
+        Expected frequencies summed within each bin.
+    noncentrality : NoncentralityChisquareResult
+        Estimate of the noncentrality parameter and its confidence
+        interval for the chisquare statistic.
+    resid_pearson : ndarray
+        Pearson residuals for each bin, ``(freqs - probs) / sqrt(probs)``.
+    chi2_stat_groups : ndarray
+        Chisquare contribution of each bin, before summing across bins.
+    indices : list of ndarray
+        Indices of the original observations included in each bin.
+    """
+
+    statistic: float
+    pvalue: float
+    df: int
+    freqs: np.ndarray
+    probs: np.ndarray
+    noncentrality: NoncentralityChisquareResult
+    resid_pearson: np.ndarray
+    chi2_stat_groups: np.ndarray
+    indices: list
 
 
 def test_chisquare_binning(
@@ -65,13 +109,9 @@ def test_chisquare_binning(
 
     Returns
     -------
-    HolderTuple instance
-        This instance contains the results of the chisquare test and some
-        information about the data
-
-        - statistic : chisquare statistic of the goodness-of-fit test
-        - pvalue : pvalue of the chisquare test
-        - df : degrees of freedom of the test
+    ChisquareBinningResult
+        See :class:`ChisquareBinningResult` for a description of the
+        attributes.
 
     Notes
     -----
@@ -136,7 +176,7 @@ def test_chisquare_binning(
     pvalue = stats.chi2.sf(chi2_stat, df)
     noncentrality = _noncentrality_chisquare(chi2_stat, df, alpha=alpha_nc)
 
-    res = HolderTuple(
+    res = ChisquareBinningResult(
         statistic=chi2_stat,
         pvalue=pvalue,
         df=df,
