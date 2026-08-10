@@ -8,13 +8,10 @@ License: BSD-3
 """
 
 import numpy as np
-from sklearn.isotonic import isotonic_regression
-
-from statsmodels.stats._knockoff import RegressionFDR
 from scipy.optimize import isotonic_regression
-from statsmodels.tools.testing import Holder
 
 from statsmodels.stats._knockoff import RegressionFDR
+from statsmodels.tools.testing import Holder
 
 __all__ = [
     "NullDistribution",
@@ -429,7 +426,7 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     Estimate local and tail FDR values for a list of p-values.
 
     Estimates the marginal density of the p-values using the Grenander estimator
-    of a monotone density. Combined with an estimate of the null proportion, 
+    of a monotone density. Combined with an estimate of the null proportion,
     this yields (by Bayes' rule) estimates of two posterior quantities:
     1. The tail false discovery rate, given by fdr(t) = Prob{null | p ≤ t}
     2. The local false discovery rate, given by lfdr(t) = Prob{null | p = t}
@@ -499,15 +496,10 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
         pvals_sorted = pvals  # alias
 
     # compute left-hand slopes of least concave majorant of empirical cdf
-    w = W[1:] - W[:-1]
-
-    slopes = isotonic_regression(
-        np.ones(nobs)/(nobs*w), sample_weight=w.copy(), increasing=False
-    )
-
     gaps = np.diff(pvals_sorted, prepend=0)
-    slope_reg = isotonic_regression(
-        np.ones(nobs)/(nobs*w), weights=w.copy(), increasing=False)
+    slope_reg = isotonic_regression(np.ones(nobs)/(nobs*gaps),
+                                weights=gaps.copy(),
+                                increasing=False)
     slopes = slope_reg.x
 
     # compute LCM of empirical cdf
