@@ -478,7 +478,7 @@ def plot_ccf(
         If True, negative lags are shown on the horizontal axis.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
-        plotted, e.g. if alpha=.05, 95 % confidence intervals are shown.
+        plotted, e.g., if alpha=.05, 95 % confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
         If True, shows vertical lines and markers for the correlation values.
@@ -605,7 +605,7 @@ def plot_pccf(
           intervening observations.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the
-        given level are plotted, e.g. if alpha=.05, 95 %
+        given level are plotted, e.g., if alpha=.05, 95 %
         confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
@@ -736,7 +736,7 @@ def plot_accf_grid(
         below the main diagonal.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
-        plotted, e.g. if alpha=.05, 95 % confidence intervals are shown.
+        plotted, e.g., if alpha=.05, 95 % confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
         If True, shows vertical lines and markers for the correlation values.

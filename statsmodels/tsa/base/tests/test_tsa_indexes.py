@@ -117,7 +117,7 @@ unsupported_indexes = [
     ([str, 1, "a", -30.1, {}], None),
 ]
 
-# Unsupported date indexes (i.e. those without inferrable frequency)
+# Unsupported date indexes (i.e., those without inferrable frequency)
 unsupported_date_indexes = [
     (["1950", "1952", "1941", "1954", "1991"], None),
     (
@@ -145,7 +145,7 @@ def test_instantiation_valid():
     #
     # Each pandas index (of `endog`, `exog`, or passed to `dates`) can be:
     # 0. None
-    # 1. RangeIndex (if applicable; i.e. if Pandas >= 0.18)
+    # 1. RangeIndex (if applicable; i.e., if Pandas >= 0.18)
     # 2. Integral Indexes with values exactly equal to 0, 1, ..., nobs-1
     # 3. DatetimeIndex with frequency
     # 4. PeriodIndex with frequency
@@ -174,11 +174,11 @@ def test_instantiation_valid():
     #
     # Each test will be denoted by:
     # endog.index:exog.index/date/freq where the corresponding
-    # location is the integer from above; e.g. 1.0:0.0/9/1 corresponds to
+    # location is the integer from above; e.g., 1.0:0.0/9/1 corresponds to
     # - List endog (with no index)
     # - No exog
     # - Series of datetime objects
-    # - Something valid for `pd.to_offset` (e.g. 'D', if that works with
+    # - Something valid for `pd.to_offset` (e.g., 'D', if that works with
     #   dates)
     #
     # Notice that the endog.index:exog.index really collapses to a single
@@ -187,14 +187,14 @@ def test_instantiation_valid():
     # otherwise. **Thus, we will not test `exog` here.**
     #
     # Example valid combinations of row_label/date/freq include:
-    # - */0/0 (i.e. anything is valid if date and freq are not passed)
-    # - */%/% where %/% denotes a valid date/freq combination (i.e. any
+    # - */0/0 (i.e., anything is valid if date and freq are not passed)
+    # - */%/% where %/% denotes a valid date/freq combination (i.e., any
     #   row_label is valid if a valid date/freq combination is given)
     #
     # Example invalid combinations include:
-    # - [1-2],[3-4].4/0/[1-2] (i.e. if have freq, then must have, or
+    # - [1-2],[3-4].4/0/[1-2] (i.e., if have freq, then must have, or
     #   coerce, a date index)
-    # - */[4-10]/0 (i.e. for some types of dates, freq must be passed)
+    # - */[4-10]/0 (i.e., for some types of dates, freq must be passed)
 
     # Baseline: list, numpy endog with no dates, no freq
     for endog in dta[:2]:
@@ -458,7 +458,7 @@ def test_instantiation_valid():
         message = (
             "A date index has been provided, but it has no"
             " associated frequency information and so will be"
-            " ignored when e.g. forecasting."
+            " ignored when e.g., forecasting."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")

@@ -43,7 +43,7 @@ class PenalizedMixin:
 
         super().__init__(*args, **kwds)
 
-        # TODO: define pen_weight as average pen_weight? i.e. per observation
+        # TODO: define pen_weight as average pen_weight? i.e., per observation
         # I would have preferred len(self.endog) * kwds.get('pen_weight', 1)
         # or use pen_weight_factor in signature
         if self.pen_weight is None:

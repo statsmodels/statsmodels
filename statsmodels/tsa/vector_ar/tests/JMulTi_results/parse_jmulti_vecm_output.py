@@ -248,7 +248,7 @@ def load_results_jmulti(dataset):
                       dt_string + "_Sigmau" + ".txt"
         sigmau_file = Path(here).joinpath(sigmau_file)
         rows_to_parse = 0
-        # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
+        # all numbers of Sigma_u in notation with e (e.g., 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
         sigmau_file = Path(sigmau_file).open(encoding="latin_1")

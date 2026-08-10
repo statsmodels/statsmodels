@@ -191,7 +191,7 @@ class TestMedianTestKsample:
             "and ncells=2*ngroups here), not the hardcoded 1. The reported "
             "chi-square statistic matches scipy.stats.median_test exactly "
             "(see test_statistic_matches_scipy), but with the wrong ddof "
-            "the p-value does not -- e.g. for this dataset the sandbox "
+            "the p-value does not -- e.g., for this dataset the sandbox "
             "version reports p=0.300 where the correct value (matching "
             "scipy.stats.median_test) is p=0.087."
         ),

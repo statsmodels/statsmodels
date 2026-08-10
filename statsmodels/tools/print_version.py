@@ -18,7 +18,7 @@ def safe_version(module, attr="__version__", *others):
         The imported module to inspect.
     attr : str or list[str]
         Name of the attribute (or chain of nested attribute names) to
-        look up on ``module``, e.g. ``"__version__"`` or
+        look up on ``module``, e.g., ``"__version__"`` or
         ``["version", "version"]``.
     *others : str
         Additional attribute names to try, in order, if ``attr`` is not

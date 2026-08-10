@@ -1,5 +1,5 @@
 """
-Methods for analyzing two-way contingency tables (i.e. frequency
+Methods for analyzing two-way contingency tables (i.e., frequency
 tables for observations that are cross-classified with respect to two
 categorical variables).
 
@@ -571,7 +571,7 @@ class SquareTable(Table):
         marginal distribution of the row factor is equal to the
         marginal distribution of the column factor.  For this to be
         meaningful, the two factors must have the same sample space
-        (i.e. the same categories).
+        (i.e., the same categories).
         """
 
         if self.table.shape[0] < 1:

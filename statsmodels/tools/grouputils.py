@@ -60,7 +60,7 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
     -------
     uni_inv : ndarray
         Integer codes into `uni` that reconstruct the original `groups`
-        array, i.e. the group index of each observation.
+        array, i.e., the group index of each observation.
     uni_idx : ndarray
         Indices of the first occurrence of each unique group in the
         input.
@@ -113,7 +113,7 @@ def group_sums(x, group, use_bincount=True):
         ``x`` is only supported when ``use_bincount=False``.
     group : array_like of non-negative int
         Non-negative integer group labels of shape ``(nobs,)``. For predictable
-        indexing (e.g. ``result[group]``), groups should be coded as
+        indexing (e.g., ``result[group]``), groups should be coded as
         ``0, 1, ..., n_groups-1``.
     use_bincount : bool, default True
         Use ``np.bincount`` when True, otherwise a pure-Python group loop.
@@ -191,7 +191,7 @@ def dummy_sparse(groups):
     ----------
     groups : ndarray, int, 1d (nobs,)
         an array of group indicators for each observation. Group levels are
-        assumed to be defined as consecutive integers, i.e. range(n_groups)
+        assumed to be defined as consecutive integers, i.e., range(n_groups)
         where n_groups is the number of group levels. A group level with no
         observations for it will still produce a column of zeros.
 
@@ -525,7 +525,7 @@ def _is_hierarchical(x):
     -------
     bool
         True if `x` appears to represent hierarchical (MultiIndex-style)
-        groups, i.e. its first element is itself list-like. False
+        groups, i.e., its first element is itself list-like. False
         otherwise.
     """
     item = x[0]
@@ -585,7 +585,7 @@ class Grouping:
     index : index-like
         Can be a pandas MultiIndex, Index, or array-like. If array-like
         and hierarchical (more than one grouping variable), groups are
-        expected to be given as a tuple in each row, e.g. ``[('red', 1),
+        expected to be given as a tuple in each row, e.g., ``[('red', 1),
         ('red', 2), ('green', 1), ('green', 2)]``.
     names : list or str, optional
         The names to use for the groups. Should be a str if only one
@@ -597,7 +597,7 @@ class Grouping:
         The (possibly constructed) pandas index representing the
         groups.
     nobs : int
-        Number of observations, i.e. ``len(index)``.
+        Number of observations, i.e., ``len(index)``.
     nlevels : int
         Number of grouping levels.
     slices : list or None

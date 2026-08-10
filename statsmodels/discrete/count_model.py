@@ -33,7 +33,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 _doc_zi_params = """
     exog_infl : array_like or None
-        Explanatory variables for the binary inflation model, i.e. for
+        Explanatory variables for the binary inflation model, i.e., for
         mixing probability model. If None, then a constant is used.
     offset : array_like
         Offset is added to the linear prediction with coefficient equal to 1.
@@ -304,7 +304,7 @@ class GenericZeroInflated(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         params_infl = params[: self.k_inflate]

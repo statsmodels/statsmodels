@@ -551,7 +551,7 @@ class BinaryModel(DiscreteModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
@@ -795,7 +795,7 @@ class MultinomialModel(BinaryModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
@@ -1096,7 +1096,7 @@ class CountModel(DiscreteModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' variance of endog implied by the likelihood model
             - 'prob' predicted probabilities for counts.
@@ -1510,7 +1510,7 @@ class Poisson(CountModel):
         ----------
         constraints : formula expression or tuple
             If it is a tuple, then the constraint needs to be given by two
-            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            arrays (constraint_matrix, constraint_value), i.e., (R, q).
             Otherwise, the constraints can be given as strings or list of
             strings.
             see t_test for details
@@ -1582,7 +1582,7 @@ class Poisson(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
 
         Notes
@@ -1776,7 +1776,7 @@ class Poisson(CountModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
@@ -2069,7 +2069,7 @@ class GeneralizedPoisson(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
@@ -2144,7 +2144,7 @@ class GeneralizedPoisson(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
@@ -2693,7 +2693,7 @@ class Logit(BinaryModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
 
         Notes
@@ -2979,7 +2979,7 @@ class Probit(BinaryModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
 
         Notes
@@ -3333,7 +3333,7 @@ class MNLogit(MultinomialModel):
         Returns
         -------
         score : ndarray, (K * (J-1),)
-            The 2-d score vector, i.e. the first derivative of the
+            The 2-d score vector, i.e., the first derivative of the
             log-likelihood function, of the multinomial logit model evaluated at
             `params`.
 
@@ -3983,7 +3983,7 @@ class NegativeBinomial(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
@@ -4074,7 +4074,7 @@ class NegativeBinomial(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
@@ -4273,7 +4273,7 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         if self._transparams:
@@ -4314,7 +4314,7 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         score = np.sum(self.score_obs(params), axis=0)
@@ -4339,7 +4339,7 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         params = np.asarray(params)
@@ -4621,7 +4621,7 @@ class NegativeBinomialP(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
@@ -4696,7 +4696,7 @@ class NegativeBinomialP(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
@@ -4865,7 +4865,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.converged = mlefit.mle_retvals["converged"]
 
         if not hasattr(self, "cov_type"):
-            # do this only if super, i.e. mlefit did not already add cov_type
+            # do this only if super, i.e., mlefit did not already add cov_type
             # robust covariance
             if use_t is not None:
                 self.use_t = use_t
@@ -5161,7 +5161,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Aggregation weights, only used if average is True.
             The weights are not normalized.

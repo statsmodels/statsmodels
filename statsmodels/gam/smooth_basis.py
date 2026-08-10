@@ -103,7 +103,7 @@ def _eval_bspline_basis(x, knots, degree, deriv="all", include_intercept=True):
         from scipy.interpolate import splev
     except ImportError as err:
         raise ImportError("spline functionality requires scipy") from err
-    # 'knots' are assumed to be already pre-processed. E.g. usually you
+    # 'knots' are assumed to be already pre-processed. e.g., usually you
     # want to include duplicate copies of boundary knots; you should do
     # that *before* calling this constructor.
     knots = np.sort(np.atleast_1d(np.asarray(knots, dtype=float)))

@@ -572,7 +572,7 @@ class GLMGam(PenalizedMixin, GLM):
     Status: experimental. This has full unit test coverage for the core
     results with Gaussian and Poisson (without offset and exposure). Other
     options and additional results might not be correctly supported yet.
-    (Binomial with counts, i.e. with n_trials, is most likely wrong in pirls.
+    (Binomial with counts, i.e., with n_trials, is most likely wrong in pirls.
     User specified var or freq weights are most likely also not correct for
     all results.)
     """
@@ -860,7 +860,7 @@ class GLMGam(PenalizedMixin, GLM):
         # self.scale, self.scaletype, self.mu, self.weights
         # self.data_weights,
         # and possibly self._offset_exposure
-        # several of those might not be necessary, e.g. mu and weights
+        # several of those might not be necessary, e.g., mu and weights
 
         # alpha = alpha * len(y) * self.scale / 100
         # TODO: we need to rescale alpha
@@ -1018,7 +1018,7 @@ class GLMGam(PenalizedMixin, GLM):
         minimization.
 
         Status: experimental, It is possible that defaults change if there
-        is a better way to find a global optimum. API (e.g. type of return)
+        is a better way to find a global optimum. API (e.g., type of return)
         might also change.
         """
         # copy attributes that are changed, so we can reset them

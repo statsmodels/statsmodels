@@ -40,7 +40,7 @@ TODO:
 
 * more work: bivariate distributions,
   inherit from multivariate but overwrite some methods for better efficiency,
-  e.g. cdf and expect
+  e.g., cdf and expect
 
 I kept the original MVNormal0 class as reference, can be deleted
 
@@ -422,7 +422,7 @@ class MVElliptical:
             dispersion matrix, covariance matrix in normal distribution, but
             only proportional to covariance matrix in t distribution
         args : list
-            distribution specific arguments, e.g. df for t distribution
+            distribution specific arguments, e.g., df for t distribution
         kwds : dict
             currently not used
 
@@ -567,7 +567,7 @@ class MVElliptical:
         return np.exp(self.logpdf(x))
 
     def standardize(self, x):
-        """standardize the random variable, i.e. subtract mean and whiten
+        """standardize the random variable, i.e., subtract mean and whiten
 
         Parameters
         ----------
@@ -596,7 +596,7 @@ class MVElliptical:
         return self.affine_transformed(-self.mean, self.cholsigmainv)
 
     def normalize(self, x):
-        """normalize the random variable, i.e. subtract mean and rescale
+        """normalize the random variable, i.e., subtract mean and rescale
 
         The distribution will have zero mean and sigma equal to correlation
 

@@ -5,7 +5,7 @@ TODO skips the tests for measurement disturbance and measurement disturbance
 covariance, which do not pass. The univariate smoother *appears* to be
 correctly implemented against Durbin and Koopman (2012) chapter 6, yet still
 gives a different answer from the conventional smoother. It's not clear if
-this is intended (i.e. it has to be at least slightly different, since the
+this is intended (i.e., it has to be at least slightly different, since the
 conventional smoother can return a non-diagonal covariance matrix whereas the
 univariate smoother must return a diagonal covariance matrix).
 
@@ -117,7 +117,7 @@ class TestClark1989:
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
-        # used the univariate Kalman filtering approach (i.e. that the flag
+        # used the univariate Kalman filtering approach (i.e., that the flag
         # being set actually caused the filter to not use the conventional
         # filter)
         assert not self.conventional_results.filter_univariate
@@ -305,7 +305,7 @@ class MultivariateMissingGeneralObsCov:
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
-        # used the univariate Kalman filtering approach (i.e. that the flag
+        # used the univariate Kalman filtering approach (i.e., that the flag
         # being set actually caused the filter to not use the conventional
         # filter)
         assert not self.conventional_results.filter_univariate

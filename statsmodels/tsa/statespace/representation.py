@@ -111,11 +111,11 @@ class Representation:
         If `initialization='known'` is used, the covariance matrix of the
         initial state's distribution.
     nobs : int, optional
-        If an endogenous vector is not given (i.e. `k_endog` is an integer),
+        If an endogenous vector is not given (i.e., `k_endog` is an integer),
         the number of observations can optionally be specified. If not
         specified, they will be set to zero until data is bound to the model.
     dtype : np.dtype, optional
-        If an endogenous vector is not given (i.e. `k_endog` is an integer),
+        If an endogenous vector is not given (i.e., `k_endog` is an integer),
         the default datatype of the state space matrices can optionally be
         specified. Default is `np.float64`.
     design : array_like, optional
@@ -139,7 +139,7 @@ class Representation:
     **kwargs
         Additional keyword arguments. Not used directly. It is present to
         improve compatibility with subclasses, so that they can use `**kwargs`
-        to specify any default state space matrices (e.g. `design`) without
+        to specify any default state space matrices (e.g., `design`) without
         having to clean out any other keyword arguments they might have been
         passed.
 
@@ -459,7 +459,7 @@ class Representation:
             # Set the new value
             matrix[slice_] = value
             setattr(self, name, matrix)
-        # Otherwise we got a single non-string key, (e.g. mod[:]), which is
+        # Otherwise we got a single non-string key, (e.g., mod[:]), which is
         # invalid
         else:
             raise IndexError(
@@ -659,7 +659,7 @@ class Representation:
                 # (so we pass in updated_mat.shape[-1] as the nobs argument
                 # in the validate_* calls); instead, we check below that we
                 # at least `nobs` values were passed in and then only take the
-                # first of them as required. This can be useful when e.g. the
+                # first of them as required. This can be useful when e.g., the
                 # end user knows the extension values up to some maximum
                 # endpoint, but does not know what the calling methods may
                 # specifically require.
@@ -708,7 +708,7 @@ class Representation:
             (non-missing) value.
         new_ix : list of tuple
             List of (row, column) indices indicating which values in
-            `new_endog` represent a newly observed value (i.e. one that
+            `new_endog` represent a newly observed value (i.e., one that
             was previously missing).
         """
         # TODO: move this function to tools?

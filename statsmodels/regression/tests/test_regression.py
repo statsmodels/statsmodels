@@ -1183,7 +1183,7 @@ def test_fvalue_const_only():
 
 
 def test_conf_int_single_regressor():
-    # GH#706 single-regressor model (i.e. no intercept) with 1D exog
+    # GH#706 single-regressor model (i.e., no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
     rs = np.random.RandomState(3232121)
     y = pd.Series(rs.randn(10))

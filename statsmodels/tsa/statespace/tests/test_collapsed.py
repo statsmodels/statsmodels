@@ -67,7 +67,7 @@ class Trivariate:
 
     def test_using_collapsed(self):
         # Test to make sure the results_b actually used a collapsed Kalman
-        # filtering approach (i.e. that the flag being set actually caused the
+        # filtering approach (i.e., that the flag being set actually caused the
         # filter to not use the conventional filter)
 
         assert not self.results_a.filter_collapsed
@@ -528,7 +528,7 @@ class TestDFM:
 
     def test_using_collapsed(self):
         # Test to make sure the results_b actually used a collapsed Kalman
-        # filtering approach (i.e. that the flag being set actually caused the
+        # filtering approach (i.e., that the flag being set actually caused the
         # filter to not use the conventional filter)
 
         assert not self.results_a.filter_collapsed

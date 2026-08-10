@@ -234,7 +234,7 @@ class MI:
     The imputer object must have an 'update' method, and a 'data'
     attribute that contains the current imputed dataset.
 
-    xfunc can be used to introduce domain constraints, e.g. when
+    xfunc can be used to introduce domain constraints, e.g., when
     imputing binary data the imputed continuous values can be rounded
     to 0/1.
     """

@@ -132,7 +132,7 @@ def get_index_loc(key, index):
             index_fn = date_range
         else:
             index_fn = period_range
-        # Integer key (i.e. already given a location)
+        # Integer key (i.e., already given a location)
         if isinstance(key, (int, np.integer)):
             # Negative indices (that lie in the Index)
             if key < 0 and -key < nobs:
@@ -148,7 +148,7 @@ def get_index_loc(key, index):
                 key = index[-1]
             else:
                 key = index[key]
-        # Other key types (i.e. string date or some datetime-like object)
+        # Other key types (i.e., string date or some datetime-like object)
         else:
             # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
@@ -200,7 +200,7 @@ def get_index_loc(key, index):
         #   index[10] on an index of length 9) will raise an IndexError
         #   (as of Pandas 0.22)
         # - Attemtping to index with a type that cannot be cast to integer
-        #   (e.g. a non-numeric string) will raise a ValueError if the
+        #   (e.g., a non-numeric string) will raise a ValueError if the
         #   index is RangeIndex (otherwise will raise an IndexError)
         #   (as of Pandas 0.22)
         except (IndexError, ValueError) as exc:
@@ -353,7 +353,7 @@ def get_prediction_index(
     prediction_index : pd.Index or None
         The index associated with the prediction results. This index covers
         the range [start, end + out_of_sample]. If the model has no given
-        index and no given row labels (i.e. endog/exog is not Pandas), then
+        index and no given row labels (i.e., endog/exog is not Pandas), then
         this will be None.
 
     Notes
@@ -503,14 +503,14 @@ class TimeSeriesModel(base.LikelihoodModel):
         is called a "supported" index. Otherwise it is called an "unsupported"
         index.
 
-        Supported indexes are standardized (i.e. a list of date strings is
+        Supported indexes are standardized (i.e., a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
 
         Unsupported indexes are ignored, and a supported NumericIndex is
         generated and put in `self._index`. Warnings are issued in this case
         to alert the user if the returned index from some operation (e.g.
         forecasting) is different from the original data's index. However,
-        whenever possible (e.g. purely in-sample prediction), the original
+        whenever possible (e.g., purely in-sample prediction), the original
         index is returned.
 
         The benefit of supported indexes is that they allow *forecasting*, i.e.
@@ -675,7 +675,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn(
                 "A date index has been provided, but it has no"
                 " associated frequency information and so will be"
-                " ignored when e.g. forecasting.",
+                " ignored when e.g., forecasting.",
                 ValueWarning,
                 stacklevel=2,
             )
@@ -821,7 +821,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         prediction_index : pd.Index or None
             The index associated with the prediction results. This index covers
             the range [start, end + out_of_sample]. If the model has no given
-            index and no given row labels (i.e. endog/exog is not Pandas), then
+            index and no given row labels (i.e., endog/exog is not Pandas), then
             this will be None.
 
         Notes

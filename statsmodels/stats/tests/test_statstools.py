@@ -15,6 +15,7 @@ from statsmodels.stats.stattools import (
     robust_kurtosis,
     robust_skewness,
 )
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 # a random array, rounded to 4 decimals
 x = np.array(
@@ -238,17 +239,21 @@ class TestStattools:
             _medcouple_1d(x)
 
     def test_medcouple_symmetric(self):
-        mc = medcouple(np.arange(5.0))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc = medcouple(np.arange(5.0))
         assert_almost_equal(mc, 0)
 
     def test_medcouple_nonzero(self):
-        mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
         assert_almost_equal(mc, -0.3333333)
 
     def test_medcouple_int(self):
         # GH 4243
-        mc1 = medcouple(np.array([1, 2, 7, 9, 10]))
-        mc2 = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc1 = medcouple(np.array([1, 2, 7, 9, 10]))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc2 = medcouple(np.array([1, 2, 7, 9, 10.0]))
         assert_equal(mc1, mc2)
 
     def test_medcouple_symmetry(self):
@@ -265,7 +270,8 @@ class TestStattools:
 
     def test_medcouple_consistency_fast_vs_legacy(self):
         x = np.array([1.0, 2.0, 7.0, 9.0, 10.0])
-        mc_fast = medcouple(x, use_fast=True)
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc_fast = medcouple(x, use_fast=True)
         mc_legacy = medcouple(x, use_fast=False)
         assert_almost_equal(mc_fast, mc_legacy, decimal=7)
 
@@ -281,7 +287,9 @@ class TestStattools:
 
     def test_medcouple_short_input(self):
         x = np.array([1, 2])
-        assert np.isnan(medcouple(x, use_fast=True))
+        with pytest.warns(ValueWarning, match="medcouple is undefined"):
+            res = medcouple(x, use_fast=True)
+        assert np.isnan(res)
 
     def test_medcouple_large_random(self):
         rs = np.random.default_rng(238201381)

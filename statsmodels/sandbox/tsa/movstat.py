@@ -13,7 +13,7 @@ TODO
 
 moving statistics
 - filters do not handle boundary conditions nicely (correctly ?)
-e.g. minimum order filter uses 0 for out of bounds value
+e.g., minimum order filter uses 0 for out of bounds value
 -> append and prepend with last resp. first value
 - enhance for nd arrays, with axis = 0
 

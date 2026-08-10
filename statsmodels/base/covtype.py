@@ -234,7 +234,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         df_correction = kwds.get("df_correction", None)
         # TODO: check also use_correction, do I need all combinations?
 
-        if df_correction is not False:  # i.e. in [None, True]:
+        if df_correction is not False:  # i.e., in [None, True]:
             # user did not explicitly set it to False
 
             adjust_df = True

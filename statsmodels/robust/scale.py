@@ -12,6 +12,8 @@ C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust
 estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 from scipy.stats import norm as Gaussian
@@ -25,11 +27,6 @@ from ._qn import _qn
 GAUSSIAN_3_4 = Gaussian.ppf(3 / 4.0)
 GAUSSIAN_IQR = GAUSSIAN_3_4 - Gaussian.ppf(1 / 4)
 ONE_OVER_SQRT2_GAUSSIAN_5_8 = 1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))
-
-
-class Holder:
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
 
 
 def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
@@ -525,6 +522,41 @@ class MScale:
         return scale
 
 
+class ScaleTrimmedResult(NamedTuple):
+    """
+    Result of :func:`scale_trimmed`.
+
+    Parameters
+    ----------
+    scale : ndarray
+        Estimated scale based on the symmetrically trimmed sample.
+    center : ndarray
+        Center used to compute the scale, either estimated from the data
+        or the user-provided value.
+    center_type : str
+        How `center` was obtained, one of ``"median"``, ``"mean"``,
+        ``"tmean"`` or ``"user"``.
+    trim_idx : int
+        Number of observations trimmed from each tail.
+    nobs : int
+        Number of observations along `axis`.
+    distr : scipy.stats distribution or "raw"
+        Reference distribution used to normalize the scale, or ``"raw"``
+        if the scale was not normalized.
+    scale_correction : float
+        Correction factor applied to normalize the scale to the reference
+        distribution, ``1 / c_inv``.
+    """
+
+    scale: np.ndarray
+    center: np.ndarray
+    center_type: str
+    trim_idx: int
+    nobs: int
+    distr: object
+    scale_correction: float
+
+
 def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=None):
     """
     Scale estimate based on symmetrically trimmed sample
@@ -563,10 +595,9 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
 
     Returns
     -------
-    Holder
-        Instance with the estimated ``scale`` as the main attribute, and
-        with ``center``, ``center_type``, ``trim_idx``, ``nobs``,
-        ``distr``, and ``scale_correction`` as additional attributes.
+    ScaleTrimmedResult
+        See :class:`ScaleTrimmedResult` for a description of the
+        attributes.
 
     Examples
     --------
@@ -634,7 +665,7 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
     s_raw = ((x_trimmed - center) ** 2).sum(axis)
     scale = np.sqrt(s_raw / nobs / c_inv)
 
-    res = Holder(
+    res = ScaleTrimmedResult(
         scale=scale,
         center=center,
         center_type=center_type,

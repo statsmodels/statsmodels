@@ -4,13 +4,15 @@ Created on Fri Sep 15 12:53:45 2017
 Author: Josef Perktold
 """
 
+from typing import NamedTuple
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.base import compat_2tuple_unpack
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, SingularMatrixWarning
 
 
@@ -139,6 +141,36 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
     return fig
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
+class ChisquareProbResult(NamedTuple):
+    """
+    Result of :func:`test_chisquare_prob`.
+
+    Parameters
+    ----------
+    statistic : float
+        Chi-square test statistic.
+    pvalue : float
+        p-value based on the chi-square distribution.
+    df : int
+        Degrees of freedom of the test.
+    diff1 : ndarray
+        Difference between the observed and predicted binned indicator
+        variables, ``d_ind_bins - probs_bins``.
+    res_aux : RegressionResults
+        Fitted auxiliary OLS regression used to compute `statistic`.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+    """
+
+    statistic: float
+    pvalue: float
+    df: int
+    diff1: np.ndarray
+    res_aux: object
+    distribution: str
+
+
 def test_chisquare_prob(results, probs, bin_edges=None):
     """
     Chi-square test for predicted probabilities using cmt-opg.
@@ -156,11 +188,9 @@ def test_chisquare_prob(results, probs, bin_edges=None):
 
     Returns
     -------
-    HolderTuple
-        Instance with test statistic, p-value, and degrees of freedom as
-        main attributes (``statistic``, ``pvalue``, ``df``), and with
-        intermediate results ``diff1`` and ``res_aux`` as additional
-        attributes.  The api is not stable and might be replaced by a
+    ChisquareProbResult
+        See :class:`ChisquareProbResult` for a description of the
+        attributes. The api is not stable and might be replaced by a
         test-results class.
 
     Notes
@@ -169,7 +199,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     Status : experimental, no verified unit tests, needs to be generalized
     currently only OPG version with auxiliary regression is implemented
 
-    Assumes counts are np.arange(probs.shape[1]), i.e. consecutive
+    Assumes counts are np.arange(probs.shape[1]), i.e., consecutive
     integers starting at zero.
 
     Auxiliary regression drops the last column of binned probs to avoid
@@ -219,7 +249,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     statistic = chi2_stat
     pvalue = stats.chi2.sf(chi2_stat, df)
 
-    res = HolderTuple(
+    res = ChisquareProbResult(
         statistic=statistic,
         pvalue=pvalue,
         df=df,
@@ -230,7 +260,30 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     return res
 
 
-class DispersionResults(HolderTuple):
+@compat_2tuple_unpack("statistic", "pvalue")
+class DispersionResults(NamedTuple):
+    """
+    Result of :func:`test_poisson_dispersion`.
+
+    Parameters
+    ----------
+    statistic : ndarray
+        Test statistic for each of the dispersion tests.
+    pvalue : ndarray
+        p-value for each of the dispersion tests.
+    method : list of str
+        Short name of each dispersion test.
+    alternative : list of str
+        Description of the alternative variance assumption of each test.
+    name : str
+        Descriptive title for the collection of tests.
+    """
+
+    statistic: np.ndarray
+    pvalue: np.ndarray
+    method: list
+    alternative: list
+    name: str
 
     def summary_frame(self):
         frame = pd.DataFrame(
@@ -254,7 +307,7 @@ def test_poisson_dispersion(results, method="all"):
     H0: var(y) = E(y) and assuming E(y) is correctly specified
     H1: var(y) ~= E(y)
 
-    The tests are based on the constrained model, i.e. the Poisson model.
+    The tests are based on the constrained model, i.e., the Poisson model.
     The tests differ in their assumed alternatives, and in their maintained
     assumptions.
 
@@ -452,6 +505,33 @@ def _test_poisson_dispersion_generic(
     return stat_ols, pval_ols
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
+class ZeroinflationJHResult(NamedTuple):
+    """
+    Result of :func:`test_poisson_zeroinflation_jh`.
+
+    Parameters
+    ----------
+    statistic : float
+        Score test statistic, chi-square distributed.
+    pvalue : float
+        p-value based on the chi-square distribution.
+    df : int
+        Degrees of freedom, equal to the number of columns of `exog_infl`.
+    rank_score : int
+        Rank of the score covariance matrix, may differ from `df` if the
+        covariance matrix is singular.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+    """
+
+    statistic: float
+    pvalue: float
+    df: int
+    rank_score: int
+    distribution: str
+
+
 def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     """
     Score test for zero inflation or deflation in Poisson.
@@ -473,14 +553,16 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
 
     Returns
     -------
-    score test results based on chisquare distribution
+    ZeroinflationJHResult
+        See :class:`ZeroinflationJHResult` for a description of the
+        attributes.
 
     Notes
     -----
     This is a score test based on the null hypothesis that
     the true model is Poisson. It will also reject for
     other deviations from a Poisson model if those affect
-    the zero probabilities, e.g. in the direction of
+    the zero probabilities, e.g., in the direction of
     excess dispersion as in the Negative Binomial
     or Generalized Poisson model.
     Therefore, rejection in this test does not imply that
@@ -535,7 +617,7 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     df = exog_infl.shape[1]
     pvalue = stats.chi2.sf(statistic, df)
 
-    res = HolderTuple(
+    res = ZeroinflationJHResult(
         statistic=statistic,
         pvalue=pvalue,
         df=df,
@@ -543,6 +625,45 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
         distribution="chi2",
     )
     return res
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class ZeroModificationTestResult(NamedTuple):
+    """
+    Result of :func:`test_poisson_zeroinflation_broek` and
+    :func:`test_poisson_zeros`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic, standard normal distributed.
+    pvalue : float
+        Two-sided p-value based on the normal distribution.
+    pvalue_smaller : float
+        One-sided p-value for the alternative that zeros are inflated
+        (statistic is larger).
+    pvalue_larger : float
+        One-sided p-value for the alternative that zeros are deflated
+        (statistic is smaller).
+    chi2 : float
+        Chi-square statistic, ``statistic ** 2``.
+    pvalue_chi2 : float
+        Two-sided p-value based on the chi-square distribution with one
+        degree of freedom.
+    df_chi2 : int
+        Degrees of freedom of the chi-square distribution, always 1.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"normal"``.
+    """
+
+    statistic: float
+    pvalue: float
+    pvalue_smaller: float
+    pvalue_larger: float
+    chi2: float
+    pvalue_chi2: float
+    df_chi2: int
+    distribution: str
 
 
 def test_poisson_zeroinflation_broek(results_poisson):
@@ -566,10 +687,9 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
     Returns
     -------
-    HolderTuple
-        Test statistic and p-values for the two-sided and one-sided
-        alternatives, together with the corresponding chi-square
-        statistic and p-value.
+    ZeroModificationTestResult
+        See :class:`ZeroModificationTestResult` for a description of the
+        attributes.
 
     References
     ----------
@@ -592,7 +712,7 @@ def test_poisson_zeroinflation_broek(results_poisson):
     pvalue_upp = stats.norm.sf(statistic)
     pvalue_low = stats.norm.cdf(statistic)
 
-    res = HolderTuple(
+    res = ZeroModificationTestResult(
         statistic=statistic,
         pvalue=pvalue_two,
         pvalue_smaller=pvalue_upp,
@@ -619,8 +739,9 @@ def test_poisson_zeros(results):
 
     Returns
     -------
-    HolderTuple
-        Test statistic, p-values and distribution information.
+    ZeroModificationTestResult
+        See :class:`ZeroModificationTestResult` for a description of the
+        attributes.
 
     References
     ----------
@@ -652,7 +773,7 @@ def test_poisson_zeros(results):
     pvalue_upp = stats.norm.sf(statistic)
     pvalue_low = stats.norm.cdf(statistic)
 
-    res = HolderTuple(
+    res = ZeroModificationTestResult(
         statistic=statistic,
         pvalue=pvalue_two,
         pvalue_smaller=pvalue_upp,

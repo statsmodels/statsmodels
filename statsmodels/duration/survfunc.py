@@ -17,7 +17,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
         An array of times (censoring times or event times)
     status : array_like
         Status at the event time, status==1 is the 'event'
-        (e.g. death, failure), meaning that the event occurs at the
+        (e.g., death, failure), meaning that the event occurs at the
         given value in `time`; status==0 indicates that censoring
         has occurred, meaning that the event occurs after the given
         value in `time`.
@@ -341,7 +341,7 @@ class SurvfuncRight:
         An array of times (censoring times or event times)
     status : array_like
         Status at the event time, status==1 is the 'event'
-        (e.g. death, failure), meaning that the event
+        (e.g., death, failure), meaning that the event
         occurs at the given value in `time`; status==0
         indicates that censoring has occurred, meaning that
         the event occurs after the given value in `time`.
@@ -373,7 +373,7 @@ class SurvfuncRight:
         The number of subjects at risk just before each time value in
         `surv_times`.  Not available if exog is provided.
     n_events : array_like
-        The number of events (e.g. deaths) that occur at each point
+        The number of events (e.g., deaths) that occur at each point
         in `surv_times`.  Not available if exog is provided.
 
     Notes

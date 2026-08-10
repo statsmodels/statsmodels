@@ -120,7 +120,7 @@ def _clean_order(order):
     ----------
     order : str
         The regular and, optionally, seasonal ARMA order as returned by
-        X12/X13, e.g. ``"(1 1 0)(0 1 1)"`` or ``"(1 1 0)"``.
+        X12/X13, e.g., ``"(1 1 0)(0 1 1)"`` or ``"(1 1 0)"``.
 
     Returns
     -------

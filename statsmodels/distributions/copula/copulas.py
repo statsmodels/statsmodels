@@ -27,7 +27,7 @@ class CopulaDistribution:
     Parameters
     ----------
     copula : :class:`Copula` instance
-        An instance of :class:`Copula`, e.g. :class:`GaussianCopula`,
+        An instance of :class:`Copula`, e.g., :class:`GaussianCopula`,
         :class:`FrankCopula`, etc.
     marginals : list of distribution instances
         Marginal distributions.
@@ -319,7 +319,7 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
+            of the random variable, e.g., 2 for bivariate copula.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
@@ -339,7 +339,7 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
+            of the random variable, e.g., 2 for bivariate copula.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
@@ -361,7 +361,7 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
+            of the random variable, e.g., 2 for bivariate copula.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.

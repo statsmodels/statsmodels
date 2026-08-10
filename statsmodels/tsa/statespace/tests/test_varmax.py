@@ -518,7 +518,7 @@ class TestVAR_exog(CheckLutkepohl):
         desired = self.results.forecast(steps=16, exog=exog)
         assert_allclose(desired, self.true["fcast"], atol=1e-6)
 
-        # Test it directly (i.e. without the wrapping done in
+        # Test it directly (i.e., without the wrapping done in
         # VARMAXResults.get_prediction which converts exog to state_intercept)
         # beta = self.results.params[-9:-6]
         # state_intercept = np.concatenate([

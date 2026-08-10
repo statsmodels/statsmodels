@@ -48,7 +48,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         the estimated coefficients from the previous step imply a stationary
         and invertible process and False otherwise.
     fixed_params : dict, optional
-        Dictionary with names of fixed parameters as keys (e.g. 'ar.L1',
+        Dictionary with names of fixed parameters as keys (e.g., 'ar.L1',
         'ma.L2'), which correspond to SARIMAXSpecification.param_names.
         Dictionary values are the values of the associated fixed parameters.
 
@@ -503,7 +503,7 @@ def _stitch_fixed_and_free_params(fixed_ar_or_ma_lags, fixed_ar_or_ma_params,
     lag_to_param_map = dict(zip(all_lags, all_params, strict=True))
 
     # Sort params by the order of their corresponding lags in
-    # spec_ar_or_ma_lags (e.g. SARIMAXSpecification.ar_lags or
+    # spec_ar_or_ma_lags (e.g., SARIMAXSpecification.ar_lags or
     # SARIMAXSpecification.ma_lags)
     all_params_sorted = [lag_to_param_map[lag] for lag in spec_ar_or_ma_lags]
     return all_params_sorted

@@ -292,7 +292,7 @@ class PHReg(model.LikelihoodModel):
         The covariates or exogeneous variables
     status : array_like
         The censoring status values; status=1 indicates that an
-        event occurred (e.g. failure or death), status=0 indicates
+        event occurred (e.g., failure or death), status=0 indicates
         that the observation was right censored. If None, defaults
         to status=1 for all cases.
     entry : array_like
@@ -402,7 +402,7 @@ class PHReg(model.LikelihoodModel):
             The data for the model. See Notes.
         status : array_like
             The censoring status values; status=1 indicates that an
-            event occurred (e.g. failure or death), status=0 indicates
+            event occurred (e.g., failure or death), status=0 indicates
             that the observation was right censored. If None, defaults
             to status=1 for all cases.
         entry : array_like

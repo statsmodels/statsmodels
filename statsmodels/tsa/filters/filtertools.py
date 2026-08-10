@@ -37,7 +37,7 @@ class CycleTrendResult(NamedTuple):
     cycle : array_like
         The estimated cyclical component. See the docstring of the
         function that produced this result for the precise definition
-        (e.g. :func:`hamilton_filter` leaves the first ``p + h - 1``
+        (e.g., :func:`hamilton_filter` leaves the first ``p + h - 1``
         values as ``NaN``).
     trend : array_like
         The estimated trend component, matching ``cycle`` in shape.

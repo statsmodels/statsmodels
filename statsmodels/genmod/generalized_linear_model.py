@@ -645,7 +645,7 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         hessian : ndarray
-            Hessian, i.e. observed information, or expected information matrix.
+            Hessian, i.e., observed information, or expected information matrix.
         """
         if observed is None:
             if self._optim_hessian == "eim":
@@ -843,7 +843,7 @@ class GLM(base.LikelihoodModel):
             not None, then k_constraints is assumed to be zero if it is None.
         exog_extra : None or array_like
             Explanatory variables that are jointly tested for inclusion in the
-            model, i.e. omitted variables.
+            model, i.e., omitted variables.
         observed : bool
             If True, then the observed Hessian is used in calculating the
             covariance matrix of the score. If false then the expected
@@ -1030,7 +1030,7 @@ class GLM(base.LikelihoodModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. inverse of the model's link function of linear predictor.
+              i.e., inverse of the model's link function of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
@@ -1660,7 +1660,7 @@ class GLM(base.LikelihoodModel):
         ----------
         constraints : formula expression or tuple
             If it is a tuple, then the constraint needs to be given by two
-            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            arrays (constraint_matrix, constraint_value), i.e., (R, q).
             Otherwise, the constraints can be given as strings or list of
             strings.
             see t_test for details
@@ -2254,7 +2254,7 @@ class GLMResults(base.LikelihoodModelResults):
             See notes.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. inverse of the model's link function of linear predictor.
+              i.e., inverse of the model's link function of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
@@ -2265,7 +2265,7 @@ class GLMResults(base.LikelihoodModelResults):
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Keyword is only used if ``which`` is not None.
             Aggregation weights, only used if average is True.
@@ -2293,7 +2293,7 @@ class GLMResults(base.LikelihoodModelResults):
         versions, and returns the mean and linear prediction results.
         If the ``which`` keyword is not None, then a generic prediction results
         class is returned and is not backwards compatible with the old prediction
-        results class, e.g. column names of summary_frame differ.
+        results class, e.g., column names of summary_frame differ.
         There are more choices for the returned predicted statistic using
         ``which``. More choices will be added in the next release.
         Two additional keywords, average and agg_weights, are now also

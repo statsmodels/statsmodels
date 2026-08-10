@@ -1895,7 +1895,7 @@ def pccf(
     stationary series, this is asymptotically equivalent to OLS by
     the Frisch-Waugh-Lovell theorem [3]_, but is O(n * nlags)
     versus O(n * nlags^3) for OLS. The two methods may differ
-    substantially on non-stationary (e.g. trending) data.
+    substantially on non-stationary (e.g., trending) data.
 
     The "ols" method computes pccf(h) as the sample correlation
     between the backward residual (x_t regressed on the
@@ -2223,7 +2223,7 @@ def breakvar_heteroskedasticity_test(
     use_f : bool, optional
         Whether or not to compare against the asymptotic distribution
         (chi-squared) or the approximate small-sample distribution (F).
-        Default is True (i.e. default is to compare against an F
+        Default is True (i.e., default is to compare against an F
         distribution).
 
     Returns
@@ -2569,7 +2569,7 @@ def coint(
     assumed to be integrated of order 1, I(1).
 
     This uses the augmented Engle-Granger two-step cointegration test.
-    Constant or trend is included in 1st stage regression, i.e. in
+    Constant or trend is included in 1st stage regression, i.e., in
     cointegrating equation.
 
     **Warning:** The autolag default has changed compared to statsmodels 0.8.
@@ -2766,10 +2766,10 @@ def diebold_mariano_test(
         criterion. Alternatively, ``criterion`` can be a callable that
         accepts two array_like arguments and returns an array of losses
         with signature ``loss = criterion(y, forecast)``, allowing
-        problem-specific loss functions (e.g. QLIKE, see Examples).
+        problem-specific loss functions (e.g., QLIKE, see Examples).
     power : float, optional
         The exponent used to compute the loss when ``criterion='poly'``,
-        i.e. the loss is ``|y - forecast| ** power``. Default is 2, which
+        i.e., the loss is ``|y - forecast| ** power``. Default is 2, which
         reproduces 'mse'. Ignored unless ``criterion='poly'``.
     harvey_adj : bool
         Indicates if the Harvey-Leybourne-Newbold (1997) correction for
@@ -2819,7 +2819,7 @@ def diebold_mariano_test(
     standard normal.
 
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
-    overlapping information sets (e.g. multi-step-ahead forecasts), the
+    overlapping information sets (e.g., multi-step-ahead forecasts), the
     loss differential is often serially correlated even under the null,
     which is why a HAC estimator rather than the usual OLS standard error
     is used.
@@ -2869,7 +2869,7 @@ def diebold_mariano_test(
 
     Examples
     --------
-    Comparing two forecasts of a strictly positive series (e.g. realized
+    Comparing two forecasts of a strictly positive series (e.g., realized
     variance) using the QLIKE loss, which is standard in the volatility
     forecasting literature and only defined for non-negative ``y`` and
     strictly positive forecasts:

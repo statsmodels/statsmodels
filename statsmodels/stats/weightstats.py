@@ -350,7 +350,7 @@ class DescrStatsW:
         Notes
         -----
         In a previous version, statsmodels 0.4, alpha was the confidence
-        level, e.g. 0.95
+        level, e.g., 0.95
         """
         # TODO: add asymmetric
         dof = self.sum_weights - 1
@@ -389,7 +389,7 @@ class DescrStatsW:
         Notes
         -----
         In a previous version, statsmodels 0.4, alpha was the confidence
-        level, e.g. 0.95
+        level, e.g., 0.95
         """
 
         return _zconfint_generic(self.mean, self.std_mean, alpha, alternative)

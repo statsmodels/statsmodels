@@ -124,7 +124,7 @@ def anova1_lm_single(
     test : str {"F", "Chisq", "Cp"} or None
         Test statistic to provide.
     pr_test : str
-        Name of the column holding the p-value for `test`, e.g. "PR(>F)".
+        Name of the column holding the p-value for `test`, e.g., "PR(>F)".
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Type of heteroscedasticity-robust covariance estimator; accepted
         for interface consistency but not used for Type I sums of squares.
@@ -197,7 +197,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     test : str {"F", "Chisq", "Cp"} or None
         Test statistic to provide.
     pr_test : str
-        Name of the column holding the p-value for `test`, e.g. "PR(>F)".
+        Name of the column holding the p-value for `test`, e.g., "PR(>F)".
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Type of heteroscedasticity-robust covariance estimator to use, if
         any.

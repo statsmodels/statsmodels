@@ -121,7 +121,7 @@ class TestOGKTau(TestOGKMad):
         assert_allclose(res1.mean, res2.center, atol=0.03, rtol=1e-10)
         # cov raw differs in scaling, no idea why
         # note rrcov uses C code for this case with hardoced tau scale
-        # our results are "better", i.e. correct outliers same as dgp
+        # our results are "better", i.e., correct outliers same as dgp
         # rrcov has one extra outlier
         fact = 1.1356801031633883
         assert_allclose(res1.cov_raw, res2.cov_raw * fact, rtol=1e-8)

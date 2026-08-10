@@ -398,7 +398,7 @@ class TestMultivariateMissing:
 
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
-    measurement equation (e.g. forecasts, etc.). In this case, although the
+    measurement equation (e.g., forecasts, etc.). In this case, although the
     model is multivariate, each of the series is truly independent so the
     values will be the same regardless of whether the univariate approach
     is used or not.
@@ -567,7 +567,7 @@ class TestMultivariateVAR:
 
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
-    measurement equation (e.g. forecasts, etc.). In this case, although the
+    measurement equation (e.g., forecasts, etc.). In this case, although the
     model is multivariate, each of the series is truly independent so the
     values will be the same regardless of whether the univariate approach is
     used or not.
@@ -760,7 +760,7 @@ class TestMultivariateVARUnivariate:
 
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
-    measurement equation (e.g. forecasts, etc.). In this case, although the
+    measurement equation (e.g., forecasts, etc.). In this case, although the
     model is multivariate, each of the series is truly independent so the
     values will be the same regardless of whether the univariate approach is
     used or not.

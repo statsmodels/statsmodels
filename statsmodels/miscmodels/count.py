@@ -25,7 +25,7 @@ Known issues:
 * need good start_params and their use in genericmle needs to be checked
   for consistency, set as attribute or method (called as attribute)
 * numerical hessian needs better scaling
-* check taking parts out of the loop, e.g. factorial(endog) could be
+* check taking parts out of the loop, e.g., factorial(endog) could be
   precalculated
 """
 import numpy as np

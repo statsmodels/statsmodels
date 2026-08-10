@@ -206,7 +206,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     This has not been verified against a reference implementation. In a short
     Monte Carlo simulation where both samples are normally distribute, the test
     seems to be correctly sized for larger number of observations (30 or
-    larger), but conservative (i.e. reject less often than nominal) with a
+    larger), but conservative (i.e., reject less often than nominal) with a
     sample size of 10 in each group.
 
     See Also

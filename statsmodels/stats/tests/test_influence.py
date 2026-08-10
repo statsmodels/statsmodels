@@ -266,7 +266,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
 
     def test_basics(self):
         # needs to override attributes that are not equivalent,
-        # i.e. not available or different definition like external vs internal
+        # i.e., not available or different definition like external vs internal
         infl1 = self.infl1
         infl0 = self.infl0
 
@@ -280,7 +280,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1)  # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
-        # d_fittedvalues is not available in OLSInfluence, i.e. only scaled dffits
+        # d_fittedvalues is not available in OLSInfluence, i.e., only scaled dffits
         # assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
         assert_allclose(
             infl0.d_fittedvalues_scaled, infl1.dffits_internal[0], rtol=1e-9

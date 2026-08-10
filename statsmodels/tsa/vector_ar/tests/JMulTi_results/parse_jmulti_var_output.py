@@ -24,8 +24,8 @@ def dt_s_tup_to_string(dt_s_tup):
     Returns
     -------
     dt_string : str
-        Returns dt_s_tup[0], if dt_s_tup[1] is 0 (i.e. no seasons).
-        If dt_s_tup[1] is > 0 (i.e. there are seasons) add an "s" to the string
+        Returns dt_s_tup[0], if dt_s_tup[1] is 0 (i.e., no seasons).
+        If dt_s_tup[1] is > 0 (i.e., there are seasons) add an "s" to the string
         in dt_s_tup[0] like in the following examples:
         "nc" --> "ncs"
         "c" --> "cs"
@@ -166,7 +166,7 @@ def load_results_jmulti(dataset, dt_s_list):
             + "_Sigmau" + ".txt"
         sigmau_file = Path(here).joinpath(sigmau_file)
         rows_to_parse = 0
-        # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
+        # all numbers of Sigma_u in notation with e (e.g., 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
         sigmau_file = Path(sigmau_file).open(encoding="latin_1")

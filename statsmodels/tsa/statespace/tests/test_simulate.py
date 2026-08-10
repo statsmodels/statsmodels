@@ -71,7 +71,7 @@ def test_arma_lfilter():
 
 def test_arma_direct():
     # Tests of an ARMA model simulation against direct construction
-    # This is useful for e.g. trend components
+    # This is useful for e.g., trend components
     # Note: the first elements of the generated SARIMAX datasets are based on
     # the initial state, so we do not include them in the comparisons
     rs = np.random.RandomState(10239)
@@ -678,7 +678,7 @@ def test_known_initialization():
 
 def test_sequential_simulate():
     # Test that we can perform simulation, change the system matrices, and then
-    # perform simulation again (i.e. check that everything updates correctly
+    # perform simulation again (i.e., check that everything updates correctly
     # in the simulation smoother).
     n_simulations = 100
     mod = sarimax.SARIMAX([1], order=(0, 0, 0), trend="c")

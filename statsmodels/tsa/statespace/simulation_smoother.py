@@ -250,7 +250,7 @@ class SimulationSmoother(KalmanSmoother):
             The prefix of the datatype. Usually only used internally.
         nobs : int, optional
             The number of observations to simulate. If set to anything other
-            than -1, only simulation will be performed (i.e. simulation
+            than -1, only simulation will be performed (i.e., simulation
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available. Default is -1,
             which uses the number of observations in the model.
@@ -616,7 +616,7 @@ class SimulationSmoothResults:
             be shaped (`k_states` x 1), where `k_states` is the same as in the
             state space model. If unspecified, but the model has been
             initialized, then that initialization is used. Usually only
-            specified if results are to be replicated (e.g. to enforce a seed)
+            specified if results are to be replicated (e.g., to enforce a seed)
             or for testing; if not specified, random variates are drawn.
         pretransformed_measurement_disturbance_variates : bool, optional
             If `measurement_disturbance_variates` is provided, this flag

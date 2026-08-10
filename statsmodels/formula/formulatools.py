@@ -32,7 +32,7 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
         The number of stack frames to go up when evaluating variables that
         are not found in Y or X.
     missing : str
-        The action to take on missing values, e.g. "drop" or "raise".
+        The action to take on missing values, e.g., "drop" or "raise".
 
     Returns
     -------
@@ -95,7 +95,7 @@ def make_hypotheses_matrices(model_results, test_formula):
     model_results : Results
         A results instance with an attached model that defines exog_names.
     test_formula : str
-        The hypothesis test formula, e.g. "x1 = x2 = 0".
+        The hypothesis test formula, e.g., "x1 = x2 = 0".
 
     Returns
     -------

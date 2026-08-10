@@ -203,7 +203,7 @@ class CheckExtras:
 
     def test_score_test_alpha(self):
         # this is mostly sanity check
-        # we need heteroscedastic model, i.e. exog_dispersion as comparison
+        # we need heteroscedastic model, i.e., exog_dispersion as comparison
         # res1 = self.res1
         modr = self.klass(endog, exog.values[:, :-1])
         resr = modr.fit(method="newton", maxiter=300)

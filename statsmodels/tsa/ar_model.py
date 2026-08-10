@@ -1952,7 +1952,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         Notes
         -----
         The endog and exog arguments to this method must be formatted in the
-        same way (e.g. Pandas Series versus Numpy array) as were the endog
+        same way (e.g., Pandas Series versus Numpy array) as were the endog
         and exog arrays passed to the original model.
 
         The endog argument to this method should consist of new observations

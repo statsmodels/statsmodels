@@ -355,7 +355,7 @@ class KalmanFilter(Representation):
         # Kalman filter to indicate that the scale should not be concentrated
         # out, so that self.filter_concentrated = False, but we still want to
         # alert the results object that we are viewing the model as one in
-        # which the scale had been concentrated out for e.g. degree of freedom
+        # which the scale had been concentrated out for e.g., degree of freedom
         # computations.
         # This value should always be None, except within the fixed_scale
         # context, and should not be modified by users or anywhere else.
@@ -1098,7 +1098,7 @@ class KalmanFilter(Representation):
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
         simulator : SimulationSmoothResults, optional
-            A simulator object to use to perform the simulation, e.g. as
+            A simulator object to use to perform the simulation, e.g., as
             returned by a prior call with `return_simulator=True`. If not
             specified, a new simulator is created.
         return_simulator : bool, optional
@@ -1189,7 +1189,7 @@ class KalmanFilter(Representation):
 
         TODO: add note about how for time-varying systems this is - perhaps
         counter-intuitively - returning the impulse response within the given
-        model (i.e. starting at period 0 defined by the model) and it is *not*
+        model (i.e., starting at period 0 defined by the model) and it is *not*
         doing impulse responses after the end of the model. To compute impulse
         responses from arbitrary time points, it is necessary to clone a new
         model with the appropriate system matrices.
@@ -1630,10 +1630,10 @@ class FilterResults(FrozenRepresentation):
                     # forecast error covariance matrices) as usual, but their
                     # dimension will only be equal to the number of non-missing
                     # elements, and their location in memory will be in the
-                    # first blocks (e.g. for the forecasts_error, the first
+                    # first blocks (e.g., for the forecasts_error, the first
                     # k_endog - nmissing[t] columns will be filled in),
                     # regardless of which endogenous variables they refer to
-                    # (i.e. the non- missing endogenous variables for that
+                    # (i.e., the non- missing endogenous variables for that
                     # observation). Furthermore, the forecast error covariance
                     # matrix is only valid for those elements. What is done is
                     # to set all elements to nan for these observations so that
@@ -1753,7 +1753,7 @@ class FilterResults(FrozenRepresentation):
         # The self.model._scale value is only not None within a fixed_scale
         # context, in which case it is set and indicates that we should
         # generally view this results object as using a concentrated scale
-        # (e.g. for d.o.f. computations), but because the fixed scale was
+        # (e.g., for d.o.f. computations), but because the fixed scale was
         # actually applied to the model prior to filtering, we do not need to
         # make any adjustments to the filter output, etc.
         elif self.model._scale is not None:
@@ -2009,7 +2009,7 @@ class FilterResults(FrozenRepresentation):
             # Otherwise initialize with the predicted state / cov from the
             # existing results, at index kf_start (note that the time
             # dimension of predicted_state and predicted_state_cov is
-            # self.nobs + 1; so e.g. in the case of pure forecasting we should
+            # self.nobs + 1; so e.g., in the case of pure forecasting we should
             # be using the very last predicted state and predicted state cov
             # elements, and kf_start will equal self.nobs which is correct)
             else:

@@ -335,7 +335,7 @@ class MICEData:
             Conditional formula for imputation. Defaults to a formula
             with main effects for all other variables in dataset.  The
             formula should only include an expression for the mean
-            structure, e.g. use 'x1 + x2' not 'x4 ~ x1 + x2'.
+            structure, e.g., use 'x1 + x2' not 'x4 ~ x1 + x2'.
         model_class : statsmodels model, optional
             Conditional model for imputation. Defaults to OLS.  See below
             for more information.
@@ -962,7 +962,7 @@ class MICEData:
 
         return fig
 
-    # Try to identify any auxiliary arrays (e.g. status vector in
+    # Try to identify any auxiliary arrays (e.g., status vector in
     # PHReg) that need to be bootstrapped along with exog and endog.
     def _boot_kwds(self, kwds, rix):
 

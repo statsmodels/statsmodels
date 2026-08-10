@@ -427,7 +427,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         If false (default), then the header row is added. If true, then no
         header row is added.
     float_format : str
-        float formatting options (e.g. ".3g")
+        float formatting options (e.g., ".3g")
 
     Returns
     -------
