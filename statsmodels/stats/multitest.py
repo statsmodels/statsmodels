@@ -540,8 +540,8 @@ def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
     requirements = ("C_CONTIGUOUS", "ALIGNED", "OWNDATA", "WRITEABLE", "ENSUREARRAY")
     y = np.require(counts / (nobs * gaps), dtype=float, requirements=requirements)
     weights = np.require(gaps, dtype=float, requirements=requirements)
-    slope_reg = isotonic_regression(y, weights=weights, increasing=False)
-    slopes_uniq = slope_reg.x
+    slope_reg = isotonic_regression(-y, weights=weights, increasing=True)
+    slopes_uniq = -slope_reg.x
 
     # compute LCM of empirical cdf
     keep = np.ones(len(uniq_pvals), dtype=bool)
