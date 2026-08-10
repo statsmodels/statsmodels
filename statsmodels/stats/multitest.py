@@ -7,18 +7,20 @@ License: BSD-3
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
-from scipy.optimize import isotonic_regression
 
 from statsmodels.stats._knockoff import RegressionFDR
-from statsmodels.tools.testing import Holder
 
 __all__ = [
+    "LocalFDRCorrectionResult",
     "NullDistribution",
     "RegressionFDR",
     "fdrcorrection",
     "fdrcorrection_twostage",
     "local_fdr",
+    "local_fdr_correction",
     "multipletests",
 ]
 
@@ -54,6 +56,7 @@ multitest_methods_names = {
     "fdr_tsbh": "FDR 2-stage Benjamini-Hochberg",
     "fdr_tsbky": "FDR 2-stage Benjamini-Krieger-Yekutieli",
     "fdr_gbs": "FDR adaptive Gavrilov-Benjamini-Sarkar",
+    "lfdr": "lfdr support line procedure",
 }
 
 _alias_list = [
@@ -68,42 +71,15 @@ _alias_list = [
     ["fdr_tsbh", "fdr_2sbh"],
     ["fdr_tsbky", "fdr_2sbky", "fdr_twostage"],
     ["fdr_gbs"],
+    ["lfdr", "lfdr_sl"],
 ]
-
-multitest_methods_names = {'b': 'Bonferroni',
-                           's': 'Sidak',
-                           'h': 'Holm',
-                           'hs': 'Holm-Sidak',
-                           'sh': 'Simes-Hochberg',
-                           'ho': 'Hommel',
-                           'fdr_bh': 'FDR Benjamini-Hochberg',
-                           'fdr_by': 'FDR Benjamini-Yekutieli',
-                           'fdr_tsbh': 'FDR 2-stage Benjamini-Hochberg',
-                           'fdr_tsbky': 'FDR 2-stage Benjamini-Krieger-Yekutieli',
-                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar',
-                           'lfdr' : 'lfdr support line procedure',
-                           }
-
-_alias_list = [['b', 'bonf', 'bonferroni'],
-               ['s', 'sidak'],
-               ['h', 'holm'],
-               ['hs', 'holm-sidak'],
-               ['sh', 'simes-hochberg'],
-               ['ho', 'hommel'],
-               ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp'],
-               ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr'],
-               ['fdr_tsbh', 'fdr_2sbh'],
-               ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage'],
-               ['fdr_gbs'],
-               ['lfdr', 'lfdr_sl'],
-               ]
 
 
 multitest_alias = {}
-for m in _alias_list:
-    multitest_alias[m[0]] = m[0]
-    for a in m[1:]:
-        multitest_alias[a] = m[0]
+for _alias_sub_list in _alias_list:
+    _formal_name = _alias_sub_list[0]
+    for _alias in _alias_sub_list:
+        multitest_alias[_alias] = _formal_name
 
 
 def multipletests(
@@ -311,8 +287,8 @@ def multipletests(
         del pvals_corrected_raw
         reject = pvals_corrected <= alpha
 
-    elif method.lower() in ['lfdr', 'lfdr_sl']:
-        pvals_corrected = lfdrcorrection(pvals, is_sorted=True).lfdr
+    elif method.lower() in ["lfdr", "lfdr_sl"]:
+        pvals_corrected = local_fdr_correction(pvals, is_sorted=True).lfdr
         reject = pvals_corrected <= alpha
 
     else:
@@ -421,69 +397,119 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
         return reject, pvals_corrected
 
 
-def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
-    '''
-    Estimate local and tail FDR values for a list of p-values.
+class LocalFDRCorrectionResult(NamedTuple):
+    """
+    Result of :func:`local_fdr_correction`.
 
-    Estimates the marginal density of the p-values using the Grenander estimator
-    of a monotone density. Combined with an estimate of the null proportion,
-    this yields (by Bayes' rule) estimates of two posterior quantities:
-    1. The tail false discovery rate, given by fdr(t) = Prob{null | p ≤ t}
-    2. The local false discovery rate, given by lfdr(t) = Prob{null | p = t}
-    This function estimates fdr and lfdr for each input p-value.
+    Parameters
+    ----------
+    fdr : ndarray
+        The estimated tail false discovery rate for each input p-value, in
+        the same order as the p-values passed to `local_fdr_correction`.
+    lfdr : ndarray
+        The estimated local false discovery rate for each input p-value, in
+        the same order as the p-values passed to `local_fdr_correction`.
+    """
+
+    fdr: np.ndarray
+    lfdr: np.ndarray
+
+
+def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
+    r"""
+    Estimate local and tail false discovery rates for a list of p-values.
+
+    Fits a monotone (non-increasing) estimate of the marginal density of
+    the p-values using the Grenander estimator. Combined with an estimate
+    of the proportion of true null hypotheses, this yields, by Bayes' rule,
+    empirical Bayes estimates of the tail and local false discovery rates.
 
     Parameters
     ----------
     pvals : array_like, 1d
         List of p-values of the individual tests.
     null_proportion : float, optional
-        estimate of the null proportion. Defaults to conservative choice ``1.``.
+        Estimate of :math:`\pi_0`, the proportion of true null hypotheses.
+        Defaults to the conservative choice ``1.0``, i.e. all hypotheses
+        are assumed null.
     is_sorted : bool, optional
-        If False (default), the p-values will be sorted, but the corrected
-        p-values are in the original order. If True, then it assumed that the
-        p-values are already sorted in ascending order.
+        If False (default), the p-values will be sorted, but the estimated
+        FDR values are returned in the original order. If True, then it is
+        assumed that the p-values are already sorted in ascending order.
 
     Returns
     -------
-    results : Holder
-        contains estimated tail FDR values (`results.fdr`) and estimated local
-        FDR values (`results.lfdr`)
+    LocalFDRCorrectionResult
+        A namedtuple with the estimated tail false discovery rates
+        (``fdr``) and estimated local false discovery rates (``lfdr``).
 
-    See also
+    See Also
     --------
-    local_fdr
+    local_fdr : Local FDR estimation for Z-scores using Poisson regression.
+    fdrcorrection : Benjamini-Hochberg/Benjamini-Yekutieli p-value
+        correction.
 
     Notes
     -----
-    Assumes p-values are independent, uniformly distributed under the null and
-    have decreasing densities under the alternative.
+    Let :math:`t \in [0, 1]` denote a p-value threshold and
+    :math:`\hat{\pi}_0` the `null_proportion`. Let :math:`\hat{F}` be the
+    Grenander estimate of the empirical distribution function of `pvals`,
+    given by the least concave majorant (LCM) of the empirical cdf, and let
+    :math:`\hat{f}` be its density estimate, given by the left-hand slope
+    of the LCM. The tail and local false discovery rates are then estimated
+    by Bayes' rule as
+
+    .. math::
+
+        \widehat{Fdr}(t) = \min\left(1, \hat{\pi}_0 \frac{t}{\hat{F}(t)}
+            \right) \approx \Pr(\text{null} \mid p \leq t)
+
+    .. math::
+
+        \widehat{fdr}(t) = \min\left(1, \frac{\hat{\pi}_0}{\hat{f}(t)}
+            \right) \approx \Pr(\text{null} \mid p = t)
+
+    Tied p-values are treated as repeated observations at a single support
+    point of the empirical distribution function.
+
+    This method assumes that the p-values are independent, are uniformly
+    distributed under the null, and have non-increasing densities under
+    the alternative.
 
     References
     ----------
-    U Grenander (1956). On the theory of mortality measurement: part II.
-    Scandinavian Actuarial Journal, 39, 125-153.
+    .. [*] U Grenander (1956). On the theory of mortality measurement: part
+       II. Scandinavian Actuarial Journal, 39, 125-153.
 
-    B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical Bayes
-    analysis of a microarray experiment. Journal of the American Statistical
-    Association, 96:456, 1151-1160.
+    .. [*] B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical
+       Bayes analysis of a microarray experiment. Journal of the American
+       Statistical Association, 96:456, 1151-1160.
 
-    B Efron (2007). Size, Power and False Discovery Rates. The Annals of
-    Statistics, 35:4, 1351-1377.
+    .. [*] B Efron (2007). Size, Power and False Discovery Rates. The
+       Annals of Statistics, 35:4, 1351-1377.
 
-    K Strimmer (2008). A unified approach to false discovery rate estimation.
-    BMC Bioinformatics, 9, 1-14.
+    .. [*] K Strimmer (2008). A unified approach to false discovery rate
+       estimation. BMC Bioinformatics, 9, 303.
 
-    J A Soloff, D Xiang, and W Fithian (2024). The edge of discovery:
-    Controlling the local false discovery rate at the margin. The Annals of
-    Statistics, 52:2, 580-601.
+    .. [*] J A Soloff, D Xiang, and W Fithian (2024). The edge of
+       discovery: Controlling the local false discovery rate at the
+       margin. The Annals of Statistics, 52:2, 580-601.
 
     Examples
     --------
-    >>> from statsmodels.stats.multitest import lfdrcorrection
+    >>> from statsmodels.stats.multitest import local_fdr_correction
     >>> import numpy as np
     >>> pvals = np.random.rand(30)
-    >>> lfdr = lfdrcorrection(pvals).lfdr
-    '''
+    >>> lfdr = local_fdr_correction(pvals).lfdr
+    """
+    try:
+        from scipy.optimize import isotonic_regression
+    except ImportError as imp_err:
+        raise ImportError(
+            "SciPy 1.12 or greater is required to provide the function "
+            "isotonic_regression in order to use local FDR."
+        ) from imp_err
+
     pvals = np.asarray(pvals)
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
 
@@ -495,29 +521,35 @@ def lfdrcorrection(pvals, null_proportion=1.0, is_sorted=False):
     else:
         pvals_sorted = pvals  # alias
 
+    # tied p-values share a support point of the empirical cdf, so the
+    # Grenander fit is computed on the distinct values weighted by their
+    # multiplicities (ties otherwise produce zero-width, zero-weight gaps)
+    uniq_pvals, counts = np.unique(pvals_sorted, return_counts=True)
+
     # compute left-hand slopes of least concave majorant of empirical cdf
-    gaps = np.diff(pvals_sorted, prepend=0)
-    slope_reg = isotonic_regression(np.ones(nobs)/(nobs*gaps),
-                                weights=gaps.copy(),
-                                increasing=False)
-    slopes = slope_reg.x
+    gaps = np.diff(uniq_pvals, prepend=0)
+    slope_reg = isotonic_regression(
+        counts / (nobs * gaps), weights=gaps.copy(), increasing=False
+    )
+    slopes_uniq = slope_reg.x
 
     # compute LCM of empirical cdf
-    keep = np.ones(nobs, dtype=bool)
-    keep[:-1] = ~np.isclose(slopes[:-1], slopes[1:])
-    knots_  = np.hstack([0, pvals_sorted[keep]])
-    heights_= np.hstack([0, (np.where(keep)[0]+1)/m])
+    keep = np.ones(len(uniq_pvals), dtype=bool)
+    keep[:-1] = ~np.isclose(slopes_uniq[:-1], slopes_uniq[1:])
+    knots_ = np.hstack([0, uniq_pvals[keep]])
+    heights_ = np.hstack([0, np.cumsum(counts)[keep] / nobs])
     lcm_cdf = np.interp(pvals_sorted, knots_, heights_)
+    slopes = np.repeat(slopes_uniq, counts)
 
     # return fitted values in original order
     if not is_sorted:
         pvals_unsortind = pvals_sortind.argsort()
         slopes = np.take(slopes, pvals_unsortind)
         lcm_cdf = np.take(lcm_cdf, pvals_unsortind)
-    lfdr = np.minimum(1, null_proportion/slopes)
-    fdr = np.minimum(1, null_proportion*pvals/lcm_cdf)
+    lfdr = np.minimum(1, null_proportion / slopes)
+    fdr = np.minimum(1, null_proportion * pvals / lcm_cdf)
 
-    return Holder(fdr=fdr, lfdr=lfdr)
+    return LocalFDRCorrectionResult(fdr=fdr, lfdr=lfdr)
 
 
 def fdrcorrection_twostage(
@@ -694,8 +726,8 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     References
     ----------
-    B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
-    Model.  Statistical Science 23:1, 1-22.
+    .. [*] B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
+       Model.  Statistical Science 23:1, 1-22.
 
     Examples
     --------
@@ -806,8 +838,8 @@ class NullDistribution:
 
     References
     ----------
-    B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
-    Model.  Statistical Science 23:1, 1-22.
+    .. [*] B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
+       Model.  Statistical Science 23:1, 1-22.
 
     Notes
     -----

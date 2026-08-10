@@ -316,7 +316,8 @@ Multiple Tests and Multiple Comparison Procedures
 -------------------------------------------------
 
 `multipletests` is a function for p-value correction, which includes p-value
-correction based on fdr in `fdrcorrection` and based on local fdr in `lfdrcorrection`.
+correction based on fdr in `fdrcorrection` and based on local fdr in
+`local_fdr_correction`.
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
@@ -333,7 +334,8 @@ to one way ANOVA, but still in development
 
    multipletests
    fdrcorrection
-   lfdrcorrection
+   local_fdr_correction
+   LocalFDRCorrectionResult
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 

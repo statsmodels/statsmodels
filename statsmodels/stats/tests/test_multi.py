@@ -12,6 +12,8 @@ are tested against R:multtest
     consistency only
 
 """
+from statsmodels.compat.scipy import SP_LT_112
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from packaging import version
@@ -24,8 +26,8 @@ from statsmodels.stats.multitest import (
     NullDistribution,
     fdrcorrection,
     fdrcorrection_twostage,
-    lfdrcorrection,
     local_fdr,
+    local_fdr_correction,
     multipletests,
     multitest_methods_names,
 )
@@ -231,8 +233,6 @@ class CheckMultiTestsMixin:
         assert_almost_equal(pvalscorr, res_multtest[:, 7], 15)
         pvalscorr = np.sort(fdrcorrection(pval0, method="i")[1])
         assert_almost_equal(pvalscorr, res_multtest[:, 6], 15)
-        lvals = np.sort(np.sort(lfdrcorrection(pval0)[1]))
-        assert_almost_equal(lvals, res_multtest[:, 8], 15)
 
 
 class TestMultiTests1(CheckMultiTestsMixin):
@@ -241,6 +241,129 @@ class TestMultiTests1(CheckMultiTestsMixin):
         cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n"]
         cls.alpha = 0.1
         cls.res2 = res_multtest1
+
+
+@pytest.mark.skipif(SP_LT_112, reason="SciPy < 1.12 does not have isotonic_regression")
+def test_local_fdr_correction_reference():
+    # res_multtest1[:, 8] holds reference lfdr values for pval0; this is the
+    # only one of the res_multtest arrays with an lfdr reference column, the
+    # others reuse that column position for the (untested) ABH method or NA
+    lvals = np.sort(local_fdr_correction(pval0).lfdr)
+    assert_almost_equal(lvals, np.sort(res_multtest1[:, 8]), 8)
+
+
+@pytest.mark.skipif(SP_LT_112, reason="SciPy < 1.12 does not have isotonic_regression")
+@pytest.mark.parametrize(
+    "pvals, null_proportion, expected_fdr, expected_lfdr",
+    [
+        # distinct p-values, conservative (default) null_proportion
+        (
+            [0.0005, 0.003, 0.012, 0.02, 0.031, 0.045, 0.09, 0.14, 0.31,
+             0.52, 0.61, 0.77, 0.83, 0.91, 0.98],
+            1.0,
+            [0.0075000000000000006, 0.022499999999999999,
+             0.058846153846153847, 0.074999999999999997,
+             0.092999999999999999, 0.11249999999999999,
+             0.19285714285714284, 0.26250000000000001,
+             0.49380530973451325, 0.69850746268656716,
+             0.76783216783216779, 0.8716981132075472,
+             0.9054545454545454, 0.94682080924855494,
+             0.97999999999999998],
+            [0.0074999999999999997, 0.037500000000000006, 0.1275, 0.1275,
+             0.16500000000000004, 0.20999999999999985,
+             0.67500000000000016, 0.75000000000000044, 1, 1, 1, 1, 1, 1,
+             1],
+        ),
+        # same p-values, non-conservative null_proportion
+        (
+            [0.0005, 0.003, 0.012, 0.02, 0.031, 0.045, 0.09, 0.14, 0.31,
+             0.52, 0.61, 0.77, 0.83, 0.91, 0.98],
+            0.7,
+            [0.0052500000000000003, 0.01575, 0.041192307692307688, 0.0525,
+             0.065099999999999991, 0.078750000000000001,
+             0.13500000000000001, 0.18375, 0.34566371681415931,
+             0.48895522388059698, 0.53748251748251741,
+             0.61018867924528297, 0.63381818181818184,
+             0.66277456647398847, 0.68599999999999994],
+            [0.0052499999999999995, 0.026249999999999999,
+             0.089249999999999996, 0.089249999999999996,
+             0.11550000000000001, 0.14699999999999988,
+             0.47250000000000009, 0.52500000000000024, 1, 1, 1, 1, 1, 1,
+             1],
+        ),
+        # tied p-values: exercises the repeated-support-point handling
+        (
+            [0.001, 0.02, 0.02, 0.02, 0.15, 0.15, 0.4, 0.4, 0.4, 0.4, 0.8,
+             0.95],
+            0.9,
+            [0.010800000000000002, 0.054000000000000006,
+             0.054000000000000006, 0.054000000000000006,
+             0.26765217391304347, 0.26765217391304347,
+             0.43200000000000005, 0.43200000000000005,
+             0.43200000000000005, 0.43200000000000005,
+             0.75428571428571434, 0.85499999999999998],
+            [0.010800000000000001, 0.068400000000000002,
+             0.068400000000000002, 0.068400000000000002,
+             0.68399999999999994, 0.68399999999999994,
+             0.68399999999999994, 0.68399999999999994,
+             0.68399999999999994, 0.68399999999999994, 1, 1],
+        ),
+        # unsorted input, same values as the first case (exercises the
+        # is_sorted=False branch)
+        (
+            [0.0005, 0.031, 0.98, 0.31, 0.52, 0.02, 0.003, 0.77, 0.83,
+             0.61, 0.09, 0.91, 0.14, 0.012, 0.045],
+            1.0,
+            [0.0075000000000000006, 0.092999999999999999,
+             0.97999999999999998, 0.49380530973451325,
+             0.69850746268656716, 0.074999999999999997,
+             0.022499999999999999, 0.8716981132075472,
+             0.9054545454545454, 0.76783216783216779,
+             0.19285714285714284, 0.94682080924855494,
+             0.26250000000000001, 0.058846153846153847,
+             0.11249999999999999],
+            [0.0074999999999999997, 0.16500000000000004, 1, 1, 1, 0.1275,
+             0.037500000000000006, 1, 1, 1, 0.67500000000000016, 1,
+             0.75000000000000044, 0.1275, 0.20999999999999985],
+        ),
+    ],
+)
+def test_local_fdr_correction_against_r_fdrtool(
+    pvals, null_proportion, expected_fdr, expected_lfdr
+):
+    # Reference values were generated with R 4.6.1 and the fdrtool package
+    # (Strimmer 2008, the method cited in local_fdr_correction's docstring),
+    # whose grenander() function computes the same Grenander (1956) least
+    # concave majorant of the empirical cdf used here. R's F.knots agree
+    # exactly with our lcm_cdf, so the density (slope) at each p-value was
+    # derived directly from consecutive (knot, height) pairs rather than
+    # from grenander()'s f.knots, whose indexing is offset by one relative
+    # to x.knots. Generated with the following R script:
+    #
+    #   library(fdrtool)
+    #   options(digits = 17)
+    #
+    #   local_fdr_correction_ref <- function(pvals, null_proportion = 1.0) {
+    #     g <- grenander(ecdf(pvals), type = "decreasing")
+    #     knots <- c(0, g$x.knots)
+    #     heights <- c(0, g$F.knots)
+    #     lcm_cdf <- approx(knots, heights, xout = pvals, rule = 2)$y
+    #     slope_at <- function(p) {
+    #       j <- which(knots >= p)[1]
+    #       (heights[j] - heights[j - 1]) / (knots[j] - knots[j - 1])
+    #     }
+    #     slopes <- vapply(pvals, slope_at, numeric(1))
+    #     lfdr <- pmin(1, null_proportion / slopes)
+    #     fdr <- pmin(1, null_proportion * pvals / lcm_cdf)
+    #     list(fdr = fdr, lfdr = lfdr)
+    #   }
+    #
+    #   p <- c(0.0005, 0.003, 0.012, 0.02, 0.031, 0.045, 0.09, 0.14, 0.31,
+    #          0.52, 0.61, 0.77, 0.83, 0.91, 0.98)
+    #   local_fdr_correction_ref(p, null_proportion = 1.0)
+    res = local_fdr_correction(np.asarray(pvals), null_proportion=null_proportion)
+    assert_allclose(res.fdr, expected_fdr, rtol=0, atol=1e-10)
+    assert_allclose(res.lfdr, expected_lfdr, rtol=0, atol=1e-10)
 
 
 class TestMultiTests2(CheckMultiTestsMixin):
