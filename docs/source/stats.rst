@@ -870,6 +870,7 @@ Status: experimental, API might change, added in 0.12
    effectsize_2proportions
    effectsize_smd
    CombineResults
+   HomogeneityTestResult
 
 The module also includes internal functions to compute random effects
 variance.
