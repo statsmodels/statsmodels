@@ -283,8 +283,9 @@ class TestStattools:
         x = np.array([1, 2])
         assert np.isnan(medcouple(x, use_fast=True))
 
-    def test_medcouple_large_random(self, reset_randomstate):
-        x = np.random.randn(500)
+    def test_medcouple_large_random(self):
+        rs = np.random.default_rng(238201381)
+        x = rs.standard_normal(500)
         mc_fast = medcouple(x, use_fast=True)
         mc_legacy = medcouple(x, use_fast=False)
         assert_allclose(mc_fast, mc_legacy, rtol=2e-2, atol=1e-5)
