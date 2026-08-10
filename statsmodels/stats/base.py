@@ -16,6 +16,14 @@ class HolderTuple(Holder):
     """
     Holder class with indexing
 
+    .. deprecated:: 0.15
+        ``HolderTuple`` is no longer used internally by statsmodels. Result
+        classes that used to subclass ``HolderTuple`` have been replaced by
+        documented ``NamedTuple`` classes; those that need the same 2-tuple
+        unpacking behavior are decorated with
+        :func:`~statsmodels.stats.base.compat_2tuple_unpack`.
+        ``HolderTuple`` will be removed after statsmodels 0.16 is released.
+
     Parameters
     ----------
     tuple_ : tuple of str, optional
@@ -27,6 +35,13 @@ class HolderTuple(Holder):
     """
 
     def __init__(self, tuple_=None, **kwds):
+        warnings.warn(
+            "HolderTuple is deprecated and is no longer used internally by "
+            "statsmodels. It will be removed after statsmodels 0.16 is "
+            "released. Use a documented NamedTuple result class instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         super().__init__(**kwds)
         if tuple_ is not None:
             self.tuple = tuple(getattr(self, att) for att in tuple_)
@@ -91,7 +106,7 @@ def compat_2tuple_unpack(*field_names):
                 f"({names}) for backwards compatibility with the "
                 "Holder-based API it replaced. Starting in statsmodels "
                 "0.16, unpacking will return all fields like a standard "
-                "tuple. Use named attribute access instead, e.g. "
+                "tuple. Use named attribute access instead, e.g., "
                 f"``result.{first}``.",
                 FutureWarning,
                 stacklevel=3,
@@ -100,7 +115,7 @@ def compat_2tuple_unpack(*field_names):
                 yield getattr(self, name)
 
         def _asdict(self):
-            return dict(zip(self._fields, tuple.__iter__(self)))
+            return dict(zip(self._fields, tuple.__iter__(self), strict=True))
 
         def _replace(self, /, **kwds):
             result = self._make(map(kwds.pop, self._fields, tuple.__iter__(self)))
