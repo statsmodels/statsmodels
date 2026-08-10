@@ -30,3 +30,6 @@ pywinpty; os_name == "nt"
 flake8
 flake8-bugbear
 ruff
+
+# scikit-learn
+scikit-learn; os_name == "nt"

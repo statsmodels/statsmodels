@@ -12,7 +12,6 @@ are tested against R:multtest
     consistency only
 
 """
-from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.scipy import SP_LT_112
 
 import numpy as np
@@ -244,7 +243,6 @@ class TestMultiTests1(CheckMultiTestsMixin):
         cls.res2 = res_multtest1
 
 
-@pytest.mark.skipif(PLATFORM_WIN, reason="segfaults on windows")
 @pytest.mark.skipif(SP_LT_112, reason="SciPy < 1.12 does not have isotonic_regression")
 def test_local_fdr_correction_reference():
     # res_multtest1[:, 8] holds reference lfdr values for pval0; this is the
@@ -254,7 +252,6 @@ def test_local_fdr_correction_reference():
     assert_almost_equal(lvals, np.sort(res_multtest1[:, 8]), 8)
 
 
-@pytest.mark.skipif(PLATFORM_WIN, reason="segfaults on windows")
 @pytest.mark.skipif(SP_LT_112, reason="SciPy < 1.12 does not have isotonic_regression")
 @pytest.mark.parametrize(
     "pvals, null_proportion, expected_fdr, expected_lfdr",

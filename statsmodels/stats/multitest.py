@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.scipy import SP_LT_112
 
 from typing import NamedTuple
@@ -540,8 +541,15 @@ def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
     requirements = ("C_CONTIGUOUS", "ALIGNED", "OWNDATA", "WRITEABLE", "ENSUREARRAY")
     y = np.require(counts / (nobs * gaps), dtype=float, requirements=requirements)
     weights = np.require(gaps, dtype=float, requirements=requirements)
-    slope_reg = isotonic_regression(-y, weights=weights, increasing=True)
-    slopes_uniq = -slope_reg.x
+    if PLATFORM_WIN:
+        from sklearn.isotonic import IsotonicRegression
+        ir = IsotonicRegression()
+        _x = np.arange(y.shape[0])
+        ir.fit(_x, -y, sample_weight=weights)
+        slopes_uniq = -ir.fit_transform(_x, -y, sample_weight=weights)
+    else:
+        slope_reg = isotonic_regression(-y, weights=weights, increasing=True)
+        slopes_uniq = -slope_reg.x
 
     # compute LCM of empirical cdf
     keep = np.ones(len(uniq_pvals), dtype=bool)
