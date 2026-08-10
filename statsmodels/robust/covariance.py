@@ -1182,6 +1182,44 @@ def weights_quantile(distance, frac=0.5, rescale=True):
     return w
 
 
+class CovIterResult(NamedTuple):
+    """
+    Result of :func:`_cov_iter`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimated covariance, rescaled if `rescale` was not "none".
+    mean : ndarray
+        Weighted mean from the final iteration.
+    weights : ndarray
+        Weights from the final iteration.
+    mahalanobis : ndarray
+        Mahalanobis distances computed at the final covariance estimate.
+    scale_factor : float
+        Rescaling factor applied to `cov`. Equal to 1 if `rescale` is
+        "none".
+    n_iter : int
+        Number of iterations used in finding a solution.
+    converged : bool
+        Whether the iteration converged before `maxiter` was reached.
+    method : str
+        Name of the estimation method, "m-estimator".
+    weights_func : callable
+        The `weights_func` argument that was used.
+    """
+
+    cov: np.ndarray
+    mean: np.ndarray
+    weights: np.ndarray
+    mahalanobis: np.ndarray
+    scale_factor: float
+    n_iter: int
+    converged: bool
+    method: str
+    weights_func: object
+
+
 def _cov_iter(
     data,
     weights_func,
@@ -1229,8 +1267,10 @@ def _cov_iter(
 
     Returns
     -------
-    Holder instance with attributes: cov, mean, weights, mahalanobis,
-    scale_factor, n_iter, converged, method, weights_func
+    CovIterResult
+        Named tuple with `cov`, `mean`, `weights`, `mahalanobis`,
+        `scale_factor`, `n_iter`, `converged`, `method`, and
+        `weights_func`. See :class:`CovIterResult` for details.
 
     Notes
     -----
@@ -1275,7 +1315,7 @@ def _cov_iter(
     else:
         raise NotImplementedError('only rescale="med" is currently available')
 
-    res = Holder(
+    res = CovIterResult(
         cov=cov,
         mean=mean,
         weights=w,
@@ -1287,6 +1327,26 @@ def _cov_iter(
         weights_func=weights_func,
     )
     return res
+
+
+class CovStartingResult(NamedTuple):
+    """
+    One robust starting covariance estimate from :func:`_cov_starting`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimate of the covariance or correlation matrix.
+    mean : ndarray
+        Estimate of the mean or center.
+    method : str
+        Name identifying the estimation method used for this starting
+        covariance.
+    """
+
+    cov: np.ndarray
+    mean: np.ndarray
+    method: str
 
 
 def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
@@ -1321,7 +1381,9 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     Returns
     -------
-    list of Holder instances with `cov` attribute.
+    list of CovStartingResult and CovIterResult and CovOGKResult
+        Each entry has at least `cov` and `method` attributes. See
+        :class:`CovStartingResult` for the common shape.
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
@@ -1344,7 +1406,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
         xsp = xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
-        c0 = Holder(
+        c0 = CovStartingResult(
             cov=c * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="pearson truncated",
@@ -1358,7 +1420,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
             maxiter=100,
         )
 
-        c02 = Holder(
+        c02 = CovStartingResult(
             cov=_naive_ledoit_wolf_shrinkage(xsp, 0).cov * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="ledoit_wolf",
@@ -1383,7 +1445,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     c2 = cov_ogk(xs)
     cov_all.append(c2)
 
-    c2raw = Holder(
+    c2raw = CovStartingResult(
         cov=c2.cov_raw,
         mean=c2.loc_raw * std + center,
         method="ogk_raw",
@@ -1391,7 +1453,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     cov_all.append(c2raw)
 
     z_tanh = np.tanh(xs)
-    c_th = Holder(
+    c_th = CovStartingResult(
         cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
         mean=center,  # TODO: do we add inverted mean z_tanh ?
         method="tanh",
@@ -1399,14 +1461,14 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     cov_all.append(c_th)
 
     x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
-    c_th = Holder(
+    c_th = CovStartingResult(
         cov=np.cov(x_spatial.T),
         mean=center,
         method="spatial",
     )
     cov_all.append(c_th)
 
-    c_th = Holder(
+    c_th = CovStartingResult(
         # not consistently scaled for cov
         # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
         cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
@@ -1415,7 +1477,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     )
     cov_all.append(c_th)
 
-    c_ns = Holder(
+    c_ns = CovStartingResult(
         cov=corr_normal_scores(xs),  # not consistently scaled for cov
         mean=center,  # TODO: do we add inverted mean z_tanh ?
         method="normal-scores",
