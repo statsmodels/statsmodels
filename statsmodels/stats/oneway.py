@@ -12,6 +12,8 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
+from statsmodels.stats.base import compat_2tuple_unpack
+
 # functions that use scipy.special instead of boost based function in stats
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
@@ -557,6 +559,7 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     return ci_res
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class AnovaResult(NamedTuple):
     """
     Result of :func:`anova_generic` and :func:`anova_oneway`.
@@ -850,6 +853,7 @@ def anova_oneway(
     return res
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class EquivalenceOnewayResult(NamedTuple):
     """
     Result of :func:`equivalence_oneway_generic` and :func:`equivalence_oneway`.
@@ -1360,6 +1364,7 @@ def simulate_power_equivalence_oneway(
     return res
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class ScaleAnovaResult(NamedTuple):
     """
     Result of :func:`test_scale_oneway`.
@@ -1516,6 +1521,7 @@ def test_scale_oneway(
     return res
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class ScaleEquivalenceResult(NamedTuple):
     """
     Result of :func:`equivalence_scale_oneway`.

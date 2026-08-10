@@ -5,6 +5,8 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
+import warnings
+
 import numpy as np
 
 from statsmodels.tools.testing import Holder
@@ -43,6 +45,79 @@ class HolderTuple(Holder):
     def __array__(self, dtype=None, copy=None):
         copy = copy if copy is not None else True
         return np.array(list(self.tuple), dtype=dtype, copy=copy)
+
+
+def compat_2tuple_unpack(*field_names):
+    """
+    Class decorator giving a NamedTuple HolderTuple-compatible unpacking.
+
+    Several results classes that used to subclass ``HolderTuple`` have been
+    replaced by plain ``NamedTuple`` classes with many more fields.
+    ``HolderTuple`` only ever unpacked into a fixed, short tuple (by
+    default ``(statistic, pvalue)``), so existing code may do
+    ``statistic, pvalue = result``. Decorating the replacement NamedTuple
+    with ``@compat_2tuple_unpack("statistic", "pvalue")`` keeps that
+    working (with a deprecation warning) during a transition period,
+    instead of unpacking every field and raising ``ValueError``.
+
+    This only overrides ``__iter__``, which controls unpacking, iteration,
+    ``list(result)`` and ``tuple(result)``. Indexing (``result[0]``),
+    attribute access, and equality are unaffected since they operate on
+    the underlying tuple directly rather than through ``__iter__``.
+
+    ``_asdict``, ``_replace``, and ``__getnewargs__`` (used by ``pickle``
+    and ``copy.deepcopy``) are also overridden to bypass the restricted
+    ``__iter__`` and continue operating on all fields; without this they
+    would silently truncate to just `field_names`, since the standard
+    library implementations of those methods iterate over ``self``.
+
+    Parameters
+    ----------
+    *field_names : str
+        Names of the fields that unpacking should yield, in order. These
+        must be a prefix consistent with how many values the replaced
+        ``HolderTuple`` used to unpack into (commonly ``("statistic",
+        "pvalue")``, or a single field for a ``HolderTuple`` constructed
+        with a custom ``tuple_`` argument).
+    """
+
+    def decorator(cls):
+        names = ", ".join(field_names)
+        first = field_names[0]
+
+        def __iter__(self):
+            warnings.warn(
+                f"Unpacking {type(self).__name__} currently returns only "
+                f"({names}) for backwards compatibility with the "
+                "Holder-based API it replaced. Starting in statsmodels "
+                "0.16, unpacking will return all fields like a standard "
+                "tuple. Use named attribute access instead, e.g. "
+                f"``result.{first}``.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            for name in field_names:
+                yield getattr(self, name)
+
+        def _asdict(self):
+            return dict(zip(self._fields, tuple.__iter__(self)))
+
+        def _replace(self, /, **kwds):
+            result = self._make(map(kwds.pop, self._fields, tuple.__iter__(self)))
+            if kwds:
+                raise ValueError(f"Got unexpected field names: {list(kwds)!r}")
+            return result
+
+        def __getnewargs__(self):
+            return tuple(tuple.__iter__(self))
+
+        cls.__iter__ = __iter__
+        cls._asdict = _asdict
+        cls._replace = _replace
+        cls.__getnewargs__ = __getnewargs__
+        return cls
+
+    return decorator
 
 
 class AllPairsResults:
