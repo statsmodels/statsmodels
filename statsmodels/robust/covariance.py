@@ -646,6 +646,26 @@ def cov_ogk(
 # # Tyler ###
 
 
+class CovTylerResult(NamedTuple):
+    """
+    Result of :func:`cov_tyler`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimate of the scatter matrix.
+    n_iter : int
+        Number of iterations used in finding a solution. If n_iter is less
+        than maxiter, then the iteration converged.
+    method : str
+        Name of the estimation method, "tyler".
+    """
+
+    cov: np.ndarray
+    n_iter: int
+    method: str
+
+
 def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     """
     Tyler's M-estimator for normalized covariance (scatter)
@@ -686,13 +706,9 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
 
     Returns
     -------
-    Holder instance with the following attributes
-
-    cov : ndarray
-        Estimate of the scatter matrix.
-    n_iter : int
-        Number of iterations used in finding a solution. If n_iter is less
-        than maxiter, then the iteration converged.
+    CovTylerResult
+        Named tuple with `cov`, `n_iter`, and `method`. See
+        :class:`CovTylerResult` for details.
 
     References
     ----------
@@ -751,7 +767,33 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         msg = 'normalize needs to be False, "trace", "det" or "normal"'
         raise ValueError(msg)
 
-    return Holder(cov=c, n_iter=n_iter, method="tyler")
+    return CovTylerResult(cov=c, n_iter=n_iter, method="tyler")
+
+
+class CovTylerRegularizedResult(NamedTuple):
+    """
+    Result of :func:`cov_tyler_regularized` and
+    :func:`cov_tyler_pairs_regularized`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimate of the scatter matrix.
+    n_iter : int
+        Number of iterations used in finding a solution. If n_iter is less
+        than maxiter, then the iteration converged.
+    shrinkage_factor : float
+        Shrinkage factor that was used in the estimation. This will be the
+        same as the function argument if it was not None.
+    corr : ndarray or None
+        Correlation matrix used in the plugin shrinkage factor estimation,
+        or None if shrinkage_factor was given.
+    """
+
+    cov: np.ndarray
+    n_iter: int
+    shrinkage_factor: float
+    corr: np.ndarray | None
 
 
 def cov_tyler_regularized(
@@ -783,19 +825,9 @@ def cov_tyler_regularized(
 
     Returns
     -------
-    result instance with the following attributes
-
-    cov : ndarray
-        Estimate of the scatter matrix.
-    n_iter : int
-        Number of iterations used in finding a solution. If n_iter is less
-        than maxiter, then the iteration converged.
-    shrinkage_factor : float
-        Shrinkage factor that was used in the estimation. This will be the
-        same as the function argument if it was not None.
-    corr : ndarray or None
-        Correlation matrix used in the plugin shrinkage factor estimation,
-        or None if shrinkage_factor was given.
+    CovTylerRegularizedResult
+        Named tuple with `cov`, `n_iter`, `shrinkage_factor`, and `corr`.
+        See :class:`CovTylerRegularizedResult` for details.
 
     Notes
     -----
@@ -860,7 +892,9 @@ def cov_tyler_regularized(
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr)
+    res = CovTylerRegularizedResult(
+        cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr
+    )
     return res
 
 
@@ -911,19 +945,9 @@ def cov_tyler_pairs_regularized(
 
     Returns
     -------
-    result instance with the following attributes
-
-    cov : ndarray
-        Estimate of the scatter matrix.
-    n_iter : int
-        Number of iterations used in finding a solution. If n_iter is less
-        than maxiter, then the iteration converged.
-    shrinkage_factor : float
-        Shrinkage factor that was used in the estimation. This will be the
-        same as the function argument if it was not None.
-    corr : ndarray or None
-        Correlation matrix used in the plugin shrinkage factor estimation,
-        or None if shrinkage_factor was given.
+    CovTylerRegularizedResult
+        Named tuple with `cov`, `n_iter`, `shrinkage_factor`, and `corr`.
+        See :class:`CovTylerRegularizedResult` for details.
 
     Notes
     -----
@@ -993,7 +1017,9 @@ def cov_tyler_pairs_regularized(
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr)
+    res = CovTylerRegularizedResult(
+        cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr
+    )
     return res
 
 
