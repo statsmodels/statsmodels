@@ -9,6 +9,8 @@ License: BSD-3
 """
 
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
@@ -596,6 +598,54 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     return res
 
 
+class JonckheereTerpstraResult(NamedTuple):
+    """
+    Result of :func:`jonckheere_terpstra`.
+
+    Parameters
+    ----------
+    statistic : float
+        The Jonckheere-Terpstra J statistic.
+    pvalue : float
+        P-value based on the asymptotic normal approximation.
+    zstat : float
+        Standardized normal approximation for the test statistic.
+    distribution : str
+        The distribution used to compute `pvalue`, always ``"normal"``.
+    alternative : str
+        The alternative hypothesis that was tested.
+    nobs : int
+        Total number of observations across all samples.
+    k_groups : int
+        Number of samples, i.e. the number of ordered groups.
+    counts : ndarray
+        Number of observations in each sample.
+    mean_null : float
+        Mean of `statistic` under the null hypothesis.
+    var_null : float
+        Variance of `statistic` under the null hypothesis.
+    concordant_minus_discordant : float
+        Difference between the number of concordant and discordant pairs,
+        i.e. ``2 * statistic - mean_null * 2``.
+    tau : float
+        Kendall's tau computed from the pooled observations and their
+        ordered group labels.
+    """
+
+    statistic: float
+    pvalue: float
+    zstat: float
+    distribution: str
+    alternative: str
+    nobs: int
+    k_groups: int
+    counts: np.ndarray
+    mean_null: float
+    var_null: float
+    concordant_minus_discordant: float
+    tau: float
+
+
 def jonckheere_terpstra(samples, alternative="larger"):
     """
     Jonckheere-Terpstra test for ordered k-sample alternatives.
@@ -608,8 +658,9 @@ def jonckheere_terpstra(samples, alternative="larger"):
     Parameters
     ----------
     samples : sequence of array_like
-        Sequence containing at least two one-dimensional samples in the order
-        implied by the alternative hypothesis.
+        Sequence containing at least two one-dimensional samples of numeric,
+        finite observations, in the order implied by the alternative
+        hypothesis.
     alternative : {"two-sided", "larger", "smaller"}
         Defines the alternative hypothesis. The following options are
         available:
@@ -620,15 +671,25 @@ def jonckheere_terpstra(samples, alternative="larger"):
 
     Returns
     -------
-    res : HolderTuple
-        HolderTuple instance with the following main attributes
+    res : JonckheereTerpstraResult
+        A NamedTuple with the Jonckheere-Terpstra statistic, pvalue and related
+        quantities. The key fieleds are``statistic`` and ``pvalue``. See
+        :class:`JonckheereTerpstraResult` for the full list of fields.
 
-        statistic : float
-            The Jonckheere-Terpstra J statistic.
-        zstat : float
-            Standardized normal approximation for the test statistic.
-        pvalue : float
-            P-value based on the asymptotic normal approximation.
+    See Also
+    --------
+    JonckheereTerpstraResult
+        Results class for the Jonckheere-Terpstra test
+    scipy.stats.kendalltau : Kendall's tau, the asymptotically equivalent
+        trend statistic used here for the pooled observations and ordered
+        group labels.
+    scipy.stats.mannwhitneyu : Mann-Whitney U test, the pairwise two-sample
+        building block summed by the Jonckheere-Terpstra statistic.
+    scipy.stats.kruskal : Kruskal-Wallis H-test, a k-sample test against an
+        unordered (omnibus) alternative rather than an ordered trend.
+    scipy.stats.page_trend_test : Page's L test for an ordered alternative
+        in related (repeated-measures) samples, as opposed to the
+        independent samples assumed here.
 
     Notes
     -----
@@ -660,11 +721,14 @@ def jonckheere_terpstra(samples, alternative="larger"):
     for idx, sample in enumerate(samples):
         sample_arr = np.asarray(sample, dtype=float)
         if sample_arr.ndim != 1:
-            sample_arr = np.ravel(sample_arr)
+            raise ValueError(
+                f"sample at position {idx} must be one-dimensional, got "
+                f"{sample_arr.ndim} dimensions."
+            )
         if sample_arr.size == 0:
             raise ValueError(f"sample at position {idx} has zero length.")
         if not np.all(np.isfinite(sample_arr)):
-            raise ValueError("all observations must be finite.")
+            raise ValueError("All observations must be finite.")
         arrays.append(sample_arr)
 
     counts = np.array([sample_arr.size for sample_arr in arrays], dtype=np.int64)
@@ -679,6 +743,10 @@ def jonckheere_terpstra(samples, alternative="larger"):
     pooled_sorted = pooled[sort_idx]
     groups_sorted = group_labels[sort_idx]
 
+    # ytie/y0/y1 are the tie-correction terms for the pooled ranking
+    # ("y" ranking in Kendall's tau terminology); xtie/x0/x1 below are the
+    # analogous terms for the group-label ranking. Both follow the
+    # tie-adjusted variance derivation used by scipy.stats.kendalltau.
     prev_counts = np.zeros(n_groups, dtype=np.int64)
     statistic = 0.0
     ytie = 0
@@ -738,7 +806,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
     tau_denom = np.sqrt((total_pairs - xtie) * (total_pairs - ytie))
     tau = con_minus_dis / tau_denom if tau_denom > 0 else np.nan
 
-    return HolderTuple(
+    return JonckheereTerpstraResult(
         statistic=statistic,
         pvalue=pvalue,
         zstat=zstat,

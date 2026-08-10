@@ -271,6 +271,8 @@ Non-Parametric Tests
    cohensd2problarger
    prob_larger_continuous
    rankdata_2samp
+   jonckheere_terpstra
+   JonckheereTerpstraResult
 
 
 Descriptive Statistics

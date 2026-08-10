@@ -7,6 +7,7 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import lzip
+from statsmodels.compat.scipy import SP_LT_110
 
 from pathlib import Path
 
@@ -33,6 +34,7 @@ from statsmodels.stats.contingency_tables import (
     mcnemar,
 )
 from statsmodels.stats.nonparametric import (
+    JonckheereTerpstraResult,
     _compute_rank_placements,
     cohensd2problarger,
     jonckheere_terpstra,
@@ -532,12 +534,22 @@ def test_rank_compare_vectorized():
 def _jt_statistic_bruteforce(samples):
     statistic = 0.0
     for i, sample_low in enumerate(samples[:-1]):
-        for sample_high in samples[i + 1:]:
+        for sample_high in samples[i + 1 :]:
             for x_low in sample_low:
                 for x_high in sample_high:
                     statistic += x_high > x_low
                     statistic += 0.5 * (x_high == x_low)
     return statistic
+
+
+def test_jonckheere_terpstra_exceptions():
+    samples = [
+        np.array([1, 2, 2, np.nan]),
+        np.array([2, 3, 4]),
+        np.array([3, 4, 5, 6]),
+    ]
+    with pytest.raises(ValueError, match="All observations must be finite"):
+        jonckheere_terpstra(samples, alternative="larger")
 
 
 def test_jonckheere_terpstra_larger_matches_kendalltau():
@@ -558,9 +570,9 @@ def test_jonckheere_terpstra_larger_matches_kendalltau():
         method="asymptotic",
         alternative="greater",
     )
-
+    expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
     assert_allclose(res.statistic, expected_stat, rtol=1e-13)
-    assert_allclose(res.tau, expected.statistic, rtol=1e-13)
+    assert_allclose(res.tau, expected_statistic, rtol=1e-13)
     assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
 
 
@@ -581,8 +593,11 @@ def test_jonckheere_terpstra_smaller_and_two_sided():
         method="asymptotic",
         alternative="less",
     )
+    expected_small_statistic = (
+        expected_small.correlation if SP_LT_110 else expected_small.statistic
+    )
     assert_allclose(res_small.statistic, _jt_statistic_bruteforce(samples))
-    assert_allclose(res_small.tau, expected_small.statistic, rtol=1e-13)
+    assert_allclose(res_small.tau, expected_small_statistic, rtol=1e-13)
     assert_allclose(res_small.pvalue, expected_small.pvalue, rtol=1e-13)
 
     res_two = jonckheere_terpstra(samples, alternative="two-sided")
@@ -604,6 +619,43 @@ def test_jonckheere_terpstra_known_extreme_statistic():
     assert_(res.zstat > 0)
 
 
+def test_jonckheere_terpstra_result_type():
+    samples = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
+    res = jonckheere_terpstra(samples)
+
+    assert isinstance(res, JonckheereTerpstraResult)
+    # positional unpacking follows the documented field order
+    assert res[0] == res.statistic
+    assert res[1] == res.pvalue
+    statistic, pvalue, *_ = res
+    assert statistic == res.statistic
+    assert pvalue == res.pvalue
+
+
+def test_jonckheere_terpstra_many_unequal_groups():
+    rng = np.random.default_rng(1234)
+    sizes = [2, 5, 3, 7, 4]
+    samples = [rng.integers(0, 6, size=size).astype(float) for size in sizes]
+    res = jonckheere_terpstra(samples, alternative="two-sided")
+
+    expected_stat = _jt_statistic_bruteforce(samples)
+    group = np.repeat(np.arange(len(samples)), sizes)
+    pooled = np.concatenate(samples)
+    expected = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="two-sided",
+    )
+
+    assert res.k_groups == len(samples)
+    assert res.nobs == sum(sizes)
+    assert_allclose(res.statistic, expected_stat, rtol=1e-13)
+    expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
+    assert_allclose(res.tau, expected_statistic, rtol=1e-13)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
+
+
 def test_jonckheere_terpstra_stats_api_export():
     from statsmodels.stats import api as sms
 
@@ -620,6 +672,11 @@ def test_jonckheere_terpstra_stats_api_export():
             [np.array([1, 1]), np.array([1, 1])],
             "larger",
             "variance is zero",
+        ),
+        (
+            [np.array([[1, 2], [3, 4]]), np.array([5, 6])],
+            "larger",
+            "one-dimensional",
         ),
     ],
 )
