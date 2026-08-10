@@ -5,10 +5,10 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import integrate, optimize, stats
-
-from statsmodels.tools.testing import Holder
 
 
 def _var_normal(norm):
@@ -159,6 +159,34 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
     return res
 
 
+class TuningSEstimatorMeanResult(NamedTuple):
+    """
+    Result of :func:`tuning_s_estimator_mean`.
+
+    Parameters
+    ----------
+    breakdown : float or ndarray
+        Breakdown point(s), same as the `breakdown` function argument.
+    eff : float or ndarray
+        Relative efficiency at the given breakdown point(s).
+    param : float or ndarray
+        Tuning parameter for the norm at the given breakdown point(s).
+    scale_bias : float or ndarray
+        Correction term for Fisher consistency at the given breakdown
+        point(s).
+    all : ndarray
+        Stacked array with rows `breakdown`, `eff`, `param` and
+        `scale_bias` for all requested breakdown points, regardless of
+        whether a scalar or iterable `breakdown` was given.
+    """
+
+    breakdown: float | np.ndarray
+    eff: float | np.ndarray
+    param: float | np.ndarray
+    scale_bias: float | np.ndarray
+    all: np.ndarray
+
+
 def tuning_s_estimator_mean(norm, breakdown=None):
     """
     Tuning parameter and scale bias correction for S-estimators of mean
@@ -175,13 +203,9 @@ def tuning_s_estimator_mean(norm, breakdown=None):
 
     Returns
     -------
-    Holder
-        Instance with the following attributes:
-
-        - `breakdown` : breakdown point
-        - `eff` : relative efficiency
-        - `param` : tuning parameter for norm
-        - `scale_bias` : correction term for Fisher consistency.
+    TuningSEstimatorMeanResult
+        Named tuple with `breakdown`, `eff`, `param`, and `scale_bias`.
+        See :class:`TuningSEstimatorMeanResult` for details.
 
     Notes
     -----
@@ -231,7 +255,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
         # use one list
         res = res[0]
 
-    res2 = Holder(
+    res2 = TuningSEstimatorMeanResult(
         breakdown=res[0],
         eff=res[1],
         param=res[2],
