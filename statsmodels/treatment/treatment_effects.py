@@ -230,7 +230,7 @@ def ate_ipw(endog, tind, prob, weighted=True, probt=None):
         If True, weights are normalized so that each of the treated and
         untreated weights average to one.
     probt : ndarray, optional
-        Additional weight, e.g. propensity score, used to target the effect
+        Additional weight, e.g., propensity score, used to target the effect
         on a subgroup such as the treated or untreated population. If None,
         the sample average treatment effect is computed.
 
@@ -283,7 +283,7 @@ class _TEGMMGeneric1(GMM):
         parameters of the selection model.
     **kwargs
         Additional keyword arguments that are attached to the instance,
-        e.g. `teff` and `effect_group` used by the subclasses.
+        e.g., `teff` and `effect_group` used by the subclasses.
     """
 
     def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False,
@@ -746,7 +746,7 @@ effect_group : {"all", 0, 1}
     If effect_group is 1 or "treated", then effects on treated are
     returned.
     If effect_group is 0, "untreated" or "control", then effects on
-    untreated, i.e. control group, are returned.
+    untreated, i.e., control group, are returned.
 disp : bool
     Indicates whether the scipy optimizer should display the
     optimization results
@@ -889,7 +889,7 @@ class TreatmentEffect:
             If effect_group is 1 or "treated", then effects on treated are
             returned.
             If effect_group is 0, "untreated" or "control", then effects on
-            untreated, i.e. control group, are returned.
+            untreated, i.e., control group, are returned.
         disp : bool
             Indicates whether the scipy optimizer should display the
             optimization results

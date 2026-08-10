@@ -224,13 +224,13 @@ class TestDynamicFactor2(CheckDynamicFactor):
         pass
 
     def test_aic(self):
-        # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
+        # Stata uses 9 df (i.e., 9 params) here instead of 13, because since the
         # model did not coverge, 4 of the parameters are not fully estimated
         # (possibly they are still at starting values?) so the AIC is off
         pass
 
     def test_bic(self):
-        # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
+        # Stata uses 9 df (i.e., 9 params) here instead of 13, because since the
         # model did not coverge, 4 of the parameters are not fully estimated
         # (possibly they are still at starting values?) so the BIC is off
         pass
@@ -661,7 +661,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
 
 class TestStaticFactor(CheckDynamicFactor):
     """
-    Test for a static factor model (i.e. factors are not autocorrelated).
+    Test for a static factor model (i.e., factors are not autocorrelated).
     """
 
     def construct_model(self):
@@ -680,14 +680,14 @@ class TestStaticFactor(CheckDynamicFactor):
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
     def test_bic(self):
-        # Stata uses 5 df (i.e. 5 params) here instead of 6, because one param
+        # Stata uses 5 df (i.e., 5 params) here instead of 6, because one param
         # is basically zero.
         pass
 
 
 class TestSUR(CheckDynamicFactor):
     """
-    Test for a seemingly unrelated regression model (i.e. no factors) with
+    Test for a seemingly unrelated regression model (i.e., no factors) with
     errors cross-sectionally, but not auto-, correlated
     """
 
@@ -720,7 +720,7 @@ class TestSUR(CheckDynamicFactor):
 
 class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     """
-    Test for a seemingly unrelated regression model (i.e. no factors) where
+    Test for a seemingly unrelated regression model (i.e., no factors) where
     the errors are vector autocorrelated, but innovations are uncorrelated.
     """
 

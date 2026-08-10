@@ -1025,7 +1025,7 @@ class NewsResults:
         -------
         details_table : SimpleTable or list of SimpleTable
             Table or list of tables describing how the news from each update
-            (i.e. news from a particular variable / date) translates into
+            (i.e., news from a particular variable / date) translates into
             changes to the forecasts of each impacted variable / date.
 
             This table contains information about the updates and about the
@@ -1317,7 +1317,7 @@ class NewsResults:
             - `updated variable` : variable for which new data was added at
               `update date`.
             - `forecast (prev)` : the forecast value for the updated variable
-              at the update date in the previous results object (i.e. prior to
+              at the update date in the previous results object (i.e., prior to
               the data being available).
             - `observed` : the observed value of the new datapoint.
 
@@ -1569,7 +1569,7 @@ class NewsResults:
             Whether to include the details of impacts from data revisions.
             Default is True.
         include_updates : bool, optional
-            Whether to include the details of impacts from news (i.e. newly
+            Whether to include the details of impacts from news (i.e., newly
             observed datapoints). Default is True.
 
         Returns
@@ -1622,7 +1622,7 @@ class NewsResults:
             Whether to include the impacts from data revisions. Default is
             True.
         include_updates : bool, optional
-            Whether to include the impacts from news (i.e. newly observed
+            Whether to include the impacts from news (i.e., newly observed
             datapoints). Default is True.
 
         Returns

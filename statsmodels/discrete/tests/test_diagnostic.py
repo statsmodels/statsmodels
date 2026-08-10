@@ -54,7 +54,8 @@ class TestCountDiagnostic:
 
         # regression test
         tzi3_1 = (0.79863597832443878, 0.67077736750318928)
-        assert_allclose(tzi3, tzi3_1, rtol=5e-4)
+        with pytest.warns(FutureWarning, match="Unpacking"):
+            assert_allclose(tzi3, tzi3_1, rtol=5e-4)
         assert_equal(tzi3.df, 2)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")

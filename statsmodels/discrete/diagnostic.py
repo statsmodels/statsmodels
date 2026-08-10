@@ -183,7 +183,7 @@ class PoissonDiagnostic(CountDiagnostic):
         Hinde is used.
 
         Warning: The Broek and the Jansakul and Hinde tests are not numerically
-        stable when the probability of zeros in Poisson is small, i.e. if the
+        stable when the probability of zeros in Poisson is small, i.e., if the
         conditional means of the estimated Poisson distribution are large.
         In these cases, p-values will not be accurate.
         """

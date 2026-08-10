@@ -100,7 +100,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         L = A.dot(T)
         f, Gq = vgQ(L=L)
         G = (A.T).dot(Gq)
-    else:  # i.e. rotation_method == 'oblique' and not derivative_free
+    else:  # i.e., rotation_method == 'oblique' and not derivative_free
         Ti = np.linalg.inv(T)
         L = A.dot(Ti.T)
         f, Gq = vgQ(L=L)
@@ -112,7 +112,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
             M = (T.T).dot(G)
             S = (M + M.T)/2
             Gp = G - T.dot(S)
-        else:  # i.e. if rotation_method == 'oblique':
+        else:  # i.e., if rotation_method == 'oblique':
             Gp = G-T.dot(np.diag(np.sum(T*G, axis=0)))
         s = np.linalg.norm(Gp, "fro")
         table.append([i_try, f, np.log10(s), al])
@@ -127,7 +127,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
             if rotation_method == "orthogonal":
                 U, D, V = np.linalg.svd(X, full_matrices=False)
                 Tt = U.dot(V)
-            else:  # i.e. if rotation_method == 'oblique':
+            else:  # i.e., if rotation_method == 'oblique':
                 v = 1/np.sqrt(np.sum(X**2, axis=0))
                 Tt = X.dot(np.diag(v))
             # calculate objective using Tt
@@ -136,7 +136,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
             elif rotation_method == "orthogonal":  # and not derivative_free
                 L = A.dot(Tt)
                 ft, Gq = vgQ(L=L)
-            else:  # i.e. rotation_method == 'oblique' and not derivative_free
+            else:  # i.e., rotation_method == 'oblique' and not derivative_free
                 Ti = np.linalg.inv(Tt)
                 L = A.dot(Ti.T)
                 ft, Gq = vgQ(L=L)
@@ -151,7 +151,7 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
             G = Gff(T)
         elif rotation_method == "orthogonal":  # and not derivative_free
             G = (A.T).dot(Gq)
-        else:  # i.e. rotation_method == 'oblique' and not derivative_free
+        else:  # i.e., rotation_method == 'oblique' and not derivative_free
             G = -((L.T).dot(Gq).dot(Ti)).T
     # post processing
     Th = T
@@ -215,7 +215,7 @@ def rotateA(A, T, rotation_method="orthogonal"):
         L = A.dot(T)
     elif rotation_method == "oblique":
         L = A.dot(np.linalg.inv(T.T))
-    else:  # i.e. if rotation_method == 'oblique':
+    else:  # i.e., if rotation_method == 'oblique':
         raise ValueError("rotation_method should be one of "
                          "{orthogonal, oblique}")
     return L

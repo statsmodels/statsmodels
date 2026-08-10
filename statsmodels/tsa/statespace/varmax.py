@@ -48,7 +48,7 @@ class VARMAX(MLEModel):
         use.
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the non-zero polynomial exponents to include, in
@@ -84,7 +84,7 @@ class VARMAX(MLEModel):
         use.
     trend : str{'n','c','t','ct'} or iterable
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the non-zero polynomial exponents to include, in
@@ -1061,7 +1061,7 @@ class VARMAXResults(MLEResults):
         if start is None:
             start = 0
 
-        # Handle end (e.g. date)
+        # Handle end (e.g., date)
         _start, _end, out_of_sample, _ = (
             self.model._get_prediction_index(start, end, index, silent=True))
 
@@ -1123,7 +1123,7 @@ class VARMAXResults(MLEResults):
                                state_index=None):
         # TODO: tests for:
         # - the model cloning used in `kalman_smoother.news` works when we
-        #   have time-varying exog (i.e. or do we need to somehow explicitly
+        #   have time-varying exog (i.e., or do we need to somehow explicitly
         #   call the _set_final_exog and _set_final_predicted_state methods
         #   on the rev_mod / revision_results)
         # - in the case of revisions to `endog`, should the revised model use

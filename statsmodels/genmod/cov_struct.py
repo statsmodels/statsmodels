@@ -134,7 +134,7 @@ class CovStruct:
 
         Some dependence structures do not use `expval` and/or `index`
         to determine the correlation matrix.  Some families
-        (e.g. binomial) do not use the `stdev` parameter when forming
+        (e.g., binomial) do not use the `stdev` parameter when forming
         the covariance matrix.
 
         If the covariance matrix is singular or not SPD, it is
@@ -431,7 +431,7 @@ class Nested(CovStruct):
     membership.  The `0 + ` should be included to prevent creation of
     an intercept.  The variable values are interpreted as labels for
     group membership, but the variables should not be explicitly coded
-    as categorical, i.e. use `0 + a` not `0 + C(a)`.
+    as categorical, i.e., use `0 + a` not `0 + C(a)`.
 
     Notes
     -----

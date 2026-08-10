@@ -226,7 +226,7 @@ class RLMDetSMM(RLMDetS):
             Default is ... (todo).
         scale_binding : bool
             If true, then the scale is fixed in the second stage M-estimation,
-            i.e. this is the MM-estimator.
+            i.e., this is the MM-estimator.
             If false, then the high breakdown point M-scale is used also in the
             second stage M-estimation if that estimated scale is smaller than
             the scale of the preliminary, first stage S-estimator.

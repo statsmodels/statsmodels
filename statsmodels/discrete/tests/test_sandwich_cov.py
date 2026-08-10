@@ -504,7 +504,8 @@ class CheckDiscreteGLM:
         exog_extra = np.column_stack((fitted**2, fitted**3))
         res_lm1 = res1.score_test(exog_extra, cov_type="nonrobust")
         res_lm2 = res2.score_test(exog_extra, cov_type="nonrobust")
-        assert_allclose(np.hstack(res_lm1), np.hstack(res_lm2), rtol=5e-7)
+        with pytest.warns(FutureWarning, match="Unpacking"):
+            assert_allclose(np.hstack(res_lm1), np.hstack(res_lm2), rtol=5e-7)
 
     def test_margeff(self):
         if isinstance(self.res2.model, OLS) or hasattr(self.res1.model, "offset"):

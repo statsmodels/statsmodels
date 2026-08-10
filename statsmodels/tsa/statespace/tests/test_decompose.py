@@ -64,7 +64,7 @@ def test_smoothed_decomposition_sarimax(
     # Get the decomposition of the smoothed state
     cd, coi, csi, cp = res.get_smoothed_decomposition(decomposition_of="smoothed_state")
 
-    # Sum across contributions (i.e. from observations at each time period and
+    # Sum across contributions (i.e., from observations at each time period and
     # from the initial state)
     css = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     css = css.unstack(level="state_to").values
@@ -94,7 +94,7 @@ def test_smoothed_decomposition_sarimax(
         decomposition_of="smoothed_signal"
     )
 
-    # Sum across contributions (i.e. from observations and intercepts at each
+    # Sum across contributions (i.e., from observations and intercepts at each
     # time period and from the initial state) to get the smoothed signal
     cs_sig = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     cs_sig = cs_sig.unstack(level="variable_to").values
@@ -143,7 +143,7 @@ def test_smoothed_decomposition_varmax(use_exog, trend):
     # Get the decomposition of the smoothed state
     cd, coi, csi, cp = res.get_smoothed_decomposition(decomposition_of="smoothed_state")
 
-    # Sum across contributions (i.e. from observations at each time period and
+    # Sum across contributions (i.e., from observations at each time period and
     # from the initial state)
     css = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     css = css.unstack(level="state_to").values
@@ -173,7 +173,7 @@ def test_smoothed_decomposition_varmax(use_exog, trend):
         decomposition_of="smoothed_signal"
     )
 
-    # Sum across contributions (i.e. from observations and intercepts at each
+    # Sum across contributions (i.e., from observations and intercepts at each
     # time period and from the initial state) to get the smoothed signal
     cs_sig = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     cs_sig = cs_sig.unstack(level="variable_to").values
@@ -227,7 +227,7 @@ def test_smoothed_decomposition_dfm_mq():
     # Get the decomposition of the smoothed state
     cd, coi, csi, cp = res.get_smoothed_decomposition(decomposition_of="smoothed_state")
 
-    # Sum across contributions (i.e. from observations at each time period and
+    # Sum across contributions (i.e., from observations at each time period and
     # from the initial state)
     css = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     css = css.unstack(level="state_to")[mod.state_names].values
@@ -259,7 +259,7 @@ def test_smoothed_decomposition_dfm_mq():
         decomposition_of="smoothed_signal"
     )
 
-    # Sum across contributions (i.e. from observations and intercepts at each
+    # Sum across contributions (i.e., from observations and intercepts at each
     # time period and from the initial state) to get the smoothed signal
     cs_sig = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     cs_sig = cs_sig.unstack(level="variable_to")[mod.endog_names].values
@@ -295,7 +295,7 @@ def test_smoothed_decomposition_TVSS(univariate):
     # Get the decomposition of the smoothed state
     cd, coi, csi, cp = res.get_smoothed_decomposition(decomposition_of="smoothed_state")
 
-    # Sum across contributions (i.e. from observations at each time period and
+    # Sum across contributions (i.e., from observations at each time period and
     # from the initial state)
     css = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     css = css.unstack(level="state_to")[mod.state_names].values
@@ -329,7 +329,7 @@ def test_smoothed_decomposition_TVSS(univariate):
         decomposition_of="smoothed_signal"
     )
 
-    # Sum across contributions (i.e. from observations and intercepts at each
+    # Sum across contributions (i.e., from observations and intercepts at each
     # time period and from the initial state) to get the smoothed signal
     cs_sig = (cd + coi).sum(axis=1) + csi.sum(axis=1) + cp.sum(axis=1)
     cs_sig = cs_sig.unstack(level="variable_to")[mod.endog_names].values

@@ -163,7 +163,7 @@ class TruncatedLFGeneric(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         score_main = self.model_main.score_obs(params)
@@ -198,7 +198,7 @@ class TruncatedLFGeneric(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         return self.score_obs(params).sum(0)
@@ -760,7 +760,7 @@ class _RCensoredGeneric(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         score_main = self.model_main.score_obs(params)
@@ -787,7 +787,7 @@ class _RCensoredGeneric(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         return self.score_obs(params).sum(0)

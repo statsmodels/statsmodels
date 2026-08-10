@@ -69,7 +69,7 @@ def ma_rep(coefs, maxn=10):
 
     .. math:: y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
 
-    e.g. can recursively compute the \Phi_i matrices with \Phi_0 = I_k
+    e.g., can recursively compute the \Phi_i matrices with \Phi_0 = I_k
     """
     p, k, _ = coefs.shape
     phis = np.zeros((maxn + 1, k, k))
@@ -267,10 +267,10 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
         for i in range(1, p + 1):
             # slightly hackish
             if h - i <= 0:
-                # e.g. when h=1, h-1 = 0, which is y[-1]
+                # e.g., when h=1, h-1 = 0, which is y[-1]
                 prior_y = y[h - i - 1]
             else:
-                # e.g. when h=2, h-1=1, which is forcs[0]
+                # e.g., when h=2, h-1=1, which is forcs[0]
                 prior_y = forcs[h - i - 1]
 
             # i=1 is coefs[0]
@@ -656,7 +656,7 @@ class VAR(TimeSeriesModel):
         # todo: this code is only supporting deterministic terms as exog.
         # This means that all exog-variables have lag 0. If dealing with
         # different exogs is necessary, a `lags_exog`-parameter might make
-        # sense (e.g. a sequence of ints specifying lags).
+        # sense (e.g., a sequence of ints specifying lags).
         # Alternatively, leading zeros for exog-variables with smaller number
         # of lags than the maximum number of exog-lags might work.
         """
@@ -2133,7 +2133,7 @@ class VARResults(VARProcess):
         against H1: "Instantaneous causality between caused and causing
         exists".
 
-        Instantaneous causality is a symmetric relation (i.e. if causing is
+        Instantaneous causality is a symmetric relation (i.e., if causing is
         "instantaneously causing" caused, then also caused is "instantaneously
         causing" causing), thus the naming of the parameters (which is chosen
         to be in accordance with test_granger_causality()) may be misleading.

@@ -56,7 +56,7 @@ This is the general case for MLE and GMM also
 
 in MLE     hessian H, outerproduct of jacobian S,   cov_hjjh = HJJH,
 which reduces to the above in the linear case, but can be used
-generally, e.g. in discrete, and is misnomed in GenericLikelihoodModel
+generally, e.g., in discrete, and is misnomed in GenericLikelihoodModel
 
 in GMM it's similar but I would have to look up the details, (it comes
 out in sandwich form by default, it's in the sandbox), standard Newey
@@ -400,7 +400,7 @@ def _HCCM2(hessian_inv, scale):
     Parameters
     ----------
     hessian_inv : ndarray (k_vars, k_vars)
-       inverse Hessian, i.e. (X'X)^(-1), usually
+       inverse Hessian, i.e., (X'X)^(-1), usually
        results.normalized_cov_params
     scale : ndarray (k_vars, k_vars)
        scale matrix
@@ -625,7 +625,7 @@ def cov_cluster(results, group, use_correction=True):
     """
     Cluster robust covariance matrix
 
-    Calculates sandwich covariance matrix for a single cluster, i.e. grouped
+    Calculates sandwich covariance matrix for a single cluster, i.e., grouped
     variables.
 
     Parameters
@@ -855,7 +855,7 @@ def lagged_groups(x, lag, groupidx):
         each group.
     out_lagged : ndarray
         Stacked array of ``x`` values from index ``lo`` to ``up - lag`` for
-        each group, i.e. ``out0`` lagged by ``lag``.
+        each group, i.e., ``out0`` lagged by ``lag``.
     """
     out0 = []
     out_lagged = []

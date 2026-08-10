@@ -50,7 +50,7 @@ def test_cubic_splines_transform_not_shadowed():
     # GH: CubicSplines.__init__ stored its `transform` constructor argument
     # (a string like "domain") as `self.transform`, shadowing the inherited
     # AdditiveGamSmoother.transform(x_new) method needed for out-of-sample
-    # basis construction (e.g. GAM prediction on new data). Before the fix,
+    # basis construction (e.g., GAM prediction on new data). Before the fix,
     # `cs.transform` was the literal string "domain", not callable.
     x = np.linspace(0, 1, 50)
     cs = CubicSplines(x, df=[5], transform="domain")

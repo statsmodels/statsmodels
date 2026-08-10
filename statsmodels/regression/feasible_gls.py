@@ -28,7 +28,7 @@ class GLSHet2(GLS):
     sense.
 
     This should probably be rewritten following the pattern of GLSAR;
-    the stopping criteria could also be improved in GLSAR, e.g. change
+    the stopping criteria could also be improved in GLSAR, e.g., change
     in rho.
     """
 

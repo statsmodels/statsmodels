@@ -104,7 +104,7 @@ def coef_normalize_cov_truncated(frac, k_vars):
     frac : float in (0, 1)
         Fraction (probability) of observations that are not trimmed.
     k_vars : integer
-        Number of variables, i.e. dimension of multivariate random variable.
+        Number of variables, i.e., dimension of multivariate random variable.
 
     Returns
     -------
@@ -295,11 +295,11 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
     This does not fully correct for multiple testing and does not
     maintain a familywise error rate or false discovery rate.
     The error rate goes to zero asymptotically under the null model,
-    i.e. if there are no outliers.
+    i.e., if there are no outliers.
 
     This might not handle threshold points correctly with discrete
     distribution.
-    TODO: check weak versus strict inequalities (e.g. in isf)
+    TODO: check weak versus strict inequalities (e.g., in isf)
 
     This only checks the upper tail of the distribution and of `d`.
     """
@@ -682,7 +682,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         If normalize is False (default), then the unscaled tyler scatter matrix
         is returned.
 
-        Three types of normalization, i.e. rescaling are available by defining
+        Three types of normalization, i.e., rescaling are available by defining
         string option:
 
         - "trace" :
@@ -1496,7 +1496,7 @@ class _Standardize:
 
     def __init__(self, x, func_center=None, func_scale=None):
         # naming mean or center
-        # maybe also allow str func_scale for robust.scale, e.g. for not
+        # maybe also allow str func_scale for robust.scale, e.g., for not
         #    vectorized Qn
         if func_center is None:
             center = np.median(x, axis=0)
@@ -1535,7 +1535,7 @@ def _orthogonalize_det(x, corr, loc_func, scale_func):
     Parameters
     ----------
     x : ndarray
-        Data, zscored with robust estimators, e.g. median and Qn in DetMCD.
+        Data, zscored with robust estimators, e.g., median and Qn in DetMCD.
     corr : ndarray
         Correlation matrix used to obtain the orthogonalizing eigenvectors.
     loc_func : callable
@@ -1642,7 +1642,7 @@ class CovMResult(NamedTuple):
     mean : ndarray
         Estimated mean.
     shape : ndarray
-        Estimated shape matrix, i.e. scatter matrix normalized to
+        Estimated shape matrix, i.e., scatter matrix normalized to
         det(shape) = 1.
     scale : float
         Estimated scale.
@@ -1835,7 +1835,7 @@ class CovM:
             Starting value for mean, center.
             If None, then median is used.
         start_shape : None or 2-dim ndarray
-            Starting value of shape matrix, i.e. scatter matrix normalized
+            Starting value of shape matrix, i.e., scatter matrix normalized
             to det(scatter) = 1.
             If None, then scaled covariance matrix of data is used.
         start_scale : None or float
@@ -1938,7 +1938,7 @@ class CovDetMCDResult(NamedTuple):
         for the non-reweighted (raw) result.
     converged : bool or None
         Whether the final c-step iteration converged. Only set if the best
-        candidate was refit to convergence, i.e. if ``maxiter_step <
+        candidate was refit to convergence, i.e., if ``maxiter_step <
         maxiter`` in :meth:`CovDetMCD.fit`.
     det_all : ndarray or None
         Determinants of the covariance of the evaluation subset for all
@@ -2147,7 +2147,7 @@ class CovDetMCD:
         options_start : None or dict
             Options for the starting estimators.
             Currently not used.
-            TODO: which options? e.g. for OGK
+            TODO: which options? e.g., for OGK
         reweight : bool
             If reweight is true, then a reweighted estimator is returned. The
             reweighting is based on a chisquare trimming of Mahalanobis
@@ -2394,7 +2394,7 @@ class CovDetS:
             candidate solution.
         options_start : None or dict
            Options for the starting estimators.
-           TODO: which options? e.g. for OGK
+           TODO: which options? e.g., for OGK
         maxiter_step : int
            Number of iterations used for each starting candidate before
            selecting the best one for further iteration.

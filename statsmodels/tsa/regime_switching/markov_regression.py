@@ -74,7 +74,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         y_t = a_{S_t} + x_t' \beta_{S_t} + \varepsilon_t \\
         \varepsilon_t \sim N(0, \sigma_{S_t}^2)
 
-    i.e. the model is a dynamic linear regression where the coefficients and
+    i.e., the model is a dynamic linear regression where the coefficients and
     the variance of the error term may be switching across regimes.
 
     The `trend` is accommodated by prepending columns to the `exog` array. Thus

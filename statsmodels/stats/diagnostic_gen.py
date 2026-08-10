@@ -77,7 +77,7 @@ def test_chisquare_binning(
     Parameters
     ----------
     counts : array_like
-        Observed frequency, i.e. counts for all choices
+        Observed frequency, i.e., counts for all choices
     expected : array_like
         Expected counts or probability. If expected are counts, then they
         need to sum to the same total count as the sum of observed.
@@ -98,7 +98,7 @@ def test_chisquare_binning(
         whether ``ordered`` is True or False.
     ordered : bool
         If True, the degrees of freedom for the ordinal case are used when
-        ``df`` is not provided. Default is False, i.e. the multinomial
+        ``df`` is not provided. Default is False, i.e., the multinomial
         (unordered) case.
     sort_method : str
         Sorting method used by ``numpy.argsort`` when binning by
@@ -201,13 +201,13 @@ def prob_larger_ordinal_choice(prob):
     Parameters
     ----------
     prob : array_like
-        Expected probabilities for ordinal choices, e.g. from prediction of
+        Expected probabilities for ordinal choices, e.g., from prediction of
         an ordinal model with observations in rows and choices in columns.
 
     Returns
     -------
     cdf_mid : ndarray
-        mid cdf, i.e. ``P(x < y) + 0.5 P(x=y)``
+        mid cdf, i.e., ``P(x < y) + 0.5 P(x=y)``
     r : ndarray
         Probability residual ``P(x > y) - P(x < y)`` for all possible choices.
         Computed as ``r = cdf_mid * 2 - 1``

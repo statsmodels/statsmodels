@@ -33,7 +33,7 @@ class NonlinearDeltaCov:
     ----------
     func : callable, f(params)
         Nonlinear function of the estimation parameters. The return of
-        the function can be vector valued, i.e. a 1-D array.
+        the function can be vector valued, i.e., a 1-D array.
     params : ndarray
         Parameters at which function `func` is evaluated.
     cov_params : ndarray

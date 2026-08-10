@@ -483,7 +483,7 @@ def test_fit_vs_R(setup_model):
         start = None
     fit = model.fit(disp=True, pgtol=1e-8, start_params=start)
 
-    # check log likelihood: we want to have a fit that is better, i.e. a fit
+    # check log likelihood: we want to have a fit that is better, i.e., a fit
     # that has a **higher** log-likelihood
     const = -model.nobs / 2 * (np.log(2 * np.pi / model.nobs) + 1)
     loglike_R = results_R["loglik"][0] + const

@@ -446,6 +446,11 @@ filterwarnings = [
     "error:the 'random_state' keyword is deprecated:FutureWarning:",
     "error:the 'seed' keyword is deprecated:FutureWarning:",
     "error:the 'center' keyword is deprecated:FutureWarning:",
+    "error:Unpacking:FutureWarning:",
+    "error:The test statistic is outside:statsmodels.tools.sm_exceptions.InterpolationWarning:",
+    "error:Fast medcouple algorithm:UserWarning:",
+    "error:medcouple is undefined:UserWarning:",
+    "error:Provided `endog` series:UserWarning:",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",

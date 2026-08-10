@@ -365,7 +365,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
     their paper, Sison & Glaz demo their method with at least 7 categories, so
     ``len(counts) >= 7`` with all values in `counts` at or above 5 can be used
     as a rule of thumb for the validity of this method. This method is less
-    conservative than the `goodman` method (i.e. it will yield confidence
+    conservative than the `goodman` method (i.e., it will yield confidence
     intervals closer to the desired significance level), but produces
     confidence intervals of uniform width over all categories (except when the
     intervals reach 0 or 1, in which case they are truncated), which makes it
@@ -1630,7 +1630,7 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True
         proportional to the probabilities under independence.
     return_corr : bool
         If true, then only the correction term is returned
-        If false, then the corrected counts, i.e. original counts plus
+        If false, then the corrected counts, i.e., original counts plus
         correction term, are returned.
 
     Returns
@@ -1724,7 +1724,7 @@ def score_test_proportions_2indep(
     value : float
         diff, ratio or odds-ratio under the null hypothesis. If value is None,
         then equality of proportions under the Null is assumed,
-        i.e. value=0 for 'diff' or value=1 for either rate or odds-ratio.
+        i.e., value=0 for 'diff' or value=1 for either rate or odds-ratio.
     compare : string in ['diff', 'ratio' 'odds-ratio']
         If compare is diff, then the confidence interval is for diff = p1 - p2.
         If compare is ratio, then the confidence interval is for the risk ratio
@@ -2499,10 +2499,10 @@ def power_proportions_2indep(
     ratio : float
         sample size ratio, nobs2 = ratio * nobs1
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float
-        currently only `value=0`, i.e. equality testing, is supported
+        currently only `value=0`, i.e., equality testing, is supported
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
@@ -2576,10 +2576,10 @@ def samplesize_proportions_2indep_onetail(
     ratio : float
         Sample size ratio, nobs2 = ratio * nobs1
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float
-        Currently only `value=0`, i.e. equality testing, is supported
+        Currently only `value=0`, i.e., equality testing, is supported
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. In the case of a one-sided
@@ -2626,7 +2626,7 @@ def _score_confint_inversion(
         If compare is `odds-ratio`, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     correction : bool
         If correction is True (default), then the Miettinen and Nurminen

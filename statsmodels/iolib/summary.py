@@ -95,7 +95,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         Default is `X.#` for # in p the number of regressors.
     title : str or int, optional
         Title for the summary. If 0 (the default), the title is derived
-        from the model class, e.g. 'Generalized linear model' for a GLM
+        from the model class, e.g., 'Generalized linear model' for a GLM
         model.
     alpha : float, optional
         The confidence interval, currently not implemented.
@@ -610,7 +610,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     result : result instance
         the result instance with params and attributes in extras
     extras : list[str]
-        additional attributes to add below a parameter row, e.g. bse or tvalues
+        additional attributes to add below a parameter row, e.g., bse or tvalues
     endog_names : {list[str], None}
         names for rows of the parameter array (multivariate endog)
     exog_names : {list[str], None}
@@ -658,7 +658,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
 def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
                           use_t=True, keep_headers=True, endog_cols=False):
     """
-    Summary table for parameters that are 2d, e.g. multi-equation models
+    Summary table for parameters that are 2d, e.g., multi-equation models
 
     Parameters
     ----------

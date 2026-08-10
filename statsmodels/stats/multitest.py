@@ -87,7 +87,7 @@ def multipletests(
     pvals : array_like, 1-d
         uncorrected p-values.   Must be 1-dimensional.
     alpha : float
-        FWER, family-wise error rate, e.g. 0.1
+        FWER, family-wise error rate, e.g., 0.1
     method : str
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:

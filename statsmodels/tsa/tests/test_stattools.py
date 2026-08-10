@@ -1531,20 +1531,23 @@ class TestKPSS:
             kpss(self.x, nlags=None)
 
     def test_use_namedtuple_default_warns(self):
-        with pytest.warns(FutureWarning, match="use_namedtuple"):
-            res = kpss(self.x, "c", nlags=3)
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            with pytest.warns(FutureWarning, match="use_namedtuple"):
+                res = kpss(self.x, "c", nlags=3)
         assert not isinstance(res, KpssResult)
 
     def test_use_namedtuple_false_silences_warning(self):
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
-            res = kpss(self.x, "c", nlags=3, use_namedtuple=False)
+            with pytest.warns(InterpolationWarning, match="The test statistic is"):
+                res = kpss(self.x, "c", nlags=3, use_namedtuple=False)
         assert not isinstance(res, KpssResult)
 
     def test_use_namedtuple_true_returns_namedtuple(self):
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
-            res = kpss(self.x, "c", nlags=3, use_namedtuple=True)
+            with pytest.warns(InterpolationWarning, match="The test statistic is"):
+                res = kpss(self.x, "c", nlags=3, use_namedtuple=True)
         assert isinstance(res, KpssResult)
         assert res.resstore is None
         assert res[0] == res.kpss_stat
@@ -1553,7 +1556,8 @@ class TestKPSS:
         assert res[3] == res.crit
 
     def test_use_namedtuple_true_with_store(self):
-        res = kpss(self.x, "c", nlags=3, store=True, use_namedtuple=True)
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            res = kpss(self.x, "c", nlags=3, store=True, use_namedtuple=True)
         assert isinstance(res, KpssResult)
         assert res.lags == 3
         assert res.resstore is not None
@@ -1713,7 +1717,8 @@ class TestRUR:
         assert res[2] == res.crit
 
     def test_use_namedtuple_true_with_store(self):
-        res = range_unit_root_test(self.x, store=True, use_namedtuple=True)
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            res = range_unit_root_test(self.x, store=True, use_namedtuple=True)
         assert isinstance(res, RangeUnitRootTestResult)
         assert res.resstore is not None
         assert res.resstore.nobs == len(self.x)

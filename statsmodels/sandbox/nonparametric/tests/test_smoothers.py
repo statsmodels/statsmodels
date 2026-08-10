@@ -247,7 +247,7 @@ class TestKernelSmoother:
         reason=(
             "BUG (in sandbox.nonparametric.kernels, not smoothers): "
             "KernelSmoother documents accepting any Kernel object via its "
-            "`Kernel` parameter, but non-Gaussian kernels (e.g. "
+            "`Kernel` parameter, but non-Gaussian kernels (e.g., "
             "Epanechnikov, Uniform) raise "
             "`TypeError: unsupported operand type(s) for -: 'tuple' and "
             "'float'` inside Kernel.smooth() even with default "

@@ -199,7 +199,7 @@ class QIF(base.Model):
             The estimated covariance matrix of the estimating
             equations.
         gn : array_like
-            The moment vector, i.e. the average of the estimating
+            The moment vector, i.e., the average of the estimating
             equations over the groups.
         gn_deriv : array_like
             The gradients of each estimating equation with

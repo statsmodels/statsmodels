@@ -182,7 +182,7 @@ class CombineResults:
         ci_eff_re_wls : tuple of floats
             Confidence interval for mean effects size based on random effects
             model with estimated scale corresponding to WLS, ie. HKSJ.
-            If random effects method is fully iterated, i.e. Paule-Mandel, then
+            If random effects method is fully iterated, i.e., Paule-Mandel, then
             the estimated scale is 1.
         """
         if use_t is None:

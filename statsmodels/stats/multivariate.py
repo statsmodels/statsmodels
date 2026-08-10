@@ -337,7 +337,7 @@ def test_cov(cov, nobs, cov_null):
     ----------
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
-        i.e. `ddof=1`.
+        i.e., `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
     cov_null : ndarray
@@ -406,7 +406,7 @@ def test_cov_spherical(cov, nobs):
     ----------
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
-        i.e. `ddof=1`.
+        i.e., `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
 
@@ -462,7 +462,7 @@ def test_cov_diagonal(cov, nobs):
     ----------
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
-        i.e. `ddof=1`.
+        i.e., `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
 
@@ -543,7 +543,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     ----------
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
-        i.e. `ddof=1`.
+        i.e., `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
     block_len : list
@@ -651,7 +651,7 @@ def test_cov_oneway(cov_list, nobs_list):
     ----------
     cov_list : list of array_like
         Covariance matrices of the sample, estimated with denominator
-        ``(N - 1)``, i.e. `ddof=1`.
+        ``(N - 1)``, i.e., `ddof=1`.
     nobs_list : list
         List of the number of observations used in the estimation of the
         covariance for each sample.

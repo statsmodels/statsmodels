@@ -861,7 +861,7 @@ def test_pandas_univariate_rangeindex():
 
 
 def test_pandas_univariate_dateindex():
-    # Impulse responses still have RangeIndex (i.e. aren't wrapped with dates)
+    # Impulse responses still have RangeIndex (i.e., aren't wrapped with dates)
     ix = pd.date_range(start="2000", periods=1, freq=MONTH_END)
     endog = pd.Series(np.zeros(1), index=ix)
     mod = sarimax.SARIMAX(endog)
@@ -886,7 +886,7 @@ def test_pandas_multivariate_rangeindex():
 
 
 def test_pandas_multivariate_dateindex():
-    # Impulse responses still have RangeIndex (i.e. aren't wrapped with dates)
+    # Impulse responses still have RangeIndex (i.e., aren't wrapped with dates)
     ix = pd.date_range(start="2000", periods=1, freq=MONTH_END)
     endog = pd.DataFrame(np.zeros((1, 2)), index=ix)
     mod = varmax.VARMAX(endog, trend="n")

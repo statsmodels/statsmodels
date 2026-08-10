@@ -39,7 +39,7 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     nobs : int or array_like
         Number of observations for the samples.
         If nobs is scalar, then it is assumed that all samples have the same
-        number ``nobs`` of observation, i.e. a balanced sample case.
+        number ``nobs`` of observation, i.e., a balanced sample case.
         Otherwise, statistics will be weighted corresponding to nobs.
         Only relative sizes are relevant, any proportional change to nobs does
         not change the effect size.
@@ -309,7 +309,7 @@ def _fstat2effectsize(f_stat, df):
 
     Currently omega2 and eps2 are computed in two different ways. Those
     values agree for regular cases but can show different behavior in corner
-    cases (e.g. zero division).
+    cases (e.g., zero division).
 
     """
     df1, df2 = df
@@ -639,7 +639,7 @@ def anova_generic(
     nobs : int or array_like
         Number of observations for the samples.
         If nobs is scalar, then it is assumed that all samples have the same
-        number ``nobs`` of observation, i.e. a balanced sample case.
+        number ``nobs`` of observation, i.e., a balanced sample case.
         Otherwise, statistics will be weighted corresponding to nobs.
         Only relative sizes are relevant, any proportional change to nobs does
         not change the effect size.
@@ -912,7 +912,7 @@ def equivalence_oneway_generic(
     The null hypothesis is that the means differ by more than `equiv_margin`
     in the anova distance measure.
     If the Null is rejected, then the data supports that means are equivalent,
-    i.e. within a given distance.
+    i.e., within a given distance.
 
     Parameters
     ----------
@@ -1027,7 +1027,7 @@ def equivalence_oneway(
     The null hypothesis is that the means differ by more than `equiv_margin`
     in the anova distance measure.
     If the Null is rejected, then the data supports that means are equivalent,
-    i.e. within a given distance.
+    i.e., within a given distance.
 
     Parameters
     ----------
@@ -1279,7 +1279,7 @@ def simulate_power_equivalence_oneway(
         chosen with `margin_type`. default is squared Cohen's f.
     vars_ : array_like or None
         Variances of the samples used to simulate the data. If None, then
-        unit variance, i.e. standard deviation equal to 1, is used for all
+        unit variance, i.e., standard deviation equal to 1, is used for all
         samples.
     k_mc : int
         Number of Monte Carlo replications.
@@ -1456,7 +1456,7 @@ def test_scale_oneway(
     method : {"unequal", "equal" or "bf"}
         How to treat heteroscedasticity across samples. This is used as
         `use_var` option in `anova_oneway` and refers to the variance of the
-        transformed data, i.e. assumption is on 4th moment if squares are used
+        transformed data, i.e., assumption is on 4th moment if squares are used
         as transform.
         Three approaches are available:
 
@@ -1606,7 +1606,7 @@ def equivalence_scale_oneway(
     method : {"unequal", "equal" or "bf"}
         How to treat heteroscedasticity across samples. This is used as
         `use_var` option in `anova_oneway` and refers to the variance of the
-        transformed data, i.e. assumption is on 4th moment if squares are used
+        transformed data, i.e., assumption is on 4th moment if squares are used
         as transform.
         Three approaches are available:
 

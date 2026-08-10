@@ -42,7 +42,7 @@ hypotheses : list[tuple]
     transform_M : 2D array or an array of strings or None, optional
         Left hand side transform matrix.
         If `None` or left out, it is set to a k_endog by k_endog
-        identity matrix (i.e. do not transform y matrix).
+        identity matrix (i.e., do not transform y matrix).
         If an array of strings, it will be passed to
         patsy.DesignInfo().linear_constraint based on endog_names.
 
@@ -56,7 +56,7 @@ hypotheses : list[tuple]
     on the dependent variables will be tested. Or 2) if model is created
     using a formula, `hypotheses` will be created according to
     `design_info`. 1) and 2) are equivalent if no additional variables
-    are created by the formula (e.g. dummy variables for categorical
+    are created by the formula (e.g., dummy variables for categorical
     variables and interaction terms)
 """
 

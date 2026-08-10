@@ -943,7 +943,7 @@ class Binomial(Family):
     ]
     variance = V.binary  # this is not used below in an effort to include n
 
-    # Other safe links, e.g. cloglog and probit are subclasses
+    # Other safe links, e.g., cloglog and probit are subclasses
     safe_links = [L.Logit, L.CDFLink]
 
     def __init__(self, link=None, check_link=True):  # , n=1.):
@@ -1075,7 +1075,7 @@ class Binomial(Family):
         n = self.n  # Number of trials
         y = endog * n  # Number of successes
 
-        # note that mu is still in (0,1), i.e. not converted back
+        # note that mu is still in (0,1), i.e., not converted back
         return (
             special.gammaln(n + 1)
             - special.gammaln(y + 1)

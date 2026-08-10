@@ -192,7 +192,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     Tuning parameter and scale bias correction for S-estimators of mean
 
     The reference distribution is the normal distribution.
-    This requires a (hard) redescending norm, i.e. with finite max rho.
+    This requires a (hard) redescending norm, i.e., with finite max rho.
 
     Parameters
     ----------
@@ -374,7 +374,7 @@ def eff_mvmean(norm, k_vars):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
 
     Returns
     -------
@@ -421,7 +421,7 @@ def eff_mvshape(norm, k_vars):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
 
     Returns
     -------
@@ -470,7 +470,7 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
     efficiency : float < 1
         Desired asymptotic relative efficiency of mean estimator.
         Default is 0.95.
@@ -592,7 +592,7 @@ def tukeybiweight_mvmean_eff(k, eff, eff_mean=True):
     Parameters
     ----------
     k : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
     eff : float
         Desired asymptotic relative efficiency of mean estimator.
     eff_mean : bool

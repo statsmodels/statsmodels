@@ -65,7 +65,7 @@ class HypothesisTestResults:
     signif : float
         Significance level. Must be between 0 and 1.
     method : str
-        The kind of test (e.g. ``"f"`` for F-test, ``"wald"`` for Wald-test).
+        The kind of test (e.g., ``"f"`` for F-test, ``"wald"`` for Wald-test).
     title : str
         A title describing the test. It will be part of the summary.
     h0 : str

@@ -212,7 +212,7 @@ class Initialization:
         self.blocks = {}
 
         # Attributes handling initialization of the entire set of states
-        # `constant` is a vector of constant values (i.e. it is the vector
+        # `constant` is a vector of constant values (i.e., it is the vector
         # a from DK)
         self.initialization_type = None
         self.constant = np.zeros(self.k_states)

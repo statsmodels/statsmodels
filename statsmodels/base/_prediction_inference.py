@@ -693,7 +693,7 @@ def get_prediction_delta(
         predictions are computed for individual exog and then them mean over
         observation is used.
         If average is False, then the results are the predictions for all
-        observations, i.e. same length as ``exog``.
+        observations, i.e., same length as ``exog``.
     agg_weights : ndarray, optional
         Aggregation weights, only used if average is True.
         The weights are not normalized.
@@ -780,7 +780,7 @@ def get_prediction(
         predictions are computed for individual exog and then the average
         over observation is used.
         If average is False, then the results are the predictions for all
-        observations, i.e. same length as ``exog``.
+        observations, i.e., same length as ``exog``.
     agg_weights : ndarray, optional
         Aggregation weights, only used if average is True.
         The weights are not normalized.

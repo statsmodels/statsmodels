@@ -2208,7 +2208,7 @@ def test_predict_custom_index():
 
 
 def test_arima000():
-    # Test an ARIMA(0, 0, 0) with measurement error model (i.e. just estimating
+    # Test an ARIMA(0, 0, 0) with measurement error model (i.e., just estimating
     # a variance term)
     rs = np.random.RandomState(328423)
     nobs = 50

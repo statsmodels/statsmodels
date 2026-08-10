@@ -175,7 +175,7 @@ class TestInDomain:
             "not ndarrays: `xs, ys = lzip(*filtered)` unzips a list of "
             "(x, y) pairs into two tuples-of-scalars. This happens "
             "whenever a domain is set and at least one point passes the "
-            "filter (i.e. essentially always for realistic calls), not "
+            "filter (i.e., essentially always for realistic calls), not "
             "just when some points get excluded."
         ),
         raises=AssertionError,
@@ -196,7 +196,7 @@ class TestSmoothPlainFloatVsNumpyScalar:
     # `numpy.float64 - tuple` broadcasts the tuple as array_like and
     # works, but `float - tuple` raises TypeError. This means the exact
     # same call succeeds or fails purely based on whether the caller
-    # happens to pass a numpy scalar (e.g. from np.linspace) or a plain
+    # happens to pass a numpy scalar (e.g., from np.linspace) or a plain
     # Python float/int -- a fragile, surprising inconsistency.
     @classmethod
     def setup_class(cls):

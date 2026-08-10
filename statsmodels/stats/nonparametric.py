@@ -211,7 +211,7 @@ class RankCompareResult(NamedTuple):
         ----------
         value : float
             Value, default 0, shifts the confidence interval,
-            e.g. ``value=0.5`` centers the confidence interval at zero.
+            e.g., ``value=0.5`` centers the confidence interval at zero.
         alpha : float
             Significance level for the confidence interval, coverage is
             ``1-alpha``
@@ -531,7 +531,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     -----
     Wilcoxon-Mann-Whitney assumes equal variance or equal distribution under
     the Null hypothesis. Fligner-Policello test allows for unequal variances
-    but assumes continuous distribution, i.e. no ties.
+    but assumes continuous distribution, i.e., no ties.
     Brunner-Munzel extends the test to allow for unequal variance and discrete
     or ordered categorical random variables.
 
@@ -641,7 +641,7 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     Stochastically larger probability for 2 independent ordinal samples
 
     This is a special case of `rank_compare_2indep` when the data are given as
-    counts of two independent ordinal, i.e. ordered multinomial, samples.
+    counts of two independent ordinal, i.e., ordered multinomial, samples.
 
     The statistic of interest is the probability that a random draw from the
     population of the first sample has a larger value than a random draw from
@@ -739,7 +739,7 @@ class JonckheereTerpstraResult(NamedTuple):
     nobs : int
         Total number of observations across all samples.
     k_groups : int
-        Number of samples, i.e. the number of ordered groups.
+        Number of samples, i.e., the number of ordered groups.
     counts : ndarray
         Number of observations in each sample.
     mean_null : float
@@ -748,7 +748,7 @@ class JonckheereTerpstraResult(NamedTuple):
         Variance of `statistic` under the null hypothesis.
     concordant_minus_discordant : float
         Difference between the number of concordant and discordant pairs,
-        i.e. ``2 * statistic - mean_null * 2``.
+        i.e., ``2 * statistic - mean_null * 2``.
     tau : float
         Kendall's tau computed from the pooled observations and their
         ordered group labels.
@@ -1356,7 +1356,7 @@ def samplesize_rank_compare_onetail(
     )
     quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
     # Add a small epsilon to avoid division by zero when there is no
-    # treatment effect, i.e. p_hat = 0.5
+    # treatment effect, i.e., p_hat = 0.5
     nobs_total = (quantiles_terms**2) / (
         prop_reference
         * (1 - prop_reference)

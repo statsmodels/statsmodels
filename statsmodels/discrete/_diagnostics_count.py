@@ -199,7 +199,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     Status : experimental, no verified unit tests, needs to be generalized
     currently only OPG version with auxiliary regression is implemented
 
-    Assumes counts are np.arange(probs.shape[1]), i.e. consecutive
+    Assumes counts are np.arange(probs.shape[1]), i.e., consecutive
     integers starting at zero.
 
     Auxiliary regression drops the last column of binned probs to avoid
@@ -307,7 +307,7 @@ def test_poisson_dispersion(results, method="all"):
     H0: var(y) = E(y) and assuming E(y) is correctly specified
     H1: var(y) ~= E(y)
 
-    The tests are based on the constrained model, i.e. the Poisson model.
+    The tests are based on the constrained model, i.e., the Poisson model.
     The tests differ in their assumed alternatives, and in their maintained
     assumptions.
 
@@ -562,7 +562,7 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     This is a score test based on the null hypothesis that
     the true model is Poisson. It will also reject for
     other deviations from a Poisson model if those affect
-    the zero probabilities, e.g. in the direction of
+    the zero probabilities, e.g., in the direction of
     excess dispersion as in the Negative Binomial
     or Generalized Poisson model.
     Therefore, rejection in this test does not imply that

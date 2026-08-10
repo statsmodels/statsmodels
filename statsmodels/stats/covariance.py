@@ -160,8 +160,8 @@ def transform_corr_normal(
         # but original corr coefficient seems to match results in articles
         # rho = corr_n
         if return_var:
-            # odeint only works if grid of rho is large, i.e. many points
-            # e.g. rho = np.linspace(0, 1, 101)
+            # odeint only works if grid of rho is large, i.e., many points
+            # e.g., rho = np.linspace(0, 1, 101)
             rho = np.atleast_1d(rho)
             idx = np.argsort(rho)
             rhos = rho[idx]

@@ -429,7 +429,7 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     Parameters
     ----------
     n_seasons : int >= 0
-        Number of seasons (e.g. 12 for monthly data and 4 for quarterly data).
+        Number of seasons (e.g., 12 for monthly data and 4 for quarterly data).
     len_endog : int >= 0
         Total number of observations.
     first_period : int, default: 0

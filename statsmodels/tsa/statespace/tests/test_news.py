@@ -124,7 +124,7 @@ def check_news(news, revisions, updates, impact_dates, impacted_variables,
                update_forecasts, update_realized, news_desired, weights):
     # Note: we use atol=1e-12 to handle cases where impacts, etc. are equal to
     # zero, but numerical precision of the Kalman filter procedures gives an
-    # answer of e.g. 1e-16.
+    # answer of e.g., 1e-16.
 
     # Note: Here we set the tolerance to be slightly negative, since some of
     # the tests have weights or impacts exactly equal to zero, while we still
@@ -386,7 +386,7 @@ def test_sarimax_time_invariant(revisions, updates, revisions_details_start):
 @pytest.mark.parametrize("which", ["exog", "trend"])
 def test_sarimax_time_varying(revisions, updates, which):
     # This is primarily a test that the `news` method works with a time-varying
-    # setup (i.e. time-varying state space matrices). It tests a time-varying
+    # setup (i.e., time-varying state space matrices). It tests a time-varying
     # SARIMAX model where the time-varying component has been set to zeros
     # against a time-invariant version of the model.
 
@@ -446,7 +446,7 @@ def test_sarimax_time_varying(revisions, updates, which):
 @pytest.mark.parametrize("updates", [True, False])
 def test_unobserved_components_time_varying(revisions, updates):
     # This is primarily a test that the `news` method works with a time-varying
-    # setup (i.e. time-varying state space matrices). It tests a time-varying
+    # setup (i.e., time-varying state space matrices). It tests a time-varying
     # UnobservedComponents model where the time-varying component has been set
     # to zeros against a time-invariant version of the model.
 
@@ -626,7 +626,7 @@ def test_varmax_time_invariant(revisions, updates):
 @pytest.mark.parametrize("which", ["exog", "trend"])
 def test_varmax_time_varying(revisions, updates, which):
     # This is primarily a test that the `news` method works with a time-varying
-    # setup (i.e. time-varying state space matrices). It tests a time-varying
+    # setup (i.e., time-varying state space matrices). It tests a time-varying
     # VARMAX model where the time-varying component has been set to zeros
     # against a time-invariant version of the model.
 
@@ -693,7 +693,7 @@ def test_varmax_time_varying(revisions, updates, which):
 @pytest.mark.parametrize("updates", [True, False])
 def test_dynamic_factor_time_varying(revisions, updates):
     # This is primarily a test that the `news` method works with a time-varying
-    # setup (i.e. time-varying state space matrices). It tests a time-varying
+    # setup (i.e., time-varying state space matrices). It tests a time-varying
     # DynamicFactor model where the time-varying component has been set to
     # zeros against a time-invariant version of the model.
 
@@ -1125,7 +1125,7 @@ def test_detailed_revisions(revisions_details_start):
 @pytest.mark.parametrize("revisions_details_start", [False, 202])
 def test_grouped_revisions(revisions_details_start):
     # Tests for computing revision impacts when all revisions are grouped
-    # together (i.e. no detailed impacts are computed )
+    # together (i.e., no detailed impacts are computed )
     # Construct original and revised datasets
     y = np.log(dta[["realgdp", "realcons",
                     "realinv", "cpi"]]).diff().iloc[1:] * 100
@@ -1250,7 +1250,7 @@ def test_mixed_revisions(revisions_details_start):
     for key in revisions.keys():
         assert_allclose(data_revisions.loc[key, "revised"], y_revised.loc[key])
         assert_allclose(data_revisions.loc[key, "observed (prev)"], y.loc[key])
-        # Revisions to 2009Q2 are grouped (i.e. no details are computed),
+        # Revisions to 2009Q2 are grouped (i.e., no details are computed),
         # while revisions to 2009Q3 have detailed impacts computed
         expected_details_computed = key[0] == "2009Q3"
         assert_equal(

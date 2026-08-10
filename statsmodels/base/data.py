@@ -708,7 +708,7 @@ def handle_data_class_factory(endog, exog):
     -------
     ModelData
         The data handling class appropriate for the type of `endog` and
-        `exog`, e.g. `PandasData` if either is a pandas object.
+        `exog`, e.g., `PandasData` if either is a pandas object.
     """
     if data_util._is_using_ndarray_type(endog, exog):
         klass = ModelData

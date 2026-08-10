@@ -208,7 +208,7 @@ class NumpyDocString(Mapping):
         if self._doc.eof():
             return False
 
-        l1 = self._doc.peek().strip()  # e.g. Parameters
+        l1 = self._doc.peek().strip()  # e.g., Parameters
 
         if l1.startswith(".. index::"):
             return True

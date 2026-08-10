@@ -1471,7 +1471,7 @@ class MixedLM(base.LikelihoodModel):
         Notes
         -----
         If P are the standard form parameters and R are the
-        transformed parameters (i.e. with the Cholesky square root
+        transformed parameters (i.e., with the Cholesky square root
         covariance and square root transformed variance components),
         then P[i] = lin[i] * R + R' * quad[i] * R
 
@@ -2412,7 +2412,7 @@ class MixedLM(base.LikelihoodModel):
             msg = f"Gradient optimization failed, |grad| = {gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
-        # Convert to the final parameterization (i.e. undo the square
+        # Convert to the final parameterization (i.e., undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
         params = MixedLMParams.from_packed(

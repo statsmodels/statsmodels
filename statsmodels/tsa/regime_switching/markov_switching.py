@@ -354,8 +354,8 @@ class MarkovSwitchingParams:
 
     Parameters are lexicographically ordered in the following way:
 
-    1. Named type string (e.g. "autoregressive")
-    2. Number (e.g. the first autoregressive parameter, then the second)
+    1. Named type string (e.g., "autoregressive")
+    2. Number (e.g., the first autoregressive parameter, then the second)
     3. Regime (if applicable)
 
     Parameter blocks are set using dictionary setter notation where the key
@@ -387,7 +387,7 @@ class MarkovSwitchingParams:
     There are three options for the dictionary key:
 
     - Regime number (zero-indexed)
-    - Named type string (e.g. "autoregressive")
+    - Named type string (e.g., "autoregressive")
     - Regime number and named type string
 
     In the above example, consider the following getters:
@@ -1804,7 +1804,7 @@ class HamiltonFilterResults:
         self.llf_obs = self.joint_loglikelihoods
         self.llf = np.sum(self.llf_obs)
 
-        # Subset transition if necessary (e.g. for Markov autoregression)
+        # Subset transition if necessary (e.g., for Markov autoregression)
         if self.regime_transition.shape[-1] > 1 and self.order > 0:
             self.regime_transition = self.regime_transition[..., self.order :]
 

@@ -180,10 +180,10 @@ _gee_init_doc = """
     Parameters
     ----------
     endog : array_like
-        1d array of endogenous values (i.e. responses, outcomes,
+        1d array of endogenous values (i.e., responses, outcomes,
         dependent variables, or 'Y' values).
     exog : array_like
-        2d array of exogenous values (i.e. covariates, predictors,
+        2d array of exogenous values (i.e., covariates, predictors,
         independent variables, regressors, or 'X' values). A `nobs x
         k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
@@ -246,7 +246,7 @@ _gee_init_doc = """
     exog will change.
 
     The "robust" covariance type is the standard "sandwich estimator"
-    (e.g. Liang and Zeger (1986)).  It is the default here and in most
+    (e.g., Liang and Zeger (1986)).  It is the default here and in most
     other packages.  The "naive" estimator gives smaller standard
     errors, but is only correct if the working correlation structure
     is correctly specified.  The "bias reduced" estimator of Mancl and
@@ -333,7 +333,7 @@ _gee_fit_doc = """
     -----
     If convergence difficulties occur, increase the values of
     `first_dep_update` and/or `params_niter`.  Setting
-    `first_dep_update` to a greater value (e.g. ~10-20) causes the
+    `first_dep_update` to a greater value (e.g., ~10-20) causes the
     algorithm to move close to the GLM solution before attempting
     to identify the dependence structure.
 
@@ -748,7 +748,7 @@ class GEE(GLM):
             If you wish to use a "clean" environment set ``eval_env=-1``.
         dep_data : str or array_like, optional
             Data used for estimating the dependence structure.  See
-            specific dependence structure classes (e.g. Nested) for
+            specific dependence structure classes (e.g., Nested) for
             details.  If `dep_data` is a string, it is interpreted as
             a formula that is applied to `data`. If it is an array, it
             must be an array of strings corresponding to column names in
@@ -1576,7 +1576,7 @@ class GEE(GLM):
         scale : float or string
             If a float, this value is used as the scale parameter.
             If "X2", the scale parameter is always estimated using
-            Pearson's chi-square method (e.g. as in a quasi-Poisson
+            Pearson's chi-square method (e.g., as in a quasi-Poisson
             analysis).  If None, the default approach for the family
             is used to estimate the scale parameter.
 

@@ -216,7 +216,7 @@ class Optimizer:
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer
                     `scipy.optimize.minimize()`, for example 'method' - the
-                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    minimization method (e.g., 'L-BFGS-B'), or 'tol' - the
                     tolerance for termination. Other arguments are mapped from
                     explicit argument of `fit`:
                     - `args` <- `fargs`

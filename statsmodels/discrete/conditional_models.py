@@ -255,7 +255,7 @@ class ConditionalLogit(_ConditionalModel):
             raise ValueError(msg)
 
         self.K = self.exog.shape[1]
-        # i.e. self.k_params, for compatibility with MNLogit
+        # i.e., self.k_params, for compatibility with MNLogit
 
     def loglike(self, params):
 

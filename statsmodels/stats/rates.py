@@ -536,7 +536,7 @@ def confint_quantile_poisson(
     exposure : array_like
         Currently this is total exposure time of the count variable.
     prob : float in (0, 1)
-        Probability for the quantile, e.g. 0.95 to get the upper 95% quantile.
+        Probability for the quantile, e.g., 0.95 to get the upper 95% quantile.
         With known mean mu, the quantile would be poisson.ppf(prob, mu).
     exposure_new : float
         Exposure of the new or predicted observation.
@@ -817,7 +817,7 @@ def test_poisson_2indep(
         Total exposure (time * subjects) in second sample.
     value : float
         Value of the ratio or difference of 2 independent rates under the null
-        hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
+        hypothesis. Default is equal rates, i.e., 1 for ratio and 0 for diff.
     method : string
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
@@ -1155,7 +1155,7 @@ def etest_poisson_2indep(
         Total exposure (time * subjects) in second sample.
     value : float
         Value of the ratio or diff of 2 independent rates under the null
-        hypothesis. Default is equal rates, i.e. 1 for ratio and 0 for diff.
+        hypothesis. Default is equal rates, i.e., 1 for ratio and 0 for diff.
     method : {"score", "wald"}
         Method for the test statistic that defines the rejection region.
     compare : {'diff', 'ratio'}
@@ -1793,7 +1793,7 @@ class PowerRatioResult(NamedTuple):
     """
     Result of :func:`power_poisson_ratio_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g. with
+    Behaves like the scalar `power` when converted to an array, e.g., with
     ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
     be compared directly against a plain power value.
 
@@ -1869,7 +1869,7 @@ def power_poisson_ratio_2indep(
     value : float
         Rate ratio, rate1 / rate2, under the null hypothesis.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     dispersion : float
         Dispersion coefficient for quasi-Poisson. Dispersion different from
@@ -1893,7 +1893,7 @@ def power_poisson_ratio_2indep(
         If return_results is False, then only the power is returned as a
         float. If return_results is True (default), then a
         :class:`PowerRatioResult` namedtuple is returned; it behaves like
-        the scalar power in numeric comparisons (e.g. ``assert_allclose``),
+        the scalar power in numeric comparisons (e.g., ``assert_allclose``),
         while also exposing `std_null`, `std_alt` and other attributes.
 
     References
@@ -1960,7 +1960,7 @@ class PowerEquivalenceResult(NamedTuple):
     Result of :func:`power_equivalence_poisson_2indep` and
     :func:`power_equivalence_neginb_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g. with
+    Behaves like the scalar `power` when converted to an array, e.g., with
     ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
     be compared directly against a plain power value.
 
@@ -2039,7 +2039,7 @@ def power_equivalence_poisson_2indep(
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     dispersion : float
         Dispersion coefficient for quasi-Poisson. Dispersion different from
@@ -2253,7 +2253,7 @@ class PowerDiffResult(NamedTuple):
     """
     Result of :func:`power_poisson_diff_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g. with
+    Behaves like the scalar `power` when converted to an array, e.g., with
     ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
     be compared directly against a plain power value.
 
@@ -2319,7 +2319,7 @@ def power_poisson_diff_2indep(
     nobs_ratio : float
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float
         Difference between rates 1 and 2 under the null hypothesis.
@@ -2342,7 +2342,7 @@ def power_poisson_diff_2indep(
         If return_results is False, then only the power is returned as a
         float. If return_results is True (default), then a
         :class:`PowerDiffResult` namedtuple is returned; it behaves like
-        the scalar power in numeric comparisons (e.g. ``assert_allclose``),
+        the scalar power in numeric comparisons (e.g., ``assert_allclose``),
         while also exposing `std_null`, `std_alt` and other attributes.
 
     References
@@ -2456,7 +2456,7 @@ class PowerNegbinRatioResult(NamedTuple):
     """
     Result of :func:`power_negbin_ratio_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g. with
+    Behaves like the scalar `power` when converted to an array, e.g., with
     ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
     be compared directly against a plain power value.
 
@@ -2526,7 +2526,7 @@ def power_negbin_ratio_2indep(
     value : float
         Rate ratio, rate1 / rate2, under the null hypothesis.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     dispersion : float >= 0.
         Dispersion parameter for Negative Binomial distribution.
@@ -2658,7 +2658,7 @@ def power_equivalence_neginb_2indep(
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     dispersion : float >= 0.
         Dispersion parameter for Negative Binomial distribution.

@@ -2767,7 +2767,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             warnings.warn(
                 "Care should be used when applying a loglikelihood"
                 " burn to a model with exact diffuse initialization."
-                " Some results objects, e.g. degrees of freedom,"
+                " Some results objects, e.g., degrees of freedom,"
                 " expect only one of the two to be set.",
                 ModelWarning,
                 stacklevel=2,
@@ -2776,10 +2776,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # periods but does not exclude exact diffuse periods. This is
         # because the loglikelihood remains valid for the initial periods in
         # the exact diffuse case (see DK, 2012, section 7.2) and so also do
-        # e.g. information criteria (see DK, 2012, section 7.4) and the score
+        # e.g., information criteria (see DK, 2012, section 7.4) and the score
         # vector (see DK, 2012, section 7.3.3, equation 7.15).
         # However, other objects should be excluded in the diffuse periods
-        # (e.g. the diffuse forecast errors, so in some cases a different
+        # (e.g., the diffuse forecast errors, so in some cases a different
         # nobs_effective will have to be computed and used)
         self.nobs_effective = self.nobs - self.loglikelihood_burn
 
@@ -2872,7 +2872,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # Save more convenient access to states
         # (will create a private attribute _states here and provide actual
-        # access via a getter, so that we can e.g. issue a warning in the case
+        # access via a getter, so that we can e.g., issue a warning in the case
         # that a useless Pandas index was given in the model specification)
         self._states = SimpleNamespace()
 
@@ -3586,7 +3586,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         use_f : bool, optional
             Whether or not to compare against the asymptotic distribution
             (chi-squared) or the approximate small-sample distribution (F).
-            Default is True (i.e. default is to compare against an F
+            Default is True (i.e., default is to compare against an F
             distribution).
 
         Returns
@@ -4689,7 +4689,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         # For time-varying models try to create an appended `updated` model
         # with NaN values. Do not extend the model if this was already done
-        # above (i.e. the case that `comparison` was a new dataset), because
+        # above (i.e., the case that `comparison` was a new dataset), because
         # in that case `exog` and `kwargs` should have
         # been set with the input `comparison` dataset in mind, and so would be
         # useless here. Ultimately, we've already extended `updated` as far
@@ -4965,7 +4965,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         Notes
         -----
         The `endog` and `exog` arguments to this method must be formatted in
-        the same way (e.g. Pandas Series versus Numpy array) as were the
+        the same way (e.g., Pandas Series versus Numpy array) as were the
         `endog` and `exog` arrays passed to the original model.
 
         The `endog` argument to this method should consist of new observations

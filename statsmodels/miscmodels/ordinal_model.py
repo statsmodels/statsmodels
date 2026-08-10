@@ -192,7 +192,7 @@ class OrderedModel(GenericLikelihoodModel):
         -------
         endog : array_like or pandas Series
             If the original endog is a pandas ordered Categorical Series,
-            then the returned endog are the ``codes``, i.e. integer
+            then the returned endog are the ``codes``, i.e., integer
             representation of ordered categorical variable
         labels : None or list
             If original endog is pandas ordered Categorical Series, then the
@@ -431,7 +431,7 @@ class OrderedModel(GenericLikelihoodModel):
             observations in rows and one column for each category or level of
             the categorical dependent variable.
             If which is "cumprob", then "prob" are cumulatively added to get the
-            cdf at k, i.e. probability of observing choice k or lower.
+            cdf at k, i.e., probability of observing choice k or lower.
             If which is "linpred", then the conditional prediction of the
             latent variable is returned. In this case, the return is
             one-dimensional.

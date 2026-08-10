@@ -154,7 +154,7 @@ def score_test(
     ----------
     exog_extra : None or array_like
         Explanatory variables that are jointly tested for inclusion in the
-        model, i.e. omitted variables.
+        model, i.e., omitted variables.
     params_constrained : array_like
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
