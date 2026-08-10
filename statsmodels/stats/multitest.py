@@ -535,9 +535,12 @@ def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
 
     # compute left-hand slopes of least concave majorant of empirical cdf
     gaps = np.diff(uniq_pvals, prepend=0)
-    slope_reg = isotonic_regression(
-        counts / (nobs * gaps), weights=gaps.copy(), increasing=False
-    )
+    # Ensure arrays passed to isotonic_regression are contiguous, aligned, and writeable to avoid
+    # potential issues with memory layout and performance on Windows
+    requirements = ("C_CONTIGUOUS", "ALIGNED", "OWNDATA", "WRITEABLE", "ENSUREARRAY")
+    y = np.require(counts / (nobs * gaps), dtype=float, requirements=requirements)
+    weights = np.require(gaps, dtype=float, requirements=requirements)
+    slope_reg = isotonic_regression(y, weights=weights, increasing=False)
     slopes_uniq = slope_reg.x
 
     # compute LCM of empirical cdf
