@@ -542,11 +542,15 @@ Status: experimental, API might change, added in 0.12
    :toctree: generated
 
    test_proportions_2indep
+   Proportions2indepTestResult
    confint_proportions_2indep
    power_proportions_2indep
+   PowerProportionsResult
    tost_proportions_2indep
+   TostProportionsResult
    samplesize_proportions_2indep_onetail
    score_test_proportions_2indep
+   ScoreTestProportionsResult
    _score_confint_inversion
 
 

@@ -1227,7 +1227,7 @@ def test_score_confint_koopman_nam():
 
     res = smprop._confint_riskratio_koopman(x1, n1, x0, n0, alpha=0.05)
 
-    assert_allclose(res._p_roots, results_nam.p0_roots, atol=4)
+    assert_allclose(res.p_roots, results_nam.p0_roots, atol=4)
     assert_allclose(res.confint, results_nam.conf_int, atol=3)
 
     table = [67, 9, 7, 16]  # [67, 7, 9, 16]
