@@ -5,6 +5,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
+
 import numpy as np
 
 from statsmodels.base.model import Model
@@ -13,7 +15,26 @@ from statsmodels.robust.covariance import _get_detcov_startidx
 import statsmodels.robust.norms as rnorms
 from statsmodels.robust.robust_linear_model import RLM
 import statsmodels.robust.scale as rscale
-from statsmodels.tools.testing import Holder
+
+
+class DetSStartResult(NamedTuple):
+    """
+    Result of one starting-value fit within :meth:`RLMDetS.fit`.
+
+    Parameters
+    ----------
+    scale : float
+        Estimated scale of the RLM fit from this starting value.
+    params : ndarray
+        Estimated parameters of the RLM fit from this starting value.
+    method : int
+        Index of the starting value that produced this fit, used to
+        identify which entry of ``results_iter`` this is.
+    """
+
+    scale: float
+    params: np.ndarray
+    method: int
 
 
 class RLMDetS(Model):
@@ -128,7 +149,7 @@ class RLMDetS(Model):
         res = {}
         for ii, sp in enumerate(start_params_all):
             res_ii = self._fit_one(sp, maxiter=maxiter_step)
-            res[ii] = Holder(
+            res[ii] = DetSStartResult(
                 scale=res_ii.scale,
                 params=res_ii.params,
                 method=ii,  # method  # TODO need start set method
