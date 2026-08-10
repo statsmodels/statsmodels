@@ -665,6 +665,7 @@ Status: experimental, API might change, added in 0.12
    fstat_to_wellek
    wellek_to_f2
    _fstat2effectsize
+   FstatEffectSizeResult
 
    scale_transform
    simulate_power_equivalence_oneway

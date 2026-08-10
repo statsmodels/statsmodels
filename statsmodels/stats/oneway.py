@@ -240,6 +240,38 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
     return res
 
 
+class FstatEffectSizeResult(NamedTuple):
+    """
+    Result of :func:`_fstat2effectsize`.
+
+    Parameters
+    ----------
+    f2 : array_like
+        Squared Cohen's f effect size, ``f_stat * df1 / df2``.
+    eta2 : array_like
+        Squared eta effect size, ``f2 / (f2 + 1)``.
+    omega2 : array_like
+        Squared omega effect size, computed as
+        ``(f2 - df1 / df2) / (f2 + 1 + 1 / df2)``.
+    eps2 : array_like
+        Squared epsilon effect size, computed as
+        ``(f2 - df1 / df2) / (f2 + 1)``.
+    eps2_ : array_like
+        Squared epsilon effect size, computed with the alternative
+        expression ``(f_stat - 1) / (f_stat + df2 / df1)``.
+    omega2_ : array_like
+        Squared omega effect size, computed with the alternative
+        expression ``(f_stat - 1) / (f_stat + (df2 + 1) / df1)``.
+    """
+
+    f2: np.ndarray
+    eta2: np.ndarray
+    omega2: np.ndarray
+    eps2: np.ndarray
+    eps2_: np.ndarray
+    omega2_: np.ndarray
+
+
 def _fstat2effectsize(f_stat, df):
     """
     Compute anova effect size from F-statistic
@@ -257,9 +289,9 @@ def _fstat2effectsize(f_stat, df):
 
     Returns
     -------
-    res : Holder instance
-        This instance contains effect size measures f2, eta2, omega2 and eps2
-        as attributes.
+    FstatEffectSizeResult
+        This namedtuple contains effect size measures f2, eta2, omega2 and
+        eps2 as attributes.
 
     Notes
     -----
@@ -288,7 +320,7 @@ def _fstat2effectsize(f_stat, df):
     omega2 = (f2 - df1 / df2) / (f2 + 1 + 1 / df2)  # rewrite
     eps2_ = (f_stat - 1) / (f_stat + df2 / df1)
     eps2 = (f2 - df1 / df2) / (f2 + 1)  # rewrite
-    return Holder(
+    return FstatEffectSizeResult(
         f2=f2, eta2=eta2, omega2=omega2, eps2=eps2, eps2_=eps2_, omega2_=omega2_
     )
 
