@@ -12,13 +12,10 @@ import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
-from statsmodels.stats.base import HolderTuple
-
 # functions that use scipy.special instead of boost based function in stats
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.testing import Holder
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -1218,6 +1215,34 @@ def power_equivalence_oneway(
     return pwr_alt
 
 
+class SimulatePowerEquivalenceResult(NamedTuple):
+    """
+    Result of :func:`simulate_power_equivalence_oneway`.
+
+    Parameters
+    ----------
+    f_stat : ndarray
+        Simulated F-statistics, or Wellek's effect size estimate depending
+        on `margin_type`, with one row per Monte Carlo replication and one
+        column per entry in `options_var`.
+    other : ndarray
+        Simulated `crit_f`, `crit_es` and `power_zero` from
+        :class:`EquivalenceOnewayResult`, stacked column-wise for each
+        Monte Carlo replication and entry in `options_var`.
+    pvalue : ndarray
+        Simulated p-values, with one row per Monte Carlo replication and
+        one column per entry in `options_var`.
+    reject : ndarray
+        Simulated rejection decisions, with one row per Monte Carlo
+        replication and one column per entry in `options_var`.
+    """
+
+    f_stat: np.ndarray
+    other: np.ndarray
+    pvalue: np.ndarray
+    reject: np.ndarray
+
+
 def simulate_power_equivalence_oneway(
     means,
     nobs,
@@ -1272,11 +1297,10 @@ def simulate_power_equivalence_oneway(
 
     Returns
     -------
-    res : Holder instance
-        Holder instance with Monte Carlo results in the attributes
-        `f_stat`, `other`, `pvalue` and `reject`, each an ndarray with one
-        row per Monte Carlo replication and one column per entry in
-        `options_var`.
+    SimulatePowerEquivalenceResult
+        Namedtuple with Monte Carlo results in the attributes `f_stat`,
+        `other`, `pvalue` and `reject`, each an ndarray with one row per
+        Monte Carlo replication and one column per entry in `options_var`.
     """
     if options_var is None:
         options_var = ["unequal", "equal", "bf"]
@@ -1330,7 +1354,9 @@ def simulate_power_equivalence_oneway(
     other_mc = np.asarray(other_mc)
     res_mc = np.asarray(res_mc)
     reject_mc = np.asarray(reject_mc)
-    res = Holder(f_stat=f_mc, other=other_mc, pvalue=res_mc, reject=reject_mc)
+    res = SimulatePowerEquivalenceResult(
+        f_stat=f_mc, other=other_mc, pvalue=res_mc, reject=reject_mc
+    )
     return res
 
 

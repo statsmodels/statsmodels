@@ -673,6 +673,7 @@ Status: experimental, API might change, added in 0.12
 
    scale_transform
    simulate_power_equivalence_oneway
+   SimulatePowerEquivalenceResult
 
 
 .. _robust_stats:
