@@ -7,6 +7,7 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import lzip
+from statsmodels.compat.scipy import SP_LT_110
 
 from pathlib import Path
 
@@ -533,7 +534,7 @@ def test_rank_compare_vectorized():
 def _jt_statistic_bruteforce(samples):
     statistic = 0.0
     for i, sample_low in enumerate(samples[:-1]):
-        for sample_high in samples[i + 1:]:
+        for sample_high in samples[i + 1 :]:
             for x_low in sample_low:
                 for x_high in sample_high:
                     statistic += x_high > x_low
@@ -569,9 +570,9 @@ def test_jonckheere_terpstra_larger_matches_kendalltau():
         method="asymptotic",
         alternative="greater",
     )
-
+    expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
     assert_allclose(res.statistic, expected_stat, rtol=1e-13)
-    assert_allclose(res.tau, expected.statistic, rtol=1e-13)
+    assert_allclose(res.tau, expected_statistic, rtol=1e-13)
     assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
 
 
@@ -592,8 +593,11 @@ def test_jonckheere_terpstra_smaller_and_two_sided():
         method="asymptotic",
         alternative="less",
     )
+    expected_small_statistic = (
+        expected_small.correlation if SP_LT_110 else expected_small.statistic
+    )
     assert_allclose(res_small.statistic, _jt_statistic_bruteforce(samples))
-    assert_allclose(res_small.tau, expected_small.statistic, rtol=1e-13)
+    assert_allclose(res_small.tau, expected_small_statistic, rtol=1e-13)
     assert_allclose(res_small.pvalue, expected_small.pvalue, rtol=1e-13)
 
     res_two = jonckheere_terpstra(samples, alternative="two-sided")
@@ -631,9 +635,7 @@ def test_jonckheere_terpstra_result_type():
 def test_jonckheere_terpstra_many_unequal_groups():
     rng = np.random.default_rng(1234)
     sizes = [2, 5, 3, 7, 4]
-    samples = [
-        rng.integers(0, 6, size=size).astype(float) for size in sizes
-    ]
+    samples = [rng.integers(0, 6, size=size).astype(float) for size in sizes]
     res = jonckheere_terpstra(samples, alternative="two-sided")
 
     expected_stat = _jt_statistic_bruteforce(samples)
@@ -649,7 +651,8 @@ def test_jonckheere_terpstra_many_unequal_groups():
     assert res.k_groups == len(samples)
     assert res.nobs == sum(sizes)
     assert_allclose(res.statistic, expected_stat, rtol=1e-13)
-    assert_allclose(res.tau, expected.statistic, rtol=1e-13)
+    expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
+    assert_allclose(res.tau, expected_statistic, rtol=1e-13)
     assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
 
 
