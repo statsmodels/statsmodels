@@ -660,7 +660,7 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
             "medcouple is undefined for input with less than 3 elements. "
             "Returning NaN."
         )
-        warn(msg, ValueWarning)
+        warn(msg, ValueWarning, stacklevel=2)
         return np.nan
 
     if n < 10:
@@ -670,7 +670,7 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
             "for small datasets (N < 10). Results may be unstable. Consider "
             "using use_fast=False for accuracy."
         )
-        warn(msg, UserWarning)
+        warn(msg, UserWarning, stacklevel=2)
 
     Z = np.sort(X)[::-1]
     n2 = (n - 1) // 2
