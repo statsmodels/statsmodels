@@ -341,10 +341,14 @@ def test_brunnermunzel_one_sided():
     x, y = y, x
 
     # Results are compared with R's lawstat package.
-    u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative="smaller")
-    u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative="larger")
-    u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative="larger")
-    u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative="smaller")
+    t1 = rank_compare_2indep(x, y).test_prob_superior(alternative="smaller")
+    t2 = rank_compare_2indep(y, x).test_prob_superior(alternative="larger")
+    t3 = rank_compare_2indep(x, y).test_prob_superior(alternative="larger")
+    t4 = rank_compare_2indep(y, x).test_prob_superior(alternative="smaller")
+    u1, p1 = t1.statistic, t1.pvalue
+    u2, p2 = t2.statistic, t2.pvalue
+    u3, p3 = t3.statistic, t3.pvalue
+    u4, p4 = t4.statistic, t4.pvalue
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(p3, p4, significant=significant)
@@ -370,10 +374,10 @@ def test_brunnermunzel_two_sided():
 
     # Results are compared with R's lawstat package.
     res1 = rank_compare_2indep(x, y)
-    u1, p1 = res1
+    u1, p1 = res1.statistic, res1.pvalue
     t1 = res1.test_prob_superior(alternative="two-sided")
     res2 = rank_compare_2indep(y, x)
-    u2, p2 = res2
+    u2, p2 = res2.statistic, res2.pvalue
     t2 = res2.test_prob_superior(alternative="two-sided")
 
     assert_approx_equal(p1, p2, significant=significant)

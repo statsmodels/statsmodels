@@ -15,7 +15,6 @@ import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
 
-from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
     _tstat_generic,
@@ -69,14 +68,133 @@ def rankdata_2samp(x1, x2):
     return rank1, rank2, ranki1, ranki2
 
 
-class RankCompareResult(HolderTuple):
+class ProbSuperiorResult(NamedTuple):
+    """
+    Result of :meth:`RankCompareResult.test_prob_superior`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic for the z- or t-test.
+    pvalue : float
+        p-value of the test based on either the normal or t distribution.
+    df : float or None
+        Degrees of freedom used for the t distribution. None if the normal
+        distribution was used.
+    distribution : {"normal", "t"}
+        Name of the reference distribution used for `pvalue`.
+    """
+
+    statistic: float
+    pvalue: float
+    df: float | None
+    distribution: str
+
+
+class TostProbSuperiorResult(NamedTuple):
+    """
+    Result of :meth:`RankCompareResult.tost_prob_superior`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic of the one-sided test that has the larger pvalue.
+    pvalue : float
+        p-value of the equivalence test given by the larger pvalue of the
+        two one-sided tests.
+    results_larger : ProbSuperiorResult
+        Results instance with test statistic, pvalue and degrees of freedom
+        for the lower threshold test.
+    results_smaller : ProbSuperiorResult
+        Results instance with test statistic, pvalue and degrees of freedom
+        for the upper threshold test.
+    title : str
+        Descriptive title of the equivalence test.
+    """
+
+    statistic: float
+    pvalue: float
+    results_larger: ProbSuperiorResult
+    results_smaller: ProbSuperiorResult
+    title: str
+
+
+class RankCompareResult(NamedTuple):
     """
     Results for rank comparison
 
-    This is a subclass of HolderTuple that includes results from intermediate
-    computations, as well as methods for hypothesis tests, confidence intervals
-    and summary.
+    This includes results from intermediate computations, as well as
+    methods for hypothesis tests, confidence intervals and summary.
+
+    Parameters
+    ----------
+    statistic : float
+        The Brunner-Munzel W statistic.
+    pvalue : float
+        p-value based on the t distribution if `use_t` is True, otherwise
+        based on the normal distribution.
+    s1 : float
+        Variance-like quantity for sample 1 used in the Brunner-Munzel
+        statistic.
+    s2 : float
+        Variance-like quantity for sample 2 used in the Brunner-Munzel
+        statistic.
+    var1 : float
+        Estimated variance contribution of sample 1 to `prob1`.
+    var2 : float
+        Estimated variance contribution of sample 2 to `prob2`.
+    var : float
+        Estimated variance of `statistic`.
+    var_prob : float
+        Estimated variance of `prob1` (and `prob2`).
+    nobs1 : int
+        Number of observations in sample 1.
+    nobs2 : int
+        Number of observations in sample 2.
+    nobs : int
+        Total number of observations, ``nobs1 + nobs2``.
+    mean1 : float
+        Mean rank of sample 1 in the pooled sample.
+    mean2 : float
+        Mean rank of sample 2 in the pooled sample.
+    prob1 : float
+        Probability that a random draw from sample 1 is stochastically
+        larger than a random draw from sample 2,
+        ``P(x1 > x2) + 0.5 * P(x1 = x2)``.
+    prob2 : float
+        Probability that a random draw from sample 2 is stochastically
+        larger than a random draw from sample 1. Equal to ``1 - prob1``.
+    somersd1 : float
+        Somers' D statistic based on `prob1`, ``2 * prob1 - 1``.
+    somersd2 : float
+        Somers' D statistic based on `prob2`, ``2 * prob2 - 1``.
+    df : float or None
+        Degrees of freedom used for the t distribution if `use_t` is True,
+        otherwise None.
+    use_t : bool
+        Whether the t distribution (True) or normal distribution (False)
+        is used for `pvalue` and inference in the instance methods.
     """
+
+    statistic: float
+    pvalue: float
+    s1: float
+    s2: float
+    var1: float
+    var2: float
+    var: float
+    var_prob: float
+    nobs1: int
+    nobs2: int
+    nobs: int
+    mean1: float
+    mean2: float
+    prob1: float
+    prob2: float
+    somersd1: float
+    somersd2: float
+    df: float | None
+    use_t: bool
 
     def conf_int(self, value=None, alpha=0.05, alternative="two-sided"):
         """
@@ -146,8 +264,8 @@ class RankCompareResult(HolderTuple):
 
         Returns
         -------
-        res : HolderTuple
-            HolderTuple instance with the following main attributes
+        ProbSuperiorResult
+            Namedtuple with the following main attributes
 
             statistic : float
                 Test statistic for z- or t-test
@@ -171,11 +289,11 @@ class RankCompareResult(HolderTuple):
                                       alternative, diff=0)
             distr = "t"
 
-        res = HolderTuple(statistic=stat,
-                          pvalue=pv,
-                          df=self.df,
-                          distribution=distr
-                          )
+        res = ProbSuperiorResult(statistic=stat,
+                                 pvalue=pv,
+                                 df=self.df,
+                                 distribution=distr
+                                 )
         return res
 
     def tost_prob_superior(self, low, upp):
@@ -203,8 +321,8 @@ class RankCompareResult(HolderTuple):
 
         Returns
         -------
-        res : HolderTuple
-            HolderTuple instance with the following main attributes
+        TostProbSuperiorResult
+            Namedtuple with the following main attributes
 
             pvalue : float
                 Pvalue of the equivalence test given by the larger pvalue of
@@ -212,10 +330,10 @@ class RankCompareResult(HolderTuple):
             statistic : float
                 Test statistic of the one-sided test that has the larger
                 pvalue.
-            results_larger : HolderTuple
+            results_larger : ProbSuperiorResult
                 Results instance with test statistic, pvalue and degrees of
                 freedom for lower threshold test.
-            results_smaller : HolderTuple
+            results_smaller : ProbSuperiorResult
                 Results instance with test statistic, pvalue and degrees of
                 freedom for upper threshold test.
 
@@ -227,15 +345,15 @@ class RankCompareResult(HolderTuple):
         # idx_max = 1 if t1.pvalue < t2.pvalue else 0
         idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
         title = "Equivalence test for Prob(x1 > x2) + 0.5 Prob(x1 = x2) "
-        res = HolderTuple(statistic=np.choose(idx_max,
-                                              [t1.statistic, t2.statistic]),
-                          # pvalue=[t1.pvalue, t2.pvalue][idx_max], # python
-                          # use np.choose for vectorized selection
-                          pvalue=np.choose(idx_max, [t1.pvalue, t2.pvalue]),
-                          results_larger=t1,
-                          results_smaller=t2,
-                          title=title
-                          )
+        res = TostProbSuperiorResult(
+            statistic=np.choose(idx_max, [t1.statistic, t2.statistic]),
+            # pvalue=[t1.pvalue, t2.pvalue][idx_max], # python
+            # use np.choose for vectorized selection
+            pvalue=np.choose(idx_max, [t1.pvalue, t2.pvalue]),
+            results_larger=t1,
+            results_smaller=t2,
+            title=title,
+        )
         return res
 
     def confint_lintransf(self, const=-1, slope=2, alpha=0.05,
@@ -333,7 +451,8 @@ class RankCompareResult(HolderTuple):
         yname = "None"
         effect = np.atleast_1d(self.prob1)
         if self.pvalue is None:
-            statistic, pvalue = self.test_prob_superior()
+            psr = self.test_prob_superior()
+            statistic, pvalue = psr.statistic, psr.pvalue
         else:
             pvalue = self.pvalue
             statistic = self.statistic
