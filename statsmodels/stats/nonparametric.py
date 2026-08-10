@@ -15,6 +15,7 @@ import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
 
+from statsmodels.stats.base import compat_2tuple_unpack
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
     _tstat_generic,
@@ -67,6 +68,7 @@ def rankdata_2samp(x1, x2):
     return rank1, rank2, ranki1, ranki2
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class ProbSuperiorResult(NamedTuple):
     """
     Result of :meth:`RankCompareResult.test_prob_superior`.
@@ -90,6 +92,7 @@ class ProbSuperiorResult(NamedTuple):
     distribution: str
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class TostProbSuperiorResult(NamedTuple):
     """
     Result of :meth:`RankCompareResult.tost_prob_superior`.
@@ -118,6 +121,7 @@ class TostProbSuperiorResult(NamedTuple):
     title: str
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class RankCompareResult(NamedTuple):
     """
     Results for rank comparison
