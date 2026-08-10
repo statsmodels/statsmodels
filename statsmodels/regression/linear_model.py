@@ -1505,10 +1505,37 @@ class YuleWalkerResult(NamedTuple):
 
 def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, *,
                 use_namedtuple: bool | None = None):
-    """
+    r"""
     Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
 
-    Adjusted or maximum-likelihood estimator (mle)
+    The Yule-Walker estimator is based on the autocorrelation structure of
+    a weakly stationary process. Under stationarity, the covariance between
+    two observations depends only on their lag:
+
+    .. math::
+
+        \operatorname{Cov}(X_t, X_{t-k}) = \gamma_k.
+
+    For an AR(p) process, the Yule-Walker equations can be written as
+
+    .. math::
+
+        R \phi = r,
+
+    where ``R`` is the Toeplitz autocovariance matrix constructed from the
+    estimated autocovariances at lags 0 through ``p - 1``, ``\phi`` is the
+    vector of AR(p) parameters, and ``r`` is the vector of estimated
+    autocovariances at lags 1 through ``p``.
+
+    In practice, the theoretical autocovariances are replaced by their
+    sample estimates.
+
+    The method provides either adjusted or maximum-likelihood estimates,
+    depending on the value of ``method``.
+
+    The reference below formulates the Yule-Walker equations in terms of
+    autocorrelations, whereas this implementation uses autocovariances.
+    The two formulations are equivalent up to normalization by the variance.
 
     Parameters
     ----------
@@ -1517,9 +1544,8 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     order : int, optional
         The order of the autoregressive process.  Default is 1.
     method : str, optional
-       Method can be 'adjusted' or 'mle' and this determines
-       denominator in estimate of autocorrelation function (ACF) at
-       lag k. If 'mle', the denominator is n=X.shape[0], if 'adjusted'
+       Method can be 'adjusted' or 'mle' and determines the denominator
+       used to estimate the autocovariance at lag k. If 'mle', the denominator is n=X.shape[0], if 'adjusted'
        the denominator is n-k.  The default is adjusted.
     df : int, optional
        Specifies the degrees of freedom. If `df` is supplied, then it
@@ -1584,6 +1610,9 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     >>> sigma
     16.808022730464351
 
+    References
+    ----------
+    http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YWSourceFiles/YW-Eshel.pdf
     """
     # TODO: define R better, look back at notes and technical notes on YW.
     # First link here is useful
