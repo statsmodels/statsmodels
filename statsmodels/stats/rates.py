@@ -6,11 +6,12 @@ License: BSD-3
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import optimize, stats
 
 from statsmodels.stats._inference_tools import _mover_confint
-from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.weightstats import _zstat_generic2
 
 # shorthand
@@ -44,6 +45,37 @@ method_names_poisson_1samp = {
 }
 
 
+class PoissonTestResult(NamedTuple):
+    """
+    Result of :func:`test_poisson`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic.
+    pvalue : float
+        p-value of the test.
+    distribution : str
+        Name of the reference distribution used for `pvalue`.
+    method : str
+        Method used to compute the test statistic and p-value.
+    alternative : str
+        The alternative hypothesis used for the test.
+    rate : float
+        The observed rate, ``count / nobs``.
+    nobs : array_like
+        Total exposure time, same as the `nobs` argument to `test_poisson`.
+    """
+
+    statistic: float
+    pvalue: float
+    distribution: str
+    method: str
+    alternative: str
+    rate: float
+    nobs: float
+
+
 def test_poisson(
     count, nobs, value, method=None, alternative="two-sided", dispersion=1
 ):
@@ -75,8 +107,8 @@ def test_poisson(
 
     Returns
     -------
-    HolderTuple
-        Instance with test statistic, pvalue and other attributes.
+    PoissonTestResult
+        Namedtuple with test statistic, pvalue and other attributes.
 
     Notes
     -----
@@ -177,7 +209,7 @@ def test_poisson(
     if dist == "normal":
         statistic, pvalue = _zstat_generic2(statistic, 1, alternative)
 
-    res = HolderTuple(
+    res = PoissonTestResult(
         statistic=statistic,
         pvalue=np.clip(pvalue, 0, 1),
         distribution=dist,
@@ -692,6 +724,51 @@ method_names_poisson_2indep = {
 }
 
 
+class PoissonTest2indepResult(NamedTuple):
+    """
+    Result of :func:`test_poisson_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic.
+    pvalue : float
+        p-value of the test.
+    distribution : str
+        Name of the reference distribution used for `pvalue`.
+    compare : {"diff", "ratio"}
+        Whether the test is for the difference or ratio of the two rates.
+    method : str
+        Method used to compute the test statistic and p-value.
+    alternative : str
+        The alternative hypothesis used for the test.
+    rates : tuple
+        The two observed rates, ``(rate1, rate2)``.
+    ratio : float
+        The observed rate ratio, ``rate1 / rate2``.
+    diff : float
+        The observed rate difference, ``rate1 - rate2``.
+    value : float
+        Value of the ratio or difference under the null hypothesis.
+    rates_cmle : tuple or None
+        Constrained maximum likelihood estimates of the two rates under
+        the null hypothesis, ``(rate1_cmle, rate2_cmle)``. Only set for
+        ``compare="diff"`` and ``method="score"``, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    distribution: str
+    compare: str
+    method: str
+    alternative: str
+    rates: tuple
+    ratio: float
+    diff: float
+    value: float
+    rates_cmle: tuple | None
+
+
 def test_poisson_2indep(
     count1,
     exposure1,
@@ -783,9 +860,9 @@ def test_poisson_2indep(
 
     Returns
     -------
-    results : instance of HolderTuple class
+    PoissonTest2indepResult
         The two main attributes are test statistic `statistic` and p-value
-        `pvalue`.
+        `pvalue`. See :class:`PoissonTest2indepResult` for the full list.
 
     See Also
     --------
@@ -968,7 +1045,7 @@ def test_poisson_2indep(
     rates = (rate1, rate2)
     ratio = rate1 / rate2
     diff = rate1 - rate2
-    res = HolderTuple(
+    res = PoissonTest2indepResult(
         statistic=stat,
         pvalue=pvalue,
         distribution=dist,
@@ -1216,6 +1293,43 @@ def etest_poisson_2indep(
     return stat_sample, pvalue
 
 
+class TostPoissonResult(NamedTuple):
+    """
+    Result of :func:`tost_poisson_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic of the one-sided test that has the larger pvalue.
+    pvalue : float
+        p-value of the equivalence test given by the larger pvalue of the
+        two one-sided tests.
+    method : str
+        Method used to compute the underlying one-sided tests.
+    compare : {"diff", "ratio"}
+        Whether the test is for the difference or ratio of the two rates.
+    equiv_limits : tuple
+        The equivalence margin, ``(low, upp)``.
+    results_larger : PoissonTest2indepResult
+        Results instance for the one-sided test at the lower equivalence
+        margin.
+    results_smaller : PoissonTest2indepResult
+        Results instance for the one-sided test at the upper equivalence
+        margin.
+    title : str
+        Descriptive title of the equivalence test.
+    """
+
+    statistic: float
+    pvalue: float
+    method: str
+    compare: str
+    equiv_limits: tuple
+    results_larger: PoissonTest2indepResult
+    results_smaller: PoissonTest2indepResult
+    title: str
+
+
 def tost_poisson_2indep(
     count1, exposure1, count2, exposure2, low, upp, method="score", compare="ratio"
 ):
@@ -1283,9 +1397,9 @@ def tost_poisson_2indep(
 
     Returns
     -------
-    results : instance of HolderTuple class
+    TostPoissonResult
         The two main attributes are test statistic `statistic` and p-value
-        `pvalue`.
+        `pvalue`. See :class:`TostPoissonResult` for the full list.
 
     References
     ----------
@@ -1324,7 +1438,7 @@ def tost_poisson_2indep(
     statistic = np.choose(idx_max, [tt1.statistic, tt2.statistic])
     pvalue = np.choose(idx_max, [tt1.pvalue, tt2.pvalue])
 
-    res = HolderTuple(
+    res = TostPoissonResult(
         statistic=statistic,
         pvalue=pvalue,
         method=method,
@@ -1336,6 +1450,35 @@ def tost_poisson_2indep(
     )
 
     return res
+
+
+class NonequivalencePoissonResult(NamedTuple):
+    """
+    Result of :func:`nonequivalence_poisson_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic of the one-sided test that has the smaller pvalue.
+    pvalue : float
+        p-value of the non-equivalence test, ``2 * min(pvalue_low,
+        pvalue_upp)``.
+    method : str
+        Method used to compute the underlying one-sided tests.
+    results_larger : PoissonTest2indepResult
+        Results instance for the one-sided test at the lower boundary.
+    results_smaller : PoissonTest2indepResult
+        Results instance for the one-sided test at the upper boundary.
+    title : str
+        Descriptive title of the non-equivalence test.
+    """
+
+    statistic: float
+    pvalue: float
+    method: str
+    results_larger: PoissonTest2indepResult
+    results_smaller: PoissonTest2indepResult
+    title: str
 
 
 def nonequivalence_poisson_2indep(
@@ -1383,9 +1526,10 @@ def nonequivalence_poisson_2indep(
 
     Returns
     -------
-    results : instance of HolderTuple class
+    NonequivalencePoissonResult
         The two main attributes are test statistic `statistic` and p-value
-        `pvalue`.
+        `pvalue`. See :class:`NonequivalencePoissonResult` for the full
+        list.
 
     Notes
     -----
@@ -1437,7 +1581,7 @@ def nonequivalence_poisson_2indep(
     idx_min = np.asarray(tt1.pvalue < tt2.pvalue, int)
     pvalue = 2 * np.minimum(tt1.pvalue, tt2.pvalue)
     statistic = np.choose(idx_min, [tt1.statistic, tt2.statistic])
-    res = HolderTuple(
+    res = NonequivalencePoissonResult(
         statistic=statistic,
         pvalue=pvalue,
         method=method,
@@ -1639,6 +1783,49 @@ def confint_poisson_2indep(
     return ci
 
 
+class PowerRatioResult(NamedTuple):
+    """
+    Result of :func:`power_poisson_ratio_2indep`.
+
+    Behaves like the scalar `power` when converted to an array, e.g. with
+    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
+    be compared directly against a plain power value.
+
+    Parameters
+    ----------
+    power : float
+        Power of the test.
+    p_pooled : None
+        Not currently computed, reserved for future use.
+    std_null : float
+        Standard error of the test statistic under the null hypothesis
+        (without ``sqrt(nobs1)``).
+    std_alt : float
+        Standard error of the test statistic under the alternative
+        hypothesis (without ``sqrt(nobs1)``).
+    nobs1 : float or int
+        Number of observations in sample 1.
+    nobs2 : float or int
+        Number of observations in sample 2.
+    nobs_ratio : float
+        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+    alpha : float
+        Significance level used for the power computation.
+    """
+
+    power: float
+    p_pooled: None
+    std_null: float
+    std_alt: float
+    nobs1: float
+    nobs2: float
+    nobs_ratio: float
+    alpha: float
+
+    def __array__(self, dtype=None, copy=None):
+        return np.asarray(self.power, dtype=dtype)
+
+
 def power_poisson_ratio_2indep(
     rate1,
     rate2,
@@ -1696,24 +1883,12 @@ def power_poisson_ratio_2indep(
 
     Returns
     -------
-    results : results instance or float
-        If return_results is False, then only the power is returned.
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
-            type II error. Power is the probability that the test correctly
-            rejects the Null Hypothesis if the Alternative Hypothesis is true.
-
-        Other attributes in results instance include :
-
-        std_null
-            standard error of difference under the null hypothesis (without
-            sqrt(nobs1))
-        std_alt
-            standard error of difference under the alternative hypothesis
-            (without sqrt(nobs1))
+    PowerRatioResult or float
+        If return_results is False, then only the power is returned as a
+        float. If return_results is True (default), then a
+        :class:`PowerRatioResult` namedtuple is returned; it behaves like
+        the scalar power in numeric comparisons (e.g. ``assert_allclose``),
+        while also exposing `std_null`, `std_alt` and other attributes.
 
     References
     ----------
@@ -1758,7 +1933,7 @@ def power_poisson_ratio_2indep(
     p_pooled = None  # TODO: replace or remove
 
     if return_results:
-        res = HolderTuple(
+        res = PowerRatioResult(
             power=pow_,
             p_pooled=p_pooled,
             std_null=std_null,
@@ -1767,11 +1942,58 @@ def power_poisson_ratio_2indep(
             nobs2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
-            tuple_=("power",),  # override default
         )
         return res
 
     return pow_
+
+
+class PowerEquivalenceResult(NamedTuple):
+    """
+    Result of :func:`power_equivalence_poisson_2indep` and
+    :func:`power_equivalence_neginb_2indep`.
+
+    Behaves like the scalar `power` when converted to an array, e.g. with
+    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
+    be compared directly against a plain power value.
+
+    Parameters
+    ----------
+    power : float
+        Power of the equivalence test.
+    power_margins : ndarray
+        Power contributions from the lower and upper equivalence margins.
+    std_null_low : float
+        Standard error of the test statistic under the null hypothesis at
+        the lower equivalence margin.
+    std_null_upp : float
+        Standard error of the test statistic under the null hypothesis at
+        the upper equivalence margin.
+    std_alt : float
+        Standard error of the test statistic under the alternative
+        hypothesis.
+    nobs1 : float or int
+        Number of observations in sample 1.
+    nobs2 : float or int
+        Number of observations in sample 2.
+    nobs_ratio : float
+        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+    alpha : float
+        Significance level used for the power computation.
+    """
+
+    power: float
+    power_margins: np.ndarray
+    std_null_low: float
+    std_null_upp: float
+    std_alt: float
+    nobs1: float
+    nobs2: float
+    nobs_ratio: float
+    alpha: float
+
+    def __array__(self, dtype=None, copy=None):
+        return np.asarray(self.power, dtype=dtype)
 
 
 def power_equivalence_poisson_2indep(
@@ -1827,24 +2049,13 @@ def power_equivalence_poisson_2indep(
 
     Returns
     -------
-    results : results instance or float
-        If return_results is False, then only the power is returned.
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
-            type II error. Power is the probability that the test correctly
-            rejects the Null Hypothesis if the Alternative Hypothesis is true.
-
-        Other attributes in results instance include :
-
-        std_null
-            standard error of difference under the null hypothesis (without
-            sqrt(nobs1))
-        std_alt
-            standard error of difference under the alternative hypothesis
-            (without sqrt(nobs1))
+    PowerEquivalenceResult or float
+        If return_results is False (default), then only the power is
+        returned as a float. If return_results is True, then a
+        :class:`PowerEquivalenceResult` namedtuple is returned; it behaves
+        like the scalar power in numeric comparisons (e.g.
+        ``assert_allclose``), while also exposing `std_null_low`,
+        `std_null_upp`, `std_alt` and other attributes.
 
     References
     ----------
@@ -1889,9 +2100,9 @@ def power_equivalence_poisson_2indep(
     )
 
     if return_results:
-        res = HolderTuple(
+        res = PowerEquivalenceResult(
             power=pow_[0],
-            power_margins=pow[1:],
+            power_margins=pow_[1:],
             std_null_low=std_null_low,
             std_null_upp=std_null_upp,
             std_alt=std_alternative,
@@ -1899,7 +2110,6 @@ def power_equivalence_poisson_2indep(
             nobs2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
-            tuple_=("power",),  # override default
         )
         return res
     else:
@@ -2031,6 +2241,49 @@ def _std_2poisson_power(
     return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
+class PowerDiffResult(NamedTuple):
+    """
+    Result of :func:`power_poisson_diff_2indep`.
+
+    Behaves like the scalar `power` when converted to an array, e.g. with
+    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
+    be compared directly against a plain power value.
+
+    Parameters
+    ----------
+    power : float
+        Power of the test.
+    rates_alt : tuple
+        The two rates under the alternative hypothesis, ``(rate1, rate2)``.
+    std_null : float
+        Standard error of the test statistic under the null hypothesis
+        (without ``sqrt(nobs1)``).
+    std_alt : float
+        Standard error of the test statistic under the alternative
+        hypothesis (without ``sqrt(nobs1)``).
+    nobs1 : float or int
+        Number of observations in sample 1.
+    nobs2 : float or int
+        Number of observations in sample 2.
+    nobs_ratio : float
+        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+    alpha : float
+        Significance level used for the power computation.
+    """
+
+    power: float
+    rates_alt: tuple
+    std_null: float
+    std_alt: float
+    nobs1: float
+    nobs2: float
+    nobs_ratio: float
+    alpha: float
+
+    def __array__(self, dtype=None, copy=None):
+        return np.asarray(self.power, dtype=dtype)
+
+
 def power_poisson_diff_2indep(
     rate1,
     rate2,
@@ -2077,24 +2330,12 @@ def power_poisson_diff_2indep(
 
     Returns
     -------
-    results : results instance or float
-        If return_results is False, then only the power is returned.
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
-            type II error. Power is the probability that the test correctly
-            rejects the Null Hypothesis if the Alternative Hypothesis is true.
-
-        Other attributes in results instance include :
-
-        std_null
-            standard error of difference under the null hypothesis (without
-            sqrt(nobs1))
-        std_alt
-            standard error of difference under the alternative hypothesis
-            (without sqrt(nobs1))
+    PowerDiffResult or float
+        If return_results is False, then only the power is returned as a
+        float. If return_results is True (default), then a
+        :class:`PowerDiffResult` namedtuple is returned; it behaves like
+        the scalar power in numeric comparisons (e.g. ``assert_allclose``),
+        while also exposing `std_null`, `std_alt` and other attributes.
 
     References
     ----------
@@ -2130,7 +2371,7 @@ def power_poisson_diff_2indep(
     )
 
     if return_results:
-        res = HolderTuple(
+        res = PowerDiffResult(
             power=pow_,
             rates_alt=(rate2 + diff, rate2),
             std_null=std_null,
@@ -2139,7 +2380,6 @@ def power_poisson_diff_2indep(
             nobs2=nobs_ratio * nobs1,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
-            tuple_=("power",),  # override default
         )
         return res
     else:
@@ -2203,6 +2443,46 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0
     return v * nobs_ratio, r1, r2
 
 
+class PowerNegbinRatioResult(NamedTuple):
+    """
+    Result of :func:`power_negbin_ratio_2indep`.
+
+    Behaves like the scalar `power` when converted to an array, e.g. with
+    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
+    be compared directly against a plain power value.
+
+    Parameters
+    ----------
+    power : float
+        Power of the test.
+    std_null : float
+        Standard error of the test statistic under the null hypothesis
+        (without ``sqrt(nobs1)``).
+    std_alt : float
+        Standard error of the test statistic under the alternative
+        hypothesis (without ``sqrt(nobs1)``).
+    nobs1 : float or int
+        Number of observations in sample 1.
+    nobs2 : float or int
+        Number of observations in sample 2.
+    nobs_ratio : float
+        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+    alpha : float
+        Significance level used for the power computation.
+    """
+
+    power: float
+    std_null: float
+    std_alt: float
+    nobs1: float
+    nobs2: float
+    nobs_ratio: float
+    alpha: float
+
+    def __array__(self, dtype=None, copy=None):
+        return np.asarray(self.power, dtype=dtype)
+
+
 def power_negbin_ratio_2indep(
     rate1,
     rate2,
@@ -2258,24 +2538,13 @@ def power_negbin_ratio_2indep(
 
     Returns
     -------
-    results : results instance or float
-        If return_results is False, then only the power is returned.
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
-            type II error. Power is the probability that the test correctly
-            rejects the Null Hypothesis if the Alternative Hypothesis is true.
-
-        Other attributes in results instance include :
-
-        std_null
-            standard error of difference under the null hypothesis (without
-            sqrt(nobs1))
-        std_alt
-            standard error of difference under the alternative hypothesis
-            (without sqrt(nobs1))
+    PowerNegbinRatioResult or float
+        If return_results is False, then only the power is returned as a
+        float. If return_results is True (default), then a
+        :class:`PowerNegbinRatioResult` namedtuple is returned; it behaves
+        like the scalar power in numeric comparisons (e.g.
+        ``assert_allclose``), while also exposing `std_null`, `std_alt`
+        and other attributes.
 
     References
     ----------
@@ -2330,7 +2599,7 @@ def power_negbin_ratio_2indep(
     )
 
     if return_results:
-        res = HolderTuple(
+        res = PowerNegbinRatioResult(
             power=pow_,
             std_null=std_null,
             std_alt=std_alt,
@@ -2338,7 +2607,6 @@ def power_negbin_ratio_2indep(
             nobs2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
-            tuple_=("power",),  # override default
         )
         return res
 
@@ -2398,24 +2666,13 @@ def power_equivalence_neginb_2indep(
 
     Returns
     -------
-    results : results instance or float
-        If return_results is False, then only the power is returned.
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
-            type II error. Power is the probability that the test correctly
-            rejects the Null Hypothesis if the Alternative Hypothesis is true.
-
-        Other attributes in results instance include :
-
-        std_null
-            standard error of difference under the null hypothesis (without
-            sqrt(nobs1))
-        std_alt
-            standard error of difference under the alternative hypothesis
-            (without sqrt(nobs1))
+    PowerEquivalenceResult or float
+        If return_results is False, then only the power is returned as a
+        float. If return_results is True (default), then a
+        :class:`PowerEquivalenceResult` namedtuple is returned; it behaves
+        like the scalar power in numeric comparisons (e.g.
+        ``assert_allclose``), while also exposing `std_null_low`,
+        `std_null_upp`, `std_alt` and other attributes.
 
     References
     ----------
@@ -2483,9 +2740,9 @@ def power_equivalence_neginb_2indep(
     )
 
     if return_results:
-        res = HolderTuple(
+        res = PowerEquivalenceResult(
             power=pow_[0],
-            power_margins=pow[1:],
+            power_margins=pow_[1:],
             std_null_low=std_null_low,
             std_null_upp=std_null_upp,
             std_alt=std_alternative,
@@ -2493,7 +2750,6 @@ def power_equivalence_neginb_2indep(
             nobs2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
-            tuple_=("power",),  # override default
         )
         return res
     else:

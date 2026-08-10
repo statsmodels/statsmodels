@@ -572,6 +572,7 @@ statistical function for one sample
    :toctree: generated
 
    test_poisson
+   PoissonTestResult
    confint_poisson
    confint_quantile_poisson
    tolerance_int_poisson
@@ -582,10 +583,13 @@ statistical function for two independent samples
    :toctree: generated
 
    test_poisson_2indep
+   PoissonTest2indepResult
    etest_poisson_2indep
    confint_poisson_2indep
    tost_poisson_2indep
+   TostPoissonResult
    nonequivalence_poisson_2indep
+   NonequivalencePoissonResult
 
 functions for statistical power
 
@@ -593,9 +597,13 @@ functions for statistical power
    :toctree: generated
 
    power_poisson_ratio_2indep
+   PowerRatioResult
    power_equivalence_poisson_2indep
+   PowerEquivalenceResult
    power_poisson_diff_2indep
+   PowerDiffResult
    power_negbin_ratio_2indep
+   PowerNegbinRatioResult
    power_equivalence_neginb_2indep
 
 
