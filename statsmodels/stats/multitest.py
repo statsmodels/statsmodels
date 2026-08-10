@@ -6,6 +6,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from statsmodels.compat.scipy import SP_LT_112
 
 from typing import NamedTuple
 
@@ -73,6 +74,12 @@ _alias_list = [
     ["fdr_gbs"],
     ["lfdr", "lfdr_sl"],
 ]
+
+
+if SP_LT_112:
+    # lfdr does not work with scipy < 1.12 because it uses isotonic_regression
+    del multitest_methods_names["lfdr"]
+    _alias_list.remove(["lfdr", "lfdr_sl"])
 
 
 multitest_alias = {}
