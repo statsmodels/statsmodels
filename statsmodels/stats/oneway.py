@@ -560,6 +560,67 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     return ci_res
 
 
+class AnovaResult(NamedTuple):
+    """
+    Result of :func:`anova_generic` and :func:`anova_oneway`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic for k-sample mean comparison which is approximately
+        F-distributed.
+    pvalue : float
+        If ``use_var="bf"``, then the p-value is based on corrected degrees
+        of freedom following Mehrotra 1997.
+    df : tuple
+        Degrees of freedom ``(df_num, df_denom)`` for the F-distribution
+        used for `pvalue`.
+    df_num : float
+        Numerator degrees of freedom.
+    df_denom : float
+        Denominator degrees of freedom used for `pvalue`.
+    nobs_t : float
+        Total number of observations across all samples.
+    n_groups : int
+        Number of samples being compared.
+    means : ndarray
+        Mean of each sample.
+    nobs : ndarray
+        Number of observations in each sample.
+    vars_ : ndarray
+        Residual (within) variance of each sample.
+    use_var : {"unequal", "equal", "bf"}
+        The `use_var` option that was used to compute the test.
+    welch_correction : bool
+        Whether the Welch correction was included in the test statistic.
+    df2 : tuple or None
+        Degrees of freedom ``(df_num2, df_denom)`` for the Brown-Forsythe
+        1974 p-value. Only set if ``use_var="bf"``, otherwise None.
+    df_num2 : float or None
+        Numerator degrees of freedom for the Brown-Forsythe 1974 p-value.
+        Only set if ``use_var="bf"``, otherwise None.
+    pvalue2 : float or None
+        p-value based on degrees of freedom as in Brown-Forsythe 1974.
+        Only set if ``use_var="bf"``, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    df: tuple
+    df_num: float
+    df_denom: float
+    nobs_t: float
+    n_groups: int
+    means: np.ndarray
+    nobs: np.ndarray
+    vars_: np.ndarray
+    use_var: str
+    welch_correction: bool
+    df2: tuple | None = None
+    df_num2: float | None = None
+    pvalue2: float | None = None
+
+
 def anova_generic(
     means, variances, nobs, use_var="unequal", welch_correction=True, info=None
 ):
@@ -593,7 +654,7 @@ def anova_generic(
 
     Returns
     -------
-    res : results instance
+    AnovaResult
         This includes `statistic` and `pvalue`.
 
     """
@@ -651,7 +712,7 @@ def anova_generic(
         raise ValueError('use_var is to be one of "unequal", "equal" or "bf"')
 
     pval = stats.f.sf(statistic, df_num, df_denom)
-    res = HolderTuple(
+    res = AnovaResult(
         statistic=statistic,
         pvalue=pval,
         df=(df_num, df_denom),
@@ -719,25 +780,12 @@ def anova_oneway(
 
     Returns
     -------
-    res : results instance
-        The returned HolderTuple instance has the following main attributes
-        and some additional information in other attributes.
-
-        statistic : float
-            Test statistic for k-sample mean comparison which is approximately
-            F-distributed.
-        pvalue : float
-            If ``use_var="bf"``, then the p-value is based on corrected
-            degrees of freedom following Mehrotra 1997.
-        pvalue2 : float
-            This is the p-value based on degrees of freedom as in
-            Brown-Forsythe 1974 and is only available if ``use_var="bf"``.
-        df = (df_num, df_denom) : tuple of floats
-            Degrees of freedom for the F-distribution depend on ``use_var``.
-            If ``use_var="bf"``, then `df_denom` is for Mehrotra p-values
-            `df_denom2` is available for Brown-Forsythe 1974 p-values.
-            `df_num` is the same numerator degrees of freedom for both
-            p-values.
+    AnovaResult
+        See :class:`AnovaResult` for a description of the attributes. If
+        ``use_var="bf"``, then `pvalue` is based on corrected degrees of
+        freedom following Mehrotra 1997, and `pvalue2`, `df2` and `df_num2`
+        hold the Brown-Forsythe 1974 alternative; otherwise those three are
+        None.
 
     See Also
     --------
@@ -1240,6 +1288,73 @@ def simulate_power_equivalence_oneway(
     return res
 
 
+class ScaleAnovaResult(NamedTuple):
+    """
+    Result of :func:`test_scale_oneway`.
+
+    Has the same attributes as :class:`AnovaResult`, computed on the
+    transformed data, plus `data_transformed`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic for k-sample mean comparison which is approximately
+        F-distributed.
+    pvalue : float
+        If ``method="bf"``, then the p-value is based on corrected degrees
+        of freedom following Mehrotra 1997.
+    df : tuple
+        Degrees of freedom ``(df_num, df_denom)`` for the F-distribution
+        used for `pvalue`.
+    df_num : float
+        Numerator degrees of freedom.
+    df_denom : float
+        Denominator degrees of freedom used for `pvalue`.
+    nobs_t : float
+        Total number of observations across all samples.
+    n_groups : int
+        Number of samples being compared.
+    means : ndarray
+        Mean of each sample of the transformed data.
+    nobs : ndarray
+        Number of observations in each sample.
+    vars_ : ndarray
+        Residual (within) variance of each sample of the transformed data.
+    use_var : {"unequal", "equal", "bf"}
+        The `method` option that was used to compute the test.
+    welch_correction : bool
+        Whether the Welch correction was included in the test statistic.
+    data_transformed : list of ndarray
+        The centered and transformed data used to compute the test.
+    df2 : tuple or None
+        Degrees of freedom ``(df_num2, df_denom)`` for the Brown-Forsythe
+        1974 p-value. Only set if ``method="bf"``, otherwise None.
+    df_num2 : float or None
+        Numerator degrees of freedom for the Brown-Forsythe 1974 p-value.
+        Only set if ``method="bf"``, otherwise None.
+    pvalue2 : float or None
+        p-value based on degrees of freedom as in Brown-Forsythe 1974.
+        Only set if ``method="bf"``, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    df: tuple
+    df_num: float
+    df_denom: float
+    nobs_t: float
+    n_groups: int
+    means: np.ndarray
+    nobs: np.ndarray
+    vars_: np.ndarray
+    use_var: str
+    welch_correction: bool
+    data_transformed: list
+    df2: tuple | None = None
+    df_num2: float | None = None
+    pvalue2: float | None = None
+
+
 def test_scale_oneway(
     data,
     method="bf",
@@ -1298,25 +1413,12 @@ def test_scale_oneway(
 
     Returns
     -------
-    res : results instance
-        The returned HolderTuple instance has the following main attributes
-        and some additional information in other attributes.
-
-        statistic : float
-            Test statistic for k-sample mean comparison which is approximately
-            F-distributed.
-        pvalue : float
-            If ``method="bf"``, then the p-value is based on corrected
-            degrees of freedom following Mehrotra 1997.
-        pvalue2 : float
-            This is the p-value based on degrees of freedom as in
-            Brown-Forsythe 1974 and is only available if ``method="bf"``.
-        df : (df_num, df_denom)
-            Tuple containing degrees of freedom for the F-distribution depend
-            on ``method``. If ``method="bf"``, then `df_denom` is for Mehrotra
-            p-values `df_denom2` is available for Brown-Forsythe 1974 p-values.
-            `df_num` is the same numerator degrees of freedom for both
-            p-values.
+    ScaleAnovaResult
+        See :class:`ScaleAnovaResult` for a description of the attributes.
+        If ``method="bf"``, then `pvalue` is based on corrected degrees of
+        freedom following Mehrotra 1997, and `pvalue2`, `df2` and `df_num2`
+        hold the Brown-Forsythe 1974 alternative; otherwise those three are
+        None.
 
     See Also
     --------
@@ -1331,14 +1433,14 @@ def test_scale_oneway(
         for x in data
     ]
 
-    res = anova_oneway(
+    res0 = anova_oneway(
         xxd,
         groups=None,
         use_var=method,
         welch_correction=True,
         trim_frac=trim_frac_anova,
     )
-    res.data_transformed = xxd
+    res = ScaleAnovaResult(data_transformed=xxd, **res0._asdict())
     return res
 
 

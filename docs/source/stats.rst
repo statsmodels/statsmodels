@@ -647,12 +647,14 @@ Status: experimental, API might change, added in 0.12
 
    anova_oneway
    anova_generic
+   AnovaResult
    equivalence_oneway
    equivalence_oneway_generic
    power_equivalence_oneway
    _power_equivalence_oneway_emp
 
    test_scale_oneway
+   ScaleAnovaResult
    equivalence_scale_oneway
 
    confint_effectsize_oneway
