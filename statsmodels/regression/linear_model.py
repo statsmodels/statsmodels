@@ -1614,10 +1614,6 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     ----------
     http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YWSourceFiles/YW-Eshel.pdf
     """
-    # TODO: define R better, look back at notes and technical notes on YW.
-    # First link here is useful
-    # http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
-
     use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     method = string_like(method, "method", options=("adjusted", "mle"))
 
