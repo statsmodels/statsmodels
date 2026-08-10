@@ -1438,7 +1438,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
             cov_all.extend([c0, c01, c02, c03])
         else:
             # compensate for initial rescaling
-            # TODO: this does not return list of Holder anymore
+            # TODO: this does not return list of named tuples anymore
             s = np.outer(std, std)
             cov_all.extend([r.cov * s for r in [c0, c01, c02, c03]])
 
