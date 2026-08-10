@@ -1377,7 +1377,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
         If standardize and retransform are both True, then the returned
         covariances are transformed back to compensate for the initial
         standardization, and the result is a list of ndarrays instead of a
-        list of Holder instances.
+        list of named tuples.
 
     Returns
     -------
@@ -1916,6 +1916,59 @@ class CovM:
         return res
 
 
+class CovDetMCDResult(NamedTuple):
+    """
+    Result of :meth:`CovDetMCD.fit`.
+
+    Also used internally for the per-starting-set candidates and, via
+    `results_raw`, for the non-reweighted result nested inside the final
+    reweighted result.
+
+    Parameters
+    ----------
+    mean : ndarray
+        Estimated mean.
+    cov : ndarray
+        Estimated covariance.
+    method : str
+        Label of the starting set that produced this candidate, or of the
+        best candidate if this is the final (possibly reweighted) result.
+    det_subset : float or None
+        Determinant of the covariance of the evaluation subset. Only set
+        for the non-reweighted (raw) result.
+    converged : bool or None
+        Whether the final c-step iteration converged. Only set if the best
+        candidate was refit to convergence, i.e. if ``maxiter_step <
+        maxiter`` in :meth:`CovDetMCD.fit`.
+    det_all : ndarray or None
+        Determinants of the covariance of the evaluation subset for all
+        starting sets. Only set on the non-reweighted (raw) result.
+    idx_best : int or None
+        Index of the best starting set in `det_all`. Only set on the
+        non-reweighted (raw) result.
+    tmean : ndarray or None
+        Location estimate used to standardize the data before computing
+        starting sets. Only set on the non-reweighted (raw) result.
+    tscale : ndarray or None
+        Scale estimate used to standardize the data before computing
+        starting sets. Only set on the non-reweighted (raw) result.
+    results_raw : CovDetMCDResult or None
+        The non-reweighted (raw) result. Only set if ``reweight=True`` in
+        :meth:`CovDetMCD.fit`.
+    """
+
+    mean: np.ndarray
+    cov: np.ndarray
+    method: str
+    det_subset: float | None = None
+    converged: bool | None = None
+    det_all: np.ndarray | None = None
+    idx_best: int | None = None
+    tmean: np.ndarray | None = None
+    tscale: np.ndarray | None = None
+    results_raw: "CovDetMCDResult | None" = None
+
+
 class CovDetMCD:
     """
     Minimum covariance determinant estimator with deterministic starts
@@ -2109,7 +2162,10 @@ class CovDetMCD:
 
         Returns
         -------
-        Holder instance with results
+        CovDetMCDResult
+            Named tuple with `mean`, `cov`, `method` and extra attributes
+            depending on `reweight`. See :class:`CovDetMCDResult` for
+            details.
         """
 
         x = self.data
@@ -2141,11 +2197,11 @@ class CovDetMCD:
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
             mean, cov, det, _ = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
-            res[ii] = Holder(
+            res[ii] = CovDetMCDResult(
                 mean=mean,
                 cov=cov * fac_trunc,
-                det_subset=det,
                 method=method,
+                det_subset=det,
             )
 
         det_all = np.array([i.det_subset for i in res.values()])
@@ -2160,35 +2216,28 @@ class CovDetMCD:
             mean, cov, det, conv = self._fit_one(
                 x, None, h, maxiter=maxiter, mean=best.mean, cov=best.cov
             )
-            best = Holder(
-                mean=mean,
-                cov=cov * fac_trunc,
-                det_subset=det,
-                method=method,
-                converged=conv,
+            best = best._replace(
+                mean=mean, cov=cov * fac_trunc, det_subset=det, converged=conv
             )
 
-        # include extra info in returned Holder instance
-        best.det_all = det_all
-        best.idx_best = idx_best
-
-        best.tmean = m
-        best.tscale = s
+        # include extra info in the returned CovDetMCDResult
+        best = best._replace(
+            det_all=det_all, idx_best=idx_best, tmean=m, tscale=s
+        )
 
         if reweight:
             cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac, ddof=1)
             fac_trunc = coef_normalize_cov_truncated(trim_frac, k_vars)
-            best_w = Holder(
+            best_w = CovDetMCDResult(
                 mean=mean,
                 cov=cov * fac_trunc,
-                # det_subset=det,
-                method=method,
+                method=best.method,
                 results_raw=best,
             )
 
             return best_w
         else:
-            return best  # is Holder instance already
+            return best
 
 
 class CovDetS:
