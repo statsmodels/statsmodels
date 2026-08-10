@@ -544,9 +544,12 @@ def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
     if PLATFORM_WIN:
         from sklearn.isotonic import IsotonicRegression
         ir = IsotonicRegression()
-        _x = np.arange(y.shape[0])
-        ir.fit(_x, -y, sample_weight=weights)
-        slopes_uniq = -ir.fit_transform(_x, -y, sample_weight=weights)
+        if y.size:
+            _x = np.arange(y.shape[0])
+            ir.fit(_x, -y, sample_weight=weights)
+            slopes_uniq = -ir.fit_transform(_x, -y, sample_weight=weights)
+        else:
+            slopes_uniq = np.array([])
     else:
         slope_reg = isotonic_regression(-y, weights=weights, increasing=True)
         slopes_uniq = -slope_reg.x
