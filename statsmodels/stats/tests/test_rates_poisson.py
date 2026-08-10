@@ -306,40 +306,35 @@ def test_rate_poisson_diff_ratio_consistency(method):
                     rtol=1e-13)
 
 
-def _sp(res):
-    # extract (statistic, pvalue) from a PoissonTestResult namedtuple
-    return res.statistic, res.pvalue
-
-
 def test_twosample_poisson():
     # testing against two examples in Gu et al
 
     # example 1
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
 
-    s1, pv1 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="wald"))
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald")
     pv1r = 0.000356
     assert_allclose(pv1, pv1r*2, rtol=0, atol=5e-6)
     assert_allclose(s1, 3.384913, atol=0, rtol=5e-6)  # regression test
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="score"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score")
     pv2r = 0.000316
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.417402, atol=0, rtol=5e-6)  # regression test
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="wald-log"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="wald-log")
     pv2r = 0.000420
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.3393, atol=0, rtol=5e-6)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="score-log"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="score-log")
     pv2r = 0.000200
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.5406, atol=0, rtol=5e-5)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt")
     pv2r = 0.000285
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.445485, atol=0, rtol=5e-6)  # regression test
@@ -348,33 +343,33 @@ def test_twosample_poisson():
     # example2
     # I don't know why it's only 2.5 decimal agreement, rounding?
     count1, n1, count2, n2 = 41, 28010, 15, 19017
-    s1, pv1 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
-                                          value=1.5))
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
+                                      value=1.5)
     pv1r = 0.2309
     assert_allclose(pv1, pv1r*2, rtol=0, atol=5e-4)
     assert_allclose(s1, 0.735447, atol=0, rtol=5e-6)  # regression test
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
-                                          value=1.5))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
+                                      value=1.5)
     pv2r = 0.2398
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.706631, atol=0, rtol=5e-6)  # regression test
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="wald-log", value=1.5))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="wald-log", value=1.5)
     pv2r = 0.2402
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7056, atol=0, rtol=5e-4)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
         count1, n1, count2, n2, method="score-log", value=1.5
-    ))
+    )
     pv2r = 0.2303
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7380, atol=0, rtol=5e-4)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
-                                          value=1.5))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
+                                      value=1.5)
     pv2r = 0.2499
     assert_allclose(pv2, pv2r*2, rtol=0, atol=5e-3)
     assert_allclose(s2, 0.674401, atol=0, rtol=5e-6)  # regression test
@@ -383,32 +378,32 @@ def test_twosample_poisson():
     # example 1 onesided
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
 
-    s1, pv1 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
-                                          alternative="larger"))
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
+                                      alternative="larger")
     pv1r = 0.000356
     assert_allclose(pv1, pv1r, rtol=0, atol=5e-6)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
-                                          alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
+                                      alternative="larger")
     pv2r = 0.000316
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-6)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
-                                          alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
+                                      alternative="larger")
     pv2r = 0.000285
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-6)
 
     # 'exact-cond', 'cond-midp'
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="exact-cond",
-                                          value=1, alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="exact-cond",
+                                      value=1, alternative="larger")
     pv2r = 0.000428  # typo in Gu et al, switched pvalues between C and M
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="cond-midp",
-                                          value=1, alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="cond-midp",
+                                      value=1, alternative="larger")
     pv2r = 0.000310
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
@@ -427,32 +422,32 @@ def test_twosample_poisson():
     # example2 onesided
     # I don't know why it's only 2.5 decimal agreement, rounding?
     count1, n1, count2, n2 = 41, 28010, 15, 19017
-    s1, pv1 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
-                                          value=1.5, alternative="larger"))
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald",
+                                      value=1.5, alternative="larger")
     pv1r = 0.2309
     assert_allclose(pv1, pv1r, rtol=0, atol=5e-4)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
-                                          value=1.5, alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2398
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
-                                          value=1.5, alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2499
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
     # 'exact-cond', 'cond-midp'
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="exact-cond",
-                                          value=1.5, alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="exact-cond",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2913
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    s2, pv2 = _sp(smr.test_poisson_2indep(count1, n1, count2, n2,
-                                          method="cond-midp",
-                                          value=1.5, alternative="larger"))
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2,
+                                      method="cond-midp",
+                                      value=1.5, alternative="larger")
     pv2r = 0.2450
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
@@ -682,8 +677,8 @@ def test_alternative(case):
     # regression test numbers, but those are close to each other
     alt, meth = case
     count1, n1, count2, n2 = 6, 51., 1, 54.
-    _, pv = _sp(smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
-                                        value=1.2, alternative=alt))
+    _, pv = smr.test_poisson_2indep(count1, n1, count2, n2, method=meth,
+                                    value=1.2, alternative=alt)
     assert_allclose(pv, cases_alt[case], rtol=1e-13)
 
 

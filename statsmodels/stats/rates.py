@@ -12,6 +12,7 @@ import numpy as np
 from scipy import optimize, stats
 
 from statsmodels.stats._inference_tools import _mover_confint
+from statsmodels.stats.base import compat_2tuple_unpack
 from statsmodels.stats.weightstats import _zstat_generic2
 
 # shorthand
@@ -45,6 +46,7 @@ method_names_poisson_1samp = {
 }
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class PoissonTestResult(NamedTuple):
     """
     Result of :func:`test_poisson`.
@@ -724,6 +726,7 @@ method_names_poisson_2indep = {
 }
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class PoissonTest2indepResult(NamedTuple):
     """
     Result of :func:`test_poisson_2indep`.
@@ -1293,6 +1296,7 @@ def etest_poisson_2indep(
     return stat_sample, pvalue
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class TostPoissonResult(NamedTuple):
     """
     Result of :func:`tost_poisson_2indep`.
@@ -1452,6 +1456,7 @@ def tost_poisson_2indep(
     return res
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class NonequivalencePoissonResult(NamedTuple):
     """
     Result of :func:`nonequivalence_poisson_2indep`.
@@ -1783,6 +1788,7 @@ def confint_poisson_2indep(
     return ci
 
 
+@compat_2tuple_unpack("power")
 class PowerRatioResult(NamedTuple):
     """
     Result of :func:`power_poisson_ratio_2indep`.
@@ -1948,6 +1954,7 @@ def power_poisson_ratio_2indep(
     return pow_
 
 
+@compat_2tuple_unpack("power")
 class PowerEquivalenceResult(NamedTuple):
     """
     Result of :func:`power_equivalence_poisson_2indep` and
@@ -2241,6 +2248,7 @@ def _std_2poisson_power(
     return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
+@compat_2tuple_unpack("power")
 class PowerDiffResult(NamedTuple):
     """
     Result of :func:`power_poisson_diff_2indep`.
@@ -2443,6 +2451,7 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0
     return v * nobs_ratio, r1, r2
 
 
+@compat_2tuple_unpack("power")
 class PowerNegbinRatioResult(NamedTuple):
     """
     Result of :func:`power_negbin_ratio_2indep`.
