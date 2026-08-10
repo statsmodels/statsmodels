@@ -10,6 +10,7 @@ from typing import NamedTuple
 import numpy as np
 from scipy import stats
 
+from statsmodels.stats.base import compat_2tuple_unpack
 from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.validation import array_like
 
@@ -19,6 +20,7 @@ def _logdet(x):
     return np.linalg.slogdet(x)[1]
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class HotellingResult(NamedTuple):
     """
     Result of :func:`test_mvmean` and :func:`test_mvmean_2indep`.
@@ -293,6 +295,7 @@ to the formula collection in Bartlett 1954 for several of them.
 """  # pylint: disable=W0105
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class CovTestResult(NamedTuple):
     """
     Result of :func:`test_cov`, :func:`test_cov_spherical`,
@@ -583,6 +586,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     )
 
 
+@compat_2tuple_unpack("statistic", "pvalue")
 class CovOnewayResult(NamedTuple):
     """
     Result of :func:`test_cov_oneway`.
