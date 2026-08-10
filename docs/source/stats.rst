@@ -619,11 +619,14 @@ Status: experimental, API might change, added in 0.12
    confint_mvmean
    confint_mvmean_fromstats
    test_mvmean_2indep
+   HotellingResult
    test_cov
    test_cov_blockdiagonal
    test_cov_diagonal
    test_cov_oneway
+   CovOnewayResult
    test_cov_spherical
+   CovTestResult
 
 
 .. _oneway_stats:

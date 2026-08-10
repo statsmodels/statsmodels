@@ -5,10 +5,11 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
 from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.validation import array_like
 
@@ -16,6 +17,31 @@ from statsmodels.tools.validation import array_like
 # shortcut function
 def _logdet(x):
     return np.linalg.slogdet(x)[1]
+
+
+class HotellingResult(NamedTuple):
+    """
+    Result of :func:`test_mvmean` and :func:`test_mvmean_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Hotelling's T-squared test statistic, rescaled to be F-distributed.
+    pvalue : float
+        p-value based on the F distribution.
+    df : tuple
+        Numerator and denominator degrees of freedom of the F distribution.
+    t2 : float
+        Hotelling's T-squared statistic.
+    distr : str
+        Name of the reference distribution used for `pvalue`, ``"F"``.
+    """
+
+    statistic: float
+    pvalue: float
+    df: tuple
+    t2: float
+    distr: str
 
 
 def test_mvmean(data, mean_null=0, return_results=True):
@@ -34,8 +60,8 @@ def test_mvmean(data, mean_null=0, return_results=True):
 
     Returns
     -------
-    results : instance of a results class with attributes
-        statistic, pvalue, t2 and df
+    HotellingResult
+        Namedtuple with attributes statistic, pvalue, t2 and df.
     (statistic, pvalue) : tuple
         If return_results is false, then only the test statistic and the
         pvalue are returned.
@@ -52,7 +78,7 @@ def test_mvmean(data, mean_null=0, return_results=True):
     df = (k_vars, nobs - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
     if return_results:
-        res = HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
+        res = HotellingResult(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
         return res
     else:
         return statistic, pvalue
@@ -74,8 +100,8 @@ def test_mvmean_2indep(data1, data2):
 
     Returns
     -------
-    results : instance of a results class with attributes
-        statistic, pvalue, t2 and df
+    HotellingResult
+        Namedtuple with attributes statistic, pvalue, t2 and df.
     """
     x1 = array_like(data1, "x1", ndim=2)
     x2 = array_like(data2, "x2", ndim=2)
@@ -96,7 +122,7 @@ def test_mvmean_2indep(data1, data2):
     statistic = t2 / factor
     df = (k_vars, nobs_t - 1 - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
-    return HolderTuple(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
+    return HotellingResult(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
 
 
 def confint_mvmean(data, lin_transf=None, alpha=0.05, simult=False):
@@ -267,6 +293,36 @@ to the formula collection in Bartlett 1954 for several of them.
 """  # pylint: disable=W0105
 
 
+class CovTestResult(NamedTuple):
+    """
+    Result of :func:`test_cov`, :func:`test_cov_spherical`,
+    :func:`test_cov_diagonal` and :func:`test_cov_blockdiagonal`.
+
+    Parameters
+    ----------
+    statistic : float
+        Chi-square test statistic.
+    pvalue : float
+        p-value based on the chi-square distribution.
+    df : float
+        Degrees of freedom of the chi-square distribution.
+    distr : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+    null : str
+        Short description of the null hypothesis being tested.
+    cov_null : ndarray or None
+        Covariance matrix under the null hypothesis. Only set by
+        :func:`test_cov`, otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    df: float
+    distr: str
+    null: str
+    cov_null: np.ndarray | None = None
+
+
 def test_cov(cov, nobs, cov_null):
     """
     One sample hypothesis test for covariance equal to null covariance
@@ -286,8 +342,9 @@ def test_cov(cov, nobs, cov_null):
 
     Returns
     -------
-    res : instance of HolderTuple
-        results with ``statistic, pvalue`` and other attributes like ``df``
+    CovTestResult
+        Namedtuple with ``statistic, pvalue`` and other attributes like
+        ``df``.
 
     References
     ----------
@@ -319,7 +376,7 @@ def test_cov(cov, nobs, cov_null):
     statistic = fact * fact2
     df = k * (k + 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(
+    return CovTestResult(
         statistic=statistic,
         pvalue=pvalue,
         df=df,
@@ -352,8 +409,9 @@ def test_cov_spherical(cov, nobs):
 
     Returns
     -------
-    res : instance of HolderTuple
-        results with ``statistic, pvalue`` and other attributes like ``df``
+    CovTestResult
+        Namedtuple with ``statistic, pvalue`` and other attributes like
+        ``df``.
 
     References
     ----------
@@ -379,7 +437,7 @@ def test_cov_spherical(cov, nobs):
     statistic *= k * np.log(np.trace(cov)) - _logdet(cov) - k * np.log(k)
     df = k * (k + 1) / 2 - 1
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(
+    return CovTestResult(
         statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="spherical"
     )
 
@@ -407,8 +465,9 @@ def test_cov_diagonal(cov, nobs):
 
     Returns
     -------
-    res : instance of HolderTuple
-        results with ``statistic, pvalue`` and other attributes like ``df``
+    CovTestResult
+        Namedtuple with ``statistic, pvalue`` and other attributes like
+        ``df``.
 
     References
     ----------
@@ -427,7 +486,7 @@ def test_cov_diagonal(cov, nobs):
     statistic = -(nobs - 1 - (2 * k + 5) / 6) * _logdet(R)
     df = k * (k - 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(
+    return CovTestResult(
         statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="diagonal"
     )
 
@@ -489,8 +548,9 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
 
     Returns
     -------
-    res : instance of HolderTuple
-        results with ``statistic, pvalue`` and other attributes like ``df``
+    CovTestResult
+        Namedtuple with ``statistic, pvalue`` and other attributes like
+        ``df``.
 
     References
     ----------
@@ -518,9 +578,54 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
 
     df = a2 / 2
     pvalue = stats.chi2.sf(statistic, df)
-    return HolderTuple(
+    return CovTestResult(
         statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="block-diagonal"
     )
+
+
+class CovOnewayResult(NamedTuple):
+    """
+    Result of :func:`test_cov_oneway`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic of the F-test version, same value as `statistic_f`.
+    pvalue : float
+        p-value of the F-test version, same value as `pvalue_f`.
+    statistic_base : float
+        Box's M statistic before the chi-square or F approximation
+        correction factors are applied.
+    statistic_chi2 : float
+        Test statistic of the chi-square approximation.
+    pvalue_chi2 : float
+        p-value based on the chi-square approximation.
+    df_chi2 : float
+        Degrees of freedom of the chi-square approximation.
+    distr_chi2 : str
+        Name of the chi-square reference distribution, ``"chi2"``.
+    statistic_f : float
+        Test statistic of the F approximation, same value as `statistic`.
+    pvalue_f : float
+        p-value based on the F approximation, same value as `pvalue`.
+    df_f : tuple
+        Numerator and denominator degrees of freedom of the F
+        approximation.
+    distr_f : str
+        Name of the F reference distribution, ``"F"``.
+    """
+
+    statistic: float
+    pvalue: float
+    statistic_base: float
+    statistic_chi2: float
+    pvalue_chi2: float
+    df_chi2: float
+    distr_chi2: str
+    statistic_f: float
+    pvalue_f: float
+    df_f: tuple
+    distr_f: str
 
 
 def test_cov_oneway(cov_list, nobs_list):
@@ -549,11 +654,11 @@ def test_cov_oneway(cov_list, nobs_list):
 
     Returns
     -------
-    res : instance of HolderTuple
-        Results contains test statistic and pvalues for both chisquare and F
-        distribution based tests, identified by the name ending "_chi2" and
-        "_f".
-        Attributes ``statistic, pvalue`` refer to the F-test version.
+    CovOnewayResult
+        Namedtuple containing test statistic and pvalues for both chisquare
+        and F distribution based tests, identified by the name ending
+        "_chi2" and "_f". Attributes ``statistic, pvalue`` refer to the
+        F-test version.
 
     Notes
     -----
@@ -600,7 +705,7 @@ def test_cov_oneway(cov_list, nobs_list):
         statistic_f = a2 / a1 * tmp / (1 + tmp)
     df_f = (a1, a2)
     pvalue_f = stats.f.sf(statistic_f, *df_f)
-    return HolderTuple(
+    return CovOnewayResult(
         statistic=statistic_f,  # name convention, using F here
         pvalue=pvalue_f,  # name convention, using F here
         statistic_base=stat0,

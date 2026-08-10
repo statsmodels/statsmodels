@@ -232,9 +232,9 @@ class TestCovStructure:
         # df = 5
         chi2 = 21.53275509455011
 
-        stat, pv = smmv.test_cov_spherical(cov, nobs)
-        assert_allclose(stat, chi2, rtol=1e-7)
-        assert_allclose(pv, p_chi2, rtol=1e-6)
+        res = smmv.test_cov_spherical(cov, nobs)
+        assert_allclose(res.statistic, chi2, rtol=1e-7)
+        assert_allclose(res.pvalue, p_chi2, rtol=1e-6)
 
     def test_diagonal(self):
         cov, nobs = self.cov, self.nobs
@@ -243,9 +243,9 @@ class TestCovStructure:
         # df = 3
         chi2 = 17.91025335733012
 
-        stat, pv = smmv.test_cov_diagonal(cov, nobs)
-        assert_allclose(stat, chi2, rtol=1e-8)
-        assert_allclose(pv, p_chi2, rtol=1e-7)
+        res = smmv.test_cov_diagonal(cov, nobs)
+        assert_allclose(res.statistic, chi2, rtol=1e-8)
+        assert_allclose(res.pvalue, p_chi2, rtol=1e-7)
 
     def test_blockdiagonal(self):
         cov, nobs = self.cov, self.nobs
@@ -257,9 +257,9 @@ class TestCovStructure:
         # cov_blocks = cov[:2, :2], cov[-1:, -1:]
         # stat, pv = smmv.test_cov_blockdiagonal(cov, nobs, cov_blocks)
         block_len = [2, 1]
-        stat, pv = smmv.test_cov_blockdiagonal(cov, nobs, block_len)
-        assert_allclose(stat, chi2, rtol=1e-7)
-        assert_allclose(pv, p_chi2, rtol=1e-6)
+        res = smmv.test_cov_blockdiagonal(cov, nobs, block_len)
+        assert_allclose(res.statistic, chi2, rtol=1e-7)
+        assert_allclose(res.pvalue, p_chi2, rtol=1e-6)
 
     def test_covmat(self):
         cov, nobs = self.cov, self.nobs
@@ -269,9 +269,9 @@ class TestCovStructure:
         chi2 = 5.481422374989864
 
         cov_null = np.array([[30, 15, 0], [15, 20, 0], [0, 0, 10]])
-        stat, pv = smmv.test_cov(cov, nobs, cov_null)
-        assert_allclose(stat, chi2, rtol=1e-7)
-        assert_allclose(pv, p_chi2, rtol=1e-6)
+        res = smmv.test_cov(cov, nobs, cov_null)
+        assert_allclose(res.statistic, chi2, rtol=1e-7)
+        assert_allclose(res.pvalue, p_chi2, rtol=1e-6)
 
 
 def test_cov_oneway():
@@ -303,9 +303,8 @@ def test_cov_oneway():
           27.995967741935484]])
 
     res = smmv.test_cov_oneway([cov_m, cov_f], nobs)
-    stat, pv = res
-    assert_allclose(stat, F_Box, rtol=1e-10)
-    assert_allclose(pv, p_F_Box, rtol=1e-6)
+    assert_allclose(res.statistic, F_Box, rtol=1e-10)
+    assert_allclose(res.pvalue, p_F_Box, rtol=1e-6)
     assert_allclose(res.statistic_f, F_Box, rtol=1e-10)
     assert_allclose(res.pvalue_f, p_F_Box, rtol=1e-6)
     assert_allclose(res.df_f, (df_m_Box, df_r_Box), rtol=1e-13)
