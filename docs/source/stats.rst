@@ -656,8 +656,10 @@ Status: experimental, API might change, added in 0.12
    equivalence_scale_oneway
 
    confint_effectsize_oneway
+   ConfintEffectSizeResult
    confint_noncentrality
    convert_effectsize_fsqu
+   EffectSizeFsquResult
    effectsize_oneway
    f2_to_wellek
    fstat_to_wellek

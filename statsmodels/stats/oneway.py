@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
@@ -184,6 +186,24 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     return f2
 
 
+class EffectSizeFsquResult(NamedTuple):
+    """
+    Result of :func:`convert_effectsize_fsqu`.
+
+    Parameters
+    ----------
+    f2 : float
+        Squared Cohen's f effect size, the signal to noise ratio
+        ``var_explained / var_residual``.
+    eta2 : float
+        Squared eta effect size, the proportion of explained variance
+        ``var_explained / var_total``.
+    """
+
+    f2: float
+    eta2: float
+
+
 def convert_effectsize_fsqu(f2=None, eta2=None):
     """
     Convert squared effect sizes in f family
@@ -206,8 +226,8 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
 
     Returns
     -------
-    res : Holder instance
-        An instance of the Holder class with f2 and eta2 as attributes.
+    EffectSizeFsquResult
+        A namedtuple with f2 and eta2 as attributes.
 
     """
     if f2 is not None:
@@ -216,7 +236,7 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
     elif eta2 is not None:
         f2 = eta2 / (1 - eta2)
 
-    res = Holder(f2=f2, eta2=eta2)
+    res = EffectSizeFsquResult(f2=f2, eta2=eta2)
     return res
 
 
@@ -408,6 +428,40 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
     return ci
 
 
+class ConfintEffectSizeResult(NamedTuple):
+    """
+    Result of :func:`confint_effectsize_oneway`.
+
+    Parameters
+    ----------
+    f2 : float
+        Squared Cohen's f effect size at the confidence limits of the
+        noncentrality parameter.
+    eta2 : float
+        Squared eta effect size at the confidence limits of the
+        noncentrality parameter.
+    ci_omega2 : ndarray
+        Confidence interval for the omega-squared effect size.
+    ci_nc : ndarray
+        Confidence interval for the noncentrality parameter.
+    ci_f : ndarray
+        Confidence interval for Cohen's f effect size, ``sqrt(f2)``.
+    ci_eta : ndarray
+        Confidence interval for the eta effect size, ``sqrt(eta2)``.
+    ci_f_corrected : ndarray
+        Confidence interval for Cohen's f effect size with the small-sample
+        correction used by Steiger (2004).
+    """
+
+    f2: float
+    eta2: float
+    ci_omega2: np.ndarray
+    ci_nc: np.ndarray
+    ci_f: np.ndarray
+    ci_eta: np.ndarray
+    ci_f_corrected: np.ndarray
+
+
 def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     """
     Confidence interval for effect size in oneway anova for F distribution
@@ -434,8 +488,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
 
     Returns
     -------
-    Holder
-        Class with effect size and confidence attributes
+    ConfintEffectSizeResult
+        Namedtuple with effect size and confidence attributes.
 
     See Also
     --------
@@ -460,12 +514,16 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     ci_nc = confint_noncentrality(f_stat, df, alpha=alpha)
 
     ci_f2 = ci_nc / nobs
-    ci_res = convert_effectsize_fsqu(f2=ci_f2)
-    ci_res.ci_omega2 = (ci_f2 - df1 / df2) / (ci_f2 + 1 + 1 / df2)
-    ci_res.ci_nc = ci_nc
-    ci_res.ci_f = np.sqrt(ci_res.f2)
-    ci_res.ci_eta = np.sqrt(ci_res.eta2)
-    ci_res.ci_f_corrected = np.sqrt(ci_res.f2 * (df1 + 1) / df1)
+    es = convert_effectsize_fsqu(f2=ci_f2)
+    ci_res = ConfintEffectSizeResult(
+        f2=es.f2,
+        eta2=es.eta2,
+        ci_omega2=(ci_f2 - df1 / df2) / (ci_f2 + 1 + 1 / df2),
+        ci_nc=ci_nc,
+        ci_f=np.sqrt(es.f2),
+        ci_eta=np.sqrt(es.eta2),
+        ci_f_corrected=np.sqrt(es.f2 * (df1 + 1) / df1),
+    )
 
     return ci_res
 
