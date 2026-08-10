@@ -650,12 +650,14 @@ Status: experimental, API might change, added in 0.12
    AnovaResult
    equivalence_oneway
    equivalence_oneway_generic
+   EquivalenceOnewayResult
    power_equivalence_oneway
    _power_equivalence_oneway_emp
 
    test_scale_oneway
    ScaleAnovaResult
    equivalence_scale_oneway
+   ScaleEquivalenceResult
 
    confint_effectsize_oneway
    ConfintEffectSizeResult

@@ -853,6 +853,52 @@ def anova_oneway(
     return res
 
 
+class EquivalenceOnewayResult(NamedTuple):
+    """
+    Result of :func:`equivalence_oneway_generic` and :func:`equivalence_oneway`.
+
+    Parameters
+    ----------
+    statistic : float
+        F-statistic used for the equivalence test, same value as `f_stat`.
+    pvalue : float
+        p-value of the equivalence test.
+    effectsize : float
+        Estimated effect size, in the units given by `type_effectsize`.
+    crit_f : float
+        Critical value for the F-statistic at the boundary of the
+        equivalence margin.
+    crit_es : float
+        Critical value for the effect size at the boundary of the
+        equivalence margin, in the same units as `effectsize`.
+    reject : bool
+        True if the null hypothesis of non-equivalence is rejected, i.e.
+        the data supports equivalence within `equiv_margin`.
+    power_zero : float
+        Power of the equivalence test if the true effect size were zero.
+    df : tuple
+        Degrees of freedom ``(df1, df2)`` of the F-distribution used for
+        the test.
+    f_stat : float
+        F-statistic used for the equivalence test, same value as
+        `statistic`.
+    type_effectsize : str
+        Description of the effect size type used for `effectsize` and
+        `crit_es`, determined by `margin_type`.
+    """
+
+    statistic: float
+    pvalue: float
+    effectsize: float
+    crit_f: float
+    crit_es: float
+    reject: bool
+    power_zero: float
+    df: tuple
+    f_stat: float
+    type_effectsize: str
+
+
 def equivalence_oneway_generic(
     f_stat, n_groups, nobs, equiv_margin, df, alpha=0.05, margin_type="f2"
 ):
@@ -891,9 +937,9 @@ def equivalence_oneway_generic(
 
     Returns
     -------
-    results : instance of HolderTuple class
+    EquivalenceOnewayResult
         The two main attributes are test statistic `statistic` and p-value
-        `pvalue`.
+        `pvalue`. See :class:`EquivalenceOnewayResult` for the full list.
 
     Notes
     -----
@@ -950,7 +996,7 @@ def equivalence_oneway_generic(
 
     pv = ncf_cdf(f_stat, df[0], df[1], nc_null)
     pwr = ncf_cdf(crit_f, df[0], df[1], 1e-13)  # scipy, cannot be 0
-    res = HolderTuple(
+    res = EquivalenceOnewayResult(
         statistic=f_stat,
         pvalue=pv,
         effectsize=es,  # match es type to margin_type
@@ -1031,9 +1077,9 @@ def equivalence_oneway(
 
     Returns
     -------
-    results : instance of HolderTuple class
+    EquivalenceOnewayResult
         The two main attributes are test statistic `statistic` and p-value
-        `pvalue`.
+        `pvalue`. See :class:`EquivalenceOnewayResult` for the full list.
 
     See Also
     --------
@@ -1444,6 +1490,58 @@ def test_scale_oneway(
     return res
 
 
+class ScaleEquivalenceResult(NamedTuple):
+    """
+    Result of :func:`equivalence_scale_oneway`.
+
+    Has the same attributes as :class:`EquivalenceOnewayResult`, computed
+    on the transformed data, plus `x_transformed`.
+
+    Parameters
+    ----------
+    statistic : float
+        F-statistic used for the equivalence test, same value as `f_stat`.
+    pvalue : float
+        p-value of the equivalence test.
+    effectsize : float
+        Estimated effect size, in the units given by `type_effectsize`.
+    crit_f : float
+        Critical value for the F-statistic at the boundary of the
+        equivalence margin.
+    crit_es : float
+        Critical value for the effect size at the boundary of the
+        equivalence margin, in the same units as `effectsize`.
+    reject : bool
+        True if the null hypothesis of non-equivalence is rejected, i.e.
+        the data supports equivalence within `equiv_margin`.
+    power_zero : float
+        Power of the equivalence test if the true effect size were zero.
+    df : tuple
+        Degrees of freedom ``(df1, df2)`` of the F-distribution used for
+        the test.
+    f_stat : float
+        F-statistic used for the equivalence test, same value as
+        `statistic`.
+    type_effectsize : str
+        Description of the effect size type used for `effectsize` and
+        `crit_es`, determined by `margin_type`.
+    x_transformed : list of ndarray
+        The centered and transformed data used to compute the test.
+    """
+
+    statistic: float
+    pvalue: float
+    effectsize: float
+    crit_f: float
+    crit_es: float
+    reject: bool
+    power_zero: float
+    df: tuple
+    f_stat: float
+    type_effectsize: str
+    x_transformed: list
+
+
 def equivalence_scale_oneway(
     data,
     equiv_margin,
@@ -1509,9 +1607,9 @@ def equivalence_scale_oneway(
 
     Returns
     -------
-    results : instance of HolderTuple class
+    ScaleEquivalenceResult
         The two main attributes are test statistic `statistic` and p-value
-        `pvalue`.
+        `pvalue`. See :class:`ScaleEquivalenceResult` for the full list.
 
     See Also
     --------
@@ -1526,12 +1624,12 @@ def equivalence_scale_oneway(
         for x in data
     ]
 
-    res = equivalence_oneway(
+    res0 = equivalence_oneway(
         xxd,
         equiv_margin,
         use_var=method,
         welch_correction=True,
         trim_frac=trim_frac_anova,
     )
-    res.x_transformed = xxd
+    res = ScaleEquivalenceResult(x_transformed=xxd, **res0._asdict())
     return res
