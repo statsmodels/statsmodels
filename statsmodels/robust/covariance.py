@@ -25,6 +25,8 @@ doi:10.1109/TSP.2011.2138698.
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import linalg, stats
 from scipy.linalg.lapack import get_lapack_funcs
@@ -33,7 +35,6 @@ import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
 from statsmodels.stats.covariance import corr_normal_scores, corr_rank
-from statsmodels.tools.testing import Holder
 
 from .scale import mad
 
@@ -44,6 +45,22 @@ def mad0(x):
 
 def median(x):
     return np.median(x, axis=0)
+
+
+class NaiveLedoitWolfResult(NamedTuple):
+    """
+    Result of :func:`_naive_ledoit_wolf_shrinkage`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Shrinkage estimate of the covariance matrix.
+    method : str
+        Name of the estimation method, "naive ledoit wolf".
+    """
+
+    cov: np.ndarray
+    method: str
 
 
 # from scikit-learn
@@ -72,7 +89,7 @@ def _naive_ledoit_wolf_shrinkage(x, center):
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
-    return Holder(cov=shrinkage * emp_cov, method="naive ledoit wolf")
+    return NaiveLedoitWolfResult(cov=shrinkage * emp_cov, method="naive ledoit wolf")
 
 
 def coef_normalize_cov_truncated(frac, k_vars):
@@ -421,6 +438,59 @@ def cov_gk(data, scale_func=mad):
     return cov
 
 
+class CovOGKResult(NamedTuple):
+    """
+    Result of :func:`cov_ogk`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimated covariance, either raw OGK or reweighted OGK.
+    loc : ndarray
+        Estimated location, either from raw OGK or reweighted OGK. Alias
+        of `mean`.
+    mean : ndarray
+        Estimated location, alias of `loc`.
+    mask : ndarray or None
+        Boolean mask of observations kept in the reweighting step, or None
+        if `reweight` was None.
+    mahalanobis_raw : ndarray or None
+        Squared robust distances of the raw OGK estimate used for
+        reweighting, or None if neither `reweight` nor `rescale_raw` was
+        used.
+    cov_raw : ndarray
+        OGK covariance without reweighting, optionally rescaled.
+    loc_raw : ndarray
+        Location or center of OGK without reweighting.
+    transf0 : ndarray
+        Orthogonal transformation matrix accumulated over `maxiter` steps.
+    scale_factor : float
+        Rescaling factor applied to the reweighted covariance. Equal to 1.0
+        if `reweight` was None or `rescale` was False.
+    scale_factor_raw : float
+        Rescaling factor applied to the raw covariance. Equal to 1.0 if
+        neither `reweight` nor `rescale_raw` was used.
+    n_trunc : int
+        Number of observations trimmed in the reweighting step. Zero if
+        `reweight` was None.
+    method : str
+        Name of the estimation method, "ogk".
+    """
+
+    cov: np.ndarray
+    loc: np.ndarray
+    mean: np.ndarray
+    mask: np.ndarray | None
+    mahalanobis_raw: np.ndarray | None
+    cov_raw: np.ndarray
+    loc_raw: np.ndarray
+    transf0: np.ndarray
+    scale_factor: float
+    scale_factor_raw: float
+    n_trunc: int
+    method: str
+
+
 def cov_ogk(
     data,
     maxiter=2,
@@ -472,14 +542,10 @@ def cov_ogk(
 
     Returns
     -------
-    Holder instance with main attributes
-
-    - cov : covariance, either raw OGK or reweighted OGK.
-    - loc (and alias mean) : mean, either from raw OGK or reweighted OGK.
-    - cov_raw : OGK covariance without reweighting optionally rescaled.
-    - loc_raw : mean or center of OGK without reweighting.
-
-    and extra attributes from intermediate results.
+    CovOGKResult
+        Named tuple with `cov`, `loc` (and alias `mean`), `cov_raw`,
+        `loc_raw`, and extra attributes from intermediate results. See
+        :class:`CovOGKResult` for details.
 
     Notes
     -----
@@ -559,7 +625,7 @@ def cov_ogk(
         cov_raw *= scale_factor_raw
 
     # duplicate name loc mean center, choose consistent naming
-    res = Holder(
+    res = CovOGKResult(
         cov=cov,
         loc=loc,
         mean=loc,
