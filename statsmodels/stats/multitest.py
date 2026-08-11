@@ -362,25 +362,25 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     fdr_by.
 
     **Benjamini-Hochberg procedure** (see Benjamini and Hochberg, 1995)
-    
+
     Define pvals as:
-    
-        ``pvals`` = ``pval_1`` <= ``pval_2`` <= ... ``pval_k`` ... <= ``pval_(m-1)`` <= ``pval_m``
-    
+
+        ``pvals`` = ``pval_1`` <= ``pval_2`` <= ... <= ``pval_k`` ... <= ``pval_(m-1)`` <= ``pval_m``
+
     Compute raw adjusted p-values as:
-    
-        ``raw_adj_pval_k`` = ``pval_k`` * ``m``/``k``, where
-    
+
+       ``raw_adj_pval_k`` = ``pval_k`` * ``m``/``k``, where
+
     - ``raw_adj_pval_k`` is the adjusted ``pval_k`` BEFORE a final correction,
     - ``pval_k`` is the p-value under consideration,
     - ``m`` is the total number of p-values, and
     - ``k`` is the rank of ``pval_k``.
-    
+
     Perform a final correction to make sure that adjusted p-values are monotonic:
-    
-    The final correction is to make sure that ``adj_pval_k`` is less than or equal to 
-    ``adj_pval_(k+1)``. This procedure starts at the last p-value (``raw_adj_pval_m``)
-    and proceeds until the first p-value (``raw_adj_pval_1``).
+
+    The final correction is to make sure that ``adj_pval_k`` is less than or
+    equal to ``adj_pval_(k+1)``. This procedure starts at the last p-value
+    (``raw_adj_pval_m``) and proceeds until the first p-value (``raw_adj_pval_1``).
 
     Both methods exposed via this function (Benjamini/Hochberg, Benjamini/Yekutieli)
     are also available in the function ``multipletests``, as ``method="fdr_bh"`` and
