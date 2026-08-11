@@ -16,5 +16,6 @@ sm.graphics.plot_partregress(
     exog_others=["urban", "poverty", "single"],
     data=crime_data.data,
     obs_labels=False,
+    use_namedtuple=True,
 )
 plt.show()

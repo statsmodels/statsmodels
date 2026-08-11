@@ -509,7 +509,8 @@ def plot_partregress(
     >>> crime_data = sm.datasets.statecrime.load_pandas()
     >>> sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',
     ...                              exog_others=['urban', 'poverty', 'single'],
-    ...                              data=crime_data.data, obs_labels=False)
+    ...                              data=crime_data.data, obs_labels=False,
+    ...                              use_namedtuple=True)
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_partregress.py

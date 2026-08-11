@@ -250,9 +250,6 @@ Non-Parametric Tests
    median_test_ksample
    runstest_1samp
    runstest_2samp
-   cochrans_q
-   CochransQResult
-   Runs
 
 .. currentmodule:: statsmodels.stats.descriptivestats
 
