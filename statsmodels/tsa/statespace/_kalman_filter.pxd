@@ -4,9 +4,11 @@
 """
 Kalman Filter declarations
 
-Author: Chad Fulton  
+Author: Chad Fulton 
 License: Simplified-BSD
 """
+
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 
 # ## Constants
 
@@ -57,11 +59,16 @@ cdef int TIMING_INIT_FILTERED
 cdef int TIMING_INIT_PREDICTED
 
 # Typical imports
+
 cimport numpy as np
 
 from statsmodels.tsa.statespace._representation cimport (
-    sStatespace, dStatespace, cStatespace, zStatespace
+    cStatespace,
+    dStatespace,
+    sStatespace,
+    zStatespace,
 )
+
 
 # Single precision
 cdef class sKalmanFilter(object):
@@ -102,7 +109,7 @@ cdef class sKalmanFilter(object):
 
     # ### Temporary arrays
     cdef readonly np.float32_t [::1,:] forecast_error_fac
-    cdef readonly int [:] forecast_error_ipiv
+    cdef readonly blas_int [:] forecast_error_ipiv
     cdef readonly np.float32_t [::1,:] forecast_error_work
     cdef readonly np.float32_t [::1,:] tmp0, tmp00
     cdef readonly np.float32_t [::1,:] tmp2
@@ -157,7 +164,7 @@ cdef class sKalmanFilter(object):
     cdef np.float32_t * _converged_M
 
     cdef np.float32_t * _forecast_error_fac
-    cdef int * _forecast_error_ipiv
+    cdef blas_int * _forecast_error_ipiv
     cdef np.float32_t * _forecast_error_work
 
     cdef np.float32_t * _tmp0
@@ -257,7 +264,7 @@ cdef class dKalmanFilter(object):
 
     # ### Temporary arrays
     cdef readonly np.float64_t [::1,:] forecast_error_fac
-    cdef readonly int [:] forecast_error_ipiv
+    cdef readonly blas_int [:] forecast_error_ipiv
     cdef readonly np.float64_t [::1,:] forecast_error_work
     cdef readonly np.float64_t [::1,:] tmp0, tmp00
     cdef readonly np.float64_t [::1,:] tmp2
@@ -311,7 +318,7 @@ cdef class dKalmanFilter(object):
     cdef np.float64_t * _converged_M
 
     cdef np.float64_t * _forecast_error_fac
-    cdef int * _forecast_error_ipiv
+    cdef blas_int * _forecast_error_ipiv
     cdef np.float64_t * _forecast_error_work
 
     cdef np.float64_t * _tmp0
@@ -411,7 +418,7 @@ cdef class cKalmanFilter(object):
 
     # ### Temporary arrays
     cdef readonly np.complex64_t [::1,:] forecast_error_fac
-    cdef readonly int [:] forecast_error_ipiv
+    cdef readonly blas_int [:] forecast_error_ipiv
     cdef readonly np.complex64_t [::1,:] forecast_error_work
     cdef readonly np.complex64_t [::1,:] tmp0, tmp00
     cdef readonly np.complex64_t [::1,:] tmp2
@@ -466,7 +473,7 @@ cdef class cKalmanFilter(object):
     cdef np.complex64_t * _converged_M
 
     cdef np.complex64_t * _forecast_error_fac
-    cdef int * _forecast_error_ipiv
+    cdef blas_int * _forecast_error_ipiv
     cdef np.complex64_t * _forecast_error_work
 
     cdef np.complex64_t * _tmp0
@@ -566,7 +573,7 @@ cdef class zKalmanFilter(object):
 
     # ### Temporary arrays
     cdef readonly np.complex128_t [::1,:] forecast_error_fac
-    cdef readonly int [:] forecast_error_ipiv
+    cdef readonly blas_int [:] forecast_error_ipiv
     cdef readonly np.complex128_t [::1,:] forecast_error_work
     cdef readonly np.complex128_t [::1,:] tmp0, tmp00
     cdef readonly np.complex128_t [::1,:] tmp2
@@ -621,7 +628,7 @@ cdef class zKalmanFilter(object):
     cdef np.complex128_t * _converged_M
 
     cdef np.complex128_t * _forecast_error_fac
-    cdef int * _forecast_error_ipiv
+    cdef blas_int * _forecast_error_ipiv
     cdef np.complex128_t * _forecast_error_work
 
     cdef np.complex128_t * _tmp0

@@ -3,7 +3,7 @@ import numpy as np
 
 class RegressionEffects:
     """
-    Base class for regression effects used in RegressionFDR.
+    Base class for regression effects used in RegressionFDR
 
     Any implementation of the class must provide a method called
     'stats' that takes a RegressionFDR object and returns effect sizes
@@ -26,7 +26,7 @@ class RegressionEffects:
 
 class CorrelationEffects(RegressionEffects):
     """
-    Marginal correlation effect sizes for FDR control.
+    Marginal correlation effect sizes for FDR control
 
     Parameters
     ----------
@@ -50,7 +50,7 @@ class CorrelationEffects(RegressionEffects):
 
 class ForwardEffects(RegressionEffects):
     """
-    Forward selection effect sizes for FDR control.
+    Forward selection effect sizes for FDR control
 
     Parameters
     ----------
@@ -92,7 +92,7 @@ class ForwardEffects(RegressionEffects):
                 for v in past:
                     x -= np.dot(x, v)*v
                 past.append(x)
-            rv -= np.dot(rv, x) * x
+            rv = rv - np.dot(rv, x) * x
         z1 = z[0:nvar//2]
         z2 = z[nvar//2:]
         st = np.where(z1 > z2, z1, z2) * np.sign(z1 - z2)
@@ -101,7 +101,7 @@ class ForwardEffects(RegressionEffects):
 
 class OLSEffects(RegressionEffects):
     """
-    OLS regression for knockoff analysis.
+    OLS regression for knockoff analysis
 
     Parameters
     ----------
@@ -129,7 +129,7 @@ class OLSEffects(RegressionEffects):
 
 class RegModelEffects(RegressionEffects):
     """
-    Use any regression model for Regression FDR analysis.
+    Use any regression model for Regression FDR analysis
 
     Parameters
     ----------
@@ -138,13 +138,13 @@ class RegModelEffects(RegressionEffects):
         applied.
     model_cls : class
         Any model with appropriate fit or fit_regularized
-        functions
+        functions.
     regularized : bool
-        If True, use fit_regularized to fit the model
+        If True, use fit_regularized to fit the model.
     model_kws : dict
-        Keywords passed to model initializer
+        Keywords passed to model initializer.
     fit_kws : dict
-        Dictionary of keyword arguments for fit or fit_regularized
+        Dictionary of keyword arguments for fit or fit_regularized.
     """
 
     def __init__(self, model_cls, regularized=False, model_kws=None,

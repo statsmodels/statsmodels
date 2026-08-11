@@ -16,14 +16,14 @@ class ResultsWrapper:
         self.__doc__ = results.__doc__
 
     def __dir__(self):
-        return [x for x in dir(self._results)]
+        return list(dir(self._results))
 
     def __getattribute__(self, attr):
         def get(name):
             return object.__getattribute__(self, name)
 
         try:
-            results = get('_results')
+            results = get("_results")
         except AttributeError:
             pass
 
@@ -106,7 +106,7 @@ def union_dicts(*dicts):
 def make_wrapper(func, how):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        results = object.__getattribute__(self, '_results')
+        results = object.__getattribute__(self, "_results")
         data = results.model.data
         if how and isinstance(how, tuple):
             obj = data.wrap_output(func(results, *args, **kwargs), how[0], how[1:])
@@ -117,7 +117,7 @@ def make_wrapper(func, how):
     sig = inspect.signature(func)
     formatted = str(sig)
 
-    doc = dedent(wrapper.__doc__) if wrapper.__doc__ else ''
+    doc = dedent(wrapper.__doc__) if wrapper.__doc__ else ""
     wrapper.__doc__ = f"\n{func.__name__}{formatted}\n{doc}"
 
     return wrapper

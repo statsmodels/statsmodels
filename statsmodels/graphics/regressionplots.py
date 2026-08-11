@@ -1,5 +1,5 @@
-'''Partial Regression plot and residual plots to find misspecification
-
+"""
+Partial Regression plot and residual plots to find misspecification
 
 Author: Josef Perktold
 License: BSD-3
@@ -8,13 +8,18 @@ Created: 2011-01-23
 update
 2011-06-05 : start to convert example to usable functions
 2011-10-27 : docstrings
+"""
 
-'''
-from statsmodels.compat.pandas import Appender
+from __future__ import annotations
+
 from statsmodels.compat.python import lrange, lzip
+
+from typing import TYPE_CHECKING, NamedTuple
+import warnings
 
 import numpy as np
 import pandas as pd
+from scipy.stats import chi2
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_estimating_equations import GEE
@@ -23,7 +28,9 @@ from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from statsmodels.regression.linear_model import GLS, OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import maybe_unwrap_results
+from statsmodels.tools.validation import bool_like
 
 from ._regressionplots_doc import (
     _plot_added_variable_doc,
@@ -33,32 +40,54 @@ from ._regressionplots_doc import (
     _plot_partial_residuals_doc,
 )
 
-__all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
-           'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
-           'add_lowess', 'abline_plot', 'influence_plot',
-           'plot_leverage_resid2', 'added_variable_resids',
-           'partial_resids', 'ceres_resids', 'plot_added_variable',
-           'plot_partial_residuals', 'plot_ceres_residuals']
+if TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
-#TODO: consider moving to influence module
+__all__ = [
+    "PartRegressPlotResult",
+    "abline_plot",
+    "add_ellipse",
+    "add_lowess",
+    "added_variable_resids",
+    "ceres_resids",
+    "influence_plot",
+    "partial_resids",
+    "plot_added_variable",
+    "plot_ccpr",
+    "plot_ccpr_grid",
+    "plot_ceres_residuals",
+    "plot_fit",
+    "plot_leverage_resid2",
+    "plot_partial_residuals",
+    "plot_partregress",
+    "plot_partregress_grid",
+    "plot_regress_exog",
+]
+
+
+# TODO: consider moving to influence module
 def _high_leverage(results):
-    #TODO: replace 1 with k_constant
-    return 2. * (results.df_model + 1)/results.nobs
+    # TODO: replace 1 with k_constant
+    return 2.0 * (results.df_model + 1) / results.nobs
 
 
-def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
+def add_lowess(ax, lines_idx=0, frac=0.2, *, exog=None, endog=None, **lowess_kwargs):
     """
-    Add Lowess line to a plot.
+    Add Lowess line to a plot
 
     Parameters
     ----------
     ax : AxesSubplot
-        The Axes to which to add the plot
+        The Axes to which to add the plot.
     lines_idx : int
         This is the line on the existing plot to which you want to add
         a smoothed lowess line.
     frac : float
         The fraction of the points to use when doing the lowess fit.
+    exog : array_like, optional
+        Data for the x-axis. If None, it will be extracted from the axis lines.
+    endog : array_like, optional
+        Data for the y-axis. If None, it will be extracted from the axis lines.
     lowess_kwargs
         Additional keyword arguments are passes to lowess.
 
@@ -67,16 +96,80 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     Figure
         The figure that holds the instance.
     """
-    y0 = ax.get_lines()[lines_idx]._y
-    x0 = ax.get_lines()[lines_idx]._x
+    if exog is None and endog is None:
+        y0 = ax.get_lines()[lines_idx]._y
+        x0 = ax.get_lines()[lines_idx]._x
+    else:
+        y0 = np.asarray(endog)
+        x0 = np.asarray(exog)
+
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
-    ax.plot(lres[:, 0], lres[:, 1], 'r', lw=1.5)
+    ax.plot(lres[:, 0], lres[:, 1], "r", lw=1.5)
+    return ax.figure
+
+
+def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
+    """
+    Add a confidence ellipse to a plot axis
+
+    Parameters
+    ----------
+    x : array_like, 1-dim
+        Data for the x-axis.
+    y : array_like, 1-dim
+        Data for the y-axis.
+    ax : AxesSubplot, optional
+        The ellipse patch will be added to this axis. If None, the current
+        matplotlib axis is used.
+    alpha : float
+        Confidence level (e.g., 0.95 for 95%).
+    ellipse_kwargs
+        Additional keyword arguments are passed to the Matplotlib `Ellipse` patch.
+
+    Returns
+    -------
+    Figure
+        The figure that holds the instance.
+    """
+    from matplotlib.patches import Ellipse
+
+    fig, ax = utils.create_mpl_ax(ax)
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    if x.size != y.size:
+        raise ValueError("x and y must be the same size")
+
+    cov = np.cov(x, y)
+    mean_x, mean_y = np.mean(x), np.mean(y)
+
+    # Eigen decomposition
+    vals, vecs = np.linalg.eigh(cov)
+    order = vals.argsort()[::-1]
+    vals, vecs = vals[order], vecs[:, order]
+
+    # Angle of ellipse
+    angle = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
+
+    # Chi-squared quantile for 2D
+    scale = np.sqrt(chi2.ppf(alpha, df=2))
+
+    # Width and height scaled by chi2 quantile
+    width, height = 2 * scale * np.sqrt(vals)
+
+    ellipse_kwds = dict(edgecolor="blue", facecolor="none", linewidth=1.5)
+    if ellipse_kwargs:
+        ellipse_kwds.update(ellipse_kwargs)
+
+    ellipse = Ellipse((mean_x, mean_y), width, height, angle=angle, **ellipse_kwds)
+    ax.add_patch(ellipse)
     return ax.figure
 
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     """
-    Plot fit against one regressor.
+    Plot fit against one regressor
 
     This creates one graph with the scatterplot of observed values
     compared to fitted values.
@@ -88,14 +181,14 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
         attributes.
     exog_idx : {int, str}
         Name or index of regressor in exog matrix.
-    y_true : array_like. optional
+    y_true : array_like, optional
         If this is not None, then the array is added to the plot.
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     vlines : bool, optional
-        If this not True, then the uncertainty (pointwise prediction intervals) of the fit is not
-        plotted.
+        If this is not True, then the uncertainty (pointwise prediction intervals) of
+        the fit is not plotted.
     **kwargs
         The keyword arguments are passed to the plot command for the fitted
         values points.
@@ -112,7 +205,6 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     `poverty` and `hs_grad` as variables and `murder` as the response
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
 
     >>> data = sm.datasets.statecrime.load_pandas().data
     >>> murder = data['murder']
@@ -142,36 +234,39 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, vlines=True, **kwargs):
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
     results = maybe_unwrap_results(results)
 
-    #maybe add option for wendog, wexog
+    # maybe add option for wendog, wexog
     y = results.model.endog
     x1 = results.model.exog[:, exog_idx]
     x1_argsort = np.argsort(x1)
     y = y[x1_argsort]
     x1 = x1[x1_argsort]
 
-    ax.plot(x1, y, 'bo', label=results.model.endog_names)
+    ax.plot(x1, y, "bo", label=results.model.endog_names)
     if y_true is not None:
-        ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
-    title = 'Fitted values versus %s' % exog_name
+        ax.plot(x1, y_true[x1_argsort], "b-", label="True values")
+    title = f"Fitted values versus {exog_name}"
 
-    ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
-            label='fitted', **kwargs)
+    ax.plot(
+        x1, results.fittedvalues[x1_argsort], "D", color="r", label="fitted", **kwargs
+    )
     if vlines is True:
         _, iv_l, iv_u = wls_prediction_std(results)
-        ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1,
-                  color='k', alpha=.7)
-    #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
+        ax.vlines(
+            x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color="k", alpha=0.7
+        )
+    # ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
     #                    color='k')
     ax.set_title(title)
     ax.set_xlabel(exog_name)
     ax.set_ylabel(results.model.endog_names)
-    ax.legend(loc='best', numpoints=1)
+    ax.legend(loc="best", numpoints=1)
 
     return fig
 
 
 def plot_regress_exog(results, exog_idx, fig=None):
-    """Plot regression results against one regressor.
+    """
+    Plot regression results against one regressor
 
     This plots four graphs in a 2 by 2 figure: 'endog versus exog',
     'residuals versus exog', 'fitted versus exog' and
@@ -204,7 +299,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     and CCPR plot for poverty rate.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -222,25 +316,24 @@ def plot_regress_exog(results, exog_idx, fig=None):
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
     results = maybe_unwrap_results(results)
 
-    #maybe add option for wendog, wexog
+    # maybe add option for wendog, wexog
     y_name = results.model.endog_names
     x1 = results.model.exog[:, exog_idx]
     prstd, iv_l, iv_u = wls_prediction_std(results)
 
     ax = fig.add_subplot(2, 2, 1)
-    ax.plot(x1, results.model.endog, 'o', color='b', alpha=0.9, label=y_name)
-    ax.plot(x1, results.fittedvalues, 'D', color='r', label='fitted',
-            alpha=.5)
-    ax.vlines(x1, iv_l, iv_u, linewidth=1, color='k', alpha=.7)
-    ax.set_title('Y and Fitted vs. X', fontsize='large')
+    ax.plot(x1, results.model.endog, "o", color="b", alpha=0.9, label=y_name)
+    ax.plot(x1, results.fittedvalues, "D", color="r", label="fitted", alpha=0.5)
+    ax.vlines(x1, iv_l, iv_u, linewidth=1, color="k", alpha=0.7)
+    ax.set_title("Y and Fitted vs. X", fontsize="large")
     ax.set_xlabel(exog_name)
     ax.set_ylabel(y_name)
-    ax.legend(loc='best')
+    ax.legend(loc="best")
 
     ax = fig.add_subplot(2, 2, 2)
-    ax.plot(x1, results.resid, 'o')
-    ax.axhline(y=0, color='black')
-    ax.set_title('Residuals versus %s' % exog_name, fontsize='large')
+    ax.plot(x1, results.resid, "o")
+    ax.axhline(y=0, color="black")
+    ax.set_title(f"Residuals versus {exog_name}", fontsize="large")
     ax.set_xlabel(exog_name)
     ax.set_ylabel("resid")
 
@@ -249,73 +342,83 @@ def plot_regress_exog(results, exog_idx, fig=None):
     exog_noti[exog_idx] = False
     exog_others = results.model.exog[:, exog_noti]
     from pandas import Series
-    fig = plot_partregress(results.model.data.orig_endog,
-                           Series(x1, name=exog_name,
-                                  index=results.model.data.row_labels),
-                           exog_others, obs_labels=False, ax=ax)
-    ax.set_title('Partial regression plot', fontsize='large')
-    #ax.set_ylabel("Fitted values")
-    #ax.set_xlabel(exog_name)
+
+    fig = plot_partregress(
+        results.model.data.orig_endog,
+        Series(x1, name=exog_name, index=results.model.data.row_labels),
+        exog_others,
+        obs_labels=False,
+        ax=ax,
+        use_namedtuple=False,
+    )
+    ax.set_title("Partial regression plot", fontsize="large")
+    # ax.set_ylabel("Fitted values")
+    # ax.set_xlabel(exog_name)
 
     ax = fig.add_subplot(2, 2, 4)
     fig = plot_ccpr(results, exog_idx, ax=ax)
-    ax.set_title('CCPR Plot', fontsize='large')
-    #ax.set_xlabel(exog_name)
-    #ax.set_ylabel("Fitted values + resids")
+    ax.set_title("CCPR Plot", fontsize="large")
+    # ax.set_xlabel(exog_name)
+    # ax.set_ylabel("Fitted values + resids")
 
-    fig.suptitle('Regression Plots for %s' % exog_name, fontsize="large")
+    fig.suptitle(f"Regression Plots for {exog_name}", fontsize="large")
 
     fig.tight_layout()
 
-    fig.subplots_adjust(top=.90)
+    fig.subplots_adjust(top=0.90)
     return fig
 
 
-def _partial_regression(endog, exog_i, exog_others):
-    """Partial regression.
-
-    regress endog on exog_i conditional on exog_others
-
-    uses OLS
+class PartRegressPlotResult(NamedTuple):
+    """
+    Result of :func:`plot_partregress` when ``use_namedtuple=True``.
 
     Parameters
     ----------
-    endog : array_like
-    exog : array_like
-    exog_others : array_like
-
-    Returns
-    -------
-    res1c : OLS results instance
-
-    (res1a, res1b) : tuple of OLS results instances
-         results from regression of endog on exog_others and of exog_i on
-         exog_others
+    fig : Figure
+        If ``ax`` is None, the created figure. Otherwise the figure to
+        which ``ax`` is connected.
+    coords : tuple of ndarray or None
+        The ``(x_coords, y_coords)`` of the plotted points, i.e., the
+        residuals of ``exog_i`` and ``endog`` after partialling out
+        ``exog_others``. These are computed to draw the plot, so they are
+        always reported. ``None`` only when there were no other regressors
+        to partial out, in which case no residuals exist.
     """
-    #FIXME: This function does not appear to be used.
-    res1a = OLS(endog, exog_others).fit()
-    res1b = OLS(exog_i, exog_others).fit()
-    res1c = OLS(res1a.resid, res1b.resid).fit()
 
-    return res1c, (res1a, res1b)
+    fig: Figure
+    coords: tuple[np.ndarray, np.ndarray] | None
 
 
-def plot_partregress(endog, exog_i, exog_others, data=None,
-                     title_kwargs={}, obs_labels=True, label_kwargs={},
-                     ax=None, ret_coords=False, eval_env=1, **kwargs):
-    """Plot partial regression for a single regressor.
+def plot_partregress(
+    endog,
+    exog_i,
+    exog_others,
+    data=None,
+    title_kwargs=None,
+    obs_labels=True,
+    label_kwargs=None,
+    ax=None,
+    ret_coords=False,
+    eval_env=1,
+    *,
+    use_namedtuple: bool | None = None,
+    **kwargs,
+):
+    """
+    Plot partial regression for a single regressor
 
     Parameters
     ----------
     endog : {ndarray, str}
-       The endogenous or response variable. If string is given, you can use a
-       arbitrary translations as with a formula.
+        The endogenous or response variable. If string is given, you can use
+        arbitrary translations as with a formula.
     exog_i : {ndarray, str}
-        The exogenous, explanatory variable. If string is given, you can use a
+        The exogenous, explanatory variable. If string is given, you can use
         arbitrary translations as with a formula.
     exog_others : {ndarray, list[str]}
         Any other exogenous, explanatory variables. If a list of strings is
-        given, each item is a term in formula. You can use a arbitrary
+        given, each item is a term in formula. You can use arbitrary
         translations as with a formula. The effect of these variables will be
         removed by OLS regression.
     data : {DataFrame, dict}
@@ -341,16 +444,46 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     eval_env : int
         Patsy eval environment if user functions and formulas are used in
         defining endog or exog.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``PartRegressPlotResult`` NamedTuple is
+        returned. When ``ret_coords`` is True a ``PartRegressPlotResult``
+        is always returned; it holds the same two elements as the legacy
+        ``(fig, coords)`` tuple, so it unpacks and indexes identically.
+        Otherwise a bare figure is returned unless
+        ``use_namedtuple=True``.
+
+        .. deprecated:: 0.15.0
+
+            When ``ret_coords=False``, in release 0.16.0 or after July
+            2027, whichever is later, the default will change to return a
+            ``PartRegressPlotResult`` rather than a bare figure. Set
+            ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type.
     **kwargs
         The keyword arguments passed to plot for the points.
 
     Returns
     -------
-    fig : Figure
-        If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
-    coords : list, optional
-        If ret_coords is True, return a tuple of arrays (x_coords, y_coords).
+    PartRegressPlotResult or Figure
+        When ``ret_coords`` is True (or ``use_namedtuple=True``), a
+        NamedTuple with fields:
+
+        fig : Figure
+            If `ax` is None, the created figure.  Otherwise the figure to
+            which `ax` is connected.
+        coords : tuple of ndarray or None
+            The ``(x_coords, y_coords)`` of the plotted points. Always
+            populated, including when ``ret_coords=False``, because the
+            residuals are computed to draw the plot; ``None`` only when
+            there were no other regressors to partial out.
+
+        ``PartRegressPlotResult`` has the same length and contents as the
+        plain ``(fig, coords)`` tuple it replaces, so it unpacks and
+        indexes identically. See
+        :class:`~statsmodels.graphics.regressionplots.PartRegressPlotResult`.
+
+        When ``ret_coords`` is False a bare figure is returned instead.
 
     See Also
     --------
@@ -372,7 +505,6 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     are removed by OLS regression.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
     >>> sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',
@@ -385,13 +517,18 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     More detailed examples can be found in the Regression Plots notebook
     on the examples page.
     """
-    #NOTE: there is no interaction between possible missing data and
-    #obs_labels yet, so this will need to be tweaked a bit for this case
+    # NOTE: there is no interaction between possible missing data and
+    # obs_labels yet, so this will need to be tweaked a bit for this case
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    label_kwargs = {} if label_kwargs is None else label_kwargs
+    title_kwargs = {} if title_kwargs is None else title_kwargs
     fig, ax = utils.create_mpl_ax(ax)
 
     # strings, use patsy to transform to data
     if isinstance(endog, str):
-        endog = FormulaManager().get_matrices(endog + "-1", data, eval_env=eval_env, pandas=False)
+        endog = FormulaManager().get_matrices(
+            endog + "-1", data, eval_env=eval_env, pandas=False
+        )
 
     mgr = FormulaManager()
     if isinstance(exog_others, str):
@@ -402,7 +539,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     else:
         RHS = exog_others
     RHS_isemtpy = False
-    if isinstance(RHS, np.ndarray) and RHS.size==0:
+    if isinstance(RHS, np.ndarray) and RHS.size == 0:
         RHS_isemtpy = True
     elif isinstance(RHS, pd.DataFrame) and RHS.empty:
         RHS_isemtpy = True
@@ -414,10 +551,12 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     if RHS_isemtpy:
         endog = np.asarray(endog)
         exog_i = np.asarray(exog_i)
-        ax.plot(endog, exog_i, 'o', **kwargs)
+        ax.plot(endog, exog_i, "o", **kwargs)
         fitted_line = OLS(endog, exog_i).fit()
-        x_axis_endog_name = 'x' if isinstance(exog_i, np.ndarray) else exog_i.name
-        y_axis_endog_name = 'y' if isinstance(endog, np.ndarray) else endog.model_spec.column_names[0]
+        x_axis_endog_name = "x" if isinstance(exog_i, np.ndarray) else exog_i.name
+        y_axis_endog_name = (
+            "y" if isinstance(endog, np.ndarray) else endog.model_spec.column_names[0]
+        )
     else:
         res_yaxis = OLS(endog, RHS).fit()
         res_xaxis = OLS(exog_i, RHS).fit()
@@ -425,16 +564,16 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         yaxis_resid = res_yaxis.resid
         x_axis_endog_name = res_xaxis.model.endog_names
         y_axis_endog_name = res_yaxis.model.endog_names
-        ax.plot(xaxis_resid, yaxis_resid, 'o', **kwargs)
+        ax.plot(xaxis_resid, yaxis_resid, "o", **kwargs)
         fitted_line = OLS(yaxis_resid, xaxis_resid).fit()
 
-    fig = abline_plot(0, np.asarray(fitted_line.params)[0], color='k', ax=ax)
+    fig = abline_plot(0, np.asarray(fitted_line.params)[0], color="k", ax=ax)
 
-    if x_axis_endog_name == 'y':  # for no names regression will just get a y
-        x_axis_endog_name = 'x'  # this is misleading, so use x
-    ax.set_xlabel("e(%s | X)" % x_axis_endog_name)
-    ax.set_ylabel("e(%s | X)" % y_axis_endog_name)
-    ax.set_title('Partial Regression Plot', **title_kwargs)
+    if x_axis_endog_name == "y":  # for no names regression will just get a y
+        x_axis_endog_name = "x"  # this is misleading, so use x
+    ax.set_xlabel(f"e({x_axis_endog_name} | X)")
+    ax.set_ylabel(f"e({y_axis_endog_name} | X)")
+    ax.set_title("Partial Regression Plot", **title_kwargs)
 
     # NOTE: if we want to get super fancy, we could annotate if a point is
     # clicked using this widget
@@ -448,8 +587,8 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
             obs_labels = exog_i.index
         else:
             obs_labels = res_xaxis.model.data.row_labels
-        #NOTE: row_labels can be None.
-        #Maybe we should fix this to never be the case.
+        # NOTE: row_labels can be None.
+        # Maybe we should fix this to never be the case.
         if obs_labels is None:
             obs_labels = lrange(len(exog_i))
 
@@ -457,27 +596,58 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         if len(obs_labels) != len(exog_i):
             raise ValueError("obs_labels does not match length of exog_i")
         label_kwargs.update(dict(ha="center", va="bottom"))
-        ax = utils.annotate_axes(lrange(len(obs_labels)), obs_labels,
-                                 lzip(res_xaxis.resid, res_yaxis.resid),
-                                 [(0, 5)] * len(obs_labels), "x-large", ax=ax,
-                                 **label_kwargs)
+        ax = utils.annotate_axes(
+            lrange(len(obs_labels)),
+            obs_labels,
+            lzip(res_xaxis.resid, res_yaxis.resid),
+            [(0, 5)] * len(obs_labels),
+            "x-large",
+            ax=ax,
+            **label_kwargs,
+        )
 
-    if ret_coords:
-        return fig, (res_xaxis.resid, res_yaxis.resid)
-    else:
-        return fig
+    # The residuals are already computed to draw the plot, so they are
+    # always reported rather than being None-filled.  They only exist when
+    # there were other regressors to partial out.
+    coords = None if RHS_isemtpy else (res_xaxis.resid, res_yaxis.resid)
+
+    # With ret_coords=True, PartRegressPlotResult has exactly the same
+    # length and contents as the legacy (fig, coords) tuple, so it unpacks
+    # and indexes identically and is adopted with no deprecation.  Only
+    # ret_coords=False changes shape, from a bare figure to the two-field
+    # NamedTuple, so that is the only path that warns.
+    if use_namedtuple is None and not ret_coords:
+        warnings.warn(
+            "plot_partregress currently returns a bare figure when "
+            "ret_coords=False. In release 0.16 or after July 2027, "
+            "whichever is later, the default behavior will switch to "
+            "always returning a PartRegressPlotResult NamedTuple, which "
+            "also carries the coordinates. Set use_namedtuple=True to "
+            "switch now, or use_namedtuple=False to keep the current "
+            "behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    # PartRegressPlotResult has exactly the same length and contents as the
+    # legacy (fig, coords) tuple, so it unpacks and indexes identically and
+    # is always used when ret_coords=True.  Otherwise a bare figure is
+    # returned, as before; pass use_namedtuple=True to always get a
+    # PartRegressPlotResult.
+    if use_namedtuple or ret_coords:
+        return PartRegressPlotResult(fig, coords)
+    return fig
 
 
 def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     """
-    Plot partial regression for a set of regressors.
+    Plot partial regression for a set of regressors
 
     Parameters
     ----------
     results : Results instance
         A regression model results instance.
     exog_idx : {None, list[int], list[str]}
-        The indices  or column names of the exog used in the plot, default is
+        The indices or column names of the exog used in the plot, default is
         all.
     grid : {None, tuple[int]}
         If grid is given, then it is used for the arrangement of the subplots.
@@ -511,14 +681,13 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     Examples
     --------
-    Using the state crime dataset separately plot the effect of the each
-    variable on the on the outcome, murder rate while accounting for the effect
+    Using the state crime dataset separately plot the effect of each
+    variable on the outcome, murder rate, while accounting for the effect
     of all other variables in the model visualized with a grid of partial
     regression plots.
 
     >>> from statsmodels.graphics.regressionplots import plot_partregress_grid
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 6))
@@ -530,13 +699,13 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     .. plot:: plots/graphics_regression_partregress_grid.py
     """
-    import pandas
+
     fig = utils.create_mpl_fig(fig)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     # TODO: maybe add option for using wendog, wexog instead
-    y = pandas.Series(results.model.endog, name=results.model.endog_names)
+    y = pd.Series(results.model.endog, name=results.model.endog_names)
     exog = results.model.exog
 
     k_vars = exog.shape[1]
@@ -547,32 +716,36 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     if grid is not None:
         nrows, ncols = grid
     if ncols > 1:
-        title_kwargs = {"fontdict": {"fontsize": 'small'}}
+        title_kwargs = {"fontdict": {"fontsize": "small"}}
 
     # for indexing purposes
     other_names = np.array(results.model.exog_names)
     for i, idx in enumerate(exog_idx):
         others = lrange(k_vars)
         others.pop(idx)
-        exog_others = pandas.DataFrame(exog[:, others],
-                                       columns=other_names[others])
+        exog_others = pd.DataFrame(exog[:, others], columns=other_names[others])
         ax = fig.add_subplot(nrows, ncols, i + 1)
-        plot_partregress(y, pandas.Series(exog[:, idx],
-                                          name=other_names[idx]),
-                         exog_others, ax=ax, title_kwargs=title_kwargs,
-                         obs_labels=False)
+        plot_partregress(
+            y,
+            pd.Series(exog[:, idx], name=other_names[idx]),
+            exog_others,
+            ax=ax,
+            title_kwargs=title_kwargs,
+            obs_labels=False,
+            use_namedtuple=False,
+        )
         ax.set_title("")
 
     fig.suptitle("Partial Regression Plot", fontsize="large")
     fig.tight_layout()
-    fig.subplots_adjust(top=.95)
+    fig.subplots_adjust(top=0.95)
 
     return fig
 
 
 def plot_ccpr(results, exog_idx, ax=None):
     """
-    Plot CCPR against one regressor.
+    Plot CCPR against one regressor
 
     Generates a component and component-plus-residual (CCPR) plot.
 
@@ -621,7 +794,6 @@ def plot_ccpr(results, exog_idx, ax=None):
     of poverty ('poverty').
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> crime_data = sm.datasets.statecrime.load_pandas()
@@ -638,24 +810,25 @@ def plot_ccpr(results, exog_idx, ax=None):
     results = maybe_unwrap_results(results)
 
     x1 = results.model.exog[:, exog_idx]
-    #namestr = ' for %s' % self.name if self.name else ''
-    x1beta = x1*results.params[exog_idx]
-    ax.plot(x1, x1beta + results.resid, 'o')
+    # namestr = ' for %s' % self.name if self.name else ''
+    x1beta = x1 * results.params[exog_idx]
+    ax.plot(x1, x1beta + results.resid, "o")
     from statsmodels.tools.tools import add_constant
+
     mod = OLS(x1beta, add_constant(x1)).fit()
     params = mod.params
     fig = abline_plot(*params, **dict(ax=ax))
-    #ax.plot(x1, x1beta, '-')
-    ax.set_title('Component and component plus residual plot')
-    ax.set_ylabel("Residual + %s*beta_%d" % (exog_name, exog_idx))
-    ax.set_xlabel("%s" % exog_name)
+    # ax.plot(x1, x1beta, '-')
+    ax.set_title("Component and component plus residual plot")
+    ax.set_ylabel(f"Residual + {exog_name}*beta_{exog_idx:d}")
+    ax.set_xlabel(f"{exog_name}")
 
     return fig
 
 
 def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     """
-    Generate CCPR plots against a set of regressors, plot in a grid.
+    Generate CCPR plots against a set of regressors, plot in a grid
 
     Generates a grid of component and component-plus-residual (CCPR) plots.
 
@@ -699,12 +872,11 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     Examples
     --------
-    Using the state crime dataset separately plot the effect of the each
-    variable on the on the outcome, murder rate while accounting for the effect
+    Using the state crime dataset separately plot the effect of each
+    variable on the outcome, murder rate, while accounting for the effect
     of all other variables in the model.
 
     >>> import statsmodels.api as sm
-    >>> import matplotlib.pyplot as plt
     >>> import statsmodels.formula.api as smf
 
     >>> fig = plt.figure(figsize=(8, 8))
@@ -722,13 +894,12 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     if grid is not None:
         nrows, ncols = grid
+    elif len(exog_idx) > 2:
+        nrows = int(np.ceil(len(exog_idx) / 2.0))
+        ncols = 2
     else:
-        if len(exog_idx) > 2:
-            nrows = int(np.ceil(len(exog_idx)/2.))
-            ncols = 2
-        else:
-            nrows = len(exog_idx)
-            ncols = 1
+        nrows = len(exog_idx)
+        ncols = 1
 
     seen_constant = 0
     for i, idx in enumerate(exog_idx):
@@ -736,7 +907,7 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
             seen_constant = 1
             continue
 
-        ax = fig.add_subplot(nrows, ncols, i+1-seen_constant)
+        ax = fig.add_subplot(nrows, ncols, i + 1 - seen_constant)
         fig = plot_ccpr(results, exog_idx=idx, ax=ax)
         ax.set_title("")
 
@@ -744,14 +915,21 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     fig.tight_layout()
 
-    fig.subplots_adjust(top=.95)
+    fig.subplots_adjust(top=0.95)
     return fig
 
 
-def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
-                model_results=None, ax=None, **kwargs):
+def abline_plot(
+    intercept=None,
+    slope=None,
+    horiz=None,
+    vert=None,
+    model_results=None,
+    ax=None,
+    **kwargs,
+):
     """
-    Plot a line given an intercept and slope.
+    Plot a line given an intercept and slope
 
     Parameters
     ----------
@@ -761,8 +939,8 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         The slope of the line.
     horiz : float or array_like
         Data for horizontal lines on the y-axis.
-    vert : array_like
-        Data for verterical lines on the x-axis.
+    vert : float or array_like
+        Data for vertical lines on the x-axis.
     model_results : statsmodels results instance
         Any object that has a two-value `params` attribute. Assumed that it
         is (intercept, slope).
@@ -781,15 +959,14 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import numpy as np
     >>> import statsmodels.api as sm
 
-    >>> np.random.seed(12345)
-    >>> X = sm.add_constant(np.random.normal(0, 20, size=30))
-    >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
+    >>> rs = np.random.default_rng(12345)
+    >>> X = sm.add_constant(rs.normal(0, 20, size=30))
+    >>> y = np.dot(X, [25, 3.5]) + rs.normal(0, 30, size=30)
     >>> mod = sm.OLS(y,X).fit()
     >>> fig = sm.graphics.abline_plot(model_results=mod)
     >>> ax = fig.axes[0]
     >>> ax.scatter(X[:,1], y)
     >>> ax.margins(.1)
-    >>> import matplotlib.pyplot as plt
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_abline.py
@@ -804,17 +981,19 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     if model_results:
         intercept, slope = model_results.params
         if x is None:
-            x = [model_results.model.exog[:, 1].min(),
-                 model_results.model.exog[:, 1].max()]
+            x = [
+                model_results.model.exog[:, 1].min(),
+                model_results.model.exog[:, 1].max(),
+            ]
     else:
         if not (intercept is not None and slope is not None):
             raise ValueError("specify slope and intercepty or model_results")
         if x is None:
             x = ax.get_xlim()
 
-    data_y = [x[0]*slope+intercept, x[1]*slope+intercept]
+    data_y = [x[0] * slope + intercept, x[1] * slope + intercept]
     ax.set_xlim(x)
-    #ax.set_ylim(y)
+    # ax.set_ylim(y)
 
     from matplotlib.lines import Line2D
 
@@ -845,8 +1024,8 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     # TODO: how to intercept something like a margins call and adjust?
     line = ABLine2D(x, data_y, **kwargs)
     ax.add_line(line)
-    line.id_xlim_callback = ax.callbacks.connect('xlim_changed', line.update_datalim)
-    line.id_ylim_callback = ax.callbacks.connect('ylim_changed', line.update_datalim)
+    line.id_xlim_callback = ax.callbacks.connect("xlim_changed", line.update_datalim)
+    line.id_ylim_callback = ax.callbacks.connect("ylim_changed", line.update_datalim)
 
     if horiz:
         ax.hline(horiz)
@@ -855,34 +1034,46 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     return fig
 
 
-@Appender(_plot_influence_doc.format(**{
-    'extra_params_doc': "results: object\n"
-                        "        Results for a fitted regression model.\n"
-                        "    influence: instance\n"
-                        "        The instance of Influence for model."}))
-def _influence_plot(results, influence, external=True, alpha=.05,
-                    criterion="cooks", size=48, plot_alpha=.75, ax=None,
-                    leverage=None, resid=None,
-                    **kwargs):
+@Appender(
+    _plot_influence_doc.format(
+        extra_params_doc="results : object\n"
+        "        Results for a fitted regression model.\n"
+        "    influence : instance\n"
+        "        The instance of Influence for model."
+    )
+)
+def _influence_plot(
+    results,
+    influence,
+    external=True,
+    alpha=0.05,
+    criterion="cooks",
+    size=48,
+    plot_alpha=0.75,
+    ax=None,
+    leverage=None,
+    resid=None,
+    **kwargs,
+):
     # leverage and resid kwds are used only internally for MLEInfluence
     infl = influence
     fig, ax = utils.create_mpl_ax(ax)
 
-    if criterion.lower().startswith('coo'):
+    if criterion.lower().startswith("coo"):
         psize = infl.cooks_distance[0]
-    elif criterion.lower().startswith('dff'):
+    elif criterion.lower().startswith("dff"):
         psize = np.abs(infl.dffits[0])
     else:
-        raise ValueError("Criterion %s not understood" % criterion)
+        raise ValueError(f"Criterion {criterion} not understood")
 
     # scale the variables
-    #TODO: what is the correct scaling and the assumption here?
-    #we want plots to be comparable across different plots
-    #so we would need to use the expected distribution of criterion probably
+    # TODO: what is the correct scaling and the assumption here?
+    # we want plots to be comparable across different plots
+    # so we would need to use the expected distribution of criterion probably
     old_range = np.ptp(psize)
     new_range = size**2 - 8**2
 
-    psize = (psize - psize.min()) * new_range/old_range + 8**2
+    psize = (psize - psize.min()) * new_range / old_range + 8**2
 
     if leverage is None:
         leverage = infl.hat_matrix_diag
@@ -898,7 +1089,7 @@ def _influence_plot(results, influence, external=True, alpha=.05,
 
     from scipy import stats
 
-    cutoff = stats.t.ppf(1.-alpha/2, results.df_resid)
+    cutoff = stats.t.ppf(1.0 - alpha / 2, results.df_resid)
     large_resid = np.abs(resid) > cutoff
     large_leverage = leverage > _high_leverage(results)
     large_points = np.logical_or(large_resid, large_leverage)
@@ -909,10 +1100,14 @@ def _influence_plot(results, influence, external=True, alpha=.05,
     labels = results.model.data.row_labels
     if labels is None:
         labels = lrange(len(resid))
-    ax = utils.annotate_axes(np.where(large_points)[0], labels,
-                             lzip(leverage, resid),
-                             lzip(-(psize/2)**.5, (psize/2)**.5), "x-large",
-                             ax)
+    ax = utils.annotate_axes(
+        np.where(large_points)[0],
+        labels,
+        lzip(leverage, resid),
+        lzip(-((psize / 2) ** 0.5), (psize / 2) ** 0.5),
+        "x-large",
+        ax,
+    )
 
     # TODO: make configurable or let people do it ex-post?
     font = {"fontsize": 16, "color": "black"}
@@ -922,82 +1117,120 @@ def _influence_plot(results, influence, external=True, alpha=.05,
     return fig
 
 
-@Appender(_plot_influence_doc.format(**{
-    'extra_params_doc': "results : Results\n"
-                        "        Results for a fitted regression model."}))
-def influence_plot(results, external=True, alpha=.05, criterion="cooks",
-                   size=48, plot_alpha=.75, ax=None, **kwargs):
+@Appender(
+    _plot_influence_doc.format(
+        extra_params_doc="results : Results\n"
+        "        Results for a fitted regression model."
+    )
+)
+def influence_plot(
+    results,
+    external=True,
+    alpha=0.05,
+    criterion="cooks",
+    size=48,
+    plot_alpha=0.75,
+    ax=None,
+    **kwargs,
+):
 
     infl = results.get_influence()
-    res = _influence_plot(results, infl, external=external, alpha=alpha,
-                          criterion=criterion, size=size,
-                          plot_alpha=plot_alpha, ax=ax, **kwargs)
+    res = _influence_plot(
+        results,
+        infl,
+        external=external,
+        alpha=alpha,
+        criterion=criterion,
+        size=size,
+        plot_alpha=plot_alpha,
+        ax=ax,
+        **kwargs,
+    )
     return res
 
 
-@Appender(_plot_leverage_resid2_doc.format({
-    'extra_params_doc': "results: object\n"
-                        "    Results for a fitted regression model\n"
-                        "influence: instance\n"
-                        "    instance of Influence for model"}))
-def _plot_leverage_resid2(results, influence, alpha=.05, ax=None,
-                         **kwargs):
+@Appender(
+    _plot_leverage_resid2_doc.format(
+        extra_params_doc="results : object\n"
+        "        Results for a fitted regression model\n"
+        "    influence : instance\n"
+        "        Instance of Influence for model"
+    )
+)
+def _plot_leverage_resid2(results, influence, alpha=0.05, ax=None, **kwargs):
 
     from scipy.stats import norm, zscore
+
     fig, ax = utils.create_mpl_ax(ax)
 
     infl = influence
     leverage = infl.hat_matrix_diag
     resid = zscore(infl.resid)
-    ax.plot(resid**2, leverage, 'o', **kwargs)
+    ax.plot(resid**2, leverage, "o", **kwargs)
     ax.set_xlabel("Normalized residuals**2")
     ax.set_ylabel("Leverage")
     ax.set_title("Leverage vs. Normalized residuals squared")
 
     large_leverage = leverage > _high_leverage(results)
-    #norm or t here if standardized?
-    cutoff = norm.ppf(1.-alpha/2)
+    # norm or t here if standardized?
+    cutoff = norm.ppf(1.0 - alpha / 2)
     large_resid = np.abs(resid) > cutoff
     labels = results.model.data.row_labels
     if labels is None:
         labels = lrange(int(results.nobs))
     index = np.where(np.logical_or(large_leverage, large_resid))[0]
-    ax = utils.annotate_axes(index, labels, lzip(resid**2, leverage),
-                             [(0, 5)]*int(results.nobs), "large",
-                             ax=ax, ha="center", va="bottom")
-    ax.margins(.075, .075)
+    ax = utils.annotate_axes(
+        index,
+        labels,
+        lzip(resid**2, leverage),
+        [(0, 5)] * int(results.nobs),
+        "large",
+        ax=ax,
+        ha="center",
+        va="bottom",
+    )
+    ax.margins(0.075, 0.075)
     return fig
 
 
-@Appender(_plot_leverage_resid2_doc.format({
-    'extra_params_doc': "results : object\n"
-                        "    Results for a fitted regression model"}))
-def plot_leverage_resid2(results, alpha=.05, ax=None, **kwargs):
+@Appender(
+    _plot_leverage_resid2_doc.format(
+        extra_params_doc="results : object\n"
+        "        Results for a fitted regression model"
+    )
+)
+def plot_leverage_resid2(results, alpha=0.05, ax=None, **kwargs):
 
     infl = results.get_influence()
     return _plot_leverage_resid2(results, infl, alpha=alpha, ax=ax, **kwargs)
 
 
-
-@Appender(_plot_added_variable_doc % {
-    'extra_params_doc': "results : object\n"
-                        "    Results for a fitted regression model"})
-def plot_added_variable(results, focus_exog, resid_type=None,
-                        use_glm_weights=True, fit_kwargs=None, ax=None):
+@Appender(
+    _plot_added_variable_doc
+    % {
+        "extra_params_doc": "results : object\n"
+        "        Results for a fitted regression model"
+    }
+)
+def plot_added_variable(
+    results, focus_exog, resid_type=None, use_glm_weights=True, fit_kwargs=None, ax=None
+):
 
     model = results.model
 
     fig, ax = utils.create_mpl_ax(ax)
 
-    endog_resid, focus_exog_resid =\
-                 added_variable_resids(results, focus_exog,
-                                       resid_type=resid_type,
-                                       use_glm_weights=use_glm_weights,
-                                       fit_kwargs=fit_kwargs)
+    endog_resid, focus_exog_resid = added_variable_resids(
+        results,
+        focus_exog,
+        resid_type=resid_type,
+        use_glm_weights=use_glm_weights,
+        fit_kwargs=fit_kwargs,
+    )
 
-    ax.plot(focus_exog_resid, endog_resid, 'o', alpha=0.6)
+    ax.plot(focus_exog_resid, endog_resid, "o", alpha=0.6)
 
-    ax.set_title('Added variable plot', fontsize='large')
+    ax.set_title("Added variable plot", fontsize="large")
 
     if isinstance(focus_exog, str):
         xname = focus_exog
@@ -1009,9 +1242,13 @@ def plot_added_variable(results, focus_exog, resid_type=None,
     return fig
 
 
-@Appender(_plot_partial_residuals_doc % {
-    'extra_params_doc': "results : object\n"
-                        "    Results for a fitted regression model"})
+@Appender(
+    _plot_partial_residuals_doc
+    % {
+        "extra_params_doc": "results : object\n"
+        "        Results for a fitted regression model"
+    }
+)
 def plot_partial_residuals(results, focus_exog, ax=None):
     # Docstring attached below
 
@@ -1023,9 +1260,9 @@ def plot_partial_residuals(results, focus_exog, ax=None):
     focus_exog_vals = results.model.exog[:, focus_col]
 
     fig, ax = utils.create_mpl_ax(ax)
-    ax.plot(focus_exog_vals, pr, 'o', alpha=0.6)
+    ax.plot(focus_exog_vals, pr, "o", alpha=0.6)
 
-    ax.set_title('Partial residuals plot', fontsize='large')
+    ax.set_title("Partial residuals plot", fontsize="large")
 
     if isinstance(focus_exog, str):
         xname = focus_exog
@@ -1037,26 +1274,28 @@ def plot_partial_residuals(results, focus_exog, ax=None):
     return fig
 
 
-@Appender(_plot_ceres_residuals_doc % {
-    'extra_params_doc': "results : Results\n"
-                        "        Results instance of a fitted regression "
-                        "model."})
-def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
-                         ax=None):
+@Appender(
+    _plot_ceres_residuals_doc
+    % {
+        "extra_params_doc": "results : Results\n"
+        "        Results instance of a fitted regression "
+        "model."
+    }
+)
+def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None, ax=None):
 
     model = results.model
 
     focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
 
-    presid = ceres_resids(results, focus_exog, frac=frac,
-                          cond_means=cond_means)
+    presid = ceres_resids(results, focus_exog, frac=frac, cond_means=cond_means)
 
     focus_exog_vals = model.exog[:, focus_col]
 
     fig, ax = utils.create_mpl_ax(ax)
-    ax.plot(focus_exog_vals, presid, 'o', alpha=0.6)
+    ax.plot(focus_exog_vals, presid, "o", alpha=0.6)
 
-    ax.set_title('CERES residuals plot', fontsize='large')
+    ax.set_title("CERES residuals plot", fontsize="large")
 
     ax.set_xlabel(focus_exog, size=15)
     ax.set_ylabel("Component plus residual", size=15)
@@ -1067,14 +1306,15 @@ def plot_ceres_residuals(results, focus_exog, frac=0.66, cond_means=None,
 def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     """
     Calculate the CERES residuals (Conditional Expectation Partial
-    Residuals) for a fitted model.
+    Residuals) for a fitted model
 
     Parameters
     ----------
     results : model results instance
         The fitted model for which the CERES residuals are calculated.
-    focus_exog : int
-        The column of results.model.exog used as the 'focus variable'.
+    focus_exog : {int, str}
+        The column index of results.model.exog, or the variable name,
+        used as the 'focus variable'.
     frac : float, optional
         Lowess smoothing parameter for estimating the conditional
         means.  Not used if `cond_means` is provided.
@@ -1088,7 +1328,8 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
 
     Returns
     -------
-    An array containing the CERES residuals.
+    ndarray
+        The CERES residuals.
 
     Notes
     -----
@@ -1101,8 +1342,9 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
     model = results.model
 
     if not isinstance(model, (GLM, GEE, OLS)):
-        raise ValueError("ceres residuals not available for %s" %
-                         model.__class__.__name__)
+        raise ValueError(
+            f"ceres residuals not available for {model.__class__.__name__}"
+        )
 
     focus_exog, focus_col = utils.maybe_name_or_idx(focus_exog, model)
 
@@ -1153,28 +1395,30 @@ def ceres_resids(results, focus_exog, frac=0.66, cond_means=None):
 
     return presid
 
+
 def partial_resids(results, focus_exog):
     """
-    Returns partial residuals for a fitted model with respect to a
-    'focus predictor'.
+    Return partial residuals for a fitted model with respect to a
+    'focus predictor'
 
     Parameters
     ----------
     results : results instance
         A fitted regression model.
-    focus col : int
-        The column index of model.exog with respect to which the
-        partial residuals are calculated.
+    focus_exog : {int, str}
+        The column index of model.exog, or the variable name, with
+        respect to which the partial residuals are calculated.
 
     Returns
     -------
-    An array of partial residuals.
+    ndarray
+        The partial residuals.
 
     References
     ----------
-    RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
-    generalized linear models.  Journal of the American Statistical
-    Association, 93:442.
+    .. [1] RD Cook and R Croos-Dabrera (1998).  Partial residual plots in
+       generalized linear models.  Journal of the American Statistical
+       Association, 93:442.
     """
 
     # TODO: could be a method of results
@@ -1187,10 +1431,9 @@ def partial_resids(results, focus_exog):
     if isinstance(model, (GLM, GEE)):
         resid *= model.family.link.deriv(results.fittedvalues)
     elif isinstance(model, (OLS, GLS, WLS)):
-        pass # No need to do anything
+        pass  # No need to do anything
     else:
-        raise ValueError("Partial residuals for '%s' not implemented."
-                         % type(model))
+        raise ValueError(f"Partial residuals for '{type(model)}' not implemented.")
 
     if type(focus_exog) is str:
         focus_col = model.exog_names.index(focus_exog)
@@ -1201,11 +1444,13 @@ def partial_resids(results, focus_exog):
 
     return focus_val + resid
 
-def added_variable_resids(results, focus_exog, resid_type=None,
-                          use_glm_weights=True, fit_kwargs=None):
+
+def added_variable_resids(
+    results, focus_exog, resid_type=None, use_glm_weights=True, fit_kwargs=None
+):
     """
     Residualize the endog variable and a 'focus' exog variable in a
-    regression model with respect to the other exog variables.
+    regression model with respect to the other exog variables
 
     Parameters
     ----------
@@ -1244,8 +1489,9 @@ def added_variable_resids(results, focus_exog, resid_type=None,
 
     model = results.model
     if not isinstance(model, (GEE, GLM, OLS)):
-        raise ValueError("model type %s not supported for added variable residuals" %
-                         model.__class__.__name__)
+        raise ValueError(
+            f"model type {model.__class__.__name__} not supported for added variable residuals"
+        )
 
     exog = model.exog
     endog = model.endog
@@ -1276,12 +1522,14 @@ def added_variable_resids(results, focus_exog, resid_type=None,
         args.update(fit_kwargs)
     new_result = new_model.fit(**args)
     if not getattr(new_result, "converged", True):
-        raise ValueError("fit did not converge when calculating added variable residuals")
+        raise ValueError(
+            "fit did not converge when calculating added variable residuals"
+        )
 
     try:
         endog_resid = getattr(new_result, resid_type)
-    except AttributeError:
-        raise ValueError("'%s' residual type not available" % resid_type)
+    except AttributeError as exc:
+        raise ValueError(f"'{resid_type}' residual type not available") from exc
 
     import statsmodels.regression.linear_model as lm
 

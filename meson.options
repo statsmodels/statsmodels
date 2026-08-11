@@ -1,0 +1,7 @@
+# Use this options by adding to the pip command:
+#     -Csetup-args="-Dcython-coverage=true"
+# then run:
+#     pytest --cov=statsmodels statsmodels
+#     coverage html
+option('cython-coverage', type: 'boolean', value: false,
+        description: 'Compile and build cython modules with coverage support')

@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 
 if [[ ${USE_CONDA} == "true" ]]; then
+  conda config --add channels defaults
+  conda tos accept
   conda config --set always_yes true
   conda update --all --quiet
+  conda tos accept
   conda create -n statsmodels-test python=${PYTHON_VERSION} -y
   conda init
   echo ${PATH}
   source activate statsmodels-test
   echo ${PATH}
   which python
+  conda config --add channels conda-forge
+  conda tos accept
   CMD="conda install -c conda-forge numpy"
 else
   CMD="python -m pip install numpy"
@@ -22,18 +27,18 @@ if [[ ${USE_CONDA} != "true" ]]; then
   python -m pip uninstall numpy scipy pandas cython -y
 fi
 
-if [[ -n ${NUMPY} ]]; then CMD="$CMD==${NUMPY}"; fi;
+if [[ -n ${NUMPY_VERSION} ]]; then CMD="$CMD==${NUMPY_VERSION}"; fi;
 CMD="$CMD scipy"
-if [[ -n ${SCIPY} ]]; then CMD="$CMD==${SCIPY}"; fi;
+if [[ -n ${SCIPY_VERSION} ]]; then CMD="$CMD==${SCIPY_VERSION}"; fi;
 CMD="$CMD pandas"
-if [[ -n ${PANDAS} ]]; then CMD="$CMD==${PANDAS}"; fi;
+if [[ -n ${PANDAS_VERSION} ]]; then CMD="$CMD==${PANDAS_VERSION}"; fi;
 CMD="$CMD cython"
-if [[ -n ${CYTHON} ]]; then CMD="$CMD==${CYTHON}"; fi;
+if [[ -n ${CYTHON_VERSION} ]]; then CMD="$CMD==${CYTHON_VERSION}"; fi;
 
 if [[ ${USE_MATPLOTLIB} == true ]]; then
   CMD="$CMD matplotlib"
-  if [[ -n ${MATPLOTLIB} ]]; then
-    CMD="$CMD==${MATPLOTLIB}";
+  if [[ -n ${MATPLOTLIB_VERSION} ]]; then
+    CMD="$CMD==${MATPLOTLIB_VERSION}";
   fi
 else
   # Uninstall if not needed

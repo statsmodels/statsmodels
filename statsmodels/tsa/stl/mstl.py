@@ -11,23 +11,28 @@ This implementation has the following differences with the original algorithm:
 seasonality. This implementation assumes that there is at least one seasonal
 component.
 
-[1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
+[1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
 MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with Multiple
 Seasonal Patterns
 https://arxiv.org/pdf/2107.13462.pdf
 """
-from collections.abc import Sequence
-from typing import Optional, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 import warnings
 
 import numpy as np
 import pandas as pd
 from scipy.stats import boxcox
 
-from statsmodels.tools.typing import ArrayLike1D
 from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.tsatools import freq_to_period
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from statsmodels.tools.typing import ArrayLike1D
 
 
 class MSTL:
@@ -35,7 +40,7 @@ class MSTL:
     MSTL(endog, periods=None, windows=None, lmbda=None, iterate=2,
          stl_kwargs=None)
 
-    Season-Trend decomposition using LOESS for multiple seasonalities.
+    Season-Trend decomposition using LOESS for multiple seasonalities
 
     .. versionadded:: 0.14.0
 
@@ -58,7 +63,7 @@ class MSTL:
         value will be estimated that maximizes the log-likelihood function.
     iterate : int, optional
         Number of iterations to use to refine the seasonal component.
-    stl_kwargs: dict, optional
+    stl_kwargs : dict, optional
         Arguments to pass to STL.
 
     See Also
@@ -67,7 +72,7 @@ class MSTL:
 
     References
     ----------
-    .. [1] K. Bandura, R.J. Hyndman, and C. Bergmeir (2021)
+    .. [1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
         MSTL: A Seasonal-Trend Decomposition Algorithm for Time Series with
         Multiple Seasonal Patterns. arXiv preprint arXiv:2107.13462.
 
@@ -106,22 +111,21 @@ class MSTL:
         self,
         endog: ArrayLike1D,
         *,
-        periods: Optional[Union[int, Sequence[int]]] = None,
-        windows: Optional[Union[int, Sequence[int]]] = None,
-        lmbda: Optional[Union[float, str]] = None,
+        periods: int | Sequence[int] | None = None,
+        windows: int | Sequence[int] | None = None,
+        lmbda: float | str | None = None,
         iterate: int = 2,
-        stl_kwargs: Optional[dict[str, Union[int, bool, None]]] = None,
+        stl_kwargs: dict[str, int | bool | None] | None = None,
     ):
         self.endog = endog
         self._y = self._to_1d_array(endog)
         self.nobs = self._y.shape[0]
         self.lmbda = lmbda
-        self.periods, self.windows = self._process_periods_and_windows(
-            periods, windows
-        )
+        self.est_lmbda = None
+        self.periods, self.windows = self._process_periods_and_windows(periods, windows)
         self.iterate = iterate
         self._stl_kwargs = self._remove_overloaded_stl_kwargs(
-            stl_kwargs if stl_kwargs else {}
+            stl_kwargs or {}
         )
 
     def fit(self):
@@ -196,8 +200,8 @@ class MSTL:
 
     def _process_periods_and_windows(
         self,
-        periods: Union[int, Sequence[int], None],
-        windows: Union[int, Sequence[int], None],
+        periods: int | Sequence[int] | None,
+        windows: int | Sequence[int] | None,
     ) -> tuple[Sequence[int], Sequence[int]]:
         periods = self._process_periods(periods)
 
@@ -215,17 +219,17 @@ class MSTL:
         if any(period >= self.nobs / 2 for period in periods):
             warnings.warn(
                 "A period(s) is larger than half the length of time series."
-                " Removing these period(s).", UserWarning
+                " Removing these period(s).",
+                UserWarning,
+                stacklevel=2,
             )
-            periods = tuple(
-                period for period in periods if period < self.nobs / 2
-            )
+            periods = tuple(period for period in periods if period < self.nobs / 2)
             windows = windows[: len(periods)]
 
         return periods, windows
 
     def _process_periods(
-        self, periods: Union[int, Sequence[int], None]
+        self, periods: int | Sequence[int] | None
     ) -> Sequence[int]:
         if periods is None:
             periods = (self._infer_period(),)
@@ -237,7 +241,7 @@ class MSTL:
 
     def _process_windows(
         self,
-        windows: Union[int, Sequence[int], None],
+        windows: int | Sequence[int] | None,
         num_seasons: int,
     ) -> Sequence[int]:
         if windows is None:
@@ -263,7 +267,7 @@ class MSTL:
     ) -> tuple[Sequence[int], Sequence[int]]:
         if len(periods) != len(windows):
             raise ValueError("Periods and windows must have same length")
-        periods, windows = zip(*sorted(zip(periods, windows)))
+        periods, windows = zip(*sorted(zip(periods, windows, strict=True)), strict=True)
         return periods, windows
 
     @staticmethod

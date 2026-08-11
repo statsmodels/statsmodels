@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+import sys
+
+import Cython.Tempita
+
+
+def process_tempita(fromfile, outfile=None):
+    """Process tempita templated file and write out the result.
+
+    The template file is expected to end in `.c.in` or `.pyx.in`:
+    e.g., processing `template.c.in` generates `template.c`.
+
+    """
+    from_filename = Cython.Tempita.Template.from_filename
+    template = from_filename(fromfile, encoding=sys.getdefaultencoding())
+
+    content = template.substitute()
+
+    with Path(outfile).open("w") as f:
+        f.write(content)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("infile", type=str, help="Path to the input file")
+    parser.add_argument("-o", "--outdir", type=str, help="Path to the output directory")
+    parser.add_argument(
+        "--outfile",
+        type=str,
+        help="Path to the output file (use either this or outdir)",
+    )
+    parser.add_argument(
+        "-i",
+        "--ignore",
+        type=str,
+        help="An ignored input - may be useful to add a "
+        "dependency between custom targets",
+    )
+    args = parser.parse_args()
+
+    if not args.infile.endswith(".in"):
+        raise ValueError(f"Unexpected extension: {args.infile}")
+
+    if not (args.outdir or args.outfile):
+        raise ValueError("Missing `--outdir` or `--outfile` argument to tempita.py")
+
+    if args.outfile:
+        outfile = args.outfile
+    else:
+        outdir_abs = Path.cwd() / args.outdir
+        outfile = outdir_abs / Path(args.infile).stem
+
+    process_tempita(args.infile, outfile)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,16 +1,21 @@
 from statsmodels.compat.pandas import PD_LT_2
 
+import functools
+
 import numpy as np
-import pandas as pd
 
 
 def _safe_is_pandas_categorical_dtype(dt):
+    """Check whether a dtype is a pandas categorical dtype across versions"""
+    import pandas as pd
+
     if PD_LT_2:
         return pd.api.types.is_categorical_dtype(dt)
     return isinstance(dt, pd.CategoricalDtype)
 
 
 def monkey_patch_cat_dtype():
+    """Patch patsy to use a version-compatible categorical dtype check"""
     try:
         import patsy.util
 
@@ -24,22 +29,37 @@ def monkey_patch_cat_dtype():
 def get_all_sorted_knots(
     x, n_inner_knots=None, inner_knots=None, lower_bound=None, upper_bound=None
 ):
-    """Gets all knots locations with lower and upper exterior knots included.
+    """
+    Get all knots locations with lower and upper exterior knots included
 
     If needed, inner knots are computed as equally spaced quantiles of the
     input data falling between given lower and upper bounds.
 
-    :param x: The 1-d array data values.
-    :param n_inner_knots: Number of inner knots to compute.
-    :param inner_knots: Provided inner knots if any.
-    :param lower_bound: The lower exterior knot location. If unspecified, the
-     minimum of ``x`` values is used.
-    :param upper_bound: The upper exterior knot location. If unspecified, the
-     maximum of ``x`` values is used.
-    :return: The array of ``n_inner_knots + 2`` distinct knots.
+    Parameters
+    ----------
+    x : ndarray
+        The 1-d array data values.
+    n_inner_knots : int, optional
+        Number of inner knots to compute.
+    inner_knots : array_like, optional
+        Provided inner knots if any.
+    lower_bound : float, optional
+        The lower exterior knot location. If unspecified, the
+        minimum of ``x`` values is used.
+    upper_bound : float, optional
+        The upper exterior knot location. If unspecified, the
+        maximum of ``x`` values is used.
 
-    :raise ValueError: for various invalid parameters sets or if unable to
-     compute ``n_inner_knots + 2`` distinct knots.
+    Returns
+    -------
+    ndarray
+        The array of ``n_inner_knots + 2`` distinct knots.
+
+    Raises
+    ------
+    ValueError
+        For various invalid parameter sets or if unable to compute
+        ``n_inner_knots + 2`` distinct knots.
     """
     if lower_bound is None and x.size == 0:
         raise ValueError(
@@ -59,13 +79,13 @@ def get_all_sorted_knots(
 
     if upper_bound < lower_bound:
         raise ValueError(
-            "lower_bound > upper_bound (%r > %r)" % (lower_bound, upper_bound)
+            f"lower_bound > upper_bound ({lower_bound!r} > {upper_bound!r})"
         )
 
     if inner_knots is None and n_inner_knots is not None:
         if n_inner_knots < 0:
             raise ValueError(
-                "Invalid requested number of inner knots: %r" % (n_inner_knots,)
+                f"Invalid requested number of inner knots: {n_inner_knots!r}"
             )
 
         x = x[(lower_bound <= x) & (x <= upper_bound)]
@@ -79,27 +99,27 @@ def get_all_sorted_knots(
             inner_knots = np.array([])
         else:
             raise ValueError(
-                "No data values between lower_bound(=%r) and "
-                "upper_bound(=%r): cannot compute requested "
-                "%r inner knot(s)." % (lower_bound, upper_bound, n_inner_knots)
+                f"No data values between lower_bound(={lower_bound!r}) and "
+                f"upper_bound(={upper_bound!r}): cannot compute requested "
+                f"{n_inner_knots!r} inner knot(s)."
             )
     elif inner_knots is not None:
         inner_knots = np.unique(inner_knots)
         if n_inner_knots is not None and n_inner_knots != inner_knots.size:
             raise ValueError(
-                "Needed number of inner knots=%r does not match "
-                "provided number of inner knots=%r." % (n_inner_knots, inner_knots.size)
+                f"Needed number of inner knots={n_inner_knots!r} does not match "
+                f"provided number of inner knots={inner_knots.size!r}."
             )
         n_inner_knots = inner_knots.size
         if np.any(inner_knots < lower_bound):
             raise ValueError(
-                "Some knot values (%s) fall below lower bound "
-                "(%r)." % (inner_knots[inner_knots < lower_bound], lower_bound)
+                f"Some knot values ({inner_knots[inner_knots < lower_bound]}) fall below lower bound "
+                f"({lower_bound!r})."
             )
         if np.any(inner_knots > upper_bound):
             raise ValueError(
-                "Some knot values (%s) fall above upper bound "
-                "(%r)." % (inner_knots[inner_knots > upper_bound], upper_bound)
+                f"Some knot values ({inner_knots[inner_knots > upper_bound]}) fall above upper bound "
+                f"({upper_bound!r})."
             )
     else:
         raise ValueError("Must specify either 'n_inner_knots' or 'inner_knots'.")
@@ -108,10 +128,24 @@ def get_all_sorted_knots(
     all_knots = np.unique(all_knots)
     if all_knots.size != n_inner_knots + 2:
         raise ValueError(
-            "Unable to compute n_inner_knots(=%r) + 2 distinct "
-            "knots: %r data value(s) found between "
-            "lower_bound(=%r) and upper_bound(=%r)."
-            % (n_inner_knots, x.size, lower_bound, upper_bound)
+            f"Unable to compute n_inner_knots(={n_inner_knots!r}) + 2 distinct "
+            f"knots: {x.size!r} data value(s) found between "
+            f"lower_bound(={lower_bound!r}) and upper_bound(={upper_bound!r})."
         )
 
     return all_knots
+
+
+@functools.cache
+def ensure_patsy_compat():
+    """Apply the patsy categorical dtype compatibility patch, if possible"""
+    try:
+        import patsy.util  # noqa: F401
+    except ImportError:
+        # patsy not installed skip applying the patch now
+        return
+    try:
+        monkey_patch_cat_dtype()
+    except Exception:
+        # Intentionally ignored to avoid breaking import time behavior
+        return

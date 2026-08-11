@@ -5,12 +5,16 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import warnings
 
 import numpy as np
 from scipy import interpolate, stats
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 # helper functions to work on a grid of cdf and pdf, histogram
+
 
 class _Grid:
     """Create Grid values and indices, grid in [0, 1]^d
@@ -27,7 +31,7 @@ class _Grid:
         intervals of [0, 1] for each axis.
     eps : float
         If eps is not zero, then x values will be clipped to [eps, 1 - eps],
-        i.e. to the interior of the unit interval or hyper cube.
+        i.e., to the interior of the unit interval or hyper cube.
 
 
     Attributes
@@ -47,8 +51,8 @@ class _Grid:
         x_marginal = [np.arange(ki) / (ki - 1) for ki in k_grid]
 
         idx_flat = np.column_stack(
-                np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
-                ).astype(float)
+            np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
+        ).astype(float)
         x_flat = idx_flat / idx_flat.max(0)
         if eps != 0:
             x_marginal = [np.clip(xi, eps, 1 - eps) for xi in x_marginal]
@@ -87,6 +91,10 @@ def cdf2prob_grid(cdf, prepend=0):
     ----------
     cdf : array_like
         Grid of cumulative probabilities with same shape as probs.
+    prepend : int, float or None
+        Value to prepend to the difference along each axis before taking
+        ``np.diff``. If None, then no value is prepended (i.e., the length
+        along each axis decreases by 1 relative to ``cdf``).
 
     Returns
     -------
@@ -139,8 +147,8 @@ def average_grid(values, coords=None, _method="slicing"):
 
     elif _method == "convolve":
         from scipy import signal
-        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim),
-                            mode="valid")
+
+        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim), mode="valid")
 
     if coords is not None:
         dx = np.array(1)
@@ -185,7 +193,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     for _ in range(maxiter):
         pc0 = pc.copy()
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             pc0 /= pc.sum(axis=axs, keepdims=True)
         pc = pc0
         pc /= pc.sum()
@@ -193,7 +201,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
         # check convergence
         mptps = []
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             marg = pc.sum(axis=axs, keepdims=False)
             mptps.append(np.ptp(marg))
         if max(mptps) < tol:
@@ -202,8 +210,12 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
 
     if not converged:
         from statsmodels.tools.sm_exceptions import ConvergenceWarning
-        warnings.warn("Iterations did not converge, maxiter reached",
-                      ConvergenceWarning)
+
+        warnings.warn(
+            "Iterations did not converge, maxiter reached",
+            ConvergenceWarning,
+            stacklevel=2,
+        )
     return pc
 
 
@@ -267,7 +279,7 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     return freqr
 
 
-def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
+def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False, rng=None):
     """Histogram probabilities as approximation to a copula density.
 
     Parameters
@@ -287,6 +299,13 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
         If true, then the density, ``pdf``, is used and cell probabilities
         are approximated by averaging the pdf of the cell corners. This is
         only useful if the cdf is not available.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        The source of the random variables to use in cdf calculation, if
+        needed. If `rng` is None, a new ``Generator`` is created using
+        fresh entropy from the operating system. If `rng` is an int or
+        array of ints, a new ``Generator`` is created, seeded with `rng`.
+        If `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -318,7 +337,13 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
             pdf_grid = ag / ag.sum()
     else:
         g = _Grid([k] * k_dim, eps=1e-6)
-        cdfg = copula.cdf(g.x_flat).reshape(*ks)
+        rng = check_random_state(rng)
+        try:
+            # This is a hack because some copula CDFs are approximate and use
+            # random variates in their calculation, while most do not.
+            cdfg = copula.cdf(g.x_flat, rng=rng).reshape(*ks)
+        except TypeError:
+            cdfg = copula.cdf(g.x_flat).reshape(*ks)
         # correct for bin size
         pdf_grid = cdf2prob_grid(cdfg, prepend=None)
         # TODO: check boundary approximation, eg. undefined at zero
@@ -329,6 +354,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
 
 
 # functions to evaluate bernstein polynomials
+
 
 def _eval_bernstein_1d(x, fvals, method="binom"):
     """Evaluate 1-dimensional bernstein polynomial given grid of values.
@@ -358,7 +384,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
     k_terms = fvals.shape[-1]
     xx = np.asarray(x)
     k = np.arange(k_terms).astype(float)
-    n = k_terms - 1.
+    n = k_terms - 1.0
 
     if method.lower() == "binom":
         # Divide by 0 RuntimeWarning here
@@ -367,7 +393,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
             poly_base = stats.binom.pmf(k, n, xx[..., None])
         bp_values = (fvals * poly_base).sum(-1)
     elif method.lower() == "bpoly":
-        bpb = interpolate.BPoly(fvals[:, None], [0., 1])
+        bpb = interpolate.BPoly(fvals[:, None], [0.0, 1])
         bp_values = bpb(x)
     elif method.lower() == "beta":
         # Divide by 0 RuntimeWarning here
@@ -413,8 +439,9 @@ def _eval_bernstein_2d(x, fvals):
     k2 = np.arange(k_terms[1]).astype(float)
 
     # we are building a nobs x n1 x n2 array
-    poly_base = (stats.binom.pmf(k1[None, :, None], n1, x1[:, None, None]) *
-                 stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None]))
+    poly_base = stats.binom.pmf(
+        k1[None, :, None], n1, x1[:, None, None]
+    ) * stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None])
     bp_values = (fvals * poly_base).sum(-1).sum(-1)
 
     return bp_values
@@ -449,7 +476,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.zeros(x.shape[0])
     for i in range(k_dim):
         ki = np.arange(k_terms[i]).astype(float)
-        for _ in range(i+1):
+        for _ in range(i + 1):
             ki = ki[..., None]
         ni = k_terms[i] - 1
         xi = xx[:, i]
@@ -458,7 +485,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.exp(poly_base)
     bp_values = fvals.T[..., None] * poly_base
 
-    for i in range(k_dim):
+    for _ in range(k_dim):
         bp_values = bp_values.sum(0)
 
     return bp_values

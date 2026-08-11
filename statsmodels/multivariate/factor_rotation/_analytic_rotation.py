@@ -34,16 +34,17 @@ def target_rotation(A, H, full_rank=False):
 
     Parameters
     ----------
-    A : numpy matrix (default None)
-        non rotated factors
-    H : numpy matrix
-        target matrix
-    full_rank : bool (default FAlse)
-        if set to true full rank is assumed
+    A : ndarray
+        Non-rotated factors.
+    H : ndarray
+        Target matrix.
+    full_rank : bool, optional
+        If set to True full rank is assumed. Default is False.
 
     Returns
     -------
-    The matrix :math:`T`.
+    ndarray
+        The rotation matrix :math:`T`.
 
     References
     ----------
@@ -83,16 +84,15 @@ def procrustes(A, H):
 
     Parameters
     ----------
-    A : numpy matrix
-        non rotated factors
-    H : numpy matrix
-        target matrix
-    full_rank : bool (default False)
-        if set to true full rank is assumed
+    A : ndarray
+        Non-rotated factors.
+    H : ndarray
+        Target matrix.
 
     Returns
     -------
-    The matrix :math:`T`.
+    ndarray
+        The rotation matrix :math:`T`.
 
     References
     ----------
@@ -125,10 +125,17 @@ def promax(A, k=2):
 
     Parameters
     ----------
-    A : numpy matrix
-        non rotated factors
-    k : float
-        parameter, should be positive
+    A : ndarray
+        Non-rotated factors.
+    k : float, optional
+        Power parameter, should be positive.
+
+    Returns
+    -------
+    ndarray
+        The rotated factors.
+    ndarray
+        The rotation matrix :math:`T`.
 
     References
     ----------
@@ -141,7 +148,7 @@ def promax(A, k=2):
     assert k > 0
     # define rotation target using varimax rotation:
     from ._wrappers import rotate_factors
-    V, T = rotate_factors(A, 'varimax')
+    V, T = rotate_factors(A, "varimax")
     H = np.abs(V)**k/V
     # solve procrustes problem
     S = procrustes(A, H)  # np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H);

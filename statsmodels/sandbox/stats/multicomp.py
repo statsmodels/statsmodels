@@ -61,15 +61,14 @@ TODO
 
 
 """
-
 from statsmodels.compat.python import lrange, lzip
 
-from collections import namedtuple
 import copy
 import math
+from typing import NamedTuple
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+import pandas as pd
 from scipy import interpolate, stats
 
 from statsmodels.graphics import utils
@@ -82,8 +81,11 @@ try:
 except ImportError:
     from statsmodels.stats.libqsturng import psturng, qsturng
 
-    studentized_range_tuple = namedtuple("studentized_range", ["ppf", "sf"])
-    studentized_range = studentized_range_tuple(ppf=qsturng, sf=psturng)
+    class StudentizedRangeTuple(NamedTuple):
+        ppf: float
+        sf: float
+
+    studentized_range = StudentizedRangeTuple(ppf=qsturng, sf=psturng)
 
 
 qcrit = """
@@ -187,7 +189,7 @@ def get_tukey_pvalue(k, df, q):
 def Tukeythreegene(first, second, third):
     # Performing the Tukey HSD post-hoc test for three genes
     # qwb = xlrd.open_workbook('F:/Lab/bioinformatics/qcrittable.xls')
-    # #opening the workbook containing the q crit table
+    # # opening the workbook containing the q crit table
     # qwb.sheet_names()
     # qcrittable = qwb.sheet_by_name(u'Sheet1')
 
@@ -268,11 +270,11 @@ def Tukeythreegene2(genes):  # Performing the Tukey HSD post-hoc test for three 
         means.append(np.mean(gene))
         std.append(np.std(gene))  # noqa:F821  See GH#5756
 
-    # firstmean = np.mean(first) #means of the three arrays
+    # firstmean = np.mean(first) # means of the three arrays
     # secondmean = np.mean(second)
     # thirdmean = np.mean(third)
 
-    # firststd = np.std(first) #standard deviations of the three arrays
+    # firststd = np.std(first) # standard deviations of the three arrays
     # secondstd = np.std(second)
     # thirdstd = np.std(third)
 
@@ -280,15 +282,15 @@ def Tukeythreegene2(genes):  # Performing the Tukey HSD post-hoc test for three 
     for std in stds:
         stds2.append(math.pow(std, 2))
 
-    # firsts2 = math.pow(firststd,2) #standard deviation squared of the three arrays
+    # firsts2 = math.pow(firststd,2) # standard deviation squared of the three arrays
     # seconds2 = math.pow(secondstd,2)
     # thirds2 = math.pow(thirdstd,2)
 
     # Unused result, comented out
-    # mserrornum = firsts2*2+seconds2*2+thirds2*2 #numerator for mean square error
+    # mserrornum = firsts2*2+seconds2*2+thirds2*2 # numerator for mean square error
     # mserrornum = sum(stds2)*2
-    # mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 #denominator for mean square error
-    # mserrornum/mserrorden #mean square error
+    # mserrorden = (len(genes[0])+len(genes[1])+len(genes[2]))-3 # denominator for mean square error
+    # mserrornum/mserrorden # mean square error
 
 
 def catstack(args):
@@ -432,7 +434,7 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.0):
     # ntests - ntrue
     locs = np.array([0.0] * ntrue + [mu] * (ntests - ntrue))
     results = []
-    for i in range(nrepl):
+    for _ in range(nrepl):
         # rvs = locs + stats.norm.rvs(size=(nobs, ntests))
         rvs = locs + randmvn(rho, size=(nobs, ntests))
         tt, tpval = stats.ttest_1samp(rvs, 0)
@@ -462,6 +464,9 @@ def randmvn(rho, size=(1, 2), standardize=False):
         correlation coefficient
     size : tuple of int
         size is interpreted (nobs, nvars) where each row
+    standardize : bool
+        If True, then the returned draws are standardized to have unit
+        variance using `scipy.stats.zscore`. Default is False.
 
     Returns
     -------
@@ -471,7 +476,7 @@ def randmvn(rho, size=(1, 2), standardize=False):
 
     """
     nobs, nvars = size
-    if 0 < rho and rho < 1:
+    if 0 < rho < 1:
         rvs = np.random.randn(nobs, nvars + 1)
         rvs2 = rvs[:, :-1] * np.sqrt(1 - rho) + rvs[:, -1:] * np.sqrt(rho)
     elif rho == 0:
@@ -646,6 +651,9 @@ class TukeyHSDResults:
         reject2=None,
         variance=None,
         pvalues=None,
+        alpha=None,
+        group_t=None,
+        group_c=None,
     ):
         self._multicomp = mc_object
         self._results_table = results_table
@@ -658,10 +666,22 @@ class TukeyHSDResults:
         self.reject2 = reject2
         self.variance = variance
         self.pvalues = pvalues
+        self.alpha = alpha
+        self.group_t = group_t
+        self.group_c = group_c
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups = self._multicomp.groups
         self.groupsunique = self._multicomp.groupsunique
+
+        if np.size(df_total) > 1:  # or should it be np.isscalar
+            # assume we have Games-Howell, unequal var case
+            self._qcrit_hsd = None
+        else:
+            self._qcrit_hsd = q_crit
+
+        nobs_group = self._multicomp.groupstats.groupnobs
+        self.df_total_hsd = np.sum(nobs_group - 1)
 
     def __str__(self):
         return str(self._results_table)
@@ -670,10 +690,62 @@ class TukeyHSDResults:
         """Summary table that can be printed"""
         return self._results_table
 
+    def summary_frame(self):
+        """Summary DataFrame
+
+        The group columns are labeled as "group_t" and "group_c" with mean
+        difference defined as treatment minus control.
+        This should be less confusing than numeric labels group1 and group2.
+
+        Returns
+        -------
+        pandas.DataFrame
+
+        Notes
+        -----
+        The number of columns will likely increase in a future version of
+        statsmodels. Do not use numeric indices for the DataFrame in order
+        to be robust to the addition of columns.
+        """
+        frame = pd.DataFrame(
+            {
+                "group_t": self.group_t,
+                "group_c": self.group_c,
+                "meandiff": self.meandiffs,
+                "p-adj": self.pvalues,
+                "lower": self.confint[:, 0],
+                "upper": self.confint[:, 1],
+                "reject": self.reject,
+            }
+        )
+        return frame
+
+    def _get_q_crit(self, hsd=True, alpha=None):
+        n_means = len(self.groupsunique)
+
+        if alpha is None:
+            alpha = self.alpha
+            use_attr = True
+
+        if hsd is True:
+            if use_attr and self._qcrit_hsd is not None:
+                q_crit = self._qcrit_hsd
+            else:  # compute it
+                q_crit = get_tukeyQcrit2(n_means, self.df_total_hsd, alpha=alpha)
+            if use_attr:
+                self._qcrit_hsd = q_crit
+        else:
+            raise NotImplementedError("not yet")
+
+        return q_crit
+
     def _simultaneous_ci(self):
         """Compute simultaneous confidence intervals for comparison of means."""
+
+        q_crit_hsd = self._get_q_crit(hsd=True)
+
         self.halfwidths = simultaneous_ci(
-            self.q_crit,
+            q_crit_hsd,
             self.variance,
             self._multicomp.groupstats.groupnobs,
             self._multicomp.pairindices,
@@ -720,6 +792,16 @@ class TukeyHSDResults:
         confidence intervals, any two pairs can be compared for significance
         by looking for overlap.
 
+        The derivation in Hochberg and Tamhane is under the equal variance
+        assumption. We use the same computation in the case of unequal
+        variances, however, with replacement of the common pooled variance
+        by the unequal estimates of the whithin group variances.
+        This provides a plot that looks more informative and plausible in the
+        case where there are large differences in variances. In the equal
+        sample size and equal variance case, the confidence intervals computed
+        by the two methods, equal and unequal variance, are very close to
+        each other in larger samples.
+
         References
         ----------
         .. [*] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
@@ -736,7 +818,7 @@ class TukeyHSDResults:
 
         This example shows an example plot comparing significant differences
         in group means. Significant differences at the alpha=0.05 level can be
-        identified by intervals that do not overlap (i.e. USA vs Japan,
+        identified by intervals that do not overlap (i.e., USA vs Japan,
         USA vs Germany).
 
         >>> results.plot_simultaneous(comparison_name="USA")
@@ -858,7 +940,7 @@ class MultiComparison:
     def __init__(self, data, groups, group_order=None):
         if len(data) != len(groups):
             raise ValueError(
-                "data has %d elements and groups has %d" % (len(data), len(groups))
+                f"data has {len(data):d} elements and groups has {len(groups):d}"
             )
         self.data = np.asarray(data)
         self.groups = groups = np.asarray(groups)
@@ -870,7 +952,7 @@ class MultiComparison:
             # check if group_order has any names not in groups
             for grp in group_order:
                 if grp not in groups:
-                    raise ValueError("group_order value '%s' not found in groups" % grp)
+                    raise ValueError(f"group_order value '{grp}' not found in groups")
             self.groupsunique = np.array(group_order)
             self.groupintlab = np.empty(len(data), int)
             self.groupintlab.fill(-999)  # instead of a nan
@@ -885,9 +967,9 @@ class MultiComparison:
                 import warnings
 
                 warnings.warn(
-                    "group_order does not contain all groups:"
-                    + " dropping observations",
+                    "group_order does not contain all groups: dropping observations",
                     ValueWarning,
+                    stacklevel=2,
                 )
 
                 mask_keep = self.groupintlab != -999
@@ -936,12 +1018,12 @@ class MultiComparison:
         # simultaneous/separate treatment of multiple tests
         f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(self.rankdata)  # (xranks)
         print("MultiComparison.kruskal")
-        for i, j in zip(*self.pairindices):
+        for i, j in zip(*self.pairindices, strict=True):
             # pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(
                 f * np.sum(1.0 / groupnobs[[i, j]])
-            )  # np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
+            )  # np.array([8,8]))) # Fixme groupnobs[[i,j]] ))
             Q = pdiff / se
 
             # TODO : print(statments, fix
@@ -983,7 +1065,7 @@ class MultiComparison:
         from statsmodels.stats.multitest import multipletests
 
         res = []
-        for i, j in zip(*self.pairindices):
+        for i, j in zip(*self.pairindices, strict=True):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = multipletests(
@@ -1029,12 +1111,12 @@ class MultiComparison:
                 ],
             )
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
-        results_table.title = "Test Multiple Comparison %s \n%s%4.2f method=%s" % (
+        results_table.title = "Test Multiple Comparison {} \n{}{:4.2f} method={}".format(
             testfunc.__name__,
             "FWER=",
             alpha,
             method,
-        ) + "\nalphacSidak=%4.2f, alphacBonf=%5.3f" % (alphacSidak, alphacBonf)
+        ) + f"\nalphacSidak={alphacSidak:4.2f}, alphacBonf={alphacBonf:5.3f}"
 
         return (
             results_table,
@@ -1042,7 +1124,7 @@ class MultiComparison:
             resarr,
         )
 
-    def tukeyhsd(self, alpha=0.05):
+    def tukeyhsd(self, alpha=0.05, use_var="equal"):
         """
         Tukey's range test to compare means of all pairs of groups
 
@@ -1050,12 +1132,25 @@ class MultiComparison:
         ----------
         alpha : float, optional
             Value of FWER at which to calculate HSD.
+        use_var : {"unequal", "equal"}
+            If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
+            Tukey-hsd assumes that (within) variances are the same across groups.
+            If ``use_var`` is "unequal", then the Games-Howell pvalues are
+            returned. This uses Welch's t-test for unequal variances with
+            Satterthwait's corrected degrees of freedom for each pairwise
+            comparison.
 
         Returns
         -------
-        results : TukeyHSDResults instance
+        results : TukeyHSDResults
             A results class containing relevant data and some post-hoc
             calculations
+
+        Notes
+        -----
+        The ``use_var`` keyword and option for Games-Howell test.
+
+        .. versionadded:: 0.15.0
         """
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
@@ -1063,9 +1158,13 @@ class MultiComparison:
 
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
-        # var_ = self.groupstats.groupvarwithin()
-        # #possibly an error in varcorrection in this case
-        var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        if use_var == "unequal":
+            var_ = self.groupstats.groupvarwithin()
+        elif use_var == "equal":
+            var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
+        else:
+            raise ValueError('use_var should be "unequal" or "equal"')
+
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
@@ -1092,21 +1191,24 @@ class MultiComparison:
         )
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = (
-            "Multiple Comparison of Means - Tukey HSD, " + "FWER=%4.2f" % alpha
+            "Multiple Comparison of Means - Tukey HSD, " + f"FWER={alpha:4.2f}"
         )
 
         return TukeyHSDResults(
-            self,
+            self,  # mc_object, attached as _multicomp
             results_table,
-            res[5],
-            res[1],
-            res[2],
-            res[3],
-            res[4],
-            res[6],
-            res[7],
-            var_,
-            res[8],
+            res[5],  # q_crit, positional
+            reject=res[1],
+            meandiffs=res[2],
+            std_pairs=res[3],
+            confint=res[4],
+            df_total=res[6],
+            reject2=res[7],
+            variance=var_,
+            pvalues=res[8],
+            alpha=alpha,
+            group_t=self.groupsunique[res[0][1]],
+            group_c=self.groupsunique[res[0][0]],
         )
 
 
@@ -1326,7 +1428,6 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     error, MSE. To obtain the correction factor for the standard deviation,
     square root needs to be taken.
 
-    TODO: something looks wrong with dfjoint, is formula from SPSS
     """
     # TODO: test and replace with broadcasting
     v1, v2 = np.meshgrid(var_all, var_all)
@@ -1334,15 +1435,14 @@ def varcorrection_pairs_unequal(var_all, nobs_all, df_all):
     df1, df2 = np.meshgrid(df_all, df_all)
 
     varjoint = v1 / n1 + v2 / n2
-
-    dfjoint = varjoint**2 / (df1 * (v1 / n1) ** 2 + df2 * (v2 / n2) ** 2)
+    dfjoint = varjoint**2 / ((v1 / n1) ** 2 / df1 + (v2 / n2) ** 2 / df2)
 
     return varjoint, dfjoint
 
 
 def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
-    """simultaneous Tukey HSD
-
+    """
+    simultaneous Tukey HSD
 
     check: instead of sorting, I use absolute value of pairwise differences
     in means. That's irrelevant for the test, but maybe reporting actual
@@ -1368,6 +1468,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     else:
         df_total = np.sum(df)
 
+    df_pairs_ = None
     if (np.size(nobs_all) == 1) and (np.size(var_all) == 1):
         # balanced sample sizes and homogenous variance
         var_pairs = 1.0 * var_all / nobs_all * np.ones((n_means, n_means))
@@ -1376,7 +1477,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         # unequal sample sizes and homogenous variance
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs, df_pairs_ = varcorrection_pairs_unequal(var_all, nobs_all, df)
         var_pairs /= 2.0
         # check division by two for studentized range
 
@@ -1391,10 +1492,13 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
     idx1, idx2 = np.triu_indices(n_means, 1)
     meandiffs = meandiffs_[idx1, idx2]
     std_pairs = std_pairs_[idx1, idx2]
+    if df_pairs_ is not None:
+        df_total = df_pairs_[idx1, idx2]
 
     st_range = np.abs(meandiffs) / std_pairs  # studentized range statistic
 
-    max(df_total, 5)  # TODO: smallest df in table
+    # df_total_ = np.maximum(df_total, 5)  # TODO: smallest df in table
+
     if q_crit is None:
         q_crit = get_tukeyQcrit2(n_means, df_total, alpha=alpha)
 
@@ -1513,10 +1617,9 @@ def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
         # unequal sample sizes and homogenous variance
         var_pairs = var_all * varcorrection_pairs_unbalanced(nobs_all, srange=True)
     elif np.size(var_all) > 1:
-        var_pairs, df_sum = varcorrection_pairs_unequal(nobs_all, var_all, df)
+        var_pairs, df_sum = varcorrection_pairs_unequal(var_all, nobs_all, df)
         var_pairs /= 2.0
         # check division by two for studentized range
-
     else:
         raise ValueError("not supposed to be here")
 
@@ -1592,7 +1695,9 @@ def contrast_diff_mean(nm):
 
 
 def tukey_pvalues(std_range, nm, df):
+    """compute tukey p-values by numerical integration of multivariate-t distribution"""
     # corrected but very slow with warnings about integration
+    # need to increase maxiter or similar
     # nm = len(std_range)
     contr = contrast_allpairs(nm)
     corr = np.dot(contr, contr.T) / 2.0
@@ -1601,7 +1706,11 @@ def tukey_pvalues(std_range, nm, df):
 
 
 def multicontrast_pvalues(tstat, tcorr, df=None, dist="t", alternative="two-sided"):
-    """pvalues for simultaneous tests"""
+    """pvalues for simultaneous tests
+
+    currently only for t distribution, normal distribution not added yet
+    alternative is ignored
+    """
     from statsmodels.sandbox.distributions.multivariate import mvstdtprob
 
     if (df is None) and (dist == "t"):
@@ -1661,8 +1770,8 @@ class StepDown:
         self.df = df
         # the following has been moved to run
         # self.cache_result = {}
-        # self.crit = self.getcrit(0.5)   #decide where to set alpha, moved to run
-        # self.accepted = []  #store accepted sets, not unique
+        # self.crit = self.getcrit(0.5)   # decide where to set alpha, moved to run
+        # self.accepted = []  # store accepted sets, not unique
 
     def get_crit(self, alpha):
         """
@@ -1730,7 +1839,7 @@ class StepDown:
         self.get_distance_matrix()
         self.stepdown(lrange(self.n_vals))
 
-        return list(set(self.accepted)), list(set(sd.rejected))
+        return list(set(self.accepted)), list(set(self.rejected))
 
 
 def homogeneous_subsets(vals, dcrit):
@@ -1815,7 +1924,7 @@ def set_partition(ssli):
     this should be correctly called select largest disjoint sets.
     Begun and Gabriel 1981 do not seem to be bothered by sets of accepted
     hypothesis with joint elements,
-    e.g. maximal_accepted_sets = { {1,2,3}, {2,3,4} }
+    e.g., maximal_accepted_sets = { {1,2,3}, {2,3,4} }
 
     This creates a set partition from a list of sets given as tuples.
     It tries to find the partition with the largest sets. That is, sets are
@@ -1833,7 +1942,7 @@ def set_partition(ssli):
 
     """
     part = []
-    for s in sorted(list(set(ssli)), key=len)[::-1]:
+    for s in sorted(set(ssli), key=len)[::-1]:
         # print(s,
         s_ = set(s).copy()
         if not any(set(s_).intersection(set(t)) for t in part):
@@ -1869,7 +1978,7 @@ def set_remove_subs(ssli):
     """
     # TODO: maybe convert all tuples to sets immediately, but I do not need the extra efficiency
     part = []
-    for s in sorted(list(set(ssli)), key=lambda x: len(set(x)))[::-1]:
+    for s in sorted(set(ssli), key=lambda x: len(set(x)))[::-1]:
         # print(s,
         # s_ = set(s).copy()
         if not any(set(s).issubset(set(t)) for t in part):
@@ -1877,239 +1986,6 @@ def set_remove_subs(ssli):
             part.append(s)
         # else: print(part
 
-    ##    missing = list(set(i for ll in ssli for i in ll)
-    ##                   - set(i for ll in part for i in ll))
+    #    missing = list(set(i for ll in ssli for i in ll)
+    #                   - set(i for ll in part for i in ll))
     return part
-
-
-if __name__ == "__main__":
-    from statsmodels.stats.multitest import (
-        fdrcorrection as fdrcorrection0,
-        fdrcorrection_twostage,
-        multipletests,
-    )
-
-    examples = [
-        "tukey",
-        "tukeycrit",
-        "fdr",
-        "fdrmc",
-        "bonf",
-        "randmvn",
-        "multicompdev",
-        "None",
-    ]  # [-1]
-
-    if "tukey" in examples:
-        # Example Tukey
-        x = np.array([[0, 0, 1]]).T + np.random.randn(3, 20)
-        print(Tukeythreegene(*x))
-
-    # Example FDR
-    # ------------
-    if ("fdr" in examples) or ("bonf" in examples):
-        from .ex_multicomp import example_fdr_bonferroni
-
-        example_fdr_bonferroni()
-
-    if "fdrmc" in examples:
-        mcres = mcfdr(
-            nobs=100, nrepl=1000, ntests=30, ntrue=30, mu=0.1, alpha=0.05, rho=0.3
-        )
-        mcmeans = np.array(mcres).mean(0)
-        print(mcmeans)
-        print(mcmeans[0] / 6.0, 1 - mcmeans[1] / 4.0)
-        print(mcmeans[:4], mcmeans[-4:])
-
-    if "randmvn" in examples:
-        rvsmvn = randmvn(0.8, (5000, 5))
-        print(np.corrcoef(rvsmvn, rowvar=0))
-        print(rvsmvn.var(0))
-
-    if "tukeycrit" in examples:
-        print(get_tukeyQcrit(8, 8, alpha=0.05), 5.60)
-        print(get_tukeyQcrit(8, 8, alpha=0.01), 7.47)
-
-    if "multicompdev" in examples:
-        # development of kruskal-wallis multiple-comparison
-        # example from matlab file exchange
-
-        X = np.array(
-            [
-                [7.68, 1],
-                [7.69, 1],
-                [7.70, 1],
-                [7.70, 1],
-                [7.72, 1],
-                [7.73, 1],
-                [7.73, 1],
-                [7.76, 1],
-                [7.71, 2],
-                [7.73, 2],
-                [7.74, 2],
-                [7.74, 2],
-                [7.78, 2],
-                [7.78, 2],
-                [7.80, 2],
-                [7.81, 2],
-                [7.74, 3],
-                [7.75, 3],
-                [7.77, 3],
-                [7.78, 3],
-                [7.80, 3],
-                [7.81, 3],
-                [7.84, 3],
-                [7.71, 4],
-                [7.71, 4],
-                [7.74, 4],
-                [7.79, 4],
-                [7.81, 4],
-                [7.85, 4],
-                [7.87, 4],
-                [7.91, 4],
-            ]
-        )
-        xli = [X[X[:, 1] == k, 0] for k in range(1, 5)]
-        xranks = stats.rankdata(X[:, 0])
-        xranksli = [xranks[X[:, 1] == k] for k in range(1, 5)]
-        xnobs = np.array([len(xval) for xval in xli])
-        meanranks = [item.mean() for item in xranksli]
-        sumranks = [item.sum() for item in xranksli]
-        # equivalent function
-        # from scipy import special
-        # -np.sqrt(2.)*special.erfcinv(2-0.5) == stats.norm.isf(0.25)
-        stats.norm.sf(0.67448975019608171)
-        stats.norm.isf(0.25)
-
-        mrs = np.sort(meanranks)
-        v1, v2 = np.triu_indices(4, 1)
-        print("\nsorted rank differences")
-        print(mrs[v2] - mrs[v1])
-        diffidx = np.argsort(mrs[v2] - mrs[v1])[::-1]
-        mrs[v2[diffidx]] - mrs[v1[diffidx]]
-
-        print("\nkruskal for all pairs")
-        for i, j in zip(v2[diffidx], v1[diffidx]):
-            print(i, j, stats.kruskal(xli[i], xli[j]))
-            mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
-            print(mwu, mwupval * 2, mwupval * 2 < 0.05 / 6.0, mwupval * 2 < 0.1 / 6.0)
-
-        uni, intlab = np.unique(X[:, 0], return_inverse=True)
-        groupnobs = np.bincount(intlab)
-        groupxsum = np.bincount(intlab, weights=X[:, 0])
-        groupxmean = groupxsum * 1.0 / groupnobs
-
-        rankraw = X[:, 0].argsort().argsort()
-        groupranksum = np.bincount(intlab, weights=rankraw)
-        # start at 1 for stats.rankdata :
-        grouprankmean = groupranksum * 1.0 / groupnobs + 1
-        assert_almost_equal(grouprankmean[intlab], stats.rankdata(X[:, 0]), 15)
-        gs = GroupsStats(X, useranks=True)
-        print("\ngroupmeanfilter and grouprankmeans")
-        print(gs.groupmeanfilter)
-        print(grouprankmean[intlab])
-        # the following has changed
-        # assert_almost_equal(gs.groupmeanfilter, stats.rankdata(X[:,0]), 15)
-
-        xuni, xintlab = np.unique(X[:, 0], return_inverse=True)
-        gs2 = GroupsStats(np.column_stack([X[:, 0], xintlab]), useranks=True)
-        # assert_almost_equal(gs2.groupmeanfilter, stats.rankdata(X[:,0]), 15)
-
-        rankbincount = np.bincount(xranks.astype(int))
-        nties = rankbincount[rankbincount > 1]
-        ntot = float(len(xranks))
-        tiecorrection = 1 - (nties**3 - nties).sum() / (ntot**3 - ntot)
-        assert_almost_equal(tiecorrection, stats.tiecorrect(xranks), 15)
-        print("\ntiecorrection for data and ranks")
-        print(tiecorrection)
-        print(tiecorrect(xranks))
-
-        tot = X.shape[0]
-        t = 500  # 168
-        f = (tot * (tot + 1.0) / 12.0) - (t / (6.0 * (tot - 1.0)))
-        f = (tot * (tot + 1.0) / 12.0) / stats.tiecorrect(xranks)
-        print("\npairs of mean rank differences")
-        for i, j in zip(v2[diffidx], v1[diffidx]):
-            # pdiff = np.abs(mrs[i] - mrs[j])
-            pdiff = np.abs(meanranks[i] - meanranks[j])
-            se = np.sqrt(
-                f * np.sum(1.0 / xnobs[[i, j]])
-            )  # np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
-            print(i, j, pdiff, se, pdiff / se, pdiff / se > 2.6310)
-
-        multicomp = MultiComparison(*X.T)
-        multicomp.kruskal()
-        gsr = GroupsStats(X, useranks=True)
-
-        print("\nexamples for kruskal multicomparison")
-        for i in range(10):
-            x1, x2 = (np.random.randn(30, 2) + np.array([0, 0.5])).T
-            skw = stats.kruskal(x1, x2)
-            mc2 = MultiComparison(
-                np.r_[x1, x2], np.r_[np.zeros(len(x1)), np.ones(len(x2))]
-            )
-            newskw = mc2.kruskal()
-            print(skw, np.sqrt(skw[0]), skw[1] - newskw, (newskw / skw[1] - 1) * 100)
-
-        tablett, restt, arrtt = multicomp.allpairtest(stats.ttest_ind)
-        tablemw, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu)
-        print("")
-        print(tablett)
-        print("")
-        print(tablemw)
-        tablemwhs, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu, method="hs")
-        print("")
-        print(tablemwhs)
-
-    if "last" in examples:
-        xli = (np.random.randn(60, 4) + np.array([0, 0, 0.5, 0.5])).T
-        # Xrvs = np.array(catstack(xli))
-        xrvs, xrvsgr = catstack(xli)
-        multicompr = MultiComparison(xrvs, xrvsgr)
-        tablett, restt, arrtt = multicompr.allpairtest(stats.ttest_ind)
-        print(tablett)
-
-        xli = [[8, 10, 9, 10, 9], [7, 8, 5, 8, 5], [4, 8, 7, 5, 7]]
-        x, labels = catstack(xli)
-        gs4 = GroupsStats(np.column_stack([x, labels]))
-        print(gs4.groupvarwithin())
-
-    # test_tukeyhsd() #moved to test_multi.py
-
-    gmeans = np.array([7.71375, 7.76125, 7.78428571, 7.79875])
-    gnobs = np.array([8, 8, 7, 8])
-    sd = StepDown(gmeans, gnobs, 0.001, [27])
-
-    # example from BKY
-    pvals = [
-        0.0001,
-        0.0004,
-        0.0019,
-        0.0095,
-        0.0201,
-        0.0278,
-        0.0298,
-        0.0344,
-        0.0459,
-        0.3240,
-        0.4262,
-        0.5719,
-        0.6528,
-        0.7590,
-        1.000,
-    ]
-
-    # same number of rejection as in BKY paper:
-    # single step-up:4, two-stage:8, iterated two-step:9
-    # also alpha_star is the same as theirs for TST
-    print(fdrcorrection0(pvals, alpha=0.05, method="indep"))
-    print(fdrcorrection_twostage(pvals, alpha=0.05, iter=False))
-    res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
-    assert_almost_equal(
-        [0.047619, 0.0649], res_tst[-1][:2], 3
-    )  # alpha_star for stage 2
-    assert_equal(8, res_tst[0].sum())
-    print(fdrcorrection_twostage(pvals, alpha=0.05, iter=True))
-    print("fdr_gbs", multipletests(pvals, alpha=0.05, method="fdr_gbs"))
-    # multicontrast_pvalues(tstat, tcorr, df)
-    tukey_pvalues(3.649, 3, 16)

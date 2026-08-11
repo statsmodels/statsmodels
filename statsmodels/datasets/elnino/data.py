@@ -1,23 +1,23 @@
 """El Nino dataset, 1950 - 2010"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This data is in the public domain."""
+COPYRIGHT = """This data is in the public domain."""
 
-TITLE       = """El Nino - Sea Surface Temperatures"""
+TITLE = """El Nino - Sea Surface Temperatures"""
 
-SOURCE      = """
+SOURCE = """
 National Oceanic and Atmospheric Administration's National Weather Service
 
 ERSST.V3B dataset, Nino 1+2
 http://www.cpc.ncep.noaa.gov/data/indices/
 """
 
-DESCRSHORT  = """Averaged monthly sea surface temperature - Pacific Ocean."""
+DESCRSHORT = """Averaged monthly sea surface temperature - Pacific Ocean."""
 
-DESCRLONG   = """This data contains the averaged monthly sea surface
-temperature in degrees Celcius of the Pacific Ocean, between 0-10 degrees South
+DESCRLONG = """This data contains the averaged monthly sea surface
+temperature in degrees Celsius of the Pacific Ocean, between 0-10 degrees South
 and 90-80 degrees West, from 1950 to 2010.  This dataset was obtained from
 NOAA.
 """
@@ -30,7 +30,7 @@ NOTE = """::
 
     Variable name definitions::
 
-        TEMPERATURE - average sea surface temperature in degrees Celcius
+        TEMPERATURE - average sea surface temperature in degrees Celsius
                       (12 columns, one per month).
 """
 
@@ -58,4 +58,4 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'elnino.csv', convert_float=True)
+    return du.load_csv(__file__, "elnino.csv", convert_float=True)

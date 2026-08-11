@@ -16,7 +16,8 @@ __all__ = []
 
 def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     r"""
-    Subroutine for orthogonal and oblique rotation of the matrix :math:`A`.
+    Subroutine for orthogonal and oblique rotation of the matrix :math:`A`
+
     For orthogonal rotations :math:`A` is rotated to :math:`L` according to
 
     .. math::
@@ -34,7 +35,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Parameters
     ----------
-    A : numpy matrix (default None)
+    A : numpy matrix
         non rotated factors
     method : str
         should be one of the methods listed below
@@ -65,7 +66,10 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Returns
     -------
-    The tuple :math:`(L,T)`
+    L : numpy matrix
+        The rotated factors.
+    T : numpy matrix
+        The rotation matrix.
 
     Notes
     -----
@@ -99,7 +103,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         * :math:`\gamma=1` corresponds to varimax,
         * :math:`\gamma=\frac{1}{p}` corresponds to equamax.
 
-        For oblique rotations rotations:
+        For oblique rotations:
 
         * :math:`\gamma=0` corresponds to quartimin,
         * :math:`\gamma=\frac{1}{2}` corresponds to biquartimin.
@@ -174,15 +178,14 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     parsimony : orthogonal rotation method
         minimizes the Crawford-Ferguson family objective with :math:`\kappa=1`
 
-    quartimin : oblique rotation method that minimizes
+    quartimin : oblique rotation method that
         minimizes the oblimin objective with :math:`\gamma=0`
 
-    quartimin : oblique rotation method that minimizes
+    biquartimin : oblique rotation method that
         minimizes the oblimin objective with :math:`\gamma=\frac{1}{2}`
 
     target : orthogonal or oblique rotation that rotates towards a target
-
-    matrix : math:`H` by minimizing the objective
+        matrix :math:`H` by minimizing the objective
 
         .. math::
 
@@ -220,10 +223,13 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     >>> A = np.random.randn(8,2)
     >>> L, T = rotate_factors(A,'varimax')
     >>> np.allclose(L,A.dot(T))
+    True
     >>> L, T = rotate_factors(A,'orthomax',0.5)
     >>> np.allclose(L,A.dot(T))
+    True
     >>> L, T = rotate_factors(A,'quartimin',0.5)
     >>> np.allclose(L,A.dot(np.linalg.inv(T.T)))
+    True
     """
     if "algorithm" in algorithm_kwargs:
         algorithm = algorithm_kwargs["algorithm"]
@@ -233,7 +239,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     assert (
         "rotation_method" not in algorithm_kwargs
     ), "rotation_method cannot be provided as keyword argument"
-    vgQ = ff = T = L = None
+    T = L = None
     p, k = A.shape
     # set ff or vgQ to appropriate objective function, compute solution using
     # recursion or analytically compute solution
@@ -246,17 +252,19 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         gamma = method_args[0]
         if algorithm == "gpa":
 
-            def vgQ(L=None, A=None, T=None):  # noqa: F811
+            def vgQ(L=None, A=None, T=None):
                 return orthomax_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=True
                 )
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
-            def ff(L=None, A=None, T=None):  # noqa: F811
+            def ff(L=None, A=None, T=None):
                 return orthomax_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=False
                 )
+            vgQ = None
 
         else:
             raise ValueError(
@@ -264,9 +272,9 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             )
     elif method == "oblimin":
         assert len(method_args) == 2, (
-            "Both %s family parameter and "
+            f"Both {method} family parameter and "
             "rotation_method should be "
-            "provided" % method
+            "provided"
         )
         rotation_method = method_args[1]
         assert rotation_method in [
@@ -280,6 +288,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                 return oblimin_objective(
                     L=L, A=A, T=T, gamma=gamma, return_gradient=True
                 )
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
@@ -292,15 +301,16 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                     rotation_method=rotation_method,
                     return_gradient=False,
                 )
+            vgQ = None
 
         else:
             raise ValueError(
-                "Algorithm %s is not possible for %s rotation" % (algorithm, method)
+                f"Algorithm {algorithm} is not possible for {method} rotation"
             )
     elif method == "CF":
         assert len(method_args) == 2, (
-            "Both %s family parameter and "
-            "rotation_method should be provided" % method
+            f"Both {method} family parameter and "
+            "rotation_method should be provided"
         )
         rotation_method = method_args[1]
         assert rotation_method in [
@@ -319,6 +329,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                     rotation_method=rotation_method,
                     return_gradient=True,
                 )
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
@@ -331,10 +342,11 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
                     rotation_method=rotation_method,
                     return_gradient=False,
                 )
+            vgQ = None
 
         else:
             raise ValueError(
-                "Algorithm %s is not possible for %s rotation" % (algorithm, method)
+                f"Algorithm {algorithm} is not possible for {method} rotation"
             )
     elif method == "quartimax":
         return rotate_factors(A, "orthomax", 0, **algorithm_kwargs)
@@ -357,7 +369,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
     elif method == "target":
         assert len(method_args) == 2, (
             "only the rotation target and orthogonal/oblique should be provide"
-            " for %s rotation" % method
+            f" for {method} rotation"
         )
         H = method_args[0]
         rotation_method = method_args[1]
@@ -369,11 +381,13 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
             def vgQ(L=None, A=None, T=None):
                 return vgQ_target(H, L=L, A=A, T=T, rotation_method=rotation_method)
+            ff = None
 
         elif algorithm == "gpa_der_free":
 
             def ff(L=None, A=None, T=None):
                 return ff_target(H, L=L, A=A, T=T, rotation_method=rotation_method)
+            vgQ = None
 
         elif algorithm == "analytic":
             assert rotation_method == "orthogonal", (
@@ -386,7 +400,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
             )
     elif method == "partial_target":
         assert len(method_args) == 2, (
-            "2 additional arguments are expected for %s rotation" % method
+            f"2 additional arguments are expected for {method} rotation"
         )
         H = method_args[0]
         W = method_args[1]
@@ -395,15 +409,15 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
             def vgQ(L=None, A=None, T=None):
                 return vgQ_partial_target(H, W=W, L=L, A=A, T=T)
-
+            ff = None
         elif algorithm == "gpa_der_free":
 
             def ff(L=None, A=None, T=None):
                 return ff_partial_target(H, W=W, L=L, A=A, T=T)
-
+            vgQ = None
         else:
             raise ValueError(
-                "Algorithm %s is not possible for %s rotation" % (algorithm, method)
+                f"Algorithm {algorithm} is not possible for {method} rotation"
             )
     else:
         raise ValueError("Invalid method")

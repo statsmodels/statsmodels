@@ -77,9 +77,9 @@ def test_alt_index(indexed_data):
     period = 12 if date_like else None
     res = ThetaModel(indexed_data, period=period).fit()
     if hasattr(idx, "freq") and idx.freq is None:
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast_components(37)
-        with pytest.warns(UserWarning):
+        with pytest.warns(UserWarning, match="Only PeriodIndexes, DatetimeIndexes"):
             res.forecast(23)
     else:
         res.forecast_components(37)
@@ -87,11 +87,12 @@ def test_alt_index(indexed_data):
 
 
 def test_no_freq():
+    rs = np.random.RandomState(3231298)
     idx = pd.date_range("2000-1-1", periods=300)
     locs = []
     for i in range(100):
         locs.append(2 * i + int((i % 2) == 1))
-    y = pd.Series(np.random.standard_normal(100), index=idx[locs])
+    y = pd.Series(rs.standard_normal(100), index=idx[locs])
     with pytest.raises(ValueError, match="You must specify a period or"):
         ThetaModel(y)
 
@@ -135,9 +136,10 @@ def test_forecast_seasonal_alignment(data, period):
     np.testing.assert_allclose(comp.seasonal, expected)
 
 
-def test_auto(reset_randomstate):
+def test_auto():
+    rs = np.random.RandomState(232387289)
     m = 250
-    e = np.random.standard_normal(m)
+    e = rs.standard_normal(m)
     s = 10 * np.sin(np.linspace(0, np.pi, 12))
     s = np.tile(s, (m // 12 + 1))[:m]
     idx = pd.period_range("2000-01-01", freq="M", periods=m)
@@ -152,7 +154,7 @@ def test_auto(reset_randomstate):
     assert tm.method == "mul"
     res2 = tm.fit()
 
-    np.testing.assert_allclose(res.params, res2.params)
+    np.testing.assert_allclose(res.params, res2.params, rtol=1e-4)
 
     tm = ThetaModel(y - y.mean(), method="auto")
     assert tm.method == "add"

@@ -1,15 +1,15 @@
 import numpy as np
-
+from numpy.testing import assert_allclose, assert_equal
 import pytest
-from numpy.testing import assert_allclose, assert_equal, assert_raises
 
-from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import dowj, lake
 from statsmodels.tsa.arima.estimators.burg import burg
+from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
-@pytest.mark.low_precision('Test against Example 5.1.3 in Brockwell and Davis'
-                           ' (2016)')
+@pytest.mark.low_precision(
+    "Test against Example 5.1.3 in Brockwell and Davis (2016)"
+)
 def test_brockwell_davis_example_513():
     # Test against Example 5.1.3 in Brockwell and Davis (2016)
     # (low-precision test, since we are testing against values printed in the
@@ -24,8 +24,9 @@ def test_brockwell_davis_example_513():
     assert_allclose(res.sigma2, 0.1423, atol=1e-4)
 
 
-@pytest.mark.low_precision('Test against Example 5.1.4 in Brockwell and Davis'
-                           ' (2016)')
+@pytest.mark.low_precision(
+    "Test against Example 5.1.4 in Brockwell and Davis (2016)"
+)
 def test_brockwell_davis_example_514():
     # Test against Example 5.1.4 in Brockwell and Davis (2016)
     # (low-precision test, since we are testing against values printed in the
@@ -49,15 +50,24 @@ def check_itsmr(lake):
     # Test against R itsmr::burg; see results/results_burg.R
     res, _ = burg(lake, 10, demean=True)
     desired_ar_params = [
-        1.05853631096, -0.32639150878, 0.04784765122, 0.02620476111,
-        0.04444511374, -0.04134010262, 0.02251178970, -0.01427524694,
-        0.22223486915, -0.20935524387]
+        1.05853631096,
+        -0.32639150878,
+        0.04784765122,
+        0.02620476111,
+        0.04444511374,
+        -0.04134010262,
+        0.02251178970,
+        -0.01427524694,
+        0.22223486915,
+        -0.20935524387,
+    ]
     assert_allclose(res.ar_params, desired_ar_params)
 
     # itsmr always returns the innovations algorithm estimate of sigma2,
     # whereas we return Burg's estimate
-    u, v = arma_innovations(np.array(lake) - np.mean(lake),
-                            ar_params=res.ar_params, sigma2=1)
+    u, v = arma_innovations(
+        np.array(lake) - np.mean(lake), ar_params=res.ar_params, sigma2=1
+    )
     desired_sigma2 = 0.4458956354
     assert_allclose(np.sum(u**2 / v) / len(u), desired_sigma2)
 
@@ -67,8 +77,8 @@ def test_itsmr():
     # control this)
     endog = lake.copy()
 
-    check_itsmr(endog)           # Pandas series
-    check_itsmr(endog.values)    # Numpy array
+    check_itsmr(endog)  # Pandas series
+    check_itsmr(endog.values)  # Numpy array
     check_itsmr(endog.tolist())  # Python list
 
 
@@ -91,12 +101,16 @@ def test_nonstationary_series():
 
 def test_invalid():
     endog = np.arange(2) * 1.0
-    assert_raises(ValueError, burg, endog, ar_order=2)
-    assert_raises(ValueError, burg, endog, ar_order=-1)
-    assert_raises(ValueError, burg, endog, ar_order=1.5)
+    with pytest.raises(ValueError):
+        burg(endog, ar_order=2)
+    with pytest.raises(ValueError):
+        burg(endog, ar_order=-1)
+    with pytest.raises(ValueError):
+        burg(endog, ar_order=1.5)
 
     endog = np.arange(10) * 1.0
-    assert_raises(ValueError, burg, endog, ar_order=[1, 3])
+    with pytest.raises(ValueError):
+        burg(endog, ar_order=[1, 3])
 
 
 def test_misc():

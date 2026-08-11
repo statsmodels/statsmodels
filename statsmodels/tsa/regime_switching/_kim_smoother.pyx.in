@@ -4,7 +4,7 @@
 """
 Kim smoother
 
-Author: Chad Fulton  
+Author: Chad Fulton
 License: Simplified-BSD
 """
 
@@ -24,7 +24,7 @@ import numpy as np
 import warnings
 cimport numpy as np
 cimport cython
-from statsmodels.src.math cimport dlog, zlog, dexp, zexp
+from statsmodels.includes.math cimport dlog, zlog, dexp, zexp
 
 cdef int FORTRAN = 1
 

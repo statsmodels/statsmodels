@@ -3,9 +3,9 @@ Created on Sun Nov  5 14:48:19 2017
 
 Author: Josef Perktold
 """
-
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal  #noqa
+from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels.stats import weightstats
 import statsmodels.stats.multivariate as smmv  # pytest cannot import test_xxx
@@ -232,7 +232,8 @@ class TestCovStructure:
         # df = 5
         chi2 = 21.53275509455011
 
-        stat, pv = smmv.test_cov_spherical(cov, nobs)
+        with pytest.warns(FutureWarning, match="Unpacking"):
+            stat, pv = smmv.test_cov_spherical(cov, nobs)
         assert_allclose(stat, chi2, rtol=1e-7)
         assert_allclose(pv, p_chi2, rtol=1e-6)
 
@@ -242,8 +243,9 @@ class TestCovStructure:
         p_chi2 = 0.0004589987613319
         # df = 3
         chi2 = 17.91025335733012
+        with pytest.warns(FutureWarning, match="Unpacking"):
+            stat, pv = smmv.test_cov_diagonal(cov, nobs)
 
-        stat, pv = smmv.test_cov_diagonal(cov, nobs)
         assert_allclose(stat, chi2, rtol=1e-8)
         assert_allclose(pv, p_chi2, rtol=1e-7)
 
@@ -257,7 +259,8 @@ class TestCovStructure:
         # cov_blocks = cov[:2, :2], cov[-1:, -1:]
         # stat, pv = smmv.test_cov_blockdiagonal(cov, nobs, cov_blocks)
         block_len = [2, 1]
-        stat, pv = smmv.test_cov_blockdiagonal(cov, nobs, block_len)
+        with pytest.warns(FutureWarning, match="Unpacking"):
+            stat, pv = smmv.test_cov_blockdiagonal(cov, nobs, block_len)
         assert_allclose(stat, chi2, rtol=1e-7)
         assert_allclose(pv, p_chi2, rtol=1e-6)
 
@@ -269,7 +272,8 @@ class TestCovStructure:
         chi2 = 5.481422374989864
 
         cov_null = np.array([[30, 15, 0], [15, 20, 0], [0, 0, 10]])
-        stat, pv = smmv.test_cov(cov, nobs, cov_null)
+        with pytest.warns(FutureWarning, match="Unpacking"):
+            stat, pv = smmv.test_cov(cov, nobs, cov_null)
         assert_allclose(stat, chi2, rtol=1e-7)
         assert_allclose(pv, p_chi2, rtol=1e-6)
 
@@ -303,7 +307,8 @@ def test_cov_oneway():
           27.995967741935484]])
 
     res = smmv.test_cov_oneway([cov_m, cov_f], nobs)
-    stat, pv = res
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        stat, pv = res
     assert_allclose(stat, F_Box, rtol=1e-10)
     assert_allclose(pv, p_F_Box, rtol=1e-6)
     assert_allclose(res.statistic_f, F_Box, rtol=1e-10)

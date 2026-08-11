@@ -10,6 +10,9 @@ Genest, C., 2009. Rank-based inference for bivariate extreme-value
 copulas. The Annals of Statistics, 37(5), pp.2990-3022.
 
 """
+
+from statsmodels.compat.pandas import deprecate_kwarg
+
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -24,7 +27,7 @@ class CopulaDistribution:
     Parameters
     ----------
     copula : :class:`Copula` instance
-        An instance of :class:`Copula`, e.g. :class:`GaussianCopula`,
+        An instance of :class:`Copula`, e.g., :class:`GaussianCopula`,
         :class:`FrankCopula`, etc.
     marginals : list of distribution instances
         Marginal distributions.
@@ -36,6 +39,7 @@ class CopulaDistribution:
     Status: experimental, argument handling may still change
 
     """
+
     def __init__(self, copula, marginals, cop_args=()):
 
         self.copula = copula
@@ -45,7 +49,8 @@ class CopulaDistribution:
         self.cop_args = cop_args
         self.k_vars = len(marginals)
 
-    def rvs(self, nobs=1, cop_args=None, marg_args=None, random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, cop_args=None, marg_args=None, rng=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Sample the joint distribution.
@@ -65,15 +70,17 @@ class CopulaDistribution:
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        random_state : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -95,12 +102,12 @@ class CopulaDistribution:
         if marg_args is None:
             marg_args = [()] * self.k_vars
 
-        sample = self.copula.rvs(nobs=nobs, args=cop_args,
-                                 random_state=random_state)
+        sample = self.copula.rvs(nobs=nobs, args=cop_args, rng=rng)
 
         for i, dist in enumerate(self.marginals):
-            sample[:, i] = dist.ppf(0.5 + (1 - 1e-10) * (sample[:, i] - 0.5),
-                                    *marg_args[i])
+            sample[:, i] = dist.ppf(
+                0.5 + (1 - 1e-10) * (sample[:, i] - 0.5), *marg_args[i]
+            )
         return sample
 
     def cdf(self, y, cop_args=None, marg_args=None):
@@ -233,8 +240,8 @@ class Copula(ABC):
 
     1. Sample :math:`V \sim F = LS^{−1}(\phi)`.
     2. Sample i.i.d. :math:`X_i \sim U[0,1], i \in \{1,...,d\}`.
-    3. Return:math:`(U_1,..., U_d)`, where :math:`U_i = \phi(−\log(X_i)/V), i
-       \in \{1, ...,d\}`.
+    3. Return :math:`(U_1,..., U_d)`, where
+       :math:`U_i = \phi(−\log(X_i)/V), i \in \{1, ...,d\}`.
 
     Detailed properties of each copula can be found in [3]_.
 
@@ -255,7 +262,7 @@ class Copula(ABC):
     References
     ----------
     .. [1] Marshall AW, Olkin I. “Families of Multivariate Distributions”,
-      Journal of the American Statistical Association, 83, 834–841, 1988.
+      Journal of the American Statistical Association, 83, 834-841, 1988.
     .. [2] Marius Hofert. "Sampling Archimedean copulas",
       Universität Ulm, 2008.
     .. rvs[3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
@@ -266,7 +273,8 @@ class Copula(ABC):
     def __init__(self, k_dim=2):
         self.k_dim = k_dim
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
         """Draw `n` in the half-open interval ``[0, 1)``.
 
         Marginals are uniformly distributed.
@@ -278,15 +286,17 @@ class Copula(ABC):
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        random_state : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
@@ -309,7 +319,7 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
+            of the random variable, e.g., 2 for bivariate copula.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
@@ -329,7 +339,7 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
+            of the random variable, e.g., 2 for bivariate copula.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
@@ -351,7 +361,7 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
+            of the random variable, e.g., 2 for bivariate copula.
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
@@ -362,7 +372,7 @@ class Copula(ABC):
             Copula cdf evaluated at points ``u``.
         """
 
-    def plot_scatter(self, sample=None, nobs=500, random_state=None, ax=None):
+    def plot_scatter(self, sample=None, nobs=500, rng=None, ax=None):
         """Sample the copula and plot.
 
         Parameters
@@ -372,15 +382,12 @@ class Copula(ABC):
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        random_state : {None, int, numpy.random.Generator}, optional
-            If `seed` is None then the legacy singleton NumPy generator.
-            This will change after 0.13 to use a fresh NumPy ``Generator``,
-            so you should explicitly pass a seeded ``Generator`` if you
-            need reproducible results.
-            If `seed` is an int, a new ``Generator`` instance is used,
-            seeded with `seed`.
-            If `seed` is already a ``Generator`` instance then that instance is
-            used.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         ax : AxesSubplot, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -401,12 +408,12 @@ class Copula(ABC):
             raise ValueError("Can only plot 2-dimensional Copula.")
 
         if sample is None:
-            sample = self.rvs(nobs=nobs, random_state=random_state)
+            sample = self.rvs(nobs=nobs, rng=rng)
 
         fig, ax = utils.create_mpl_ax(ax)
         ax.scatter(sample[:, 0], sample[:, 1])
-        ax.set_xlabel('u')
-        ax.set_ylabel('v')
+        ax.set_xlabel("u")
+        ax.set_ylabel("v")
 
         return fig, sample
 
@@ -429,15 +436,20 @@ class Copula(ABC):
 
         """
         from matplotlib import pyplot as plt
+
         if self.k_dim != 2:
             import warnings
-            warnings.warn("Plotting 2-dimensional Copula.")
+
+            warnings.warn(
+                "Plotting 2-dimensional Copula.", RuntimeWarning, stacklevel=2
+            )
 
         n_samples = 100
 
         eps = 1e-4
-        uu, vv = np.meshgrid(np.linspace(eps, 1 - eps, n_samples),
-                             np.linspace(eps, 1 - eps, n_samples))
+        uu, vv = np.meshgrid(
+            np.linspace(eps, 1 - eps, n_samples), np.linspace(eps, 1 - eps, n_samples)
+        )
         points = np.vstack([uu.ravel(), vv.ravel()]).T
 
         data = self.pdf(points).T.reshape(uu.shape)
@@ -448,31 +460,47 @@ class Copula(ABC):
 
         vticks = np.linspace(min_, max_, num=ticks_nbr)
         range_cbar = [min_, max_]
-        cs = ax.contourf(uu, vv, data, vticks,
-                         antialiased=True, vmin=range_cbar[0],
-                         vmax=range_cbar[1])
+        cs = ax.contourf(
+            uu,
+            vv,
+            data,
+            vticks,
+            antialiased=True,
+            vmin=range_cbar[0],
+            vmax=range_cbar[1],
+        )
 
         ax.set_xlabel("u")
         ax.set_ylabel("v")
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         cbar = plt.colorbar(cs, ticks=vticks)
-        cbar.set_label('p')
+        cbar.set_label("p")
         fig.tight_layout()
 
         return fig
 
-    def tau_simulated(self, nobs=1024, random_state=None):
+    def tau_simulated(self, nobs=1024, rng=None):
         """Kendall's tau based on simulated samples.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
         tau : float
             Kendall's tau.
-
         """
-        x = self.rvs(nobs, random_state=random_state)
+        x = self.rvs(nobs, rng=rng)
         return stats.kendalltau(x[:, 0], x[:, 1])[0]
 
     def fit_corr_param(self, data):
@@ -496,8 +524,11 @@ class Copula(ABC):
             tau = stats.kendalltau(x[:, 0], x[:, 1])[0]
         else:
             k = self.k_dim
-            taus = [stats.kendalltau(x[..., i], x[..., j])[0]
-                    for i in range(k) for j in range(i+1, k)]
+            taus = [
+                stats.kendalltau(x[..., i], x[..., j])[0]
+                for i in range(k)
+                for j in range(i + 1, k)
+            ]
             tau = np.mean(taus)
         return self._arg_from_tau(tau)
 

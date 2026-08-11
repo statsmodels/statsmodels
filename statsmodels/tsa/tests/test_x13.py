@@ -1,10 +1,14 @@
 from statsmodels.compat.pandas import MONTH_END
 
+from pathlib import Path
+import tempfile
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from statsmodels.datasets import co2, macrodata
+from statsmodels.tools.sm_exceptions import X13Error
 from statsmodels.tsa.x13 import (
     _find_x12,
     x13_arima_analysis,
@@ -66,7 +70,7 @@ def test_x13_arima_select_order(dataset, use_numpy):
             start = start.to_timestamp()
             freq = index.freq
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
         assert freq is not None
     else:
         freq = start = None
@@ -75,12 +79,190 @@ def test_x13_arima_select_order(dataset, use_numpy):
     assert isinstance(res.sorder, tuple)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_x13_arima_plot(dataset):
+def test_x13_arima_plot(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
 
 
-def test_x13_arima_plot_no_pandas(dataset):
+def test_x13_arima_plot_no_pandas(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
+
+
+@pytest.mark.smoke
+def test_log_diagnostics(dataset):
+    res = x13_arima_analysis(dataset, log_diagnostics=True)
+    assert isinstance(res.x13_diagnostic, dict)
+    assert next(iter(res.x13_diagnostic.keys())) == "F-D8"
+    assert isinstance(next(iter(res.x13_diagnostic.values())), float)
+
+
+@pytest.mark.smoke
+def test_log_diagnostics_false(dataset):
+    res = x13_arima_analysis(dataset, log_diagnostics=False)
+    assert isinstance(res.x13_diagnostic, dict)
+    assert next(iter(res.x13_diagnostic.keys())) == "F-D8"
+    assert next(iter(res.x13_diagnostic.values())) == "Log diagnostics not retrieved."
+
+
+def test_x13_arima_rawspec_arg():
+    with pytest.raises(ValueError):
+        # error because both param and rawspec are specified
+        x13_arima_analysis(dataset, outlier=True, rawspec="/fake/path.spc")
+
+    with pytest.raises(ValueError):
+        # error because of fake path
+        x13_arima_analysis(dataset, rawspec="/fake/path.spc")
+
+
+def test_x13_arima_rawspec_run(dataset):
+    # example rawspec file string
+    raw_spec_file = """
+series {
+    modelspan=(,)
+    save=(B1)
+    span=(,)
+    type=(flow)
+}
+x11 {
+    seasonalma=(  msr)
+    appendfcst=yes
+    mode=(mult)
+    print=( seasadj seasonal adjustfac)
+    save=(seasadj seasonal adjustfac)
+    savelog=(  alldiagnostics)
+}
+arima {model=(0 1 0)(1 0 1)}
+transform {
+    function=log
+}
+regression {
+    savelog=(  aictest)
+ }
+estimate {save=mdl}
+slidingspans { }
+history {
+    estimates=(sadj seasonal fcst)
+    fixmdl=yes
+}
+"""
+
+    # pass rawspec as string
+    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
+        ft.seek(0)
+
+        x13_arima_analysis(dataset, rawspec=ft.name)
+
+
+def test_x13_arima_rawspec_no_save(dataset):
+    # example rawspec file string
+    raw_spec_file = """
+series {
+    modelspan=(,)
+    save=(B1)
+    span=(,)
+    type=(flow)
+}
+x11 {
+    seasonalma=(  msr)
+    appendfcst=yes
+    mode=(mult)
+    print=( seasadj seasonal adjustfac)
+    savelog=(  alldiagnostics)
+}
+arima {model=(0 1 0)(1 0 1)}
+transform {
+    function=log
+}
+regression {
+    savelog=(  aictest)
+ }
+estimate {save=mdl}
+slidingspans { }
+history {
+    estimates=(sadj seasonal fcst)
+    fixmdl=yes
+}
+"""
+
+    # pass rawspec as string
+    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
+        ft.seek(0)
+
+        x13_arima_analysis(dataset, rawspec=ft.name)
+
+
+def test_x13_arima_rawspec_no_x11(dataset):
+    # example rawspec file string
+    raw_spec_file = """
+series {
+    modelspan=(,)
+    save=(B1)
+    span=(,)
+    type=(flow)
+}
+arima {model=(0 1 0)(1 0 1)}
+transform {
+    function=log
+}
+regression {
+    savelog=(  aictest)
+ }
+estimate {save=mdl}
+slidingspans { }
+history {
+    estimates=(sadj seasonal fcst)
+    fixmdl=yes
+}
+"""
+
+    # pass rawspec as string
+    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
+        ft.write(raw_spec_file.encode("utf8"))
+        ft.seek(0)
+        ft.close()
+
+        x13_arima_analysis(dataset, rawspec=ft.name)
+        try:
+            Path(ft.name).unlink()
+        except OSError:
+            # While it best ot unlink, not strictly required
+            pass
+
+
+def test_x13_arima_invalid_rawspec(dataset):
+    # bad rawspec file string ("series" misspelled, no closing "}" on "x11")
+    raw_spec_file = """
+seri es {
+    modelspan=(,)
+}
+x11 {
+    seasonalma=(  msr)
+"""
+
+    # pass rawspec as string
+    with pytest.raises(X13Error):
+
+        x13_arima_analysis(dataset, rawspec=raw_spec_file)
+
+    # pass rawspec as file path
+    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+        ft.write(raw_spec_file.encode("utf8"))
+        ft.seek(0)
+
+        with pytest.raises(X13Error):
+
+            x13_arima_analysis(dataset, rawspec=ft.name)

@@ -46,6 +46,7 @@ within and between values of the `ident` array).  The model
 :math:`p(y | vc, fep)` depends on the specific GLM being fit.
 """
 
+
 import warnings
 
 import numpy as np
@@ -57,6 +58,8 @@ import statsmodels.base.model as base
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod import families
 from statsmodels.iolib import summary2
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 # Gauss-Legendre weights
 glw = [
@@ -114,7 +117,7 @@ _init_doc = r"""
 
     Returns
     -------
-    MixedGLMResults object
+    BayesMixedGLMResults instance.
 
     Notes
     -----
@@ -139,17 +142,13 @@ _init_doc = r"""
     log-normal prior distributions with mean 0 and standard deviation
     `vcp_p`.
 
-    Note that for some families, e.g. Binomial, the posterior mode may
+    Note that for some families, e.g., Binomial, the posterior mode may
     be difficult to find numerically if `vcp_p` is set to too large of
     a value.  Setting `vcp_p` to 0.5 seems to work well.
 
     The prior for the fixed effects parameters is Gaussian with mean 0
     and standard deviation `fe_p`.  It is recommended that quantitative
     covariates be standardized.
-
-    Examples
-    --------{example}
-
 
     References
     ----------
@@ -162,6 +161,9 @@ _init_doc = r"""
     An assessment of estimation methods for generalized linear mixed
     models with binary outcomes
     https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3866838/
+
+    Examples
+    --------{example}
     """
 
 # The code in the example should be identical to what appears in
@@ -190,18 +192,20 @@ _poisson_example = """
 
 
 class _BayesMixedGLM(base.Model):
-    def __init__(self,
-                 endog,
-                 exog,
-                 exog_vc=None,
-                 ident=None,
-                 family=None,
-                 vcp_p=1,
-                 fe_p=2,
-                 fep_names=None,
-                 vcp_names=None,
-                 vc_names=None,
-                 **kwargs):
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_vc=None,
+        ident=None,
+        family=None,
+        vcp_p=1,
+        fe_p=2,
+        fep_names=None,
+        vcp_names=None,
+        vc_names=None,
+        **kwargs,
+    ):
 
         if exog.ndim == 1:
             if isinstance(exog, np.ndarray):
@@ -241,18 +245,17 @@ class _BayesMixedGLM(base.Model):
             if hasattr(exog, "columns"):
                 fep_names = exog.columns.tolist()
             else:
-                fep_names = ["FE_%d" % (k + 1) for k in range(exog.shape[1])]
+                fep_names = [f"FE_{k + 1:d}" for k in range(exog.shape[1])]
 
         # Get the variance parameter names
         if vcp_names is None:
-            vcp_names = ["VC_%d" % (k + 1) for k in range(int(max(ident)) + 1)]
-        else:
-            if len(vcp_names) != len(set(ident)):
-                msg = "The lengths of vcp_names and ident should be the same"
-                raise ValueError(msg)
+            vcp_names = [f"VC_{k + 1:d}" for k in range(int(max(ident)) + 1)]
+        elif len(vcp_names) != len(set(ident)):
+            msg = "The lengths of vcp_names and ident should be the same"
+            raise ValueError(msg)
 
         if not sparse.issparse(exog_vc):
-            exog_vc = sparse.csr_matrix(exog_vc)
+            exog_vc = sparse.csr_array(exog_vc)
 
         ident = ident.astype(int)
         vcp_p = float(vcp_p)
@@ -299,13 +302,13 @@ class _BayesMixedGLM(base.Model):
         ii = 0
 
         # Fixed effects parameters
-        fep = vec[:ii + self.k_fep]
+        fep = vec[: ii + self.k_fep]
         ii += self.k_fep
 
         # Variance component structure parameters (standard
         # deviations).  These are on the log scale.  The standard
         # deviation for random effect j is exp(vcp[ident[j]]).
-        vcp = vec[ii:ii + self.k_vcp]
+        vcp = vec[ii : ii + self.k_vcp]
         ii += self.k_vcp
 
         # Random effect realizations
@@ -398,21 +401,15 @@ class _BayesMixedGLM(base.Model):
 
         return np.concatenate(te)
 
-    def _get_start(self):
+    def _get_start(self, rng):
         start_fep = np.zeros(self.k_fep)
         start_vcp = np.ones(self.k_vcp)
-        start_vc = np.random.normal(size=self.k_vc)
+        start_vc = rng.normal(size=self.k_vc)
         start = np.concatenate((start_fep, start_vcp, start_vc))
         return start
 
     @classmethod
-    def from_formula(cls,
-                     formula,
-                     vc_formulas,
-                     data,
-                     family=None,
-                     vcp_p=1,
-                     fe_p=2):
+    def from_formula(cls, formula, vc_formulas, data, family=None, vcp_p=1, fe_p=2):
         """
         Fit a BayesMixedGLM using a formula.
 
@@ -464,7 +461,8 @@ class _BayesMixedGLM(base.Model):
             vc_names=vc_names,
             vcp_names=vcp_names,
             fe_p=fe_p,
-            vcp_p=vcp_p)
+            vcp_p=vcp_p,
+        )
 
         return model
 
@@ -478,7 +476,7 @@ class _BayesMixedGLM(base.Model):
         """
         self.fit_map(method, minim_opts)
 
-    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False):
+    def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False, rng=None):
         """
         Construct the Laplace approximation to the posterior distribution.
 
@@ -493,6 +491,12 @@ class _BayesMixedGLM(base.Model):
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
 
         Returns
         -------
@@ -502,7 +506,7 @@ class _BayesMixedGLM(base.Model):
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog
+            exog_save = self.exog
             self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
@@ -514,23 +518,25 @@ class _BayesMixedGLM(base.Model):
         def grad(params):
             return -self.logposterior_grad(params)
 
-        start = self._get_start()
+        rng = check_random_state(rng)
+        start = self._get_start(rng)
 
         r = minimize(fun, start, method=method, jac=grad, options=minim_opts)
         if not r.success:
-            msg = ("Laplace fitting did not converge, |gradient|=%.6f" %
-                   np.sqrt(np.sum(r.jac**2)))
-            warnings.warn(msg)
+            msg = "Laplace fitting did not converge, |gradient|={:.6f}".format(np.sqrt(
+                np.sum(r.jac**2)
+            ))
+            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         from statsmodels.tools.numdiff import approx_fprime
+
         hess = approx_fprime(r.x, grad)
         cov = np.linalg.inv(hess)
 
         params = r.x
 
         if scale_fe:
-            self.exog = self._exog_save
-            del self._exog_save
+            self.exog = exog_save
             params[ixs] /= sc[ixs]
             cov[ixs, :][:, ixs] /= np.outer(sc[ixs], sc[ixs])
 
@@ -593,8 +599,7 @@ class _VariationalBayesMixedGLM:
 
         return tm, tv
 
-    def vb_elbo_base(self, h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd,
-                     vc_sd):
+    def vb_elbo_base(self, h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd):
         """
         Returns the evidence lower bound (ELBO) for the model.
 
@@ -610,46 +615,61 @@ class _VariationalBayesMixedGLM:
             is a standard normal random variable.  This formulation
             can be achieved for any GLM with a canonical link
             function.
+        tm : array_like
+            Mean of the linear predictor.
+        fep_mean : array_like
+            Mean of the fixed effects parameters.
+        vcp_mean : array_like
+            Mean of the variance component parameters.
+        vc_mean : array_like
+            Mean of the random effects realizations.
+        fep_sd : array_like
+            Standard deviation of the fixed effects parameters.
+        vcp_sd : array_like
+            Standard deviation of the variance component parameters.
+        vc_sd : array_like
+            Standard deviation of the random effects realizations.
         """
 
         # p(y | vc) contributions
         iv = 0
         for w in glw:
             z = self.rng * w[1]
-            iv += w[0] * h(z) * np.exp(-z**2 / 2)
+            iv += w[0] * h(z) * np.exp(-(z**2) / 2)
         iv /= np.sqrt(2 * np.pi)
         iv *= self.rng
         iv += self.endog * tm
         iv = iv.sum()
 
         # p(vc | vcp) * p(vcp) * p(fep) contributions
-        iv += self._elbo_common(fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean,
-                                vc_sd)
+        iv += self._elbo_common(fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd)
 
-        r = (iv + np.sum(np.log(fep_sd)) + np.sum(np.log(vcp_sd)) + np.sum(
-            np.log(vc_sd)))
+        r = iv + np.sum(np.log(fep_sd)) + np.sum(np.log(vcp_sd)) + np.sum(np.log(vc_sd))
 
         return r
 
-    def vb_elbo_grad_base(self, h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd,
-                          vcp_sd, vc_sd):
+    def vb_elbo_grad_base(
+        self, h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd
+    ):
         """
         Return the gradient of the ELBO function.
 
-        See vb_elbo_base for parameters.
+        See vb_elbo_base for parameters. In addition, `tv` is the
+        variance of the linear predictor under the given distribution
+        parameters.
         """
 
-        fep_mean_grad = 0.
-        fep_sd_grad = 0.
-        vcp_mean_grad = 0.
-        vcp_sd_grad = 0.
-        vc_mean_grad = 0.
-        vc_sd_grad = 0.
+        fep_mean_grad = 0.0
+        fep_sd_grad = 0.0
+        vcp_mean_grad = 0.0
+        vcp_sd_grad = 0.0
+        vc_mean_grad = 0.0
+        vc_sd_grad = 0.0
 
         # p(y | vc) contributions
         for w in glw:
             z = self.rng * w[1]
-            u = h(z) * np.exp(-z**2 / 2) / np.sqrt(2 * np.pi)
+            u = h(z) * np.exp(-(z**2) / 2) / np.sqrt(2 * np.pi)
             r = u / np.sqrt(tv)
             fep_mean_grad += w[0] * np.dot(u, self.exog)
             vc_mean_grad += w[0] * self.exog_vc.transpose().dot(u)
@@ -665,9 +685,14 @@ class _VariationalBayesMixedGLM:
         fep_mean_grad += np.dot(self.endog, self.exog)
         vc_mean_grad += self.exog_vc.transpose().dot(self.endog)
 
-        (fep_mean_grad_i, fep_sd_grad_i, vcp_mean_grad_i, vcp_sd_grad_i,
-         vc_mean_grad_i, vc_sd_grad_i) = self._elbo_grad_common(
-             fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd)
+        (
+            fep_mean_grad_i,
+            fep_sd_grad_i,
+            vcp_mean_grad_i,
+            vcp_sd_grad_i,
+            vc_mean_grad_i,
+            vc_sd_grad_i,
+        ) = self._elbo_grad_common(fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd)
 
         fep_mean_grad += fep_mean_grad_i
         fep_sd_grad += fep_sd_grad_i
@@ -680,23 +705,24 @@ class _VariationalBayesMixedGLM:
         vcp_sd_grad += 1 / vcp_sd
         vc_sd_grad += 1 / vc_sd
 
-        mean_grad = np.concatenate((fep_mean_grad, vcp_mean_grad,
-                                    vc_mean_grad))
+        mean_grad = np.concatenate((fep_mean_grad, vcp_mean_grad, vc_mean_grad))
         sd_grad = np.concatenate((fep_sd_grad, vcp_sd_grad, vc_sd_grad))
 
         if self.verbose:
-            print(
-                "|G|=%f" % np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)))
+            print(f"|G|={np.sqrt(np.sum(mean_grad**2) + np.sum(sd_grad**2)):f}")
 
         return mean_grad, sd_grad
 
-    def fit_vb(self,
-               mean=None,
-               sd=None,
-               fit_method="BFGS",
-               minim_opts=None,
-               scale_fe=False,
-               verbose=False):
+    def fit_vb(
+        self,
+        mean=None,
+        sd=None,
+        fit_method="BFGS",
+        minim_opts=None,
+        scale_fe=False,
+        verbose=False,
+        rng=None,
+    ):
         """
         Fit a model using the variational Bayes mean field approximation.
 
@@ -718,6 +744,12 @@ class _VariationalBayesMixedGLM:
         verbose : bool
             If True, print the gradient norm to the screen each time
             it is calculated.
+        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used. Only used if sd is None.
 
         Notes
         -----
@@ -743,7 +775,7 @@ class _VariationalBayesMixedGLM:
         if scale_fe:
             mn = self.exog.mean(0)
             sc = self.exog.std(0)
-            self._exog_save = self.exog
+            exog_save = self.exog
             self.exog = self.exog.copy()
             ixs = np.flatnonzero(sc > 1e-8)
             self.exog[:, ixs] -= mn[ixs]
@@ -756,14 +788,15 @@ class _VariationalBayesMixedGLM:
         else:
             if len(mean) != ml:
                 raise ValueError(
-                    "mean has incorrect length, %d != %d" % (len(mean), ml))
+                    f"mean has incorrect length, {len(mean):d} != {ml:d}"
+                )
             m = mean.copy()
         if sd is None:
-            s = -0.5 + 0.1 * np.random.normal(size=n)
+            rng = check_random_state(rng)
+            s = -0.5 + 0.1 * rng.normal(size=n)
         else:
             if len(sd) != ml:
-                raise ValueError(
-                    "sd has incorrect length, %d != %d" % (len(sd), ml))
+                raise ValueError(f"sd has incorrect length, {len(sd):d} != {ml:d}")
 
             # s is parametrized on the log-scale internally when
             # optimizing the ELBO function (this is transparent to the
@@ -790,20 +823,20 @@ class _VariationalBayesMixedGLM:
             return -np.concatenate((gm, gs))
 
         start = np.concatenate((m, s))
-        mm = minimize(
-            elbo, start, jac=elbo_grad, method=fit_method, options=minim_opts)
+        mm = minimize(elbo, start, jac=elbo_grad, method=fit_method, options=minim_opts)
         if not mm.success:
-            warnings.warn("VB fitting did not converge")
+            warnings.warn(
+                "VB fitting did not converge", ConvergenceWarning, stacklevel=2
+            )
 
         n = len(mm.x) // 2
         params = mm.x[0:n]
         va = np.exp(2 * mm.x[n:])
 
         if scale_fe:
-            self.exog = self._exog_save
-            del self._exog_save
+            self.exog = exog_save
             params[ixs] /= sc[ixs]
-            va[ixs] /= sc[ixs]**2
+            va[ixs] /= sc[ixs] ** 2
 
         return BayesMixedGLMResults(self, params, va, mm)
 
@@ -826,8 +859,7 @@ class _VariationalBayesMixedGLM:
 
         return iv
 
-    def _elbo_grad_common(self, fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean,
-                          vc_sd):
+    def _elbo_grad_common(self, fep_mean, fep_sd, vcp_mean, vcp_sd, vc_mean, vc_sd):
 
         # p(vc | vcp) contributions
         m = vcp_mean[self.ident]
@@ -850,8 +882,14 @@ class _VariationalBayesMixedGLM:
         fep_mean_grad = -fep_mean.copy() / self.fe_p**2
         fep_sd_grad = -fep_sd.copy() / self.fe_p**2
 
-        return (fep_mean_grad, fep_sd_grad, vcp_mean_grad, vcp_sd_grad,
-                vc_mean_grad, vc_sd_grad)
+        return (
+            fep_mean_grad,
+            fep_sd_grad,
+            vcp_mean_grad,
+            vcp_sd_grad,
+            vc_mean_grad,
+            vc_sd_grad,
+        )
 
 
 class BayesMixedGLMResults:
@@ -883,7 +921,7 @@ class BayesMixedGLMResults:
         self._cov_params = cov_params
         self.optim_retvals = optim_retvals
 
-        self.fe_mean, self.vcp_mean, self.vc_mean = (model._unpack(params))
+        self.fe_mean, self.vcp_mean, self.vc_mean = model._unpack(params)
 
         if cov_params.ndim == 2:
             cp = np.diag(cov_params)
@@ -898,8 +936,7 @@ class BayesMixedGLMResults:
 
         if hasattr(self.model.data, "frame"):
             # Return the covariance matrix as a dataframe or series
-            na = (self.model.fep_names + self.model.vcp_names +
-                  self.model.vc_names)
+            na = self.model.fep_names + self.model.vcp_names + self.model.vc_names
             if self._cov_params.ndim == 2:
                 return pd.DataFrame(self._cov_params, index=na, columns=na)
             else:
@@ -912,8 +949,9 @@ class BayesMixedGLMResults:
 
         df = pd.DataFrame()
         m = self.model.k_fep + self.model.k_vcp
-        df["Type"] = (["M" for k in range(self.model.k_fep)] +
-                      ["V" for k in range(self.model.k_vcp)])
+        df["Type"] = ["M" for k in range(self.model.k_fep)] + [
+            "V" for k in range(self.model.k_vcp)
+        ]
 
         df["Post. Mean"] = self.params[0:m]
 
@@ -927,9 +965,9 @@ class BayesMixedGLMResults:
         df["SD"] = np.exp(df["Post. Mean"])
         df["SD (LB)"] = np.exp(df["Post. Mean"] - 2 * df["Post. SD"])
         df["SD (UB)"] = np.exp(df["Post. Mean"] + 2 * df["Post. SD"])
-        df["SD"] = ["%.3f" % x for x in df.SD]
-        df["SD (LB)"] = ["%.3f" % x for x in df["SD (LB)"]]
-        df["SD (UB)"] = ["%.3f" % x for x in df["SD (UB)"]]
+        df["SD"] = [f"{x:.3f}" for x in df.SD]
+        df["SD (LB)"] = [f"{x:.3f}" for x in df["SD (LB)"]]
+        df["SD (UB)"] = [f"{x:.3f}" for x in df["SD (UB)"]]
         df.loc[df.index < self.model.k_fep, "SD"] = ""
         df.loc[df.index < self.model.k_fep, "SD (LB)"] = ""
         df.loc[df.index < self.model.k_fep, "SD (UB)"] = ""
@@ -937,14 +975,13 @@ class BayesMixedGLMResults:
         df.index = self.model.fep_names + self.model.vcp_names
 
         summ = summary2.Summary()
-        summ.add_title(self.model.family.__class__.__name__ +
-                       " Mixed GLM Results")
+        summ.add_title(self.model.family.__class__.__name__ + " Mixed GLM Results")
         summ.add_df(df)
 
-        summ.add_text("Parameter types are mean structure (M) and "
-                      "variance structure (V)")
-        summ.add_text("Variance parameters are modeled as log "
-                      "standard deviations")
+        summ.add_text(
+            "Parameter types are mean structure (M) and variance structure (V)"
+        )
+        summ.add_text("Variance parameters are modeled as log standard deviations")
 
         return summ
 
@@ -1010,16 +1047,18 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     __doc__ = _init_doc.format(example=_logit_example)
 
-    def __init__(self,
-                 endog,
-                 exog,
-                 exog_vc,
-                 ident,
-                 vcp_p=1,
-                 fe_p=2,
-                 fep_names=None,
-                 vcp_names=None,
-                 vc_names=None):
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_vc,
+        ident,
+        vcp_p=1,
+        fe_p=2,
+        fep_names=None,
+        vcp_names=None,
+        vc_names=None,
+    ):
 
         super().__init__(
             endog,
@@ -1031,7 +1070,8 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             family=families.Binomial(),
             fep_names=fep_names,
             vcp_names=vcp_names,
-            vc_names=vc_names)
+            vc_names=vc_names,
+        )
 
         if not np.all(np.unique(endog) == np.r_[0, 1]):
             msg = "endog values must be 0 and 1, and not all identical"
@@ -1039,10 +1079,37 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     @classmethod
     def from_formula(cls, formula, vc_formulas, data, vcp_p=1, fe_p=2):
+        """
+        Fit a BinomialBayesMixedGLM using a formula.
+
+        Parameters
+        ----------
+        formula : str
+            Formula for the endog and fixed effects terms (use ~ to
+            separate dependent and independent expressions).
+        vc_formulas : dictionary
+            vc_formulas[name] is a one-sided formula that creates one
+            collection of random effects with a common variance
+            parameter.  If using categorical (factor) variables to
+            produce variance components, note that generally `0 + ...`
+            should be used so that an intercept is not included.
+        data : data frame
+            The data to which the formulas are applied.
+        vcp_p : float
+            The prior standard deviation for the logarithms of the standard
+            deviations of the random effects.
+        fe_p : float
+            The prior standard deviation for the fixed effects parameters.
+
+        Returns
+        -------
+        BinomialBayesMixedGLM instance.
+        """
 
         fam = families.Binomial()
         x = _BayesMixedGLM.from_formula(
-            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p)
+            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p
+        )
 
         # Copy over to the intended class structure
         mod = BinomialBayesMixedGLM(
@@ -1054,7 +1121,8 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             fe_p=x.fe_p,
             fep_names=x.fep_names,
             vcp_names=x.vcp_names,
-            vc_names=x.vc_names)
+            vc_names=x.vc_names,
+        )
         mod.data = x.data
 
         return mod
@@ -1071,8 +1139,9 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         def h(z):
             return -np.log(1 + np.exp(tm + np.sqrt(tv) * z))
 
-        return self.vb_elbo_base(h, tm, fep_mean, vcp_mean, vc_mean, fep_sd,
-                                 vcp_sd, vc_sd)
+        return self.vb_elbo_base(
+            h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd
+        )
 
     def vb_elbo_grad(self, vb_mean, vb_sd):
         """
@@ -1094,24 +1163,27 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             x[ii] = np.exp(uu) / (1 + np.exp(uu))
             return -x
 
-        return self.vb_elbo_grad_base(h, tm, tv, fep_mean, vcp_mean, vc_mean,
-                                      fep_sd, vcp_sd, vc_sd)
+        return self.vb_elbo_grad_base(
+            h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd
+        )
 
 
 class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
 
     __doc__ = _init_doc.format(example=_poisson_example)
 
-    def __init__(self,
-                 endog,
-                 exog,
-                 exog_vc,
-                 ident,
-                 vcp_p=1,
-                 fe_p=2,
-                 fep_names=None,
-                 vcp_names=None,
-                 vc_names=None):
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_vc,
+        ident,
+        vcp_p=1,
+        fe_p=2,
+        fep_names=None,
+        vcp_names=None,
+        vc_names=None,
+    ):
 
         super().__init__(
             endog=endog,
@@ -1123,26 +1195,48 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             family=families.Poisson(),
             fep_names=fep_names,
             vcp_names=vcp_names,
-            vc_names=vc_names)
+            vc_names=vc_names,
+        )
 
     @classmethod
-    def from_formula(cls,
-                     formula,
-                     vc_formulas,
-                     data,
-                     vcp_p=1,
-                     fe_p=2,
-                     vcp_names=None,
-                     vc_names=None):
+    def from_formula(
+        cls, formula, vc_formulas, data, vcp_p=1, fe_p=2, vcp_names=None, vc_names=None
+    ):
+        """
+        Fit a PoissonBayesMixedGLM using a formula.
+
+        Parameters
+        ----------
+        formula : str
+            Formula for the endog and fixed effects terms (use ~ to
+            separate dependent and independent expressions).
+        vc_formulas : dictionary
+            vc_formulas[name] is a one-sided formula that creates one
+            collection of random effects with a common variance
+            parameter.  If using categorical (factor) variables to
+            produce variance components, note that generally `0 + ...`
+            should be used so that an intercept is not included.
+        data : data frame
+            The data to which the formulas are applied.
+        vcp_p : float
+            The prior standard deviation for the logarithms of the standard
+            deviations of the random effects.
+        fe_p : float
+            The prior standard deviation for the fixed effects parameters.
+        vcp_names : list[str]
+            The names of the variance component parameters.
+        vc_names : list[str]
+            The names of the random effect realizations.
+
+        Returns
+        -------
+        PoissonBayesMixedGLM instance.
+        """
 
         fam = families.Poisson()
         x = _BayesMixedGLM.from_formula(
-            formula,
-            vc_formulas,
-            data,
-            family=fam,
-            vcp_p=vcp_p,
-            fe_p=fe_p)
+            formula, vc_formulas, data, family=fam, vcp_p=vcp_p, fe_p=fe_p
+        )
 
         # Copy over to the intended class structure
         mod = PoissonBayesMixedGLM(
@@ -1153,8 +1247,9 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             vcp_p=x.vcp_p,
             fe_p=x.fe_p,
             fep_names=x.fep_names,
-            vcp_names=x.vcp_names,
-            vc_names=x.vc_names)
+            vcp_names=vcp_names if vcp_names is not None else x.vcp_names,
+            vc_names=vc_names if vc_names is not None else x.vc_names,
+        )
         mod.data = x.data
 
         return mod
@@ -1171,8 +1266,9 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         def h(z):
             return -np.exp(tm + np.sqrt(tv) * z)
 
-        return self.vb_elbo_base(h, tm, fep_mean, vcp_mean, vc_mean, fep_sd,
-                                 vcp_sd, vc_sd)
+        return self.vb_elbo_base(
+            h, tm, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd
+        )
 
     def vb_elbo_grad(self, vb_mean, vb_sd):
         """
@@ -1187,5 +1283,6 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
             y = -np.exp(tm + np.sqrt(tv) * z)
             return y
 
-        return self.vb_elbo_grad_base(h, tm, tv, fep_mean, vcp_mean, vc_mean,
-                                      fep_sd, vcp_sd, vc_sd)
+        return self.vb_elbo_grad_base(
+            h, tm, tv, fep_mean, vcp_mean, vc_mean, fep_sd, vcp_sd, vc_sd
+        )
