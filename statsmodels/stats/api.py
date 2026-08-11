@@ -8,7 +8,15 @@ from statsmodels.stats.contingency_tables import (
     mcnemar,
 )
 
-from . import diagnostic, gof, moment_helpers, multicomp, sandwich_covariance, stattools
+from . import (
+    covariance,
+    diagnostic,
+    gof,
+    moment_helpers,
+    multicomp,
+    sandwich_covariance,
+    stattools,
+)
 from ._adnorm import normal_ad
 from ._knockoff import RegressionFDR
 from ._lilliefors import lilliefors
@@ -21,6 +29,12 @@ from .correlation_tools import (
     corr_thresholded,
     cov_nearest,
     cov_nearest_factor_homog,
+)
+from .covariance import (
+    corr_normal_scores,
+    corr_quadrant,
+    corr_rank,
+    transform_corr_normal,
 )
 from .descriptivestats import Describe
 from .diagnostic import (
@@ -58,6 +72,7 @@ from .multitest import (
     fdrcorrection,
     fdrcorrection_twostage,
     local_fdr,
+    local_fdr_correction,
     multipletests,
 )
 from .multivariate import (
@@ -215,6 +230,9 @@ __all__ = [
     "corr_clipped",
     "corr_nearest",
     "corr_nearest_factor",
+    "corr_normal_scores",
+    "corr_quadrant",
+    "corr_rank",
     "corr_thresholded",
     "cov_cluster",
     "cov_cluster_2groups",
@@ -227,6 +245,7 @@ __all__ = [
     "cov_nearest_factor_homog",
     "cov_nw_panel",
     "cov_white_simple",
+    "covariance",
     "diagnostic",
     "durbin_watson",
     "effectsize_2proportions",
@@ -255,6 +274,7 @@ __all__ = [
     "linear_rainbow",
     "linear_reset",
     "local_fdr",
+    "local_fdr_correction",
     "mcnemar",
     "moment_helpers",
     "multicomp",
@@ -305,6 +325,7 @@ __all__ = [
     "tolerance_int_poisson",
     "tost_poisson_2indep",
     "tost_proportions_2indep",
+    "transform_corr_normal",
     "tt_ind_solve_power",
     "tt_solve_power",
     "ttest_ind",

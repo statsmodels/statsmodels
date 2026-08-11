@@ -757,6 +757,27 @@ inverse covariance or precision matrix.
 
    RegularizedInvCovariance
 
+Correlation Consistent at the Normal Distribution
+--------------------------------------------------
+
+Rank-based correlation estimators (Gaussian-rank, Spearman, Kendall's tau,
+and quadrant correlation) can be transformed so that they are consistent
+estimators of the Pearson correlation when the underlying data are jointly
+normal.
+
+.. module:: statsmodels.stats.covariance
+   :synopsis: Correlation and covariance estimators consistent at the normal distribution
+
+.. currentmodule:: statsmodels.stats.covariance
+
+.. autosummary::
+   :toctree: generated/
+
+   transform_corr_normal
+   corr_normal_scores
+   corr_quadrant
+   corr_rank
+
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
 

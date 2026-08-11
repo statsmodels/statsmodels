@@ -23,6 +23,7 @@ __all__ = [
     "MICEData",
     "MNLogit",
     "MixedLM",
+    "MultivariateLS",
     "NegativeBinomial",
     "NegativeBinomialP",
     "NominalGEE",
@@ -129,6 +130,7 @@ from .iolib.smpickle import load_pickle
 from .multivariate import api as multivariate
 from .multivariate.factor import Factor
 from .multivariate.manova import MANOVA
+from .multivariate.multivariate_ols import MultivariateLS
 from .multivariate.pca import PCA
 from .nonparametric import api as nonparametric
 from .regression.linear_model import GLS, GLSAR, OLS, WLS

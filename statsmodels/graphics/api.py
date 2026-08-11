@@ -8,6 +8,7 @@ from .gofplots import qqplot
 from .plottools import rainbow
 from .regressionplots import (
     abline_plot,
+    add_ellipse,
     influence_plot,
     plot_ccpr,
     plot_ccpr_grid,
@@ -20,6 +21,7 @@ from .regressionplots import (
 
 __all__ = [
     "abline_plot",
+    "add_ellipse",
     "beanplot",
     "fboxplot",
     "hdrboxplot",

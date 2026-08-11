@@ -88,6 +88,7 @@ Regression Plots
    plot_ccpr_grid
    plot_ceres_residuals
    abline_plot
+   add_ellipse
    influence_plot
    plot_leverage_resid2
 
@@ -104,6 +105,7 @@ Time Series Plots
    plot_ccf
    plot_pccf
    plot_accf_grid
+   seasonal_diagnostic_plot
    month_plot
    quarter_plot
 
