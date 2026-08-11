@@ -1507,35 +1507,9 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
                 use_namedtuple: bool | None = None):
     r"""
     Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
-
-    The Yule-Walker estimator is based on the autocorrelation structure of
-    a weakly stationary process. Under stationarity, the covariance between
-    two observations depends only on their lag:
-
-    .. math::
-
-        \operatorname{Cov}(X_t, X_{t-k}) = \gamma_k.
-
-    For an AR(p) process, the Yule-Walker equations can be written as
-
-    .. math::
-
-        R \phi = r,
-
-    where ``R`` is the Toeplitz autocovariance matrix constructed from the
-    estimated autocovariances at lags 0 through ``p - 1``, ``\phi`` is the
-    vector of AR(p) parameters, and ``r`` is the vector of estimated
-    autocovariances at lags 1 through ``p``.
-
-    In practice, the theoretical autocovariances are replaced by their
-    sample estimates.
-
     The method provides either adjusted or maximum-likelihood estimates,
     depending on the value of ``method``.
 
-    The reference below formulates the Yule-Walker equations in terms of
-    autocorrelations, whereas this implementation uses autocovariances.
-    The two formulations are equivalent up to normalization by the variance.
 
     Parameters
     ----------
@@ -1594,8 +1568,31 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
 
     Notes
     -----
-    See https://en.wikipedia.org/wiki/Autoregressive_moving_average_model for
-    further details.
+    The Yule-Walker estimator is based on the autocorrelation structure of
+    a weakly stationary process. Under stationarity, the covariance between
+    two observations depends only on their lag:
+
+    .. math::
+
+        \operatorname{Cov}(X_t, X_{t-k}) = \gamma_k.
+
+    For an AR(p) process, the Yule-Walker equations can be written as
+
+    .. math::
+
+        R \phi = r,
+
+    where ``R`` is the Toeplitz autocovariance matrix constructed from the
+    estimated autocovariances at lags 0 through ``p - 1``, ``\phi`` is the
+    vector of AR(p) parameters, and ``r`` is the vector of estimated
+    autocovariances at lags 1 through ``p``.
+
+    In practice, the theoretical autocovariances are replaced by their
+    sample estimates.
+
+    The reference below formulates the Yule-Walker equations in terms of
+    autocorrelations, whereas this implementation uses autocovariances.
+    The two formulations are equivalent up to normalization by the variance.
 
     Examples
     --------
