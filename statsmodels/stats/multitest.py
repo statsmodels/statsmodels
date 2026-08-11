@@ -6,7 +6,6 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-# from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.scipy import SP_LT_112
 
 from typing import NamedTuple
@@ -25,6 +24,8 @@ __all__ = [
     "local_fdr_correction",
     "multipletests",
 ]
+
+from statsmodels.tools.validation import array_like, bool_like, float_like
 
 # ==============================================
 #
@@ -518,8 +519,9 @@ def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
             "isotonic_regression in order to use local FDR."
         ) from imp_err
 
-    pvals = np.asarray(pvals)
-    assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
+    pvals = array_like(pvals, "pvals", maxdim=1, ndim=1, dtype=float)
+    null_proportion = float_like(null_proportion, "null_proportion")
+    is_sorted = bool_like(is_sorted, "is_sorted")
 
     nobs = len(pvals)
 
@@ -541,17 +543,15 @@ def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
     requirements = ("C_CONTIGUOUS", "ALIGNED", "OWNDATA", "WRITEABLE", "ENSUREARRAY")
     y = np.require(counts / (nobs * gaps), dtype=float, requirements=requirements)
     weights = np.require(gaps, dtype=float, requirements=requirements)
-    if not y.size:
-        slopes_uniq = np.array([])
-    elif False: # PLATFORM_WIN:
-        from sklearn.isotonic import IsotonicRegression
-        ir = IsotonicRegression(increasing=False)
-        _x = np.arange(y.shape[0], dtype=float)
-        ir.fit(_x, y, sample_weight=weights)
-        slopes_uniq = ir.fit_transform(_x, y, sample_weight=weights)
-    else:
+
+    # Special case when y is empty, which can happen if pvals is empty.
+    # In that case, we should avoid calling isotonic_regression and
+    # just set slopes_uniq to an empty array.
+    if y.size:
         slope_reg = isotonic_regression(y, weights=weights, increasing=False)
         slopes_uniq = slope_reg.x
+    else:
+        slopes_uniq = np.array([])
 
     # compute LCM of empirical cdf
     keep = np.ones(len(uniq_pvals), dtype=bool)
