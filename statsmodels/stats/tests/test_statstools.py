@@ -275,6 +275,70 @@ class TestStattools:
         mc_legacy = medcouple(x, use_fast=False)
         assert_almost_equal(mc_fast, mc_legacy, decimal=7)
 
+    def test_medcouple_even_hcount_regression(self):
+        # Regression test for GH#10098: the fast algorithm returned one of
+        # the two central h-kernel order statistics instead of their
+        # average whenever their count (n_plus * n_minus) was even, which
+        # happens for roughly half of all sample sizes. n=4 here gives
+        # n_plus = n_minus = 2, so exactly 4 (even) pairwise h-values.
+        x = np.array([1.0, 2.0, 3.0, 10.0])
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc_fast = medcouple(x, use_fast=True)
+        mc_legacy = medcouple(x, use_fast=False)
+        assert_allclose(mc_fast, 1.0 / 3.0, rtol=1e-12)
+        assert_allclose(mc_fast, mc_legacy, rtol=1e-12)
+
+    def test_medcouple_r_reference_ties(self):
+        # External verification against R's robustbase::mc() (v0.99.7),
+        # the reference implementation for this algorithm, on inputs with
+        # moderate ties. Values are `mc(x)` at defaults (doReflect=TRUE,
+        # the default for length(x) <= 100, doScale=FALSE). n=10 for the
+        # third case is even, which also exercises the even/odd h-kernel
+        # count fix from GH#10098 on a realistic tied dataset rather than
+        # only on tie-free random data.
+        cases = [
+            (np.array([1.0, 2.0, 2.0, 3.0, 4.0]), 1.0 / 6.0),
+            (np.array([1.0, 3.0, 5.0, 7.0, 7.0, 7.0, 8.0, 8.0, 9.0, 9.0, 9.0]),
+             -1.0 / 6.0),
+            (np.array([2.0, 2.0, 3.0, 3.0, 3.0, 4.0, 5.0, 5.0, 8.0, 10.0]), 0.5),
+        ]
+        for x, expected in cases:
+            if x.shape[0] < 10:
+                with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+                    mc_fast = medcouple(x, use_fast=True)
+            else:
+                mc_fast = medcouple(x, use_fast=True)
+            mc_legacy = medcouple(x, use_fast=False)
+            assert_allclose(mc_fast, expected, rtol=1e-12)
+            assert_allclose(mc_legacy, expected, rtol=1e-12)
+
+    def test_medcouple_r_reference_majority_tied(self):
+        # External verification against R's robustbase::mc() (v0.99.7) for
+        # data where a strict majority is tied at one extreme, including
+        # the fully degenerate (constant) case. use_fast=True's early-return
+        # shortcut for "one extreme equals the median" matches R's
+        # convention of +-1 here exactly (this also regression-tests
+        # GH#10098, where an earlier, incorrect attempt at "fixing" this
+        # shortcut was caught by comparing against these R values).
+        #
+        # use_fast=False (legacy) uses a different, longstanding tie-break
+        # convention for this specific edge case (an O(n**2) antisymmetric
+        # rank-based rule) that does not match R here -- e.g. it returns
+        # 0.5 rather than 1.0 for the first case below. That is a known,
+        # pre-existing difference between the two code paths for heavily
+        # tied data, not something asserted here.
+        cases = [
+            (np.array([1.0] * 9 + [5.0]), 1.0),
+            (np.array([1.0] * 9 + [-5.0]), -1.0),
+            (np.array([1.0] * 6 + [5.0] * 4), 1.0),
+            (np.ones(10), -1.0),
+        ]
+        for x, expected in cases:
+            assert_allclose(medcouple(x, use_fast=True), expected, rtol=1e-12)
+
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            assert_allclose(medcouple(np.ones(5), use_fast=True), -1.0, rtol=1e-12)
+
     def test_medcouple_axis_consistency(self):
         x = np.arange(100.0).reshape(10, 10)
         mc_fast = medcouple(x, axis=1, use_fast=True)
@@ -292,11 +356,16 @@ class TestStattools:
         assert np.isnan(res)
 
     def test_medcouple_large_random(self):
+        # rtol was previously loosened to 2e-2 to paper over GH#10098 (the
+        # fast algorithm silently returned one of the two central h-kernel
+        # order statistics instead of their average whenever their count
+        # was even); now that this is fixed, fast and legacy agree to
+        # machine precision.
         rs = np.random.default_rng(238201381)
         x = rs.standard_normal(500)
         mc_fast = medcouple(x, use_fast=True)
         mc_legacy = medcouple(x, use_fast=False)
-        assert_allclose(mc_fast, mc_legacy, rtol=2e-2, atol=1e-5)
+        assert_allclose(mc_fast, mc_legacy, rtol=1e-8, atol=1e-10)
 
     def test_durbin_watson(self):
         rs = np.random.RandomState(32392131)

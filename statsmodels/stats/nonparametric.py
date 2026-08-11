@@ -856,10 +856,13 @@ def jonckheere_terpstra(samples, alternative="larger"):
     counts = np.array([sample_arr.size for sample_arr in arrays], dtype=np.int64)
     n_groups = len(arrays)
     nobs = int(counts.sum())
-    if nobs < 2:
-        raise ValueError("`samples` must contain at least two observations.")
 
-    group_labels = np.repeat(np.arange(n_groups, dtype=np.int64), counts)
+    # We need to cast to intp because np.repeat requires repeats to be safely
+    # castable to the platform indexing dtype, which is 32 bits on 32-bit
+    # platforms.
+    group_labels = np.repeat(
+        np.arange(n_groups, dtype=np.intp), counts.astype(np.intp, copy=False)
+    )
     pooled = np.concatenate(arrays)
     sort_idx = np.argsort(pooled, kind="mergesort")
     pooled_sorted = pooled[sort_idx]

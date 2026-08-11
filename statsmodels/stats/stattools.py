@@ -695,13 +695,62 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
     n_plus = Zplus.shape[0]
     n_minus = Zminus.shape[0]
 
+    Rtot = n_minus * n_plus
+    medc_idx = Rtot // 2
+
+    if Rtot % 2:
+        # Odd number of pairwise h values: the medcouple is the single
+        # value at the middle rank.
+        return _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, medc_idx, eps1, eps2)
+
+    # Even number of pairwise h values: the medcouple is the average of
+    # the two values straddling the middle, at ranks medc_idx - 1 and
+    # medc_idx (0-indexed). Returning only one of them (as opposed to
+    # their average) silently produces the wrong answer whenever
+    # n_plus * n_minus is even, which happens for roughly half of all
+    # input sizes -- see GH#10098.
+    lo = _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, medc_idx - 1, eps1, eps2)
+    hi = _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, medc_idx, eps1, eps2)
+    return (lo + hi) / 2.0
+
+
+def _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, k, eps1, eps2):
+    """
+    Select the value of rank `k` (0-indexed) among the n_plus * n_minus
+    pairwise h-kernel values, without materializing the full array.
+
+    Parameters
+    ----------
+    Zplus : np.ndarray
+        1-d array of input values with Zplus >= -Zeps.
+    Zminus :  np.ndarray
+        1-d array of input values with Zminus <= Zeps.
+    n_plus : int
+    n_minus : int
+    k : int
+        0-indexed rank, among the n_plus * n_minus pairwise h-kernel
+        values sorted in ascending order, of the value to select.
+    eps1 : float
+    eps2 : float
+
+    Returns
+    -------
+    float
+        The h-kernel value of rank `k`.
+
+    Notes
+    -----
+    This is a helper for the O(N log N) medcouple algorithm. Finding the
+    medcouple requires this to be called once (odd total count) or twice
+    with adjacent ranks that are then averaged (even total count).
+    """
+
     # construct L, R as numpy arrays
     L = np.zeros(n_plus, dtype=int)
     R = np.full(n_plus, n_minus - 1, dtype=int)
 
     Ltot = 0
     Rtot = n_minus * n_plus
-    medc_idx = Rtot // 2
 
     while Rtot - Ltot > n_plus:
 
@@ -747,17 +796,17 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
         sumP = np.sum(P) + n_plus
         sumQ = np.sum(Q)
 
-        if medc_idx <= sumP - 1:
+        if k <= sumP - 1:
             R = P
             Rtot = sumP
-        elif medc_idx > sumQ - 1:
+        elif k > sumQ - 1:
             L = Q
             Ltot = sumQ
         else:
             return h_med
 
     A = _finalize_h_kernel_sweep(L, R, Zplus, Zminus, n_plus, eps2)
-    return A[medc_idx - Ltot]
+    return A[k - Ltot]
 
 
 def _medcouple_1d(y, use_fast=True):

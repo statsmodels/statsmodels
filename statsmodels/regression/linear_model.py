@@ -1617,8 +1617,6 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     method = string_like(method, "method", options=("adjusted", "mle"))
 
-    if method not in ("adjusted", "mle"):
-        raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
     if demean:
