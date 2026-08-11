@@ -625,6 +625,31 @@ def test_jonckheere_terpstra_known_extreme_statistic():
     assert_(res.zstat > 0)
 
 
+def test_jonckheere_terpstra_minimal_nobs():
+    # Regression test for the `nobs > 2` guard in the variance formula:
+    # with two singleton samples, nobs == 2 and the (nobs - 2.0) term in
+    # the third variance component would divide by zero if the guard were
+    # removed. counts == [1, 1] also makes that component's x0 * y0
+    # numerator identically zero, so this only exercises the branch and
+    # the absence of a ZeroDivisionError/NaN, not a numerically distinct
+    # variance value. scipy.stats.kendalltau itself raises ZeroDivisionError
+    # for n=2 (see scipy gh-21678), so the expected values here are derived
+    # by hand instead of cross-checked against it.
+    samples = [np.array([1.0]), np.array([2.0])]
+    res = jonckheere_terpstra(samples, alternative="larger")
+
+    assert np.isfinite(res.statistic)
+    assert np.isfinite(res.var_null)
+    assert np.isfinite(res.pvalue)
+
+    assert_allclose(res.statistic, _jt_statistic_bruteforce(samples), rtol=1e-13)
+    assert_allclose(res.statistic, 1.0, rtol=1e-13)
+    assert_allclose(res.mean_null, 0.5, rtol=1e-13)
+    assert_allclose(res.var_null, 0.25, rtol=1e-13)
+    assert_allclose(res.zstat, 1.0, rtol=1e-13)
+    assert_allclose(res.pvalue, stats.norm.sf(1.0), rtol=1e-13)
+
+
 def test_jonckheere_terpstra_result_type():
     samples = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
     res = jonckheere_terpstra(samples)
