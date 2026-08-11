@@ -117,7 +117,7 @@ class Substitution:
         Update self.params with supplied args
 
         Only valid when Substitution was constructed with keyword arguments
-        (i.e. self.params is a dict). No-op for positional (tuple) params.
+        (i.e., self.params is a dict). No-op for positional (tuple) params.
         """
         if isinstance(self.params, dict):
             self.params.update(*args, **kwargs)

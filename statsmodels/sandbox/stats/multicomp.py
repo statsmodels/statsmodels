@@ -818,7 +818,7 @@ class TukeyHSDResults:
 
         This example shows an example plot comparing significant differences
         in group means. Significant differences at the alpha=0.05 level can be
-        identified by intervals that do not overlap (i.e. USA vs Japan,
+        identified by intervals that do not overlap (i.e., USA vs Japan,
         USA vs Germany).
 
         >>> results.plot_simultaneous(comparison_name="USA")
@@ -1924,7 +1924,7 @@ def set_partition(ssli):
     this should be correctly called select largest disjoint sets.
     Begun and Gabriel 1981 do not seem to be bothered by sets of accepted
     hypothesis with joint elements,
-    e.g. maximal_accepted_sets = { {1,2,3}, {2,3,4} }
+    e.g., maximal_accepted_sets = { {1,2,3}, {2,3,4} }
 
     This creates a set partition from a list of sets given as tuples.
     It tries to find the partition with the largest sets. That is, sets are

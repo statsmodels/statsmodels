@@ -379,7 +379,7 @@ class PartRegressPlotResult(NamedTuple):
         If ``ax`` is None, the created figure. Otherwise the figure to
         which ``ax`` is connected.
     coords : tuple of ndarray or None
-        The ``(x_coords, y_coords)`` of the plotted points, i.e. the
+        The ``(x_coords, y_coords)`` of the plotted points, i.e., the
         residuals of ``exog_i`` and ``endog`` after partialling out
         ``exog_others``. These are computed to draw the plot, so they are
         always reported. ``None`` only when there were no other regressors

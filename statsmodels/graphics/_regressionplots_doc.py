@@ -82,7 +82,7 @@ _plot_ceres_residuals_doc = """
     linear, it is sufficient to set cond_means equal to the focus
     exog.  Alternatively, cond_means may consist of one or more
     columns containing functional transformations of the focus
-    exog (e.g. x2^2) that are thought to capture E[x1 | x2].
+    exog (e.g., x2^2) that are thought to capture E[x1 | x2].
 
     If nothing is known or suspected about the form of E[x1 | x2],
     set `cond_means` to None, and it will be estimated by

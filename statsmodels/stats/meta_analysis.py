@@ -6,13 +6,40 @@ License: BSD-3
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.base import compat_2tuple_unpack
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.tools.validation import float_like
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class HomogeneityTestResult(NamedTuple):
+    """
+    Result of :meth:`CombineResults.test_homogeneity`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic, ``q`` in meta-analysis, this is the pearson_chi2
+        statistic for the fixed effects model.
+    pvalue : float
+        p-value based on the chisquare distribution.
+    df : float
+        Degrees of freedom, equal to the number of studies or samples
+        minus 1.
+    distr : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+    """
+
+    statistic: float
+    pvalue: float
+    df: float
+    distr: str
 
 
 class CombineResults:
@@ -155,7 +182,7 @@ class CombineResults:
         ci_eff_re_wls : tuple of floats
             Confidence interval for mean effects size based on random effects
             model with estimated scale corresponding to WLS, ie. HKSJ.
-            If random effects method is fully iterated, i.e. Paule-Mandel, then
+            If random effects method is fully iterated, i.e., Paule-Mandel, then
             the estimated scale is 1.
         """
         if use_t is None:
@@ -186,20 +213,14 @@ class CombineResults:
 
         Returns
         -------
-        res : HolderTuple instance
-            The results include the following attributes:
-
-            - statistic : float
-                Test statistic, ``q`` in meta-analysis, this is the
-                pearson_chi2 statistic for the fixed effects model.
-            - pvalue : float
-                P-value based on chisquare distribution.
-            - df : float
-                Degrees of freedom, equal to number of studies or samples
-                minus 1.
+        HomogeneityTestResult
+            See :class:`HomogeneityTestResult` for a description of the
+            attributes.
         """
         pvalue = stats.chi2.sf(self.q, self.k - 1)
-        res = HolderTuple(statistic=self.q, pvalue=pvalue, df=self.k - 1, distr="chi2")
+        res = HomogeneityTestResult(
+            statistic=self.q, pvalue=pvalue, df=self.k - 1, distr="chi2"
+        )
         return res
 
     def summary_array(self, alpha=0.05, use_t=None):

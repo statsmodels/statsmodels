@@ -267,7 +267,7 @@ class SimpleTable(list):
         row : sequence of data or cells
             The row to insert.
         datatype : str, optional
-            The datatype of the row, e.g. 'data' or 'header'. If None,
+            The datatype of the row, e.g., 'data' or 'header'. If None,
             taken from ``row.datatype`` if available.
         """
         if datatype is None:
@@ -932,7 +932,7 @@ class Cell:
         The cell's data. If a Cell instance is passed, its data,
         datatype and formatting are copied.
     datatype : object, optional
-        The cell's datatype, e.g. an int index into `data_fmts`, or a
+        The cell's datatype, e.g., an int index into `data_fmts`, or a
         label such as 'stub' or 'header'.
     row : Row, optional
         The row the cell belongs to, if any.

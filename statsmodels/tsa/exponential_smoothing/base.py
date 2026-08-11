@@ -593,7 +593,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         use_f : bool, optional
             Whether or not to compare against the asymptotic distribution
             (chi-squared) or the approximate small-sample distribution (F).
-            Default is True (i.e. default is to compare against an F
+            Default is True (i.e., default is to compare against an F
             distribution).
 
         Returns

@@ -352,7 +352,7 @@ array([   5.51471653,   80.36595035,    7.46933695,   82.92232357,
 [   5.10032831   74.34988912    6.96522122   76.7091604   169.8117832
    22.91695494]
 
-Is scale a misnomer, actually scale squared, i.e. variance of error term ?
+Is scale a misnomer, actually scale squared, i.e., variance of error term ?
 """
 
 print(res_norm3.model.score_obs(res_norm3.params).shape)

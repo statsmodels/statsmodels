@@ -4,10 +4,39 @@ Created on Wed May 30 15:11:09 2018
 @author: josef
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.base import compat_2tuple_unpack
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class ScoreTestResult(NamedTuple):
+    """
+    Result of :func:`_lm_robust` and :func:`score_test`.
+
+    Parameters
+    ----------
+    statistic : float or ndarray
+        Score/Lagrange multiplier test statistic. This is a chisquare
+        statistic for ``hypothesis="joint"``, or an array of z-statistics,
+        one per constraint, for ``hypothesis="separate"``.
+    pvalue : float or ndarray
+        p-value(s) of the test, based on `distribution`.
+    distribution : {"chi2", "norm"}
+        Name of the reference distribution used for `pvalue`.
+    df : int or None
+        Degrees of freedom of the chi-square distribution, equal to the
+        number of constraints. Only set for the joint hypothesis test
+        (``distribution="chi2"``), otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    distribution: str
+    df: int | None = None
 
 
 # this is a copy from stats._diagnostic_other to avoid circular imports
@@ -46,10 +75,8 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
 
     Returns
     -------
-    lm_stat : float
-        score/lagrange multiplier statistic
-    p-value : float
-        p-value of the LM test based on chisquare distribution
+    ScoreTestResult
+        See :class:`ScoreTestResult` for a description of the attributes.
 
     Notes
     -----
@@ -78,7 +105,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
         # TODO: check if usecase for pinv exists
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
-    return HolderTuple(
+    return ScoreTestResult(
         statistic=lm_stat,
         pvalue=pval,
         df=k_constraints,
@@ -127,7 +154,7 @@ def score_test(
     ----------
     exog_extra : None or array_like
         Explanatory variables that are jointly tested for inclusion in the
-        model, i.e. omitted variables.
+        model, i.e., omitted variables.
     params_constrained : array_like
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
@@ -168,13 +195,12 @@ def score_test(
 
     Returns
     -------
-    chi2_stat : float
-        chisquare statistic for the score test
-    p-value : float
-        P-value of the score test based on the chisquare distribution.
-    df : int
-        Degrees of freedom used in the p-value calculation. This is equal
-        to the number of constraints.
+    ScoreTestResult
+        See :class:`ScoreTestResult` for a description of the attributes.
+        For ``hypothesis="joint"``, `statistic` and `pvalue` are the
+        chisquare test and `df` is the number of constraints. For
+        ``hypothesis="separate"``, `statistic` and `pvalue` are arrays
+        with one z-test per constraint, and `df` is None.
 
     Notes
     -----
@@ -304,7 +330,7 @@ def score_test(
         chi2stat = score.dot(np.linalg.solve(cov_score_test, score[:, None]))
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
-        return HolderTuple(
+        return ScoreTestResult(
             statistic=chi2stat,
             pvalue=pval,
             df=k_constraints,
@@ -315,7 +341,7 @@ def score_test(
         bse = np.sqrt(np.diag(cov_score_test))
         stat = diff / bse
         pval = stats.norm.sf(np.abs(stat)) * 2
-        return HolderTuple(
+        return ScoreTestResult(
             statistic=stat,
             pvalue=pval,
             distribution="norm",

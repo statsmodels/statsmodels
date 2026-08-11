@@ -304,7 +304,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
                     ci = causing_ind[0] if len(causing_ind) == 1 else causing_ind
@@ -340,7 +340,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
@@ -376,7 +376,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -410,7 +410,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(

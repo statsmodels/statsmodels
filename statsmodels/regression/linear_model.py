@@ -1172,7 +1172,7 @@ class OLS(WLS):
         **kwargs,
     ):
 
-        # In the future we could add support for other penalties, e.g. SCAD.
+        # In the future we could add support for other penalties, e.g., SCAD.
         if method not in ("elastic_net", "sqrt_lasso"):
             msg = f"Unknown method '{method}' for fit_regularized"
             raise ValueError(msg)
@@ -1592,8 +1592,6 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     method = string_like(method, "method", options=("adjusted", "mle"))
 
-    if method not in ("adjusted", "mle"):
-        raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
     if demean:
@@ -2022,7 +2020,7 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
-            # TODO: What if model includes implicit constant, e.g. all
+            # TODO: What if model includes implicit constant, e.g., all
             #       dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing
             #       to constant?
@@ -2347,7 +2345,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value : float
             The p-value of the test statistic.
         df_diff : int
-            The degrees of freedom of the restriction, i.e. difference in df
+            The degrees of freedom of the restriction, i.e., difference in df
             between models.
 
         Notes
@@ -2430,7 +2428,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value : float
             The p-value of the test statistic.
         df_diff : int
-            The degrees of freedom of the restriction, i.e. difference in
+            The degrees of freedom of the restriction, i.e., difference in
             df between models.
 
         Notes
@@ -2493,7 +2491,7 @@ class RegressionResults(base.LikelihoodModelResults):
             p_value : float
                 The p-value of the test statistic.
             df_diff : int
-                The degrees of freedom of the restriction, i.e. difference
+                The degrees of freedom of the restriction, i.e., difference
                 in df between models.
 
             The result supports tuple unpacking and indexing, so existing
@@ -2725,7 +2723,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
-            if df_correction is not False:  # i.e. in [None, True]:
+            if df_correction is not False:  # i.e., in [None, True]:
                 # user did not explicitly set it to False
                 adjust_df = True
 

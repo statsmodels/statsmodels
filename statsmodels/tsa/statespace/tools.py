@@ -329,7 +329,7 @@ def concat(series, axis=0, allow_mix=False):
     allow_mix : bool
         Whether or not to allow a mix of pandas and non-pandas objects. Default
         is False. If true, the returned object is an ndarray, and additional
-        pandas metadata (e.g. column names, indices, etc) is lost.
+        pandas metadata (e.g., column names, indices, etc) is lost.
 
     Returns
     -------
@@ -1924,7 +1924,7 @@ def prepare_trend_spec(trend):
         entries indicate that the associated degree term is included in the
         model, in order of increasing degree.
     k_trend : int
-        The number of distinct trend elements (i.e. the number of non-zero
+        The number of distinct trend elements (i.e., the number of non-zero
         entries of `polynomial_trend`). Note that this is not the same as
         the degree of the trend polynomial.
     """
@@ -1972,7 +1972,7 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
         in the trend data, in order of increasing degree. See
         `prepare_trend_spec`.
     k_trend : int
-        The number of distinct trend elements (i.e. the number of non-zero
+        The number of distinct trend elements (i.e., the number of non-zero
         entries of `polynomial_trend`).
     nobs : int
         The number of observations for which to construct trend data.
@@ -2018,7 +2018,7 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
     ----------
     ssm : KalmanSmoother
         The `statespace.kalman_smoother.KalmanSmoother` object (or a
-        subclass, e.g. `statespace.simulation_smoother.SimulationSmoother`)
+        subclass, e.g., `statespace.simulation_smoother.SimulationSmoother`)
         with an underlying Cython state space, Kalman filter, and Kalman
         smoother that have already been run so that the required attributes
         are available.
@@ -2033,7 +2033,7 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         prior mean. Default is True if 0 is in `compute_j`, and False
         otherwise.
     scale : float, optional
-        The scale of the model, as computed e.g. by the Kalman filter. Used
+        The scale of the model, as computed e.g., by the Kalman filter. Used
         to scale the weights appropriately. Default is 1.0.
 
     Returns
@@ -2207,7 +2207,7 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
        multivariate filtering approach, and we handle singular forecast error
        covariance matrices by using a pseudo-inverse.
     2. Constructing observation weights for periods in which the exact diffuse
-       filter (see e.g. Chapter 5 of [1]_) is operative is not done here, and
+       filter (see e.g., Chapter 5 of [1]_) is operative is not done here, and
        so the corresponding entries in the returned weight matrices will always
        be set equal to zeros. While handling these periods may be implemented
        in the future, one option for constructing these weights is to use an
@@ -2289,7 +2289,7 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
     start : int
         Integer location of the first included impact dates.
     end : int
-        Integer location of the last included impact dates (i.e. this integer
+        Integer location of the last included impact dates (i.e., this integer
         location is included in the returned `index`).
     index : pd.Index
         Index associated with `start` and `end`, as computed from the

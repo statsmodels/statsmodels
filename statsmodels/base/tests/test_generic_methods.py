@@ -93,7 +93,7 @@ class CheckGenericMixinBase:
         smt.check_predict_types(self.results)
 
     def _get_constrained(self, keep_index, keep_index_p):
-        # override in some test classes, no fit_kwds yet, e.g. cov_type
+        # override in some test classes, no fit_kwds yet, e.g., cov_type
         mod2 = self.results.model
         mod_cls = mod2.__class__
         init_kwds = mod2._get_init_kwds()

@@ -138,7 +138,7 @@ class ContrastResults:
             For F or Wald test, the return is a string.
         """
         if self.effect is not None:
-            # TODO: should also add some extra information, e.g. robust cov ?
+            # TODO: should also add some extra information, e.g., robust cov ?
             # TODO: can we infer names for constraints, xname in __init__ ?
             if title is None:
                 title = "Test for Constraints"
@@ -343,7 +343,7 @@ def contrastfromcols(L, D, pseudo=None):
     """
     From an n x p design matrix D and a matrix L, tries
     to determine a p x q contrast matrix C which
-    determines a contrast of full rank, i.e. the
+    determines a contrast of full rank, i.e., the
     n x q matrix
 
     dot(transpose(C), pinv(D))
@@ -636,7 +636,7 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
         at column with index `idx_start`.
     index : slice or ndarray
         Column index if constraints do not form a block in the full restriction
-        matrix, i.e. if parameters that are subject to restrictions are not
+        matrix, i.e., if parameters that are subject to restrictions are not
         consecutive in the list of parameters.
         If index is not None, then idx_start is ignored.
 
@@ -825,7 +825,7 @@ def _offset_constraint(r_matrix, params_est, params_alt):
     Returns
     -------
     ndarray
-        The offset, i.e. the difference between the value of the linear
+        The offset, i.e., the difference between the value of the linear
         constraint at `params_est` and at `params_alt`.
     """
     diff_est = r_matrix @ params_est

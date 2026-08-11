@@ -8,10 +8,48 @@ Todo:
   - rewrite core loop to use for...except instead of while.
 
 """
+from typing import NamedTuple
+
 import numpy as np
 from scipy import optimize
 
-from statsmodels.tools.testing import Holder
+
+class BrentqExpandingInfo(NamedTuple):
+    """
+    Info returned by :func:`brentq_expanding` when ``full_output=True``.
+
+    Parameters
+    ----------
+    root : float
+        Root as returned by ``brentq``, same value as the first returned
+        value of `brentq_expanding`.
+    iterations : int
+        Number of iterations used by ``brentq``.
+    function_calls : int
+        Number of function calls used by ``brentq``.
+    converged : bool
+        True if ``brentq`` converged.
+    flag : str
+        Return status of ``brentq``, ``"converged"`` if it converged.
+    iterations_expand : int
+        Number of iterations in the bound-expansion stage.
+    start_bounds : tuple
+        Starting bounds used for the expansion stage.
+    brentq_bounds : tuple
+        Bounds passed to ``brentq`` after expansion.
+    increasing : bool
+        Whether the function was treated as monotonically increasing.
+    """
+
+    root: float
+    iterations: int
+    function_calls: int
+    converged: bool
+    flag: str
+    iterations_expand: int
+    start_bounds: tuple
+    brentq_bounds: tuple
+    increasing: bool
 
 
 # based on scipy.stats.distributions._ppf_single_call
@@ -57,26 +95,15 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     full_output : bool, optional
         If full_output is False, the root is returned. If full_output is True,
         the return value is (x, r), where x is the root, and r is a
-        ``Holder`` object.
+        :class:`BrentqExpandingInfo` namedtuple.
 
     Returns
     -------
     x : float
         root of the function, value at which ``func(x) = 0``.
-    info : Holder (optional)
-        returned if ``full_output`` is True.
-        attributes:
-
-         - start_bounds : starting bounds for expansion stage
-         - brentq_bounds : bounds used with ``brentq``
-         - root : root as returned by ``brentq``, same value as `x`
-         - iterations_expand : number of iterations in expansion stage
-         - converged : True if brentq converged.
-         - flag : return status, 'converged' if brentq converged
-         - function_calls : number of function calls by ``brentq``
-         - iterations : number of iterations in ``brentq``
-         - increasing : whether the function was treated as
-           monotonically increasing
+    info : BrentqExpandingInfo, optional
+        returned if ``full_output`` is True. See
+        :class:`BrentqExpandingInfo` for a description of the attributes.
 
     Notes
     -----
@@ -200,7 +227,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                           full_output=full_output)
     if full_output:
         val = res[0]
-        info = Holder(
+        info = BrentqExpandingInfo(
             # from brentq
             root=res[1].root,
             iterations=res[1].iterations,

@@ -80,7 +80,7 @@ def varfilter(x, a):
         lag polynomial, uses loop over nvar
     case 3 : a is 3d, (nlags, nvars, npoly)
         the ith column of the output array is given by the linear filter
-        defined by the 2d array a[:,:,i], i.e. ::
+        defined by the 2d array a[:,:,i], i.e., ::
 
             y[:,i] = a(.,.,i)(L) * x
             y[t,i] = sum_p sum_j a(p,j,i)*x(t-p,j)

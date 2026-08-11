@@ -130,7 +130,7 @@ def corr_clipped(corr, threshold=1e-15):
     The smallest eigenvalue of the corrected correlation matrix is
     approximately equal to the ``threshold``. In examples, the
     smallest eigenvalue can be by a factor of 10 smaller than the threshold,
-    e.g. threshold 1e-8 can result in smallest eigenvalue in the range
+    e.g., threshold 1e-8 can result in smallest eigenvalue in the range
     between 1e-9 and 1e-8.
     If the threshold=0, then the smallest eigenvalue of the correlation matrix
     might be negative, but zero within a numerical error, for example in the
@@ -182,7 +182,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
-    This leaves the diagonal, i.e. the variance, unchanged, unless ``min_diag``
+    This leaves the diagonal, i.e., the variance, unchanged, unless ``min_diag``
     is used to enforce a strictly positive diagonal (see below).
 
     Parameters
@@ -966,7 +966,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Examples
     --------
-    Here X is a tall data matrix (e.g. with 100,000 rows and 50
+    Here X is a tall data matrix (e.g., with 100,000 rows and 50
     columns).  The row-wise correlation matrix of X is calculated
     and stored in sparse form, with all entries smaller than 0.3
     treated as 0.
@@ -1095,7 +1095,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     Use kernel averaging to estimate a multivariate covariance function
 
     The goal is to estimate a covariance function C(x, y) =
-    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g. representing
+    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g., representing
     locations in time or space), and Z(.) represents a multivariate
     process on R^p.
 
@@ -1109,7 +1109,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         The rows of exog are realizations of the process obtained at
         specified points.
     loc : array_like
-        The rows of loc are the locations (e.g. in space or time) at
+        The rows of loc are the locations (e.g., in space or time) at
         which the rows of exog are observed.
     groups : array_like
         The values of groups are labels for distinct independent copies

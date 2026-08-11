@@ -77,7 +77,7 @@ def hamilton_filter(x, h=8, p=4):
     [Hamilton2018]_ shows that the HP filter introduces spurious cyclical
     dynamics; the regression-based filter avoids this by construction.
 
-    The regression is estimated once on all available observations (i.e. this
+    The regression is estimated once on all available observations (i.e., this
     is *not* a rolling regression).  With ``h = 8`` and ``p = 4`` (the
     quarterly defaults), the first ``11`` observations of the output are
     ``NaN``.

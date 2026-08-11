@@ -752,9 +752,9 @@ class FormulaManager:
         Parameters
         ----------
         action : str
-            The action to take on missing values, e.g. "drop" or "raise".
+            The action to take on missing values, e.g., "drop" or "raise".
         types : Sequence[Any]
-            The types of missing values to consider, e.g. "None" or "NaN".
+            The types of missing values to consider, e.g., "None" or "NaN".
             Only used when using patsy.
 
         Returns

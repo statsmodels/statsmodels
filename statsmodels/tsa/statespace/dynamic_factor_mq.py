@@ -71,7 +71,7 @@ class FactorBlock(dict):
 
     - `factors_ix` is a matrix of indices, with rows corresponding to factors
       in the block and columns corresponding to lags
-    - `factors` is vec(factors_ix) (i.e. it stacks columns, so that it is
+    - `factors` is vec(factors_ix) (i.e., it stacks columns, so that it is
       `factors_ix.ravel(order='F')`). Thinking about a VAR system, the first
        k*p elements correspond to the equation for the first variable. The next
        k*p elements correspond to the equation for the second variable, and so
@@ -107,7 +107,7 @@ class FactorBlock(dict):
     @property
     def factors_ix(self):
         """Factor state index array, shaped (k_factors, lags)"""
-        # i.e. the position in the state vector of the second lag of the third
+        # i.e., the position in the state vector of the second lag of the third
         # factor is factors_ix[2, 1]
         # ravel(order='F') gives e.g (f0.L1, f1.L1, f0.L2, f1.L2, f0.L3, ...)
         # while
@@ -318,7 +318,7 @@ class DynamicFactorMQStates(dict):
     - `endog_factor_iloc` is a list of lists, with entries for each endogenous
       variable. The entry for variable `i`, `endog_factor_iloc[i]` is a list of
       indexes of the factors that variable `i` loads on. This does not include
-      any lags, but it can be used with e.g. `factors_L1_5_ix` to get lags.
+      any lags, but it can be used with e.g., `factors_L1_5_ix` to get lags.
 
     """
 
@@ -423,7 +423,7 @@ class DynamicFactorMQStates(dict):
 
         # If the `factor_orders` variable was an integer, then it did not
         # define an ordering for the factor blocks. In this case, we use the
-        # loading counts to do so. This ensures that e.g. global factors are
+        # loading counts to do so. This ensures that e.g., global factors are
         # listed first.
         if orders_is_int:
             keys = self.block_loading_counts.keys()
@@ -660,7 +660,7 @@ class DynamicFactorMQStates(dict):
     @property
     def idio_ar_Q_ix(self):
         """Idiosyncratic AR (quarterly) state index, (k_endog_Q, lags)"""
-        # i.e. the position in the state vector of the second lag of the third
+        # i.e., the position in the state vector of the second lag of the third
         # quarterly variable is idio_ar_Q_ix[2, 1]
         # ravel(order='F') gives e.g (y1.L1, y2.L1, y1.L2, y2.L3, y1.L3, ...)
         # while
@@ -674,7 +674,7 @@ class DynamicFactorMQStates(dict):
     @property
     def endog_factor_iloc(self):
         """List of list of int, factor indexes for each observed variable"""
-        # i.e. endog_factor_iloc[i] is a list of integer locations of the
+        # i.e., endog_factor_iloc[i] is a list of integer locations of the
         # factors that load on the ith observed variable
         if self._endog_factor_iloc is None:
             ilocs = [
@@ -924,7 +924,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     By default, if standardization is applied prior to estimation, results such
     as in-sample predictions, out-of-sample forecasts, and the computation of
-    the "news"  are reported in the scale of the original data (i.e. the model
+    the "news"  are reported in the scale of the original data (i.e., the model
     output has the reverse transformation applied before it is returned to the
     user).
 
@@ -1489,7 +1489,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # Cache
         self._loading_constraints = {}
 
-        # Initialization kwarg keys, e.g. for cloning
+        # Initialization kwarg keys, e.g., for cloning
         self._init_keys += [
             "factors", "factor_orders", "factor_multiplicities",
             "idiosyncratic_ar1", "standardize", "init_t0",
@@ -3024,7 +3024,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # Compute new obs cov
         # Note: this is unnecessary if `idiosyncratic_ar1=True`.
         # See Banbura and Modugno (2014), equation (12)
-        # This does not literally follow their formula, e.g. multiplying by the
+        # This does not literally follow their formula, e.g., multiplying by the
         # W_t selection matrices, because those formulas require loops that are
         # relatively slow. The formulation here is vectorized.
         if compute_H:
@@ -3805,7 +3805,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             DatetimeIndex or PeriodIndex at the quarterly frequency.
         original_scale : bool, optional
             If the model specification standardized the data, whether or not
-            to return impacts in the original scale of the data (i.e. before
+            to return impacts in the original scale of the data (i.e., before
             it was standardized by the model). Default is True.
         **kwargs
             Keyword arguments to pass to the base `news` method, and/or to
@@ -4074,7 +4074,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         Notes
         -----
         The `endog` and `exog` arguments to this method must be formatted in
-        the same way (e.g. Pandas Series versus Numpy array) as were the
+        the same way (e.g., Pandas Series versus Numpy array) as were the
         `endog` and `exog` arrays passed to the original model.
 
         The `endog` (and, if applicable, `endog_quarterly`) arguments to this

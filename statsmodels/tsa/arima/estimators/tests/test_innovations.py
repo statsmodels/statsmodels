@@ -179,7 +179,7 @@ def test_brockwell_davis_example_541():
 
     # TODO: the test for sigma2 fails; we get 2040.85 whereas BD reports
     # 2040.75. Unclear if this is optimizers finding different maxima, or a
-    # reporting error by BD (i.e. typo where the 8 got reported as a 7). Should
+    # reporting error by BD (i.e., typo where the 8 got reported as a 7). Should
     # check this out with ITSM program. NB: state space also finds 2040.85 as
     # the MLE value.
     # assert_allclose(p.sigma2, 2040.75, atol=1e-2)
@@ -213,7 +213,7 @@ def test_innovations_mle_statespace():
     assert_allclose(p.params, res2.params)
 
     # Test that starting parameter estimation succeeds and isn't terrible
-    # (i.e. leads to the same MLE)
+    # (i.e., leads to the same MLE)
     p2, _ = innovations_mle(endog, order=(1, 0, 1), demean=False)
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
@@ -248,7 +248,7 @@ def test_innovations_mle_statespace_seasonal():
     assert_allclose(p.params, res2.params)
 
     # Test that starting parameter estimation succeeds and isn't terrible
-    # (i.e. leads to the same MLE)
+    # (i.e., leads to the same MLE)
     p2, _ = innovations_mle(endog, seasonal_order=(1, 0, 0, 4), demean=False)
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
@@ -283,7 +283,7 @@ def test_innovations_mle_statespace_nonconsecutive():
     assert_allclose(p.params, res2.params)
 
     # Test that starting parameter estimation succeeds and isn't terrible
-    # (i.e. leads to the same MLE)
+    # (i.e., leads to the same MLE)
     p2, _ = innovations_mle(endog, order=([0, 1], 0, [0, 1]), demean=False)
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)

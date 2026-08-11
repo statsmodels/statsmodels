@@ -68,7 +68,7 @@ def test_ols():
     assert_allclose(res.params, res_ols.params)
     assert_allclose(res.bse, res_ols.bse)
     # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
-    # the called the ML estimator and sometimes (e.g. later in section 5)
+    # the called the ML estimator and sometimes (e.g., later in section 5)
     # denoted \tilde \sigma_*^2
     assert_allclose(res.filter_results.obs_cov[0, 0], res_ols.scale)
 
@@ -83,7 +83,7 @@ def test_ols():
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
     # Harvey, 1989, 4.2.5 on p. 183), then llf_recursive is equivalent to the
-    # full OLS loglikelihood (i.e. without the scale concentrated out).
+    # full OLS loglikelihood (i.e., without the scale concentrated out).
     desired = mod_ols.loglike(res_ols.params, scale=res_ols.scale)
     assert_allclose(res.llf_recursive, desired)
     # Alternatively, we can construct the concentrated OLS loglikelihood
@@ -167,7 +167,7 @@ def test_glm(constraints):
     assert_allclose(res.params, res_glm.params)
     assert_allclose(res.bse, res_glm.bse, atol=1e-6)
     # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
-    # the called the ML estimator and sometimes (e.g. later in section 5)
+    # the called the ML estimator and sometimes (e.g., later in section 5)
     # denoted \tilde \sigma_*^2
     assert_allclose(res.filter_results.obs_cov[0, 0], res_glm.scale)
 
@@ -186,7 +186,7 @@ def test_glm(constraints):
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
     # Harvey, 1989, 4.2.5 on p. 183), then llf_recursive is equivalent to the
-    # full OLS loglikelihood (i.e. without the scale concentrated out).
+    # full OLS loglikelihood (i.e., without the scale concentrated out).
     desired = mod_glm.loglike(res_glm.params, scale=res_glm.scale)
     assert_allclose(res.llf_recursive, desired)
     # Alternatively, we can construct the concentrated OLS loglikelihood

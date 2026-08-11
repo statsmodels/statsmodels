@@ -314,7 +314,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     generic version of Wooldridge procedure for test of conditional moments
 
     Limitation: This version allows only for one unconditional moment
-    restriction, i.e. resid is scalar for each observation.
+    restriction, i.e., resid is scalar for each observation.
     Another limitation is that it assumes independent observations, no
     correlation in residuals and weights cannot be replaced by cross-observation
     whitening.
@@ -551,7 +551,7 @@ def lm_robust_subset_parts(
     This is the same as lm_robust_subset with arguments in parts of
     partitioned matrices.
     This can be useful, when we have the parts based on different estimation
-    procedures, i.e. when we do not have the full unconstrained model.
+    procedures, i.e., when we do not have the full unconstrained model.
 
     Calculates mainly the covariance of the constraint part of the score.
 
@@ -884,7 +884,7 @@ class CMTNewey:
     cov_moments : ndarray
         An estimate for the joint (expected) covariance of all moments. This
         can be a heteroscedasticity or correlation robust covariance estimate,
-        i.e. the inner part of a sandwich covariance.
+        i.e., the inner part of a sandwich covariance.
     moments_deriv : ndarray
         derivative of the moment function with respect to the parameters that
         are estimated
@@ -1060,7 +1060,7 @@ class CMTTauchen:
     cov_moments : ndarray
         An estimate for the joint (expected) covariance of score and test
         moments. This can be a heteroscedasticity or correlation robust
-        covariance estimate, i.e. the inner part of a sandwich covariance.
+        covariance estimate, i.e., the inner part of a sandwich covariance.
     """
 
     def __init__(self, score, score_deriv, moments, moments_deriv, cov_moments):

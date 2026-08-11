@@ -523,7 +523,7 @@ class LikelihoodModel(Model):
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer
                     `scipy.optimize.minimize()`, for example 'method' - the
-                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    minimization method (e.g., 'L-BFGS-B'), or 'tol' - the
                     tolerance for termination. Other arguments are mapped from
                     explicit argument of `fit`:
                       - `args` <- `fargs`
@@ -767,7 +767,7 @@ class LikelihoodModel(Model):
 
         if hasattr(res_constr, "mle_retvals"):
             res._results.mle_retvals = res_constr.mle_retvals
-            # not available for not scipy optimization, e.g. glm irls
+            # not available for not scipy optimization, e.g., glm irls
             # TODO: what retvals should be required?
             # res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
             # res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
@@ -2305,7 +2305,7 @@ class LikelihoodModelResults(Results):
         ----------
         func : callable, f(params)
             Nonlinear function of the estimation parameters. The return of
-            the function can be vector valued, i.e. a 1-D array.
+            the function can be vector valued, i.e., a 1-D array.
         deriv : function or None
             First derivative or Jacobian of func. If deriv is None, then a
             numerical derivative will be used. If func returns a 1-D array,
@@ -2985,7 +2985,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Aggregation weights, only used if average is True.
             The weights are not normalized.

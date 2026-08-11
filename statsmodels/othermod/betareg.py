@@ -601,7 +601,7 @@ class BetaModel(GenericLikelihoodModel):
         Returns
         -------
         hessian : ndarray
-            Hessian, i.e. observed information, or expected information matrix.
+            Hessian, i.e., observed information, or expected information matrix.
         """
         if self.hess_type == "eim":
             observed = False

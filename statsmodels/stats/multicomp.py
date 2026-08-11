@@ -38,7 +38,7 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
     Notes
     -----
     This is just a wrapper around tukeyhsd method of MultiComparison.
-    Tukey-hsd is not robust to heteroscedasticity, i.e. variance differ across
+    Tukey-hsd is not robust to heteroscedasticity, i.e., variance differ across
     groups, especially if group sizes also vary. In those cases, the actual
     size (rejection rate under the Null hypothesis) might be far from the
     nominal size of the test.

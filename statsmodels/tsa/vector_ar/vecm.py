@@ -59,7 +59,7 @@ def select_order(
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
     seasons : int, default: 0
@@ -148,7 +148,7 @@ def _num_det_vars(det_string, seasons=0):
         * "lo" - linear trend outside the cointegration relation
         * "li" - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        Combinations of these are possible (e.g., "cili" or "colo" for linear
         trend with intercept). See the docstring of the :class:`VECM`-class for
         more information.
     seasons : int
@@ -185,7 +185,7 @@ def _deterministic_to_exog(
 
     These information is taken from `deterministic` and `seasons` as well as
     from the `exog` and `exog_coint` arrays. The resulting array form can then
-    be used e.g. in VAR's __init__ method.
+    be used e.g., in VAR's __init__ method.
 
     Parameters
     ----------
@@ -288,7 +288,7 @@ def _endog_matrices(
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
     seasons : int, default: 0
@@ -868,10 +868,10 @@ class VECM(tsbase.TimeSeriesModel):
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). When using a constant term you have to
         choose whether you want to restrict it to the cointegration relation
-        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Do not use
+        (i.e., ``"ci"``) or leave it unrestricted (i.e., ``"co"``). Do not use
         both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
         when using a linear term. See the Notes-section for more information.
     seasons : int, default: 0
@@ -1198,7 +1198,7 @@ class VECMResults:
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
     seasons : int, default: 0
@@ -1347,7 +1347,7 @@ class VECMResults:
         :math:`i=0, \\ldots, k_{ar}-1`.
     cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
         This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
-        It is needed e.g. for impulse-response-analysis.
+        It is needed e.g., for impulse-response-analysis.
     fittedvalues : ndarray (nobs x neqs)
         The predicted in-sample values of the models' endogenous variables.
     resid : ndarray (nobs x neqs)
@@ -2096,7 +2096,7 @@ class VECMResults:
         variables in `caused` and those in `causing`" against |H1|:
         "Instantaneous causality between `caused` and `causing` exists".
         Note that instantaneous causality is a symmetric relation
-        (i.e. if `causing` is "instantaneously causing" `caused`, then also
+        (i.e., if `causing` is "instantaneously causing" `caused`, then also
         `caused` is "instantaneously causing" `causing`), thus the naming of
         the parameters (which is chosen to be in accordance with
         :meth:`test_granger_causality()`) may be misleading.

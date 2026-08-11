@@ -46,7 +46,7 @@ def stationary_solve(r, b):
         A vector describing the coefficient matrix.  r[0] is the first
         band next to the diagonal, r[1] is the second band, etc.
     b : array_like
-        The right-hand side for which we are solving, i.e. we solve
+        The right-hand side for which we are solving, i.e., we solve
         Tx = b and return b, where T is the Toeplitz coefficient matrix.
 
     Returns
@@ -143,7 +143,7 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15
         matrix is returned.
     full : bool
         If full is False (default, then the square root has reduce number
-        of rows if the matrix is singular, i.e. has singular values below
+        of rows if the matrix is singular, i.e., has singular values below
         the threshold.
     nullspace : bool
         If nullspace is true, then the matrix square root of the null space

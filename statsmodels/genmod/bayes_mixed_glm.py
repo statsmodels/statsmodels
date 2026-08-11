@@ -142,7 +142,7 @@ _init_doc = r"""
     log-normal prior distributions with mean 0 and standard deviation
     `vcp_p`.
 
-    Note that for some families, e.g. Binomial, the posterior mode may
+    Note that for some families, e.g., Binomial, the posterior mode may
     be difficult to find numerically if `vcp_p` is set to too large of
     a value.  Setting `vcp_p` to 0.5 seems to work well.
 

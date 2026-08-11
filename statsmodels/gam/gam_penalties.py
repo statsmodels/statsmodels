@@ -129,7 +129,7 @@ class UnivariateGamPenalty(Penalty):
         penalty_matrix : ndarray
             square penalty matrix for quadratic penalization. The number
             of rows and columns are equal to the number of columns in the
-            smooth terms, i.e. the number of parameters for this smooth
+            smooth terms, i.e., the number of parameters for this smooth
             term in the regression model
         """
         if alpha is None:

@@ -65,7 +65,7 @@ class SARIMAX(MLEModel):
         effect.
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the non-zero polynomial exponents to include, in
@@ -81,7 +81,7 @@ class SARIMAX(MLEModel):
     mle_regression : bool, optional
         Whether or not to use estimate the regression coefficients for the
         exogenous variables as part of maximum likelihood estimation or through
-        the Kalman filter (i.e. recursive least squares). If
+        the Kalman filter (i.e., recursive least squares). If
         `time_varying_regression` is True, this must be set to False. Default
         is True.
     simple_differencing : bool, optional
@@ -220,7 +220,7 @@ class SARIMAX(MLEModel):
     k_seasonal_ma_params : int
         Number of seasonal moving average parameters to be estimated.
     k_trend : int
-        Order of the trend polynomial plus one (i.e. the constant polynomial
+        Order of the trend polynomial plus one (i.e., the constant polynomial
         would have `k_trend=1`).
     k_exog : int
         Number of exogenous regressors.
@@ -243,7 +243,7 @@ class SARIMAX(MLEModel):
             \theta_q (L) \tilde \theta_Q (L^s) \zeta_t
 
     where :math:`\eta_t` is only applicable in the case of measurement error
-    (although it is also used in the case of a pure regression model, i.e. if
+    (although it is also used in the case of a pure regression model, i.e., if
     p=q=0).
 
     In terms of this model, regression with SARIMA errors can be represented
@@ -935,7 +935,7 @@ class SARIMAX(MLEModel):
     def start_params(self):
         """Starting parameters for maximum likelihood estimation"""
 
-        # Perform differencing if necessary (i.e. if simple differencing is
+        # Perform differencing if necessary (i.e., if simple differencing is
         # false so that the state-space model will use the entire dataset)
         trend_data = self._trend_data
         if not self.simple_differencing and (
@@ -1679,7 +1679,7 @@ class SARIMAX(MLEModel):
         # (Hamilton)
         # SARIMA trend enters through the a time-varying state intercept,
         # associated with the first row of the stationary component of the
-        # state vector (i.e. the first element of the state vector following
+        # state vector (i.e., the first element of the state vector following
         # any differencing elements)
         if self._k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
@@ -1711,7 +1711,7 @@ class SARIMAX(MLEModel):
             self.ssm[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
         elif self.ssm.transition.dtype != params.dtype:
             # This is required if the transition matrix is not really in use
-            # (e.g. for an MA(q) process) so that it's dtype never changes as
+            # (e.g., for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
             self.ssm["transition"] = self.ssm["transition"].real.astype(
                 params.dtype)

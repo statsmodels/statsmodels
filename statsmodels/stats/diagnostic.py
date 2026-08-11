@@ -1368,7 +1368,7 @@ def het_goldfeldquandt(
     Notes
     -----
     The Null hypothesis is that the variance in the two sub-samples are the
-    same. The alternative hypothesis, can be increasing, i.e. the variance
+    same. The alternative hypothesis, can be increasing, i.e., the variance
     in the second sample is larger than in the first, or decreasing or
     two-sided.
 
@@ -1735,7 +1735,7 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
         # Order by distance, breaking exact ties deterministically using the
         # exog values (never endog, which would make the subset depend on the
         # response) so that the ordering, and hence the statistic, does not
-        # depend on the input row order even when distances tie (e.g. discrete
+        # depend on the input row order even when distances tie (e.g., discrete
         # or duplicated regressors). lexsort uses the last key as primary.
         idx = np.lexsort((*exog.T[::-1], dist.ravel()))
         endog = endog[idx]

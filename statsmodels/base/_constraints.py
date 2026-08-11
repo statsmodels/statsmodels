@@ -144,7 +144,7 @@ class TransformRestriction:
         evals, evecs = np.linalg.eigh(m)
 
         # This normalizes the transformation so the larges element is 1.
-        # It makes it easier to interpret simple restrictions, e.g. b1 + b2 = 0
+        # It makes it easier to interpret simple restrictions, e.g., b1 + b2 = 0
         # TODO: make this work, there is something wrong, does not round-trip
         #       need to adjust constant
         # evecs_maxabs = np.max(np.abs(evecs), 0)
@@ -182,7 +182,7 @@ class TransformRestriction:
 
         Notes
         -----
-        If the restriction is not homogeneous, i.e. q is not equal to zero,
+        If the restriction is not homogeneous, i.e., q is not equal to zero,
         then this is an affine transform.
         """
         params_reduced = np.asarray(params_reduced)
@@ -269,7 +269,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     constraint_values : array_like
         This is `q` in the linear equality constraint `R params = q`.
         If it is a tuple, then the constraint needs to be given by two
-        arrays (constraint_matrix, constraint_value), i.e. (R, q).
+        arrays (constraint_matrix, constraint_value), i.e., (R, q).
         Otherwise, the constraints can be given as strings or list of
         strings.
         See t_test for details.
@@ -288,7 +288,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
         Covariance matrix of the parameter estimates. This is a reverse
         transformation of the covariance matrix of the transformed model given
         by `cov_params()`.
-        Note: `fit_kwds` can affect the choice of covariance, e.g. by
+        Note: `fit_kwds` can affect the choice of covariance, e.g., by
         specifying `cov_type`, which will be reflected in the returned
         covariance.
     res_constr : results instance
@@ -357,7 +357,7 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
         An instance of a model that supports `fit_constrained`.
     constraints : str, tuple or array_like
         Constraints as accepted by
-        ``FormulaManager.get_linear_constraints``, e.g. a string, a
+        ``FormulaManager.get_linear_constraints``, e.g., a string, a
         sequence of strings, or a tuple (R, q).
     start_params : None or array_like
         Starting values for the optimization, in the original parameter
