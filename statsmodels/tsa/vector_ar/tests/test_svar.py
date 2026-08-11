@@ -2,46 +2,47 @@
 Test SVAR estimation
 """
 
-import statsmodels.api as sm
-from statsmodels.tsa.vector_ar.svar_model import SVAR
-from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
-from .results import results_svar
+from statsmodels.compat.platform import PLATFORM_WIN
+
 import numpy as np
-import numpy.testing as npt
+from numpy.testing import assert_allclose, assert_almost_equal
+import pytest
+
+import statsmodels.datasets.macrodata
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
+from statsmodels.tsa.vector_ar.svar_model import SVAR
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
 
-class TestSVAR(object):
+
+class TestSVAR:
     @classmethod
     def setup_class(cls):
-        mdata = sm.datasets.macrodata.load_pandas().data
-        mdata = mdata[['realgdp','realcons','realinv']]
+        mdata = statsmodels.datasets.macrodata.load_pandas().data
+        mdata = mdata[["realgdp", "realcons", "realinv"]]
         data = mdata.values
         data = np.diff(np.log(data), axis=0)
-        A = np.asarray([[1, 0, 0],['E', 1, 0],['E', 'E', 1]])
-        B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']])
-        results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
+        A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+        B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+        results = SVAR(data, svar_type="AB", A=A, B=B).fit(maxlags=3)
         cls.res1 = results
-        #cls.res2 = results_svar.SVARdataResults()
+        # cls.res2 = results_svar.SVARdataResults()
         from .results import results_svar_st
-        cls.res2 = results_svar_st.results_svar1_small
 
+        cls.res2 = results_svar_st.results_svar1_small
 
     def _reformat(self, x):
         return x[[1, 4, 7, 2, 5, 8, 3, 6, 9, 0], :].ravel("F")
 
-
     def test_A(self):
         assert_almost_equal(self.res1.A, self.res2.A, DECIMAL_4)
-
 
     def test_B(self):
         # see issue #3148, adding np.abs to make solution positive
         # general case will need positive sqrt of covariance matrix
         assert_almost_equal(np.abs(self.res1.B), self.res2.B, DECIMAL_4)
-
 
     def test_basic(self):
         res1 = self.res1
@@ -49,7 +50,6 @@ class TestSVAR(object):
         assert_allclose(self._reformat(res1.params), res2.b_var, atol=1e-12)
         bse_st = np.sqrt(np.diag(res2.V_var))
         assert_allclose(self._reformat(res1.bse), bse_st, atol=1e-12)
-
 
     def test_llf_ic(self):
         res1 = self.res1
@@ -61,3 +61,60 @@ class TestSVAR(object):
         assert_allclose(res1.aic - corr_const, res2.aic_var, atol=1e-12)
         assert_allclose(res1.bic - corr_const, res2.sbic_var, atol=1e-12)
         assert_allclose(res1.hqic - corr_const, res2.hqic_var, atol=1e-12)
+
+    @pytest.mark.smoke
+    def test_irf(self):
+        # mostly SMOKE, API test
+        # this only checks that the methods work and produce the same result
+        res1 = self.res1
+        errband1 = res1.sirf_errband_mc(
+            orth=False, repl=50, steps=10, signif=0.05, rng=987123, burn=100, cum=False
+        )
+        assert isinstance(errband1, ErrorBand)
+
+        irf = res1.irf()
+        errband2 = irf.errband_mc(
+            orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
+        )
+        assert isinstance(errband2, ErrorBand)
+        # Windows precision limits require non-zero atol
+        atol = 1e-6 if PLATFORM_WIN else 1e-8
+        assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)
+
+
+def test_oneparam():
+    # regression test, one parameter in A, B, issue #9302
+    rs = np.random.RandomState(873562)
+    lags = 2
+    nobs = 200
+    y = rs.randn(nobs, 3)
+    y[1:] += 0.5 * y[:-1]
+    A = np.asarray([[1, "E"], [0, 1.0]])
+    # A_guess = np.asarray([[1, 0.2], [0, 1.]])
+    B = np.eye(2, dtype=object)
+
+    k = 2
+    model = SVAR(y[:, :k], svar_type="AB", A=A, B=B)
+    model.k_exog_user = 0
+    results = model.fit(maxlags=lags, solver="bfgs")  # "newton")
+    results.k_exog_user = 0
+    results.summary()
+
+    # regression number
+    assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
+
+    results = model.fit(maxlags=lags, solver="newton")
+    results.k_exog_user = 0
+    results.summary()
+
+    # regression number
+    assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
+
+
+def test_summary_no_user_exog():
+    rs = np.random.RandomState(0)
+    data = rs.randn(200, 3)
+    B = np.asarray([[1, "E", "E"], [0, 1, "E"], [0, 0, 1]], dtype="U")
+    results = SVAR(data, svar_type="B", B=B).fit(maxlags=2, solver="newton")
+    assert results.k_exog_user == 0
+    results.summary()

@@ -1,55 +1,83 @@
 import glob
-import io
-import os
+from pathlib import Path
 import sys
 
-from statsmodels.compat.testing import SkipTest, example
+import pytest
 
 try:
-    import pytest
     import jupyter_client
-    import nbformat
     from nbconvert.preprocessors import ExecutePreprocessor
+    import nbformat
+
+    plat_win = sys.platform.startswith("win")
+    if plat_win and (3, 8) <= sys.version_info < (3, 14):  # pragma: no cover
+        import asyncio
+
+        try:
+            from asyncio import WindowsSelectorEventLoopPolicy
+        except ImportError:
+            pass  # Can't assign a policy which doesn't exist.
+        else:
+            pol = asyncio.get_event_loop_policy()
+            if not isinstance(pol, WindowsSelectorEventLoopPolicy):
+                asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 except ImportError:
-    raise SkipTest('Required packages not available')
+    pytestmark = pytest.mark.skip(reason="Required packages not available")
 
-KNOWN_FAILURES = ['distributed_estimation']
-if os.name == 'nt':
-    KNOWN_FAILURES += ['mixed_lm_example']
+try:
+    import rpy2
 
-kernels = jupyter_client.kernelspec.find_kernel_specs()
-kernel_name = 'python%s' % sys.version_info.major
+    HAS_RPY2 = True
+except ImportError:
+    HAS_RPY2 = False
 
-head, _ = os.path.split(__file__)
-NOTEBOOK_DIR = os.path.abspath(os.path.join(head, '..', '..', '..', 'examples', 'notebooks'))
+try:
+    import joblib
 
-nbs = sorted(glob.glob(os.path.join(NOTEBOOK_DIR, '*.ipynb')))
-ids = list(map(lambda p: os.path.split(p)[-1], nbs))
-
-
-@pytest.fixture(params=nbs, ids=ids)
-def notebook(request):
-    return request.param
+    HAS_JOBLIB = True
+except ImportError:
+    HAS_JOBLIB = False
 
 
-if not nbs:
-    raise SkipTest('No notebooks found so not tests run')
+KNOWN_FAILURES = []
+JOBLIB_NOTEBOOKS = ["distributed_estimation"]
+RPY2_NOTEBOOKS = ["mixed_lm_example", "robust_models_1"]
 
+kernel_name = f"python{sys.version_info.major}"
 
-@example
-def test_notebook(notebook):
-    fullfile = os.path.abspath(notebook)
-    _, filename = os.path.split(fullfile)
-    filename, _ = os.path.splitext(notebook)
-    
-    for known_fail in KNOWN_FAILURES:
-        if filename == known_fail:
-            raise SkipTest('{0} is known to fail'.format(filename))
-    
-    with io.open(fullfile, encoding='utf-8') as f:
-        nb = nbformat.read(fullfile, as_version=4)
-    
-    ep = ExecutePreprocessor(allow_errors=False,
-                             timeout=20,
-                             kernel_name=kernel_name)
-    ep.preprocess(nb, {'metadata': {'path': NOTEBOOK_DIR}})
+head = Path(__file__).resolve().parent
+NOTEBOOK_DIR = head / ".." / ".." / ".." / "examples" / "notebooks"
+
+nbs = sorted(NOTEBOOK_DIR.glob("*.ipynb"))
+
+if nbs:
+    ids = [p.name for p in nbs]
+
+    @pytest.fixture(params=nbs, ids=ids)
+    def notebook(request):
+        return request.param
+
+    @pytest.mark.slow
+    @pytest.mark.example
+    @pytest.mark.thread_unsafe(reason="notebooks use matplotlib")
+    def test_notebook(notebook):
+        fullfile = notebook.resolve()
+        filename = notebook.stem
+
+        if filename in KNOWN_FAILURES:
+            pytest.skip(f"{filename} is known to fail")
+        if filename in RPY2_NOTEBOOKS and not HAS_RPY2:
+            pytest.skip(f"{filename} since rpy2 is not installed")
+        if filename in JOBLIB_NOTEBOOKS and not JOBLIB_NOTEBOOKS:
+            pytest.skip(f"{filename} since joblib is not installed")
+
+        with open(fullfile, encoding="utf-8") as fp:
+            nb = nbformat.read(fp, as_version=4)
+
+        ep = ExecutePreprocessor(
+            allow_errors=False, timeout=20, kernel_name=kernel_name
+        )
+        ep.preprocess(nb, {"metadata": {"path": NOTEBOOK_DIR}})
+
+else:
+    pytestmark = pytest.mark.skip(reason="No notebooks found so no tests run")

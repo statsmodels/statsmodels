@@ -1,9 +1,9 @@
 Pitfalls
 ========
 
-This page lists issues which may arise while using statsmodels. These 
+This page lists issues which may arise while using statsmodels. These
 can be the result of data-related or statistical problems, software design,
-"non-standard" use of models, or edge cases. 
+"non-standard" use of models, or edge cases.
 
 statsmodels provides several warnings and helper functions for diagnostic
 checking (see this `blog article
@@ -23,10 +23,10 @@ Repeated calls to fit with different parameters
 Result instances often need to access attributes from the corresponding model
 instance. Fitting a model multiple times with different arguments can change
 model attributes. This means that the result instance may no longer point to
-the correct model attributes after the model has been re-fit. 
+the correct model attributes after the model has been re-fit.
 
 It is therefore best practice to create separate model instances when we want
-to fit a model using different fit function arguments. 
+to fit a model using different fit function arguments.
 
 For example, this works without problem because we are not keeping the results
 instance for further use ::
@@ -54,12 +54,12 @@ Rank deficient exog, perfect multicollinearity
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Models based on linear models, GLS, RLM, GLM and similar, use a generalized
-inverse. This means that: 
+inverse. This means that:
 
 + Rank deficient matrices will not raise an error
 + Cases of almost perfect multicollinearity or ill-conditioned design matrices might produce numerically unstable results. Users need to manually check the rank or condition number of the matrix if this is not the desired behavior
-  
-Note: Statsmodels currently fails on the NIST benchmark case for Filip if the
+
+Note: statsmodels currently fails on the NIST benchmark case for Filip if the
 data is not rescaled, see `this blog <http://jpktd.blogspot.ca/2012/03/numerical-accuracy-in-linear-least.html>`_
 
 Incomplete convergence in maximum likelihood estimation
@@ -92,3 +92,27 @@ The only currently known case is a perfect fit in robust linear model estimation
 For RLM, if residuals are equal to zero, then it does not cause an exception,
 but having this perfect fit can produce NaNs in some results (scale=0 and 0/0
 division) (issue #55).
+
+True parameter outside domain of model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In some cases domain restrictions for parameters in a model might be
+inconsistent with the data. In those cases, estimation might stop at
+parameter values close to the boundary of the parameter space, but can slso
+fail with runtime errors or produce nans during optimization.
+
+Two examples:
+
+Estimating a negative binomial model when the data is not overdispersed
+relative to Poisson, that is the true model has the same dispersion as Poisson
+or is underdispersed, is inconsistent with the overdispersion assumption of
+the Negative Binomial distribution. The loglikelihood and its derivatives, as
+implemented in statsmodels, cannot be evaluated for dispersion parameter at
+zero dispersion or in a positive neighborhood of zero dispersion.
+
+Zero inflated models currently use either Logit or Probit as model for
+inflation. This means that no inflation is at the boundary of the parameter
+space and zero deflation is outside the valid parameter space.
+When the data has no zero inflation or is zero deflated, then the zero
+inflation model will often fail in the optimization, or end up close to the
+no inflation boundary.

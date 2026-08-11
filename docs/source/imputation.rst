@@ -9,7 +9,7 @@
 Multiple Imputation with Chained Equations
 ==========================================
 
-The MICE module allows most Statsmodels models to be fit to a dataset
+The MICE module allows most statsmodels models to be fit to a dataset
 with missing values on the independent and/or dependent variables, and
 provides rigorous standard errors for the fitted parameters.  The
 basic idea is to treat each variable with missing values as the
@@ -43,10 +43,18 @@ Classes
    MICE
    MICEData
 
+.. currentmodule:: statsmodels.imputation.bayes_mi
+
+.. autosummary::
+   :toctree: generated/
+
+   MI
+   BayesGaussMI
+
 
 Implementation Details
 ----------------------
 
 Internally, this function uses
-`pandas.isnull <http://pandas.pydata.org/pandas-docs/stable/missing_data.html#working-with-missing-data>`_.
+`pandas.isnull <https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#working-with-missing-data>`_.
 Anything that returns True from this function will be treated as missing data.

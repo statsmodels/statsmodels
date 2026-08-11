@@ -1,12 +1,11 @@
 """
-The RegressionFDR class implements the 'Knockoff' approach for
-controlling false discovery rates (FDR) in regression analysis.
+Control false discovery rates (FDR) in regression analysis using the knockoff approach
 
 The knockoff approach does not require standard errors.  Thus one
 application is to provide inference for parameter estimates that are
 not smooth functions of the data.  For example, the knockoff approach
 can be used to do inference for parameter estimates obtained from the
-LASSO, of from stepwise variable selection.
+LASSO, or from stepwise variable selection.
 
 The knockoff approach controls FDR for parameter estimates that may be
 dependent, such as coefficient estimates in a multiple regression
@@ -16,33 +15,46 @@ The knockoff approach is applicable whenever the test statistic can be
 computed entirely from x'y and x'x, where x is the design matrix and y
 is the vector of responses.
 
-Reference
----------
+References
+----------
 Rina Foygel Barber, Emmanuel Candes (2015).  Controlling the False
 Discovery Rate via Knockoffs.  Annals of Statistics 43:5.
-http://statweb.stanford.edu/~candes/papers/FDR_regression.pdf
+https://candes.su.domains/publications/downloads/FDR_regression.pdf
 """
 
 import numpy as np
-from statsmodels.compat.numpy import np_new_unique
+import pandas as pd
+
+from statsmodels.iolib import summary2
+from statsmodels.tools.rng_qrng import check_random_state
 
 
-class RegressionFDR(object):
+class RegressionFDR:
     """
-    Control FDR in a regression procedure.
+    Control FDR in a regression procedure
 
     Parameters
     ----------
-    endog : array-like
+    endog : array_like
         The dependent variable of the regression
-    exog : array-like
+    exog : array_like
         The independent variables of the regression
     regeffects : RegressionEffects instance
         An instance of a RegressionEffects class that can compute
         effect sizes for the regression coefficients.
-    method : string
-        The approach used to asssess and control FDR, currently
+    method : str
+        The approach used to assess and control FDR, currently
         must be 'knockoff'.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
+    **kwargs
+        Additional keyword arguments.  Currently supports
+        `design_method`, the approach used to construct the augmented
+        design matrix, either 'equi' (the default) or 'sdp'.
 
     Returns
     -------
@@ -51,7 +63,7 @@ class RegressionFDR(object):
 
     Notes
     -----
-    This class Implements the knockoff method of Barber and Candes.
+    This class implements the knockoff method of Barber and Candes.
     This is an approach for controlling the FDR of a variety of
     regression estimation procedures, including correlation
     coefficients, OLS regression, OLS with forward selection, and
@@ -66,32 +78,37 @@ class RegressionFDR(object):
     the 'equivariant' approach, set `design_method='sdp'` to use an
     alternative approach involving semidefinite programming.  See
     Barber and Candes for more information about both approaches.  The
-    sdp approach requires that cvxopt be installed.
+    sdp approach requires that the cvxopt package be installed.
     """
 
-    def __init__(self, endog, exog, regeffects, method="knockoff",
-                 **kwargs):
+    def __init__(self, endog, exog, regeffects, method="knockoff", rng=None, **kwargs):
+
+        if hasattr(exog, "columns"):
+            self.xnames = exog.columns
+        else:
+            self.xnames = [f"x{j:d}" for j in range(exog.shape[1])]
+
+        exog = np.asarray(exog)
+        endog = np.asarray(endog)
 
         if "design_method" not in kwargs:
             kwargs["design_method"] = "equi"
 
-        nobs, nvar = exog.shape
-
+        self.rng = check_random_state(rng)
         if kwargs["design_method"] == "equi":
-            exog1, exog2, _ = _design_knockoff_equi(exog)
+            exog1, exog2, _ = _design_knockoff_equi(exog, self.rng)
         elif kwargs["design_method"] == "sdp":
-            exog1, exog2, _ = _design_knockoff_sdp(exog)
+            exog1, exog2, _ = _design_knockoff_sdp(exog, self.rng)
         endog = endog - np.mean(endog)
 
         self.endog = endog
-        self.exog = exog
+        self.exog = np.concatenate((exog1, exog2), axis=1)
         self.exog1 = exog1
         self.exog2 = exog2
 
         self.stats = regeffects.stats(self)
 
-        unq, inv, cnt = np_new_unique(self.stats, return_inverse=True,
-                                      return_counts=True)
+        unq, inv, cnt = np.unique(self.stats, return_inverse=True, return_counts=True)
 
         # The denominator of the FDR
         cc = np.cumsum(cnt)
@@ -99,20 +116,41 @@ class RegressionFDR(object):
         denom[denom < 1] = 1
 
         # The numerator of the FDR
-        ii = np.searchsorted(unq, -unq, side='right') - 1
+        ii = np.searchsorted(unq, -unq, side="right") - 1
         numer = cc[ii]
         numer[ii < 0] = 0
 
+        # The knockoff+ estimated FDR
+        fdrp = (1 + numer) / denom
+
         # The knockoff estimated FDR
-        fdr = (1 + numer) / denom
+        fdr = numer / denom
 
         self.fdr = fdr[inv]
+        self.fdrp = fdrp[inv]
         self._ufdr = fdr
         self._unq = unq
 
+        df = pd.DataFrame(index=self.xnames)
+        df["Stat"] = self.stats
+        df["FDR+"] = self.fdrp
+        df["FDR"] = self.fdr
+        self.fdr_df = df
+
     def threshold(self, tfdr):
         """
-        Returns the threshold statistic for a given target FDR.
+        Return the threshold statistic for a given target FDR
+
+        Parameters
+        ----------
+        tfdr : float
+            The target false discovery rate.
+
+        Returns
+        -------
+        float
+            The threshold statistic corresponding to `tfdr`, or
+            np.inf if no such threshold exists.
         """
 
         if np.min(self._ufdr) <= tfdr:
@@ -120,26 +158,33 @@ class RegressionFDR(object):
         else:
             return np.inf
 
+    def summary(self):
 
-def _design_knockoff_sdp(exog):
+        summ = summary2.Summary()
+        summ.add_title("Regression FDR results")
+        summ.add_df(self.fdr_df)
+
+        return summ
+
+
+def _design_knockoff_sdp(exog, rng):
     """
-    Use semidefinite programming to construct a knockoff design
-    matrix.
+    Use semidefinite programming to construct a knockoff design matrix
 
     Requires cvxopt to be installed.
     """
 
     try:
-        from cvxopt import solvers, matrix
-    except ImportError:
-        raise ValueError("SDP knockoff designs require installation of cvxopt")
+        from cvxopt import matrix, solvers
+    except ImportError as exc:
+        raise ValueError("SDP knockoff designs require installation of cvxopt") from exc
 
     nobs, nvar = exog.shape
 
     # Standardize exog
     xnm = np.sum(exog**2, 0)
     xnm = np.sqrt(xnm)
-    exog /= xnm
+    exog = exog / xnm
 
     Sigma = np.dot(exog.T, exog)
 
@@ -153,25 +198,25 @@ def _design_knockoff_sdp(exog):
     h1 = 2 * Sigma
     h1 = matrix(h1)
     i, j = np.diag_indices(nvar)
-    G1 = np.zeros((nvar*nvar, nvar))
-    G1[i*nvar + j, i] = 1
+    G1 = np.zeros((nvar * nvar, nvar))
+    G1[i * nvar + j, i] = 1
     G1 = matrix(G1)
 
-    solvers.options['show_progress'] = False
+    solvers.options["show_progress"] = False
     sol = solvers.sdp(c, G0, h0, [G1], [h1])
-    sl = np.asarray(sol['x']).ravel()
+    sl = np.asarray(sol["x"]).ravel()
 
     xcov = np.dot(exog.T, exog)
-    exogn = _get_knmat(exog, xcov, sl)
+    exogn = _get_knmat(exog, xcov, sl, rng)
 
     return exog, exogn, sl
 
 
-def _design_knockoff_equi(exog):
+def _design_knockoff_equi(exog, rng):
     """
-    Construct an equivariant design matrix for knockoff analysis.
+    Construct an equivariant design matrix for knockoff analysis
 
-    Follows the 'equi-correlated knockoff approach of equation 2.4 in
+    Follows the 'equi-correlated' knockoff approach of equation 2.4 in
     Barber and Candes.
 
     Constructs a pair of design matrices exogs, exogn such that exogs
@@ -183,42 +228,49 @@ def _design_knockoff_equi(exog):
 
     nobs, nvar = exog.shape
 
-    if nobs < 2*nvar:
+    if nobs < 2 * nvar:
         msg = "The equivariant knockoff can ony be used when n >= 2*p"
         raise ValueError(msg)
 
     # Standardize exog
     xnm = np.sum(exog**2, 0)
     xnm = np.sqrt(xnm)
-    exog /= xnm
+    exog = exog / xnm
 
     xcov = np.dot(exog.T, exog)
     ev, _ = np.linalg.eig(xcov)
+
+    if np.iscomplexobj(ev):
+        if np.all(ev.imag == 0):
+            ev = ev.real
+        else:
+            raise RuntimeError("Expected real eigenvalues, got imaginary.")
     evmin = np.min(ev)
 
-    sl = min(2*evmin, 1)
+    sl = min(2 * evmin, 1)
     sl = sl * np.ones(nvar)
 
-    exogn = _get_knmat(exog, xcov, sl)
+    exogn = _get_knmat(exog, xcov, sl, rng)
 
     return exog, exogn, sl
 
 
-def _get_knmat(exog, xcov, sl):
+def _get_knmat(exog, xcov, sl, rng):
     # Utility function, see equation 2.2 of Barber & Candes.
 
     nobs, nvar = exog.shape
 
     ash = np.linalg.inv(xcov)
-    ash *= -np.outer(sl, sl)
+    # Change for numpy returning complex128
+    ash = ash * -np.outer(sl, sl)
+
     i, j = np.diag_indices(nvar)
     ash[i, j] += 2 * sl
 
-    umat = np.random.normal(size=(nobs, nvar))
+    umat = rng.normal(size=(nobs, nvar))
     u, _ = np.linalg.qr(exog)
     umat -= np.dot(u, np.dot(u.T, umat))
     umat, _ = np.linalg.qr(umat)
-
     ashr, xc, _ = np.linalg.svd(ash, 0)
     ashr *= np.sqrt(xc)
     ashr = ashr.T

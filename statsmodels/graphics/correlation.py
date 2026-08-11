@@ -1,30 +1,31 @@
-'''correlation plots
+"""
+Correlation plots
 
 Author: Josef Perktold
 License: BSD-3
 
 example for usage with different options in
-statsmodels\sandbox\examples\thirdparty\ex_ratereturn.py
-
-'''
+statsmodels/sandbox/examples/thirdparty/ex_ratereturn.py
+"""
 import numpy as np
 
 from . import utils
 
 
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
-              ax=None, cmap='RdYlBu_r'):
-    """Plot correlation of many variables in a tight color grid.
+              ax=None, cmap="RdYlBu_r"):
+    """
+    Plot correlation of many variables in a tight color grid
 
     Parameters
     ----------
     dcorr : ndarray
         Correlation matrix, square 2-D array.
-    xnames : list of str, optional
+    xnames : list[str], optional
         Labels for the horizontal axis.  If not given (None), then the
         matplotlib defaults (integers) are used.  If it is an empty list, [],
         then no ticks and labels are added.
-    ynames : list of str, optional
+    ynames : list[str], optional
         Labels for the vertical axis.  Works the same way as `xnames`.
         If not given, the same names as for `xnames` are re-used.
     title : str, optional
@@ -35,7 +36,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         range of `dcorr`.  If True, then the color range is normalized to
         (-1, 1).  If this is a tuple of two numbers, then they define the range
         for the color bar.
-    ax : Matplotlib AxesSubplot instance, optional
+    ax : AxesSubplot, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, then only the main plot but not the colorbar is created.
     cmap : str or Matplotlib Colormap instance, optional
@@ -44,7 +45,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
     Returns
     -------
-    fig : Matplotlib figure instance
+    Figure
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
@@ -59,6 +60,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     >>> smg.plot_corr(corr_matrix, xnames=hie_data.names)
     >>> plt.show()
 
+    .. plot:: plots/graphics_correlation_plot_corr.py
     """
     if ax is None:
         create_colorbar = True
@@ -66,15 +68,13 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
         create_colorbar = False
 
     fig, ax = utils.create_mpl_ax(ax)
-    import matplotlib as mpl
-    from matplotlib import cm
 
     nvars = dcorr.shape[0]
 
     if ynames is None:
         ynames = xnames
     if title is None:
-        title = 'Correlation Matrix'
+        title = "Correlation Matrix"
     if isinstance(normcolor, tuple):
         vmin, vmax = normcolor
     elif normcolor:
@@ -82,39 +82,39 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     else:
         vmin, vmax = None, None
 
-    axim = ax.imshow(dcorr, cmap=cmap, interpolation='nearest',
-                     extent=(0,nvars,0,nvars), vmin=vmin, vmax=vmax)
+    axim = ax.imshow(dcorr, cmap=cmap, interpolation="nearest",
+                     extent=(0, nvars, 0, nvars), vmin=vmin, vmax=vmax)
 
     # create list of label positions
     labelPos = np.arange(0, nvars) + 0.5
 
-    if not ynames is None:
+    if isinstance(ynames, list) and len(ynames) == 0:
+        ax.set_yticks([])
+    elif ynames is not None:
         ax.set_yticks(labelPos)
         ax.set_yticks(labelPos[:-1]+0.5, minor=True)
-        ax.set_yticklabels(ynames[::-1], fontsize='small',
-                           horizontalalignment='right')
-    elif ynames == []:
-        ax.set_yticks([])
+        ax.set_yticklabels(ynames[::-1], fontsize="small",
+                           horizontalalignment="right")
 
-    if not xnames is None:
+    if isinstance(xnames, list) and len(xnames) == 0:
+        ax.set_xticks([])
+    elif xnames is not None:
         ax.set_xticks(labelPos)
         ax.set_xticks(labelPos[:-1]+0.5, minor=True)
-        ax.set_xticklabels(xnames, fontsize='small', rotation=45,
-                           horizontalalignment='right')
-    elif xnames == []:
-        ax.set_xticks([])
+        ax.set_xticklabels(xnames, fontsize="small", rotation=45,
+                           horizontalalignment="right")
 
-    if not title == '':
+    if not title == "":
         ax.set_title(title)
 
     if create_colorbar:
         fig.colorbar(axim, use_gridspec=True)
     fig.tight_layout()
 
-    ax.tick_params(which='minor', length=0)
-    ax.tick_params(direction='out', top=False, right=False)
+    ax.tick_params(which="minor", length=0)
+    ax.tick_params(direction="out", top=False, right=False)
     try:
-        ax.grid(True, which='minor', linestyle='-', color='w', lw=1)
+        ax.grid(True, which="minor", linestyle="-", color="w", lw=1)
     except AttributeError:
         # Seems to fail for axes created with AxesGrid.  MPL bug?
         pass
@@ -123,8 +123,9 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
 
 
 def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None,
-                   ynames=None, fig=None, cmap='RdYlBu_r'):
-    """Create a grid of correlation plots.
+                   ynames=None, fig=None, cmap="RdYlBu_r"):
+    """
+    Create a grid of correlation plots
 
     The individual correlation plots are assumed to all have the same
     variables, axis labels can be specified only once.
@@ -133,7 +134,7 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
     ----------
     dcorrs : list or iterable of ndarrays
         List of correlation matrices.
-    titles : list of str, optional
+    titles : list[str], optional
         List of titles for the subplots.  By default no title are shown.
     ncols : int, optional
         Number of columns in the subplot grid.  If not given, the number of
@@ -143,14 +144,14 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
         range of `dcorr`.  If True, then the color range is normalized to
         (-1, 1).  If this is a tuple of two numbers, then they define the range
         for the color bar.
-    xnames : list of str, optional
+    xnames : list[str], optional
         Labels for the horizontal axis.  If not given (None), then the
         matplotlib defaults (integers) are used.  If it is an empty list, [],
         then no ticks and labels are added.
-    ynames : list of str, optional
+    ynames : list[str], optional
         Labels for the vertical axis.  Works the same way as `xnames`.
         If not given, the same names as for `xnames` are re-used.
-    fig : Matplotlib figure instance, optional
+    fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
     cmap : str or Matplotlib Colormap instance, optional
@@ -159,9 +160,9 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
 
     Returns
     -------
-    fig : Matplotlib figure instance
-        If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
+    Figure
+        If `fig` is None, the created figure.  Otherwise the figure that was
+        passed in.
 
     Examples
     --------
@@ -179,24 +180,24 @@ def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None
     >>> sm.graphics.plot_corr_grid([corr_matrix] * 8, xnames=hie_data.names)
     >>> plt.show()
 
+    .. plot:: plots/graphics_correlation_plot_corr_grid.py
     """
     if ynames is None:
         ynames = xnames
 
     if not titles:
-        titles = ['']*len(dcorrs)
+        titles = [""]*len(dcorrs)
 
     n_plots = len(dcorrs)
     if ncols is not None:
         nrows = int(np.ceil(n_plots / float(ncols)))
+    # Determine number of rows and columns, square if possible, otherwise
+    # prefer a wide (more columns) over a high layout.
+    elif n_plots < 4:
+        nrows, ncols = 1, n_plots
     else:
-        # Determine number of rows and columns, square if possible, otherwise
-        # prefer a wide (more columns) over a high layout.
-        if n_plots < 4:
-            nrows, ncols = 1, n_plots
-        else:
-            nrows = int(np.sqrt(n_plots))
-            ncols = int(np.ceil(n_plots / float(nrows)))
+        nrows = int(np.sqrt(n_plots))
+        ncols = int(np.ceil(n_plots / float(nrows)))
 
     # Create a figure with the correct size
     aspect = min(ncols / float(nrows), 1.8)

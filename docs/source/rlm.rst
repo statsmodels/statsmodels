@@ -27,8 +27,8 @@ Examples
 
 Detailed examples can be found here:
 
-* `Robust Models 1 <examples/notebooks/generated/robust_models_0.html>`__
-* `Robust Models 2 <examples/notebooks/generated/robust_models_1.html>`__
+* `Robust Models 1 <examples/notebooks/generated/robust_models_0.ipynb>`_
+* `Robust Models 2 <examples/notebooks/generated/robust_models_1.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -44,6 +44,7 @@ References
 * PJ Huber. ‘Robust Statistics’ John Wiley and Sons, Inc., New York. 1981.
 * PJ Huber. 1973, ‘The 1972 Wald Memorial Lectures: Robust Regression: Asymptotics, Conjectures, and Monte Carlo.’ The Annals of Statistics, 1.5, 799-821.
 * R Venables, B Ripley. ‘Modern Applied Statistics in S’ Springer, New York,
+* C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 
 Module Reference
 ----------------
@@ -84,6 +85,7 @@ Norms
    Hampel
    HuberT
    LeastSquares
+   MQuantileNorm
    RamsayE
    RobustNorm
    TrimmedMean
@@ -104,4 +106,5 @@ Scale
     HuberScale
     mad
     hubers_scale
-
+    iqr
+    qn_scale

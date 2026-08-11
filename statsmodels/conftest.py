@@ -1,0 +1,225 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
+import logging
+import os
+
+import numpy as np
+from packaging.version import Version, parse
+import pandas as pd
+import pytest
+
+try:
+    import matplotlib as mpl
+
+    mpl.use("agg")
+    HAVE_MATPLOTLIB = True
+except ImportError:
+    HAVE_MATPLOTLIB = False
+
+
+logger = logging.getLogger(__name__)
+
+
+set_cow = "SM_TEST_COPY_ON_WRITE" in os.environ
+cow_flag = os.environ.get("SM_TEST_COPY_ON_WRITE", "").lower() in ("true", "1")
+if set_cow and parse(pd.__version__) < Version("2.99.99"):
+    pd.options.mode.copy_on_write = cow_flag
+    logger.critical("TEST CONFIGURATION: Copy on Write %s", cow_flag)
+
+formula_engine = os.environ.get("SM_FORMULA_ENGINE", "patsy")
+if formula_engine == "formulaic":
+    logger.critical(
+        "TEST CONFIGURATION: Tests running using formulaic as the default "
+        "formula engine."
+    )
+
+    import statsmodels.formula
+
+    statsmodels.formula.options.formula_engine = "formulaic"
+
+
+def pytest_addoption(parser):
+    parser.addoption("--skip-slow", action="store_true", help="skip slow tests")
+    parser.addoption("--only-slow", action="store_true", help="run only slow tests")
+    parser.addoption(
+        "--skip-examples", action="store_true", help="skip tests of examples"
+    )
+    parser.addoption(
+        "--skip-matplotlib",
+        action="store_true",
+        help="skip tests that depend on matplotlib",
+    )
+    parser.addoption("--skip-smoke", action="store_true", help="skip smoke tests")
+    parser.addoption("--only-smoke", action="store_true", help="run only smoke tests")
+    parser.addoption(
+        "--skip-joblib", action="store_true", help="skip tests that use joblib"
+    )
+    parser.addoption(
+        "--only-joblib", action="store_true", help="run only tests that use joblib"
+    )
+    parser.addoption(
+        "--skip-high-memory", action="store_true", help="skip high memory usage tests"
+    )
+    parser.addoption(
+        "--only-high-memory",
+        action="store_true",
+        help="run only high memory usage tests",
+    )
+
+
+def pytest_runtest_setup(item):
+    if "slow" in item.keywords and item.config.getoption("--skip-slow"):
+        pytest.skip("skipping due to --skip-slow")
+
+    if "slow" not in item.keywords and item.config.getoption("--only-slow"):
+        pytest.skip("skipping due to --only-slow")
+
+    if "example" in item.keywords and item.config.getoption("--skip-examples"):
+        pytest.skip("skipping due to --skip-examples")
+
+    if "matplotlib" in item.keywords and item.config.getoption("--skip-matplotlib"):
+        pytest.skip("skipping due to --skip-matplotlib")
+
+    if "matplotlib" in item.keywords and not HAVE_MATPLOTLIB:
+        pytest.skip("skipping since matplotlib is not installed")
+
+    if "smoke" in item.keywords and item.config.getoption("--skip-smoke"):
+        pytest.skip("skipping due to --skip-smoke")
+
+    if "smoke" not in item.keywords and item.config.getoption("--only-smoke"):
+        pytest.skip("skipping due to --only-smoke")
+
+    if "joblib" in item.keywords and item.config.getoption("--skip-joblib"):
+        pytest.skip("skipping due to --skip-joblib")
+
+    if "joblib" not in item.keywords and item.config.getoption("--only-joblib"):
+        pytest.skip("skipping due to --only-joblib")
+
+    if "high_memory" in item.keywords and item.config.getoption("--skip-high-memory"):
+        pytest.skip("skipping due to --skip-high-memory")
+
+    if "high_memory" not in item.keywords and item.config.getoption(
+        "--only-high-memory"
+    ):
+        pytest.skip("skipping due to --only-high-memory")
+
+
+def pytest_configure(config):
+    try:
+        import matplotlib as mpl
+
+        mpl.use("agg")
+
+        from pandas.plotting import register_matplotlib_converters
+
+        register_matplotlib_converters()
+    except ImportError:
+        # Tests are required to run without matplotlib
+        pass
+
+
+@pytest.fixture
+def close_figures():
+    """
+    Fixture that closes all figures after a test function has completed
+
+    Returns
+    -------
+    closer : callable
+        Function that will close all figures when called.
+
+    Notes
+    -----
+    Used by passing as an argument to the function that produces a plot,
+    for example
+
+    def test_some_plot(close_figures):
+        <test code>
+
+    If a function creates many figures, then these can be destroyed within a
+    test function by calling close_figures to ensure that the number of
+    figures does not become too large.
+
+    def test_many_plots(close_figures):
+        for i in range(100000):
+            plt.plot(x,y)
+            close_figures()
+    """
+    try:
+        import matplotlib.pyplot as plt
+
+        def close():
+            plt.close("all")
+
+    except ImportError:
+
+        def close():
+            pass
+
+    yield close
+    close()
+
+
+# This is a special hook that converts all xfail marks to have strict=False
+# instead of strict=True. This is useful to have for Pyodide tests, where
+# some tests will consistently xfail due to missing functionality (such as
+# NotImplementedErrors) or floating point imprecisions, but we don't want
+# to mark them as strict xfails because they are more prominently expected
+# to fail in a Pyodide environment.
+def pytest_collection_modifyitems(config, items):
+    if PYTHON_IMPL_WASM:
+        for item in items:
+            if "xfail" in item.keywords:
+                mark = item.get_closest_marker("xfail")
+                if mark:
+                    # Modify the existing xfail mark if it exists
+                    # to set strict=False
+                    new_kwargs = dict(mark.kwargs)
+                    new_kwargs["strict"] = False
+                    new_mark = pytest.mark.xfail(**new_kwargs)
+                    item.add_marker(new_mark)
+                    item.keywords["xfail"] = new_mark
+    else:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def check_figures_closed():
+    try:
+        import matplotlib.pyplot as plt
+
+        def count():
+            return len(plt.get_fignums())
+
+    except ImportError:
+
+        def count():
+            return 0
+
+    initial = count()
+    yield
+    cnt = count()
+    assert cnt <= initial, f"test created {cnt - initial} figure(s)"
+
+
+@pytest.fixture(autouse=True)
+def check_global_randomstate_usage(request):
+    """
+    Ensure that the singleton RandomState is not modified
+
+    Notes
+    -----
+    Use pytest.mark.skip_randomstate_check to skip allow the singleton
+    RandomState to be changed in a test
+    """
+    state = np.random.get_state()
+
+    yield
+    new_state = np.random.get_state()
+
+    if "singleton_randomstate" in request.keywords:
+        return
+
+    assert state[0] == new_state[0]
+    np.testing.assert_equal(state[1], new_state[1])
+    assert state[2] == new_state[2]

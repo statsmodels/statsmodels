@@ -1,19 +1,16 @@
-global-include *.csv *.py *.txt *.pyx *.pxd *.pxi *.c *.h
+global-include *.csv *.py *.txt *.pyx *.pyx.in *.pxd *.pxi *.c *.h *.pkl
+include statsmodels/_version.py
 include MANIFEST.in
 include README.rst
 
 recursive-exclude build *
 recursive-exclude dist *
 recursive-exclude tools *
-include tools/examples_rst.py
-include tools/hash_funcs.py
-include tools/cythonize.py
 
 graft statsmodels/datasets
 graft statsmodels/sandbox/regression/data
 graft statsmodels/sandbox/tests
 graft statsmodels/sandbox/tsa/examples
-graft statsmodels/tsa/vector_ar/data
 recursive-include docs/source *
 exclude docs/source/generated/*
 recursive-include docs/sphinxext *
@@ -26,9 +23,7 @@ include docs/Makefile
 
 recursive-include examples *
 
-# Cached Cython signatures
-include cythonize.dat
-
 prune */__pycache__
 
 global-exclude *~ *.swp  *.pyc *.pyo *.bak
+include statsmodels/_version.py

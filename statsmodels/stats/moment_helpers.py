@@ -1,158 +1,341 @@
-'''helper functions conversion between moments
+"""
+Helper functions for conversion between moments
 
-contains:
+Contains:
 
 * conversion between central and non-central moments, skew, kurtosis and
-  cummulants
+  cumulants
 * cov2corr : convert covariance matrix to correlation matrix
 
 
 Author: Josef Perktold
 License: BSD-3
 
-'''
+"""
 
-from statsmodels.compat.python import range
+from typing import NamedTuple
+
 import numpy as np
-from scipy.misc import comb
+from scipy.special import comb
+
+from statsmodels.tools.validation import bool_like
 
 
-## start moment helpers
+def _convert_to_multidim(x):
+    if any([isinstance(x, list), isinstance(x, tuple)]):
+        return np.array(x)
+    elif isinstance(x, np.ndarray):
+        return x
+    else:
+        # something strange was passed and the function probably
+        # will fall, maybe insert an exception?
+        return x
+
+
+def _convert_from_multidim(x, totype=list):
+    if len(x.shape) < 2:
+        return totype(x)
+    return x.T
+
 
 def mc2mnc(mc):
-    '''convert central to non-central moments, uses recursive formula
-    optionally adjusts first moment to return mean
+    """
+    Convert central to non-central moments, uses recursive formula
 
-    '''
-    n = len(mc)
-    mean = mc[0]
-    mc = [1] + list(mc)    # add zero moment = 1
-    mc[1] = 0  # define central mean as zero for formula
-    mnc = [1, mean] # zero and first raw moments
-    for nn,m in enumerate(mc[2:]):
-        n=nn+2
-        mnc.append(0)
-        for k in range(n+1):
-            mnc[n] += comb(n,k,exact=1) * mc[k] * mean**(n-k)
+    Optionally adjusts first moment to return mean.
 
-    return mnc[1:]
+    Parameters
+    ----------
+    mc : array_like
+        Central moments, with the first element equal to the mean.
+
+    Returns
+    -------
+    mnc : ndarray or list
+        Non-central moments.
+    """
+    x = _convert_to_multidim(mc)
+
+    def _local_counts(mc):
+        mean = mc[0]
+        mc = [1, *list(mc)]  # add zero moment = 1
+        mc[1] = 0  # define central mean as zero for formula
+        mnc = [1, mean]  # zero and first raw moments
+        for nn, _ in enumerate(mc[2:]):
+            n = nn + 2
+            mnc.append(0)
+            for k in range(n + 1):
+                mnc[n] += comb(n, k, exact=True) * mc[k] * mean ** (n - k)
+        return mnc[1:]
+
+    res = np.apply_along_axis(_local_counts, 0, x)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res)
 
 
-def mnc2mc(mnc, wmean = True):
-    '''convert non-central to central moments, uses recursive formula
-    optionally adjusts first moment to return mean
+def mnc2mc(mnc, wmean=True):
+    """
+    Convert non-central to central moments, uses recursive formula
 
-    '''
-    n = len(mnc)
-    mean = mnc[0]
-    mnc = [1] + list(mnc)    # add zero moment = 1
-    mu = [] #np.zeros(n+1)
-    for n,m in enumerate(mnc):
-        mu.append(0)
-        #[comb(n-1,k,exact=1) for k in range(n)]
-        for k in range(n+1):
-            mu[n] += (-1)**(n-k) * comb(n,k,exact=1) * mnc[k] * mean**(n-k)
-    if wmean:
-        mu[1] = mean
-    return mu[1:]
+    Optionally adjusts first moment to return mean.
+
+    Parameters
+    ----------
+    mnc : array_like
+        Non-central moments, with the first element equal to the mean.
+    wmean : bool
+        If True (default), the first returned moment is the mean instead
+        of zero.
+
+    Returns
+    -------
+    mu : ndarray or list
+        Central moments.
+    """
+    X = _convert_to_multidim(mnc)
+
+    def _local_counts(mnc):
+        mean = mnc[0]
+        mnc = [1, *list(mnc)]  # add zero moment = 1
+        mu = []
+        for n, _ in enumerate(mnc):
+            mu.append(0)
+            for k in range(n + 1):
+                sgn_comb = (-1) ** (n - k) * comb(n, k, exact=True)
+                mu[n] += sgn_comb * mnc[k] * mean ** (n - k)
+        if wmean:
+            mu[1] = mean
+        return mu[1:]
+
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res)
 
 
 def cum2mc(kappa):
-    '''convert non-central moments to cumulants
-    recursive formula produces as many cumulants as moments
+    """
+    Convert cumulants to central moments
+
+    Recursive formula produces as many central moments as cumulants.
+
+    Parameters
+    ----------
+    kappa : array_like
+        Cumulants.
+
+    Returns
+    -------
+    mc : ndarray or list
+        Central moments.
 
     References
     ----------
     Kenneth Lange: Numerical Analysis for Statisticians, page 40
-    (http://books.google.ca/books?id=gm7kwttyRT0C&pg=PA40&lpg=PA40&dq=convert+cumulants+to+moments&source=web&ots=qyIaY6oaWH&sig=cShTDWl-YrWAzV7NlcMTRQV6y0A&hl=en&sa=X&oi=book_result&resnum=1&ct=result)
+    """
+    X = _convert_to_multidim(kappa)
 
+    def _local_counts(kappa):
+        mc = [1, 0.0]  # _kappa[0]]  # insert 0-moment and mean
+        kappa0 = kappa[0]
+        kappa = [1, *list(kappa)]
+        for nn, _ in enumerate(kappa[2:]):
+            n = nn + 2
+            mc.append(0)
+            for k in range(n - 1):
+                mc[n] += comb(n - 1, k, exact=True) * kappa[n - k] * mc[k]
+        mc[1] = kappa0  # insert mean as first moments by convention
+        return mc[1:]
 
-    '''
-    mc = [1,0.0] #_kappa[0]]  #insert 0-moment and mean
-    kappa0 = kappa[0]
-    kappa = [1] + list(kappa)
-    for nn,m in enumerate(kappa[2:]):
-        n = nn+2
-        mc.append(0)
-        for k in range(n-1):
-            mc[n] += comb(n-1,k,exact=1) * kappa[n-k]*mc[k]
-
-    mc[1] = kappa0 # insert mean as first moments by convention
-    return mc[1:]
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res)
 
 
 def mnc2cum(mnc):
-    '''convert non-central moments to cumulants
-    recursive formula produces as many cumulants as moments
+    """
+    Convert non-central moments to cumulants
 
-    http://en.wikipedia.org/wiki/Cumulant#Cumulants_and_moments
-    '''
-    mnc = [1] + list(mnc)
-    kappa = [1]
-    for nn,m in enumerate(mnc[1:]):
-        n = nn+1
-        kappa.append(m)
-        for k in range(1,n):
-            kappa[n] -= comb(n-1,k-1,exact=1) * kappa[k]*mnc[n-k]
+    Recursive formula produces as many cumulants as moments.
 
-    return kappa[1:]
+    Parameters
+    ----------
+    mnc : array_like
+        Non-central moments.
+
+    Returns
+    -------
+    kappa : ndarray or list
+        Cumulants.
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Cumulant#Cumulants_and_moments
+    """
+    X = _convert_to_multidim(mnc)
+
+    def _local_counts(mnc):
+        mnc = [1, *list(mnc)]
+        kappa = [1]
+        for nn, m in enumerate(mnc[1:]):
+            n = nn + 1
+            kappa.append(m)
+            for k in range(1, n):
+                num_ways = comb(n - 1, k - 1, exact=True)
+                kappa[n] -= num_ways * kappa[k] * mnc[n - k]
+        return kappa[1:]
+
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res)
 
 
 def mc2cum(mc):
-    '''just chained because I have still the test case
-    '''
-    return mnc2cum(mc2mnc(mc))
+    """
+    Convert central moments to cumulants
+
+    Just chained because there is still a test case for it.
+
+    Parameters
+    ----------
+    mc : array_like
+        Central moments.
+
+    Returns
+    -------
+    kappa : ndarray or list
+        Cumulants.
+    """
+    first_step = mc2mnc(mc)
+    if isinstance(first_step, np.ndarray):
+        first_step = first_step.T
+    return mnc2cum(first_step)
+    # return np.apply_along_axis(lambda x: mnc2cum(mc2mnc(x)), 0, mc)
 
 
 def mvsk2mc(args):
-    '''convert mean, variance, skew, kurtosis to central moments'''
-    mu,sig2,sk,kur = args
+    """
+    Convert mean, variance, skew, kurtosis to central moments
 
-    cnt = [None]*4
-    cnt[0] = mu
-    cnt[1] = sig2
-    cnt[2] = sk * sig2**1.5
-    cnt[3] = (kur+3.0) * sig2**2.0
-    return tuple(cnt)
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the mean, variance, skew, and kurtosis, in
+        that order.
+
+    Returns
+    -------
+    mc : tuple or ndarray
+        Central moments (mean, variance, 3rd and 4th central moments).
+    """
+    X = _convert_to_multidim(args)
+
+    def _local_counts(args):
+        mu, sig2, sk, kur = args
+        cnt = [None] * 4
+        cnt[0] = mu
+        cnt[1] = sig2
+        cnt[2] = sk * sig2**1.5
+        cnt[3] = (kur + 3.0) * sig2**2.0
+        return tuple(cnt)
+
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res, tuple)
 
 
 def mvsk2mnc(args):
-    '''convert mean, variance, skew, kurtosis to non-central moments'''
-    mc, mc2, skew, kurt = args
-    mnc = mc
-    mnc2 = mc2 + mc*mc
-    mc3  = skew*(mc2**1.5) # 3rd central moment
-    mnc3 = mc3+3*mc*mc2+mc**3 # 3rd non-central moment
-    mc4  = (kurt+3.0)*(mc2**2.0) # 4th central moment
-    mnc4 = mc4+4*mc*mc3+6*mc*mc*mc2+mc**4
-    return (mnc, mnc2, mnc3, mnc4)
+    """
+    Convert mean, variance, skew, kurtosis to non-central moments
+
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the mean, variance, skew, and kurtosis, in
+        that order.
+
+    Returns
+    -------
+    mnc : tuple or ndarray
+        Non-central moments.
+    """
+    X = _convert_to_multidim(args)
+
+    def _local_counts(args):
+        mc, mc2, skew, kurt = args
+        mnc = mc
+        mnc2 = mc2 + mc * mc
+        mc3 = skew * (mc2**1.5)  # 3rd central moment
+        mnc3 = mc3 + 3 * mc * mc2 + mc**3  # 3rd non-central moment
+        mc4 = (kurt + 3.0) * (mc2**2.0)  # 4th central moment
+        mnc4 = mc4 + 4 * mc * mc3 + 6 * mc * mc * mc2 + mc**4
+        return (mnc, mnc2, mnc3, mnc4)
+
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res, tuple)
 
 
 def mc2mvsk(args):
-    '''convert central moments to mean, variance, skew, kurtosis
-    '''
-    mc, mc2, mc3, mc4 = args
-    skew = np.divide(mc3, mc2**1.5)
-    kurt = np.divide(mc4, mc2**2.0) - 3.0
-    return (mc, mc2, skew, kurt)
+    """
+    Convert central moments to mean, variance, skew, kurtosis
+
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the central moments (mean, variance, 3rd and
+        4th central moments), in that order.
+
+    Returns
+    -------
+    res : tuple or ndarray
+        Mean, variance, skew, and kurtosis.
+    """
+    X = _convert_to_multidim(args)
+
+    def _local_counts(args):
+        mc, mc2, mc3, mc4 = args
+        skew = np.divide(mc3, mc2**1.5)
+        kurt = np.divide(mc4, mc2**2.0) - 3.0
+        return (mc, mc2, skew, kurt)
+
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res, tuple)
 
 
 def mnc2mvsk(args):
-    '''convert central moments to mean, variance, skew, kurtosis
-    '''
-    #convert four non-central moments to central moments
-    mnc, mnc2, mnc3, mnc4 = args
-    mc = mnc
-    mc2 = mnc2 - mnc*mnc
-    mc3 = mnc3 - (3*mc*mc2+mc**3) # 3rd central moment
-    mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
+    """
+    Convert non-central moments to mean, variance, skew, kurtosis
 
-    return mc2mvsk((mc, mc2, mc3, mc4))
+    Parameters
+    ----------
+    args : array_like
+        Sequence containing the non-central moments, in order.
+
+    Returns
+    -------
+    res : tuple or ndarray
+        Mean, variance, skew, and kurtosis.
+    """
+    X = _convert_to_multidim(args)
+
+    def _local_counts(args):
+        # convert four non-central moments to central moments
+        mnc, mnc2, mnc3, mnc4 = args
+        mc = mnc
+        mc2 = mnc2 - mnc * mnc
+        mc3 = mnc3 - (3 * mc * mc2 + mc**3)  # 3rd central moment
+        mc4 = mnc4 - (4 * mc * mc3 + 6 * mc * mc * mc2 + mc**4)
+        return mc2mvsk((mc, mc2, mc3, mc4))
+
+    res = np.apply_along_axis(_local_counts, 0, X)
+    # for backward compatibility convert 1-dim output to list/tuple
+    return _convert_from_multidim(res, tuple)
 
 
-#def mnc2mc(args):
-#    '''convert four non-central moments to central moments
-#    '''
+# def mnc2mc(args):
+#    """convert four non-central moments to central moments
+#    """
 #    mnc, mnc2, mnc3, mnc4 = args
 #    mc = mnc
 #    mc2 = mnc2 - mnc*mnc
@@ -160,80 +343,126 @@ def mnc2mvsk(args):
 #    mc4 = mnc4 - (4*mc*mc3+6*mc*mc*mc2+mc**4)
 #    return mc, mc2, mc
 
-    #TODO: no return, did it get lost in cut-paste?
+# TODO: no return, did it get lost in cut-paste?
 
 
-def cov2corr(cov, return_std=False):
-    '''convert covariance matrix to correlation matrix
+class Cov2CorrResult(NamedTuple):
+    """
+    Result of :func:`cov2corr` when the standard deviations are returned.
+
+    Parameters
+    ----------
+    corr : ndarray
+        Correlation matrix.
+    std : ndarray
+        Standard deviation taken from the diagonal of the covariance
+        matrix.
+    """
+
+    corr: np.ndarray
+    std: np.ndarray
+
+
+def cov2corr(cov, return_std=False, *, use_namedtuple: bool | None = None):
+    """
+    Convert covariance matrix to correlation matrix
 
     Parameters
     ----------
     cov : array_like, 2d
-        covariance matrix, see Notes
-
-    Returns
-    -------
-    corr : ndarray (subclass)
-        correlation matrix
+        Covariance matrix, see Notes.
     return_std : bool
         If this is true then the standard deviation is also returned.
         By default only the correlation matrix is returned.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``Cov2CorrResult`` NamedTuple is
+        returned. When ``return_std=True`` a ``Cov2CorrResult`` is always
+        returned; it holds the same two elements as the legacy tuple, so it
+        unpacks and indexes identically. When ``return_std=False`` a bare
+        correlation matrix is returned unless ``use_namedtuple=True``, which
+        yields a ``Cov2CorrResult`` carrying the standard deviations too.
+
+    Returns
+    -------
+    Cov2CorrResult or ndarray
+        When ``return_std=True`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        corr : ndarray (subclass)
+            Correlation matrix.
+        std : ndarray
+            Standard deviation from the diagonal of cov.
+
+        ``Cov2CorrResult`` has the same length and contents as the plain
+        ``(corr, std_)`` tuple it replaces, so it unpacks and indexes
+        identically. See
+        :class:`~statsmodels.stats.moment_helpers.Cov2CorrResult`.
+
+        When ``return_std=False`` and ``use_namedtuple`` is not True, a bare
+        correlation matrix is returned instead.
 
     Notes
     -----
-    This function does not convert subclasses of ndarrays. This requires
-    that division is defined elementwise. np.ma.array and np.matrix are allowed.
-
-    '''
+    This function does not convert subclasses of ndarrays. This requires that
+    division is defined elementwise. np.ma.array and np.matrix are allowed.
+    """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     cov = np.asanyarray(cov)
     std_ = np.sqrt(np.diag(cov))
     corr = cov / np.outer(std_, std_)
-    if return_std:
-        return corr, std_
-    else:
-        return corr
+    # Cov2CorrResult has exactly the same length and contents as the legacy
+    # (corr, std_) tuple, so it unpacks and indexes identically and is always
+    # used when return_std is True.  When return_std is False a bare
+    # correlation matrix is returned, as before; pass use_namedtuple=True to
+    # always get a Cov2CorrResult.  The standard deviations are computed
+    # either way, so nothing needs to be None-filled.
+    if use_namedtuple or return_std:
+        return Cov2CorrResult(corr, std_)
+    return corr
+
 
 def corr2cov(corr, std):
-    '''convert correlation matrix to covariance matrix given standard deviation
+    """
+    Convert correlation matrix to covariance matrix given standard deviation
 
     Parameters
     ----------
     corr : array_like, 2d
-        correlation matrix, see Notes
+        Correlation matrix, see Notes.
     std : array_like, 1d
-        standard deviation
+        Standard deviation.
 
     Returns
     -------
     cov : ndarray (subclass)
-        covariance matrix
+        Covariance matrix.
 
     Notes
     -----
     This function does not convert subclasses of ndarrays. This requires
     that multiplication is defined elementwise. np.ma.array are allowed, but
     not matrices.
-
-    '''
+    """
     corr = np.asanyarray(corr)
     std_ = np.asanyarray(std)
     cov = corr * np.outer(std_, std_)
     return cov
 
-def se_cov(cov):
-    '''get standard deviation from covariance matrix
 
-    just a shorthand function np.sqrt(np.diag(cov))
+def se_cov(cov):
+    """
+    Get standard deviation from covariance matrix
+
+    Just a shorthand function np.sqrt(np.diag(cov)).
 
     Parameters
     ----------
     cov : array_like, square
-        covariance matrix
+        Covariance matrix.
 
     Returns
     -------
     std : ndarray
-        standard deviation from diagonal of cov
-
-    '''
+        Standard deviation from diagonal of cov.
+    """
     return np.sqrt(np.diag(cov))

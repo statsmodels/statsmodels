@@ -1,5 +1,5 @@
 // Dataset
-use http://www.stata-press.com/data/r12/wpi1, clear
+use https://www.stata-press.com/data/r12/wpi1, clear
 rename t time
 
 set more off
@@ -27,7 +27,7 @@ program save_results
     args i
     replace mod = e(cmdline) in `i'
     replace llf = e(ll) in `i'
-    
+
     matrix b = e(b)
     local params = ""
     local params = string(b[1,1])

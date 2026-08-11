@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
 """
 This file contains analytic implementations of rotation methods.
 """
-
-from __future__ import division
-from __future__ import print_function
 
 import numpy as np
 import scipy as sp
@@ -36,18 +32,19 @@ def target_rotation(A, H, full_rank=False):
 
     see Schonemann (1966).
 
-    Parametes
-    ---------
-    A : numpy matrix (default None)
-        non rotated factors
-    H : numpy matrix
-        target matrix
-    full_rank : boolean (default FAlse)
-        if set to true full rank is assumed
+    Parameters
+    ----------
+    A : ndarray
+        Non-rotated factors.
+    H : ndarray
+        Target matrix.
+    full_rank : bool, optional
+        If set to True full rank is assumed. Default is False.
 
     Returns
     -------
-    The matrix :math:`T`.
+    ndarray
+        The rotation matrix :math:`T`.
 
     References
     ----------
@@ -57,7 +54,7 @@ def target_rotation(A, H, full_rank=False):
     [2] Schonemann (1966) - A generalized solution of the orthogonal
     procrustes problem
 
-    [3] Gower, Dijksterhuis (2004) - Procustes problems
+    [3] Gower, Dijksterhuis (2004) - Procrustes problems
     """
     ATH = A.T.dot(H)
     if full_rank or np.linalg.matrix_rank(ATH) == A.shape[1]:
@@ -85,22 +82,21 @@ def procrustes(A, H):
 
     see Navarra, Simoncini (2010).
 
-    Parametes
-    ---------
-    A : numpy matrix
-        non rotated factors
-    H : numpy matrix
-        target matrix
-    full_rank : boolean (default False)
-        if set to true full rank is assumed
+    Parameters
+    ----------
+    A : ndarray
+        Non-rotated factors.
+    H : ndarray
+        Target matrix.
 
     Returns
     -------
-    The matrix :math:`T`.
+    ndarray
+        The rotation matrix :math:`T`.
 
     References
     ----------
-    [1] Navarra, Simoncini (2010) - A guide to emprirical orthogonal functions
+    [1] Navarra, Simoncini (2010) - A guide to empirical orthogonal functions
     for climate data analysis
     """
     return np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H)
@@ -115,9 +111,9 @@ def promax(A, k=2):
 
     Promax rotation is performed in the following steps:
 
-    * Deterine varimax rotated patterns :math:`V`.
+    * Determine varimax rotated patterns :math:`V`.
 
-    * Construct a rotation target matrix :math:`|V_{ij}|^k/V_{ij}
+    * Construct a rotation target matrix :math:`|V_{ij}|^k/V_{ij}`
 
     * Perform procrustes rotation towards the target to obtain T
 
@@ -128,24 +124,31 @@ def promax(A, k=2):
     Then, oblique target rotation is performed towards the target.
 
     Parameters
-    ---------
-    A : numpy matrix
-        non rotated factors
-    k : float
-        parameter, should be positive
+    ----------
+    A : ndarray
+        Non-rotated factors.
+    k : float, optional
+        Power parameter, should be positive.
+
+    Returns
+    -------
+    ndarray
+        The rotated factors.
+    ndarray
+        The rotation matrix :math:`T`.
 
     References
     ----------
     [1] Browne (2001) - An overview of analytic rotation in exploratory
     factor analysis
 
-    [2] Navarra, Simoncini (2010) - A guide to emprirical orthogonal functions
+    [2] Navarra, Simoncini (2010) - A guide to empirical orthogonal functions
     for climate data analysis
     """
     assert k > 0
     # define rotation target using varimax rotation:
     from ._wrappers import rotate_factors
-    V, T = rotate_factors(A, 'varimax')
+    V, T = rotate_factors(A, "varimax")
     H = np.abs(V)**k/V
     # solve procrustes problem
     S = procrustes(A, H)  # np.linalg.inv(A.T.dot(A)).dot(A.T).dot(H);

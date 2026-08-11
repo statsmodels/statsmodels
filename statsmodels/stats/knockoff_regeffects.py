@@ -1,10 +1,9 @@
 import numpy as np
-import statsmodels.api as sm
 
 
-class RegressionEffects(object):
+class RegressionEffects:
     """
-    Base class for regression effects used in RegressionFDR.
+    Base class for regression effects used in RegressionFDR
 
     Any implementation of the class must provide a method called
     'stats' that takes a RegressionFDR object and returns effect sizes
@@ -27,11 +26,11 @@ class RegressionEffects(object):
 
 class CorrelationEffects(RegressionEffects):
     """
-    Marginal correlation effect sizes for FDR control.
+    Marginal correlation effect sizes for FDR control
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
 
@@ -39,7 +38,7 @@ class CorrelationEffects(RegressionEffects):
     -----
     This class implements the marginal correlation approach to
     constructing test statistics for a knockoff analysis, as
-    desscribed under (1) in section 2.2 of the Barber and Candes
+    described under (1) in section 2.2 of the Barber and Candes
     paper.
     """
 
@@ -51,11 +50,11 @@ class CorrelationEffects(RegressionEffects):
 
 class ForwardEffects(RegressionEffects):
     """
-    Forward selection effect sizes for FDR control.
+    Forward selection effect sizes for FDR control
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
     pursuit : bool
@@ -70,7 +69,7 @@ class ForwardEffects(RegressionEffects):
     -----
     This class implements the forward selection approach to
     constructing test statistics for a knockoff analysis, as
-    desscribed under (5) in section 2.2 of the Barber and Candes
+    described under (5) in section 2.2 of the Barber and Candes
     paper.
     """
 
@@ -93,7 +92,7 @@ class ForwardEffects(RegressionEffects):
                 for v in past:
                     x -= np.dot(x, v)*v
                 past.append(x)
-            rv -= np.dot(rv, x) * x
+            rv = rv - np.dot(rv, x) * x
         z1 = z[0:nvar//2]
         z2 = z[nvar//2:]
         st = np.where(z1 > z2, z1, z2) * np.sign(z1 - z2)
@@ -102,11 +101,11 @@ class ForwardEffects(RegressionEffects):
 
 class OLSEffects(RegressionEffects):
     """
-    OLS regression for knockoff analysis.
+    OLS regression for knockoff analysis
 
     Parameters
     ----------
-    parent : RegressionFDR instance
+    parent : RegressionFDR
         The RegressionFDR instance to which this effect size is
         applied.
 
@@ -119,8 +118,48 @@ class OLSEffects(RegressionEffects):
     """
 
     def stats(self, parent):
-        model = sm.OLS(parent.endog, parent.exog)
+        from statsmodels.regression.linear_model import OLS
+
+        model = OLS(parent.endog, parent.exog)
         result = model.fit()
         q = len(result.params) // 2
         stats = np.abs(result.params[0:q]) - np.abs(result.params[q:])
+        return stats
+
+
+class RegModelEffects(RegressionEffects):
+    """
+    Use any regression model for Regression FDR analysis
+
+    Parameters
+    ----------
+    parent : RegressionFDR
+        The RegressionFDR instance to which this effect size is
+        applied.
+    model_cls : class
+        Any model with appropriate fit or fit_regularized
+        functions.
+    regularized : bool
+        If True, use fit_regularized to fit the model.
+    model_kws : dict
+        Keywords passed to model initializer.
+    fit_kws : dict
+        Dictionary of keyword arguments for fit or fit_regularized.
+    """
+
+    def __init__(self, model_cls, regularized=False, model_kws=None,
+                 fit_kws=None):
+        self.model_cls = model_cls
+        self.regularized = regularized
+        self.model_kws = model_kws if model_kws is not None else {}
+        self.fit_kws = fit_kws if fit_kws is not None else {}
+
+    def stats(self, parent):
+        model = self.model_cls(parent.endog, parent.exog, **self.model_kws)
+        if self.regularized:
+            params = model.fit_regularized(**self.fit_kws).params
+        else:
+            params = model.fit(**self.fit_kws).params
+        q = len(params) // 2
+        stats = np.abs(params[0:q]) - np.abs(params[q:])
         return stats

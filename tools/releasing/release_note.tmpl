@@ -1,0 +1,113 @@
+:orphan:
+
+{% set release_header = "Release " + release -%}
+{%- set release_marker = "=" * release_header|length -%}
+
+{{ release_marker }}
+{{ release_header }}
+{{ release_marker }}
+
+Release summary
+===============
+
+statsmodels is using github to store the updated documentation. Two version are available:
+
+- `Stable <https://www.statsmodels.org/>`_, the latest release
+- `Development <https://www.statsmodels.org/devel/>`_, the latest build of the main branch
+
+**Warning**
+
+API stability is not guaranteed for new features, although even in
+this case changes will be made in a backwards compatible way if
+possible. The stability of a new feature depends on how much time it
+was already in statsmodels main and how much usage it has already
+seen.  If there are specific known problems or limitations, then they
+are mentioned in the docstrings.
+
+Stats
+-----
+**Issues Closed**: {{ issues_closed }}
+
+**Pull Requests Merged**: {{ pulls_merged }}
+
+
+The Highlights
+==============
+
+
+What's new - an overview
+========================
+
+The following lists the main new features of statsmodels {{ release }}. In addition,
+release {{ release }} includes bug fixes, refactorings and improvements in many areas.
+
+Submodules
+----------
+
+{% for comp in whats_new %}
+{% set pull_requests = whats_new[comp] %}
+{%- set comp_marker = "~" * (comp|length + 4) -%}
+``{{comp}}``
+{{comp_marker}}
+{% for number in pull_requests -%}
+- {{ pull_requests[number] }}  (:pr:`{{ number }}`)
+{% endfor %}
+
+{% endfor %}
+
+
+bug-wrong
+---------
+
+A new issue label `type-bug-wrong` indicates bugs that cause that incorrect
+numbers are returned without warnings.
+(Regular bugs are mostly usability bugs or bugs that raise an exception for
+unsupported use cases.)
+`see tagged issues <https://github.com/statsmodels/statsmodels/issues?q=is%3Aissue+label%3Atype-bug-wrong+is%3Aclosed+milestone%3A{{ milestone }}>`_
+
+
+Major Bugs Fixed
+================
+
+See github issues for a list of bug fixes included in this release
+
+- `Closed bugs <https://github.com/statsmodels/statsmodels/pulls?utf8=%E2%9C%93&q=is%3Apr+is%3Amerged+milestone%3A{{ milestone }}+label%3Atype-bug>`_
+- `Closed bugs (wrong result) <https://github.com/statsmodels/statsmodels/pulls?q=is%3Apr+is%3Amerged+milestone%3A{{ milestone }}+label%3Atype-bug-wrong>`_
+
+
+Development summary and credits
+===============================
+
+Besides receiving contributions for new and improved features and for bugfixes,
+important contributions to general maintenance for this release came from
+
+- Chad Fulton
+- Brock Mendel
+- Peter Quackenbush
+- Kerby Shedden
+- Kevin Sheppard
+
+and the general maintainer and code reviewer
+
+- Josef Perktold
+
+Additionally, many users contributed by participation in github issues and
+providing feedback.
+
+Thanks to all of the contributors for the {{ release }} release (based on git log):
+
+{% for contributor in contributors -%}
+- {{ contributor }}
+{% endfor %}
+
+These lists of names are automatically generated based on git log, and may not
+be complete.
+
+Merged Pull Requests
+--------------------
+
+The following Pull Requests were merged since the last release:
+
+{% for pull in pulls -%}
+- :pr:`{{ pull.number }}`: {{ pull.title }}
+{% endfor %}

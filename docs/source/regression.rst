@@ -33,17 +33,18 @@ Examples
 Detailed examples can be found here:
 
 
-* `OLS <examples/notebooks/generated/ols.html>`__
-* `WLS <examples/notebooks/generated/wls.html>`__
-* `GLS <examples/notebooks/generated/gls.html>`__
-* `Recursive LS <examples/notebooks/generated/recursive_ls.html>`__
+* `OLS <examples/notebooks/generated/ols.ipynb>`_
+* `WLS <examples/notebooks/generated/wls.ipynb>`_
+* `GLS <examples/notebooks/generated/gls.ipynb>`_
+* `Recursive LS <examples/notebooks/generated/recursive_ls.ipynb>`_
+* `Rolling LS <examples/notebooks/generated/rolling_ls.ipynb>`_
 
 Technical Documentation
 -----------------------
 
 The statistical model is assumed to be
 
- :math:`Y = X\beta + \mu`,  where :math:`\mu\sim N\left(0,\Sigma\right).`
+ :math:`Y = X\beta + \epsilon`,  where :math:`\epsilon\sim N\left(0,\Sigma\right).`
 
 Depending on the properties of :math:`\Sigma`, we have currently four classes available:
 
@@ -57,7 +58,8 @@ All regression models define the same methods and follow the same structure,
 and can be used in a similar fashion. Some of them contain additional model
 specific methods and attributes.
 
-GLS is the superclass of the other regression classes except for RecursiveLS.
+GLS is the superclass of the other regression classes except for RecursiveLS,
+RollingWLS and RollingOLS.
 
 .. Class hierachy: TODO
 
@@ -81,7 +83,7 @@ General reference for regression models:
 Econometrics references for regression models:
 
 * R.Davidson and J.G. MacKinnon. "Econometric Theory and Methods," Oxford, 2004.
-* W.Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+* W.Green. "Econometric Analysis," 5th ed., Pearson, 2003.
 
 .. toctree::
 ..   :maxdepth: 1
@@ -118,7 +120,7 @@ normalized_cov_params : array
     A `p` x `p` array equal to :math:`(X^{T}\Sigma^{-1}X)^{-1}`.
 sigma : array
     The `n` x `n` covariance matrix of the error terms:
-    :math:`\mu\sim N\left(0,\Sigma\right)`.
+    :math:`\epsilon\sim N\left(0,\Sigma\right)`.
 wexog : array
     The whitened design matrix :math:`\Psi^{T}X`.
 wendog : array
@@ -141,6 +143,8 @@ Model Classes
    WLS
    GLSAR
    yule_walker
+   YuleWalkerResult
+   burg
 
 .. module:: statsmodels.regression.quantile_regression
    :synopsis: Quantile regression
@@ -162,6 +166,41 @@ Model Classes
 
    RecursiveLS
 
+.. module:: statsmodels.regression.rolling
+   :synopsis: Rolling (moving) least squares
+
+.. currentmodule:: statsmodels.regression.rolling
+
+.. autosummary::
+   :toctree: generated/
+
+   RollingWLS
+   RollingOLS
+
+.. module:: statsmodels.regression.process_regression
+   :synopsis: Process regression
+
+.. currentmodule:: statsmodels.regression.process_regression
+
+.. autosummary::
+   :toctree: generated/
+
+   GaussianCovariance
+   ProcessMLE
+
+.. module:: statsmodels.regression.dimred
+   :synopsis: Dimension reduction methods
+
+.. currentmodule:: statsmodels.regression.dimred
+
+.. autosummary::
+   :toctree: generated/
+
+    SlicedInverseReg
+    PrincipalHessianDirections
+    SlicedAverageVarianceEstimation
+
+
 Results Classes
 ^^^^^^^^^^^^^^^
 
@@ -175,8 +214,17 @@ results class of the other linear models.
    :toctree: generated/
 
    RegressionResults
+   CompareLRTestResult
+   ELTestResult
    OLSResults
    PredictionResults
+
+.. currentmodule:: statsmodels.base.elastic_net
+
+.. autosummary::
+   :toctree: generated/
+
+    RegularizedResults
 
 .. currentmodule:: statsmodels.regression.quantile_regression
 
@@ -191,3 +239,24 @@ results class of the other linear models.
    :toctree: generated/
 
    RecursiveLSResults
+
+.. currentmodule:: statsmodels.regression.rolling
+
+.. autosummary::
+   :toctree: generated/
+
+   RollingRegressionResults
+
+.. currentmodule:: statsmodels.regression.process_regression
+
+.. autosummary::
+   :toctree: generated/
+
+   ProcessMLEResults
+
+.. currentmodule:: statsmodels.regression.dimred
+
+.. autosummary::
+   :toctree: generated/
+
+   DimReductionResults

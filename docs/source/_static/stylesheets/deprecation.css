@@ -1,0 +1,38 @@
+/*
+ * Version directives -- `.. deprecated::`, `.. versionadded::` and
+ * `.. versionchanged::` -- are deliberately left to pydata-sphinx-theme's own
+ * styling so that they render the same way they do in other projects built on
+ * the theme (pandas, for example).
+ *
+ * The theme draws them as a rounded panel with a thick coloured accent bar down
+ * the left edge, a drop shadow, a FontAwesome icon in front of the "Deprecated
+ * since version X" label, and body-sized text.  Its colours come from CSS
+ * custom properties -- --pst-color-danger, --pst-color-danger-bg and
+ * --pst-color-info -- which is what lets the panels follow the light/dark theme
+ * toggle.
+ *
+ * This file previously overrode those rules with hard-coded values.  Because it
+ * is loaded after the theme stylesheet, and the selectors have the same
+ * specificity, the overrides won and the panels ended up
+ *   - at font-size 0.72rem while the surrounding page stayed at 1rem,
+ *   - with a thin 0.05rem border on all four sides, because the `border`
+ *     shorthand reset the theme's `border-left: 0.2rem` accent bar,
+ *   - with the label forced to bold, italic and #c00 rather than the theme's
+ *     upright, weight-600, inherited-colour text, and
+ *   - pinned to hard-coded colours, so `background-color: #FFFFFF` on the
+ *     shared rule stayed white in dark mode.
+ * Please do not reintroduce them; if the colours ever need to change, set the
+ * theme's custom properties instead.
+ */
+
+/*
+ * Unrelated to the version directives above: numpydoc wraps the type of each
+ * entry in a Parameters/Returns list in a `classifier` span, and this supplies
+ * the colon that separates the name from the type.
+ */
+span.classifier:before {
+    font-style: normal;
+    margin: 0 0.5em;
+    content: ":";
+    display: inline-block;
+}

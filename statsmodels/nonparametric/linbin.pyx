@@ -1,4 +1,5 @@
-#cython profile=True
+#!python
+#cython: boundscheck=False, wraparound=False, cdivision=True
 """
 cython -a fast_linbin.pyx
 gcc -shared -pthread -fPIC -fwrapv -O2 -Wall -fno-strict-aliasing -I/usr/include/python2.7 -I/usr/local/lib/python2.7/dist-packages/numpy/core/include/ -o fast_linbin.so fast_linbin.c
@@ -9,22 +10,19 @@ cimport numpy as np
 import numpy as np
 
 ctypedef np.float64_t DOUBLE
-ctypedef np.int_t INT
+ctypedef np.int64_t INT
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
 def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
     Linear Binning as described in Fan and Marron (1994)
     """
     cdef:
         Py_ssize_t i, li_i
-        int nobs = X.shape[0]
+        int nobs = np.PyArray_DIMS(X)[0]
         double delta = (b - a)/(M - 1)
-        np.ndarray[DOUBLE] gcnts = np.zeros(M, np.float)
+        np.ndarray[DOUBLE] gcnts = np.zeros(M, float)
         np.ndarray[DOUBLE] lxi = (X - a)/delta
-        np.ndarray[INT] li = lxi.astype(int)
+        np.ndarray[INT] li = lxi.astype(np.int64)
         np.ndarray[DOUBLE] rem = lxi - li
 
 

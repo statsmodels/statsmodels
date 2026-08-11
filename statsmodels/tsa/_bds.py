@@ -17,9 +17,10 @@ LeBaron, Blake. 1997.
 Studies in Nonlinear Dynamics & Econometrics 2 (2) (January 1).
 """
 
-from __future__ import division
 import numpy as np
 from scipy import stats
+
+from statsmodels.tools.validation import array_like
 
 
 def distance_indicators(x, epsilon=None, distance=1.5):
@@ -45,17 +46,15 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     Notes
     -----
     Since this can be a very large matrix, use np.int8 to save some space.
-
     """
-    x = np.asarray(x)
-    nobs = len(x)
+    x = array_like(x, "x")
 
     if epsilon is not None and epsilon <= 0:
         raise ValueError("Threshold distance must be positive if specified."
-                         " Got epsilon of %f" % epsilon)
+                         f" Got epsilon of {epsilon:f}")
     if distance <= 0:
         raise ValueError("Threshold distance must be positive."
-                         " Got distance multiplier %f" % distance)
+                         f" Got distance multiplier {distance:f}")
 
     # TODO: add functionality to select epsilon optimally
     # TODO: and/or compute for a range of epsilons in [0.5*s, 2.0*s]?
@@ -70,13 +69,13 @@ def correlation_sum(indicators, embedding_dim):
     """
     Calculate a correlation sum
 
-    Useful as an estimator of a correlation integral
+    Useful as an estimator of a correlation integral.
 
     Parameters
     ----------
-    indicators : 2d array
-        matrix of distance threshold indicators
-    embedding_dim : integer
+    indicators : ndarray
+        2d array of distance threshold indicators
+    embedding_dim : int
         embedding dimension
 
     Returns
@@ -85,12 +84,11 @@ def correlation_sum(indicators, embedding_dim):
         Correlation sum
     indicators_joint
         matrix of joint-distance-threshold indicators
-
     """
     if not indicators.ndim == 2:
-        raise ValueError('Indicators must be a matrix')
+        raise ValueError("Indicators must be a matrix")
     if not indicators.shape[0] == indicators.shape[1]:
-        raise ValueError('Indicator matrix must be symmetric (square)')
+        raise ValueError("Indicator matrix must be symmetric (square)")
 
     if embedding_dim == 1:
         indicators_joint = indicators
@@ -111,14 +109,13 @@ def correlation_sums(indicators, max_dim):
     ----------
     indicators : 2d array
         matrix of distance threshold indicators
-    max_dim : integer
+    max_dim : int
         maximum embedding dimension
 
     Returns
     -------
-    corrsums : 1d array
+    corrsums : ndarray
         Correlation sums
-
     """
 
     corrsums = np.zeros((1, max_dim))
@@ -136,16 +133,15 @@ def _var(indicators, max_dim):
 
     Parameters
     ----------
-    indicators : 2d array
-        matrix of distance threshold indicators
-    max_dim : integer
+    indicators : ndarray
+        2d array of distance threshold indicators
+    max_dim : int
         maximum embedding dimension
 
     Returns
     -------
     variances : float
         Variance of BDS effect
-
     """
     nobs = len(indicators)
     corrsum_1dim, _ = correlation_sum(indicators, 1)
@@ -169,26 +165,26 @@ def _var(indicators, max_dim):
 
 def bds(x, max_dim=2, epsilon=None, distance=1.5):
     """
-    Calculate the BDS test statistic for independence of a time series
+    BDS Test Statistic for Independence of a Time Series
 
     Parameters
     ----------
-    x : 1d array
-        observations of time series for which bds statistics is calculated
-    max_dim : integer
-        maximum embedding dimension
-    epsilon : scalar, optional
-        the threshold distance to use in calculating the correlation sum
-    distance : scalar, optional
-        if epsilon is omitted, specifies the distance multiplier to use when
-        computing it
+    x : ndarray
+        Observations of time series for which bds statistics is calculated.
+    max_dim : int
+        The maximum embedding dimension.
+    epsilon : {float, None}, optional
+        The threshold distance to use in calculating the correlation sum.
+    distance : float, optional
+        Specifies the distance multiplier to use when computing the test
+        statistic if epsilon is omitted.
 
     Returns
     -------
     bds_stat : float
-        The BDS statistic
+        The BDS statistic.
     pvalue : float
-        The p-values associated with the BDS statistic
+        The p-values associated with the BDS statistic.
 
     Notes
     -----
@@ -204,14 +200,13 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
     Implementation conditions on the first m-1 initial values, which are
     required to calculate the m-histories:
     x_t^m = (x_t, x_{t-1}, ... x_{t-(m-1)})
-
     """
-    x = np.asarray(x)
+    x = array_like(x, "x", ndim=1)
     nobs_full = len(x)
 
     if max_dim < 2 or max_dim >= nobs_full:
         raise ValueError("Maximum embedding dimension must be in the range"
-                         " [2,len(x)-1]. Got %d." % max_dim)
+                         f" [2,len(x)-1]. Got {max_dim:d}.")
 
     # Cache the indicators
     indicators = distance_indicators(x, epsilon, distance)

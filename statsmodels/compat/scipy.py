@@ -1,162 +1,16 @@
-from __future__ import absolute_import
 import numpy as np
+from packaging.version import Version, parse
+import scipy
 
-
-def _bit_length_26(x):
-    if x == 0:
-        return 0
-    elif x == 1:
-        return 1
-    else:
-        return len(bin(x)) - 2
-
-
-try:
-    from scipy.lib._version import NumpyVersion
-except ImportError:
-    import re
-    from .python import string_types
-
-    class NumpyVersion():
-        """Parse and compare numpy version strings.
-
-        Numpy has the following versioning scheme (numbers given are examples; they
-        can be >9) in principle):
-
-        - Released version: '1.8.0', '1.8.1', etc.
-        - Alpha: '1.8.0a1', '1.8.0a2', etc.
-        - Beta: '1.8.0b1', '1.8.0b2', etc.
-        - Release candidates: '1.8.0rc1', '1.8.0rc2', etc.
-        - Development versions: '1.8.0.dev-f1234afa' (git commit hash appended)
-        - Development versions after a1: '1.8.0a1.dev-f1234afa',
-                                        '1.8.0b2.dev-f1234afa',
-                                        '1.8.1rc1.dev-f1234afa', etc.
-        - Development versions (no git hash available): '1.8.0.dev-Unknown'
-
-        Comparing needs to be done against a valid version string or other
-        `NumpyVersion` instance.
-
-        Parameters
-        ----------
-        vstring : str
-            Numpy version string (``np.__version__``).
-
-        Notes
-        -----
-        All dev versions of the same (pre-)release compare equal.
-
-        Examples
-        --------
-        >>> from scipy.lib._version import NumpyVersion
-        >>> if NumpyVersion(np.__version__) < '1.7.0':
-        ...     print('skip')
-        skip
-
-        >>> NumpyVersion('1.7')  # raises ValueError, add ".0"
-
-        """
-
-        def __init__(self, vstring):
-            self.vstring = vstring
-            ver_main = re.match(r'\d[.]\d+[.]\d+', vstring)
-            if not ver_main:
-                raise ValueError("Not a valid numpy version string")
-
-            self.version = ver_main.group()
-            self.major, self.minor, self.bugfix = [int(x) for x in
-                                                   self.version.split('.')]
-            if len(vstring) == ver_main.end():
-                self.pre_release = 'final'
-            else:
-                alpha = re.match(r'a\d', vstring[ver_main.end():])
-                beta = re.match(r'b\d', vstring[ver_main.end():])
-                rc = re.match(r'rc\d', vstring[ver_main.end():])
-                pre_rel = [m for m in [alpha, beta, rc] if m is not None]
-                if pre_rel:
-                    self.pre_release = pre_rel[0].group()
-                else:
-                    self.pre_release = ''
-
-            self.is_devversion = bool(re.search(r'.dev-', vstring))
-
-        def _compare_version(self, other):
-            """Compare major.minor.bugfix"""
-            if self.major == other.major:
-                if self.minor == other.minor:
-                    if self.bugfix == other.bugfix:
-                        vercmp = 0
-                    elif self.bugfix > other.bugfix:
-                        vercmp = 1
-                    else:
-                        vercmp = -1
-                elif self.minor > other.minor:
-                    vercmp = 1
-                else:
-                    vercmp = -1
-            elif self.major > other.major:
-                vercmp = 1
-            else:
-                vercmp = -1
-
-            return vercmp
-
-        def _compare_pre_release(self, other):
-            """Compare alpha/beta/rc/final."""
-            if self.pre_release == other.pre_release:
-                vercmp = 0
-            elif self.pre_release == 'final':
-                vercmp = 1
-            elif other.pre_release == 'final':
-                vercmp = -1
-            elif self.pre_release > other.pre_release:
-                vercmp = 1
-            else:
-                vercmp = -1
-
-            return vercmp
-
-        def _compare(self, other):
-            if not isinstance(other, (string_types, NumpyVersion)):
-                raise ValueError("Invalid object to compare with NumpyVersion.")
-
-            if isinstance(other, string_types):
-                other = NumpyVersion(other)
-
-            vercmp = self._compare_version(other)
-            if vercmp == 0:
-                # Same x.y.z version, check for alpha/beta/rc
-                vercmp = self._compare_pre_release(other)
-                if vercmp == 0:
-                    # Same version and same pre-release, check if dev version
-                    if self.is_devversion is other.is_devversion:
-                        vercmp = 0
-                    elif self.is_devversion:
-                        vercmp = -1
-                    else:
-                        vercmp = 1
-
-            return vercmp
-
-        def __lt__(self, other):
-            return self._compare(other) < 0
-
-        def __le__(self, other):
-            return self._compare(other) <= 0
-
-        def __eq__(self, other):
-            return self._compare(other) == 0
-
-        def __ne__(self, other):
-            return self._compare(other) != 0
-
-        def __gt__(self, other):
-            return self._compare(other) > 0
-
-        def __ge__(self, other):
-            return self._compare(other) >= 0
-
-        def __repr(self):
-            return "NumpyVersion(%s)" % self.vstring
+SP_VERSION = parse(scipy.__version__)
+SP_LT_19 = SP_VERSION < Version("1.8.99")
+SP_LT_110 = SP_VERSION < Version("1.10.99")
+SP_LT_112 = SP_VERSION < Version("1.12.99")
+SP_LT_115 = SP_VERSION < Version("1.14.99")
+SP_LT_116 = SP_VERSION < Version("1.15.99")
+SP_LT_118 = SP_VERSION < Version("1.17.99")
+SP_LT_2 = SP_VERSION < Version("1.99.99")
+BASINHOPPING_RNG = "seed" if SP_LT_115 else "rng"
 
 
 def _next_regular(target):
@@ -175,7 +29,7 @@ def _next_regular(target):
     if not (target & (target - 1)):
         return target
 
-    match = float('inf')  # Anything found will be smaller
+    match = float("inf")  # Anything found will be smaller
     p5 = 1
     while p5 < target:
         p35 = p5
@@ -184,11 +38,7 @@ def _next_regular(target):
             # (quotient = ceil(target / p35))
             quotient = -(-target // p35)
             # Quickly find next power of 2 >= quotient
-            try:
-                p2 = 2 ** ((quotient - 1).bit_length())
-            except AttributeError:
-                # Fallback for Python <2.7
-                p2 = 2 ** _bit_length_26(quotient - 1)
+            p2 = 2 ** ((quotient - 1).bit_length())
 
             N = p2 * p35
             if N == target:
@@ -198,18 +48,18 @@ def _next_regular(target):
             p35 *= 3
             if p35 == target:
                 return p35
-        if p35 < match:
-            match = p35
+        # if p35 < match: match = p35
+        match = min(p35, match)
         p5 *= 5
         if p5 == target:
             return p5
-    if p5 < match:
-        match = p5
+    #  if p5 < match: match = p5
+    match = min(match, p5)
     return match
 
+
 def _valarray(shape, value=np.nan, typecode=None):
-    """Return an array of all value.
-    """
+    """Return an array of all value."""
 
     out = np.ones(shape, dtype=bool) * value
     if typecode is not None:
@@ -218,43 +68,80 @@ def _valarray(shape, value=np.nan, typecode=None):
         out = np.asarray(out)
     return out
 
-def _lazywhere(cond, arrays, f, fillvalue=None, f2=None):
+
+def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
+    cond, args, f1, f2=None, /, *, fill_value=None
+):
     """
-    np.where(cond, x, fillvalue) always evaluates x even where cond is False.
-    This one only evaluates f(arr1[cond], arr2[cond], ...).
-    For example,
-    >>> a, b = np.array([1, 2, 3, 4]), np.array([5, 6, 7, 8])
-    >>> def f(a, b):
-        return a*b
-    >>> _lazywhere(a > 2, (a, b), f, np.nan)
-    array([ nan,  nan,  21.,  32.])
-    Notice it assumes that all `arrays` are of the same shape, or can be
-    broadcasted together.
+    Run one of two elementwise functions depending on a condition.
+
+    Equivalent to ``f1(*args) if cond else fill_value`` performed elementwise
+    when `fill_value` is defined, otherwise to ``f1(*args) if cond else f2(*args)``.
+
+    Parameters
+    ----------
+    cond : array
+        The condition, expressed as a boolean array.
+    args : Array or tuple of Arrays
+        Argument(s) to `f1` (and `f2`). Must be broadcastable with `cond`.
+    f1 : callable
+        Elementwise function of `args`, returning a single array.
+        Where `cond` is True, output will be ``f1(arg0[cond], arg1[cond], ...)``.
+    f2 : callable, optional
+        Elementwise function of `args`, returning a single array.
+        Where `cond` is False, output will be ``f2(arg0[cond], arg1[cond], ...)``.
+        Mutually exclusive with `fill_value`.
+    fill_value : Array or scalar, optional
+        If provided, value with which to fill output array where `cond` is False.
+        It does not need to be scalar; it needs however to be broadcastable with
+        `cond` and `args`.
+        Mutually exclusive with `f2`. You must provide one or the other.
+    xp : array_namespace, optional
+        The standard-compatible namespace for `cond` and `args`. Default: infer.
+
+    Returns
+    -------
+    Array
+        An array with elements from the output of `f1` where `cond` is True and either
+        the output of `f2` or `fill_value` where `cond` is False. The returned array has
+        data type determined by type promotion rules between the output of `f1` and
+        either `fill_value` or the output of `f2`.
+
+    Notes
+    -----
+    Falls back to _lazywhere if xpx.apply_where is not available.
+
+    ``xp.where(cond, f1(*args), f2(*args))`` requires explicitly evaluating `f1` even
+    when `cond` is False, and `f2` when cond is True. This function evaluates each
+    function only for their matching condition, if the backend allows for it.
+
+    On Dask, `f1` and `f2` are applied to the individual chunks and should use functions
+    from the namespace of the chunks.
+
     """
-    if fillvalue is None:
-        if f2 is None:
-            raise ValueError("One of (fillvalue, f2) must be given.")
-        else:
-            fillvalue = np.nan
-    else:
-        if f2 is not None:
-            raise ValueError("Only one of (fillvalue, f2) can be given.")
+    try:
+        try:
+            # From scipy >= 1.18.0
+            import scipy._external.array_api_extra as xpx
+        except (ImportError, AttributeError):
+            import scipy._lib.array_api_extra as xpx
 
-    arrays = np.broadcast_arrays(*arrays)
-    temp = tuple(np.extract(cond, arr) for arr in arrays)
-    tcode = np.mintypecode([a.dtype.char for a in arrays])
-    out = _valarray(np.shape(arrays[0]), value=fillvalue, typecode=tcode)
-    np.place(out, cond, f(*temp))
-    if f2 is not None:
-        temp = tuple(np.extract(~cond, arr) for arr in arrays)
-        np.place(out, ~cond, f2(*temp))
+        return xpx.apply_where(cond, args, f1, f2, fill_value=fill_value)
+    except (ImportError, AttributeError):
+        from scipy._lib._util import _lazywhere
 
-    return out
+        return _lazywhere(cond, args, f1, fill_value, f2)
 
 
-# Work around for complex chnges in gammaln in 1.0.0.  loggamma introduced in 0.18.
-try:
-    from scipy.special import loggamma
-except ImportError:
-    from scipy.special import gammaln
-    loggamma = gammaln
+__all__ = [
+    "BASINHOPPING_RNG",
+    "SP_LT_2",
+    "SP_LT_19",
+    "SP_LT_110",
+    "SP_LT_112",
+    "SP_LT_115",
+    "SP_LT_116",
+    "SP_LT_118",
+    "SP_VERSION",
+    "apply_where",
+]

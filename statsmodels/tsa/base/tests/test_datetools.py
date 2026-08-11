@@ -1,9 +1,9 @@
 from datetime import datetime
-from pandas import DatetimeIndex
+
 import numpy.testing as npt
-from statsmodels.tsa.base.datetools import (
-    date_parser, date_range_str, dates_from_str, dates_from_range)
-from pandas import DatetimeIndex, PeriodIndex
+
+from statsmodels.tsa.base.datetools import date_parser, dates_from_range
+
 
 def test_regex_matching_month():
     t1 = "1999m4"
@@ -16,6 +16,7 @@ def test_regex_matching_month():
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
 
+
 def test_regex_matching_quarter():
     t1 = "1999q4"
     t2 = "1999:q4"
@@ -26,6 +27,7 @@ def test_regex_matching_quarter():
     npt.assert_equal(date_parser(t2), result)
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
+
 
 def test_dates_from_range():
     results = [datetime(1959, 3, 31, 0, 0),
@@ -42,13 +44,13 @@ def test_dates_from_range():
                datetime(1961, 12, 31, 0, 0),
                datetime(1962, 3, 31, 0, 0),
                datetime(1962, 6, 30, 0, 0)]
-    dt_range = dates_from_range('1959q1', '1962q2')
-    npt.assert_(results == dt_range)
+    dt_range = dates_from_range("1959q1", "1962q2")
+    assert results == dt_range
 
     # test with starting period not the first with length
     results = results[2:]
-    dt_range = dates_from_range('1959q3', length=len(results))
-    npt.assert_(results == dt_range)
+    dt_range = dates_from_range("1959q3", length=len(results))
+    assert results == dt_range
 
     # check month
     results = [datetime(1959, 3, 31, 0, 0),

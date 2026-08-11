@@ -1,10 +1,11 @@
+from functools import partial
 
-from __future__ import print_function
 import numpy as np
 from scipy import stats
+
 import statsmodels.api as sm
 from statsmodels.base.model import GenericLikelihoodModel
-
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
 data = sm.datasets.spector.load()
 data.exog = sm.add_constant(data.exog, prepend=False)
@@ -14,41 +15,44 @@ probit_mod = sm.Probit(data.endog, data.exog)
 probit_res = probit_mod.fit()
 loglike = probit_mod.loglike
 score = probit_mod.score
-mod = GenericLikelihoodModel(data.endog, data.exog*2, loglike, score)
-res = mod.fit(method="nm", maxiter = 500)
+mod = GenericLikelihoodModel(data.endog, data.exog * 2, loglike, score)
+res = mod.fit(method="nm", maxiter=500)
+
 
 def probitloglike(params, endog, exog):
-      """
-      Log likelihood for the probit
-      """
-      q = 2*endog - 1
-      X = exog
-      return np.add.reduce(stats.norm.logcdf(q*np.dot(X,params)))
+    """
+    Log likelihood for the probit
+    """
+    q = 2 * endog - 1
+    X = exog
+    return np.add.reduce(stats.norm.logcdf(q * np.dot(X, params)))
 
-mod = GenericLikelihoodModel(data.endog, data.exog, loglike=probitloglike)
-res = mod.fit(method="nm", fargs=(data.endog,data.exog), maxiter=500)
+
+model_loglike = partial(probitloglike, endog=data.endog, exog=data.exog)
+mod = GenericLikelihoodModel(data.endog, data.exog, loglike=model_loglike)
+res = mod.fit(method="nm", maxiter=500)
 print(res)
 
 
-#np.allclose(res.params, probit_res.params)
-
+np.allclose(res.params, probit_res.params, rtol=1e-4)
 print(res.params, probit_res.params)
 
-#datal = sm.datasets.longley.load()
+# datal = sm.datasets.longley.load()
 datal = sm.datasets.ccard.load()
 datal.exog = sm.add_constant(datal.exog, prepend=False)
-# Instance of GenericLikelihood model doesn't work directly, because loglike
+# Instance of GenericLikelihood model does not work directly, because loglike
 # cannot get access to data in self.endog, self.exog
 
 nobs = 5000
-rvs = np.random.randn(nobs,6)
-datal.exog = rvs[:,:-1]
+rvs = np.random.randn(nobs, 6)
+datal.exog = rvs[:, :-1]
 datal.exog = sm.add_constant(datal.exog, prepend=False)
 datal.endog = 1 + rvs.sum(1)
 
 show_error = False
-show_error2 = 1#False
+show_error2 = 1  # False
 if show_error:
+
     def loglike_norm_xb(self, params):
         beta = params[:-1]
         sigma = params[-1]
@@ -56,25 +60,28 @@ if show_error:
         return stats.norm.logpdf(self.endog, loc=xb, scale=sigma)
 
     mod_norm = GenericLikelihoodModel(datal.endog, datal.exog, loglike_norm_xb)
-    res_norm = mod_norm.fit(method="nm", maxiter = 500)
+    res_norm = mod_norm.fit(method="nm", maxiter=500)
 
     print(res_norm.params)
 
 if show_error2:
+
     def loglike_norm_xb(params, endog, exog):
         beta = params[:-1]
         sigma = params[-1]
-        #print exog.shape, beta.shape
+        # print exog.shape, beta.shape
         xb = np.dot(exog, beta)
-        #print xb.shape, stats.norm.logpdf(endog, loc=xb, scale=sigma).shape
+        # print xb.shape, stats.norm.logpdf(endog, loc=xb, scale=sigma).shape
         return stats.norm.logpdf(endog, loc=xb, scale=sigma).sum()
 
-    mod_norm = GenericLikelihoodModel(datal.endog, datal.exog, loglike_norm_xb)
-    res_norm = mod_norm.fit(start_params=np.ones(datal.exog.shape[1]+1),
-                            method="nm", maxiter = 5000,
-                            fargs=(datal.endog, datal.exog))
+    model_loglike3 = partial(loglike_norm_xb, endog=datal.endog, exog=datal.exog)
+    mod_norm = GenericLikelihoodModel(datal.endog, datal.exog, model_loglike3)
+    res_norm = mod_norm.fit(
+        start_params=np.ones(datal.exog.shape[1] + 1), method="nm", maxiter=5000
+    )
 
     print(res_norm.params)
+
 
 class MygMLE(GenericLikelihoodModel):
     # just for testing
@@ -90,85 +97,58 @@ class MygMLE(GenericLikelihoodModel):
         xb = np.dot(self.exog, beta)
         return stats.norm.logpdf(self.endog, loc=xb, scale=sigma)
 
+
 mod_norm2 = MygMLE(datal.endog, datal.exog)
-#res_norm = mod_norm.fit(start_params=np.ones(datal.exog.shape[1]+1), method="nm", maxiter = 500)
-res_norm2 = mod_norm2.fit(start_params=[1.]*datal.exog.shape[1]+[1], method="nm", maxiter = 500)
+# res_norm = mod_norm.fit(start_params=np.ones(datal.exog.shape[1]+1), method="nm", maxiter = 500)
+res_norm2 = mod_norm2.fit(
+    start_params=[1.0] * datal.exog.shape[1] + [1], method="nm", maxiter=500
+)
+np.allclose(res_norm.params, res_norm2.params)
 print(res_norm2.params)
 
 res2 = sm.OLS(datal.endog, datal.exog).fit()
 start_params = np.hstack((res2.params, np.sqrt(res2.mse_resid)))
-res_norm3 = mod_norm2.fit(start_params=start_params, method="nm", maxiter = 500,
-                          retall=0)
+res_norm3 = mod_norm2.fit(start_params=start_params, method="nm", maxiter=500, retall=0)
 print(start_params)
 print(res_norm3.params)
 print(res2.bse)
-#print res_norm3.bse   # not available
-print('llf', res2.llf, res_norm3.llf)
+print(res_norm3.bse)
+print("llf", res2.llf, res_norm3.llf)
 
 bse = np.sqrt(np.diag(np.linalg.inv(res_norm3.model.hessian(res_norm3.params))))
 res_norm3.model.score(res_norm3.params)
 
-#fprime in fit option cannot be overwritten, set to None, when score is defined
-# exception is fixed, but I don't think score was supposed to be called
-'''
->>> mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None, maxiter
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\model.py", line 316, in fit
-    disp=disp, retall=retall, callback=callback)
-  File "C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6
-579.win32\Programs\Python25\Lib\site-packages\scipy\optimize\optimize.py", line
-710, in fmin_bfgs
-    gfk = myfprime(x0)
-  File "C:\Josef\_progs\Subversion\scipy-trunk_after\trunk\dist\scipy-0.9.0.dev6
-579.win32\Programs\Python25\Lib\site-packages\scipy\optimize\optimize.py", line
-103, in function_wrapper
-    return function(x, *args)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\model.py", line 240, in <lambda>
-    score = lambda params: -self.score(params)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\model.py", line 480, in score
-    return approx_fprime1(params, self.nloglike)
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\s
-tatsmodels\sandbox\regression\numdiff.py", line 81, in approx_fprime1
-    nobs = np.size(f0) #len(f0)
-TypeError: object of type 'numpy.float64' has no len()
+# fprime in fit option cannot be overwritten, set to None, when score is defined
+# exception is fixed, but I do not think score was supposed to be called
 
-'''
+res_bfgs = mod_norm2.fit(
+    start_params=start_params, method="bfgs", fprime=None, maxiter=500, retall=0
+)
 
-res_bfgs = mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None,
-maxiter = 500, retall=0)
-
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
-hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
-hf=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
-hh = (hf+hb)/2.
+hb = -approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
+hf = -approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
+hh = (hf + hb) / 2.0
 print(np.linalg.eigh(hh))
 
 grad = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 print(grad)
 gradb = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 gradf = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
-print((gradb+gradf)/2.)
+print((gradb + gradf) / 2.0)
 
 print(res_norm3.model.score(res_norm3.params))
 print(res_norm3.model.score(start_params))
-mod_norm2.loglike(start_params/2.)
-print(np.linalg.inv(-1*mod_norm2.hessian(res_norm3.params)))
+mod_norm2.loglike(start_params / 2.0)
+print(np.linalg.inv(-1 * mod_norm2.hessian(res_norm3.params)))
 print(np.sqrt(np.diag(res_bfgs.cov_params())))
 print(res_norm3.bse)
 
 print("MLE - OLS parameter estimates")
 print(res_norm3.params[:-1] - res2.params)
 print("bse diff in percent")
-print((res_norm3.bse[:-1] / res2.bse)*100. - 100)
+print((res_norm3.bse[:-1] / res2.bse) * 100.0 - 100)
 
-'''
-C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
- please delete it from your matplotlibrc file
-  warnings.warn('rcParams key "numerix" is obsolete and has no effect;\n'
+"""
 Optimization terminated successfully.
          Current function value: 12.818804
          Iterations 6
@@ -269,11 +249,13 @@ array([   5.47162086,   75.03147114,    6.98192136,   82.60858536,
 >>> res_norm3.conf_int
 <bound method LikelihoodModelResults.conf_int of <statsmodels.model.LikelihoodModelResults object at 0x021317F0>>
 >>> res_norm3.conf_int()
-Traceback (most recent call last):
-  File "<stdin>", line 1, in <module>
-  File "c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\model.py", line 993, in conf_int
-    lower = self.params - dist.ppf(1-alpha/2,self.model.df_resid) *\
-AttributeError: 'MygMLE' object has no attribute 'df_resid'
+array([[0.96421437, 1.01999835],
+       [0.99251725, 1.04863332],
+       [0.95721328, 1.01246222],
+       [0.97134549, 1.02695393],
+       [0.97050081, 1.02660988],
+       [0.97773434, 1.03290028],
+       [0.97529207, 1.01428874]])
 
 >>> res_norm3.params
 array([  -3.08181304,  234.34701361,  -14.99684381,   27.94088692,
@@ -370,13 +352,13 @@ array([   5.51471653,   80.36595035,    7.46933695,   82.92232357,
 [   5.10032831   74.34988912    6.96522122   76.7091604   169.8117832
    22.91695494]
 
-Is scale a misnomer, actually scale squared, i.e. variance of error term ?
-'''
+Is scale a misnomer, actually scale squared, i.e., variance of error term ?
+"""
 
 print(res_norm3.model.score_obs(res_norm3.params).shape)
 
 jac = res_norm3.model.score_obs(res_norm3.params)
-print(np.sqrt(np.diag(np.dot(jac.T, jac)))/start_params)
+print(np.sqrt(np.diag(np.dot(jac.T, jac))) / start_params)
 jac2 = res_norm3.model.score_obs(res_norm3.params, centered=True)
 
 print(np.sqrt(np.diag(np.linalg.inv(np.dot(jac.T, jac)))))

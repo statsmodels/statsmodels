@@ -54,11 +54,11 @@
 
 * tests    -> needed
   - GLSAR: check, R's gls
-  - ARMA: check R for arma, e.g. dynamo, also look more closely at GARCH_UCSD (BSD) and offspring (license ?)
+  - ARMA: check R for arma, e.g., dynamo, also look more closely at GARCH_UCSD (BSD) and offspring (license ?)
 
 * other models in draft stage  -> requires cleaning
   - gaussian process   -> might fit in
-  - multinomial logit -> requires ML, result statistics don't fit into current classes ?
+  - multinomial logit -> requires ML, result statistics do not fit into current classes ?
 
 * stochastic processes, time series  -> first step is relatively easy
   more simulators, random process generators, for fun and Monte Carlo and testing

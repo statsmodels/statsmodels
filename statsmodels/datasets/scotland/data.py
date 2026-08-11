@@ -1,18 +1,19 @@
-"""Taxation Powers Vote for the Scottish Parliament 1997 dataset."""
+"""Taxation Powers Vote for the Scottish Parliament 1997 dataset"""
+from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Used with express permission from the original author,
+COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
-TITLE       = "Taxation Powers Vote for the Scottish Parliamant 1997"
-SOURCE      = """
-Jeff Gill's `Generalized Linear Models: A Unified Approach`
+TITLE = "Taxation Powers Vote for the Scottish Parliament 1997"
+SOURCE = """
+Jeff Gill's *Generalized Linear Models: A Unified Approach*
 
 http://jgill.wustl.edu/research/books.html
 """
-DESCRSHORT  = """Taxation Powers' Yes Vote for Scottish Parliamanet-1997"""
+DESCRSHORT = """Taxation Powers' Yes Vote for Scottish Parliament-1997"""
 
-DESCRLONG   = """
+DESCRLONG = """
 This data is based on the example in Gill and describes the proportion of
 voters who voted Yes to grant the Scottish Parliament taxation powers.
 The data are divided into 32 council districts.  This example's explanatory
@@ -27,7 +28,7 @@ The original source files and variable information are included in
 /scotland/src/
 """
 
-NOTE        = """::
+NOTE = """::
 
     Number of Observations - 32 (1 for each Scottish district)
 
@@ -37,7 +38,7 @@ NOTE        = """::
 
         YES    - Proportion voting yes to granting taxation powers to the
                  Scottish parliament.
-        COUTAX - Amount of council tax collected in pounds steling as of
+        COUTAX - Amount of council tax collected in pounds sterling as of
                  April '97
         UNEMPF - Female percentage of total unemployment benefits claims as of
                 January 1998
@@ -51,9 +52,6 @@ NOTE        = """::
     returned by load.
 """
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
 
 def load():
     """
@@ -61,11 +59,11 @@ def load():
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return load_pandas()
+
 
 def load_pandas():
     """
@@ -73,15 +71,14 @@ def load_pandas():
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=0, dtype=float)
+    return du.process_pandas(data, endog_idx=0)
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/scotvote.csv',"rb") as f:
-        data = np.recfromtxt(f, delimiter=",",
-                             names=True, dtype=float, usecols=(1,2,3,4,5,6,7,8))
-    return data
+    data = du.load_csv(__file__, "scotvote.csv")
+    data = data.iloc[:, 1:9]
+    return data.astype(float)

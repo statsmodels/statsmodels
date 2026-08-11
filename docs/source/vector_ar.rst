@@ -10,6 +10,13 @@
 Vector Autoregressions :mod:`tsa.vector_ar`
 ===========================================
 
+:mod:`statsmodels.tsa.vector_ar` contains methods that are useful
+for simultaneously modeling and analyzing multiple time series using
+:ref:`Vector Autoregressions (VAR) <var>` and
+:ref:`Vector Error Correction Models (VECM) <vecm>`.
+
+.. _var_process:
+
 VAR(p) processes
 ----------------
 
@@ -20,14 +27,14 @@ and their lagged values is the *vector autoregression process*:
 
 .. math::
 
-   Y_t = A_1 Y_{t-1} + \ldots + A_p Y_{t-p} + u_t
+   Y_t = \nu + A_1 Y_{t-1} + \ldots + A_p Y_{t-p} + u_t
 
    u_t \sim {\sf Normal}(0, \Sigma_u)
 
 where :math:`A_i` is a :math:`K \times K` coefficient matrix.
 
 We follow in large part the methods and notation of `Lutkepohl (2005)
-<http://www.springer.com/gb/book/9783540401728>`__,
+<https://www.springer.com/gb/book/9783540401728>`__,
 which we will not develop here.
 
 Model fitting
@@ -44,35 +51,36 @@ class will use the passed variable names. Otherwise they can be passed
 explicitly:
 
 .. ipython:: python
-    :suppress:
+   :suppress:
 
-    import pandas as pd
-    pd.options.display.max_rows = 10
-    import matplotlib
-    import matplotlib.pyplot as plt
-    matplotlib.style.use('ggplot')
+   import pandas as pd
+   pd.options.display.max_rows = 10
+   import matplotlib
+   import matplotlib.pyplot as plt
+   matplotlib.style.use('ggplot')
 
 .. ipython:: python
+   :okwarning:
 
-    # some example data
-    import numpy as np
-    import pandas
-    import statsmodels.api as sm
-    from statsmodels.tsa.api import VAR, DynamicVAR
-    mdata = sm.datasets.macrodata.load_pandas().data
+   # some example data
+   import numpy as np
+   import pandas
+   import statsmodels.api as sm
+   from statsmodels.tsa.api import VAR
+   mdata = sm.datasets.macrodata.load_pandas().data
 
-    # prepare the dates index
-    dates = mdata[['year', 'quarter']].astype(int).astype(str)
-    quarterly = dates["year"] + "Q" + dates["quarter"]
-    from statsmodels.tsa.base.datetools import dates_from_str
-    quarterly = dates_from_str(quarterly)
+   # prepare the dates index
+   dates = mdata[['year', 'quarter']].astype(int).astype(str)
+   quarterly = dates["year"] + "Q" + dates["quarter"]
+   from statsmodels.tsa.base.datetools import dates_from_str
+   quarterly = dates_from_str(quarterly)
 
-    mdata = mdata[['realgdp','realcons','realinv']]
-    mdata.index = pandas.DatetimeIndex(quarterly)
-    data = np.log(mdata).diff().dropna()
+   mdata = mdata[['realgdp','realcons','realinv']]
+   mdata.index = pandas.DatetimeIndex(quarterly)
+   data = np.log(mdata).diff().dropna()
 
-    # make a VAR model
-    model = VAR(data)
+   # make a VAR model
+   model = VAR(data)
 
 .. note::
 
@@ -87,28 +95,28 @@ order. Or you can have the model select a lag order based on a standard
 information criterion (see below):
 
 .. ipython:: python
+   :okwarning:
 
-    results = model.fit(2)
-
-    results.summary()
-
+   results = model.fit(2)
+   results.summary()
 
 Several ways to visualize the data using `matplotlib` are available.
 
 Plotting input time series:
 
 .. ipython:: python
+   :okwarning:
 
-    @savefig var_plot_input.png
-    results.plot()
+   @savefig var_plot_input.png
+   results.plot()
 
 
 Plotting time series autocorrelation function:
 
 .. ipython:: python
 
-    @savefig var_plot_acorr.png
-    results.plot_acorr()
+   @savefig var_plot_acorr.png
+   results.plot_acorr()
 
 
 Lag order selection
@@ -120,14 +128,14 @@ implemented the latter, accessible through the :class:`VAR` class:
 
 .. ipython:: python
 
-    model.select_order(15)
+   model.select_order(15)
 
 When calling the `fit` function, one can pass a maximum number of lags and the
 order criterion to use for order selection:
 
 .. ipython:: python
 
-    results = model.fit(maxlags=15, ic='aic')
+   results = model.fit(maxlags=15, ic='aic')
 
 Forecasting
 ~~~~~~~~~~~
@@ -144,8 +152,8 @@ to specify the "initial value" for the forecast:
 
 .. ipython:: python
 
-    lag_order = results.k_ar
-    results.forecast(data.values[-lag_order:], 5)
+   lag_order = results.k_ar
+   results.forecast(data.values[-lag_order:], 5)
 
 The `forecast_interval` function will produce the above forecast along with
 asymptotic standard errors. These can be visualized using the `plot_forecast`
@@ -155,6 +163,70 @@ function:
 
    @savefig var_forecast.png
    results.plot_forecast(10)
+
+Class Reference
+~~~~~~~~~~~~~~~
+
+.. module:: statsmodels.tsa.vector_ar
+   :synopsis: Vector autoregressions and related tools
+
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
+
+
+.. autosummary::
+   :toctree: generated/
+
+   VAR
+   VARProcess
+   VARResults
+
+
+Post-estimation Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Several process properties and additional results after
+estimation are available for vector autoregressive processes.
+
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
+.. autosummary::
+   :toctree: generated/
+
+   LagOrderResults
+
+
+Normality
+~~~~~~~~~
+
+As pointed out in the beginning of this document, the white noise component
+:math:`u_t` is assumed to be normally distributed. While this assumption
+is not required for parameter estimates to be consistent or asymptotically
+normal, results are generally more reliable in finite samples when residuals
+are Gaussian white noise. To test whether this assumption is consistent with
+a data set, :class:`VARResults` offers the `test_normality` method.
+
+.. ipython:: python
+
+    results.test_normality()
+
+
+Whiteness of residuals
+~~~~~~~~~~~~~~~~~~~~~~
+
+To test the whiteness of the estimation residuals (this means absence of
+significant residual autocorrelations) one can use the `test_whiteness`
+method of :class:`VARResults`.
+
+
+.. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
+.. autosummary::
+   :toctree: generated/
+
+   HypothesisTestResults
+   CausalityTestResults
+   NormalityTestResults
+   WhitenessTestResults
+   ForecastInterval
+   ErrorBand
 
 Impulse Response Analysis
 -------------------------
@@ -171,8 +243,9 @@ We can perform an impulse response analysis by calling the `irf` function on a
 `VARResults` object:
 
 .. ipython:: python
+   :okwarning:
 
-    irf = results.irf(10)
+   irf = results.irf(10)
 
 These can be visualized using the `plot` function, in either orthogonalized or
 non-orthogonalized form. Asymptotic standard errors are plotted by default at
@@ -186,8 +259,8 @@ the 95% significance level, which can be modified by the user.
 
 .. ipython:: python
 
-    @savefig var_irf.png
-    irf.plot(orth=False)
+   @savefig var_irf.png
+   irf.plot(orth=False)
 
 
 Note the `plot` function is flexible and can plot only variables of interest if
@@ -195,17 +268,23 @@ so desired:
 
 .. ipython:: python
 
-    @savefig var_realgdp.png
-    irf.plot(impulse='realgdp')
+   @savefig var_realgdp.png
+   irf.plot(impulse='realgdp')
 
 The cumulative effects :math:`\Psi_n = \sum_{i=0}^n \Phi_i` can be plotted with
 the long run effects as follows:
 
 .. ipython:: python
 
-    @savefig var_irf_cum.png
-    irf.plot_cum_effects(orth=False)
+   @savefig var_irf_cum.png
+   irf.plot_cum_effects(orth=False)
 
+
+.. currentmodule:: statsmodels.tsa.vector_ar.irf
+.. autosummary::
+   :toctree: generated/
+
+   IRAnalysis
 
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
@@ -223,17 +302,22 @@ These are computed via the `fevd` function up through a total number of steps ah
 
 .. ipython:: python
 
-    fevd = results.fevd(5)
-
-    fevd.summary()
+   fevd = results.fevd(5)
+   fevd.summary()
 
 They can also be visualized through the returned :class:`FEVD` object:
 
 .. ipython:: python
 
-    @savefig var_fevd.png
-    results.fevd(20).plot()
+   @savefig var_fevd.png
+   results.fevd(20).plot()
 
+
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
+.. autosummary::
+   :toctree: generated/
+
+   FEVD
 
 Statistical tests
 -----------------
@@ -255,85 +339,110 @@ F-test.
 
 .. ipython:: python
 
-    results.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
+   results.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
 
-Normality
-~~~~~~~~~
+.. _svar:
 
-Whiteness of residuals
-~~~~~~~~~~~~~~~~~~~~~~
+Structural Vector Autoregressions
+---------------------------------
 
-Dynamic Vector Autoregressions
-------------------------------
+There are a matching set of classes that handle some types of Structural VAR models.
 
-.. note::
+.. module:: statsmodels.tsa.vector_ar.svar_model
+   :synopsis: Structural vector autoregressions and related tools
 
-    To use this functionality, `pandas <https://pypi.python.org/pypi/pandas>`__
-    must be installed. See the `pandas documentation
-    <http://pandas.pydata.org>`__ for more information on the below data
-    structures.
-
-One is often interested in estimating a moving-window regression on time series
-data for the purposes of making forecasts throughout the data sample. For
-example, we may wish to produce the series of 2-step-ahead forecasts produced by
-a VAR(p) model estimated at each point in time.
-
-.. ipython:: python
-
-    np.random.seed(1)
-    import pandas.util.testing as ptest
-    ptest.N = 500
-    data = ptest.makeTimeDataFrame().cumsum(0)
-    data
-
-    var = DynamicVAR(data, lag_order=2, window_type='expanding')
-
-The estimated coefficients for the dynamic model are returned as a
-:class:`pandas.Panel` object, which can allow you to easily examine, for
-example, all of the model coefficients by equation or by date:
-
-.. ipython:: python
-   :okwarning:
-
-    import datetime as dt
-
-    var.coefs
-
-    # all estimated coefficients for equation A
-    var.coefs.minor_xs('A').info()
-
-    # coefficients on 11/30/2001
-    var.coefs.major_xs(dt.datetime(2001, 11, 30)).T
-
-Dynamic forecasts for a given number of steps ahead can be produced using the
-`forecast` function and return a :class:`pandas.DataMatrix` object:
-
-.. ipython:: python
-
-    var.forecast(2)
-
-The forecasts can be visualized using `plot_forecast`:
-
-.. ipython:: python
-
-    @savefig dvar_forecast.png
-    var.plot_forecast(2)
-
-Class Reference
----------------
-
-.. module:: statsmodels.tsa.vector_ar
-   :synopsis: Vector autoregressions and related tools
-
-.. currentmodule:: statsmodels.tsa.vector_ar
+.. currentmodule:: statsmodels.tsa.vector_ar.svar_model
 
 .. autosummary::
    :toctree: generated/
 
-   var_model.VAR
-   var_model.VARProcess
-   var_model.VARResults
-   irf.IRAnalysis
-   var_model.FEVD
-   dynamic.DynamicVAR
+   SVAR
+   SVARProcess
+   SVARResults
 
+.. _vecm:
+
+Vector Error Correction Models (VECM)
+-------------------------------------
+
+Vector Error Correction Models are used to study short-run deviations from
+one or more permanent stochastic trends (unit roots). A VECM models the
+difference of a vector of time series by imposing structure that is implied
+by the assumed number of stochastic trends. :class:`VECM` is used to
+specify and estimate these models.
+
+A VECM(:math:`k_{ar}-1`) has the following form
+
+.. math::
+
+    \Delta y_t = \Pi y_{t-1} + \Gamma_1 \Delta y_{t-1} + \ldots
+                   + \Gamma_{k_{ar}-1} \Delta y_{t-k_{ar}+1} + u_t
+
+where
+
+.. math::
+
+    \Pi = \alpha \beta'
+
+as described in chapter 7 of [1]_.
+
+A VECM(:math:`k_{ar} - 1`) with deterministic terms has the form
+
+.. math::
+
+   \Delta y_t = \alpha \begin{pmatrix}\beta' & \eta'\end{pmatrix} \begin{pmatrix}y_{t-1} \\
+                D^{co}_{t-1}\end{pmatrix} + \Gamma_1 \Delta y_{t-1} + \dots + \Gamma_{k_{ar}-1} \Delta y_{t-k_{ar}+1} + C D_t + u_t.
+
+In :math:`D^{co}_{t-1}` we have the deterministic terms which are inside
+the cointegration relation (or restricted to the cointegration relation).
+:math:`\eta` is the corresponding estimator. To pass a deterministic term
+inside the cointegration relation, we can use the `exog_coint` argument.
+For the two special cases of an intercept and a linear trend there exists
+a simpler way to declare these terms: we can pass ``"ci"`` and ``"li"``
+respectively to the `deterministic` argument. So for an intercept inside
+the cointegration relation we can either pass ``"ci"`` as `deterministic`
+or `np.ones(len(data))` as `exog_coint` if `data` is passed as the
+`endog` argument. This ensures that :math:`D_{t-1}^{co} = 1` for all
+:math:`t`.
+
+We can also use deterministic terms outside the cointegration relation.
+These are defined in :math:`D_t` in the formula above with the
+corresponding estimators in the matrix :math:`C`. We specify such terms by
+passing them to the `exog` argument. For an intercept and/or linear trend
+we again have the possibility to use `deterministic` alternatively. For
+an intercept we pass ``"co"`` and for a linear trend we pass ``"lo"`` where
+the `o` stands for `outside`.
+
+The following table shows the five cases considered in [2]_. The last
+column indicates which string to pass to the `deterministic` argument for
+each of these cases.
+
+====  ===============================  ===================================  =============
+Case  Intercept                        Slope of the linear trend            `deterministic`
+====  ===============================  ===================================  =============
+I     0                                0                                    ``"nc"``
+II    :math:`- \alpha \beta^T \mu`     0                                    ``"ci"``
+III   :math:`\neq 0`                   0                                    ``"co"``
+IV    :math:`\neq 0`                   :math:`- \alpha \beta^T \gamma`      ``"coli"``
+V     :math:`\neq 0`                   :math:`\neq 0`                       ``"colo"``
+====  ===============================  ===================================  =============
+
+.. currentmodule:: statsmodels.tsa.vector_ar.vecm
+.. autosummary::
+   :toctree: generated/
+
+   VECM
+   coint_johansen
+   JohansenTestResult
+   select_order
+   select_coint_rank
+   VECMResults
+   CointRankResults
+
+
+References
+----------
+.. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
+
+.. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *
+       *Vector Autoregressive Models*. Oxford University Press.

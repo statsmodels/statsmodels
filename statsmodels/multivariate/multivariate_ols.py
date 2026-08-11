@@ -1,115 +1,126 @@
-# -*- coding: utf-8 -*-
-
 """General linear model
 
 author: Yichuan Liu
 """
-from __future__ import division
+from statsmodels.compat.pandas import Substitution
 
 import numpy as np
-from numpy.linalg import eigvals, inv, solve, matrix_rank, pinv, svd
-from scipy import stats
+from numpy.linalg import eigvals, inv, matrix_rank, pinv, solve, svd
 import pandas as pd
-from patsy import DesignInfo
+from scipy import stats
 
-from statsmodels.compat import string_types
-from statsmodels.base.model import Model
+from statsmodels.base.model import LikelihoodModelResults, Model
+import statsmodels.base.wrapper as wrap
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
-__docformat__ = 'restructuredtext en'
+from statsmodels.regression.linear_model import RegressionResultsWrapper
+from statsmodels.tools._decorators import cache_readonly
 
-_hypotheses_doc = """
-    hypotheses: A list of tuples
-        Hypothesis `L*B*M = C` to be tested where B is the parameters in
-        regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
-                       (name, contrast_L)
-                       (name, contrast_L, transform_M)
-                       (name, contrast_L, transform_M, constant_C)
-        containing a string `name`, the contrast matrix L, the transform
-        matrix M (for transforming dependent variables), and right-hand side
-        constant matrix constant_C, respectively.
-        contrast_L : 2D array or an array of strings
-           Left-hand side contrast matrix for hypotheses testing.
-           If 2D array, each row is an hypotheses and each column is an
-           independent variable. At least 1 row
-           (1 by k_exog, the number of independent variables) is required.
-           If an array of strings, it will be passed to
-           patsy.DesignInfo().linear_constraint.
-        transform_M : 2D array or an array of strings or None, optional
-            Left hand side transform matrix.
-            If `None` or left out, it is set to a k_endog by k_endog
-            identity matrix (i.e. do not transform y matrix).
-            If an array of strings, it will be passed to
-            patsy.DesignInfo().linear_constraint.
-        constant_C : 2D array or None, optional
-            Right-hand side constant matrix.
-            if `None` or left out it is set to a matrix of zeros
-            Must has the same number of rows as contrast_L and the same
-            number of columns as transform_M
-        If `hypotheses` is None: 1) the effect of each independent variable
-        on the dependent variables will be tested. Or 2) if model is created
-        using a formula,  `hypotheses` will be created according to
-        `design_info`. 1) and 2) is equivalent if no additional variables
-        are created by the formula (e.g. dummy variables for categorical
-        variables and interaction terms)
+__docformat__ = "restructuredtext en"
+
+_hypotheses_doc = """\
+hypotheses : list[tuple]
+    Hypothesis `L*B*M = C` to be tested where B is the parameters in
+    regression Y = X*B. Each element is a tuple of length 2, 3, or 4:
+
+      * (name, contrast_L)
+      * (name, contrast_L, transform_M)
+      * (name, contrast_L, transform_M, constant_C)
+
+    containing a string `name`, the contrast matrix L, the transform
+    matrix M (for transforming dependent variables), and right-hand side
+    constant matrix constant_C, respectively.
+
+    contrast_L : 2D array or an array of strings
+        Left-hand side contrast matrix for hypotheses testing.
+        If 2D array, each row is a hypothesis and each column is an
+        independent variable. At least 1 row
+        (1 by k_exog, the number of independent variables) is required.
+        If an array of strings, it will be passed to
+        patsy.DesignInfo().linear_constraint based on exog_names.
+
+    transform_M : 2D array or an array of strings or None, optional
+        Left hand side transform matrix.
+        If `None` or left out, it is set to a k_endog by k_endog
+        identity matrix (i.e., do not transform y matrix).
+        If an array of strings, it will be passed to
+        patsy.DesignInfo().linear_constraint based on endog_names.
+
+    constant_C : 2D array or None, optional
+        Right-hand side constant matrix.
+        If `None` or left out it is set to a matrix of zeros.
+        Must have the same number of rows as contrast_L and the same
+        number of columns as transform_M.
+
+    If `hypotheses` is None: 1) the effect of each independent variable
+    on the dependent variables will be tested. Or 2) if model is created
+    using a formula, `hypotheses` will be created according to
+    `design_info`. 1) and 2) are equivalent if no additional variables
+    are created by the formula (e.g., dummy variables for categorical
+    variables and interaction terms)
 """
 
 
-def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
+def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
     """
-    Solve multivariate linear model y = x * params
-    where y is dependent variables, x is independent variables
+    Solve a multivariate linear model y = x * params
 
     Parameters
     ----------
     endog : array_like
-        each column is a dependent variable
+        Each column is a dependent variable.
     exog : array_like
-        each column is a independent variable
-    method : string
-        'svd' - Singular value decomposition
-        'pinv' - Moore-Penrose pseudoinverse
-    tolerance : float, a small positive number
-        Tolerance for eigenvalue. Values smaller than tolerance is considered
-        zero.
+        Each column is an independent variable.
+    method : {"svd", "pinv"}, optional
+        The fitting method. "svd" uses the singular value decomposition and
+        "pinv" uses the Moore-Penrose pseudoinverse.
+    tolerance : float, optional
+        Tolerance for eigenvalue. Values smaller than tolerance are
+        considered zero.
+
     Returns
     -------
-    a tuple of matrices or values necessary for hypotheses testing
+    tuple
+        A tuple of matrices or values necessary for hypotheses testing,
+        (params, df_resid, inv_cov, sscpr).
 
-    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     Notes
     -----
     Status: experimental and incomplete
 
+    References
+    ----------
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
     """
     y = endog
     x = exog
     nobs, k_endog = y.shape
-    nobs1, k_exog= x.shape
+    nobs1, k_exog = x.shape
     if nobs != nobs1:
-        raise ValueError('x(n=%d) and y(n=%d) should have the same number of '
-                         'rows!' % (nobs1, nobs))
+        raise ValueError(f"x(n={nobs1:d}) and y(n={nobs:d}) should have the same number of "
+                         "rows!")
 
     # Calculate the matrices necessary for hypotheses testing
     df_resid = nobs - k_exog
-    if method == 'pinv':
+    if method == "pinv":
         # Regression coefficients matrix
         pinv_x = pinv(x)
         params = pinv_x.dot(y)
 
         # inverse of x'x
         inv_cov = pinv_x.dot(pinv_x.T)
-        if matrix_rank(inv_cov,tol=tolerance) < k_exog:
-            raise ValueError('Covariance of x singular!')
+        if matrix_rank(inv_cov, tol=tolerance) < k_exog:
+            raise ValueError("Covariance of x singular!")
 
         # Sums of squares and cross-products of residuals
         # Y'Y - (X * params)'B * params
         t = x.dot(params)
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
-    elif method == 'svd':
+    elif method == "svd":
         u, s, v = svd(x, 0)
         if (s > tolerance).sum() < len(s):
-            raise ValueError('Covariance of x singular!')
+            raise ValueError("Covariance of x singular!")
         invs = 1. / s
 
         params = v.T.dot(np.diag(invs)).dot(u.T).dot(y)
@@ -118,38 +129,45 @@ def _multivariate_ols_fit(endog, exog, method='svd', tolerance=1e-8):
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
     else:
-        raise ValueError('%s is not a supported method!' % method)
+        raise ValueError(f"{method} is not a supported method!")
 
 
 def multivariate_stats(eigenvals,
                        r_err_sscp,
                        r_contrast, df_resid, tolerance=1e-8):
     """
-    For multivariate linear model Y = X * B
-    Testing hypotheses
-        L*B*M = 0
-    where L is contrast matrix, B is the parameters of the
-    multivariate linear model and M is dependent variable transform matrix.
-        T = L*inv(X'X)*L'
-        H = M'B'L'*inv(T)*LBM
-        E =  M'(Y'Y - B'X'XB)M
+    Compute multivariate test statistics for a linear hypothesis
 
     Parameters
     ----------
-    eigenvals : array
-        The eigenvalues of inv(E + H)*H
+    eigenvals : ndarray
+        The eigenvalues of inv(E + H)*H.
     r_err_sscp : int
-        Rank of E + H
+        Rank of E + H.
     r_contrast : int
-        Rank of T matrix
+        Rank of T matrix.
     df_resid : int
-        Residual degree of freedom (n_samples minus n_variables of X)
+        Residual degree of freedom (n_samples minus n_variables of X).
     tolerance : float
-        smaller than which eigenvalue is considered 0
+        Eigenvalues smaller than tolerance are considered 0.
 
     Returns
     -------
-    A DataFrame
+    DataFrame
+        DataFrame containing the value, numerator and denominator degrees
+        of freedom, F value and p-value for Wilks' lambda, Pillai's trace,
+        the Hotelling-Lawley trace, and Roy's greatest root.
+
+    Notes
+    -----
+    For the multivariate linear model Y = X * B, testing the hypothesis
+    L*B*M = 0, where L is the contrast matrix, B is the parameters of the
+    multivariate linear model and M is the dependent variable transform
+    matrix::
+
+        T = L*inv(X'X)*L'
+        H = M'B'L'*inv(T)*LBM
+        E = M'(Y'Y - B'X'XB)M
 
     References
     ----------
@@ -160,13 +178,13 @@ def multivariate_stats(eigenvals,
     q = r_contrast
     s = np.min([p, q])
     ind = eigenvals > tolerance
-    n_e = ind.sum()
+    # n_e = ind.sum()
     eigv2 = eigenvals[ind]
     eigv1 = np.array([i / (1 - i) for i in eigv2])
     m = (np.abs(p - q) - 1) / 2
     n = (v - p - 1) / 2
 
-    cols = ['Value', 'Num DF', 'Den DF', 'F Value', 'Pr > F']
+    cols = ["Value", "Num DF", "Den DF", "F Value", "Pr > F"]
     index = ["Wilks' lambda", "Pillai's trace",
              "Hotelling-Lawley trace", "Roy's greatest root"]
     results = pd.DataFrame(columns=cols,
@@ -175,13 +193,13 @@ def multivariate_stats(eigenvals,
     def fn(x):
         return np.real([x])[0]
 
-    results.loc["Wilks' lambda", 'Value'] = fn(np.prod(1 - eigv2))
+    results.loc["Wilks' lambda", "Value"] = fn(np.prod(1 - eigv2))
 
-    results.loc["Pillai's trace", 'Value'] = fn(eigv2.sum())
+    results.loc["Pillai's trace", "Value"] = fn(eigv2.sum())
 
-    results.loc["Hotelling-Lawley trace", 'Value'] = fn(eigv1.sum())
+    results.loc["Hotelling-Lawley trace", "Value"] = fn(eigv1.sum())
 
-    results.loc["Roy's greatest root", 'Value'] = fn(eigv1.max())
+    results.loc["Roy's greatest root", "Value"] = fn(eigv1.max())
 
     r = v - (p - q + 1)/2
     u = (p*q - 2) / 4
@@ -191,26 +209,26 @@ def multivariate_stats(eigenvals,
     else:
         t = 1
     df2 = r*t - 2*u
-    lmd = results.loc["Wilks' lambda", 'Value']
+    lmd = results.loc["Wilks' lambda", "Value"]
     lmd = np.power(lmd, 1 / t)
     F = (1 - lmd) / lmd * df2 / df1
-    results.loc["Wilks' lambda", 'Num DF'] = df1
-    results.loc["Wilks' lambda", 'Den DF'] = df2
-    results.loc["Wilks' lambda", 'F Value'] = F
+    results.loc["Wilks' lambda", "Num DF"] = df1
+    results.loc["Wilks' lambda", "Den DF"] = df2
+    results.loc["Wilks' lambda", "F Value"] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Wilks' lambda", 'Pr > F'] = pval
+    results.loc["Wilks' lambda", "Pr > F"] = pval
 
-    V = results.loc["Pillai's trace", 'Value']
+    V = results.loc["Pillai's trace", "Value"]
     df1 = s * (2*m + s + 1)
     df2 = s * (2*n + s + 1)
     F = df2 / df1 * V / (s - V)
-    results.loc["Pillai's trace", 'Num DF'] = df1
-    results.loc["Pillai's trace", 'Den DF'] = df2
-    results.loc["Pillai's trace", 'F Value'] = F
+    results.loc["Pillai's trace", "Num DF"] = df1
+    results.loc["Pillai's trace", "Den DF"] = df2
+    results.loc["Pillai's trace", "F Value"] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Pillai's trace", 'Pr > F'] = pval
+    results.loc["Pillai's trace", "Pr > F"] = pval
 
-    U = results.loc["Hotelling-Lawley trace", 'Value']
+    U = results.loc["Hotelling-Lawley trace", "Value"]
     if n > 0:
         b = (p + 2*n) * (q + 2*n) / 2 / (2*n + 1) / (n - 1)
         df1 = p * q
@@ -221,50 +239,99 @@ def multivariate_stats(eigenvals,
         df1 = s * (2*m + s + 1)
         df2 = s * (s*n + 1)
         F = df2 / df1 / s * U
-    results.loc["Hotelling-Lawley trace", 'Num DF'] = df1
-    results.loc["Hotelling-Lawley trace", 'Den DF'] = df2
-    results.loc["Hotelling-Lawley trace", 'F Value'] = F
+    results.loc["Hotelling-Lawley trace", "Num DF"] = df1
+    results.loc["Hotelling-Lawley trace", "Den DF"] = df2
+    results.loc["Hotelling-Lawley trace", "F Value"] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Hotelling-Lawley trace", 'Pr > F'] = pval
+    results.loc["Hotelling-Lawley trace", "Pr > F"] = pval
 
-    sigma = results.loc["Roy's greatest root", 'Value']
+    sigma = results.loc["Roy's greatest root", "Value"]
     r = np.max([p, q])
     df1 = r
     df2 = v - r + q
     F = df2 / df1 * sigma
-    results.loc["Roy's greatest root", 'Num DF'] = df1
-    results.loc["Roy's greatest root", 'Den DF'] = df2
-    results.loc["Roy's greatest root", 'F Value'] = F
+    results.loc["Roy's greatest root", "Num DF"] = df1
+    results.loc["Roy's greatest root", "Den DF"] = df2
+    results.loc["Roy's greatest root", "F Value"] = F
     pval = stats.f.sf(F, df1, df2)
-    results.loc["Roy's greatest root", 'Pr > F'] = pval
+    results.loc["Roy's greatest root", "Pr > F"] = pval
     return results
 
 
-def _multivariate_ols_test(hypotheses, fit_results, exog_names,
-                            endog_names):
+def _multivariate_ols_test(hypotheses, fit_results, exog_names, endog_names):
     def fn(L, M, C):
-        # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
+        # .. [1] https://support.sas.com/documentation/cdl/en/statug/63033
+        #        /HTML/default/viewer.htm#statug_introreg_sect012.htm
+
         params, df_resid, inv_cov, sscpr = fit_results
         # t1 = (L * params)M
+
         t1 = L.dot(params).dot(M) - C
         # H = t1'L(X'X)^L't1
+
         t2 = L.dot(inv_cov).dot(L.T)
         q = matrix_rank(t2)
         H = t1.T.dot(inv(t2)).dot(t1)
 
         # E = M'(Y'Y - B'(X'X)B)M
+
         E = M.T.dot(sscpr).dot(M)
         return E, H, q, df_resid
 
     return _multivariate_test(hypotheses, exog_names, endog_names, fn)
 
 
+@Substitution(hypotheses_doc=_hypotheses_doc)
 def _multivariate_test(hypotheses, exog_names, endog_names, fn):
+    """
+    Multivariate linear model hypotheses testing
+
+    For y = x * params, where y are the dependent variables and x are the
+    independent variables, testing L * params * M = 0 where L is the contrast
+    matrix for hypotheses testing and M is the transformation matrix for
+    transforming the dependent variables in y.
+
+    Parameters
+    ----------
+    %(hypotheses_doc)s
+    exog_names : list[str]
+        The names of the independent variables.
+    endog_names : list[str]
+        The names of the dependent variables.
+    fn : callable
+        A function fn(contrast_L, transform_M, constant_C) that returns
+        E, H, q, df_resid where q is the rank of T matrix.
+
+    Returns
+    -------
+    dict
+        A dictionary keyed by hypothesis name. Each value is itself a
+        dictionary containing the test statistics ("stat"), the contrast
+        matrix ("contrast_L"), the transform matrix ("transform_M"), the
+        constant matrix ("constant_C"), and the intermediate "E" and "H"
+        matrices.
+
+    Notes
+    -----
+    T = L*inv(X'X)*L'
+    H = M'B'L'*inv(T)*LBM
+    E = M'(Y'Y - B'X'XB)M
+
+    where H and E correspond to the numerator and denominator of a
+    univariate F-test. Then find the eigenvalues of inv(H + E)*H from which
+    the multivariate test statistics are calculated.
+
+    References
+    ----------
+    .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML
+           /default/viewer.htm#statug_introreg_sect012.htm
+    """
+
     k_xvar = len(exog_names)
     k_yvar = len(endog_names)
     results = {}
     for hypo in hypotheses:
-        if len(hypo) ==2:
+        if len(hypo) == 2:
             name, L = hypo
             M = None
             C = None
@@ -274,43 +341,39 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         elif len(hypo) == 4:
             name, L, M, C = hypo
         else:
-            raise ValueError('hypotheses must be a tuple of length 2, 3 or 4.'
-                             ' len(hypotheses)=%d' % len(hypo))
-        if any(isinstance(j, string_types) for j in L):
-            L = DesignInfo(exog_names).linear_constraint(L).coefs
+            raise ValueError("hypotheses must be a tuple of length 2, 3 or 4."
+                             f" len(hypotheses)={len(hypo):d}")
+        mgr = FormulaManager()
+        if any(isinstance(j, str) for j in L):
+            L = mgr.get_linear_constraints(L, variable_names=exog_names).constraint_matrix
         else:
             if not isinstance(L, np.ndarray) or len(L.shape) != 2:
-                raise ValueError('Contrast matrix L must be a 2-d array!')
+                raise ValueError("Contrast matrix L must be a 2-d array!")
             if L.shape[1] != k_xvar:
-                raise ValueError('Contrast matrix L should have the same '
-                                 'number of columns as exog! %d != %d' %
-                                 (L.shape[1], k_xvar))
+                raise ValueError("Contrast matrix L should have the same "
+                                 f"number of columns as exog! {L.shape[1]:d} != {k_xvar:d}")
         if M is None:
             M = np.eye(k_yvar)
-        elif any(isinstance(j, string_types) for j in M):
-            M = DesignInfo(endog_names).linear_constraint(M).coefs.T
-        else:
-            if M is not None:
-                if not isinstance(M, np.ndarray) or len(M.shape) != 2:
-                    raise ValueError('Transform matrix M must be a 2-d array!')
-                if M.shape[0] != k_yvar:
-                    raise ValueError('Transform matrix M should have the same '
-                                     'number of rows as the number of columns '
-                                     'of endog! %d != %d' %
-                                     (M.shape[0], k_yvar))
+        elif any(isinstance(j, str) for j in M):
+            M = mgr.get_linear_constraints(M, variable_names=endog_names).constraint_matrix.T
+        elif M is not None:
+            if not isinstance(M, np.ndarray) or len(M.shape) != 2:
+                raise ValueError("Transform matrix M must be a 2-d array!")
+            if M.shape[0] != k_yvar:
+                raise ValueError("Transform matrix M should have the same "
+                                 "number of rows as the number of columns "
+                                 f"of endog! {M.shape[0]:d} != {k_yvar:d}")
         if C is None:
             C = np.zeros([L.shape[0], M.shape[1]])
         elif not isinstance(C, np.ndarray):
-            raise ValueError('Constant matrix C must be a 2-d array!')
+            raise ValueError("Constant matrix C must be a 2-d array!")
 
         if C.shape[0] != L.shape[0]:
-            raise ValueError('contrast L and constant C must have the same '
-                             'number of rows! %d!=%d'
-                             % (L.shape[0], C.shape[0]))
+            raise ValueError("contrast L and constant C must have the same "
+                             f"number of rows! {L.shape[0]:d}!={C.shape[0]:d}")
         if C.shape[1] != M.shape[1]:
-            raise ValueError('transform M and constant C must have the same '
-                             'number of columns! %d!=%d'
-                             % (M.shape[1], C.shape[1]))
+            raise ValueError("transform M and constant C must have the same "
+                             f"number of columns! {M.shape[1]:d}!={C.shape[1]:d}")
         E, H, q, df_resid = fn(L, M, C)
         EH = np.add(E, H)
         p = matrix_rank(EH)
@@ -319,49 +382,15 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
         eigv2 = np.sort(eigvals(solve(EH, H)))
         stat_table = multivariate_stats(eigv2, p, q, df_resid)
 
-        results[name] = {'stat':stat_table, 'contrast_L':L,
-                         'transform_M':M, 'constant_C':C}
+        results[name] = {"stat": stat_table, "contrast_L": L,
+                         "transform_M": M, "constant_C": C,
+                         "E": E, "H": H}
     return results
 
-_multivariate_test.__doc__ = (
-        """
-        Multivariate linear model hypotheses testing
-
-        For y = x * params, where y are the dependent variables and x are the
-        independent variables, testing L * params * M = 0 where L is the contrast
-        matrix for hypotheses testing and M is the transformation matrix for
-        transforming the dependent variables in y.
-
-        Algorithm:
-            T = L*inv(X'X)*L'
-            H = M'B'L'*inv(T)*LBM
-            E =  M'(Y'Y - B'X'XB)M
-        And then finding the eigenvalues of inv(H + E)*H
-
-        .. [*] https://support.sas.com/documentation/cdl/en/statug/63033/HTML/default/viewer.htm#statug_introreg_sect012.htm
-
-        Parameters
-        ----------
-        """ + _hypotheses_doc +
-        """
-        k_xvar : int
-            The number of independent variables
-        k_yvar : int
-            The number of dependent variables
-        fn : function
-            a function fn(contrast_L, transform_M) that returns E, H, q, df_resid
-            where q is the rank of T matrix
-
-        Returns
-        -------
-        results : MANOVAResults
-
-        """)
 
 class _MultivariateOLS(Model):
     """
     Multivariate linear model via least squares
-
 
     Parameters
     ----------
@@ -377,36 +406,45 @@ class _MultivariateOLS(Model):
         default)
 
     Attributes
-    -----------
-    endog : array
+    ----------
+    endog : ndarray
         See Parameters.
-    exog : array
+    exog : ndarray
         See Parameters.
     """
-    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
-        if len(endog.shape) == 1 or endog.shape[1] == 1:
-            raise ValueError('There must be more than one dependent variable'
-                             ' to fit multivariate OLS!')
-        super(_MultivariateOLS, self).__init__(endog, exog, missing=missing,
-                                               hasconst=hasconst, **kwargs)
+    _formula_max_endog = None
 
-    def fit(self, method='svd'):
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
+        if len(endog.shape) == 1 or endog.shape[1] == 1:
+            raise ValueError(
+                "There must be more than one dependent variable"
+                " to fit multivariate OLS!"
+            )
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+
+        self.nobs, self.k_endog = self.endog.shape
+        self.k_exog = self.exog.shape[1]
+        idx = pd.MultiIndex.from_product((self.endog_names, self.exog_names))
+        self.data.cov_names = idx
+
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self._fittedmod = None
+
+    def fit(self, method="svd"):
         self._fittedmod = _multivariate_ols_fit(
             self.endog, self.exog, method=method)
         return _MultivariateOLSResults(self)
 
 
-class _MultivariateOLSResults(object):
-    """
-    _MultivariateOLS results class
-
-    """
+class _MultivariateOLSResults(LikelihoodModelResults):
+    """_MultivariateOLS results class"""
     def __init__(self, fitted_mv_ols):
-        if (hasattr(fitted_mv_ols, 'data') and
-                hasattr(fitted_mv_ols.data, 'design_info')):
-            self.design_info = fitted_mv_ols.data.design_info
+        if (hasattr(fitted_mv_ols, "data") and
+                hasattr(fitted_mv_ols.data, "model_spec")):
+            self.model_spec = fitted_mv_ols.data.model_spec
         else:
-            self.design_info = None
+            self.model_spec = None
         self.exog_names = fitted_mv_ols.exog_names
         self.endog_names = fitted_mv_ols.endog_names
         self._fittedmod = fitted_mv_ols._fittedmod
@@ -414,72 +452,376 @@ class _MultivariateOLSResults(object):
     def __str__(self):
         return self.summary().__str__()
 
-    def mv_test(self, hypotheses=None):
-
-        k_xvar = len(self.exog_names)
-        if hypotheses is None:
-            if self.design_info is not None:
-                terms = self.design_info.term_name_slices
-                hypotheses = []
-                for key in terms:
-                    L_contrast = np.eye(k_xvar)[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
-            else:
-                hypotheses = []
-                for i in range(k_xvar):
-                    name = 'x%d' % (i)
-                    L = np.zeros([1, k_xvar])
-                    L[i] = 1
-                    hypotheses.append([name, L, None])
-
-        results = _multivariate_ols_test(hypotheses, self._fittedmod,
-                                          self.exog_names, self.endog_names)
-
-        return MultivariateTestResults(results,
-                                       self.endog_names,
-                                       self.exog_names)
-    mv_test.__doc__=(
+    @Substitution(hypotheses_doc=_hypotheses_doc)
+    def mv_test(self, hypotheses=None, skip_intercept_test=False):
         """
-        Testing the linear hypotheses
-            L * params * M = C
-        where `params` is the regression coefficient matrix for the
-        linear model y = x * params, `L` is the contrast matrix, `M` is the
-         dependent variable transform matrix and C is the constant matrix.
+        Linear hypotheses testing
 
         Parameters
         ----------
-        """ + _hypotheses_doc +
-        """
+        %(hypotheses_doc)s
+        skip_intercept_test : bool
+            If true, then testing the intercept is skipped, the model is not
+            changed.
+            Note: If a term has a numerically insignificant effect, then
+            an exception because of empty arrays may be raised. This can
+            happen for the intercept if the data has been demeaned.
+
         Returns
         -------
-        results: _MultivariateOLSResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
-        """)
-    def summary(self):
+        Notes
+        -----
+        Tests hypotheses of the form
+
+            L * params * M = C
+
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params, `L` is the contrast matrix, `M` is the
+        dependent variable transform matrix and C is the constant matrix.
+        """
+        mgr = FormulaManager()
+        k_xvar = len(self.exog_names)
+        if hypotheses is None:
+            if self.model_spec is not None:
+                terms = mgr.get_term_name_slices(self.model_spec)
+                hypotheses = []
+                for key in terms:
+                    if skip_intercept_test and (
+                        key == "Intercept" or key == mgr.intercept_term
+                    ):
+                        continue
+                    L_contrast = np.eye(k_xvar)[terms[key], :]
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = "Intercept"
+                    hypotheses.append([test_name, L_contrast, None])
+            else:
+                hypotheses = []
+                for i in range(k_xvar):
+                    name = f"x{i:d}"
+                    L = np.zeros([1, k_xvar])
+                    L[0, i] = 1
+                    hypotheses.append([name, L, None])
+
+        results = _multivariate_ols_test(
+            hypotheses, self._fittedmod, self.exog_names, self.endog_names
+        )
+
+        return MultivariateTestResults(results, self.endog_names, self.exog_names)
+
+    def _summary(self):
         raise NotImplementedError
 
 
-class MultivariateTestResults(object):
-    """ Multivariate test results class
+class MultivariateLS(_MultivariateOLS):
+    """Multivariate Linear Model estimated by least squares.
+
+    Parameters
+    ----------
+    endog : array_like
+        Dependent variables. A nobs x k_endog array where nobs is
+        the number of observations and k_endog is the number of dependent
+        variables
+    exog : array_like
+        Independent variables. A nobs x k_exog array where nobs is the
+        number of observations and k_exog is the number of independent
+        variables. An intercept is not included by default and should be added
+        by the user (models specified using a formula include an intercept by
+        default)
+    """
+
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self.df_resid = None
+
+    def fit(self, method="svd", use_t=True):
+        _fittedmod = _multivariate_ols_fit(
+            self.endog, self.exog, method=method)
+
+        params, df_resid, inv_cov, sscpr = _fittedmod
+        normalized_cov_params = np.kron(sscpr, inv_cov) / df_resid
+        self.df_resid = df_resid
+        res = MultivariateLSResults(
+            self,
+            params,
+            normalized_cov_params=normalized_cov_params,
+            scale=1,
+            use_t=use_t,
+            # extra kwargs are currently ignored
+            )
+
+        res._fittedmod = _fittedmod
+        res.cov_resid = sscpr / df_resid
+        return MultivariateLSResultsWrapper(res)
+
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+        else:
+            exog = np.asarray(exog)
+        return exog @ params
+
+
+class MultivariateLSResults(LikelihoodModelResults):
+    """Results for multivariate linear regression"""
+
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.,
+                 **kwargs):
+        super().__init__(model, params,
+                         normalized_cov_params=normalized_cov_params,
+                         scale=scale,
+                         **kwargs)
+
+        self.method = "Least Squares"
+        # model.df_resid is set by `fit` before this is constructed.
+        self.df_resid = model.df_resid
+        # used in generic part of io summary; computed here (rather than
+        # only when `summary` is called) since they depend only on the
+        # model, not on any argument to `summary`.
+        self.nobs = model.nobs
+        self.df_model = model.k_endog * (model.k_exog - 1)
+
+    @cache_readonly
+    def bse(self):
+        bse = np.sqrt(np.diag(self.cov_params()))
+        return bse.reshape(self.params.shape, order="F")
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.predict()
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.fittedvalues
+
+    @cache_readonly
+    def resid_distance(self):
+        resid = self.resid
+        cov = self.cov_resid
+        dist = (resid * np.linalg.solve(cov, resid.T).T).sum(1)
+        return dist
+
+    @cache_readonly
+    def _hat_matrix_diag(self):
+        """Diagonal of the hat_matrix for OLS"""
+        # TODO: temporarily calcu here, should go to model or influence class
+        # computation base on OLSInfluence method
+        exog = self.model.exog
+        pinv_wexog = np.linalg.pinv(exog)
+        return (exog * pinv_wexog.T).sum(1)
+
+    @Substitution(hypotheses_doc=_hypotheses_doc)
+    def mv_test(self, hypotheses=None, skip_intercept_test=False):
+        """
+        Linear hypotheses testing
+
+        Parameters
+        ----------
+        %(hypotheses_doc)s
+        skip_intercept_test : bool
+            If true, then testing the intercept is skipped, the model is not
+            changed.
+            Note: If a term has a numerically insignificant effect, then
+            an exception because of empty arrays may be raised. This can
+            happen for the intercept if the data has been demeaned.
+
+        Returns
+        -------
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
+
+        Notes
+        -----
+        Tests hypotheses of the form
+
+            L * params * M = C
+
+        where `params` is the regression coefficient matrix for the
+        linear model y = x * params, `L` is the contrast matrix, `M` is the
+        dependent variable transform matrix and C is the constant matrix.
+        """
+        k_xvar = len(self.model.exog_names)
+        if hypotheses is None:
+            if self.model.data.model_spec is not None:
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.model.data.model_spec)
+                hypotheses = []
+                for key in terms:
+                    if skip_intercept_test and (
+                        key == "Intercept" or key == mgr.intercept_term
+                    ):
+                        continue
+                    L_contrast = np.eye(k_xvar)[terms[key], :]
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = "Intercept"
+                    hypotheses.append([test_name, L_contrast, None])
+            else:
+                hypotheses = []
+                for i in range(k_xvar):
+                    name = f"x{i:d}"
+                    L = np.zeros([1, k_xvar])
+                    L[0, i] = 1
+                    hypotheses.append([name, L, None])
+
+        results = _multivariate_ols_test(
+            hypotheses, self._fittedmod, self.model.exog_names, self.model.endog_names
+        )
+
+        return MultivariateTestResults(
+            results, self.model.endog_names, self.model.exog_names
+        )
+
+    def conf_int(self, alpha=0.05):
+        confint = super().conf_int(alpha=alpha)
+        return confint.transpose(2, 0, 1)
+
+    # copied from discrete
+    def _get_endog_name(self, yname, yname_list):
+        if yname is None:
+            yname = self.model.endog_names
+        if yname_list is None:
+            yname_list = self.model.endog_names
+        return yname, yname_list
+
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05, yname_list=None):
+        """
+        Summarize the Regression Results.
+
+        Parameters
+        ----------
+        yname : str, optional
+            The name of the endog variable in the tables. The default is `y`.
+        xname : list[str], optional
+            The names for the exogenous variables, default is "var_xx".
+            Must match the number of parameters in the model.
+        title : str, optional
+            Title for the top table. If not None, then this replaces the
+            default title.
+        alpha : float
+            The significance level for the confidence intervals.
+        yname_list : list[str], optional
+            Restricted list of endogenous variable names to include when
+            constructing the table of parameter estimates. The default is
+            to include all endogenous variables.
+
+        Returns
+        -------
+        Summary
+            Class that holds the summary tables and text, which can be printed
+            or converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : Class that hold summary results.
+        """
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", [self.model.__class__.__name__]),
+            ("Method:", [self.method]),
+            ("Date:", None),
+            ("Time:", None),
+            # ('converged:', ["%s" % self.mle_retvals['converged']]),
+        ]
+
+        top_right = [
+            ("No. Observations:", None),
+            ("Df Residuals:", None),
+            ("Df Model:", None),
+            # ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
+            # ('Log-Likelihood:', None),
+            # ('LL-Null:', ["%#8.5g" % self.llnull]),
+            # ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
+        ]
+
+        if hasattr(self, "cov_type"):
+            top_left.append(("Covariance Type:", [self.cov_type]))
+
+        if title is None:
+            title = self.model.__class__.__name__ + " " + "Regression Results"
+
+        # boiler plate
+        from statsmodels.iolib.summary import Summary
+
+        smry = Summary()
+        yname, yname_list = self._get_endog_name(yname, yname_list)
+
+        # for top of table
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+
+        # for parameters, etc
+        smry.add_table_params(
+            self, yname=yname_list, xname=xname, alpha=alpha, use_t=self.use_t
+        )
+
+        if hasattr(self, "constraints"):
+            smry.add_extra_txt(
+                ["Model has been estimated subject to linear equality constraints."]
+            )
+
+        return smry
+
+
+class MultivariateTestResults:
+    """
+    Multivariate test results class
+
     Returned by `mv_test` method of `_MultivariateOLSResults` class
 
+    Parameters
+    ----------
+    results : dict[str, dict]
+        Dictionary containing test results. See the description
+        below for the expected format.
+    endog_names : sequence[str]
+        A list or other sequence of endogenous variables names
+    exog_names : sequence[str]
+        A list or other sequence of exogenous variables names
+
     Attributes
-    -----------
+    ----------
     results : dict
-       For hypothesis name `key`:
-           results[key]['stat'] contains the multivaraite test results
-           results[key]['contrast_L'] contains the contrast_L matrix
-           results[key]['transform_M'] contains the transform_M matrix
-           results[key]['constant_C'] contains the constant_C matrix
-    endog_names : string
-    exog_names : string
-    summary_frame : multiindex dataframe
-        Returns results as a multiindex dataframe
+        Each hypothesis is contained in a single `key`. Each test must
+        have the following keys:
+
+        * 'stat' - contains the multivariate test results
+        * 'contrast_L' - contains the contrast_L matrix
+        * 'transform_M' - contains the transform_M matrix
+        * 'constant_C' - contains the constant_C matrix
+        * 'H' - contains an intermediate Hypothesis matrix,
+          or the between groups sums of squares and cross-products matrix,
+          corresponding to the numerator of the univariate F test.
+        * 'E' - contains an intermediate Error matrix,
+          corresponding to the denominator of the univariate F test.
+          The Hypotheses and Error matrices can be used to calculate
+          the same test statistics in 'stat', as well as to calculate
+          the discriminant function (canonical correlates) from the
+          eigenvectors of inv(E)H.
+
+    endog_names : list[str]
+        The endogenous names
+    exog_names : list[str]
+        The exogenous names
+    summary_frame : DataFrame
+        Returns results as a MultiIndex DataFrame
     """
-    def __init__(self, mv_test_df, endog_names, exog_names):
-        self.results = mv_test_df
-        self.endog_names = endog_names
-        self.exog_names = exog_names
+
+    def __init__(self, results, endog_names, exog_names):
+        self.results = results
+        self.endog_names = list(endog_names)
+        self.exog_names = list(exog_names)
 
     def __str__(self):
         return self.summary().__str__()
@@ -489,53 +831,67 @@ class MultivariateTestResults(object):
 
     @property
     def summary_frame(self):
-        """
-        Return results as a multiindex dataframe
-        """
+        """Return results as a multiindex dataframe"""
         df = []
         for key in self.results:
-            tmp = self.results[key]['stat'].copy()
-            tmp.loc[:, 'Effect'] = key
+            tmp = self.results[key]["stat"].copy()
+            tmp.loc[:, "Effect"] = key
             df.append(tmp.reset_index())
         df = pd.concat(df, axis=0)
-        df = df.set_index(['Effect', 'index'])
-        df.index.set_names(['Effect', 'Statistic'], inplace=True)
+        df = df.set_index(["Effect", "index"])
+        df.index.set_names(["Effect", "Statistic"], inplace=True)
         return df
 
     def summary(self, show_contrast_L=False, show_transform_M=False,
                 show_constant_C=False):
         """
+        Summary of test results
 
         Parameters
         ----------
-        contrast_L : True or False
+        show_contrast_L : bool
             Whether to show contrast_L matrix
-        transform_M : True or False
+        show_transform_M : bool
             Whether to show transform_M matrix
+        show_constant_C : bool
+            Whether to show the constant_C
         """
         summ = summary2.Summary()
-        summ.add_title('Multivariate linear model')
+        summ.add_title("Multivariate linear model")
         for key in self.results:
-            summ.add_dict({'':''})
-            df = self.results[key]['stat'].copy()
+            summ.add_dict({"": ""})
+            df = self.results[key]["stat"].copy()
             df = df.reset_index()
-            c = df.columns.values
+            c = list(df.columns)
             c[0] = key
             df.columns = c
-            df.index = ['', '', '', '']
+            df.index = ["", "", "", ""]
             summ.add_df(df)
             if show_contrast_L:
-                summ.add_dict({key:' contrast L='})
-                df = pd.DataFrame(self.results[key]['contrast_L'],
+                summ.add_dict({key: " contrast L="})
+                df = pd.DataFrame(self.results[key]["contrast_L"],
                                   columns=self.exog_names)
                 summ.add_df(df)
             if show_transform_M:
-                summ.add_dict({key:' transform M='})
-                df = pd.DataFrame(self.results[key]['transform_M'],
+                summ.add_dict({key: " transform M="})
+                df = pd.DataFrame(self.results[key]["transform_M"],
                                   index=self.endog_names)
                 summ.add_df(df)
             if show_constant_C:
-                summ.add_dict({key:' constant C='})
-                df = pd.DataFrame(self.results[key]['constant_C'])
+                summ.add_dict({key: " constant C="})
+                df = pd.DataFrame(self.results[key]["constant_C"])
                 summ.add_df(df)
         return summ
+
+
+class MultivariateLSResultsWrapper(RegressionResultsWrapper):
+    # copied and adapted from Multinomial wrapper
+    _attrs = {"resid": "rows"}
+    _wrap_attrs = wrap.union_dicts(RegressionResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {"conf_int": "multivariate_confint"}
+    _wrap_methods = wrap.union_dicts(RegressionResultsWrapper._wrap_methods,
+                                     _methods)
+
+
+wrap.populate_wrapper(MultivariateLSResultsWrapper, MultivariateLSResults)

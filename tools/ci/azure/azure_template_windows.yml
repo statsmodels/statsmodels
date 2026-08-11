@@ -1,0 +1,64 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+parameters:
+  # defaults for any parameters that are not specified
+  name: ''
+  vmImage: ''
+
+
+jobs:
+
+- job: ${{ parameters.name }}Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  strategy:
+    matrix:
+      # Windows keeps sentinel coverage for the oldest supported Python,
+      # the newest supported Python, and free-threaded Python.
+      python310_win_compat:
+        python.version: '3.10'
+        python.architecture: 'x64'
+      python313_win_latest:
+        python.version: '3.13'
+        python.architecture: 'x64'
+      python314t_win_latest:
+        python.version: '3.14'
+        python.architecture: 'x64-freethreaded'
+    maxParallel: 10
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: '$(python.architecture)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
+
+  - script: |
+      python -m pip install --upgrade pip setuptools wheel
+    displayName: 'Update essentials'
+
+  - pwsh: |
+      python -m pip install -r requirements.txt
+      python -m pip install -r requirements-dev.txt
+    displayName: 'Install dependencies'
+
+  - pwsh: |
+      python -m pip list
+    displayName: 'List Configuration'
+
+  - pwsh: |
+      python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
+    displayName: 'Build Cython Extensions'
+
+  - pwsh: |
+      pytest statsmodels --skip-examples --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50
+    displayName: 'Run pytest'
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: '**/test-results.xml'
+      testRunTitle: 'Python $(python.version)'
+    condition: succeededOrFailed()

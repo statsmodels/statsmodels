@@ -1,0 +1,36 @@
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/process/templates?view=azure-devops#passing-parameters
+
+trigger:
+- main
+schedules:
+- cron: "0 6 * * 1"   # Each Monday at 06:00 UTC
+  displayName: Weekly scheduled run
+  branches:
+    include: [main, maintenance/0.13.x]
+  always: true
+
+variables:
+  MKL_NUM_THREADS: 1
+  NUMEXPR_NUM_THREADS: 1
+  OMP_NUM_THREADS: 1
+  VML_NUM_THREADS: 1
+  OPENBLAS_NUM_THREADS: 1
+  PYTHONHASHSEED: 0 # Ensure tests are correctly gathered by xdist
+  USE_MATPLOTLIB: true
+
+jobs:
+
+- template: tools/ci/azure/azure_template_posix.yml
+  parameters:
+    name: Linux
+    vmImage: ubuntu-latest
+
+- template: tools/ci/azure/azure_template_posix.yml
+  parameters:
+    name: macOS
+    vmImage: macOS-latest
+
+- template: tools/ci/azure/azure_template_windows.yml
+  parameters:
+    name: Windows
+    vmImage: windows-latest

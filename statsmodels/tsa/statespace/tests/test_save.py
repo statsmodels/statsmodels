@@ -1,42 +1,59 @@
 """
 Tests of save / load / remove_data state space functionality.
 """
+from pathlib import Path
+import pickle
+import tempfile
 
-from __future__ import division, absolute_import, print_function
-from statsmodels.compat import cPickle
-from statsmodels.compat.testing import SkipTest
-
-import numpy as np
-from distutils.version import LooseVersion
-import os
+from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import (sarimax, structural, varmax,
-                                        dynamic_factor)
-from numpy.testing import assert_allclose
+from statsmodels.tsa.statespace import (
+    dynamic_factor,
+    sarimax,
+    structural,
+    varmax,
+)
+
+current_path = Path(__file__).resolve().parent
 macrodata = datasets.macrodata.load_pandas().data
 
-# Skip copy test on older NumPy since copy does not preserve order
-NP_LT_18 = LooseVersion(np.__version__).version[:2] < [1, 8]
 
-if NP_LT_18:
-    raise SkipTest("NumPy <= 1.8 doesn't preserve matrix order when copying")
+def temp_filename():
+    _, filename = tempfile.mkstemp()
+    return filename
+
 
 def test_sarimax():
-    mod = sarimax.SARIMAX(macrodata['realgdp'].values, order=(4, 1, 0))
+    mod = sarimax.SARIMAX(macrodata["realgdp"].values, order=(4, 1, 0))
     res = mod.smooth(mod.start_params)
     res.summary()
-    res.save('test_save_sarimax.p')
-    res2 = sarimax.SARIMAXResults.load('test_save_sarimax.p')
+    file_name = temp_filename()
+    res.save(file_name)
+    res2 = sarimax.SARIMAXResults.load(file_name)
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
-    os.unlink('test_save_sarimax.p')
+
+
+# GH7527
+@pytest.mark.parametrize("order", [(4, 1, 0), (0, 1, 4), (0, 2, 0)])
+def test_sarimax_save_remove_data(order):
+    mod = sarimax.SARIMAX(macrodata["realgdp"].values, order=order)
+    res = mod.smooth(mod.start_params)
+    res.summary()
+    file_name = temp_filename()
+    res.save(file_name, remove_data=True)
+    res2 = sarimax.SARIMAXResults.load(file_name)
+    assert_allclose(res.params, res2.params)
+    assert_allclose(res.bse, res2.bse)
+    assert_allclose(res.llf, res2.llf)
 
 
 def test_sarimax_pickle():
-    mod = sarimax.SARIMAX(macrodata['realgdp'].values, order=(4, 1, 0))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    mod = sarimax.SARIMAX(macrodata["realgdp"].values, order=(4, 1, 0))
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
     pkl_res = pkl_mod.smooth(mod.start_params)
@@ -47,23 +64,20 @@ def test_sarimax_pickle():
 
 
 def test_structural():
-    mod = structural.UnobservedComponents(
-        macrodata['realgdp'].values, 'llevel')
+    mod = structural.UnobservedComponents(macrodata["realgdp"].values, "llevel")
     res = mod.smooth(mod.start_params)
     res.summary()
-    res.save('test_save_structural.p')
-    res2 = structural.UnobservedComponentsResults.load(
-        'test_save_structural.p')
+    file_name = temp_filename()
+    res.save(file_name)
+    res2 = structural.UnobservedComponentsResults.load(file_name)
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
-    os.unlink('test_save_structural.p')
 
 
 def test_structural_pickle():
-    mod = structural.UnobservedComponents(
-        macrodata['realgdp'].values, 'llevel')
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+    mod = structural.UnobservedComponents(macrodata["realgdp"].values, "llevel")
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
     pkl_res = pkl_mod.smooth(pkl_mod.start_params)
@@ -75,24 +89,25 @@ def test_structural_pickle():
 
 def test_dynamic_factor():
     mod = dynamic_factor.DynamicFactor(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values, k_factors=1,
-        factor_order=1)
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values,
+        k_factors=1,
+        factor_order=1,
+    )
     res = mod.smooth(mod.start_params)
     res.summary()
-    res.save('test_save_dynamic_factor.p')
-    res2 = dynamic_factor.DynamicFactorResults.load(
-        'test_save_dynamic_factor.p')
+    file_name = temp_filename()
+    res.save(file_name)
+    res2 = dynamic_factor.DynamicFactorResults.load(file_name)
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
-    os.unlink('test_save_dynamic_factor.p')
 
 
 def test_dynamic_factor_pickle():
     mod = varmax.VARMAX(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
-        order=(1, 0))
-    pkl_mod = cPickle.loads(cPickle.dumps(mod))
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values, order=(1, 0)
+    )
+    pkl_mod = pickle.loads(pickle.dumps(mod))
 
     res = mod.smooth(mod.start_params)
     pkl_res = pkl_mod.smooth(mod.start_params)
@@ -102,41 +117,44 @@ def test_dynamic_factor_pickle():
     assert_allclose(res.llf, pkl_res.llf)
 
     res.summary()
-    res.save('test_save_varmax.p')
-    res2 = varmax.VARMAXResults.load(
-        'test_save_varmax.p')
+    file_name = temp_filename()
+    res.save(file_name)
+    res2 = varmax.VARMAXResults.load(file_name)
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
-    os.unlink('test_save_varmax.p')
 
 
 def test_varmax():
     mod = varmax.VARMAX(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
-        order=(1, 0))
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values, order=(1, 0)
+    )
     res = mod.smooth(mod.start_params)
     res.summary()
-    res.save('test_save_varmax.p')
-    res2 = varmax.VARMAXResults.load(
-        'test_save_varmax.p')
+    file_name = temp_filename()
+    res.save(file_name)
+    res2 = varmax.VARMAXResults.load(file_name)
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
-    os.unlink('test_save_varmax.p')
 
 
 def test_varmax_pickle():
     mod = varmax.VARMAX(
-        macrodata[['realgdp', 'realcons']].diff().iloc[1:].values,
-        order=(1, 0))
+        macrodata[["realgdp", "realcons"]].diff().iloc[1:].values, order=(1, 0)
+    )
     res = mod.smooth(mod.start_params)
 
     res.summary()
-    res.save('test_save_varmax.p')
-    res2 = varmax.VARMAXResults.load(
-        'test_save_varmax.p')
+    file_name = temp_filename()
+    res.save(file_name)
+    res2 = varmax.VARMAXResults.load(file_name)
     assert_allclose(res.params, res2.params)
     assert_allclose(res.bse, res2.bse)
     assert_allclose(res.llf, res2.llf)
-    os.unlink('test_save_varmax.p')
+
+
+def test_existing_pickle():
+    pkl_file = Path(current_path).joinpath("results", "sm-0.9-sarimax.pkl")
+    loaded = sarimax.SARIMAXResults.load(pkl_file)
+    assert isinstance(loaded, sarimax.SARIMAXResultsWrapper)

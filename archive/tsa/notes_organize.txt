@@ -1,0 +1,227 @@
+
+
+
+scikits.statsmodels.sandbox.tsa.kalmanf
+---------------------------------------
+ARMA  :      ARMA model using the exact Kalman Filter
+StateSpaceModel  :
+kalmanfilter  :      Returns the negative log-likelihood of y
+conditional on the information set
+kalmansmooth  :
+updatematrices  :      TODO: change API, update names
+
+
+scikits.statsmodels.sandbox.tsa.arima
+-------------------------------------
+
+runs ok, no refactoring bugs
+has examples and monte carlo that can be split up into example files
+
+ARIMA  :  currently ARMA only, no differencing used - no I
+arma2ar  :  get the AR representation of an ARMA process
+arma2ma  :  get the impulse response function (MA representation) for
+ARMA process
+arma_acf  :  theoretical autocovariance function of ARMA process
+arma_acovf  :  theoretical autocovariance function of ARMA process
+arma_generate_sample  :  generate an random sample of an ARMA process
+arma_impulse_response  :  get the impulse response function (MA
+representation) for ARMA process
+arma_pacf  :  partial autocorrelation function of an ARMA process
+deconvolve  :  Deconvolves divisor out of signal, division of
+polynomials for n terms
+index2lpol  :  expand coefficients to lag poly
+lpol2index  :  remove zeros from lagpolynomial, squeezed
+representation with index
+mcarma22  :  run Monte Carlo for ARMA(2,2)
+
+
+scikits.statsmodels.sandbox.tsa.varma
+-------------------------------------
+
+just filter experiments
+needed to fix import for acf example
+
+VAR  :   multivariate linear filter
+VARMA  :   multivariate linear filter
+
+scikits.statsmodels.sandbox.tsa.varma_tools
+-------------------------------------------
+
+Helper and filter functions for VAR and VARMA, and basic VAR class
+needed import fix in top of module
+maybe rename to varma_process
+in "main" example for VarmaPoly, and some Var fit
+Var could be used for Granger Causality tests, otherwise it's pretty limited
+
+Var  :
+    simultaneous OLS estimation
+VarmaPoly  :  class to keep track of Varma polynomial format
+    working with and transforming VARMA Lag-Polynomials (3d)
+ar2full  :  make reduced lagpolynomial into a right side lagpoly array
+ar2lhs  :  convert full (rhs) lagpolynomial into a reduced, left side
+lagpoly array
+padone  :  pad with zeros along one axis, currently only axis=0
+trimone  :  trim number of array elements along one axis
+varfilter  :  apply an autoregressive filter to a series x
+vargenerate  :  generate an VAR process with errors u
+varinversefilter  :  creates inverse ar filter (MA representation) recursively
+
+
+scikits.statsmodels.sandbox.tsa.try_fi
+--------------------------------------
+
+(not included by script that generates this list)
+various functions to build lag-polynomials for fractional and seasonal integration
+and function ar2arma minimizes distance in terms of impulse response function
+
+move these to a module or rename
+
+scikits.statsmodels.sandbox.tsa.try_var_convolve.py
+---------------------------------------------------
+
+(not included by script that generates this list)
+two functions:
+arfilter : autoregressive filter for 1d, 2d and 3d
+fftconvolve : multidimensional filtering using fft
+
+many examples, but I'm not sure this (fft) is correct
+incompletely copied for interpreter session
+currently raises exception because a variable (imp) is not defined
+
+scikits.statsmodels.sandbox.tsa.try_var_convolve.py
+---------------------------------------------------
+
+(not included by script that generates this list)
+includes functions for
+detrending,
+(theoretical) acovf and similar for special cases
+acf plot functions
+
+(partially copied from matplotlib.mlab)
+
+currently exception:  FIXED
+uses arima.ARIMA class without data in constructor, and order now has 3 values and
+is keyword with tuple as value
+
+move plot function to new graphics directory ?
+
+
+scikits.statsmodels.sandbox.regression.mle
+------------------------------------------
+
+one refactoring bug fixed, because arima.ARIMA needs data, use class method instead
+runs without exception, but I did not look at any results
+"main" has quite a lot
+
+AR  :      Notes
+Arma  :      univariate Autoregressive Moving Average model
+Garch  :  Garch model gjrgarch (t-garch)
+Garch0  :  Garch model,
+GarchX  :  Garch model,
+LikelihoodModel  :      Likelihood model is a subclass of Model.
+TSMLEModel  :      univariate time series model for estimation with
+maximum likelihood
+garchplot  :
+generate_garch  :  simulate standard garch
+generate_gjrgarch  :  simulate gjr garch process
+generate_kindofgarch  :  simulate garch like process but not squared
+errors in arma
+gjrconvertparams  :      flat to matrix
+loglike_GARCH11  :
+miso_lfilter  :      use nd convolution to merge inputs,
+normloglike  :
+test_gjrgarch  :
+test_misofilter  :
+
+Other
+-----
+diffusion: continuous time processes, produce nice graphs but parameterization is
+a bit inconsistent.
+
+
+script files
+============
+
+sandbox/tsa/try_arma_more.py
+----------------------------
+
+imports scikits.talkbox which is not compiled against my current numpy and does not
+run
+contains
+arma_periodogram : theoretical periodogram
+
+
+Proposed Structure (preliminary)
+================================
+
+arima_estimation
+----------------
+ARIMA class for estimation, wrapper or containing different estimators
+other wrappers: here or in separate ???
+  - support for choosing lag-length
+
+
+arma_process
+------------
+all theoretical properties for given parameters
+simulation method with options: initial conditions, errors, (?) not sure what else
+
+varma_process
+-------------
+including VarmaPoly and impulse response functions
+
+filters
+-------
+miso_filter (should be in cython eventually)
+ar_filter : fast VAR filter with convolution or fft convolution
+(not sure what's the relationship between the two)
+others ???
+
+stattools
+---------
+empirical properties
+acf, ...
+
+tsatools
+--------
+helper functions
+lagmat
+detrend ???
+
+others, unclear
+---------------
+???
+
+open questions
+==============
+
+support for exog
+----------------
+is incomplete or missing from some implementations
+not clear parameterization
+- ARMAX  A(L)y_t = C(L)x_t + B(L)e_t
+- ARMAX-simple  A(L)y_t = beta x_t + B(L)e_t
+  Note: covers previous version by extending x_t
+
+- ARMA residuals y_t = beta x_t + u_t, and A(L)u_t = B(L)e_t
+- ARMAX 2-step A(L)(y_t - beta x_t) = B(L)e_t
+  Note: looks the same as ARMA residuals, implies
+      A(L)y_t = A(L)x_t + B(L)e_t
+
+- ARMAX  A(L)(y_t - A^{-1}(L) C(L) x_t) = B(L)e_t
+  this does not look useful, unless we cutoff A^{-1}(L)
+
+problem: signal.lfilter can only handle ARMAX residuals model (I think)
+deterministic trend have ARMAX-simple model, e.g. in unit root tests
+
+
+support for seasonal and "sparse" lag-polynomials
+-------------------------------------------------
+- fit functions need support for different lag structures,
+  e.g. zeros, multiplicative
+- support for pre-filters, e.g. (seasonal) differencing
+
+
+
+
+

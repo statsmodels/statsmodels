@@ -5,7 +5,7 @@ statsmodels contains code or derivative code from several other
 packages. Some modules also note the author of individual contributions, or
 author of code that formed the basis for the derived or translated code.
 The copyright statements for the datasets are attached to the individual
-datasets, most datasets are in public domain, and we don't claim any copyright
+datasets, most datasets are in public domain, and we do not claim any copyright
 on any of them.
 
 In the following, we collect copyright statements of code from other packages,

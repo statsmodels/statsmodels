@@ -28,18 +28,15 @@ Residual Diagnostics and Specification Tests
 .. module:: statsmodels.stats.stattools
    :synopsis: Statistical methods and tests that do not fit into other categories
 
+Autocorrelation
+~~~~~~~~~~~~~~~
+
 .. currentmodule:: statsmodels.stats.stattools
 
 .. autosummary::
    :toctree: generated/
 
    durbin_watson
-   jarque_bera
-   omni_normtest
-   medcouple
-   robust_skewness
-   robust_kurtosis
-   expected_robust_kurtosis
 
 .. module:: statsmodels.stats.diagnostic
    :synopsis: Statistical methods and tests to diagnose model fit problems
@@ -49,36 +46,69 @@ Residual Diagnostics and Specification Tests
 .. autosummary::
    :toctree: generated/
 
-   acorr_ljungbox
    acorr_breusch_godfrey
+   acorr_ljungbox
+   acorr_lm
+   LMTestResult
 
-   HetGoldfeldQuandt
-   het_goldfeldquandt
-   het_breuschpagan
-   het_white
+Forecast Evaluation
+~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   pesaran_timmermann
+   PesaranTimmermannResult
+
+.. currentmodule:: statsmodels.tsa.stattools
+
+.. autosummary::
+   :toctree: generated/
+
+   diebold_mariano_test
+   DieboldMarianoTestResult
+
+
+Heteroscedasticity
+~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
    het_arch
+   het_breuschpagan
+   het_goldfeldquandt
+   GoldfeldQuandtResult
+   het_white
 
-   linear_harvey_collier
-   linear_rainbow
-   linear_lm
+Kurtosis
+~~~~~~~~
 
-   breaks_cusumolsresid
-   breaks_hansen
-   recursive_olsresiduals
+.. currentmodule:: statsmodels.stats.stattools
 
-   CompareCox
-   compare_cox
-   CompareJ
-   compare_j
+.. autosummary::
+   :toctree: generated/
 
-   unitroot_adf
+   robust_kurtosis
+   expected_robust_kurtosis
 
-   normal_ad
-   kstest_normal
-   lilliefors
+Normality
+~~~~~~~~~
 
-Outliers and influence measures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+
+   jarque_bera
+   omni_normtest
+
+Outliers and Influence
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: statsmodels.stats.outliers_influence
    :synopsis: Statistical methods and measures for outliers and influence
@@ -89,7 +119,50 @@ Outliers and influence measures
    :toctree: generated/
 
    OLSInfluence
+   GLMInfluence
+   MLEInfluence
    variance_inflation_factor
+
+Skewness
+~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.stattools
+
+.. autosummary::
+   :toctree: generated/
+   
+   medcouple
+   robust_skewness
+
+Stability
+~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   breaks_cusumolsresid
+   breaks_hansen
+   recursive_olsresiduals
+
+Specification test
+~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.stats.diagnostic
+
+.. autosummary::
+   :toctree: generated/
+
+   compare_cox
+   compare_encompassing
+   compare_j
+   NonNestedTestResult
+   spec_white
+   linear_harvey_collier
+   linear_lm
+   linear_rainbow
+   linear_reset
 
 See also the notes on :ref:`notes on regression diagnostics <diagnostics>`
 
@@ -144,13 +217,18 @@ some tests for goodness of fit for univariate distributions
    gof_chisquare_discrete
    gof_binning_discrete
    chisquare_effectsize
+   chisquare
+   ChisquareResult
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
 .. autosummary::
    :toctree: generated/
 
+   anderson_statistic
    normal_ad
+   kstest_exponential
+   kstest_fit
    kstest_normal
    lilliefors
 
@@ -171,7 +249,37 @@ Non-Parametric Tests
    runstest_1samp
    runstest_2samp
    cochrans_q
+   CochransQResult
    Runs
+
+.. currentmodule:: statsmodels.stats.descriptivestats
+
+.. autosummary::
+   :toctree: generated/
+
+   sign_test
+
+.. currentmodule:: statsmodels.stats.nonparametric
+
+.. autosummary::
+   :toctree: generated/
+
+   rank_compare_2indep
+   rank_compare_2ordinal
+   samplesize_rank_compare_onetail
+   SamplesizeRankCompareResult
+   RankCompareResult
+   ProbSuperiorResult
+   TostProbSuperiorResult
+   cohensd2problarger
+   prob_larger_continuous
+   rankdata_2samp
+   jonckheere_terpstra
+   JonckheereTerpstraResult
+
+
+Descriptive Statistics
+----------------------
 
 .. module:: statsmodels.stats.descriptivestats
    :synopsis: Descriptive statistics
@@ -181,7 +289,8 @@ Non-Parametric Tests
 .. autosummary::
    :toctree: generated/
 
-   sign_test
+   describe
+   Description
 
 .. _interrater:
 
@@ -206,12 +315,13 @@ only implemented as a measures but without associated results statistics.
 Multiple Tests and Multiple Comparison Procedures
 -------------------------------------------------
 
-`multipletests` is a function for p-value correction, which also includes p-value
-correction based on fdr in `fdrcorrection`.
+`multipletests` is a function for p-value correction, which includes p-value
+correction based on fdr in `fdrcorrection` and based on local fdr in
+`local_fdr_correction`.
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
-to one way ANOVA, but still in developement
+to one way ANOVA, but still in development
 
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons
@@ -224,6 +334,8 @@ to one way ANOVA, but still in developement
 
    multipletests
    fdrcorrection
+   local_fdr_correction
+   LocalFDRCorrectionResult
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 
@@ -233,6 +345,7 @@ to one way ANOVA, but still in developement
    GroupsStats
    MultiComparison
    TukeyHSDResults
+   tukeyhsd
 
 .. module:: statsmodels.stats.multicomp
    :synopsis: Methods for controlling size while performing multiple comparisons
@@ -257,6 +370,19 @@ to one way ANOVA, but still in developement
    NullDistribution
    RegressionFDR
 
+.. module:: statsmodels.stats.knockoff_regeffects
+   :synopsis: Regression Knock-Off Effects
+
+.. currentmodule:: statsmodels.stats.knockoff_regeffects
+
+.. autosummary::
+   :toctree: generated/
+
+   CorrelationEffects
+   OLSEffects
+   ForwardEffects
+   RegModelEffects
+
 The following functions are not (yet) public
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
@@ -274,7 +400,6 @@ The following functions are not (yet) public
    ccols
    compare_ordered
    distance_st_range
-   ecdf
    get_tukeyQcrit
    homogeneous_subsets
    maxzero
@@ -287,6 +412,15 @@ The following functions are not (yet) public
    set_partition
    set_remove_subs
    tiecorrect
+
+
+.. currentmodule:: statsmodels.stats.multitest
+
+.. autosummary::
+   :toctree: generated/
+
+   _ecdf
+
 
 .. _tost:
 
@@ -361,6 +495,8 @@ equations.
    NormalIndPower
    FTestAnovaPower
    FTestPower
+   normal_power_het
+   normal_sample_size_one_tail
    tt_solve_power
    tt_ind_solve_power
    zt_ind_solve_power
@@ -370,7 +506,6 @@ equations.
 
 Proportion
 ----------
-
 
 Also available are hypothesis test, confidence intervals and effect size for
 proportions that can be used with NormalIndPower.
@@ -399,19 +534,203 @@ proportions that can be used with NormalIndPower.
    proportions_chisquare_allpairs
    proportions_chisquare_pairscontrol
 
-   proportion_effectsize
    power_binom_tost
    power_ztost_prop
    samplesize_confint_proportion
+
+Statistics for two independent samples
+Status: experimental, API might change, added in 0.12
+
+.. autosummary::
+   :toctree: generated
+
+   test_proportions_2indep
+   Proportions2indepTestResult
+   confint_proportions_2indep
+   power_proportions_2indep
+   PowerProportionsResult
+   tost_proportions_2indep
+   TostProportionsResult
+   samplesize_proportions_2indep_onetail
+   score_test_proportions_2indep
+   ScoreTestProportionsResult
+   _score_confint_inversion
+
+
+Rates
+-----
+
+Statistical functions for rates. This currently includes hypothesis tests for
+two independent samples.
+See also example notebook for an overview
+`Poisson Rates <examples/notebooks/generated/stats_poisson.ipynb>`_
+
+Status: experimental, API might change, added in 0.12, refactored and enhanced
+in 0.14
+
+.. module:: statsmodels.stats.rates
+   :synopsis: Tests for Poisson rates
+
+.. currentmodule:: statsmodels.stats.rates
+
+statistical function for one sample
+
+.. autosummary::
+   :toctree: generated
+
+   test_poisson
+   PoissonTestResult
+   confint_poisson
+   confint_quantile_poisson
+   tolerance_int_poisson
+
+statistical function for two independent samples
+
+.. autosummary::
+   :toctree: generated
+
+   test_poisson_2indep
+   PoissonTest2indepResult
+   etest_poisson_2indep
+   confint_poisson_2indep
+   tost_poisson_2indep
+   TostPoissonResult
+   nonequivalence_poisson_2indep
+   NonequivalencePoissonResult
+
+functions for statistical power
+
+.. autosummary::
+   :toctree: generated
+
+   power_poisson_ratio_2indep
+   PowerRatioResult
+   power_equivalence_poisson_2indep
+   PowerEquivalenceResult
+   power_poisson_diff_2indep
+   PowerDiffResult
+   power_negbin_ratio_2indep
+   PowerNegbinRatioResult
+   power_equivalence_neginb_2indep
+
+
+Multivariate
+------------
+
+Statistical functions for multivariate samples.
+
+This includes hypothesis test and confidence intervals for mean of sample
+of multivariate observations and hypothesis tests for the structure of a
+covariance matrix.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.multivariate
+   :synopsis: Statistical functions for multivariate samples.
+
+.. currentmodule:: statsmodels.stats.multivariate
+
+.. autosummary::
+   :toctree: generated
+
+   test_mvmean
+   confint_mvmean
+   confint_mvmean_fromstats
+   test_mvmean_2indep
+   HotellingResult
+   test_cov
+   test_cov_blockdiagonal
+   test_cov_diagonal
+   test_cov_oneway
+   CovOnewayResult
+   test_cov_spherical
+   CovTestResult
+
+
+.. _oneway_stats:
+
+Oneway Anova
+------------
+
+Hypothesis test, confidence intervals and effect size for oneway analysis of
+k samples.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.oneway
+   :synopsis: Statistical functions for oneway analysis, Anova.
+
+.. currentmodule:: statsmodels.stats.oneway
+
+.. autosummary::
+   :toctree: generated
+
+
+   anova_oneway
+   anova_generic
+   AnovaResult
+   equivalence_oneway
+   equivalence_oneway_generic
+   EquivalenceOnewayResult
+   power_equivalence_oneway
+   _power_equivalence_oneway_emp
+
+   test_scale_oneway
+   ScaleAnovaResult
+   equivalence_scale_oneway
+   ScaleEquivalenceResult
+
+   confint_effectsize_oneway
+   ConfintEffectSizeResult
+   confint_noncentrality
+   convert_effectsize_fsqu
+   EffectSizeFsquResult
+   effectsize_oneway
+   f2_to_wellek
+   fstat_to_wellek
+   wellek_to_f2
+   _fstat2effectsize
+   FstatEffectSizeResult
+
+   scale_transform
+   simulate_power_equivalence_oneway
+   SimulatePowerEquivalenceResult
+
+
+.. _robust_stats:
+
+Robust, Trimmed Statistics
+--------------------------
+
+Statistics for samples that are trimmed at a fixed fraction. This includes
+class TrimmedMean for one sample statistics. It is used in `stats.oneway`
+for trimmed "Yuen" Anova.
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.robust_compare
+   :synopsis: Trimmed sample statistics.
+
+.. currentmodule:: statsmodels.stats.robust_compare
+
+.. autosummary::
+   :toctree: generated
+
+   TrimmedMean
+   scale_transform
+   trim_mean
+   trimboth
 
 
 Moment Helpers
 --------------
 
 When there are missing values, then it is possible that a correlation or
-covariance matrix is not positive semi-definite. The following three
+covariance matrix is not positive semi-definite. The following
 functions can be used to find a correlation or covariance matrix that is
 positive definite and close to the original matrix.
+Additional functions estimate spatial covariance matrix and regularized
+inverse covariance or precision matrix.
 
 .. module:: statsmodels.stats.correlation_tools
    :synopsis: Procedures for ensuring correlations are positive semi-definite
@@ -426,8 +745,17 @@ positive definite and close to the original matrix.
    corr_nearest_factor
    corr_thresholded
    cov_nearest
+   CovNearestResult
    cov_nearest_factor_homog
    FactoredPSDMatrix
+   kernel_covariance
+
+.. currentmodule:: statsmodels.stats.regularized_covariance
+
+.. autosummary::
+   :toctree: generated/
+
+   RegularizedInvCovariance
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
@@ -449,6 +777,7 @@ kurtosis and cummulants.
    mvsk2mc
    mvsk2mnc
    cov2corr
+   Cov2CorrResult
    corr2cov
    se_cov
 
@@ -476,3 +805,83 @@ to verify in an observational setting.
 
    Mediation
    MediationResults
+
+
+Oaxaca-Blinder Decomposition
+----------------------------
+
+The Oaxaca-Blinder, or Blinder-Oaxaca as some call it, decomposition attempts to explain
+gaps in means of groups. It uses the linear models of two given regression equations to
+show what is explained by regression coefficients and known data and what is unexplained
+using the same data. There are two types of Oaxaca-Blinder decompositions, the two-fold
+and the three-fold, both of which can and are used in Economics Literature to discuss
+differences in groups. This method helps classify discrimination or unobserved effects.
+This function attempts to port the functionality of the oaxaca command in STATA to Python.
+
+.. module:: statsmodels.stats.oaxaca
+   :synopsis: Oaxaca-Blinder Decomposition
+
+.. currentmodule:: statsmodels.stats.oaxaca
+
+.. autosummary::
+   :toctree: generated/
+
+   OaxacaBlinder
+   OaxacaResults
+
+
+Distance Dependence Measures
+----------------------------
+
+Distance dependence measures and the Distance Covariance (dCov) test.
+
+.. module:: statsmodels.stats.dist_dependence_measures
+   :synopsis: Distance Dependence Measures
+
+.. currentmodule:: statsmodels.stats.dist_dependence_measures
+
+.. autosummary::
+   :toctree: generated/
+
+   distance_covariance_test
+   distance_statistics
+   distance_correlation
+   distance_covariance
+   distance_variance
+
+
+Meta-Analysis
+-------------
+
+Functions for basic meta-analysis of a collection of sample statistics.
+
+Examples can be found in the notebook
+
+ * `Meta-Analysis <examples/notebooks/generated/metaanalysis1.ipynb>`_
+
+Status: experimental, API might change, added in 0.12
+
+.. module:: statsmodels.stats.meta_analysis
+   :synopsis: Meta-Analysis
+
+.. currentmodule:: statsmodels.stats.meta_analysis
+
+.. autosummary::
+   :toctree: generated/
+
+   combine_effects
+   effectsize_2proportions
+   effectsize_smd
+   CombineResults
+   HomogeneityTestResult
+
+The module also includes internal functions to compute random effects
+variance.
+
+
+.. autosummary::
+   :toctree: generated/
+
+   _fit_tau_iter_mm
+   _fit_tau_iterative
+   _fit_tau_mm

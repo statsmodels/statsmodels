@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue May 27 13:23:24 2014
 
@@ -9,10 +8,10 @@ License: BSD-3
 
 import numpy as np
 
-from statsmodels.compat.python import string_types
 
-class StandardizeTransform(object):
-    """class to reparameterize a model for standardized exog
+class StandardizeTransform:
+    """
+    Class to reparameterize a model for standardized exog
 
     Parameters
     ----------
@@ -51,11 +50,11 @@ class StandardizeTransform(object):
         if const_idx is None:
             const_idx = np.nonzero(self.scale == 0)[0]
             if len(const_idx) == 0:
-                const_idx = 'nc'
+                const_idx = "n"
             else:
-                const_idx = int(const_idx)
+                const_idx = int(np.squeeze(const_idx))
 
-        if const_idx != 'nc':
+        if const_idx != "n":
             self.mean[const_idx] = 0
             self.scale[const_idx] = 1
 
@@ -65,9 +64,7 @@ class StandardizeTransform(object):
         self.const_idx = const_idx
 
     def transform(self, data):
-        """standardize the data using the stored transformation
-
-        """
+        """Standardize the data using the stored transformation"""
         # could use scipy.stats.zscore instead
         if self.mean is None:
             return np.asarray(data) / self.scale
@@ -75,7 +72,8 @@ class StandardizeTransform(object):
             return (np.asarray(data) - self.mean) / self.scale
 
     def transform_params(self, params):
-        """Transform parameters of the standardized model to the original model
+        """
+        Transform parameters of the standardized model to the original model
 
         Parameters
         ----------
@@ -89,9 +87,8 @@ class StandardizeTransform(object):
             model
 
         """
-
         params_new = params / self.scale
-        if self.const_idx != 'nc':
+        if self.const_idx != "n":
             params_new[self.const_idx] -= (params_new * self.mean).sum()
 
         return params_new

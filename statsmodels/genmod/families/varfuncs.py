@@ -1,13 +1,12 @@
 """
 Variance functions for use with the link functions in statsmodels.family.links
 """
-
-__docformat__ = 'restructuredtext'
-
 import numpy as np
+
 FLOAT_EPS = np.finfo(float).eps
 
-class VarianceFunction(object):
+
+class VarianceFunction:
     """
     Relates the variance of a random variable to its mean. Defaults to 1.
 
@@ -23,7 +22,7 @@ class VarianceFunction(object):
     Alias for VarianceFunction:
     constant = VarianceFunction()
 
-    See also
+    See Also
     --------
     statsmodels.genmod.families.family
     """
@@ -33,13 +32,13 @@ class VarianceFunction(object):
         Default variance function
 
         Parameters
-        -----------
-        mu : array-like
+        ----------
+        mu : array_like
             mean parameters
 
         Returns
         -------
-        v : array
+        v : ndarray
             ones(mu.shape)
         """
         mu = np.asarray(mu)
@@ -54,12 +53,14 @@ class VarianceFunction(object):
 
 constant = VarianceFunction()
 constant.__doc__ = """
-The call method of constant returns a constant variance, i.e., a vector of ones.
+The call method of constant returns a constant variance, i.e., a vector of
+ones.
 
 constant is an alias of VarianceFunction()
 """
 
-class Power(object):
+
+class Power:
     """
     Power variance function
 
@@ -73,12 +74,11 @@ class Power(object):
     call
         Returns the power variance
 
-    Formulas
-    --------
-    V(mu) = numpy.fabs(mu)**power
-
     Notes
     -----
+    Formulas
+       V(mu) = numpy.fabs(mu)**power
+
     Aliases for Power:
     mu = Power()
     mu_squared = Power(power=2)
@@ -94,12 +94,12 @@ class Power(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             mean parameters
 
         Returns
         -------
-        variance : array
+        variance : ndarray
             numpy.fabs(mu)**self.power
         """
         return np.power(np.fabs(mu), self.power)
@@ -142,7 +142,8 @@ Notes
 This is an alias of statsmodels.family.links.Power(power=3)
 """
 
-class Binomial(object):
+
+class Binomial:
     """
     Binomial variance function
 
@@ -157,14 +158,14 @@ class Binomial(object):
     call
         Returns the binomial variance
 
-    Formulas
-    --------
-    V(mu) = p * (1 - p) * n
+    Notes
+    -----
+    Formulas :
+
+       V(mu) = p * (1 - p) * n
 
     where p = mu / n
 
-    Notes
-    -----
     Alias for Binomial:
     binary = Binomial()
 
@@ -183,24 +184,28 @@ class Binomial(object):
         Binomial variance function
 
         Parameters
-        -----------
-        mu : array-like
+        ----------
+        mu : array_like
             mean parameters
 
         Returns
         -------
-        variance : array
+        variance : ndarray
            variance = mu/n * (1 - mu/n) * self.n
         """
         p = self._clean(mu / self.n)
         return p * (1 - p) * self.n
 
-    #TODO: inherit from super
+    # TODO: inherit from super
     def deriv(self, mu):
         """
-        Derivative of the variance function v'(mu)
+        Derivative of the variance function V'(mu).
+
+        For the Binomial variance V(mu) = p*(1 - p)*n where p = mu/n, the
+        derivative with respect to mu is dV/dmu = 1 - 2*p.
         """
-        return 1 - 2*mu
+        p = self._clean(mu / self.n)
+        return 1 - 2 * p
 
 
 binary = Binomial()
@@ -212,8 +217,9 @@ Notes
 This is an alias of Binomial(n=1)
 """
 
-class NegativeBinomial(object):
-    '''
+
+class NegativeBinomial:
+    """
     Negative binomial variance function
 
     Parameters
@@ -227,18 +233,18 @@ class NegativeBinomial(object):
     call
         Returns the negative binomial variance
 
-    Formulas
-    --------
-    V(mu) = mu + alpha*mu**2
-
     Notes
     -----
+    Formulas :
+
+       V(mu) = mu + alpha*mu**2
+
     Alias for NegativeBinomial:
     nbinom = NegativeBinomial()
 
     A private method _clean trims the data by machine epsilon so that p is
     in (0,inf)
-    '''
+    """
 
     def __init__(self, alpha=1.):
         self.alpha = alpha
@@ -252,12 +258,12 @@ class NegativeBinomial(object):
 
         Parameters
         ----------
-        mu : array-like
+        mu : array_like
             mean parameters
 
         Returns
         -------
-        variance : array
+        variance : ndarray
             variance = mu + alpha*mu**2
         """
         p = self._clean(mu)
@@ -270,6 +276,7 @@ class NegativeBinomial(object):
 
         p = self._clean(mu)
         return 1 + 2 * self.alpha * p
+
 
 nbinom = NegativeBinomial()
 nbinom.__doc__ = """

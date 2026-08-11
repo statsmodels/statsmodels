@@ -1,21 +1,20 @@
-#! /usr/bin/env python
-
 """Statewide Crime Data"""
+from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Public domain."""
-TITLE       = """Statewide Crime Data 2009"""
-SOURCE      = """
+COPYRIGHT = "Public domain."
+TITLE = "Statewide Crime Data 2009"
+SOURCE = """
 All data is for 2009 and was obtained from the American Statistical Abstracts except as indicated below.
 """
 
-DESCRSHORT  = """State crime data 2009"""
+DESCRSHORT = """State crime data 2009"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations: 51
     Number of variables: 8
@@ -38,24 +37,26 @@ NOTE        = """::
     murder
         Rate of murders / 100,000 population.
     hs_grad
-        Precent of population having graduated from high school or higher.
+        Percent of population having graduated from high school or higher.
     poverty
         % of individuals below the poverty line
     white
         Percent of population that is one race - white only. From 2009 American
         Community Survey
     single
-        Calculated from 2009 1-year American Community Survey obtained obtained
+        Calculated from 2009 1-year American Community Survey obtained
         from Census. Variable is Male householder, no wife present, family
-        household combined with Female household, no husband prsent, family
+        household combined with Female householder, no husband present, family
         household, divided by the total number of Family households.
     urban
         % of population in Urbanized Areas as of 2010 Census. Urbanized
         Areas are area of 50,000 or more people."""
 
-import numpy as np
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
+
+def load_pandas():
+    data = _get_data()
+    return du.process_pandas(data, endog_idx=2, exog_idx=[7, 4, 3, 5], index_idx=0)
+
 
 def load():
     """
@@ -63,25 +64,11 @@ def load():
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray(data, endog_idx=2, exog_idx=[7, 4, 3, 5],
-                               dtype=float)
+    return load_pandas()
 
-def load_pandas():
-    data = _get_data()
-    ##### SET THE INDICES #####
-    #NOTE: None for exog_idx is the complement of endog_idx
-    return du.process_recarray_pandas(data, endog_idx=2, exog_idx=[7,4,3,5],
-                                      dtype=float, index_idx=0)
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    with open(filepath + '/statecrime.csv', 'rb') as f:
-        data = np.recfromtxt(f, delimiter=",", names=True, dtype=None)
-    return data
+    return du.load_csv(__file__, "statecrime.csv")

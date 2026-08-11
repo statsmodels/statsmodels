@@ -57,7 +57,7 @@ predict predict_exog1_2, equation(dln_inc)
 predict predict_exog1_3, equation(dln_consump)
 
 // We will want to use these values to compare for forecasting, but note that
-// this also includes in the columns the value for 1978q4 (i.e. a VAR(1) needs
+// this also includes in the columns the value for 1978q4 (i.e., a VAR(1) needs
 // 1 sample from which to compute forecasts.
 fcast compute fcast_exog1_ , dynamic(tq(1979q1)) step(16) replace
 
@@ -73,7 +73,7 @@ predict predict_exog2_2, equation(dln_inc)
 predict predict_exog2_3, equation(dln_consump)
 
 // We will want to use these values to compare for forecasting, but note that
-// this also includes in the columns the value for 1978q4 (i.e. a VAR(1) needs
+// this also includes in the columns the value for 1978q4 (i.e., a VAR(1) needs
 // 1 sample from which to compute forecasts.
 fcast compute fcast_exog2_ , dynamic(tq(1979q1)) step(16) replace
 
@@ -94,7 +94,7 @@ outsheet pred* dyn* fcas* using results_var_stata.csv, comma replace
 // VARMA(1,1)
 // Note: Stata does not have this built-in, so we need to create the state space form ourselves
 // This replicates example 4 from the Stata documentation
-use http://www.stata-press.com/data/r12/manufac, clear
+use https://www.stata-press.com/data/r12/manufac, clear
 
 gen dlncaputil = D.lncaputil
 gen dlnhours = D.lnhours

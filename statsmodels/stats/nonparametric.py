@@ -1,0 +1,1380 @@
+"""
+Rank based methods for inferential statistics
+
+Created on Sat Aug 15 10:18:53 2020
+
+Author: Josef Perktold
+License: BSD-3
+
+"""
+
+
+from typing import NamedTuple
+
+import numpy as np
+from scipy import stats
+from scipy.stats import rankdata
+
+from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.weightstats import (
+    _tconfint_generic,
+    _tstat_generic,
+    _zconfint_generic,
+    _zstat_generic,
+)
+
+
+def rankdata_2samp(x1, x2):
+    """
+    Compute midranks for two samples
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Original data for two samples that will be converted to midranks.
+
+    Returns
+    -------
+    rank1 : ndarray
+        Midranks of the first sample in the pooled sample.
+    rank2 : ndarray
+        Midranks of the second sample in the pooled sample.
+    ranki1 : ndarray
+        Internal midranks of the first sample.
+    ranki2 : ndarray
+        Internal midranks of the second sample.
+    """
+    x1 = np.asarray(x1)
+    x2 = np.asarray(x2)
+
+    nobs1 = len(x1)
+    nobs2 = len(x2)
+    if nobs1 == 0 or nobs2 == 0:
+        raise ValueError("one sample has zero length")
+
+    x_combined = np.concatenate((x1, x2))
+    if x_combined.ndim > 1:
+        rank = np.apply_along_axis(rankdata, 0, x_combined)
+    else:
+        rank = rankdata(x_combined)  # no axis in older scipy
+    rank1 = rank[:nobs1]
+    rank2 = rank[nobs1:]
+    if x_combined.ndim > 1:
+        ranki1 = np.apply_along_axis(rankdata, 0, x1)
+        ranki2 = np.apply_along_axis(rankdata, 0, x2)
+    else:
+        ranki1 = rankdata(x1)
+        ranki2 = rankdata(x2)
+    return rank1, rank2, ranki1, ranki2
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class ProbSuperiorResult(NamedTuple):
+    """
+    Result of :meth:`RankCompareResult.test_prob_superior`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic for the z- or t-test.
+    pvalue : float
+        p-value of the test based on either the normal or t distribution.
+    df : float or None
+        Degrees of freedom used for the t distribution. None if the normal
+        distribution was used.
+    distribution : {"normal", "t"}
+        Name of the reference distribution used for `pvalue`.
+    """
+
+    statistic: float
+    pvalue: float
+    df: float | None
+    distribution: str
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class TostProbSuperiorResult(NamedTuple):
+    """
+    Result of :meth:`RankCompareResult.tost_prob_superior`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic of the one-sided test that has the larger pvalue.
+    pvalue : float
+        p-value of the equivalence test given by the larger pvalue of the
+        two one-sided tests.
+    results_larger : ProbSuperiorResult
+        Results instance with test statistic, pvalue and degrees of freedom
+        for the lower threshold test.
+    results_smaller : ProbSuperiorResult
+        Results instance with test statistic, pvalue and degrees of freedom
+        for the upper threshold test.
+    title : str
+        Descriptive title of the equivalence test.
+    """
+
+    statistic: float
+    pvalue: float
+    results_larger: ProbSuperiorResult
+    results_smaller: ProbSuperiorResult
+    title: str
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class RankCompareResult(NamedTuple):
+    """
+    Results for rank comparison
+
+    This includes results from intermediate computations, as well as
+    methods for hypothesis tests, confidence intervals and summary.
+
+    Parameters
+    ----------
+    statistic : float
+        The Brunner-Munzel W statistic.
+    pvalue : float
+        p-value based on the t distribution if `use_t` is True, otherwise
+        based on the normal distribution.
+    s1 : float
+        Variance-like quantity for sample 1 used in the Brunner-Munzel
+        statistic.
+    s2 : float
+        Variance-like quantity for sample 2 used in the Brunner-Munzel
+        statistic.
+    var1 : float
+        Estimated variance contribution of sample 1 to `prob1`.
+    var2 : float
+        Estimated variance contribution of sample 2 to `prob2`.
+    var : float
+        Estimated variance of `statistic`.
+    var_prob : float
+        Estimated variance of `prob1` (and `prob2`).
+    nobs1 : int
+        Number of observations in sample 1.
+    nobs2 : int
+        Number of observations in sample 2.
+    nobs : int
+        Total number of observations, ``nobs1 + nobs2``.
+    mean1 : float
+        Mean rank of sample 1 in the pooled sample.
+    mean2 : float
+        Mean rank of sample 2 in the pooled sample.
+    prob1 : float
+        Probability that a random draw from sample 1 is stochastically
+        larger than a random draw from sample 2,
+        ``P(x1 > x2) + 0.5 * P(x1 = x2)``.
+    prob2 : float
+        Probability that a random draw from sample 2 is stochastically
+        larger than a random draw from sample 1. Equal to ``1 - prob1``.
+    somersd1 : float
+        Somers' D statistic based on `prob1`, ``2 * prob1 - 1``.
+    somersd2 : float
+        Somers' D statistic based on `prob2`, ``2 * prob2 - 1``.
+    df : float or None
+        Degrees of freedom used for the t distribution if `use_t` is True,
+        otherwise None.
+    use_t : bool
+        Whether the t distribution (True) or normal distribution (False)
+        is used for `pvalue` and inference in the instance methods.
+    """
+
+    statistic: float
+    pvalue: float
+    s1: float
+    s2: float
+    var1: float
+    var2: float
+    var: float
+    var_prob: float
+    nobs1: int
+    nobs2: int
+    nobs: int
+    mean1: float
+    mean2: float
+    prob1: float
+    prob2: float
+    somersd1: float
+    somersd2: float
+    df: float | None
+    use_t: bool
+
+    def conf_int(self, value=None, alpha=0.05, alternative="two-sided"):
+        """
+        Confidence interval for probability that sample 1 has larger values
+
+        Confidence interval is for the shifted probability
+
+            P(x1 > x2) + 0.5 * P(x1 = x2) - value
+
+        Parameters
+        ----------
+        value : float
+            Value, default 0, shifts the confidence interval,
+            e.g., ``value=0.5`` centers the confidence interval at zero.
+        alpha : float
+            Significance level for the confidence interval, coverage is
+            ``1-alpha``
+        alternative : str
+            The alternative hypothesis, H1, has to be one of the following
+
+               * 'two-sided' : H1: ``prob - value`` not equal to 0.
+               * 'larger' :   H1: ``prob - value > 0``
+               * 'smaller' :  H1: ``prob - value < 0``
+
+        Returns
+        -------
+        lower : float or ndarray
+            Lower confidence limit. This is -inf for the one-sided alternative
+            "smaller".
+        upper : float or ndarray
+            Upper confidence limit. This is inf for the one-sided alternative
+            "larger".
+
+        """
+
+        p0 = value
+        if p0 is None:
+            p0 = 0
+        diff = self.prob1 - p0
+        std_diff = np.sqrt(self.var / self.nobs)
+
+        if self.use_t is False:
+            return _zconfint_generic(diff, std_diff, alpha, alternative)
+        else:
+            return _tconfint_generic(diff, std_diff, self.df, alpha,
+                                     alternative)
+
+    def test_prob_superior(self, value=0.5, alternative="two-sided"):
+        """
+        Test for superiority probability
+
+        H0: P(x1 > x2) + 0.5 * P(x1 = x2) = value
+
+        The alternative is that the probability is either not equal, larger
+        or smaller than the null-value depending on the chosen alternative.
+
+        Parameters
+        ----------
+        value : float
+            Value of the probability under the Null hypothesis.
+        alternative : str
+            The alternative hypothesis, H1, has to be one of the following
+
+               * 'two-sided' : H1: ``prob - value`` not equal to 0.
+               * 'larger' :   H1: ``prob - value > 0``
+               * 'smaller' :  H1: ``prob - value < 0``
+
+        Returns
+        -------
+        ProbSuperiorResult
+            Namedtuple with the following main attributes
+
+            statistic : float
+                Test statistic for z- or t-test
+            pvalue : float
+                Pvalue of the test based on either normal or t distribution.
+
+        """
+
+        p0 = value  # alias
+        # diff = self.prob1 - p0  # for reporting, not used in computation
+        # TODO: use var_prob
+        std_diff = np.sqrt(self.var / self.nobs)
+
+        # corresponds to a one-sample test and either p0 or diff could be used
+        if not self.use_t:
+            stat, pv = _zstat_generic(self.prob1, p0, std_diff, alternative,
+                                      diff=0)
+            distr = "normal"
+        else:
+            stat, pv = _tstat_generic(self.prob1, p0, std_diff, self.df,
+                                      alternative, diff=0)
+            distr = "t"
+
+        res = ProbSuperiorResult(statistic=stat,
+                                 pvalue=pv,
+                                 df=self.df,
+                                 distribution=distr
+                                 )
+        return res
+
+    def tost_prob_superior(self, low, upp):
+        """
+        Test of stochastic (non-)equivalence of p = P(x1 > x2)
+
+        Null hypothesis:  p < low or p > upp
+        Alternative hypothesis:  low < p < upp
+
+        where p is the probability that a random draw from the population of
+        the first sample has a larger value than a random draw from the
+        population of the second sample, specifically
+
+            p = P(x1 > x2) + 0.5 * P(x1 = x2)
+
+        If the pvalue is smaller than a threshold, say 0.05, then we reject the
+        hypothesis that the probability p that distribution 1 is stochastically
+        superior to distribution 2 is outside of the interval given by
+        thresholds low and upp.
+
+        Parameters
+        ----------
+        low, upp : float
+            equivalence interval low < p < upp
+
+        Returns
+        -------
+        TostProbSuperiorResult
+            Namedtuple with the following main attributes
+
+            pvalue : float
+                Pvalue of the equivalence test given by the larger pvalue of
+                the two one-sided tests.
+            statistic : float
+                Test statistic of the one-sided test that has the larger
+                pvalue.
+            results_larger : ProbSuperiorResult
+                Results instance with test statistic, pvalue and degrees of
+                freedom for lower threshold test.
+            results_smaller : ProbSuperiorResult
+                Results instance with test statistic, pvalue and degrees of
+                freedom for upper threshold test.
+
+        """
+
+        t1 = self.test_prob_superior(low, alternative="larger")
+        t2 = self.test_prob_superior(upp, alternative="smaller")
+
+        # idx_max = 1 if t1.pvalue < t2.pvalue else 0
+        idx_max = np.asarray(t1.pvalue < t2.pvalue, int)
+        title = "Equivalence test for Prob(x1 > x2) + 0.5 Prob(x1 = x2) "
+        res = TostProbSuperiorResult(
+            statistic=np.choose(idx_max, [t1.statistic, t2.statistic]),
+            # pvalue=[t1.pvalue, t2.pvalue][idx_max], # python
+            # use np.choose for vectorized selection
+            pvalue=np.choose(idx_max, [t1.pvalue, t2.pvalue]),
+            results_larger=t1,
+            results_smaller=t2,
+            title=title,
+        )
+        return res
+
+    def confint_lintransf(self, const=-1, slope=2, alpha=0.05,
+                          alternative="two-sided"):
+        """
+        Confidence interval of a linear transformation of prob1
+
+        This computes the confidence interval for
+
+            d = const + slope * prob1
+
+        Default values correspond to Somers' d.
+
+        Parameters
+        ----------
+        const, slope : float
+            Constant and slope for linear (affine) transformation.
+        alpha : float
+            Significance level for the confidence interval, coverage is
+            ``1-alpha``
+        alternative : str
+            The alternative hypothesis, H1, has to be one of the following
+
+               * 'two-sided' : H1: ``prob - value`` not equal to 0.
+               * 'larger' :   H1: ``prob - value > 0``
+               * 'smaller' :  H1: ``prob - value < 0``
+
+        Returns
+        -------
+        lower : float or ndarray
+            Lower confidence limit. This is -inf for the one-sided alternative
+            "smaller".
+        upper : float or ndarray
+            Upper confidence limit. This is inf for the one-sided alternative
+            "larger".
+
+        """
+
+        low_p, upp_p = self.conf_int(alpha=alpha, alternative=alternative)
+        low = const + slope * low_p
+        upp = const + slope * upp_p
+        if slope < 0:
+            low, upp = upp, low
+        return low, upp
+
+    def effectsize_normal(self, prob=None):
+        """
+        Cohen's d, standardized mean difference under normality assumption
+
+        This computes the standardized mean difference, Cohen's d, effect size
+        that is equivalent to the rank based probability ``p`` of being
+        stochastically larger if we assume that the data is normally
+        distributed, given by
+
+            :math:`d = F^{-1}(p) * \\sqrt{2}`
+
+        where :math:`F^{-1}` is the inverse of the cdf of the normal
+        distribution.
+
+        Parameters
+        ----------
+        prob : float in (0, 1)
+            Probability to be converted to Cohen's d effect size.
+            If prob is None, then the ``prob1`` attribute is used.
+
+        Returns
+        -------
+        float
+            Cohen's d effect size equivalent to the rank based probability
+            under the normality assumption.
+        """
+        if prob is None:
+            prob = self.prob1
+        return stats.norm.ppf(prob) * np.sqrt(2)
+
+    def summary(self, alpha=0.05, xname=None):
+        """
+        Summary table for probability that random draw x1 is larger than x2
+
+        Parameters
+        ----------
+        alpha : float
+            Significance level for confidence intervals. Coverage is 1 - alpha
+        xname : None or list of str
+            If None, then each row has a name column with generic names.
+            If xname is a list of strings, then it will be included as part
+            of those names.
+
+        Returns
+        -------
+        SimpleTable
+            Instance with methods to convert to different output formats.
+        """
+
+        yname = "None"
+        effect = np.atleast_1d(self.prob1)
+        if self.pvalue is None:
+            psr = self.test_prob_superior()
+            statistic, pvalue = psr.statistic, psr.pvalue
+        else:
+            pvalue = self.pvalue
+            statistic = self.statistic
+        pvalues = np.atleast_1d(pvalue)
+        ci = np.atleast_2d(self.conf_int(alpha=alpha))
+        if ci.shape[0] > 1:
+            ci = ci.T
+        use_t = self.use_t
+        sd = np.atleast_1d(np.sqrt(self.var_prob))
+        statistic = np.atleast_1d(statistic)
+        if xname is None:
+            xname = [f"c{ii:d}" for ii in range(len(effect))]
+
+        xname2 = [f"prob(x1>x2) {ii}" for ii in xname]
+
+        title = "Probability sample 1 is stochastically larger"
+        from statsmodels.iolib.summary import summary_params
+
+        summ = summary_params((self, effect, sd, statistic,
+                               pvalues, ci),
+                              yname=yname, xname=xname2, use_t=use_t,
+                              title=title, alpha=alpha)
+        return summ
+
+
+def rank_compare_2indep(x1, x2, use_t=True):
+    """
+    Statistics and tests for the probability that x1 has larger values than x2
+
+    p is the probability that a random draw from the population of
+    the first sample has a larger value than a random draw from the
+    population of the second sample, specifically
+
+            p = P(x1 > x2) + 0.5 * P(x1 = x2)
+
+    This is a measure underlying Wilcoxon-Mann-Whitney's U test,
+    Fligner-Policello test and Brunner-Munzel test, and
+    Inference is based on the asymptotic distribution of the Brunner-Munzel
+    test. The half probability for ties corresponds to the use of midranks
+    and make it valid for discrete variables.
+
+    The Null hypothesis for stochastic equality is p = 0.5, which corresponds
+    to the Brunner-Munzel test.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Array of samples, should be one-dimensional.
+    use_t : boolean
+        If use_t is true, the t distribution with Welch-Satterthwaite type
+        degrees of freedom is used for p-value and confidence interval.
+        If use_t is false, then the normal distribution is used.
+
+    Returns
+    -------
+    res : RankCompareResult
+        The results instance contains the results for the Brunner-Munzel test
+        and has methods for hypothesis tests, confidence intervals and summary.
+
+        statistic : float
+            The Brunner-Munzel W statistic.
+        pvalue : float
+            P-value based on the t distribution if `use_t` is True,
+            otherwise based on the normal distribution.
+
+    See Also
+    --------
+    RankCompareResult
+    scipy.stats.brunnermunzel : Brunner-Munzel test for stochastic equality
+    scipy.stats.mannwhitneyu : Mann-Whitney rank test on two samples.
+
+    Notes
+    -----
+    Wilcoxon-Mann-Whitney assumes equal variance or equal distribution under
+    the Null hypothesis. Fligner-Policello test allows for unequal variances
+    but assumes continuous distribution, i.e., no ties.
+    Brunner-Munzel extends the test to allow for unequal variance and discrete
+    or ordered categorical random variables.
+
+    Brunner and Munzel recommended to estimate the p-value by t-distribution
+    when the size of data is 50 or less. If the size is lower than 10, it would
+    be better to use permuted Brunner-Munzel test (see [2]_) for the test
+    of stochastic equality.
+
+    This measure has been introduced in the literature under many different
+    names relying on a variety of assumptions.
+    In psychology, McGraw and Wong (1992) introduced it as Common Language
+    effect size for the continuous, normal distribution case,
+    Vargha and Delaney (2000) [3]_ extended it to the nonparametric
+    continuous distribution case as in Fligner-Policello.
+
+    WMW and related tests can only be interpreted as test of medians or tests
+    of central location only under very restrictive additional assumptions
+    such as both distributions are identical under the equality null hypothesis
+    (assumed by Mann-Whitney) or both distributions are symmetric (shown by
+    Fligner-Policello). If the distribution of the two samples can differ in
+    an arbitrary way, then the equality Null hypothesis corresponds to p=0.5
+    against an alternative p != 0.5.  See for example Conroy (2012) [4]_ and
+    Divine et al (2018) [5]_.
+
+    Note: Brunner-Munzel and related literature define the probability that x1
+    is stochastically smaller than x2, while here we use stochastically larger.
+    This is equivalent to switching x1 and x2 in the two sample case.
+
+    References
+    ----------
+    .. [1] Brunner, E. and Munzel, U. "The nonparametric Behrens-Fisher
+           problem: Asymptotic theory and a small-sample approximation".
+           Biometrical Journal. Vol. 42(2000): 17-25.
+    .. [2] Neubert, K. and Brunner, E. "A studentized permutation test for the
+           non-parametric Behrens-Fisher problem". Computational Statistics and
+           Data Analysis. Vol. 51(2007): 5192-5204.
+    .. [3] Vargha, András, and Harold D. Delaney. 2000. “A Critique and
+           Improvement of the CL Common Language Effect Size Statistics of
+           McGraw and Wong.” Journal of Educational and Behavioral Statistics
+           25 (2): 101-32. https://doi.org/10.3102/10769986025002101.
+    .. [4] Conroy, Ronán M. 2012. “What Hypotheses Do `Nonparametric` Two-Group
+           Tests Actually Test?” The Stata Journal: Promoting Communications on
+           Statistics and Stata 12 (2): 182-90.
+           https://doi.org/10.1177/1536867X1201200202.
+    .. [5] Divine, George W., H. James Norton, Anna E. Barón, and Elizabeth
+           Juarez-Colunga. 2018. “The Wilcoxon-Mann-Whitney Procedure Fails as
+           a Test of Medians.” The American Statistician 72 (3): 278-86.
+           https://doi.org/10.1080/00031305.2017.1305291.
+
+    """
+    x1 = np.asarray(x1)
+    x2 = np.asarray(x2)
+
+    nobs1 = len(x1)
+    nobs2 = len(x2)
+    nobs = nobs1 + nobs2
+    if nobs1 == 0 or nobs2 == 0:
+        raise ValueError("one sample has zero length")
+
+    rank1, rank2, ranki1, ranki2 = rankdata_2samp(x1, x2)
+
+    meanr1 = np.mean(rank1, axis=0)
+    meanr2 = np.mean(rank2, axis=0)
+    meanri1 = np.mean(ranki1, axis=0)
+    meanri2 = np.mean(ranki2, axis=0)
+
+    S1 = np.sum(np.power(rank1 - ranki1 - meanr1 + meanri1, 2.0), axis=0)
+    S1 /= nobs1 - 1
+    S2 = np.sum(np.power(rank2 - ranki2 - meanr2 + meanri2, 2.0), axis=0)
+    S2 /= nobs2 - 1
+
+    wbfn = nobs1 * nobs2 * (meanr1 - meanr2)
+    wbfn /= (nobs1 + nobs2) * np.sqrt(nobs1 * S1 + nobs2 * S2)
+
+    # Here we only use alternative == "two-sided"
+    if use_t:
+        df_numer = np.power(nobs1 * S1 + nobs2 * S2, 2.0)
+        df_denom = np.power(nobs1 * S1, 2.0) / (nobs1 - 1)
+        df_denom += np.power(nobs2 * S2, 2.0) / (nobs2 - 1)
+        df = df_numer / df_denom
+        pvalue = 2 * stats.t.sf(np.abs(wbfn), df)
+    else:
+        pvalue = 2 * stats.norm.sf(np.abs(wbfn))
+        df = None
+
+    # other info
+    var1 = S1 / (nobs - nobs1)**2
+    var2 = S2 / (nobs - nobs2)**2
+    var_prob = (var1 / nobs1 + var2 / nobs2)
+    var = nobs * (var1 / nobs1 + var2 / nobs2)
+    prob1 = (meanr1 - (nobs1 + 1) / 2) / nobs2
+    prob2 = (meanr2 - (nobs2 + 1) / 2) / nobs1
+
+    return RankCompareResult(statistic=wbfn, pvalue=pvalue, s1=S1, s2=S2,
+                             var1=var1, var2=var2, var=var,
+                             var_prob=var_prob,
+                             nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                             mean1=meanr1, mean2=meanr2,
+                             prob1=prob1, prob2=prob2,
+                             somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
+                             df=df, use_t=use_t
+                             )
+
+
+def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
+    """
+    Stochastically larger probability for 2 independent ordinal samples
+
+    This is a special case of `rank_compare_2indep` when the data are given as
+    counts of two independent ordinal, i.e., ordered multinomial, samples.
+
+    The statistic of interest is the probability that a random draw from the
+    population of the first sample has a larger value than a random draw from
+    the population of the second sample, specifically
+
+        p = P(x1 > x2) + 0.5 * P(x1 = x2)
+
+    Parameters
+    ----------
+    count1 : array_like
+        Counts of the first sample, categories are assumed to be ordered.
+    count2 : array_like
+        Counts of the second sample, number of categories and ordering needs
+        to be the same as for sample 1.
+    ddof : scalar
+        Degrees of freedom correction for variance estimation. The default
+        ddof=1 corresponds to `rank_compare_2indep`.
+    use_t : bool
+        If use_t is true, the t distribution with Welch-Satterthwaite type
+        degrees of freedom is used for p-value and confidence interval.
+        If use_t is false, then the normal distribution is used.
+
+    Returns
+    -------
+    res : RankCompareResult
+        This includes methods for hypothesis tests and confidence intervals
+        for the probability that sample 1 is stochastically larger than
+        sample 2.
+
+    See Also
+    --------
+    rank_compare_2indep
+    RankCompareResult
+
+    Notes
+    -----
+    The implementation is based on the appendix of Munzel and Hauschke (2003)
+    with the addition of ``ddof`` so that the results match the general
+    function `rank_compare_2indep`.
+
+    """
+
+    count1 = np.asarray(count1)
+    count2 = np.asarray(count2)
+    nobs1, nobs2 = count1.sum(), count2.sum()
+    freq1 = count1 / nobs1
+    freq2 = count2 / nobs2
+    cdf1 = np.concatenate(([0], freq1)).cumsum(axis=0)
+    cdf2 = np.concatenate(([0], freq2)).cumsum(axis=0)
+
+    # mid rank cdf
+    cdfm1 = (cdf1[1:] + cdf1[:-1]) / 2
+    cdfm2 = (cdf2[1:] + cdf2[:-1]) / 2
+    prob1 = (cdfm2 * freq1).sum()
+    prob2 = (cdfm1 * freq2).sum()
+
+    var1 = (cdfm2**2 * freq1).sum() - prob1**2
+    var2 = (cdfm1**2 * freq2).sum() - prob2**2
+
+    var_prob = (var1 / (nobs1 - ddof) + var2 / (nobs2 - ddof))
+    nobs = nobs1 + nobs2
+    var = nobs * var_prob
+    vn1 = var1 * nobs2 * nobs1 / (nobs1 - ddof)
+    vn2 = var2 * nobs1 * nobs2 / (nobs2 - ddof)
+    df = (vn1 + vn2)**2 / (vn1**2 / (nobs1 - 1) + vn2**2 / (nobs2 - 1))
+    res = RankCompareResult(statistic=None, pvalue=None, s1=None, s2=None,
+                            var1=var1, var2=var2, var=var,
+                            var_prob=var_prob,
+                            nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                            mean1=None, mean2=None,
+                            prob1=prob1, prob2=prob2,
+                            somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
+                            df=df, use_t=use_t
+                            )
+
+    return res
+
+
+class JonckheereTerpstraResult(NamedTuple):
+    """
+    Result of :func:`jonckheere_terpstra`.
+
+    Parameters
+    ----------
+    statistic : float
+        The Jonckheere-Terpstra J statistic.
+    pvalue : float
+        P-value based on the asymptotic normal approximation.
+    zstat : float
+        Standardized normal approximation for the test statistic.
+    distribution : str
+        The distribution used to compute `pvalue`, always ``"normal"``.
+    alternative : str
+        The alternative hypothesis that was tested.
+    nobs : int
+        Total number of observations across all samples.
+    k_groups : int
+        Number of samples, i.e., the number of ordered groups.
+    counts : ndarray
+        Number of observations in each sample.
+    mean_null : float
+        Mean of `statistic` under the null hypothesis.
+    var_null : float
+        Variance of `statistic` under the null hypothesis.
+    concordant_minus_discordant : float
+        Difference between the number of concordant and discordant pairs,
+        i.e., ``2 * statistic - mean_null * 2``.
+    tau : float
+        Kendall's tau computed from the pooled observations and their
+        ordered group labels.
+    """
+
+    statistic: float
+    pvalue: float
+    zstat: float
+    distribution: str
+    alternative: str
+    nobs: int
+    k_groups: int
+    counts: np.ndarray
+    mean_null: float
+    var_null: float
+    concordant_minus_discordant: float
+    tau: float
+
+
+def jonckheere_terpstra(samples, alternative="larger"):
+    """
+    Jonckheere-Terpstra test for ordered k-sample alternatives.
+
+    The order of `samples` defines the ordered alternative. Under the
+    ``"larger"`` alternative, later samples tend to take larger values than
+    earlier samples. Under the ``"smaller"`` alternative, later samples tend
+    to take smaller values.
+
+    Parameters
+    ----------
+    samples : sequence of array_like
+        Sequence containing at least two one-dimensional samples of numeric,
+        finite observations, in the order implied by the alternative
+        hypothesis.
+    alternative : {"two-sided", "larger", "smaller"}
+        Defines the alternative hypothesis. The following options are
+        available:
+
+        * ``"two-sided"``: the ordered trend is non-zero
+        * ``"larger"``: later samples tend to have larger values
+        * ``"smaller"``: later samples tend to have smaller values
+
+    Returns
+    -------
+    res : JonckheereTerpstraResult
+        A NamedTuple with the Jonckheere-Terpstra statistic, pvalue and related
+        quantities. The key fieleds are``statistic`` and ``pvalue``. See
+        :class:`JonckheereTerpstraResult` for the full list of fields.
+
+    See Also
+    --------
+    JonckheereTerpstraResult
+        Results class for the Jonckheere-Terpstra test
+    scipy.stats.kendalltau : Kendall's tau, the asymptotically equivalent
+        trend statistic used here for the pooled observations and ordered
+        group labels.
+    scipy.stats.mannwhitneyu : Mann-Whitney U test, the pairwise two-sample
+        building block summed by the Jonckheere-Terpstra statistic.
+    scipy.stats.kruskal : Kruskal-Wallis H-test, a k-sample test against an
+        unordered (omnibus) alternative rather than an ordered trend.
+    scipy.stats.page_trend_test : Page's L test for an ordered alternative
+        in related (repeated-measures) samples, as opposed to the
+        independent samples assumed here.
+
+    Notes
+    -----
+    The Jonckheere-Terpstra statistic is the sum of pairwise Mann-Whitney type
+    counts over all ordered pairs of groups. Ties between groups contribute
+    one half to the raw statistic.
+
+    The p-value is computed from the asymptotic normal approximation, which is
+    equivalent to the large-sample Kendall trend test applied to the pooled
+    observations and their ordered group labels.
+
+    References
+    ----------
+    .. [1] Terpstra, T. J. "The asymptotic normality and consistency of
+       Kendall's test against trend, when ties are present in one ranking."
+       Indagationes Mathematicae 14 (1952): 327-333.
+    .. [2] Jonckheere, A. R. "A distribution-free k-sample test against
+       ordered alternatives." Biometrika 41 (1954): 133-145.
+    """
+    samples = list(samples)
+    if len(samples) < 2:
+        raise ValueError("`samples` must contain at least two ordered samples.")
+    if alternative not in ("two-sided", "larger", "smaller"):
+        raise ValueError(
+            "alternative must be one of 'two-sided', 'larger', or 'smaller'."
+        )
+
+    arrays = []
+    for idx, sample in enumerate(samples):
+        sample_arr = np.asarray(sample, dtype=float)
+        if sample_arr.ndim != 1:
+            raise ValueError(
+                f"sample at position {idx} must be one-dimensional, got "
+                f"{sample_arr.ndim} dimensions."
+            )
+        if sample_arr.size == 0:
+            raise ValueError(f"sample at position {idx} has zero length.")
+        if not np.all(np.isfinite(sample_arr)):
+            raise ValueError("All observations must be finite.")
+        arrays.append(sample_arr)
+
+    counts = np.array([sample_arr.size for sample_arr in arrays], dtype=np.int64)
+    n_groups = len(arrays)
+    nobs = int(counts.sum())
+    if nobs < 2:
+        raise ValueError("`samples` must contain at least two observations.")
+
+    # We need to cast to intp because np.repeat requires repeats to be safely
+    # castable to the platform indexing dtype, which is 32 bits on 32-bit
+    # platforms.
+    group_labels = np.repeat(
+        np.arange(n_groups, dtype=np.intp), counts.astype(np.intp, copy=False)
+    )
+    pooled = np.concatenate(arrays)
+    sort_idx = np.argsort(pooled, kind="mergesort")
+    pooled_sorted = pooled[sort_idx]
+    groups_sorted = group_labels[sort_idx]
+
+    # ytie/y0/y1 are the tie-correction terms for the pooled ranking
+    # ("y" ranking in Kendall's tau terminology); xtie/x0/x1 below are the
+    # analogous terms for the group-label ranking. Both follow the
+    # tie-adjusted variance derivation used by scipy.stats.kendalltau.
+    prev_counts = np.zeros(n_groups, dtype=np.int64)
+    statistic = 0.0
+    ytie = 0
+    y0 = 0
+    y1 = 0
+
+    start = 0
+    while start < nobs:
+        stop = start + 1
+        while stop < nobs and pooled_sorted[stop] == pooled_sorted[start]:
+            stop += 1
+
+        block_counts = np.bincount(groups_sorted[start:stop], minlength=n_groups)
+        prev_lower = np.cumsum(prev_counts, dtype=np.int64)[:-1]
+        block_lower = np.cumsum(block_counts, dtype=np.int64)[:-1]
+        statistic += np.dot(block_counts[1:], prev_lower)
+        statistic += 0.5 * np.dot(block_counts[1:], block_lower)
+
+        block_size = stop - start
+        if block_size > 1:
+            ytie += block_size * (block_size - 1) // 2
+            y0 += block_size * (block_size - 1) * (block_size - 2)
+            y1 += block_size * (block_size - 1) * (2 * block_size + 5)
+
+        prev_counts += block_counts
+        start = stop
+
+    total_pairs_between = int(np.dot(counts[1:], np.cumsum(counts)[:-1]))
+    mean_null = total_pairs_between / 2.0
+    con_minus_dis = 2.0 * statistic - total_pairs_between
+
+    xtie = int((counts * (counts - 1) // 2).sum())
+    x0 = int((counts * (counts - 1) * (counts - 2)).sum())
+    x1 = int((counts * (counts - 1) * (2 * counts + 5)).sum())
+
+    m = nobs * (nobs - 1.0)
+    var_s = (m * (2 * nobs + 5) - x1 - y1) / 18.0
+    var_s += (2.0 * xtie * ytie) / m
+    if nobs > 2:
+        var_s += (x0 * y0) / (9.0 * m * (nobs - 2.0))
+
+    if var_s <= 0:
+        raise ValueError(
+            "the asymptotic variance is zero; the test is undefined for "
+            "completely tied samples."
+        )
+
+    zstat = con_minus_dis / np.sqrt(var_s)
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(zstat))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(zstat)
+    else:
+        pvalue = stats.norm.cdf(zstat)
+
+    total_pairs = nobs * (nobs - 1.0) / 2.0
+    tau_denom = np.sqrt((total_pairs - xtie) * (total_pairs - ytie))
+    tau = con_minus_dis / tau_denom if tau_denom > 0 else np.nan
+
+    return JonckheereTerpstraResult(
+        statistic=statistic,
+        pvalue=pvalue,
+        zstat=zstat,
+        distribution="normal",
+        alternative=alternative,
+        nobs=nobs,
+        k_groups=n_groups,
+        counts=counts,
+        mean_null=mean_null,
+        var_null=var_s / 4.0,
+        concordant_minus_discordant=con_minus_dis,
+        tau=tau,
+    )
+
+
+def prob_larger_continuous(distr1, distr2):
+    """
+    Probability indicating that distr1 is stochastically larger than distr2
+
+    This computes
+
+        p = P(x1 > x2)
+
+    for two continuous distributions, where `distr1` and `distr2` are the
+    distributions of random variables x1 and x2 respectively.
+
+    Parameters
+    ----------
+    distr1, distr2 : distributions
+        Two instances of scipy.stats.distributions. The required methods are
+        cdf of the second distribution and expect of the first distribution.
+
+    Returns
+    -------
+    p : float
+        Probability that x1 is larger than x2.
+
+    Notes
+    -----
+    This is a one-liner that is added mainly as reference.
+
+    Examples
+    --------
+    >>> from scipy import stats
+    >>> prob_larger_continuous(stats.norm, stats.t(5))
+    0.4999999999999999
+
+    # which is the same as
+    >>> stats.norm.expect(stats.t(5).cdf)
+    0.4999999999999999
+
+    # distribution 1 with smaller mean (loc) than distribution 2
+    >>> prob_larger_continuous(stats.norm, stats.norm(loc=1))
+    0.23975006109347669
+
+    """
+
+    return distr1.expect(distr2.cdf)
+
+
+def cohensd2problarger(d):
+    """
+    Convert Cohen's d effect size to stochastically-larger-probability
+
+    This assumes observations are normally distributed.
+
+    Computed as
+
+        p = Prob(x1 > x2) = F(d / sqrt(2))
+
+    where `F` is cdf of normal distribution. Cohen's d is defined as
+
+        d = (mean1 - mean2) / std
+
+    where ``std`` is the pooled within standard deviation.
+
+    Parameters
+    ----------
+    d : float or array_like
+        Cohen's d effect size for difference mean1 - mean2.
+
+    Returns
+    -------
+    prob : float or ndarray
+        Prob(x1 > x2)
+    """
+
+    return stats.norm.cdf(d / np.sqrt(2))
+
+
+class RankPlacementsResult(NamedTuple):
+    """
+    Result of :func:`_compute_rank_placements`.
+
+    Parameters
+    ----------
+    n_1 : int
+        Number of observations in the first sample.
+    n_2 : int
+        Number of observations in the second sample.
+    overall_ranks_pooled : ndarray
+        Ranks of the pooled sample.
+    overall_ranks_1 : ndarray
+        Ranks of the first sample in the pooled sample.
+    overall_ranks_2 : ndarray
+        Ranks of the second sample in the pooled sample.
+    within_group_ranks_1 : ndarray
+        Internal ranks of the first sample.
+    within_group_ranks_2 : ndarray
+        Internal ranks of the second sample.
+    placements_1 : ndarray
+        Placements of the first sample in the pooled sample.
+    placements_2 : ndarray
+        Placements of the second sample in the pooled sample.
+    """
+
+    n_1: int
+    n_2: int
+    overall_ranks_pooled: np.ndarray
+    overall_ranks_1: np.ndarray
+    overall_ranks_2: np.ndarray
+    within_group_ranks_1: np.ndarray
+    within_group_ranks_2: np.ndarray
+    placements_1: np.ndarray
+    placements_2: np.ndarray
+
+
+def _compute_rank_placements(x1, x2) -> RankPlacementsResult:
+    """
+    Compute ranks and placements for two samples
+
+    This helper is used by `samplesize_rank_compare_onetail`
+    to calculate rank-based statistics for two input samples.
+    It assumes that the input data has been validated beforehand.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Data samples used to compute ranks and placements.
+
+    Returns
+    -------
+    RankPlacementsResult
+        See :class:`RankPlacementsResult` for a description of the
+        attributes.
+
+    Notes
+    -----
+    * The overall rank for each observation is determined
+    by ranking all data points from both samples combined
+    (`x1` and `x2`) in ascending order, with ties averaged.
+
+    * The within-group rank for each observation is determined
+    by ranking the data points within each sample separately.
+
+    * The placement of each observation is calculated by
+    taking the difference between the overall rank and the
+    within-group rank of the observation. Placements can be
+    thought of as measures of the degree of overlap or
+    separation between two samples.
+    """
+    n_1 = len(x1)
+    n_2 = len(x2)
+
+    # Overall ranks for each obs among combined sample
+    overall_ranks_pooled = rankdata(
+        np.r_[x1, x2], method="average"
+    )
+    overall_ranks_1 = overall_ranks_pooled[:n_1]
+    overall_ranks_2 = overall_ranks_pooled[n_1:]
+    # Within group ranks for each obs
+    within_group_ranks_1 = rankdata(x1, method="average")
+    within_group_ranks_2 = rankdata(x2, method="average")
+
+    placements_1 = overall_ranks_1 - within_group_ranks_1
+    placements_2 = overall_ranks_2 - within_group_ranks_2
+
+    return RankPlacementsResult(
+        n_1=n_1,
+        n_2=n_2,
+        overall_ranks_pooled=overall_ranks_pooled,
+        overall_ranks_1=overall_ranks_1,
+        overall_ranks_2=overall_ranks_2,
+        within_group_ranks_1=within_group_ranks_1,
+        within_group_ranks_2=within_group_ranks_2,
+        placements_1=placements_1,
+        placements_2=placements_2,
+    )
+
+
+class SamplesizeRankCompareResult(NamedTuple):
+    """
+    Result of :func:`samplesize_rank_compare_onetail`.
+
+    Parameters
+    ----------
+    nobs_total : float
+        The total sample size required for the experiment.
+    nobs_treat : float
+        Sample size for the treatment group.
+    nobs_ref : float
+        Sample size for the reference group.
+    relative_effect : float
+        The estimated relative effect size.
+    power : float
+        The desired power for the test.
+    alpha : float
+        The type I error rate for the test.
+    """
+
+    nobs_total: float
+    nobs_treat: float
+    nobs_ref: float
+    relative_effect: float
+    power: float
+    alpha: float
+
+
+def samplesize_rank_compare_onetail(
+    synthetic_sample,
+    reference_sample,
+    alpha,
+    power,
+    nobs_ratio=1,
+    alternative="two-sided",
+) -> SamplesizeRankCompareResult:
+    """
+    Compute sample size for the non-parametric Mann-Whitney U test
+
+    This function implements the method of Happ et al (2019).
+
+    Parameters
+    ----------
+    synthetic_sample : array_like
+        Generated `synthetic` data representing the treatment
+        group under the research hypothesis.
+    reference_sample : array_like
+        Available information for the reference group.
+    alpha : float
+        The type I error rate for the test (two-sided).
+    power : float
+        The desired power of the test.
+    nobs_ratio : float, optional
+        Sample size ratio, `nobs_ref` = `nobs_ratio` *
+        `nobs_treat`. This is the ratio of the reference
+        group sample size to the treatment group sample
+        size, by default 1 (balanced design). See Notes.
+    alternative : {"two-sided", "larger", "smaller"}, optional
+        Extra argument to choose whether the sample size is
+        calculated for a two-sided (default) or one-sided test.
+        See Notes.
+
+    Returns
+    -------
+    SamplesizeRankCompareResult
+        See :class:`SamplesizeRankCompareResult` for a description of the
+        attributes.
+
+    Notes
+    -----
+    In the context of the two-sample Wilcoxon Mann-Whitney
+    U test, the `reference_sample` typically represents data
+    from the control group or previous studies. The
+    `synthetic_sample` is generated based on this reference
+    data and a prespecified relative effect size that is
+    meaningful for the research question. This effect size
+    is often determined in collaboration with subject matter
+    experts to reflect a significant difference worth detecting.
+    By comparing the reference and synthetic samples, this
+    function estimates the sample size needed to achieve the
+    desired power at the specified Type-I error rate.
+
+    Choosing between `one-sided` and `two-sided` tests has
+    important implications for sample size planning. A
+    `two-sided` test is more conservative and requires a
+    larger sample size but covers effects in both directions.
+    In contrast, a `larger` (`relative_effect > 0.5`) or `smaller`
+    (`relative_effect < 0.5`) one-sided test assumes the effect
+    occurs only in one direction, leading to a smaller required
+    sample size. However, if the true effect is in the opposite
+    direction, the `one-sided` test has virtually no power to
+    detect it. Additionally, if a two-sided test ends up being
+    used instead of the planned one-sided test, the original
+    sample size may be insufficient, resulting in an underpowered
+    study. It is important to carefully consider these trade-offs
+    when planning a study.
+
+    For `nobs_ratio > 1`, `nobs_ratio = 1`, or `nobs_ratio < 1`,
+    the reference group sample size is larger, equal to, or smaller
+    than the treatment group sample size, respectively.
+
+    Examples
+    --------
+    The data for the placebo group of a clinical trial published in
+    Thall and Vail [2]_ is shown below. A relevant effect for the treatment
+    under investigation is considered to be a 50% reduction in the number
+    of seizures. To compute the required sample size with a power of 0.8
+    and holding the type I error rate at 0.05, we generate synthetic data
+    for the treatment group under the alternative assuming this reduction.
+
+    >>> from statsmodels.stats.nonparametric import samplesize_rank_compare_onetail
+    >>> import numpy as np
+    >>> reference_sample = np.array([3, 3, 5, 4, 21, 7, 2, 12, 5, 0, 22, 4, 2, 12,
+    ...                              9, 5, 3, 29, 5, 7, 4, 4, 5, 8, 25, 1, 2, 12])
+    >>> # Apply 50% reduction in seizure counts and floor operation
+    >>> synthetic_sample = np.floor(reference_sample / 2)
+    >>> result = samplesize_rank_compare_onetail(
+    ...              synthetic_sample=synthetic_sample,
+    ...              reference_sample=reference_sample,
+    ...              alpha=0.05, power=0.8
+    ...          )
+    >>> print(f"Total sample size: {result.nobs_total}, "
+    ...       f"Treatment group: {result.nobs_treat}, "
+    ...       f"Reference group: {result.nobs_ref}")
+
+    References
+    ----------
+    .. [1] Happ, M., Bathke, A. C., and Brunner, E. "Optimal sample size
+        planning for the Wilcoxon-Mann-Whitney test". Statistics in Medicine.
+        Vol. 38(2019): 363-375. https://doi.org/10.1002/sim.7983.
+    .. [2] Thall, P. F., and Vail, S. C. "Some covariance models for longitudinal
+        count data with overdispersion". Biometrics, pp. 657-671, 1990.
+    """
+    synthetic_sample = np.asarray(synthetic_sample)
+    reference_sample = np.asarray(reference_sample)
+
+    if not (len(synthetic_sample) > 0 and len(reference_sample) > 0):
+        raise ValueError(
+            "Both `synthetic_sample` and `reference_sample`"
+            " must have at least one element."
+        )
+    if not (
+        np.all(np.isfinite(reference_sample))
+        and np.all(np.isfinite(synthetic_sample))
+    ):
+        raise ValueError(
+            "All elements of `synthetic_sample` and `reference_sample`"
+            " must be finite; check for missing values."
+        )
+    if not (0 < alpha < 1):
+        raise ValueError("Alpha must be between 0 and 1 non-inclusive.")
+    if not (0 < power < 1):
+        raise ValueError("Power must be between 0 and 1 non-inclusive.")
+    if not (0 < nobs_ratio):
+        raise ValueError(
+            "Ratio of reference group to treatment group must be"
+            " strictly positive."
+        )
+    if alternative not in ("two-sided", "larger", "smaller"):
+        raise ValueError(
+            "Alternative must be one of `two-sided`, `larger`, or `smaller`."
+        )
+
+    # Group 1 is the treatment group, Group 2 is the reference group
+    rank_place = _compute_rank_placements(
+        synthetic_sample,
+        reference_sample,
+    )
+    # Extra few bytes of name binding for explicitness & readability
+    n_syn = rank_place.n_1
+    n_ref = rank_place.n_2
+    overall_ranks_pooled = rank_place.overall_ranks_pooled
+    placements_syn = rank_place.placements_1
+    placements_ref = rank_place.placements_2
+
+    relative_effect = (
+        np.mean(placements_syn) - np.mean(placements_ref)
+    ) / (n_syn + n_ref) + 0.5
+
+    # Values [0.499, 0.501] considered 'practically' = 0.5 (0.1% atol)
+    if np.isclose(relative_effect, 0.5, atol=1e-3):
+        raise ValueError(
+            "Estimated relative effect is effectively 0.5, i.e."
+            " stochastic equality between `synthetic_sample` and"
+            " `reference_sample`. Given null hypothesis is true,"
+            " sample size cannot be calculated. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+    if relative_effect < 0.5 and alternative == "larger":
+        raise ValueError(
+            "Estimated relative effect is smaller than 0.5;"
+            " `synthetic_sample` is stochastically smaller than"
+            " `reference_sample`. No sample size can be calculated"
+            " for `alternative == 'larger'`. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+    if relative_effect > 0.5 and alternative == "smaller":
+        raise ValueError(
+            "Estimated relative effect is larger than 0.5;"
+            " `synthetic_sample` is stochastically larger than"
+            " `reference_sample`. No sample size can be calculated"
+            " for `alternative == 'smaller'`. Please review data"
+            " samples to ensure they reflect appropriate relative"
+            " effect size assumptions."
+        )
+
+    sd_overall = np.sqrt(
+        np.sum(
+            (overall_ranks_pooled - (n_syn + n_ref + 1) / 2) ** 2
+        )
+        / (n_syn + n_ref) ** 3
+    )
+    var_ref = (
+        np.sum(
+            (placements_ref - np.mean(placements_ref)) ** 2
+        ) / (n_ref * (n_syn ** 2))
+    )
+    var_syn = (
+        np.sum(
+            (placements_syn - np.mean(placements_syn)) ** 2
+        ) / ((n_ref ** 2) * n_syn)
+    )
+
+    quantile_prob = (1 - alpha / 2) if alternative == "two-sided" else (1 - alpha)
+    quantile_alpha = stats.norm.ppf(quantile_prob, loc=0, scale=1)
+    quantile_power = stats.norm.ppf(power, loc=0, scale=1)
+
+    # Convert `nobs_ratio` to proportion of total allocated to reference group
+    prop_treatment = 1 / (1 + nobs_ratio)
+    prop_reference = 1 - prop_treatment
+    var_terms = np.sqrt(
+        prop_reference * var_syn + (1 - prop_reference) * var_ref
+    )
+    quantiles_terms = sd_overall * quantile_alpha + quantile_power * var_terms
+    # Add a small epsilon to avoid division by zero when there is no
+    # treatment effect, i.e., p_hat = 0.5
+    nobs_total = (quantiles_terms**2) / (
+        prop_reference
+        * (1 - prop_reference)
+        * (relative_effect - 0.5 + 1e-12) ** 2
+    )
+    nobs_treat = nobs_total * (1 - prop_reference)
+    nobs_ref = nobs_total * prop_reference
+
+    return SamplesizeRankCompareResult(
+        nobs_total=nobs_total.item(),
+        nobs_treat=nobs_treat.item(),
+        nobs_ref=nobs_ref.item(),
+        relative_effect=relative_effect.item(),
+        power=power,
+        alpha=alpha,
+    )

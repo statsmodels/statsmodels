@@ -1,20 +1,23 @@
 """American National Election Survey 1996"""
+from numpy import log
 
-__docformat__ = 'restructuredtext'
+from statsmodels.datasets import utils as du
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+__docformat__ = "restructuredtext"
+
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 http://www.electionstudies.org/
 
 The American National Election Studies.
 """
 
-DESCRSHORT  = """This data is a subset of the American National Election Studies of 1996."""
+DESCRSHORT = """This data is a subset of the American National Election Studies of 1996."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 944
     Number of variables - 10
@@ -27,7 +30,7 @@ NOTE        = """::
                 0 - Strong Democrat
                 1 - Weak Democrat
                 2 - Independent-Democrat
-                3 - Independent-Indpendent
+                3 - Independent-Independent
                 4 - Independent-Republican
                 5 - Weak Republican
                 6 - Strong Republican
@@ -85,42 +88,34 @@ NOTE        = """::
             logpopul - log(popul + .1)
 """
 
-from numpy import recfromtxt, log
-import numpy.lib.recfunctions as nprf
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
-
-def load():
-    """Load the anes96 data and returns a Dataset class.
-
-    Returns
-    -------
-    Dataset instance:
-        See DATASET_PROPOSAL.txt for more information.
-    """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=5,
-                               exog_idx=[10, 2, 6, 7, 8],
-                               dtype=float)
 
 def load_pandas():
-    """Load the anes96 data and returns a Dataset class.
+    """
+    Load the anes96 data and returns a Dataset class.
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=5,
-                                      exog_idx=[10, 2, 6, 7, 8],
-                                      dtype=float)
+    return du.process_pandas(data, endog_idx=5, exog_idx=[10, 2, 6, 7, 8])
+
+
+def load():
+    """
+    Load the anes96 data and returns a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        See DATASET_PROPOSAL.txt for more information.
+    """
+    return load_pandas()
+
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/anes96.csv', "rb") as f:
-        data = recfromtxt(f, delimiter="\t", names=True, dtype=float)
-        logpopul = log(data['popul'] + .1)
-        data = nprf.append_fields(data, 'logpopul', logpopul, usemask=False,
-                                  asrecarray=True)
-    return data
+    data = du.load_csv(__file__, "anes96.csv", sep=r"\s")
+    data = du.strip_column_names(data)
+    data["logpopul"] = log(data["popul"] + .1)
+    return data.astype(float)

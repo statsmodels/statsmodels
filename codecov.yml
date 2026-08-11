@@ -1,0 +1,16 @@
+codecov:
+  branch: main
+  notify:
+    require_ci_to_pass: no
+    after_n_builds: 1
+
+comment: off
+
+coverage:
+  status:
+    project:
+      default:
+        target: '82'
+    patch:
+      default:
+        target: '50'

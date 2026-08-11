@@ -1,4 +1,4 @@
-use http://www.stata-press.com/data/r12/wpi1, clear
+use https://www.stata-press.com/data/r12/wpi1, clear
 gen dwpi = D.wpi
 
 // Estimate an AR(3) via a state-space model

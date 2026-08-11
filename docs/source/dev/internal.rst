@@ -49,7 +49,6 @@ define some common methods.
 .. inheritance-diagram:: statsmodels.base.model statsmodels.discrete.discrete_model statsmodels.regression.linear_model statsmodels.miscmodels.count
    :parts: 3
 
-
 .. inheritance-diagram:: statsmodels.regression.linear_model.GLS statsmodels.regression.linear_model.WLS statsmodels.regression.linear_model.OLS statsmodels.regression.linear_model.GLSAR
    :parts: 1
 

@@ -1,10 +1,11 @@
 """RAND Health Insurance Experiment Data"""
+from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is in the public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is in the public domain."""
+TITLE = __doc__
+SOURCE = """
 The data was collected by the RAND corporation as part of the Health
 Insurance Experiment (HIE).
 
@@ -12,8 +13,8 @@ http://www.rand.org/health/projects/hie.html
 
 This data was used in::
 
-    Cameron, A.C. amd Trivedi, P.K. 2005.  `Microeconometrics: Methods
-        and Applications,` Cambridge: New York.
+    Cameron, A.C. and Trivedi, P.K. 2005.  *Microeconometrics: Methods
+        and Applications*, Cambridge: New York.
 
 And was obtained from: <http://cameron.econ.ucdavis.edu/mmabook/mmadata.html>
 
@@ -22,11 +23,11 @@ here contains only a subset of the original data.  The data varies slightly
 compared to that reported in Cameron and Trivedi.
 """
 
-DESCRSHORT  = """The RAND Co. Health Insurance Experiment Data"""
+DESCRSHORT = """The RAND Co. Health Insurance Experiment Data"""
 
-DESCRLONG   = """"""
+DESCRLONG = """"""
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 20,190
     Number of variables - 10
@@ -45,44 +46,40 @@ NOTE        = """::
         (Omitted category is excellent self-rated health)
 """
 
-from numpy import recfromtxt, column_stack, array
-from statsmodels.datasets import utils as du
-from os.path import dirname, abspath
-
-PATH = '%s/%s' % (dirname(abspath(__file__)), 'randhie.csv')
 
 def load():
     """
     Loads the RAND HIE data and returns a Dataset class.
 
-    ----------
+    Returns
+    -------
+    Dataset
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
     endog - response variable, mdvis
     exog - design
-
-    Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
     """
-    data = _get_data()
-    return du.process_recarray(data, endog_idx=0, dtype=float)
+    return load_pandas()
+
 
 def load_pandas():
     """
     Loads the RAND HIE data and returns a Dataset class.
 
-    ----------
+    Returns
+    -------
+    Dataset
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
     endog - response variable, mdvis
     exog - design
-
-    Returns
-    Load instance:
-        a class of the data with array attrbutes 'endog' and 'exog'
     """
-    from pandas import read_csv
-    data = read_csv(PATH)
-    return du.process_recarray_pandas(data, endog_idx=0)
+    return du.process_pandas(_get_data(), endog_idx=0)
+
 
 def _get_data():
-    with open(PATH, "rb") as f:
-        data = recfromtxt(f, delimiter=",", names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, "randhie.csv")

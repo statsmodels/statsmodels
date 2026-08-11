@@ -1,10 +1,11 @@
 """United States Macroeconomic data"""
+from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 Compiled by Skipper Seabold. All data are from the Federal Reserve Bank of St.
 Louis [1] except the unemployment rate which was taken from the National
 Bureau of Labor Statistics [2]. ::
@@ -17,11 +18,11 @@ Bureau of Labor Statistics [2]. ::
         http://www.bls.gov/data/; accessed December 15, 2009.
 """
 
-DESCRSHORT  = """US Macroeconomic Data for 1959Q1 - 2009Q3"""
+DESCRSHORT = """US Macroeconomic Data for 1959Q1 - 2009Q3"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
     Number of Observations - 203
 
     Number of Variables - 14
@@ -53,11 +54,11 @@ NOTE        = """::
         realint   - Real interest rate (tbilrate - infl)
 """
 
-from numpy import recfromtxt, column_stack, array
-from pandas import DataFrame
 
-from statsmodels.datasets.utils import Dataset
-from os.path import dirname, abspath
+def load_pandas():
+    data = _get_data()
+    return du.Dataset(data=data, names=list(data.columns))
+
 
 def load():
     """
@@ -65,33 +66,22 @@ def load():
 
     Returns
     -------
-    Dataset instance:
+    Dataset
         See DATASET_PROPOSAL.txt for more information.
 
     Notes
     -----
     The macrodata Dataset instance does not contain endog and exog attributes.
     """
-    data = _get_data()
-    names = data.dtype.names
-    dataset = Dataset(data=data, names=names)
-    return dataset
+    return load_pandas()
 
-def load_pandas():
-    dataset = load()
-    dataset.data = DataFrame(dataset.data)
-    return dataset
 
 def _get_data():
-    filepath = dirname(abspath(__file__))
-    with open(filepath + '/macrodata.csv', 'rb') as f:
-        data = recfromtxt(f, delimiter=",",
-                          names=True, dtype=float)
-    return data
+    return du.load_csv(__file__, "macrodata.csv").astype(float)
+
 
 variable_names = ["realcons", "realgdp", "realinv"]
 
 
 def __str__():
     return "macrodata"
-

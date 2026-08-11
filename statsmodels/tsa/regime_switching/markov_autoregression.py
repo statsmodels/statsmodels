@@ -5,34 +5,34 @@ Author: Chad Fulton
 License: BSD-3
 """
 
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
-import statsmodels.base.wrapper as wrap
 
-from statsmodels.tsa.tsatools import lagmat
-from statsmodels.tsa.regime_switching import (
-    markov_switching, markov_regression)
+import statsmodels.base.wrapper as wrap
+from statsmodels.tsa.regime_switching import markov_regression, markov_switching
 from statsmodels.tsa.statespace.tools import (
-    constrain_stationary_univariate, unconstrain_stationary_univariate)
+    constrain_stationary_univariate,
+    unconstrain_stationary_univariate,
+)
+from statsmodels.tsa.tsatools import lagmat
 
 
 class MarkovAutoregression(markov_regression.MarkovRegression):
     r"""
-    Markov switching regression model
+    Markov switching autoregression model
 
     Parameters
     ----------
     endog : array_like
         The endogenous variable.
-    k_regimes : integer
+    k_regimes : int
         The number of regimes.
-    order : integer
+    order : int
         The order of the autoregressive lag polynomial.
-    trend : {'nc', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct'}
         Whether or not to include a trend. To include an constant, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
-        set `trend='nc'`. Default is a constant.
+        set `trend='n'`. Default is a constant.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     exog_tvtp : array_like, optional
@@ -40,24 +40,24 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
-    switching_ar : boolean or iterable, optional
+    switching_ar : bool or iterable, optional
         If a boolean, sets whether or not all autoregressive coefficients are
         switching across regimes. If an iterable, should be of length equal
         to `order`, where each element is a boolean describing whether the
         corresponding coefficient is switching. Default is True.
-    switching_trend : boolean or iterable, optional
+    switching_trend : bool or iterable, optional
         If a boolean, sets whether or not all trend coefficients are
         switching across regimes. If an iterable, should be of length equal
         to the number of trend variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_exog : boolean or iterable, optional
+    switching_exog : bool or iterable, optional
         If a boolean, sets whether or not all regression coefficients are
         switching across regimes. If an iterable, should be of length equal
         to the number of exogenous variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_variance : boolean, optional
+    switching_variance : bool, optional
         Whether or not there is regime-specific heteroskedasticity, i.e.
         whether or not the error term has a switching variance. Default is
         False.
@@ -77,14 +77,18 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         \varepsilon_t \\
         \varepsilon_t \sim N(0, \sigma_{S_t}^2)
 
-    i.e. the model is an autoregression with where the autoregressive
+    i.e., the model is an autoregression with where the autoregressive
     coefficients, the mean of the process (possibly including trend or
     regression effects) and the variance of the error term may be switching
     across regimes.
 
-    The `trend` is accomodated by prepending columns to the `exog` array. Thus
+    The `trend` is accommodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
+
+    See the notebook `Markov switching autoregression
+    <../examples/notebooks/generated/markov_autoregression.html>`__
+    for an overview.
 
     References
     ----------
@@ -92,13 +96,12 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     "State-Space Models with Regime Switching:
     Classical and Gibbs-Sampling Approaches with Applications".
     MIT Press Books. The MIT Press.
-
     """
 
-    def __init__(self, endog, k_regimes, order, trend='c', exog=None,
+    def __init__(self, endog, k_regimes, order, trend="c", exog=None,
                  exog_tvtp=None, switching_ar=True, switching_trend=True,
                  switching_exog=False, switching_variance=False,
-                 dates=None, freq=None, missing='none'):
+                 dates=None, freq=None, missing="none"):
 
         # Properties
         self.switching_ar = switching_ar
@@ -106,11 +109,11 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Switching options
         if self.switching_ar is True or self.switching_ar is False:
             self.switching_ar = [self.switching_ar] * order
-        elif not len(self.switching_ar) == order:
-            raise ValueError('Invalid iterable passed to `switching_ar`.')
+        elif len(self.switching_ar) != order:
+            raise ValueError("Invalid iterable passed to `switching_ar`.")
 
         # Initialize the base model
-        super(MarkovAutoregression, self).__init__(
+        super().__init__(
             endog, k_regimes, trend=trend, exog=exog, order=order,
             exog_tvtp=exog_tvtp, switching_trend=switching_trend,
             switching_exog=switching_exog,
@@ -119,8 +122,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         # Sanity checks
         if self.nobs <= self.order:
-            raise ValueError('Must have more observations than the order of'
-                             ' the autoregression.')
+            raise ValueError("Must have more observations than the order of"
+                             " the autoregression.")
 
         # Autoregressive exog
         self.exog_ar = lagmat(endog, self.order)[self.order:]
@@ -139,7 +142,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         # Reset indexes, if provided
         if self.data.row_labels is not None:
-            self.data._cache['row_labels'] = (
+            self.data._cache["row_labels"] = (
                 self.data.row_labels[self.order:])
         if self._index is not None:
             if self._index_generated:
@@ -148,7 +151,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                 self._index = self._index[self.order:]
 
         # Parameters
-        self.parameters['autoregressive'] = self.switching_ar
+        self.parameters["autoregressive"] = self.switching_ar
 
         # Cache an array for holding slices
         self._predict_slices = [slice(None, None, None)] * (self.order + 1)
@@ -177,7 +180,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if self._k_exog > 0:
             xb = []
             for i in range(self.k_regimes):
-                coeffs = params[self.parameters[i, 'exog']]
+                coeffs = params[self.parameters[i, "exog"]]
                 xb.append(np.dot(self.orig_exog, coeffs))
 
         predict = np.zeros(
@@ -185,7 +188,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             dtype=np.promote_types(np.float64, params.dtype))
         # Iterate over S_{t} = i
         for i in range(self.k_regimes):
-            ar_coeffs = params[self.parameters[i, 'autoregressive']]
+            ar_coeffs = params[self.parameters[i, "autoregressive"]]
 
             # y_t - x_t beta^{(S_t)}
             ix = self._predict_slices[:]
@@ -219,33 +222,28 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     def _resid(self, params):
         return self.endog - self.predict_conditional(params)
 
-    def _conditional_likelihoods(self, params):
-        """
-        Compute likelihoods conditional on the current period's regime and
-        the last `self.order` regimes.
-        """
+    def _conditional_loglikelihoods(self, params):
+        """Compute loglikelihoods conditional on the current period's regime and the last `self.order` regimes"""
         # Get the residuals
         resid = self._resid(params)
 
         # Compute the conditional likelihoods
-        variance = params[self.parameters['variance']].squeeze()
+        variance = params[self.parameters["variance"]].squeeze()
         if self.switching_variance:
             variance = np.reshape(variance, (self.k_regimes, 1, 1))
 
-        conditional_likelihoods = (
-            np.exp(-0.5 * resid**2 / variance) / np.sqrt(2 * np.pi * variance))
+        conditional_loglikelihoods = (
+            -0.5 * resid**2 / variance - 0.5 * np.log(2 * np.pi * variance))
 
-        return conditional_likelihoods
+        return conditional_loglikelihoods
 
     @property
     def _res_classes(self):
-        return {'fit': (MarkovAutoregressionResults,
+        return {"fit": (MarkovAutoregressionResults,
                         MarkovAutoregressionResultsWrapper)}
 
     def _em_iteration(self, params0):
-        """
-        EM iteration
-        """
+        """EM iteration"""
         # Inherited parameters
         result, params1 = markov_switching.MarkovSwitching._em_iteration(
             self, params0)
@@ -256,9 +254,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         coeffs = None
         if self._k_exog > 0:
             coeffs = self._em_exog(result, self.endog, self.exog,
-                                   self.parameters.switching['exog'], tmp)
+                                   self.parameters.switching["exog"], tmp)
             for i in range(self.k_regimes):
-                params1[self.parameters[i, 'exog']] = coeffs[i]
+                params1[self.parameters[i, "exog"]] = coeffs[i]
 
         # Autoregressive
         if self.order > 0:
@@ -268,19 +266,17 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             else:
                 ar_coeffs = self._em_exog(
                     result, self.endog, self.exog_ar,
-                    self.parameters.switching['autoregressive'])
+                    self.parameters.switching["autoregressive"])
                 variance = self._em_variance(
                     result, self.endog, self.exog_ar, ar_coeffs, tmp)
             for i in range(self.k_regimes):
-                params1[self.parameters[i, 'autoregressive']] = ar_coeffs[i]
-            params1[self.parameters['variance']] = variance
+                params1[self.parameters[i, "autoregressive"]] = ar_coeffs[i]
+            params1[self.parameters["variance"]] = variance
 
         return result, params1
 
     def _em_autoregressive(self, result, betas, tmp=None):
-        """
-        EM step for autoregressive coefficients and variances
-        """
+        """EM step for autoregressive coefficients and variances"""
         if tmp is None:
             tmp = np.sqrt(result.smoothed_marginal_probabilities)
 
@@ -320,9 +316,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def start_params(self):
-        """
-        (array) Starting parameters for maximum likelihood estimation.
-        """
+        """(array) Starting parameters for maximum likelihood estimation"""
         # Inherited parameters
         params = markov_switching.MarkovSwitching.start_params.fget(self)
 
@@ -345,35 +339,32 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if self._k_exog > 0:
             if np.any(self.switching_coeffs):
                 for i in range(self.k_regimes):
-                    params[self.parameters[i, 'exog']] = (
+                    params[self.parameters[i, "exog"]] = (
                         beta[:self._k_exog] * (i / self.k_regimes))
             else:
-                params[self.parameters['exog']] = beta[:self._k_exog]
+                params[self.parameters["exog"]] = beta[:self._k_exog]
 
         # Autoregressive
         if self.order > 0:
             if np.any(self.switching_ar):
                 for i in range(self.k_regimes):
-                    params[self.parameters[i, 'autoregressive']] = (
+                    params[self.parameters[i, "autoregressive"]] = (
                         beta[self._k_exog:] * (i / self.k_regimes))
             else:
-                params[self.parameters['autoregressive']] = beta[self._k_exog:]
+                params[self.parameters["autoregressive"]] = beta[self._k_exog:]
 
         # Variance
         if self.switching_variance:
-            params[self.parameters['variance']] = (
+            params[self.parameters["variance"]] = (
                 np.linspace(variance / 10., variance, num=self.k_regimes))
         else:
-            params[self.parameters['variance']] = variance
+            params[self.parameters["variance"]] = variance
 
         return params
 
     @property
     def param_names(self):
-        """
-        (list of str) List of human readable parameter names (for parameters
-        actually included in the model).
-        """
+        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
         # Inherited parameters
         param_names = np.array(
             markov_regression.MarkovRegression.param_names.fget(self),
@@ -382,11 +373,11 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Autoregressive
         if np.any(self.switching_ar):
             for i in range(self.k_regimes):
-                param_names[self.parameters[i, 'autoregressive']] = [
-                    'ar.L%d[%d]' % (j+1, i) for j in range(self.order)]
+                param_names[self.parameters[i, "autoregressive"]] = [
+                    f"ar.L{j+1:d}[{i:d}]" for j in range(self.order)]
         else:
-            param_names[self.parameters['autoregressive']] = [
-                'ar.L%d' % (j+1) for j in range(self.order)]
+            param_names[self.parameters["autoregressive"]] = [
+                f"ar.L{j+1:d}" for j in range(self.order)]
 
         return param_names.tolist()
 
@@ -405,17 +396,17 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         -------
         constrained : array_like
             Array of constrained parameters which may be used in likelihood
-            evalation.
+            evaluation.
         """
         # Inherited parameters
-        constrained = super(MarkovAutoregression, self).transform_params(
+        constrained = super().transform_params(
             unconstrained)
 
         # Autoregressive
         # TODO may provide unexpected results when some coefficients are not
         # switching
         for i in range(self.k_regimes):
-            s = self.parameters[i, 'autoregressive']
+            s = self.parameters[i, "autoregressive"]
             constrained[s] = constrain_stationary_univariate(
                 unconstrained[s])
 
@@ -429,8 +420,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         Parameters
         ----------
         constrained : array_like
-            Array of constrained parameters used in likelihood evalution, to be
-            transformed.
+            Array of constrained parameters used in likelihood evaluation, to
+            be transformed.
 
         Returns
         -------
@@ -438,14 +429,14 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             Array of unconstrained parameters used by the optimizer.
         """
         # Inherited parameters
-        unconstrained = super(MarkovAutoregression, self).untransform_params(
+        unconstrained = super().untransform_params(
             constrained)
 
         # Autoregressive
         # TODO may provide unexpected results when some coefficients are not
         # switching
         for i in range(self.k_regimes):
-            s = self.parameters[i, 'autoregressive']
+            s = self.parameters[i, "autoregressive"]
             unconstrained[s] = unconstrain_stationary_univariate(
                 constrained[s])
 
@@ -460,11 +451,11 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
     ----------
     model : MarkovAutoregression instance
         The fitted model instance
-    params : array
+    params : ndarray
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : string
+    cov_type : str
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 
@@ -476,17 +467,17 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
         The underlying filter and, optionally, smoother output
     nobs : float
         The number of observations used to fit the model.
-    params : array
+    params : ndarray
         The parameters of the model.
     scale : float
         This is currently set to 1.0 and not used by the model or its results.
-
     """
-    pass
 
 
 class MarkovAutoregressionResultsWrapper(
         markov_regression.MarkovRegressionResultsWrapper):
     pass
+
+
 wrap.populate_wrapper(MarkovAutoregressionResultsWrapper,
                       MarkovAutoregressionResults)

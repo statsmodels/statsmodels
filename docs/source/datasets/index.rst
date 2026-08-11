@@ -25,12 +25,12 @@ Using Datasets from Stata
 Using Datasets from R
 ---------------------
 
-The `Rdatasets project <http://vincentarelbundock.github.io/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. The actual data is accessible by the ``data`` attribute. For example:
+The `Rdatasets project <https://vincentarelbundock.github.io/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. The actual data is accessible by the ``data`` attribute. For example:
 
 .. ipython:: python
 
    import statsmodels.api as sm
-   duncan_prestige = sm.datasets.get_rdataset("Duncan", "car")
+   duncan_prestige = sm.datasets.get_rdataset("Duncan", "carData")
    print(duncan_prestige.__doc__)
    duncan_prestige.data.head(5)
 
@@ -45,7 +45,7 @@ R Datasets Function Reference
    get_rdataset
    get_data_home
    clear_data_home
-   
+
 
 Available Datasets
 ------------------
@@ -64,9 +64,10 @@ Load a dataset:
 .. ipython:: python
 
    import statsmodels.api as sm
-   data = sm.datasets.longley.load()
+   data = sm.datasets.longley.load_pandas()
 
-The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`. The full dataset is available in the ``data`` attribute.
+The `Dataset` object follows the bunch pattern. The full dataset is available
+in the ``data`` attribute.
 
 .. ipython:: python
 
@@ -76,8 +77,8 @@ Most datasets hold convenient representations of the data in the attributes `end
 
 .. ipython:: python
 
-   data.endog[:5]
-   data.exog[:5,:]
+   data.endog.iloc[:5]
+   data.exog.iloc[:5,:]
 
 Univariate datasets, however, do not have an `exog` attribute.
 
@@ -125,7 +126,8 @@ The full DataFrame is available in the ``data`` attribute of the Dataset object
 With pandas integration in the estimation classes, the metadata will be attached
 to model results:
 
-.. ipython:: python,okwarning
+.. ipython:: python
+   :okwarning:
 
    y, x = data.endog, data.exog
    res = sm.OLS(y, x).fit()
@@ -144,5 +146,5 @@ following, again using the Longley dataset as an example ::
 Additional information
 ----------------------
 
-* The idea for a datasets package was originally proposed by David Cournapeau and can be found :ref:`here <dataset_proposal>` with updates by Skipper Seabold.
+* The idea for a datasets package was originally proposed by David Cournapeau.
 * To add datasets, see the :ref:`notes on adding a dataset <add_data>`.

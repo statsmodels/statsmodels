@@ -25,9 +25,6 @@ Module Reference
 .. autosummary::
    :toctree: generated/
 
-   foreign.StataReader
-   foreign.StataWriter
-   foreign.genfromdta
    foreign.savetxt
    table.SimpleTable
    table.csv2st

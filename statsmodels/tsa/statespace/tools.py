@@ -4,220 +4,139 @@ Statespace Tools
 Author: Chad Fulton
 License: Simplified-BSD
 """
-from __future__ import division, absolute_import, print_function
 
 import numpy as np
-from scipy.linalg import solve_sylvester
 import pandas as pd
+from scipy.linalg import solve_sylvester
+from scipy.linalg.blas import find_best_blas_type
+
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 
-import warnings
-
+from . import (
+    _cfa_simulation_smoother,
+    _initialization,
+    _kalman_filter,
+    _kalman_smoother,
+    _representation,
+    _simulation_smoother,
+    _tools,
+)
 
 compatibility_mode = False
 has_trmm = True
 prefix_dtype_map = {
-    's': np.float32, 'd': np.float64, 'c': np.complex64, 'z': np.complex128
+    "s": np.float32, "d": np.float64, "c": np.complex64, "z": np.complex128
 }
-prefix_statespace_map = {}
-prefix_kalman_filter_map = {}
-prefix_kalman_smoother_map = {}
-prefix_simulation_smoother_map = {}
-prefix_pacf_map = {}
-prefix_sv_map = {}
-prefix_reorder_missing_matrix_map = {}
-prefix_reorder_missing_vector_map = {}
-prefix_copy_missing_matrix_map = {}
-prefix_copy_missing_vector_map = {}
-prefix_copy_index_matrix_map = {}
-prefix_copy_index_vector_map = {}
+prefix_initialization_map = {
+    "s": _initialization.sInitialization,
+    "d": _initialization.dInitialization,
+    "c": _initialization.cInitialization,
+    "z": _initialization.zInitialization
+}
+prefix_statespace_map = {
+    "s": _representation.sStatespace, "d": _representation.dStatespace,
+    "c": _representation.cStatespace, "z": _representation.zStatespace
+}
+prefix_kalman_filter_map = {
+    "s": _kalman_filter.sKalmanFilter,
+    "d": _kalman_filter.dKalmanFilter,
+    "c": _kalman_filter.cKalmanFilter,
+    "z": _kalman_filter.zKalmanFilter
+}
+prefix_kalman_smoother_map = {
+    "s": _kalman_smoother.sKalmanSmoother,
+    "d": _kalman_smoother.dKalmanSmoother,
+    "c": _kalman_smoother.cKalmanSmoother,
+    "z": _kalman_smoother.zKalmanSmoother
+}
+prefix_simulation_smoother_map = {
+    "s": _simulation_smoother.sSimulationSmoother,
+    "d": _simulation_smoother.dSimulationSmoother,
+    "c": _simulation_smoother.cSimulationSmoother,
+    "z": _simulation_smoother.zSimulationSmoother
+}
+prefix_cfa_simulation_smoother_map = {
+    "s": _cfa_simulation_smoother.sCFASimulationSmoother,
+    "d": _cfa_simulation_smoother.dCFASimulationSmoother,
+    "c": _cfa_simulation_smoother.cCFASimulationSmoother,
+    "z": _cfa_simulation_smoother.zCFASimulationSmoother
+}
+prefix_pacf_map = {
+    "s": _tools._scompute_coefficients_from_multivariate_pacf,
+    "d": _tools._dcompute_coefficients_from_multivariate_pacf,
+    "c": _tools._ccompute_coefficients_from_multivariate_pacf,
+    "z": _tools._zcompute_coefficients_from_multivariate_pacf
+}
+prefix_sv_map = {
+    "s": _tools._sconstrain_sv_less_than_one,
+    "d": _tools._dconstrain_sv_less_than_one,
+    "c": _tools._cconstrain_sv_less_than_one,
+    "z": _tools._zconstrain_sv_less_than_one
+}
+prefix_reorder_missing_matrix_map = {
+    "s": _tools.sreorder_missing_matrix,
+    "d": _tools.dreorder_missing_matrix,
+    "c": _tools.creorder_missing_matrix,
+    "z": _tools.zreorder_missing_matrix
+}
+prefix_reorder_missing_vector_map = {
+    "s": _tools.sreorder_missing_vector,
+    "d": _tools.dreorder_missing_vector,
+    "c": _tools.creorder_missing_vector,
+    "z": _tools.zreorder_missing_vector
+}
+prefix_copy_missing_matrix_map = {
+    "s": _tools.scopy_missing_matrix,
+    "d": _tools.dcopy_missing_matrix,
+    "c": _tools.ccopy_missing_matrix,
+    "z": _tools.zcopy_missing_matrix
+}
+prefix_copy_missing_vector_map = {
+    "s": _tools.scopy_missing_vector,
+    "d": _tools.dcopy_missing_vector,
+    "c": _tools.ccopy_missing_vector,
+    "z": _tools.zcopy_missing_vector
+}
+prefix_copy_index_matrix_map = {
+    "s": _tools.scopy_index_matrix,
+    "d": _tools.dcopy_index_matrix,
+    "c": _tools.ccopy_index_matrix,
+    "z": _tools.zcopy_index_matrix
+}
+prefix_copy_index_vector_map = {
+    "s": _tools.scopy_index_vector,
+    "d": _tools.dcopy_index_vector,
+    "c": _tools.ccopy_index_vector,
+    "z": _tools.zcopy_index_vector
+}
+prefix_compute_smoothed_state_weights_map = {
+    "s": _tools._scompute_smoothed_state_weights,
+    "d": _tools._dcompute_smoothed_state_weights,
+    "c": _tools._ccompute_smoothed_state_weights,
+    "z": _tools._zcompute_smoothed_state_weights
+}
 
 
 def set_mode(compatibility=None):
-    global compatibility_mode, has_trmm
+    """
+    Set the compatibility mode
 
-    # Determine mode automatically if none given
-    if compatibility is None:
-        try:
-            from scipy.linalg import cython_blas
-            compatibility = False
-        except ImportError:
-            compatibility = True
+    Parameters
+    ----------
+    compatibility : bool, optional
+        Whether or not to enable compatibility mode. Compatibility mode is
+        only available in statsmodels <= 0.9, so passing a truthy value
+        always raises `NotImplementedError`.
 
-    # If compatibility was False, make sure that is possible
-    if not compatibility:
-        try:
-            from scipy.linalg import cython_blas
-        except ImportError:
-            warnings.warn('Minimum dependencies not met. Compatibility mode'
-                          ' enabled.')
-            compatibility = True
-
-    # Initialize the appropriate mode
-    if not compatibility:
-        from scipy.linalg import cython_blas
-        from . import (_representation, _kalman_filter, _kalman_smoother,
-                       _simulation_smoother, _tools)
-        compatibility_mode = False
-
-        prefix_statespace_map.update({
-            's': _representation.sStatespace, 'd': _representation.dStatespace,
-            'c': _representation.cStatespace, 'z': _representation.zStatespace
-        })
-        prefix_kalman_filter_map.update({
-            's': _kalman_filter.sKalmanFilter,
-            'd': _kalman_filter.dKalmanFilter,
-            'c': _kalman_filter.cKalmanFilter,
-            'z': _kalman_filter.zKalmanFilter
-        })
-        prefix_kalman_smoother_map.update({
-            's': _kalman_smoother.sKalmanSmoother,
-            'd': _kalman_smoother.dKalmanSmoother,
-            'c': _kalman_smoother.cKalmanSmoother,
-            'z': _kalman_smoother.zKalmanSmoother
-        })
-        prefix_simulation_smoother_map.update({
-            's': _simulation_smoother.sSimulationSmoother,
-            'd': _simulation_smoother.dSimulationSmoother,
-            'c': _simulation_smoother.cSimulationSmoother,
-            'z': _simulation_smoother.zSimulationSmoother
-        })
-        prefix_pacf_map.update({
-            's': _tools._scompute_coefficients_from_multivariate_pacf,
-            'd': _tools._dcompute_coefficients_from_multivariate_pacf,
-            'c': _tools._ccompute_coefficients_from_multivariate_pacf,
-            'z': _tools._zcompute_coefficients_from_multivariate_pacf
-        })
-        prefix_sv_map.update({
-            's': _tools._sconstrain_sv_less_than_one,
-            'd': _tools._dconstrain_sv_less_than_one,
-            'c': _tools._cconstrain_sv_less_than_one,
-            'z': _tools._zconstrain_sv_less_than_one
-        })
-        prefix_reorder_missing_matrix_map.update({
-            's': _tools.sreorder_missing_matrix,
-            'd': _tools.dreorder_missing_matrix,
-            'c': _tools.creorder_missing_matrix,
-            'z': _tools.zreorder_missing_matrix
-        })
-        prefix_reorder_missing_vector_map.update({
-            's': _tools.sreorder_missing_vector,
-            'd': _tools.dreorder_missing_vector,
-            'c': _tools.creorder_missing_vector,
-            'z': _tools.zreorder_missing_vector
-        })
-        prefix_copy_missing_matrix_map.update({
-            's': _tools.scopy_missing_matrix,
-            'd': _tools.dcopy_missing_matrix,
-            'c': _tools.ccopy_missing_matrix,
-            'z': _tools.zcopy_missing_matrix
-        })
-        prefix_copy_missing_vector_map.update({
-            's': _tools.scopy_missing_vector,
-            'd': _tools.dcopy_missing_vector,
-            'c': _tools.ccopy_missing_vector,
-            'z': _tools.zcopy_missing_vector
-        })
-        prefix_copy_index_matrix_map.update({
-            's': _tools.scopy_index_matrix,
-            'd': _tools.dcopy_index_matrix,
-            'c': _tools.ccopy_index_matrix,
-            'z': _tools.zcopy_index_matrix
-        })
-        prefix_copy_index_vector_map.update({
-            's': _tools.scopy_index_vector,
-            'd': _tools.dcopy_index_vector,
-            'c': _tools.ccopy_index_vector,
-            'z': _tools.zcopy_index_vector
-        })
-    else:
-        from . import _statespace
-        from ._pykalman_smoother import _KalmanSmoother
-        compatibility_mode = True
-
-        try:
-            from scipy.linalg.blas import dtrmm
-        except ImportError:
-            has_trmm = False
-
-        prefix_statespace_map.update({
-            's': _statespace.sStatespace, 'd': _statespace.dStatespace,
-            'c': _statespace.cStatespace, 'z': _statespace.zStatespace
-        })
-        prefix_kalman_filter_map.update({
-            's': _statespace.sKalmanFilter, 'd': _statespace.dKalmanFilter,
-            'c': _statespace.cKalmanFilter, 'z': _statespace.zKalmanFilter
-        })
-        prefix_kalman_smoother_map.update({
-            's': _KalmanSmoother, 'd': _KalmanSmoother,
-            'c': _KalmanSmoother, 'z': _KalmanSmoother
-        })
-        prefix_simulation_smoother_map.update({
-            's': None, 'd': None, 'c': None, 'z': None
-        })
-        if has_trmm:
-            prefix_pacf_map.update({
-                's': _statespace._scompute_coefficients_from_multivariate_pacf,
-                'd': _statespace._dcompute_coefficients_from_multivariate_pacf,
-                'c': _statespace._ccompute_coefficients_from_multivariate_pacf,
-                'z': _statespace._zcompute_coefficients_from_multivariate_pacf
-            })
-            prefix_sv_map.update({
-                's': _statespace._sconstrain_sv_less_than_one,
-                'd': _statespace._dconstrain_sv_less_than_one,
-                'c': _statespace._cconstrain_sv_less_than_one,
-                'z': _statespace._zconstrain_sv_less_than_one
-            })
-        prefix_reorder_missing_matrix_map.update({
-            's': _statespace.sreorder_missing_matrix,
-            'd': _statespace.dreorder_missing_matrix,
-            'c': _statespace.creorder_missing_matrix,
-            'z': _statespace.zreorder_missing_matrix
-        })
-        prefix_reorder_missing_vector_map.update({
-            's': _statespace.sreorder_missing_vector,
-            'd': _statespace.dreorder_missing_vector,
-            'c': _statespace.creorder_missing_vector,
-            'z': _statespace.zreorder_missing_vector
-        })
-        prefix_copy_missing_matrix_map.update({
-            's': _statespace.scopy_missing_matrix,
-            'd': _statespace.dcopy_missing_matrix,
-            'c': _statespace.ccopy_missing_matrix,
-            'z': _statespace.zcopy_missing_matrix
-        })
-        prefix_copy_missing_vector_map.update({
-            's': _statespace.scopy_missing_vector,
-            'd': _statespace.dcopy_missing_vector,
-            'c': _statespace.ccopy_missing_vector,
-            'z': _statespace.zcopy_missing_vector
-        })
-        prefix_copy_index_matrix_map.update({
-            's': _statespace.scopy_index_matrix,
-            'd': _statespace.dcopy_index_matrix,
-            'c': _statespace.ccopy_index_matrix,
-            'z': _statespace.zcopy_index_matrix
-        })
-        prefix_copy_index_vector_map.update({
-            's': _statespace.scopy_index_vector,
-            'd': _statespace.dcopy_index_vector,
-            'c': _statespace.ccopy_index_vector,
-            'z': _statespace.zcopy_index_vector
-        })
-set_mode(compatibility=None)
-
-
-try:
-    from scipy.linalg.blas import find_best_blas_type
-except ImportError:  # pragma: no cover
-    # Shim for SciPy 0.11, derived from tag=0.11 scipy.linalg.blas
-    _type_conv = {'f': 's', 'd': 'd', 'F': 'c', 'D': 'z', 'G': 'z'}
-
-    def find_best_blas_type(arrays):
-        dtype, index = max(
-            [(ar.dtype, i) for i, ar in enumerate(arrays)])
-        prefix = _type_conv.get(dtype.char, 'd')
-        return prefix, dtype, None
+    Raises
+    ------
+    NotImplementedError
+        If `compatibility` is truthy.
+    """
+    if compatibility:
+        raise NotImplementedError("Compatibility mode is only available in"
+                                  " statsmodels <= 0.9")
 
 
 def companion_matrix(polynomial):
@@ -231,7 +150,7 @@ def companion_matrix(polynomial):
         which to form the companion matrix. Polynomial coefficients are in
         order of increasing degree, and may be either scalars (as in an AR(p)
         model) or coefficient matrices (as in a VAR(p) model). If an integer,
-        it is interpereted as the size of a companion matrix of a scalar
+        it is interpreted as the size of a companion matrix of a scalar
         polynomial, where the polynomial coefficients are initialized to zeros.
         If a matrix polynomial is passed, :math:`C_0` may be set to the scalar
         value 1 to indicate an identity matrix (doing so will improve the speed
@@ -239,14 +158,14 @@ def companion_matrix(polynomial):
 
     Returns
     -------
-    companion_matrix : array
+    companion_matrix : ndarray
 
     Notes
     -----
     Given coefficients of a lag polynomial of the form:
 
     .. math::
-    
+
         c(L) = c_0 + c_1 L + \dots + c_p L^p
 
     returns a matrix of the form
@@ -289,11 +208,11 @@ def companion_matrix(polynomial):
     The coefficients from this form are defined to be :math:`c_i = - a_i`, and
     it is the :math:`c_i` coefficients that this function expects to be
     provided.
-
     """
     identity_matrix = False
-    if isinstance(polynomial, int):
-        n = polynomial
+    if isinstance(polynomial, (int, np.integer)):
+        # GH 5570, allow numpy integer types, but coerce to python int
+        n = int(polynomial)
         m = 1
         polynomial = None
     else:
@@ -303,11 +222,11 @@ def companion_matrix(polynomial):
             raise ValueError("Companion matrix polynomials must include at"
                              " least two terms.")
 
-        if isinstance(polynomial, list) or isinstance(polynomial, tuple):
+        if isinstance(polynomial, (list, tuple)):
             try:
-                # Note: can't use polynomial[0] because of the special behavior
-                # associated with matrix polynomials and the constant 1, see
-                # below.
+                # Note: cannot use polynomial[0] because of the special
+                # behavior associated with matrix polynomials and the constant
+                # 1, see below.
                 m = len(polynomial[1])
             except TypeError:
                 m = 1
@@ -343,7 +262,7 @@ def companion_matrix(polynomial):
 
 def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     r"""
-    Difference a series simply and/or seasonally along the zero-th axis.
+    Difference a series simply and/or seasonally along the zero-th axis
 
     Given a series (denoted :math:`y_t`), performs the differencing operation
 
@@ -359,9 +278,9 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     ----------
     series : array_like
         The series to be differenced.
-    diff : int, optional
+    k_diff : int, optional
         The number of simple differences to perform. Default is 1.
-    seasonal_diff : int or None, optional
+    k_seasonal_diff : int or None, optional
         The number of seasonal differences to perform. Default is no seasonal
         differencing.
     seasonal_periods : int, optional
@@ -370,7 +289,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
 
     Returns
     -------
-    differenced : array
+    differenced : ndarray
         The differenced array.
     """
     pandas = _is_using_pandas(series, None)
@@ -380,11 +299,11 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
     if k_seasonal_diff is not None:
         while k_seasonal_diff > 0:
             if not pandas:
-                differenced = (
-                    differenced[seasonal_periods:] - differenced[:-seasonal_periods]
-                )
+                differenced = (differenced[seasonal_periods:] -
+                               differenced[:-seasonal_periods])
             else:
-                differenced = differenced.diff(seasonal_periods)[seasonal_periods:]
+                sdiffed = differenced.diff(seasonal_periods)
+                differenced = sdiffed[seasonal_periods:]
             k_seasonal_diff -= 1
 
     # Simple differencing
@@ -399,18 +318,18 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
 
 def concat(series, axis=0, allow_mix=False):
     """
-    Concatenate a set of series.
+    Concatenate a set of series
 
     Parameters
     ----------
     series : iterable
         An iterable of series to be concatenated
     axis : int, optional
-        The axis along which to concatenate. Default is 1 (columns).
+        The axis along which to concatenate. Default is 0 (rows).
     allow_mix : bool
         Whether or not to allow a mix of pandas and non-pandas objects. Default
         is False. If true, the returned object is an ndarray, and additional
-        pandas metadata (e.g. column names, indices, etc) is lost.
+        pandas metadata (e.g., column names, indices, etc) is lost.
 
     Returns
     -------
@@ -419,21 +338,66 @@ def concat(series, axis=0, allow_mix=False):
         objects.
     """
     is_pandas = np.r_[[_is_using_pandas(s, None) for s in series]]
+    ndim = np.r_[[np.ndim(s) for s in series]]
+    max_ndim = np.max(ndim)
+
+    if max_ndim > 2:
+        raise ValueError("`tools.concat` does not support arrays with 3 or"
+                         " more dimensions.")
+
+    # Make sure the iterable is mutable
+    if isinstance(series, tuple):
+        series = list(series)
+
+    # Standardize ndim
+    for i in range(len(series)):
+        if ndim[i] == 0 and max_ndim == 1:
+            series[i] = np.atleast_1d(series[i])
+        elif ndim[i] == 0 and max_ndim == 2:
+            series[i] = np.atleast_2d(series[i])
+        elif ndim[i] == 1 and max_ndim == 2 and is_pandas[i]:
+            name = series[i].name
+            series[i] = series[i].to_frame()
+            series[i].columns = [name]
+        elif ndim[i] == 1 and max_ndim == 2 and not is_pandas[i]:
+            series[i] = np.atleast_2d(series[i]).T
 
     if np.all(is_pandas):
+        if isinstance(series[0], pd.DataFrame):
+            base_columns = series[0].columns
+        else:
+            base_columns = pd.Index([series[0].name])
+        for i in range(1, len(series)):
+            s = series[i]
+
+            if isinstance(s, pd.DataFrame):
+                # Handle case where we were passed a dataframe and a series
+                # to concatenate, and the series did not have a name.
+                if s.columns.equals(pd.Index([None])):
+                    s.columns = base_columns[:1]
+                s_columns = s.columns
+            else:
+                s_columns = pd.Index([s.name])
+
+            if axis == 0 and not base_columns.equals(s_columns):
+                raise ValueError("Columns must match to concatenate along"
+                                 " rows.")
+            elif axis == 1 and not series[0].index.equals(s.index):
+                raise ValueError("Index must match to concatenate along"
+                                 " columns.")
         concatenated = pd.concat(series, axis=axis)
     elif np.all(~is_pandas) or allow_mix:
         concatenated = np.concatenate(series, axis=axis)
     else:
-        raise ValueError('Attempted to concatenate Pandas objects with'
-                         ' non-Pandas objects with `allow_mix=False`.')
+        raise ValueError("Attempted to concatenate Pandas objects with"
+                         " non-Pandas objects with `allow_mix=False`.")
 
     return concatenated
 
 
 def is_invertible(polynomial, threshold=1 - 1e-10):
     r"""
-    Determine if a polynomial is invertible.
+    Determine if a polynomial is invertible
 
     Requires all roots of the polynomial lie inside the unit circle.
 
@@ -447,6 +411,10 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
         a tuple or list of matrices should be passed.
     threshold : number
         Allowed threshold for `is_invertible` to return True. Default is 1.
+
+    See Also
+    --------
+    companion_matrix
 
     Notes
     -----
@@ -488,10 +456,6 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
     Finally, a companion matrix can be formed using the coefficients of the
     polynomial. Then the eigenvalues of that matrix give the roots of the
     polynomial. This last method is the one actually used.
-
-    See Also
-    --------
-    companion_matrix
     """
     # First method:
     # np.all(np.abs(np.roots(np.r_[1, params])) < 1)
@@ -504,7 +468,25 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
 
 def solve_discrete_lyapunov(a, q, complex_step=False):
     r"""
-    Solves the discrete Lyapunov equation using a bilinear transformation.
+    Solve the discrete Lyapunov equation using a bilinear transformation
+
+    Parameters
+    ----------
+    a : array_like
+        The matrix on the left-hand side, usually the transition matrix.
+    q : array_like
+        The matrix on the right-hand side, usually the selected state
+        covariance matrix.
+    complex_step : bool, optional
+        Whether or not the function is being used as part of a complex-step
+        differentiation approximation. If so, the matrix `a` is allowed to
+        contain complex numbers, and the transpose used in the computation
+        is a non-conjugating transpose. Default is False.
+
+    Returns
+    -------
+    solution : ndarray
+        The solution to the discrete Lyapunov equation.
 
     Notes
     -----
@@ -536,17 +518,16 @@ def constrain_stationary_univariate(unconstrained):
 
     Parameters
     ----------
-    unconstrained : array
+    unconstrained : ndarray
         Unconstrained parameters used by the optimizer, to be transformed to
         stationary coefficients of, e.g., an autoregressive or moving average
         component.
 
     Returns
     -------
-    constrained : array
+    constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
-        component, to be transformed to arbitrary parameters used by the
-        optimizer.
+        component, used in likelihood evaluation.
 
     References
     ----------
@@ -573,17 +554,15 @@ def unconstrain_stationary_univariate(constrained):
 
     Parameters
     ----------
-    constrained : array
+    constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
         optimizer.
 
     Returns
     -------
-    unconstrained : array
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component.
+    unconstrained : ndarray
+        Unconstrained parameters used by the optimizer.
 
     References
     ----------
@@ -614,9 +593,9 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
     unconstrained : list
         Arbitrary matrices. Should be a list of length `order`, where each
         element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -625,15 +604,14 @@ def _constrain_sv_less_than_one_python(unconstrained, order=None,
         Partial autocorrelation matrices. Should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`.
 
+    See Also
+    --------
+    constrain_stationary_multivariate
+
     Notes
     -----
     Corresponds to Lemma 2.2 in Ansley and Kohn (1986). See
     `constrain_stationary_multivariate` for more details.
-
-    There is a Cython implementation of this function that can be much faster,
-    but which requires SciPy 0.14.0 or greater. See
-    `constrain_stationary_multivariate` for details.
-
     """
 
     from scipy import linalg
@@ -664,19 +642,19 @@ def _compute_coefficients_from_multivariate_pacf_python(
     partial_autocorrelations : list
         Partial autocorrelation matrices. Should be a list of length `order`,
         where each element is an array sized `k_endog` x `k_endog`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`. This is used as input in the algorithm even if
         is not transformed by it (when `transform_variance` is False). The
         error term variance is required input when transformation is used
         either to force an autoregressive component to be stationary or to
         force a moving average component to be invertible.
-    transform_variance : boolean, optional
+    transform_variance : bool, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -685,14 +663,14 @@ def _compute_coefficients_from_multivariate_pacf_python(
         Transformed coefficient matrices leading to a stationary VAR
         representation.
 
+    See Also
+    --------
+    constrain_stationary_multivariate
+
     Notes
     -----
     Corresponds to Lemma 2.1 in Ansley and Kohn (1986). See
     `constrain_stationary_multivariate` for more details.
-
-    There is a Cython implementation of this function that can be much faster,
-    but which requires SciPy 0.14.0 or greater. See
-    `constrain_stationary_multivariate` for details.
     """
     from scipy import linalg
 
@@ -707,7 +685,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
     if not transform_variance:
         initial_variance = error_variance
         # Need to make the input variance large enough that the recursions
-        # don't lead to zero-matrices due to roundoff error, which would case
+        # do not lead to zero-matrices due to roundoff error, which would case
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised
@@ -749,7 +727,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
         forwards.append(
             linalg.solve_triangular(
                 backward_factors[s], partial_autocorrelations[s].T,
-                lower=True, trans='T'))
+                lower=True, trans="T"))
         forwards[0] = np.dot(forward_factors[s], forwards[0].T)
 
         # P' L^{-1} = x
@@ -758,7 +736,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
         backwards.append(
             linalg.solve_triangular(
                 forward_factors[s], partial_autocorrelations[s],
-                lower=True, trans='T'))
+                lower=True, trans="T"))
         backwards[0] = np.dot(backward_factors[s], backwards[0].T)
 
         # Update the variance
@@ -828,7 +806,7 @@ def _compute_coefficients_from_multivariate_pacf_python(
 def constrain_stationary_multivariate_python(unconstrained, error_variance,
                                              transform_variance=False,
                                              prefix=None):
-    """
+    r"""
     Transform unconstrained parameters used by the optimizer to constrained
     parameters used in likelihood evaluation for a vector autoregression.
 
@@ -840,14 +818,14 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         element is an array sized `k_endog` x `k_endog`. If an array, should be
         the matrices horizontally concatenated and sized
         `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`. This is used as input in the algorithm even if
         is not transformed by it (when `transform_variance` is False). The
         error term variance is required input when transformation is used
         either to force an autoregressive component to be stationary or to
         force a moving average component to be invertible.
-    transform_variance : boolean, optional
+    transform_variance : bool, optional
         Whether or not to transform the error variance term. This option is
         not typically used, and the default is False.
     prefix : {'s','d','c','z'}, optional
@@ -861,6 +839,10 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
         Transformed coefficient matrices leading to a stationary VAR
         representation. Will match the type of the passed `unconstrained`
         variable (so if a list was passed, a list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term, transformed if
+        `transform_variance` is True (otherwise this is the same as the
+        input `error_variance`).
 
     Notes
     -----
@@ -893,10 +875,9 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
        "Multivariate Partial Autocorrelations."
        In Proceedings of the Business and Economic Statistics Section, 349-53.
        American Statistical Association
-
     """
 
-    use_list = type(unconstrained) == list
+    use_list = type(unconstrained) is list
     if not use_list:
         k_endog, order = unconstrained.shape
         order //= k_endog
@@ -927,62 +908,53 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
     return constrained, var
 
 
-# Conditionally use the Cython versions of the multivariate constraint if
-# possible (i.e. if Scipy >= 0.14.0 is available.)
-if has_trmm:
+@Appender(constrain_stationary_multivariate_python.__doc__)
+def constrain_stationary_multivariate(unconstrained, variance,
+                                      transform_variance=False,
+                                      prefix=None):
 
-    def constrain_stationary_multivariate(unconstrained, variance,
-                                          transform_variance=False,
-                                          prefix=None):
+    use_list = type(unconstrained) is list
+    if use_list:
+        unconstrained = np.concatenate(unconstrained, axis=1)
 
-        use_list = type(unconstrained) == list
-        if use_list:
-            unconstrained = np.concatenate(unconstrained, axis=1)
+    k_endog, order = unconstrained.shape
+    order //= k_endog
 
-        k_endog, order = unconstrained.shape
-        order //= k_endog
+    if order < 1:
+        raise ValueError("Must have order at least 1")
+    if k_endog < 1:
+        raise ValueError("Must have at least 1 endogenous variable")
 
-        if order < 1:
-            raise ValueError('Must have order at least 1')
-        if k_endog < 1:
-            raise ValueError('Must have at least 1 endogenous variable')
+    if prefix is None:
+        prefix, dtype, _ = find_best_blas_type(
+            [unconstrained, variance])
+    dtype = prefix_dtype_map[prefix]
 
-        if prefix is None:
-            prefix, dtype, _ = find_best_blas_type(
-                [unconstrained, variance])
-        dtype = prefix_dtype_map[prefix]
+    unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
+    variance = np.asfortranarray(variance, dtype=dtype)
 
-        unconstrained = np.asfortranarray(unconstrained, dtype=dtype)
-        variance = np.asfortranarray(variance, dtype=dtype)
+    # Step 1: convert from arbitrary matrices to those with singular values
+    # less than one.
+    # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
+    #                                              k_endog, prefix)
+    sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
 
-        # Step 1: convert from arbitrary matrices to those with singular values
-        # less than one.
-        # sv_constrained = _constrain_sv_less_than_one(unconstrained, order,
-        #                                              k_endog, prefix)
-        sv_constrained = prefix_sv_map[prefix](unconstrained, order, k_endog)
+    # Step 2: convert matrices from our "partial autocorrelation matrix"
+    # space (matrices with singular values less than one) to the space of
+    # stationary coefficient matrices
+    constrained, variance = prefix_pacf_map[prefix](
+        sv_constrained, variance, transform_variance, order, k_endog)
 
-        # Step 2: convert matrices from our "partial autocorrelation matrix"
-        # space (matrices with singular values less than one) to the space of
-        # stationary coefficient matrices
-        constrained, variance = prefix_pacf_map[prefix](
-            sv_constrained, variance, transform_variance, order, k_endog)
+    constrained = np.array(constrained, dtype=dtype)
+    variance = np.array(variance, dtype=dtype)
 
-        constrained = np.array(constrained, dtype=dtype)
-        variance = np.array(variance, dtype=dtype)
+    if use_list:
+        constrained = [
+            constrained[:k_endog, i*k_endog:(i+1)*k_endog]
+            for i in range(order)
+        ]
 
-        if use_list:
-            constrained = [
-                constrained[:k_endog, i*k_endog:(i+1)*k_endog]
-                for i in range(order)
-            ]
-
-        return constrained, variance
-    constrain_stationary_multivariate.__doc__ = (
-        constrain_stationary_multivariate_python.__doc__)
-
-else:
-    constrain_stationary_multivariate = (
-        constrain_stationary_multivariate_python)
+    return constrained, variance
 
 
 def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
@@ -995,9 +967,9 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
     constrained : list
         The partial autocorrelation matrices. Should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
@@ -1006,11 +978,14 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
         Unconstrained matrices. A list of length `order`, where each element is
         an array sized `k_endog` x `k_endog`.
 
+    See Also
+    --------
+    unconstrain_stationary_multivariate
+
     Notes
     -----
     Corresponds to the inverse of Lemma 2.2 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
-
     """
     from scipy import linalg
 
@@ -1032,14 +1007,16 @@ def _unconstrain_sv_less_than_one(constrained, order=None, k_endog=None):
 
 
 def _compute_multivariate_sample_acovf(endog, maxlag):
-    """
-    Computer multivariate sample autocovariances
+    r"""
+    Compute multivariate sample autocovariances
 
     Parameters
     ----------
     endog : array_like
         Sample data on which to compute sample autocovariances. Shaped
         `nobs` x `k_endog`.
+    maxlag : int
+        Maximum lag to use when computing the sample autocovariances.
 
     Returns
     -------
@@ -1062,8 +1039,8 @@ def _compute_multivariate_sample_acovf(endog, maxlag):
     References
     ----------
     .. [*] Wei, William. 1990.
-        Time Series Analysis : Univariate and Multivariate Methods.
-       Boston: Pearson.
+       Time Series Analysis : Univariate and Multivariate Methods. Boston:
+       Pearson.
     """
     # Get the (demeaned) data as an array
     endog = np.array(endog)
@@ -1098,13 +1075,13 @@ def _compute_multivariate_acovf_from_coefficients(
         `order`, where each element is an array sized `k_endog` x `k_endog`. If
         an array, should be the coefficient matrices horizontally concatenated
         and sized `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    maxlag : integer, optional
+    maxlag : int, optional
         The maximum autocovariance to compute. Default is `order`-1. Can be
         zero, in which case it returns the variance.
-    forward_autocovariances : boolean, optional
+    forward_autocovariances : bool, optional
         Whether or not to compute forward autocovariances
         :math:`E(y_t y_{t+j}')`. Default is False, so that backward
         autocovariances :math:`E(y_t y_{t-j}')` are returned.
@@ -1137,13 +1114,12 @@ def _compute_multivariate_acovf_from_coefficients(
 
     Autocovariances are calculated by solving the associated discrete Lyapunov
     equation of the state space representation of the VAR process.
-
     """
     from scipy import linalg
 
     # Convert coefficients to a list of matrices, for use in
     # `companion_matrix`; get dimensions
-    if type(coefficients) == list:
+    if type(coefficients) is list:
         order = len(coefficients)
         k_endog = coefficients[0].shape[0]
     else:
@@ -1162,7 +1138,7 @@ def _compute_multivariate_acovf_from_coefficients(
     # Then stack the VAR(p) into a VAR(1) in companion matrix form:
     # z_{t+1} = F z_t + v_t
     companion = companion_matrix(
-        [1] + [-coefficients[i] for i in range(order)]
+        [1] + [-np.squeeze(coefficients[i]) for i in range(order)]
     ).T
 
     # Compute the error variance matrix for the stacked form: E v_t v_t'
@@ -1180,7 +1156,7 @@ def _compute_multivariate_acovf_from_coefficients(
         for i in range(min(order, maxlag+1))
     ]
 
-    for i in range(maxlag - (order-1)):
+    for _ in range(maxlag - (order-1)):
         stacked_cov = np.dot(companion, stacked_cov)
         autocovariances += [
             stacked_cov[:k_endog, -k_endog:]
@@ -1195,14 +1171,14 @@ def _compute_multivariate_acovf_from_coefficients(
 
 def _compute_multivariate_sample_pacf(endog, maxlag):
     """
-    Computer multivariate sample partial autocorrelations
+    Compute multivariate sample partial autocorrelations
 
     Parameters
     ----------
     endog : array_like
         Sample data on which to compute sample autocovariances. Shaped
         `nobs` x `k_endog`.
-    maxlag : integer
+    maxlag : int
         Maximum lag for which to calculate sample partial autocorrelations.
 
     Returns
@@ -1210,7 +1186,6 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
     sample_pacf : list
         A list of the first `maxlag` sample partial autocorrelation matrices.
         Each matrix is shaped `k_endog` x `k_endog`.
-
     """
     sample_autocovariances = _compute_multivariate_sample_acovf(endog, maxlag)
 
@@ -1221,22 +1196,26 @@ def _compute_multivariate_sample_pacf(endog, maxlag):
 def _compute_multivariate_pacf_from_autocovariances(autocovariances,
                                                     order=None, k_endog=None):
     """
-    Compute multivariate partial autocorrelations from autocovariances.
+    Compute multivariate partial autocorrelations from autocovariances
 
     Parameters
     ----------
     autocovariances : list
         Autocorrelations matrices. Should be a list of length `order` + 1,
         where each element is an array sized `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
     -------
     pacf : list
         List of first `order` multivariate partial autocorrelations.
+
+    See Also
+    --------
+    unconstrain_stationary_multivariate
 
     Notes
     -----
@@ -1245,11 +1224,8 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
     Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
 
-    Notes
-    -----
     Computes sample partial autocorrelations if sample autocovariances are
     given.
-
     """
     from scipy import linalg
 
@@ -1379,7 +1355,7 @@ def _compute_multivariate_pacf_from_autocovariances(autocovariances,
 
 def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
                                                  order=None, k_endog=None):
-    """
+    r"""
     Transform matrices corresponding to a stationary (or invertible) process
     to matrices with singular values less than one.
 
@@ -1390,18 +1366,22 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
         `order`, where each element is an array sized `k_endog` x `k_endog`. If
         an array, should be the coefficient matrices horizontally concatenated
         and sized `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`.
-    order : integer, optional
+    order : int, optional
         The order of the autoregression.
-    k_endog : integer, optional
+    k_endog : int, optional
         The dimension of the data vector.
 
     Returns
     -------
     pacf : list
         List of first `order` multivariate partial autocorrelations.
+
+    See Also
+    --------
+    unconstrain_stationary_multivariate
 
     Notes
     -----
@@ -1410,16 +1390,13 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
     Corresponds to the inverse of Lemma 2.1 in Ansley and Kohn (1986). See
     `unconstrain_stationary_multivariate` for more details.
 
-    Notes
-    -----
-
     Coefficients are assumed to be provided from the VAR model:
 
     .. math::
         y_t = A_1 y_{t-1} + \dots + A_p y_{t-p} + \varepsilon_t
     """
 
-    if type(constrained) == list:
+    if type(constrained) is list:
         order = len(constrained)
         k_endog = constrained[0].shape[0]
     else:
@@ -1452,18 +1429,21 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
         element is an array sized `k_endog` x `k_endog`. If an array, should be
         the coefficient matrices horizontally concatenated and sized
         `k_endog` x `k_endog * order`.
-    error_variance : array
+    error_variance : ndarray
         The variance / covariance matrix of the error term. Should be sized
         `k_endog` x `k_endog`. This is used as input in the algorithm even if
         is not transformed by it (when `transform_variance` is False).
 
     Returns
     -------
-    unconstrained : array
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component. Will match the type of the passed `constrained`
-        variable (so if a list was passed, a list will be returned).
+    unconstrained : ndarray
+        Unconstrained parameters used by the optimizer. Will match the type
+        of the passed `constrained` variable (so if a list was passed, a
+        list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term. This is the same
+        as the input `error_variance`, since this function does not
+        transform the error variance term.
 
     Notes
     -----
@@ -1475,9 +1455,8 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
        "A Note on Reparameterizing a Vector Autoregressive Moving Average Model
        to Enforce Stationarity."
        Journal of Statistical Computation and Simulation 24 (2): 99-106.
-
     """
-    use_list = type(constrained) == list
+    use_list = type(constrained) is list
     if not use_list:
         k_endog, order = constrained.shape
         order //= k_endog
@@ -1535,29 +1514,27 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
 
     # Enforce dimension
     if ndim not in [2, 3]:
-        raise ValueError('Invalid value for %s matrix. Requires a'
-                         ' 2- or 3-dimensional array, got %d dimensions' %
-                         (name, ndim))
+        raise ValueError(f"Invalid value for {name} matrix. Requires a"
+                         f" 2- or 3-dimensional array, got {ndim:d} dimensions")
     # Enforce the shape of the matrix
     if not shape[0] == nrows:
-        raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                         ' rows, got %d' % (name, nrows, shape[0]))
+        raise ValueError(f"Invalid dimensions for {name} matrix: requires {nrows:d}"
+                         f" rows, got {shape[0]:d}")
     if not shape[1] == ncols:
-        raise ValueError('Invalid dimensions for %s matrix: requires %d'
-                         ' columns, got %d' % (name, ncols, shape[1]))
+        raise ValueError(f"Invalid dimensions for {name} matrix: requires {ncols:d}"
+                         f" columns, got {shape[1]:d}")
 
-    # If we don't yet know `nobs`, don't allow time-varying arrays
+    # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 2 or shape[-1] == 1):
-        raise ValueError('Invalid dimensions for %s matrix: time-varying'
-                         ' matrices cannot be given unless `nobs` is specified'
-                         ' (implicitly when a dataset is bound or else set'
-                         ' explicity)' % name)
+        raise ValueError(f"Invalid dimensions for {name} matrix: time-varying"
+                         " matrices cannot be given unless `nobs` is specified"
+                         " (implicitly when a dataset is bound or else set"
+                         " explicity)")
 
     # Enforce time-varying array size
-    if ndim == 3 and nobs is not None and not shape[-1] in [1, nobs]:
-        raise ValueError('Invalid dimensions for time-varying %s'
-                         ' matrix. Requires shape (*,*,%d), got %s' %
-                         (name, nobs, str(shape)))
+    if ndim == 3 and nobs is not None and shape[-1] not in [1, nobs]:
+        raise ValueError(f"Invalid dimensions for time-varying {name}"
+                         f" matrix. Requires shape (*,*,{nobs:d}), got {shape!s}")
 
 
 def validate_vector_shape(name, shape, nrows, nobs):
@@ -1585,26 +1562,24 @@ def validate_vector_shape(name, shape, nrows, nobs):
     ndim = len(shape)
     # Enforce dimension
     if ndim not in [1, 2]:
-        raise ValueError('Invalid value for %s vector. Requires a'
-                         ' 1- or 2-dimensional array, got %d dimensions' %
-                         (name, ndim))
+        raise ValueError(f"Invalid value for {name} vector. Requires a"
+                         f" 1- or 2-dimensional array, got {ndim:d} dimensions")
     # Enforce the shape of the vector
     if not shape[0] == nrows:
-        raise ValueError('Invalid dimensions for %s vector: requires %d'
-                         ' rows, got %d' % (name, nrows, shape[0]))
+        raise ValueError(f"Invalid dimensions for {name} vector: requires {nrows:d}"
+                         f" rows, got {shape[0]:d}")
 
-    # If we don't yet know `nobs`, don't allow time-varying arrays
+    # If we do not yet know `nobs`, do not allow time-varying arrays
     if nobs is None and not (ndim == 1 or shape[-1] == 1):
-        raise ValueError('Invalid dimensions for %s vector: time-varying'
-                         ' vectors cannot be given unless `nobs` is specified'
-                         ' (implicitly when a dataset is bound or else set'
-                         ' explicity)' % name)
+        raise ValueError(f"Invalid dimensions for {name} vector: time-varying"
+                         " vectors cannot be given unless `nobs` is specified"
+                         " (implicitly when a dataset is bound or else set"
+                         " explicity)")
 
     # Enforce time-varying array size
-    if ndim == 2 and not shape[1] in [1, nobs]:
-        raise ValueError('Invalid dimensions for time-varying %s'
-                         ' vector. Requires shape (*,%d), got %s' %
-                         (name, nobs, str(shape)))
+    if ndim == 2 and shape[1] not in [1, nobs]:
+        raise ValueError(f"Invalid dimensions for time-varying {name}"
+                         f" vector. Requires shape (*,{nobs:d}), got {shape!s}")
 
 
 def reorder_missing_matrix(matrix, missing, reorder_rows=False,
@@ -1640,14 +1615,13 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     -------
     reordered_matrix : array_like
         The reordered matrix.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((matrix,))[0]
     reorder = prefix_reorder_missing_matrix_map[prefix]
 
     if not inplace:
-        matrix = np.copy(matrix, order='F')
+        matrix = np.copy(matrix, order="F")
 
     reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
             is_diagonal)
@@ -1676,14 +1650,13 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     -------
     reordered_vector : array_like
         The reordered vector.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((vector,))[0]
     reorder = prefix_reorder_missing_vector_map[prefix]
 
     if not inplace:
-        vector = np.copy(vector, order='F')
+        vector = np.copy(vector, order="F")
 
     reorder(vector, np.asfortranarray(missing))
 
@@ -1725,21 +1698,20 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     -------
     copied_matrix : array_like
         The matrix B with the non-missing submatrix of A copied onto it.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((A, B))[0]
     copy = prefix_copy_missing_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order='F')
+        B = np.copy(B, order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
-            raise ValueError()
-    except:
+            raise ValueError
+    except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
     copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
@@ -1770,22 +1742,21 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     Returns
     -------
     copied_vector : array_like
-        The vector b with the non-missing subvector of b copied onto it.
-
+        The vector b with the non-missing subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
     copy = prefix_copy_missing_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order='F')
+        b = np.copy(b, order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
-            raise ValueError()
-    except:
+            raise ValueError
+    except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(missing))
@@ -1828,21 +1799,20 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     -------
     copied_matrix : array_like
         The matrix B with the non-index submatrix of A copied onto it.
-
     """
     if prefix is None:
         prefix = find_best_blas_type((A, B))[0]
     copy = prefix_copy_index_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order='F')
+        B = np.copy(B, order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not A.is_f_contig():
-            raise ValueError()
-    except:
+            raise ValueError
+    except (AttributeError, ValueError):
         A = np.asfortranarray(A)
 
     copy(A, B, np.asfortranarray(index), index_rows, index_cols,
@@ -1873,22 +1843,21 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     Returns
     -------
     copied_vector : array_like
-        The vector b with the non-index subvector of b copied onto it.
-
+        The vector b with the non-index subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
     copy = prefix_copy_index_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order='F')
+        b = np.copy(b, order="F")
 
-    # We may have been given an F-contiguous memoryview; in that case, we don't
-    # want to alter it or convert it to a numpy array
+    # We may have been given an F-contiguous memoryview; in that case, we do
+    # not want to alter it or convert it to a numpy array
     try:
         if not a.is_f_contig():
-            raise ValueError()
-    except:
+            raise ValueError
+    except (AttributeError, ValueError):
         a = np.asfortranarray(a)
 
     copy(a, b, np.asfortranarray(index))
@@ -1896,8 +1865,26 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     return b
 
 
-
 def prepare_exog(exog):
+    """
+    Standardize the shape of an exog array and compute its number of columns
+
+    Parameters
+    ----------
+    exog : array_like or None
+        Exogenous regressor array, or None if there are no exogenous
+        regressors.
+
+    Returns
+    -------
+    k_exog : int
+        The number of exogenous regressors (columns of `exog`). Zero if
+        `exog` is None.
+    exog : array_like or None
+        The `exog` array, coerced to a two-dimensional array (or
+        `pandas.DataFrame`, if `exog` was a pandas object) if it was not
+        already. None if `exog` is None.
+    """
     k_exog = 0
     if exog is not None:
         exog_is_using_pandas = _is_using_pandas(exog, None)
@@ -1913,3 +1900,522 @@ def prepare_exog(exog):
 
         k_exog = exog.shape[1]
     return (k_exog, exog)
+
+
+def prepare_trend_spec(trend):
+    """
+    Translate a trend specification into a polynomial trend and its order
+
+    Parameters
+    ----------
+    trend : {str, array_like, None}
+        The trend specification. Can be a string, in which case it must be
+        one of 'n' (no trend), 'c' (constant), 't' (linear trend in time),
+        'ct' (both constant and linear trend), or 'ctt' (constant, linear
+        trend, and squared trend). Alternatively, can be an iterable defining
+        a polynomial, e.g., `[1, 1, 0, 1]` corresponds to a constant, a
+        linear trend, and a trend of degree three (but not a squared trend).
+        None is equivalent to 'n'.
+
+    Returns
+    -------
+    polynomial_trend : ndarray
+        Array containing the coefficients of the polynomial, where non-zero
+        entries indicate that the associated degree term is included in the
+        model, in order of increasing degree.
+    k_trend : int
+        The number of distinct trend elements (i.e., the number of non-zero
+        entries of `polynomial_trend`). Note that this is not the same as
+        the degree of the trend polynomial.
+    """
+    # Trend
+    if trend is None or trend == "n":
+        polynomial_trend = np.ones(0)
+    elif trend == "c":
+        polynomial_trend = np.r_[1]
+    elif trend == "t":
+        polynomial_trend = np.r_[0, 1]
+    elif trend == "ct":
+        polynomial_trend = np.r_[1, 1]
+    elif trend == "ctt":
+        # TODO deprecate ctt?
+        polynomial_trend = np.r_[1, 1, 1]
+    else:
+        trend = np.array(trend)
+        if trend.ndim > 0:
+            polynomial_trend = (trend > 0).astype(int)
+        else:
+            raise ValueError(
+                "Valid trend inputs are 'c' (constant), 't' (linear trend in "
+                "time), 'ct' (both), 'ctt' (both with trend squared) or an "
+                "interable defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
+                f"b*t + ct**3`. Received {trend}"
+            )
+
+    # Note: k_trend is not the degree of the trend polynomial, because e.g.
+    # k_trend = 1 corresponds to the degree zero polynomial (with only a
+    # constant term).
+    k_trend = int(np.sum(polynomial_trend))
+
+    return polynomial_trend, k_trend
+
+
+def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
+    """
+    Construct the trend data array associated with a given trend polynomial
+
+    Parameters
+    ----------
+    polynomial_trend : array_like
+        Array containing the coefficients of the polynomial, where non-zero
+        entries indicate that the associated degree term should be included
+        in the trend data, in order of increasing degree. See
+        `prepare_trend_spec`.
+    k_trend : int
+        The number of distinct trend elements (i.e., the number of non-zero
+        entries of `polynomial_trend`).
+    nobs : int
+        The number of observations for which to construct trend data.
+    offset : int, optional
+        The time period associated with the first observation. Default is 1.
+
+    Returns
+    -------
+    trend_data : ndarray
+        Array shaped `(nobs, k_trend)` containing the trend regressors
+        associated with `polynomial_trend`.
+    """
+    # Cache the arrays for calculating the intercept from the trend
+    # components
+    time_trend = np.arange(offset, nobs + offset)
+    trend_data = np.zeros((nobs, k_trend))
+    for i, k in enumerate(polynomial_trend.nonzero()[0]):
+        if k == 0:
+            trend_data[:, i] = np.ones(nobs,)
+        else:
+            trend_data[:, i] = time_trend**k
+
+    return trend_data
+
+
+def _safe_cond(a):
+    """Compute condition while protecting from LinAlgError"""
+    try:
+        return np.linalg.cond(a)
+    except np.linalg.LinAlgError:
+        if np.any(np.isnan(a)):
+            return np.nan
+        else:
+            return np.inf
+
+
+def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
+                                    compute_prior_weights=None, scale=1.0):
+    """
+    Construct the weights of observations and the prior on the smoothed state
+
+    Parameters
+    ----------
+    ssm : KalmanSmoother
+        The `statespace.kalman_smoother.KalmanSmoother` object (or a
+        subclass, e.g., `statespace.simulation_smoother.SimulationSmoother`)
+        with an underlying Cython state space, Kalman filter, and Kalman
+        smoother that have already been run so that the required attributes
+        are available.
+    compute_t : array_like, optional
+        An explicit list of periods `t` of the smoothed state vector to
+        compute weights for. Default is to compute weights for all periods.
+    compute_j : array_like, optional
+        An explicit list of periods `j` of observations to compute weights
+        for. Default is to compute weights for all periods.
+    compute_prior_weights : bool, optional
+        Whether or not to compute the weight matrices associated with the
+        prior mean. Default is True if 0 is in `compute_j`, and False
+        otherwise.
+    scale : float, optional
+        The scale of the model, as computed e.g., by the Kalman filter. Used
+        to scale the weights appropriately. Default is 1.0.
+
+    Returns
+    -------
+    weights : ndarray
+        Weight matrices that can be used to construct the smoothed state
+        from the observations. See `compute_smoothed_state_weights` for more
+        details.
+    state_intercept_weights : ndarray
+        Weight matrices describing the impact of the state intercept on the
+        smoothed state vector.
+    prior_weights : ndarray
+        Weight matrices that describe the impact of the prior on the
+        smoothed state vector. See `compute_smoothed_state_weights` for more
+        details.
+
+    See Also
+    --------
+    compute_smoothed_state_weights
+    """
+    # Get references to the Cython objects
+    _model = ssm._statespace
+    _kfilter = ssm._kalman_filter
+    _smoother = ssm._kalman_smoother
+
+    # Determine the appropriate function for the dtype
+    func = prefix_compute_smoothed_state_weights_map[ssm.prefix]
+
+    # Handle compute_t and compute_j indexes
+    if compute_t is None:
+        compute_t = np.arange(ssm.nobs)
+    if compute_j is None:
+        compute_j = np.arange(ssm.nobs)
+    compute_t = np.unique(np.atleast_1d(compute_t).astype(np.int32))
+    compute_t.sort()
+    compute_j = np.unique(np.atleast_1d(compute_j).astype(np.int32))
+    compute_j.sort()
+
+    # Default setting for computing the prior weights
+    if compute_prior_weights is None:
+        compute_prior_weights = compute_j[0] == 0
+    # Validate that compute_prior_weights is valid
+    if compute_prior_weights and compute_j[0] != 0:
+        raise ValueError("If `compute_prior_weights` is set to True, then"
+                         " `compute_j` must include the time period 0.")
+
+    # Compute the weights
+    weights, state_intercept_weights, prior_weights, _ = func(
+        _smoother, _kfilter, _model, compute_t, compute_j, scale,
+        bool(compute_prior_weights))
+
+    # Re-order missing entries correctly and transpose to the appropriate
+    # shape
+    t0 = min(compute_t[0], compute_j[0])
+    missing = np.isnan(ssm.endog[:, t0:])
+    if np.any(missing):
+        shape = weights.shape
+        # Transpose m, p, t, j, -> t, m, p, j so that we can use the
+        # `reorder_missing_matrix` function
+        weights = np.asfortranarray(weights.transpose(2, 0, 1, 3).reshape(
+            shape[2] * shape[0], shape[1], shape[3], order="C"))
+        missing = np.asfortranarray(missing.astype(np.int32))
+        reorder_missing_matrix(weights, missing, reorder_cols=True,
+                               inplace=True)
+        # Transpose t, m, p, j -> t, j, m, p,
+        weights = (weights.reshape(shape[2], shape[0], shape[1], shape[3])
+                          .transpose(0, 3, 1, 2))
+    else:
+        # Transpose m, p, t, j -> t, j, m, p
+        weights = weights.transpose(2, 3, 0, 1)
+
+    # Transpose m, l, t, j -> t, j, m, l
+    state_intercept_weights = state_intercept_weights.transpose(2, 3, 0, 1)
+
+    # Transpose m, l, t -> t, m, l
+    prior_weights = prior_weights.transpose(2, 0, 1)
+
+    # Subset to the actual computed t, j elements
+    ix_tj = np.ix_(compute_t - t0, compute_j - t0)
+    weights = weights[ix_tj]
+    state_intercept_weights = state_intercept_weights[ix_tj]
+    if compute_prior_weights:
+        prior_weights = prior_weights[compute_t - t0]
+
+    return weights, state_intercept_weights, prior_weights
+
+
+def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
+                                   compute_prior_weights=None, resmooth=None):
+    r"""
+    Construct the weights of observations and the prior on the smoothed state
+
+    Parameters
+    ----------
+    results : MLEResults object
+        Results object from fitting a state space model.
+    compute_t : array_like, optional
+        An explicit list of periods `t` of the smoothed state vector to compute
+        weights for (see the Returns section for more details about the
+        dimension `t`). Default is to compute weights for all periods `t`.
+        However, if weights for only a few time points are desired, then
+        performance can be improved by specifying this argument.
+    compute_j : array_like, optional
+        An explicit list of periods `j` of observations to compute
+        weights for (see the Returns section for more details about the
+        dimension `j`). Default is to compute weights for all periods `j`.
+        However, if weights for only a few time points are desired, then
+        performance can be improved by specifying this argument.
+    compute_prior_weights : bool, optional
+        Whether or not to compute the weight matrices associated with the prior
+        mean (also called the "initial state"). Note that doing so requires
+        that period 0 is in the periods defined in `compute_j`. Default is True
+        if 0 is in `compute_j` (or if the `compute_j` argument is not passed)
+        and False otherwise.
+    resmooth : bool, optional
+        Whether or not to re-perform filtering and smoothing prior to
+        constructing the weights. Default is to resmooth if the smoothed_state
+        vector is different between the given results object and the
+        underlying smoother. Caution is adviced when changing this setting.
+        See the Notes section below for more details.
+
+    Returns
+    -------
+    weights : array_like
+        Weight matrices that can be used to construct the smoothed state from
+        the observations. The returned matrix is always shaped
+        `(nobs, nobs, k_states, k_endog)`, and entries that are not computed
+        are set to NaNs. (Entries will not be computed if they are not
+        included in `compute_t` and `compute_j`, or if they correspond to
+        missing observations, or if they are for periods in which the exact
+        diffuse Kalman filter is operative). The `(t, j, m, p)`-th element of
+        this matrix contains the weight of the `p`-th element of the
+        observation vector at time `j` in constructing the `m`-th element of
+        the smoothed state vector at time `t`.
+    state_intercept_weights : array_like
+        Weight matrices describing the impact of the state intercept on the
+        smoothed state vector. The returned matrix is always shaped
+        `(nobs, nobs, k_states, k_states)`.
+    prior_weights : array_like
+        Weight matrices that describe the impact of the prior (also called the
+        initialization) on the smoothed state vector. The returned matrix is
+        always shaped `(nobs, k_states, k_states)`. If prior weights are not
+        computed, then all entries will be set to NaNs. The `(t, m, l)`-th
+        element of this matrix contains the weight of the `l`-th element of the
+        prior mean (also called the "initial state") in constructing the
+        `m`-th element of the smoothed state vector at time `t`.
+
+    Notes
+    -----
+    In [1]_, Chapter 4.8, it is shown how the smoothed state vector can be
+    written as a weighted vector sum of observations:
+
+    .. math::
+
+        \hat \alpha_t = \sum_{j=1}^n \omega_{jt}^{\hat \alpha} y_j
+
+    One output of this function is the weights
+    :math:`\omega_{jt}^{\hat \alpha}`. Note that the description in [1]_
+    assumes that the prior mean (or "initial state") is fixed to be zero. More
+    generally, the smoothed state vector will also depend partly on the prior.
+    The second output of this function are the weights of the prior mean.
+
+    There are two important technical notes about the computations used here:
+
+    1. In the univariate approach to multivariate filtering (see e.g.
+       Chapter 6.4 of [1]_), all observations are introduced one at a time,
+       including those from the same time period. As a result, the weight of
+       each observation can be different than when all observations from the
+       same time point are introduced together, as in the typical multivariate
+       filtering approach. Here, we always compute weights as in the
+       multivariate filtering approach, and we handle singular forecast error
+       covariance matrices by using a pseudo-inverse.
+    2. Constructing observation weights for periods in which the exact diffuse
+       filter (see e.g., Chapter 5 of [1]_) is operative is not done here, and
+       so the corresponding entries in the returned weight matrices will always
+       be set equal to zeros. While handling these periods may be implemented
+       in the future, one option for constructing these weights is to use an
+       approximate (instead of exact) diffuse initialization for this purpose.
+
+    Finally, one note about implementation: to compute the weights, we use
+    attributes of the underlying filtering and smoothing Cython objects
+    directly. However, these objects are not frozen with the result
+    computation, and we cannot guarantee that their attributes have not
+    changed since `res` was created. As a result, by default we re-run the
+    filter and smoother to ensure that the attributes there actually correspond
+    to the `res` object. This can be overridden by the user for a small
+    performance boost if they are sure that the attributes have not changed;
+    see the `resmooth` argument.
+
+    References
+    ----------
+    .. [1] Durbin, James, and Siem Jan Koopman. 2012.
+            Time Series Analysis by State Space Methods: Second Edition.
+            Oxford University Press.
+    """
+    # Get the python model object
+    mod = results.model
+    # Always update the parameters to be consistent with `res`
+    mod.update(results.params)
+    # By default, resmooth if it appears the results have changed; check is
+    # based on the smoothed state vector
+    if resmooth is None:
+        resmooth = np.any(results.smoothed_state !=
+                          mod.ssm._kalman_smoother.smoothed_state)
+    # Resmooth if necessary, otherwise at least update the Cython model
+    if resmooth:
+        mod.ssm.smooth(conserve_memory=0, update_representation=False,
+                       update_filter=False, update_smoother=False)
+    else:
+        mod.ssm._initialize_representation()
+
+    return _compute_smoothed_state_weights(
+        mod.ssm, compute_t=compute_t, compute_j=compute_j,
+        compute_prior_weights=compute_prior_weights,
+        scale=results.filter_results.scale)
+
+
+def get_impact_dates(previous_model, updated_model, impact_date=None,
+                     start=None, end=None, periods=None):
+    """
+    Compute start/end periods and an index, often for impacts of data updates
+
+    Parameters
+    ----------
+    previous_model : MLEModel
+        Model used to compute default start/end periods if None are given.
+        In the case of computing impacts of data updates, this would be the
+        model estimated with the previous dataset. Otherwise, can be the same
+        as `updated_model`.
+    updated_model : MLEModel
+        Model used to compute the index. In the case of computing impacts of
+        data updates, this would be the model estimated with the updated
+        dataset. Otherwise, can be the same as `previous_model`.
+    impact_date : {int, str, datetime}, optional
+        Specific individual impact date. Cannot be used in combination with
+        `start`, `end`, or `periods`.
+    start : {int, str, datetime}, optional
+        Starting point of the impact dates. If given, one of `end` or `periods`
+        must also be given. If a negative integer, will be computed relative to
+        the dates in the `updated_model` index. Cannot be used in combination
+        with `impact_date`.
+    end : {int, str, datetime}, optional
+        Ending point of the impact dates. If given, one of `start` or `periods`
+        must also be given. If a negative integer, will be computed relative to
+        the dates in the `updated_model` index. Cannot be used in combination
+        with `impact_date`.
+    periods : int, optional
+        Number of impact date periods. If given, one of `start` or `end`
+        must also be given. Cannot be used in combination with `impact_date`.
+
+    Returns
+    -------
+    start : int
+        Integer location of the first included impact dates.
+    end : int
+        Integer location of the last included impact dates (i.e., this integer
+        location is included in the returned `index`).
+    index : pd.Index
+        Index associated with `start` and `end`, as computed from the
+        `updated_model`'s index.
+
+    Notes
+    -----
+    This function is typically used as a helper for standardizing start and
+    end periods for a date range where the most sensible default values are
+    based on some initial dataset (here contained in the `previous_model`),
+    while index-related operations (especially relative start/end dates given
+    via negative integers) are most sensibly computed from an updated dataset
+    (here contained in the `updated_model`).
+
+    """
+    # There doesn't seem to be any universal default that both (a) make
+    # sense for all data update combinations, and (b) work with both
+    # time-invariant and time-varying models. So we require that the user
+    # specify exactly two of start, end, periods.
+    if impact_date is not None:
+        if not (start is None and end is None and periods is None):
+            raise ValueError("Cannot use the `impact_date` argument in"
+                             " combination with `start`, `end`, or"
+                             " `periods`.")
+        start = impact_date
+        periods = 1
+    if start is None and end is None and periods is None:
+        start = previous_model.nobs - 1
+        end = previous_model.nobs - 1
+    if int(start is None) + int(end is None) + int(periods is None) != 1:
+        raise ValueError("Of the three parameters: start, end, and"
+                         " periods, exactly two must be specified")
+    # If we have the `periods` object, we need to convert `start`/`end` to
+    # integers so that we can compute the other one. That's because
+    # _get_prediction_index doesn't support a `periods` argument
+    elif start is not None and periods is not None:
+        start, _, _, _ = updated_model._get_prediction_index(start, start)
+        end = start + (periods - 1)
+    elif end is not None and periods is not None:
+        _, end, _, _ = updated_model._get_prediction_index(end, end)
+        start = end - (periods - 1)
+    elif start is not None and end is not None:
+        pass
+
+    # Get the integer-based start, end and the prediction index
+    start, end, out_of_sample, prediction_index = (
+        updated_model._get_prediction_index(start, end))
+    end = end + out_of_sample
+
+    return start, end, prediction_index
+
+
+def _atleast_1d(*arys):
+    """
+    Version of `np.atleast_1d`, copied from
+    https://github.com/numpy/numpy/blob/master/numpy/core/shape_base.py,
+    with the following modifications:
+
+    1. It allows for `None` arguments, and passes them directly through
+
+    Parameters
+    ----------
+    *arys : array_like or None
+        One or more input arrays (or None) to be converted to arrays with
+        at least one dimension.
+
+    Returns
+    -------
+    ret : ndarray or None or list
+        An array (or None, if the corresponding input was None) with
+        `a.ndim >= 1`. A list of arrays (or None values) is returned if
+        more than one input was given.
+    """
+    res = []
+    for ary in arys:
+        if ary is None:
+            result = None
+        else:
+            arr = np.asanyarray(ary)
+            if arr.ndim == 0:
+                result = arr.reshape(1)
+            else:
+                result = arr
+        res.append(result)
+    if len(res) == 1:
+        return res[0]
+    else:
+        return res
+
+
+def _atleast_2d(*arys):
+    """
+    Version of `np.atleast_2d`, copied from
+    https://github.com/numpy/numpy/blob/master/numpy/core/shape_base.py,
+    with the following modifications:
+
+    1. It allows for `None` arguments, and passes them directly through
+    2. Instead of creating new axis at the beginning, it creates it at the end
+
+    Parameters
+    ----------
+    *arys : array_like or None
+        One or more input arrays (or None) to be converted to arrays with
+        at least two dimensions.
+
+    Returns
+    -------
+    ret : ndarray or None or list
+        An array (or None, if the corresponding input was None) with
+        `a.ndim >= 2`. A list of arrays (or None values) is returned if
+        more than one input was given.
+    """
+    res = []
+    for ary in arys:
+        if ary is None:
+            result = None
+        else:
+            arr = np.asanyarray(ary)
+            if arr.ndim == 0:
+                result = arr.reshape(1, 1)
+            elif arr.ndim == 1:
+                result = arr[:, np.newaxis]
+            else:
+                result = arr
+        res.append(result)
+    if len(res) == 1:
+        return res[0]
+    else:
+        return res

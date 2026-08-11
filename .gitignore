@@ -1,23 +1,34 @@
 *.py[oc]
-# setup.py working directory
+# setup working directory
 build
-# setup.py dist directory
-./dist
+# setup dist directory
 dist
 #docs build and others
 #generated  #not yet? generated for dataset not rebuild
 docs/source/generated
 docs/source/dev/generated
 docs/source/examples/generated
+docs/source/datasets/generated
+docs/source/examples/index.rst
 docs/source/examples/notebooks/generated
-docs/source/datasets
+docs/source/datasets/statsmodels.datasets.*
+docs/source/savefig
 docs/gettingstarted_0.png
 examples/executed
+# Data downloaded for notebooks, not needed for source distribution
+examples/notebooks/*.dta
+examples/notebooks/*.table
+examples/notebooks/*.csv
 
-# generated c source and built extensions
+#setuptools-scm generated version file
+statsmodels/_version.py
+# Generated c source and built extensions
+# and Byte-compiled / optimized / DLL files
 *.c
 *.so
-*.pyd
+*.py[cod]
+__pycache__/
+
 
 # repository directories for bzr-git
 .bzr
@@ -47,9 +58,9 @@ marks.bzr
 *.svn/
 *.log.py
 # Egg metadata
-./*.egg-info
+*.egg-info
 # The shelf plugin uses this dir
-./.shelf
+.shelf
 # Mac droppings
 .DS_Store
 help
@@ -58,10 +69,15 @@ help
 .coverage
 coverage_html_report/
 
+# Idea IDE
+.idea/
+
+# VS Code
+.vscode/
+.vs/
+
 # Project specific
 statsmodels/version.py
-cythonize.dat
-cythonize_exclusions.dat
 statsmodels.egg-info/
 iterate.dat
 hash_dict.pickle
@@ -69,17 +85,36 @@ rehab.table
 salary.table
 .ipynb_checkpoints
 statsmodels/tsa/statespace/_statespace.pyx
+statsmodels/tsa/innovations/_arma_innovations.pyx
 statsmodels/tsa/regime_switching/_hamilton_filter.pyx
 statsmodels/tsa/regime_switching/_kim_smoother.pyx
+statsmodels/tsa/statespace/_initialization.pyx
 statsmodels/tsa/statespace/_representation.pyx
 statsmodels/tsa/statespace/_kalman_filter.pyx
 statsmodels/tsa/statespace/_kalman_smoother.pyx
 statsmodels/tsa/statespace/_simulation_smoother.pyx
+statsmodels/tsa/statespace/_cfa_simulation_smoother.pyx
 statsmodels/tsa/statespace/_tools.pyx
 statsmodels/tsa/statespace/_filters/_conventional.pyx
 statsmodels/tsa/statespace/_filters/_inversions.pyx
 statsmodels/tsa/statespace/_filters/_univariate.pyx
+statsmodels/tsa/statespace/_filters/_univariate_diffuse.pyx
 statsmodels/tsa/statespace/_smoothers/_conventional.pyx
 statsmodels/tsa/statespace/_smoothers/_univariate.pyx
+statsmodels/tsa/statespace/_smoothers/_univariate_diffuse.pyx
 statsmodels/tsa/statespace/_smoothers/_alternative.pyx
 statsmodels/tsa/statespace/_smoothers/_classical.pyx
+
+#pytest
+.cache
+.pytest_cache
+
+# Temporary copies for packaging
+statsmodels/setup.cfg
+statsmodels/LICENSE.txt
+
+# Dataset downloads
+statsmodels/datasets/tests/*.zip
+
+# Pytest data
+test-data.xml

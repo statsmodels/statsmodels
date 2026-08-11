@@ -79,6 +79,9 @@ Non-Linearity Tests
   - Lagrange Multiplier test for Null hypothesis that linear specification is
     correct. This tests against specific functional alternatives.
 
+:py:func:`spec_white <statsmodels.stats.diagnostic.spec_white>`
+  - White's two-moment specification test with null hypothesis of homoscedastic
+    and correctly specified.
 
 Tests for Structural Change, Parameter Stability
 ------------------------------------------------
@@ -110,7 +113,7 @@ Unknown Change Point
 :py:func:`recursive_olsresiduals <statsmodels.stats.diagnostic.recursive_olsresiduals>`
   Calculate recursive ols with residuals and cusum test statistic. This is
   currently mainly helper function for recursive residual based tests.
-  However, since it uses recursive updating and doesn't estimate separate
+  However, since it uses recursive updating and does not estimate separate
   problems it should be also quite efficient as expanding OLS function.
 
 missing
@@ -119,7 +122,7 @@ missing
   - test on recursive parameter estimates, which are there?
 
 
-Mutlicollinearity Tests
+Multicollinearity Tests
 --------------------------------
 
 conditionnum (statsmodels.stattools)
@@ -207,7 +210,7 @@ individual outliers and might not be able to identify groups of outliers.
    - resid_studentized_internal
    - ess_press
    - hat_matrix_diag
-   - cooks_distance - Cook's Distance `Wikipedia <http://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
+   - cooks_distance - Cook's Distance `Wikipedia <https://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
    - cov_ratio
    - dfbetas
    - dffits
@@ -215,13 +218,3 @@ individual outliers and might not be able to identify groups of outliers.
    - det_cov_params_not_obsi
    - params_not_obsi
    - sigma2_not_obsi
-
-
-
-Unit Root Tests
----------------
-
-:py:func:`unitroot_adf <statsmodels.stats.diagnostic.unitroot_adf>`
-  - same as adfuller but with different signature
-
-

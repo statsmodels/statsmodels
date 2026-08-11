@@ -1,4 +1,4 @@
-'''
+"""
 This module contains the one-parameter exponential families used
 for fitting GLMs and GAMs.
 
@@ -8,9 +8,33 @@ These families are described in
    Monographs on Statistics and Applied Probability.
    Chapman & Hall, London, 1983.
 
-'''
+"""
 
-#from statsmodels.family.family import Gaussian, Family, Poisson, Gamma, \
-#    InverseGaussian, Binomial, NegativeBinomial
-from .family import Gaussian, Family, Poisson, Gamma, \
-    InverseGaussian, Binomial, NegativeBinomial, Tweedie
+from statsmodels.genmod.families import links
+from statsmodels.tools._test_runner import PytestTester
+
+from .family import (
+    Binomial,
+    Family,
+    Gamma,
+    Gaussian,
+    InverseGaussian,
+    NegativeBinomial,
+    Poisson,
+    Tweedie,
+)
+
+__all__ = [
+           "Binomial",
+           "Family",
+           "Gamma",
+           "Gaussian",
+           "InverseGaussian",
+           "NegativeBinomial",
+           "Poisson",
+           "Tweedie",
+           "links",
+           "test",
+]
+
+test = PytestTester()

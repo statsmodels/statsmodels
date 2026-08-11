@@ -1,7 +1,8 @@
 import numpy as np
+
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 """
 Elastic net regularization.
@@ -9,7 +10,8 @@ Elastic net regularization.
 Routines for fitting regression models using elastic net
 regularization.  The elastic net minimizes the objective function
 
--llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 + L1_wt * sum(abs(params)))
+-llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 +
+    L1_wt * sum(abs(params)))
 
 The algorithm implemented here closely follows the implementation in
 the R glmnet package, documented here:
@@ -35,6 +37,31 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     All three functions have argument signature (x, model), where
     ``x`` is a point in the parameter space and ``model`` is an
     arbitrary statsmodels regression model.
+
+    Parameters
+    ----------
+    k : int
+        Index of the coefficient being optimized in the current
+        coordinate descent step.
+    L1_wt : scalar
+        The fraction of the penalty given to the L1 penalty term.
+    alpha : array_like
+        The penalty weight for each coefficient.
+    loglike_kwds : dict-like
+        Keyword arguments for the log-likelihood function.
+    score_kwds : dict-like
+        Keyword arguments for the score function.
+    hess_kwds : dict-like
+        Keyword arguments for the Hessian function.
+
+    Returns
+    -------
+    nploglike : function
+        The negative penalized log-likelihood function.
+    npscore : function
+        The derivative of `nploglike`.
+    nphess : function
+        The Hessian of `nploglike`.
     """
 
     def nploglike(params, model):
@@ -52,17 +79,16 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     def nphess(params, model):
         nobs = model.nobs
         pen_hess = alpha[k] * (1 - L1_wt)
-        h = -model.hessian(np.r_[params], **hess_kwds)[0,0] / nobs + pen_hess
+        h = -model.hessian(np.r_[params], **hess_kwds)[0, 0] / nobs + pen_hess
         return h
 
     return nploglike, npscore, nphess
 
 
-
 def fit_elasticnet(model, method="coord_descent", maxiter=100,
-         alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
-         zero_tol=1e-8, refit=False, check_step=True,
-         loglike_kwds=None, score_kwds=None, hess_kwds=None):
+                   alpha=0., L1_wt=1., start_params=None, cnvrg_tol=1e-7,
+                   zero_tol=1e-8, refit=False, check_step=True,
+                   loglike_kwds=None, score_kwds=None, hess_kwds=None):
     """
     Return an elastic net regularized fit to a regression model.
 
@@ -71,12 +97,12 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     model : model object
         A statsmodels object implementing ``loglike``, ``score``, and
         ``hessian``.
-    method :
+    method : {'coord_descent'}
         Only the coordinate descent algorithm is implemented.
-    maxiter : integer
+    maxiter : int
         The maximum number of iteration cycles (an iteration cycle
         involves running coordinate descent on all variables).
-    alpha : scalar or array-like
+    alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
@@ -85,7 +111,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         The fraction of the penalty given to the L1 penalty term.
         Must be between 0 and 1 (inclusive).  If 0, the fit is
         a ridge fit, if 1 it is a lasso fit.
-    start_params : array-like
+    start_params : array_like
         Starting values for `params`.
     cnvrg_tol : scalar
         If `params` changes by less than this amount (in sup-norm)
@@ -110,7 +136,8 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     Returns
     -------
-    A results object.
+    Results
+        A results object.
 
     Notes
     -----
@@ -133,7 +160,6 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     """
 
     k_exog = model.exog.shape[1]
-    n_exog = model.exog.shape[0]
 
     loglike_kwds = {} if loglike_kwds is None else loglike_kwds
     score_kwds = {} if score_kwds is None else score_kwds
@@ -148,16 +174,24 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     else:
         params = start_params.copy()
 
-    converged = False
     btol = 1e-4
     params_zero = np.zeros(len(params), dtype=bool)
 
-    init_args = dict([(k, getattr(model, k)) for k in model._init_keys
-                      if k != "offset" and hasattr(model, k)])
-    init_args['hasconst'] = False
+    init_args = model._get_init_kwds()
+    # we do not need a copy of init_args b/c get_init_kwds provides new dict
+    init_args["hasconst"] = False
+    model_offset = init_args.pop("offset", None)
+    if "exposure" in init_args and init_args["exposure"] is not None:
+        if model_offset is None:
+            model_offset = np.log(init_args.pop("exposure"))
+        else:
+            model_offset += np.log(init_args.pop("exposure"))
 
-    fgh_list = [_gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
-                for k in range(k_exog)]
+    fgh_list = [
+        _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds)
+        for k in range(k_exog)]
+
+    converged = False
 
     for itr in range(maxiter):
 
@@ -166,7 +200,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         for k in range(k_exog):
 
             # Under the active set method, if a parameter becomes
-            # zero we don't try to change it again.
+            # zero we do not try to change it again.
             # TODO : give the user the option to switch this off
             if params_zero[k]:
                 continue
@@ -177,17 +211,18 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
             params0 = params.copy()
             params0[k] = 0
             offset = np.dot(model.exog, params0)
-            if hasattr(model, "offset") and model.offset is not None:
-                offset += model.offset
+            if model_offset is not None:
+                offset += model_offset
 
             # Create a one-variable model for optimization.
-            model_1var = model.__class__(model.endog, model.exog[:, k], offset=offset,
-                                         **init_args)
+            model_1var = model.__class__(
+                model.endog, model.exog[:, k], offset=offset, **init_args)
 
             # Do the one-dimensional optimization.
             func, grad, hess = fgh_list[k]
-            params[k] = _opt_1d(func, grad, hess, model_1var, params[k], alpha[k]*L1_wt,
-                                tol=btol, check_step=check_step)
+            params[k] = _opt_1d(
+                func, grad, hess, model_1var, params[k], alpha[k]*L1_wt,
+                tol=btol, check_step=check_step)
 
             # Update the active set
             if itr > 0 and np.abs(params[k]) < zero_tol:
@@ -205,17 +240,19 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     if not refit:
         results = RegularizedResults(model, params)
+        results.converged = converged
         return RegularizedResultsWrapper(results)
 
     # Fit the reduced model to get standard errors and other
     # post-estimation results.
     ii = np.flatnonzero(params)
     cov = np.zeros((k_exog, k_exog))
-    init_args = dict([(k, getattr(model, k, None)) for k in model._init_keys])
+    init_args = {k: getattr(model, k, None) for k in model._init_keys}
     if len(ii) > 0:
-        model1 = model.__class__(model.endog, model.exog[:, ii],
-                               **init_args)
+        model1 = model.__class__(
+            model.endog, model.exog[:, ii], **init_args)
         rslt = model1.fit()
+        params[ii] = rslt.params
         cov[np.ix_(ii, ii)] = rslt.normalized_cov_params
     else:
         # Hack: no variables were selected but we need to run fit in
@@ -231,16 +268,29 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         klass = rslt.__class__
 
     # Not all models have a scale
-    if hasattr(rslt, 'scale'):
+    if hasattr(rslt, "scale"):
         scale = rslt.scale
     else:
         scale = 1.
 
+    # The degrees of freedom should reflect the number of parameters
+    # in the refit model, not including the zeros that are displayed
+    # to indicate which variables were dropped.  See issue #1723 for
+    # discussion about setting df parameters in model and results
+    # classes.
+    p, q = model.df_model, model.df_resid
+    model.df_model = len(ii)
+    model.df_resid = model.nobs - model.df_model
+
     # Assuming a standard signature for creating results classes.
     refit = klass(model, params, cov, scale=scale)
     refit.regularized = True
+    refit.converged = converged
     refit.method = method
-    refit.fit_history = {'iteration' : itr + 1}
+    refit.fit_history = {"iteration": itr + 1}
+
+    # Restore df in model class, see issue #1723 for discussion.
+    model.df_model, model.df_resid = p, q
 
     return refit
 
@@ -250,11 +300,11 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
     """
     One-dimensional helper for elastic net.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     func : function
         A smooth function of a single variable to be optimized
-        with L1 penaty.
+        with L1 penalty.
     grad : function
         The gradient of `func`.
     hess : function
@@ -284,7 +334,8 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
     Returns
     -------
-    The argmin of the objective function.
+    float
+        The argmin of the objective function.
     """
 
     # Overview:
@@ -332,23 +383,32 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
 
 class RegularizedResults(Results):
+    """
+    Results for models estimated using regularization
 
+    Parameters
+    ----------
+    model : Model
+        The model instance used to estimate the parameters.
+    params : ndarray
+        The estimated (regularized) parameters.
+    """
     def __init__(self, model, params):
-        super(RegularizedResults, self).__init__(model, params)
+        super().__init__(model, params)
 
     @cache_readonly
     def fittedvalues(self):
+        """The predicted values from the model at the estimated parameters"""
         return self.model.predict(self.params)
 
 
 class RegularizedResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
-        'params': 'columns',
-        'resid': 'rows',
-        'fittedvalues': 'rows',
+        "params": "columns",
+        "resid": "rows",
+        "fittedvalues": "rows",
     }
-
     _wrap_attrs = _attrs
 
-wrap.populate_wrapper(RegularizedResultsWrapper,
-                      RegularizedResults)
+
+wrap.populate_wrapper(RegularizedResultsWrapper, RegularizedResults)

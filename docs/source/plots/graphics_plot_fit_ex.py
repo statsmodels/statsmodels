@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Monday April 1st 2013
@@ -8,16 +7,16 @@ Author: Padarn Wilson
 """
 
 # Load the Statewide Crime data set and perform linear regression with
-#    'poverty' and 'hs_grad' as variables and 'muder' as the response
+#    'poverty' and 'hs_grad' as variables and 'murder' as the response
 
+
+import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
-import numpy as np
 
 data = sm.datasets.statecrime.load_pandas().data
-murder = data['murder']
-X = data[['poverty', 'hs_grad']]
+murder = data["murder"]
+X = data[["poverty", "hs_grad"]].copy()
 X["constant"] = 1
 
 y = murder

@@ -56,12 +56,12 @@ Factor Rotation
 Canonical Correlation
 ---------------------
 
-.. currentmodule:: statsmodels.multivariate.cancor
+.. currentmodule:: statsmodels.multivariate.cancorr
 
 .. autosummary::
    :toctree: generated/
 
-   CanCor
+   CanCorr
 
 
 MANOVA

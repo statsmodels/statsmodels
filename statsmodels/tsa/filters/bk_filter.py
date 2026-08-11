@@ -1,23 +1,23 @@
-from __future__ import absolute_import
-
 import numpy as np
 from scipy.signal import fftconvolve
-from ._utils import _maybe_get_pandas_wrapper
 
-def bkfilter(X, low=6, high=32, K=12):
+from statsmodels.tools.validation import PandasWrapper, array_like
+
+
+def bkfilter(x, low=6, high=32, K=12):
     """
-    Baxter-King bandpass filter
+    Filter a time series using the Baxter-King bandpass filter
 
     Parameters
     ----------
-    X : array-like
+    x : array_like
         A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
     low : float
-        Minimum period for oscillations, ie., Baxter and King suggest that
+        Minimum period for oscillations, i.e., Baxter and King suggest that
         the Burns-Mitchell U.S. business cycle has 6 for quarterly data and
         1.5 for annual data.
     high : float
-        Maximum period for oscillations BK suggest that the U.S.
+        Maximum period for oscillations. BK suggest that the U.S.
         business cycle has 32 for quarterly data and 8 for annual data.
     K : int
         Lead-lag length of the filter. Baxter and King propose a truncation
@@ -25,14 +25,19 @@ def bkfilter(X, low=6, high=32, K=12):
 
     Returns
     -------
-    Y : array
-        Cyclical component of X
+    ndarray
+        The cyclical component of x.
 
-    References
-    ---------- ::
-    Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate
-        Band-Pass Filters for Economic Time Series." *Review of Economics and
-        Statistics*, 1999, 81(4), 575-593.
+    See Also
+    --------
+    statsmodels.tsa.filters.cf_filter.cffilter
+        The Christiano Fitzgerald asymmetric, random walk filter.
+    statsmodels.tsa.filters.bk_filter.hpfilter
+        Hodrick-Prescott filter.
+    statsmodels.tsa.seasonal.seasonal_decompose
+        Decompose a time series using moving averages.
+    statsmodels.tsa.seasonal.STL
+        Season-Trend decomposition using LOESS.
 
     Notes
     -----
@@ -46,6 +51,15 @@ def bkfilter(X, low=6, high=32, K=12):
     and theta is a normalizing constant ::
 
       theta = -sum(b)/(2K+1)
+
+    See the notebook `Time Series Filters
+    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
+
+    References
+    ----------
+    Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate
+        Band-Pass Filters for Economic Time Series." *Review of Economics and
+        Statistics*, 1999, 81(4), 575-593.
 
     Examples
     --------
@@ -63,33 +77,25 @@ def bkfilter(X, low=6, high=32, K=12):
     >>> plt.show()
 
     .. plot:: plots/bkf_plot.py
-
-    See Also
-    --------
-    statsmodels.tsa.filters.cf_filter.cffilter
-    statsmodels.tsa.filters.hp_filter.hpfilter
-    statsmodels.tsa.seasonal.seasonal_decompose
     """
-    #TODO: change the docstring to ..math::?
-    #TODO: allow windowing functions to correct for Gibb's Phenomenon?
+    # TODO: change the docstring to ..math::?
+    # TODO: allow windowing functions to correct for Gibb's Phenomenon?
     # adjust bweights (symmetrically) by below before demeaning
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
-    _pandas_wrapper = _maybe_get_pandas_wrapper(X, K, K)
-    X = np.asarray(X)
-    omega_1 = 2.*np.pi/high # convert from freq. to periodicity
-    omega_2 = 2.*np.pi/low
-    bweights = np.zeros(2*K+1)
-    bweights[K] = (omega_2 - omega_1)/np.pi # weight at zero freq.
-    j = np.arange(1,int(K)+1)
-    weights = 1/(np.pi*j)*(np.sin(omega_2*j)-np.sin(omega_1*j))
-    bweights[K+j] = weights # j is an idx
-    bweights[:K] = weights[::-1] # make symmetric weights
-    bweights -= bweights.mean() # make sure weights sum to zero
-    if X.ndim == 2:
-        bweights = bweights[:,None]
-    X = fftconvolve(X, bweights, mode='valid') # get a centered moving avg/
-                                               # convolution
-    if _pandas_wrapper is not None:
-        return _pandas_wrapper(X)
+    pw = PandasWrapper(x)
+    x = array_like(x, "x", maxdim=2)
+    omega_1 = 2. * np.pi / high  # convert from freq. to periodicity
+    omega_2 = 2. * np.pi / low
+    bweights = np.zeros(2 * K + 1)
+    bweights[K] = (omega_2 - omega_1) / np.pi  # weight at zero freq.
+    j = np.arange(1, int(K) + 1)
+    weights = 1 / (np.pi * j) * (np.sin(omega_2 * j) - np.sin(omega_1 * j))
+    bweights[K + j] = weights  # j is an idx
+    bweights[:K] = weights[::-1]  # make symmetric weights
+    bweights -= bweights.mean()  # make sure weights sum to zero
+    if x.ndim == 2:
+        bweights = bweights[:, None]
+    x = fftconvolve(x, bweights, mode="valid")
+    # get a centered moving avg/convolution
 
-    return X
+    return pw.wrap(x, append="cycle", trim_start=K, trim_end=K)

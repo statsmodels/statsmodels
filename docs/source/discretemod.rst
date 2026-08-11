@@ -21,9 +21,11 @@ Examples
 --------
 
 .. ipython:: python
+  :okwarning:
 
   # Load the data from Spector and Mazzeo (1980)
-  spector_data = sm.datasets.spector.load()
+  import statsmodels.api as sm
+  spector_data = sm.datasets.spector.load_pandas()
   spector_data.exog = sm.add_constant(spector_data.exog)
 
   # Logit Model
@@ -34,8 +36,8 @@ Examples
 Detailed examples can be found here:
 
 
-* `Overview <examples/notebooks/generated/discrete_choice_overview.html>`__
-* `Examples <examples/notebooks/generated/discrete_choice_example.html>`__
+* `Overview <examples/notebooks/generated/discrete_choice_overview.ipynb>`_
+* `Examples <examples/notebooks/generated/discrete_choice_example.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -81,6 +83,7 @@ The specific model classes are:
    NegativeBinomialP
    GeneralizedPoisson
 
+.. currentmodule:: statsmodels.discrete.count_model
 .. module:: statsmodels.discrete.count_model
 
 .. autosummary::
@@ -90,6 +93,37 @@ The specific model classes are:
    ZeroInflatedNegativeBinomialP
    ZeroInflatedGeneralizedPoisson
 
+.. currentmodule:: statsmodels.discrete.truncated_model
+.. module:: statsmodels.discrete.truncated_model
+
+.. autosummary::
+   :toctree: generated/
+
+   HurdleCountModel
+   TruncatedLFNegativeBinomialP
+   TruncatedLFPoisson
+
+.. currentmodule:: statsmodels.discrete.conditional_models
+.. module:: statsmodels.discrete.conditional_models
+
+.. autosummary::
+   :toctree: generated/
+
+   ConditionalLogit
+   ConditionalMNLogit
+   ConditionalPoisson
+
+The cumulative link model for an ordinal dependent variable is currently
+in miscmodels as it subclasses GenericLikelihoodModel. This will change
+in future versions.
+
+.. currentmodule:: statsmodels.miscmodels.ordinal_model
+.. module:: statsmodels.miscmodels.ordinal_model
+
+.. autosummary::
+   :toctree: generated/
+
+   OrderedModel
 
 The specific result classes are:
 
@@ -102,7 +136,9 @@ The specific result classes are:
    ProbitResults
    CountResults
    MultinomialResults
+   PoissonResults
    NegativeBinomialResults
+   NegativeBinomialPResults
    GeneralizedPoissonResults
 
 .. currentmodule:: statsmodels.discrete.count_model
@@ -113,6 +149,29 @@ The specific result classes are:
    ZeroInflatedPoissonResults
    ZeroInflatedNegativeBinomialResults
    ZeroInflatedGeneralizedPoissonResults
+
+.. currentmodule:: statsmodels.discrete.truncated_model
+
+.. autosummary::
+   :toctree: generated/
+
+   HurdleCountResults
+   TruncatedLFPoissonResults
+   TruncatedNegativeBinomialResults
+
+.. currentmodule:: statsmodels.discrete.conditional_models
+
+.. autosummary::
+   :toctree: generated/
+
+   ConditionalResults
+
+.. currentmodule:: statsmodels.miscmodels.ordinal_model
+
+.. autosummary::
+   :toctree: generated/
+
+   OrderedResults
 
 
 :class:`DiscreteModel` is a superclass of all discrete regression models. The

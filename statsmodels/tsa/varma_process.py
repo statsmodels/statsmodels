@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
-""" Helper and filter functions for VAR and VARMA, and basic VAR class
+"""
+Helper and filter functions for VAR and VARMA, and basic VAR class
 
 Created on Mon Jan 11 11:04:23 2010
 Author: josef-pktd
 License: BSD
 
-This is a new version, I didn't look at the old version again, but similar
+This is a new version, I did not look at the old version again, but similar
 ideas.
 
 not copied/cleaned yet:
@@ -28,21 +28,19 @@ Extensions
 see also VAR section in Notes.txt
 
 """
-from __future__ import print_function
+
 import numpy as np
-from numpy.testing import assert_equal
 from scipy import signal
-#might not (yet) need the following
-from scipy.signal.signaltools import _centered as trim_centered
 
 from statsmodels.tsa.tsatools import lagmat
 
 
 def varfilter(x, a):
-    '''apply an autoregressive filter to a series x
+    """
+    Apply an autoregressive filter to a series x
 
-    Warning: I just found out that convolve doesn't work as I
-       thought, this likely doesn't work correctly for
+    Warning: I just found out that convolve does not work as I
+       thought, this likely does not work correctly for
        nvars>3
 
 
@@ -82,7 +80,7 @@ def varfilter(x, a):
         lag polynomial, uses loop over nvar
     case 3 : a is 3d, (nlags, nvars, npoly)
         the ith column of the output array is given by the linear filter
-        defined by the 2d array a[:,:,i], i.e. ::
+        defined by the 2d array a[:,:,i], i.e., ::
 
             y[:,i] = a(.,.,i)(L) * x
             y[t,i] = sum_p sum_j a(p,j,i)*x(t-p,j)
@@ -94,48 +92,48 @@ def varfilter(x, a):
 
     TODO: initial conditions
 
-    '''
+    """
     x = np.asarray(x)
     a = np.asarray(a)
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     if x.ndim > 2:
-        raise ValueError('x array has to be 1d or 2d')
+        raise ValueError("x array has to be 1d or 2d")
     nvar = x.shape[1]
     nlags = a.shape[0]
-    ntrim = nlags//2
+    ntrim = nlags // 2
     # for x is 2d with ncols >1
 
     if a.ndim == 1:
         # case: identical ar filter (lag polynomial)
-        return signal.convolve(x, a[:,None], mode='valid')
+        return signal.convolve(x, a[:, None], mode="valid")
         # alternative:
-        #return signal.lfilter(a,[1],x.astype(float),axis=0)
+        # return signal.lfilter(a,[1],x.astype(float),axis=0)
     elif a.ndim == 2:
         if min(a.shape) == 1:
             # case: identical ar filter (lag polynomial)
-            return signal.convolve(x, a, mode='valid')
+            return signal.convolve(x, a, mode="valid")
 
         # case: independent ar
-        #(a bit like recserar in gauss, but no x yet)
-        #(no, reserar is inverse filter)
-        result = np.zeros((x.shape[0]-nlags+1, nvar))
+        # (a bit like recserar in gauss, but no x yet)
+        # (no, reserar is inverse filter)
+        result = np.zeros((x.shape[0] - nlags + 1, nvar))
         for i in range(nvar):
             # could also use np.convolve, but easier for swiching to fft
-            result[:,i] = signal.convolve(x[:,i], a[:,i], mode='valid')
+            result[:, i] = signal.convolve(x[:, i], a[:, i], mode="valid")
         return result
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-#        #not necessary:
-#        if np.any(a.shape[1:] != nvar):
-#            raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
-        yf = signal.convolve(x[:,:,None], a)
-        yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
+        # Note: we must have shape[1] == shape[2] == nvar
+        yf = signal.convolve(x[:, :, None], a)
+        yvalid = yf[ntrim:-ntrim, yf.shape[1] // 2, :]
         return yvalid
 
+
 def varinversefilter(ar, nobs, version=1):
-    '''creates inverse ar filter (MA representation) recursively
+    """
+    Creates inverse ar filter (MA representation) recursively
 
     The VAR lag polynomial is defined by ::
 
@@ -146,47 +144,50 @@ def varinversefilter(ar, nobs, version=1):
 
         y_t = arinv(L) u_t
 
-
-
     Parameters
     ----------
-    ar : array, (nlags,nvars,nvars)
+    ar : ndarray, (nlags,nvars,nvars)
         matrix lagpolynomial, currently no exog
         first row should be identity
+    nobs : int
+        Number of observations (time points) for which to compute the
+        inverse filter.
+    version : int, optional
+        Selects the implementation to use. If 1 (the default), the
+        inverse filter is computed recursively. If 0, the alternative
+        implementation is not yet finished and raises NotImplementedError.
 
     Returns
     -------
-    arinv : array, (nobs,nvars,nvars)
-
-
-    Notes
-    -----
-
-    '''
+    arinv : ndarray, (nobs,nvars,nvars)
+        The inverse (MA representation) lag polynomial array.
+    """
     nlags, nvars, nvarsex = ar.shape
     if nvars != nvarsex:
-        print('exogenous variables not implemented not tested')
-    arinv = np.zeros((nobs+1, nvarsex, nvars))
-    arinv[0,:,:] = ar[0]
-    arinv[1:nlags,:,:] = -ar[1:]
+        print("exogenous variables not implemented not tested")
+    arinv = np.zeros((nobs + 1, nvarsex, nvars))
+    arinv[0, :, :] = ar[0]
+    arinv[1:nlags, :, :] = -ar[1:]
     if version == 1:
-        for i in range(2,nobs+1):
-            tmp = np.zeros((nvars,nvars))
-            for p in range(1,nlags):
-                tmp += np.dot(-ar[p],arinv[i-p,:,:])
-            arinv[i,:,:] = tmp
+        for i in range(2, nobs + 1):
+            tmp = np.zeros((nvars, nvars))
+            for p in range(1, nlags):
+                tmp += np.dot(-ar[p], arinv[i - p, :, :])
+            arinv[i, :, :] = tmp
     if version == 0:
-        for i in range(nlags+1,nobs+1):
-            print(ar[1:].shape, arinv[i-1:i-nlags:-1,:,:].shape)
-            #arinv[i,:,:] = np.dot(-ar[1:],arinv[i-1:i-nlags:-1,:,:])
-            #print(np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1])).shape
-            #arinv[i,:,:] = np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1]))
-            raise NotImplementedError('waiting for generalized ufuncs or something')
+        for i in range(nlags + 1, nobs + 1):
+            print(ar[1:].shape, arinv[i - 1 : i - nlags : -1, :, :].shape)
+            # arinv[i,:,:] = np.dot(-ar[1:],arinv[i-1:i-nlags:-1,:,:])
+            # print(np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1])).shape
+            # arinv[i,:,:] = np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1]))
+            raise NotImplementedError("waiting for generalized ufuncs or something")
 
     return arinv
 
+
 def vargenerate(ar, u, initvalues=None):
-    '''generate an VAR process with errors u
+    """
+    Generate a VAR process with errors u
 
     similar to gauss
     uses loop
@@ -197,6 +198,9 @@ def vargenerate(ar, u, initvalues=None):
         matrix lagpolynomial
     u : array (nobs,nvars)
         exogenous variable, error term for VAR
+    initvalues : array_like, optional
+        Initial (presample) values for the process. If None, the initial
+        values are set to zero.
 
     Returns
     -------
@@ -221,36 +225,56 @@ def vargenerate(ar, u, initvalues=None):
     imp[0,0] = 1
     vargenerate(a21,imp)
 
-    '''
+    """
     nlags, nvars, nvarsex = ar.shape
     nlagsm1 = nlags - 1
     nobs = u.shape[0]
     if nvars != nvarsex:
-        print('exogenous variables not implemented not tested')
+        print("exogenous variables not implemented not tested")
     if u.shape[1] != nvars:
-        raise ValueError('u needs to have nvars columns')
+        raise ValueError("u needs to have nvars columns")
     if initvalues is None:
-        sar = np.zeros((nobs+nlagsm1, nvars))
+        sar = np.zeros((nobs + nlagsm1, nvars))
         start = nlagsm1
     else:
         start = max(nlagsm1, initvalues.shape[0])
-        sar = np.zeros((nobs+start, nvars))
-        sar[start-initvalues.shape[0]:start] = initvalues
-    #sar[nlagsm1:] = u
+        sar = np.zeros((nobs + start, nvars))
+        sar[start - initvalues.shape[0] : start] = initvalues
+    # sar[nlagsm1:] = u
     sar[start:] = u
-    #if version == 1:
-    for i in range(start,start+nobs):
-        for p in range(1,nlags):
-            sar[i] += np.dot(sar[i-p,:],-ar[p])
+    # if version == 1:
+    for i in range(start, start + nobs):
+        for p in range(1, nlags):
+            sar[i] += np.dot(sar[i - p, :], -ar[p])
 
     return sar
 
 
 def padone(x, front=0, back=0, axis=0, fillvalue=0):
-    '''pad with zeros along one axis, currently only axis=0
+    """
+    Pad with zeros along one axis
 
+    Can be used sequentially to pad several axes.
 
-    can be used sequentially to pad several axis
+    Parameters
+    ----------
+    x : array_like
+        Array to pad.
+    front : int, optional
+        Number of `fillvalue` elements to add before the array along
+        `axis`.
+    back : int, optional
+        Number of `fillvalue` elements to add after the array along
+        `axis`.
+    axis : int, optional
+        Axis along which to pad.
+    fillvalue : scalar, optional
+        Value used to fill the padded elements.
+
+    Returns
+    -------
+    ndarray
+        The padded array.
 
     Examples
     --------
@@ -263,10 +287,10 @@ def padone(x, front=0, back=0, axis=0, fillvalue=0):
            [  1.,   1.,   1.],
            [  1.,   1.,   1.],
            [ NaN,  NaN,  NaN]])
-    '''
-    #primitive version
+    """
+    # primitive version
     shape = np.array(x.shape)
-    shape[axis] += (front + back)
+    shape[axis] += front + back
     shapearr = np.array(x.shape)
     out = np.empty(shape)
     out.fill(fillvalue)
@@ -274,15 +298,32 @@ def padone(x, front=0, back=0, axis=0, fillvalue=0):
     startind[axis] = front
     endind = startind + shapearr
     myslice = [slice(startind[k], endind[k]) for k in range(len(endind))]
-    #print(myslice
-    #print(out.shape
-    #print(out[tuple(myslice)].shape
+    # print(myslice
+    # print(out.shape
+    # print(out[tuple(myslice)].shape
     out[tuple(myslice)] = x
     return out
 
-def trimone(x, front=0, back=0, axis=0):
-    '''trim number of array elements along one axis
 
+def trimone(x, front=0, back=0, axis=0):
+    """
+    Trim a number of array elements along one axis
+
+    Parameters
+    ----------
+    x : array_like
+        Array to trim.
+    front : int, optional
+        Number of elements to remove from the front along `axis`.
+    back : int, optional
+        Number of elements to remove from the back along `axis`.
+    axis : int, optional
+        Axis along which to trim.
+
+    Returns
+    -------
+    ndarray
+        The trimmed array.
 
     Examples
     --------
@@ -293,40 +334,38 @@ def trimone(x, front=0, back=0, axis=0):
     >>> trimone(xp,1,3,1)
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]])
-    '''
+    """
     shape = np.array(x.shape)
-    shape[axis] -= (front + back)
-    #print(shape, front, back
-    shapearr = np.array(x.shape)
+    shape[axis] -= front + back
+    # print(shape, front, back
     startind = np.zeros(x.ndim)
     startind[axis] = front
     endind = startind + shape
     myslice = [slice(startind[k], endind[k]) for k in range(len(endind))]
-    #print(myslice
-    #print(shape, endind
-    #print(x[tuple(myslice)].shape
+    # print(myslice
+    # print(shape, endind
+    # print(x[tuple(myslice)].shape
     return x[tuple(myslice)]
 
 
-
 def ar2full(ar):
-    '''make reduced lagpolynomial into a right side lagpoly array
-    '''
-    nlags, nvar,nvarex = ar.shape
-    return np.r_[np.eye(nvar,nvarex)[None,:,:],-ar]
+    """Make reduced lagpolynomial into a right side lagpoly array"""
+    nlags, nvar, nvarex = ar.shape
+    return np.r_[np.eye(nvar, nvarex)[None, :, :], -ar]
+
 
 def ar2lhs(ar):
-    '''convert full (rhs) lagpolynomial into a reduced, left side lagpoly array
+    """
+    Convert full (rhs) lagpolynomial into a reduced, left side lagpoly array
 
-    this is mainly a reminder about the definition
-    '''
+    This is mainly a reminder about the definition.
+    """
     return -ar[1:]
 
 
-
-class _Var(object):
-    '''obsolete VAR class, use tsa.VAR instead, for internal use only
-
+class _Var:
+    """
+    Obsolete VAR class, use tsa.VAR instead, for internal use only
 
     Examples
     --------
@@ -340,48 +379,48 @@ class _Var(object):
            [[-0.77784898,  0.01726193],
             [ 0.10733009, -0.78665335]]])
 
-    '''
+    """
 
     def __init__(self, y):
         self.y = y
         self.nobs, self.nvars = y.shape
 
-
     def fit(self, nlags):
-        '''estimate parameters using ols
+        """
+        Estimate parameters using OLS
 
         Parameters
         ----------
-        nlags : integer
+        nlags : int
             number of lags to include in regression, same for all variables
 
         Returns
         -------
-        None, but attaches
+        None
+            Nothing is returned, but the following are attached to the
+            instance:
 
-        arhat : array (nlags, nvar, nvar)
-            full lag polynomial array
-        arlhs : array (nlags-1, nvar, nvar)
-            reduced lag polynomial for left hand side
-        other statistics as returned by linalg.lstsq : need to be completed
+            arhat : array (nlags, nvar, nvar)
+                full lag polynomial array
+            arlhs : array (nlags-1, nvar, nvar)
+                reduced lag polynomial for left hand side
+            other statistics as returned by linalg.lstsq : need to be completed
 
-
-
+        Notes
+        -----
         This currently assumes all parameters are estimated without restrictions.
-        In this case SUR is identical to OLS
+        In this case SUR is identical to OLS.
 
-        estimation results are attached to the class instance
-
-
-        '''
-        self.nlags = nlags # without current period
+        Estimation results are attached to the class instance.
+        """
+        self.nlags = nlags  # without current period
         nvars = self.nvars
-        #TODO: ar2s looks like a module variable, bug?
-        #lmat = lagmat(ar2s, nlags, trim='both', original='in')
-        lmat = lagmat(self.y, nlags, trim='both', original='in')
-        self.yred = lmat[:,:nvars]
-        self.xred = lmat[:,nvars:]
-        res = np.linalg.lstsq(self.xred, self.yred)
+        # TODO: ar2s looks like a module variable, bug?
+        # lmat = lagmat(ar2s, nlags, trim='both', original='in')
+        lmat = lagmat(self.y, nlags, trim="both", original="in")
+        self.yred = lmat[:, :nvars]
+        self.xred = lmat[:, nvars:]
+        res = np.linalg.lstsq(self.xred, self.yred, rcond=-1)
         self.estresults = res
         self.arlhs = res[0].reshape(nlags, nvars, nvars)
         self.arhat = ar2full(self.arlhs)
@@ -389,18 +428,23 @@ class _Var(object):
         self.xredrank = res[2]
 
     def predict(self):
-        '''calculate estimated timeseries (yhat) for sample
+        """Calculate estimated timeseries (yhat) for sample"""
 
-        '''
-
-        if not hasattr(self, 'yhat'):
+        if not hasattr(self, "yhat"):
             self.yhat = varfilter(self.y, self.arhat)
         return self.yhat
 
     def covmat(self):
-        ''' covariance matrix of estimate
-        # not sure it's correct, need to check orientation everywhere
-        # looks ok, display needs getting used to
+        """
+        Covariance matrix of estimate
+
+        Notes
+        -----
+        Not sure it's correct, need to check orientation everywhere.
+        Looks ok, display needs getting used to.
+
+        Examples
+        --------
         >>> v.rss[None,None,:]*np.linalg.inv(np.dot(v.xred.T,v.xred))[:,:,None]
         array([[[ 0.37247445,  0.32210609],
                 [ 0.1002642 ,  0.08670584]],
@@ -414,14 +458,17 @@ class _Var(object):
         >>> v.rss[1]*np.linalg.inv(np.dot(v.xred.T,v.xred))
         array([[ 0.32210609,  0.08670584],
                [ 0.08670584,  0.39696255]])
-       '''
+        """
 
-        #check if orientation is same as self.arhat
-        self.paramcov = (self.rss[None,None,:] *
-            np.linalg.inv(np.dot(self.xred.T, self.xred))[:,:,None])
+        # check if orientation is same as self.arhat
+        self.paramcov = (
+            self.rss[None, None, :]
+            * np.linalg.inv(np.dot(self.xred.T, self.xred))[:, :, None]
+        )
 
     def forecast(self, horiz=1, u=None):
-        '''calculates forcast for horiz number of periods at end of sample
+        """
+        Calculates forecast for horiz number of periods at end of sample
 
         Parameters
         ----------
@@ -434,15 +481,15 @@ class _Var(object):
         -------
         yforecast : array (nobs+horiz, nvars)
             this includes the sample and the forecasts
-        '''
+        """
         if u is None:
             u = np.zeros((horiz, self.nvars))
         return vargenerate(self.arhat, u, initvalues=self.y)
 
 
-class VarmaPoly(object):
-    '''class to keep track of Varma polynomial format
-
+class VarmaPoly:
+    """
+    Class to keep track of Varma polynomial format
 
     Examples
     --------
@@ -463,15 +510,16 @@ class VarmaPoly(object):
                      [ 0.2, 0.3]]])
 
 
-    '''
+    """
+
     def __init__(self, ar, ma=None):
         self.ar = ar
         self.ma = ma
         nlags, nvarall, nvars = ar.shape
         self.nlags, self.nvarall, self.nvars = nlags, nvarall, nvars
-        self.isstructured = not (ar[0,:nvars] == np.eye(nvars)).all()
+        self.isstructured = not (ar[0, :nvars] == np.eye(nvars)).all()
         if self.ma is None:
-            self.ma = np.eye(nvars)[None,...]
+            self.ma = np.eye(nvars)[None, ...]
             self.isindependent = True
         else:
             self.isindependent = not (ma[0] == np.eye(nvars)).all()
@@ -479,248 +527,145 @@ class VarmaPoly(object):
         self.hasexog = nvarall > nvars
         self.arm1 = -ar[1:]
 
-
-    #@property
-    def vstack(self, a=None, name='ar'):
-        '''stack lagpolynomial vertically in 2d array
-
-        '''
-        if not a is None:
-            a = a
-        elif name == 'ar':
-            a = self.ar
-        elif name == 'ma':
-            a = self.ma
+    # @property
+    def vstack(self, a=None, name="ar"):
+        """Stack lagpolynomial vertically in 2d array"""
+        if a is not None:
+            _a = a
+        elif name == "ar":
+            _a = self.ar
+        elif name == "ma":
+            _a = self.ma
         else:
-            raise ValueError('no array or name given')
-        return a.reshape(-1, self.nvarall)
+            raise ValueError("no array or name given")
+        return _a.reshape(-1, self.nvarall)
 
-    #@property
-    def hstack(self, a=None, name='ar'):
-        '''stack lagpolynomial horizontally in 2d array
-
-        '''
-        if not a is None:
-            a = a
-        elif name == 'ar':
-            a = self.ar
-        elif name == 'ma':
-            a = self.ma
+    # @property
+    def hstack(self, a=None, name="ar"):
+        """Stack lagpolynomial horizontally in 2d array"""
+        if a is not None:
+            _a = a
+        elif name == "ar":
+            _a = self.ar
+        elif name == "ma":
+            _a = self.ma
         else:
-            raise ValueError('no array or name given')
-        return a.swapaxes(1,2).reshape(-1, self.nvarall).T
+            raise ValueError("no array or name given")
+        return _a.swapaxes(1, 2).reshape(-1, self.nvarall).T
 
-    #@property
-    def stacksquare(self, a=None, name='ar', orientation='vertical'):
-        '''stack lagpolynomial vertically in 2d square array with eye
-
-        '''
-        if not a is None:
-            a = a
-        elif name == 'ar':
-            a = self.ar
-        elif name == 'ma':
-            a = self.ma
+    # @property
+    def stacksquare(self, a=None, name="ar", orientation="vertical"):
+        """Stack lagpolynomial vertically in 2d square array with eye"""
+        if a is not None:
+            _a = a
+        elif name == "ar":
+            _a = self.ar
+        elif name == "ma":
+            _a = self.ma
         else:
-            raise ValueError('no array or name given')
-        astacked = a.reshape(-1, self.nvarall)
-        lenpk, nvars = astacked.shape #[0]
+            raise ValueError("no array or name given")
+        astacked = _a.reshape(-1, self.nvarall)
+        lenpk, nvars = astacked.shape  # [0]
         amat = np.eye(lenpk, k=nvars)
-        amat[:,:nvars] = astacked
+        amat[:, :nvars] = astacked
         return amat
 
-    #@property
+    # @property
     def vstackarma_minus1(self):
-        '''stack ar and lagpolynomial vertically in 2d array
-
-        '''
-        a = np.concatenate((self.ar[1:], self.ma[1:]),0)
+        """Stack ar and lagpolynomial vertically in 2d array"""
+        a = np.concatenate((self.ar[1:], self.ma[1:]), 0)
         return a.reshape(-1, self.nvarall)
 
-    #@property
+    # @property
     def hstackarma_minus1(self):
-        '''stack ar and lagpolynomial vertically in 2d array
+        """
+        Stack ar and lagpolynomial vertically in 2d array
 
-        this is the Kalman Filter representation, I think
-        '''
-        a = np.concatenate((self.ar[1:], self.ma[1:]),0)
-        return a.swapaxes(1,2).reshape(-1, self.nvarall)
+        This is the Kalman Filter representation, I think.
+        """
+        a = np.concatenate((self.ar[1:], self.ma[1:]), 0)
+        return a.swapaxes(1, 2).reshape(-1, self.nvarall)
 
     def getisstationary(self, a=None):
-        '''check whether the auto-regressive lag-polynomial is stationary
+        """
+        Check whether the auto-regressive lag-polynomial is stationary
 
         Returns
         -------
-        isstationary : boolean
+        isstationary : bool
+            True if all eigenvalues of the lag-polynomial are less than one
+            in absolute value.
 
-        *attaches*
-
-        areigenvalues : complex array
-            eigenvalues sorted by absolute value
+        Notes
+        -----
+        Attaches ``areigenvalues``, the eigenvalues sorted by absolute
+        value, as a complex array.
 
         References
         ----------
-        formula taken from NAG manual
-
-        '''
-        if not a is None:
-            a = a
+        Formula taken from NAG manual.
+        """
+        if a is not None:
+            _a = a
+        elif self.isstructured:
+            _a = -self.reduceform(self.ar)[1:]
         else:
-            if self.isstructured:
-                a = -self.reduceform(self.ar)[1:]
-            else:
-                a = -self.ar[1:]
-        amat = self.stacksquare(a)
+            _a = -self.ar[1:]
+        amat = self.stacksquare(_a)
         ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.areigenvalues = ev
         return (np.abs(ev) < 1).all()
 
     def getisinvertible(self, a=None):
-        '''check whether the auto-regressive lag-polynomial is stationary
+        """
+        Check whether the moving-average lag-polynomial is invertible
 
         Returns
         -------
-        isinvertible : boolean
+        isinvertible : bool
+            True if all eigenvalues of the lag-polynomial are less than one
+            in absolute value.
 
-        *attaches*
-
-        maeigenvalues : complex array
-            eigenvalues sorted by absolute value
+        Notes
+        -----
+        Attaches ``maeigenvalues``, the eigenvalues sorted by absolute
+        value, as a complex array.
 
         References
         ----------
-        formula taken from NAG manual
-
-        '''
-        if not a is None:
-            a = a
+        Formula taken from NAG manual.
+        """
+        if a is not None:
+            _a = a
+        elif self.isindependent:
+            _a = self.reduceform(self.ma)[1:]
         else:
-            if self.isindependent:
-                a = self.reduceform(self.ma)[1:]
-            else:
-                a = self.ma[1:]
-        if a.shape[0] == 0:
+            _a = self.ma[1:]
+        if _a.shape[0] == 0:
             # no ma lags
             self.maeigenvalues = np.array([], np.complex)
             return True
 
-
-        amat = self.stacksquare(a)
+        amat = self.stacksquare(_a)
         ev = np.sort(np.linalg.eigvals(amat))[::-1]
         self.maeigenvalues = ev
         return (np.abs(ev) < 1).all()
 
     def reduceform(self, apoly):
-        '''
-
-        this assumes no exog, todo
-
-        '''
+        """This assumes no exog, todo"""
         if apoly.ndim != 3:
-            raise ValueError('apoly needs to be 3d')
+            raise ValueError("apoly needs to be 3d")
         nlags, nvarsex, nvars = apoly.shape
 
         a = np.empty_like(apoly)
         try:
-            a0inv = np.linalg.inv(a[0,:nvars, :])
-        except np.linalg.LinAlgError:
-            raise ValueError('matrix not invertible',
-                             'ask for implementation of pinv')
+            a0inv = np.linalg.inv(a[0, :nvars, :])
+        except np.linalg.LinAlgError as la_err:
+            raise ValueError(
+                "matrix not invertible, ask for implementation of pinv"
+            ) from la_err
 
         for lag in range(nlags):
             a[lag] = np.dot(a0inv, apoly[lag])
 
         return a
-
-
-
-
-if __name__ == "__main__":
-    # some example lag polynomials
-    a21 = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[-0.8,  0. ],
-                     [ 0.,  -0.6]]])
-
-    a22 = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[-0.8,  0. ],
-                     [ 0.1, -0.8]]])
-
-    a23 = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[-0.8,  0.2],
-                     [ 0.1, -0.6]]])
-
-    a24 = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[-0.6,  0. ],
-                     [ 0.2, -0.6]],
-
-                    [[-0.1,  0. ],
-                     [ 0.1, -0.1]]])
-
-    a31 = np.r_[np.eye(3)[None,:,:], 0.8*np.eye(3)[None,:,:]]
-    a32 = np.array([[[ 1. ,  0. ,  0. ],
-                     [ 0. ,  1. ,  0. ],
-                     [ 0. ,  0. ,  1. ]],
-
-                    [[ 0.8,  0. ,  0. ],
-                     [ 0.1,  0.6,  0. ],
-                     [ 0. ,  0. ,  0.9]]])
-
-    ########
-    ut = np.random.randn(1000,2)
-    ar2s = vargenerate(a22,ut)
-    #res = np.linalg.lstsq(lagmat(ar2s,1)[:,1:], ar2s)
-    res = np.linalg.lstsq(lagmat(ar2s,1), ar2s)
-    bhat = res[0].reshape(1,2,2)
-    arhat = ar2full(bhat)
-    #print(maxabs(arhat - a22)
-
-
-    v = _Var(ar2s)
-    v.fit(1)
-    v.forecast()
-    v.forecast(25)[-30:]
-
-
-    ar23 = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[-0.6,  0. ],
-                     [ 0.2, -0.6]],
-
-                    [[-0.1,  0. ],
-                     [ 0.1, -0.1]]])
-
-    ma22 = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[ 0.4,  0. ],
-                     [ 0.2, 0.3]]])
-
-    ar23ns = np.array([[[ 1. ,  0. ],
-                     [ 0. ,  1. ]],
-
-                    [[-1.9,  0. ],
-                     [ 0.4, -0.6]],
-
-                    [[ 0.3,  0. ],
-                     [ 0.1, -0.1]]])
-
-    vp = VarmaPoly(ar23, ma22)
-    print(vars(vp))
-    print(vp.vstack())
-    print(vp.vstack(a24))
-    print(vp.hstackarma_minus1())
-    print(vp.getisstationary())
-    print(vp.getisinvertible())
-
-    vp2 = VarmaPoly(ar23ns)
-    print(vp2.getisstationary())
-    print(vp2.getisinvertible()) # no ma lags

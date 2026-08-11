@@ -17,7 +17,7 @@ Examples
     import statsmodels.api as sm
     from statsmodels.formula.api import ols
 
-    moore = sm.datasets.get_rdataset("Moore", "car",
+    moore = sm.datasets.get_rdataset("Moore", "carData",
                                      cache=True) # load data
     data = moore.data
     data = data.rename(columns={"partner.status":
@@ -30,7 +30,7 @@ Examples
 
 A more detailed example for `anova_lm` can be found here:
 
-*  `ANOVA <examples/notebooks/generated/interactions_anova.html>`__
+*  `ANOVA <examples/notebooks/generated/interactions_anova.html>`_
 
 Module Reference
 ----------------

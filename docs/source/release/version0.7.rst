@@ -1,9 +1,6 @@
 :orphan:
 
-===========
-0.7 Release
-===========
-
+=============
 Release 0.7.0
 =============
 
@@ -67,7 +64,7 @@ State Space Models
 Author: Chad Fulton
 
 State space methods provide a flexible structure for the estimation and
-analysis of a wide class of time series models. The Statsmodels implementation
+analysis of a wide class of time series models. The statsmodels implementation
 allows specification of state models, fast Kalman filtering, and built-in
 methods to facilitate maximum likelihood estimation of arbitrary models. One of
 the primary goals of this module is to allow end users to create and estimate
@@ -134,7 +131,7 @@ new state space functionality. It can be used very similarly to the existing
 `ARIMA` model, but works on a wider range of specifications, including:
 
 * Additive and multiplicative seasonal effects
-* Flexible trend specications
+* Flexible trend specification
 * Regression with SARIMA errors
 * Regression with time-varying coefficients
 * Measurement error in the endogenous variables

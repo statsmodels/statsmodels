@@ -6,13 +6,13 @@
 Contingency tables
 ==================
 
-Statsmodels supports a variety of approaches for analyzing contingency
+statsmodels supports a variety of approaches for analyzing contingency
 tables, including methods for assessing independence, symmetry,
 homogeneity, and methods for working with collections of tables from a
 stratified population.
 
 The methods described here are mainly for two-way tables.  Multi-way
-tables can be analyzed using log-linear models.  Statsmodels does not
+tables can be analyzed using log-linear models.  statsmodels does not
 currently have a dedicated API for loglinear modeling, but Poisson
 regression in :class:`statsmodels.genmod.GLM` can be used for this
 purpose.
@@ -50,6 +50,7 @@ contingency table cell counts:
     import statsmodels.api as sm
 
     df = sm.datasets.get_rdataset("Arthritis", "vcd").data
+    df.fillna({"Improved":"None"}, inplace=True)
 
     tab = pd.crosstab(df['Treatment'], df['Improved'])
     tab = tab.loc[:, ["None", "Some", "Marked"]]
@@ -60,7 +61,8 @@ construct the array of cell counts for us:
 
 .. ipython:: python
 
-    table = sm.stats.Table.from_data(df[["Treatment", "Improved"]])
+    data = df[["Treatment", "Improved"]]
+    table = sm.stats.Table.from_data(data)
 
 
 Independence
@@ -73,7 +75,7 @@ product of the row and column marginal distributions:
 
 .. math::
 
-P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \forall i, j
+    P_{ij} = \sum_k P_{ij} \cdot \sum_k P_{kj} \quad \text{for all} \quad  i, j
 
 We can obtain the best-fitting independent distribution for our
 observed data, and then view residuals which identify particular cells
@@ -111,7 +113,7 @@ linear by linear association test is
 
 .. math::
 
-\sum_k r_i c_j T_{ij}
+    \sum_k r_i c_j T_{ij}
 
 where :math:`r_i` and :math:`c_j` are row and column scores.  Often
 these scores are set to the sequences 0, 1, ....  This gives the
@@ -152,10 +154,11 @@ dichotomizing the row and column factors at each possible point.
 A mosaic plot is a graphical approach to informally assessing
 dependence in two-way tables.
 
-::
+.. ipython:: python
 
     from statsmodels.graphics.mosaicplot import mosaic
-    mosaic(data)
+    fig, _ = mosaic(data, index=["Treatment", "Improved"])
+
 
 Symmetry and homogeneity
 ------------------------
@@ -167,7 +170,7 @@ identical, meaning that
 
 .. math::
 
-\sum_j P_{ij} = \sum_j P_{ji} \forall i
+    \sum_j P_{ij} = \sum_j P_{ji} \forall i
 
 Note that for these properties to be applicable the table :math:`P`
 (and :math:`T`) must be square, and the row and column categories must
@@ -262,10 +265,10 @@ methods and attributes.
 
 .. ipython:: python
 
-    data = sm.datasets.china_smoking.load()
+    data = sm.datasets.china_smoking.load_pandas()
 
     mat = np.asarray(data.data)
-    tables = [np.reshape(x, (2, 2)) for x in mat]
+    tables = [np.reshape(x.tolist(), (2, 2)) for x in mat]
 
     st = sm.stats.StratifiedTable(tables)
     print(st.summary())
@@ -288,11 +291,12 @@ Module Reference
    StratifiedTable
    mcnemar
    cochrans_q
+   CochransQResult
 
 See also
 --------
 
 Scipy_ has several functions for analyzing contingency tables,
-including Fisher's exact test which is not currently in Statsmodels.
+including Fisher's exact test which is not currently in statsmodels.
 
 .. _Scipy: https://docs.scipy.org/doc/scipy-0.18.0/reference/stats.html#contingency-table-functions

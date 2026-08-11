@@ -1,0 +1,227 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+parameters:
+  # defaults for any parameters that are not specified
+  name: ''
+  vmImage: ''
+
+
+jobs:
+
+- job: ${{ parameters.name }}Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+  variables:
+    PYTEST_PATTERN: 'not slow and not joblib'
+  strategy:
+    matrix:
+      ${{ if eq(parameters.name, 'Linux') }}:
+        # Linux carries the Python/dependency compatibility grid. Other
+        # platforms keep sentinel jobs for OS-specific coverage.
+        python_314t_parallel:
+          python.version: '3.14'
+          python.architecture: 'x64-freethreaded'
+          parallel: true
+        python_314t_latest:
+          python.version: '3.14'
+          python.architecture: 'x64-freethreaded'
+          PANDAS_VERSION: 3
+        python_312_latest:
+          python.version: '3.12'
+          python.architecture: 'x64'
+          coverage: true
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
+        python_311_wheel:
+          python.version: '3.11'
+          python.architecture: 'x64'
+          test.install: true
+        python_312_sdist:
+          python.version: '3.12'
+          python.architecture: 'x64'
+          test.install: true
+          TEST_SDIST: true
+        python_310:
+          python.version: '3.10'
+          python.architecture: 'x64'
+          USE_MATPLOTLIB: false
+          USE_CVXOPT: false
+          SCIPY_VERSION: 1.8.1
+          PANDAS_VERSION: 1.5.3
+          NUMPY_VERSION: 1.23.5
+          CYTHON_VERSION: 3.0.10
+        python_310_legacy_blas:
+          python.version: '3.10'
+          python.architecture: 'x64'
+          use.conda: true
+          NUMPY_VERSION: 2.0.0
+          PANDAS_VERSION: 2.2.2
+          SCIPY_VERSION: 1.13.0
+          CYTHON_VERSION: 3.0.12
+          BLAS: "nomkl blas=*=openblas"
+        python_313_copy_on_write:
+          python.version: '3.13'
+          python.architecture: 'x64'
+          SM_TEST_COPY_ON_WRITE: 1
+          coverage: true
+          test.x13: true
+        python_312_pre:
+          python.version: '3.12'
+          python.architecture: 'x64'
+          pip.pre: true
+        python_312_formulaic_no_patsy:
+          python.version: '3.12'
+          python.architecture: 'x64'
+          SM_FORMULA_ENGINE: "formulaic"
+          PIP_UNINSTALL: "patsy matplotlib joblib"
+          USE_MATPLOTLIB: false
+        python_312_no_formulaic:
+          python.version: '3.12'
+          python.architecture: 'x64'
+          PIP_UNINSTALL: "formulaic"
+      ${{ if eq(parameters.name, 'macOS') }}:
+        # macOS keeps one editable install on an older Python and one package
+        # install on the newest supported Python.
+        python310_macos_compat:
+          python.version: '3.10'
+          python.architecture: 'x64'
+        python313_macos_latest_install:
+          python.version: '3.13'
+          python.architecture: 'x64'
+          test.install: true
+    maxParallel: 20
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: '$(python.architecture)'
+    displayName: 'Use Python $(python.version) $(python.architecture)'
+
+  - bash: |
+      echo "##vso[task.prependpath]$CONDA/bin"
+      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test"
+      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test/condabin"
+      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test/bin"
+    displayName: 'Add conda and env to PATH'
+    condition: eq(variables['use.conda'], 'true')
+
+  - script: |
+      source tools/ci/azure/install-posix.sh
+    displayName: 'Install dependencies'
+
+  - script: |
+      echo "Installing to site packages"
+      if [[ $TEST_SDIST ]]; then
+        python -m pip install --upgrade build
+        python -m build . --sdist
+        TAIL=".tar.gz"
+      else
+        python -m pip wheel . -w ./dist -v
+        TAIL=".whl"
+      fi
+      ls -t dist/statsmodels*${TAIL}
+      PKG_NAME=$(ls -t dist/statsmodels*${TAIL})
+      python -m pip install ./${PKG_NAME}
+    displayName: 'Install statsmodels (site-packages)'
+    condition: eq(variables['test.install'], 'true')
+
+  - script: |
+       python -m pip install -vv --no-build-isolation --upgrade-strategy only-if-needed --config-settings=editable-verbose=true --editable .
+    displayName: 'Install statsmodels (editable)'
+    condition: ne(variables['test.install'], 'true')
+
+  - script: |
+      if [[ -n ${PIP_UNINSTALL} ]]; then
+        python -m pip uninstall ${PIP_UNINSTALL} -y
+      fi
+    displayName: 'Optionally Uninstall Packages'
+    condition: ne(variables['PIP_UNINSTALL'], '')
+
+  - script: python -m pip list
+    displayName: 'List Configuration (PyPI)'
+    condition: ne(variables['use.conda'], 'true')
+
+  - script: |
+      source activate statsmodels-test
+      conda list
+    displayName: 'List Configuration (conda)'
+    condition: eq(variables['use.conda'], 'true')
+
+  - script: |
+      echo "Testing site packages"
+      mkdir test_run_dir
+      pushd test_run_dir
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--dist', 'loadscope', '--durations=25'], exit=True)"
+      LAST_EXIT_CODE=$?
+      echo "Status code: ${LAST_EXIT_CODE}"
+      exit ${LAST_EXIT_CODE}
+      popd
+    displayName: 'Run tests (site-packages)'
+    condition: and(eq(variables['test.install'], 'true'), ne(variables['parallel'], 'true'))
+
+  - script: |
+      echo "Testing editable install"
+      if [[ ${COVERAGE} == "true" ]]; then
+        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
+      fi
+      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+    displayName: 'Run tests (editable)'
+    condition: and(ne(variables['test.install'], 'true'), ne(variables['pip.pre'], 'true'), ne(variables['parallel'], 'true'))
+
+  - script: |
+      echo "Testing in parallel mode"
+      export PYTHON_GIL="0"
+      # joblib creates difficult to debug exceptions during parallel runs
+      python -m pip uninstall joblib -y
+      pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
+    displayName: 'Run tests (parallel)'
+    condition: eq(variables['parallel'], 'true')
+
+  - script: |
+      echo "Testing pip-pre"
+      if [[ ${COVERAGE} == "true" ]]; then
+        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term"
+      fi
+      echo pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+      pytest -m "${PYTEST_PATTERN}" --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels
+    displayName: 'Run tests (pip pre)'
+    condition: and(ne(variables['test.install'], 'true'), eq(variables['pip.pre'], 'true'))
+    continueOnError: true
+
+  - script: |
+      echo "Testing x13 interface"
+      if [[ ${COVERAGE} == "true" ]]; then
+        export COVERAGE_OPTS="--cov-config .coveragerc --cov=statsmodels --cov-report xml:coverage.xml --cov-report term --cov-append"
+      fi
+      wget https://www2.census.gov/software/x-13arima-seats/x13as/unix-linux/program-archives/x13as_ascii-v1-1-b62.tar.gz -O x13.tar.gz
+      tar -xzf x13.tar.gz
+      where grep
+      sudo cp x13as/x13* /usr/bin/
+      echo pytest --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels/tsa/tests/test_x13.py
+      pytest --skip-examples --junitxml=junit/test-results.xml -n auto --dist loadscope --durations=25 ${COVERAGE_OPTS} statsmodels/tsa/tests/test_x13.py
+    displayName: 'Run tests (x-13)'
+    condition: eq(variables['test.x13'], 'true')
+
+
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: '**/test-results.xml'
+      testRunTitle: 'Python $(python.version)'
+    condition: succeededOrFailed()
+
+  - task: PublishCodeCoverageResults@2
+    inputs:
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+    condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
+
+  - bash: |
+      curl -Os https://uploader.codecov.io/latest/linux/codecov
+      chmod +x codecov
+      ./codecov
+    displayName: 'CodeCov upload'
+    condition: and(eq(variables['coverage'], 'true'), ne(variables['test.install'], 'true'))
+    continueOnError: true

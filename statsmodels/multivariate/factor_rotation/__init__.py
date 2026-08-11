@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Package with factor rotation algorithms.
 
@@ -22,9 +21,17 @@ References
 
 [5] http://www.stat.ucla.edu/research/gpa/GPderfree.txt
 """
+from statsmodels.tools._test_runner import PytestTester
 
-#__all__ = ['wrappers']
-
+from ._analytic_rotation import procrustes, promax, target_rotation
 from ._wrappers import rotate_factors
 
-from ._analytic_rotation import target_rotation, procrustes, promax
+__all__ = [
+           "procrustes",
+           "promax",
+           "rotate_factors",
+           "target_rotation",
+           "test",
+]
+
+test = PytestTester()
