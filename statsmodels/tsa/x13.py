@@ -25,7 +25,8 @@ from statsmodels.tools.tools import Bunch
 
 __all__ = ["x13_arima_analysis", "x13_arima_select_order"]
 
-BINARY_NAMES = ("x13as.exe", "x13as", "x12a.exe", "x12a", "x13as_ascii", "x13as_html")
+BINARY_NAMES = ("x13as", "x12a", "x13as_ascii", "x13as_html")
+BINARY_NAMES += tuple(f"{name}.exe" for name in BINARY_NAMES)  # windows
 
 
 class _freq_to_period:
