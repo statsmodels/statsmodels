@@ -68,7 +68,7 @@ Forecast Evaluation
    :toctree: generated/
 
    diebold_mariano_test
-   DieboldMarianoTestResult
+   DieboldMarianoResult
 
 
 Heteroscedasticity
