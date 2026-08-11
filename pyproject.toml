@@ -63,7 +63,7 @@ dependencies = [
     "packaging>=21.3",  # released Nov 2021
     "formulaic>=1.1.0",  # released December 2024
 ]
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
