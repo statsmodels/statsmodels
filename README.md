@@ -9,8 +9,6 @@ Version](https://anaconda.org/conda-forge/statsmodels/badges/version.svg)](https
 Status](https://dev.azure.com/statsmodels/statsmodels-testing/_apis/build/status/statsmodels.statsmodels?branchName=main)](https://dev.azure.com/statsmodels/statsmodels-testing/_build/latest?definitionId=1&branchName=main)
 [![Codecov
 Coverage](https://codecov.io/gh/statsmodels/statsmodels/branch/main/graph/badge.svg)](https://codecov.io/gh/statsmodels/statsmodels)
-[![Coveralls
-Coverage](https://coveralls.io/repos/github/statsmodels/statsmodels/badge.svg?branch=main)](https://coveralls.io/github/statsmodels/statsmodels?branch=main)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/statsmodels?label=PyPI%20Downloads)](https://pypi.org/project/statsmodels/)
 [![Conda
 downloads](https://img.shields.io/conda/dn/conda-forge/statsmodels.svg?label=Conda%20downloads)](https://anaconda.org/conda-forge/statsmodels/)
