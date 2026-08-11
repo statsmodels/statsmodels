@@ -9,7 +9,11 @@ from .plottools import rainbow
 from .regressionplots import (
     abline_plot,
     add_ellipse,
+    add_lowess,
+    added_variable_resids,
+    ceres_resids,
     influence_plot,
+    partial_resids,
     plot_ccpr,
     plot_ccpr_grid,
     plot_fit,
@@ -18,16 +22,23 @@ from .regressionplots import (
     plot_partregress_grid,
     plot_regress_exog,
 )
+from .utils import create_mpl_ax, create_mpl_fig
 
 __all__ = [
     "abline_plot",
     "add_ellipse",
+    "add_lowess",
+    "added_variable_resids",
     "beanplot",
+    "ceres_resids",
+    "create_mpl_ax",
+    "create_mpl_fig",
     "fboxplot",
     "hdrboxplot",
     "influence_plot",
     "interaction_plot",
     "mean_diff_plot",
+    "partial_resids",
     "plot_ccpr",
     "plot_ccpr_grid",
     "plot_corr",

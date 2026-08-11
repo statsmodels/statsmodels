@@ -89,8 +89,12 @@ Regression Plots
    plot_ceres_residuals
    abline_plot
    add_ellipse
+   add_lowess
    influence_plot
    plot_leverage_resid2
+   ceres_resids
+   partial_resids
+   added_variable_resids
 
 Time Series Plots
 -----------------

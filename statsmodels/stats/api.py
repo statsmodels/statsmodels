@@ -165,6 +165,8 @@ from .sandwich_covariance import (
     cov_nw_panel,
     cov_white_simple,
     se_cov,
+    weights_bartlett,
+    weights_uniform,
 )
 from .stattools import durbin_watson, jarque_bera, omni_normtest
 from .weightstats import (
@@ -332,6 +334,8 @@ __all__ = [
     "ttost_ind",
     "ttost_paired",
     "tukeyhsd",
+    "weights_bartlett",
+    "weights_uniform",
     "wellek_to_f2",
     "zconfint",
     "zt_ind_solve_power",

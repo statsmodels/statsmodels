@@ -185,6 +185,8 @@ for the LinearModelResults, these methods are designed for use with OLS.
    sandwich_covariance.cov_cluster
    sandwich_covariance.cov_cluster_2groups
    sandwich_covariance.cov_white_simple
+   sandwich_covariance.weights_bartlett
+   sandwich_covariance.weights_uniform
 
 The following are standalone versions of the heteroscedasticity robust
 standard errors attached to LinearModelResults
