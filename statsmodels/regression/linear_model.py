@@ -2163,7 +2163,10 @@ class RegressionResults(base.LikelihoodModelResults):
         of the exogenous variables.
         """
         eigvals = self.eigenvals
-        return np.sqrt(eigvals[0] / eigvals[-1])
+        if eigvals[-1] > 0:
+            return np.sqrt(eigvals[0] / eigvals[-1])
+        else:
+            return np.inf
 
     # TODO: make these properties reset bse
     def _HCCM(self, scale):
