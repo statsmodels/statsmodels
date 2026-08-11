@@ -211,7 +211,7 @@ class MixtureDistribution:
         >>> x = np.arange(-4.0, 4.0, 0.01)
         >>> prob = [.75,.25]
         >>> mixture = MixtureDistribution()
-        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm],
+        >>> Y = mixture.cdf(x, prob, dist=[stats.norm, stats.norm],
         ...                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
         """
         if len(prob) != len(dist):
@@ -294,49 +294,3 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
         except TypeError:
             sample[sample_idx] = dist[i].rvs(size=int(sample_size), random_state=rng)
     return sample
-
-
-if __name__ == "__main__":
-
-    from scipy import stats
-
-    obs_dist = mixture_rvs(
-        [0.25, 0.75],
-        size=10000,
-        dist=[stats.norm, stats.beta],
-        kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=1, args=(1, 0.5))),
-    )
-
-    nobs = 10000
-    mix = MixtureDistribution()
-    #    mrvs = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-    #                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
-
-    mix_kwds = (dict(loc=-1, scale=0.25), dict(loc=1, scale=0.75))
-    mrvs = mix.rvs(
-        [1 / 3.0, 2 / 3.0], size=nobs, dist=[stats.norm, stats.norm], kwargs=mix_kwds
-    )
-
-    grid = np.linspace(-4, 4, 100)
-    mpdf = mix.pdf(
-        grid, [1 / 3.0, 2 / 3.0], dist=[stats.norm, stats.norm], kwargs=mix_kwds
-    )
-    mcdf = mix.cdf(
-        grid, [1 / 3.0, 2 / 3.0], dist=[stats.norm, stats.norm], kwargs=mix_kwds
-    )
-
-    doplot = 1
-    if doplot:
-        import matplotlib.pyplot as plt
-
-        plt.figure()
-        plt.hist(mrvs, bins=50, normed=True, color="red")
-        plt.title("histogram of sample and pdf")
-        plt.plot(grid, mpdf, lw=2, color="black")
-
-        plt.figure()
-        plt.hist(mrvs, bins=50, normed=True, cumulative=True, color="red")
-        plt.title("histogram of sample and pdf")
-        plt.plot(grid, mcdf, lw=2, color="black")
-
-        plt.show()

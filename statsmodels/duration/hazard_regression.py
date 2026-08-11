@@ -55,11 +55,7 @@ _predict_docstring = """
     pred_type : str
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
-        'cumhaz' returns the cumulative hazard function.
-    pred_only : bool
-        If True, returns only an array of predicted values.  Otherwise
-        returns a bunch containing the predicted values and standard
-        errors.
+        'cumhaz' returns the cumulative hazard function.%(extra_params_doc)s
 
     Returns
     -------
@@ -85,6 +81,17 @@ _predict_cov_params_docstring = """
         The covariance matrix of the estimated `params` vector,
         used to obtain prediction errors if pred_type='lhr',
         otherwise optional."""
+
+_predict_pred_only_docstring = """
+    pred_only : bool
+        If True, returns only an array of predicted values.  Otherwise
+        returns a bunch containing the predicted values and standard
+        errors."""
+
+_predict_transform_docstring = """
+    transform : bool
+        If the model was fit via a formula, whether to pass `exog`
+        through the formula before forming the prediction."""
 
 
 class PHSurvivalTime:
@@ -285,7 +292,7 @@ class PHReg(model.LikelihoodModel):
         The covariates or exogeneous variables
     status : array_like
         The censoring status values; status=1 indicates that an
-        event occurred (e.g. failure or death), status=0 indicates
+        event occurred (e.g., failure or death), status=0 indicates
         that the observation was right censored. If None, defaults
         to status=1 for all cases.
     entry : array_like
@@ -395,7 +402,7 @@ class PHReg(model.LikelihoodModel):
             The data for the model. See Notes.
         status : array_like
             The censoring status values; status=1 indicates that an
-            event occurred (e.g. failure or death), status=0 indicates
+            event occurred (e.g., failure or death), status=0 indicates
             that the observation was right censored. If None, defaults
             to status=1 for all cases.
         entry : array_like
@@ -1334,6 +1341,7 @@ class PHReg(model.LikelihoodModel):
         % {
             "params_doc": _predict_params_doc,
             "cov_params_doc": _predict_cov_params_docstring,
+            "extra_params_doc": _predict_pred_only_docstring,
         }
     )
     def predict(
@@ -1602,7 +1610,14 @@ class PHRegResults(base.LikelihoodModelResults):
 
         return self.model.get_distribution(self.params)
 
-    @Appender(_predict_docstring % {"params_doc": "", "cov_params_doc": ""})
+    @Appender(
+        _predict_docstring
+        % {
+            "params_doc": "",
+            "cov_params_doc": "",
+            "extra_params_doc": _predict_transform_docstring,
+        }
+    )
     def predict(
         self,
         endog=None,

@@ -14,13 +14,11 @@ from __future__ import annotations
 
 from statsmodels.compat.pandas import assert_index_equal, assert_series_equal
 from statsmodels.compat.platform import (
-    PLATFORM_LINUX32,
     PLATFORM_OSX,
     PLATFORM_WIN32,
 )
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.python import PYTHON_IMPL_WASM
-from statsmodels.compat.scipy import SCIPY_GT_14
 
 import numpy as np
 from numpy.testing import (
@@ -33,6 +31,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.api import glm, ols
 import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import HessianInversionWarning
@@ -94,7 +93,7 @@ class CheckGenericMixinBase:
         smt.check_predict_types(self.results)
 
     def _get_constrained(self, keep_index, keep_index_p):
-        # override in some test classes, no fit_kwds yet, e.g. cov_type
+        # override in some test classes, no fit_kwds yet, e.g., cov_type
         mod2 = self.results.model
         mod_cls = mod2.__class__
         init_kwds = mod2._get_init_kwds()
@@ -227,10 +226,7 @@ class CheckGenericMixinBase:
             assert_allclose(tvals1, res2.tvalues, rtol=5e-8)
 
             # See gh5993
-            if PLATFORM_LINUX32 or SCIPY_GT_14:
-                pvals1 = res1.pvalues[keep_index_p]
-            else:
-                pvals1 = res1.pvalues[keep_index_p]
+            pvals1 = res1.pvalues[keep_index_p]
             assert_allclose(pvals1, res2.pvalues, rtol=1e-6, atol=1e-30)
 
             if hasattr(res1, "resid"):
@@ -291,10 +287,7 @@ class CheckGenericMixin(CheckGenericMixinBase):
         assert_allclose(tvals1, res2.tvalues, rtol=tol, atol=tol)
 
         # See gh5993
-        if PLATFORM_LINUX32 or SCIPY_GT_14:
-            pvals1 = res1.pvalues[keep_index_p]
-        else:
-            pvals1 = res1.pvalues[keep_index_p]
+        pvals1 = res1.pvalues[keep_index_p]
         assert_allclose(pvals1, res2.pvalues, rtol=tol, atol=tol)
 
         if hasattr(res1, "resid"):
@@ -653,7 +646,11 @@ def compare_waldres(res, wa, constrasts):
         wt = res.wald_test(c, scalar=True)
         assert_allclose(wa.table.values[i, 0], wt.statistic)
         assert_allclose(wa.table.values[i, 1], wt.pvalue)
-        df = c.shape[0] if c.ndim == 2 else 1
+        # df should match the rank-adjusted value from wald_test
+        if res.use_t:
+            df = int(wt.df_num)
+        else:
+            df = int(wt.df_denom)
         assert_equal(wa.table.values[i, 2], df)
         # attributes
         assert_allclose(wa.statistic[i], wt.statistic)
@@ -886,3 +883,61 @@ class TestTTestPairwisePoisson(CheckPairwise):
             "C(Weight)[T.3]",
             "C(Weight)[T.3] - C(Weight)[T.2]",
         ]
+
+
+class TestWaldAnovaRankDeficient:
+    """Test wald_test_terms reports rank-adjusted df for rank-deficient models.
+
+    Regression test for GH#9686.
+    """
+
+    def setup_method(self):
+        rs = np.random.RandomState(4567)
+        n = 60
+        fertilizer = np.repeat(["A", "B", "C"], n // 3)
+        # tech0 is nested: not all fertilizer x tech0 combos exist
+        tech0 = []
+        for f in fertilizer:
+            if f == "A":
+                tech0.append(rs.choice(["t1", "t2"]))
+            elif f == "B":
+                tech0.append(rs.choice(["t1", "t3"]))
+            else:
+                tech0.append(rs.choice(["t2", "t3"]))
+
+        data = pd.DataFrame({
+            "y": rs.randn(n),
+            "fertilizer": fertilizer,
+            "tech0": tech0,
+        })
+        mod = ols("y ~ C(fertilizer) * C(tech0)", data)
+        self.res = mod._fit_collinear()
+
+    def test_df_rank_adjusted(self):
+        # The interaction term has 4 columns but only 1 is non-redundant
+        res = self.res
+        wa = res.wald_test_terms(scalar=True)
+
+        # Check each term's df matches what wald_test returns
+        mgr = FormulaManager()
+        model_spec = getattr(res.model.data, "model_spec", None)
+        identity = np.eye(len(res.params))
+
+        for i, term in enumerate(model_spec.terms):
+            cols = mgr.get_slice(model_spec, term)
+            constraint = identity[cols]
+            wt = res.wald_test(constraint, scalar=True)
+            expected_df = int(wt.df_num)
+            reported_df = int(wa.table.iloc[i]["df_constraint"])
+            assert_equal(
+                reported_df, expected_df,
+                err_msg=f"df_constraint mismatch for term {i}"
+            )
+
+    def test_interaction_df_less_than_nominal(self):
+        # The interaction has 4 constraint rows but rank < 4
+        res = self.res
+        wa = res.wald_test_terms(scalar=True)
+        interaction_df = int(wa.table.iloc[-1]["df_constraint"])
+        # With missing cells, the interaction rank is less than 4
+        assert interaction_df < 4

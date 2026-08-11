@@ -129,7 +129,7 @@ class DynamicFactor(MLEModel):
       it is "diagonal", then
       :math:`\Sigma = \text{diag}(\sigma_1^2, \dots, \sigma_n^2)`. If it is
       "unstructured", then :math:`\Sigma` is any valid variance / covariance
-      matrix (i.e. symmetric and positive definite).
+      matrix (i.e., symmetric and positive definite).
     - `error_var`: this controls whether or not the errors evolve jointly
       according to a VAR(q), or individually according to separate AR(q)
       processes. In terms of the formulation above, if `error_var = False`,
@@ -182,7 +182,7 @@ class DynamicFactor(MLEModel):
             k_states += self._error_order
             k_posdef += k_endog
 
-        # We can still estimate the model with no dynamic state (e.g. SUR), we
+        # We can still estimate the model with no dynamic state (e.g., SUR), we
         # just need to have one state that does nothing.
         self._unused_state = False
         if k_states == 0:
@@ -406,7 +406,7 @@ class DynamicFactor(MLEModel):
         # Setup indices of state space matrices
         # Here we want to set only the diagonal elements of the coefficient
         # matrices, and we want to set them in order by equation, not by
-        # matrix (i.e. set the first element of the first matrix's diagonal,
+        # matrix (i.e., set the first element of the first matrix's diagonal,
         # then set the first element of the second matrix's diagonal, then...)
 
         # The basic setup is a tiled list of diagonal indices, one for each
@@ -1139,16 +1139,16 @@ class DynamicFactorResults(MLEResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        coefficients_of_determination
+
         Notes
         -----
         Produces a `k_factors` x 1 plot grid. The `i`th plot shows a bar plot
         of the coefficients of determination associated with factor `i`. The
         endogenous variables are arranged along the x-axis according to their
         position in the `endog` array.
-
-        See Also
-        --------
-        coefficients_of_determination
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()

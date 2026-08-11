@@ -33,6 +33,7 @@ from statsmodels.tsa.ar_model import (
     AROrderSelectionResults,
     AutoReg,
     AutoRegResults,
+    InformationCriteria,
     sumofsq,
 )
 from statsmodels.tsa.ardl import pss_critical_values
@@ -66,6 +67,26 @@ __all__ = [
 
 
 class BoundsTestResult(NamedTuple):
+    """
+    Result of :meth:`UECMResults.bounds_test`, the PSS cointegration
+    bounds test.
+
+    Parameters
+    ----------
+    stat : float
+        The F-type test statistic favored in PSS.
+    crit_vals : DataFrame
+        The critical values for the test statistic, with columns "lower"
+        and "upper" indexed by percentile.
+    p_values : Series
+        The p-values corresponding to the "lower" and "upper" bounds of
+        the test statistic.
+    null : str
+        The null hypothesis, "No Cointegration".
+    alternative : str
+        The alternative hypothesis, "Possible Cointegration".
+    """
+
     stat: float
     crit_vals: pd.DataFrame
     p_values: pd.Series
@@ -231,6 +252,17 @@ class ARDL(AutoReg):
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+    See Also
+    --------
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregressive model estimation with optional exogenous regressors
+    statsmodels.tsa.ardl.UECM
+        Unconstrained Error Correction Model estimation
+    statsmodels.tsa.statespace.sarimax.SARIMAX
+        Seasonal ARIMA model estimation with optional exogenous regressors
+    statsmodels.tsa.arima.model.ARIMA
+        ARIMA model estimation
+
     Notes
     -----
     The full specification of an ARDL is
@@ -256,17 +288,6 @@ class ARDL(AutoReg):
     See the notebook `Autoregressive Distributed Lag Models
     <../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
     for an overview.
-
-    See Also
-    --------
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive model estimation with optional exogenous regressors
-    statsmodels.tsa.ardl.UECM
-        Unconstrained Error Correction Model estimation
-    statsmodels.tsa.statespace.sarimax.SARIMAX
-        Seasonal ARIMA model estimation with optional exogenous regressors
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA model estimation
 
     Examples
     --------
@@ -535,7 +556,9 @@ class ARDL(AutoReg):
         """Construct and format model regressors"""
         # TODO: Missing adjustment
         self._maxlag = max(self._lags) if self._lags else 0
-        _endog_reg, _endog = lagmat(self.data.endog, self._maxlag, original="sep")
+        _endog_reg, _endog = lagmat(
+            self.data.endog, self._maxlag, original="sep", use_namedtuple=False
+        )
         assert isinstance(_endog, np.ndarray)
         assert isinstance(_endog_reg, np.ndarray)
         self._endog_reg, self._endog = _endog_reg, _endog
@@ -872,7 +895,7 @@ class ARDL(AutoReg):
             * 't' - Time trend only.
             * 'ct' - Constant and time trend.
 
-            The default is 'c'.
+            The default is 'n'.
 
         seasonal : bool, optional
             Flag indicating whether to include seasonal dummies in the model.
@@ -1068,6 +1091,126 @@ class ARDLResults(AutoRegResults):
         return self.predict(
             start=start, end=end, dynamic=False, exog_oos=exog, fixed_oos=fixed
         )
+
+    def apply(
+        self,
+        endog,
+        exog=None,
+        fixed=None,
+        refit=None,
+        fit_kwargs=None,
+    ):
+        """
+        Apply the fitted parameters to new data unrelated to original data.
+        It creates a new result object by using the current fitted parameters.
+        Applied to a completely new dataset, assumed to be unrelated to the model's original data.
+
+        The new results can then be used for analysis or forecasting.
+
+        Parameters
+        ----------
+
+        endog: array_like
+            New observations from the modeled time-series process.
+        exog: array_like, optional
+            New observations of exogenous regressors, if applicable. It must supply the same
+            un-lagged columns as the original ``exog``. The lag structure fitting the original data
+            is re-applied automatically.
+        fixed: array_like, optional
+            New observations of fixed regressors, if applicable.
+        refit: bool, optional
+            Whether to re-fit the parameters, using the new dataset. Default is False
+            (so, the parameters from the current results object are used to create the new results
+            object.)
+        fit_kwargs: dict, optional
+            Keyword arguments to pass to `fit` (if `refit=True`)
+
+        Returns
+        -------
+        ARDLResults
+            Updated results object containing results for the new dataset.
+
+        See Also
+        --------
+        ARDLResults.append
+        statsmodels.tsa.ar_model.AutoRegResults.apply
+
+        Notes
+        -----
+        The `endog` argument given to this method should consist of new observations that are
+        not necessarily related to the original model's `endog` dataset.
+
+        One should be careful when using deterministic processes with cyclical components
+        such as seasonal dummies or Fourier series. These deterministic components will align to
+        the first observation in the data and so it is necessary that any new data should have the
+        same initial period.
+        """
+
+        existing = self.model
+        try:
+            deterministic = existing.deterministic
+            if deterministic is not None:
+                if isinstance(endog, (pd.Series, pd.DataFrame)):
+                    index = endog.index
+                else:
+                    index = np.arange(endog.shape[0])
+                deterministic = deterministic.apply(index)
+            mod = ARDL(
+                endog,
+                lags=existing.ar_lags,
+                exog=exog,
+                order=existing._order,
+                trend=existing.trend,
+                fixed=fixed,
+                causal=existing.causal,
+                seasonal=existing.seasonal,
+                deterministic=deterministic,
+                hold_back=existing.hold_back,
+                period=existing.period,
+                missing="none",
+            )
+        except Exception as exc:
+            error = (
+                "An exception occured during the creation of the cloned "
+                "ARDL instance when applying the existing model "
+                "specification to the new data. The original traceback appears below"
+            )
+
+            exc.args = (error, ) + exc.args
+            raise exc.with_traceback(exc.__traceback__) from exc
+
+        if (mod.exog is None) != (existing.exog is None):
+            if existing.exog is not None:
+                raise ValueError(
+                    "exog must be provided when the original model contained "
+                    "exog variables"
+                )
+            raise ValueError(
+                "exog must be None when the original model did not contain "
+                "exog variables"
+            )
+        if existing.exog is not None and existing.exog.shape[1] != mod.exog.shape[1]:
+            raise ValueError(
+                "The number of exog variables passed must match the original "
+                f"Number of exog values ({existing.exog.shape[1]})"
+            )
+        if refit:
+            fit_kwargs = {} if fit_kwargs is None else fit_kwargs
+            return mod.fit(**fit_kwargs)
+        summary_text = (
+            "Parameters and standard errors were estimated using a different "
+            "dataset and then applied to this dataset"
+        )
+        res = ARDLResults(
+            mod,
+            self.params,
+            self.cov_params_default,
+            self.normalized_cov_params,
+            use_t=self.use_t,
+        )
+        res._summary_text = summary_text
+
+        return ARDLResultsWrapper(res)
 
     def _lag_repr(self) -> np.ndarray:
         """Returns poly repr of an AR, (1 -phi1 L -phi2 L^2-...)"""
@@ -1333,7 +1476,7 @@ def ardl_select_order(
     *,
     fixed: ArrayLike2D | None = None,
     causal: bool = False,
-    ic: Literal["aic", "bic"] = "bic",
+    ic: Literal["aic", "bic", "hqic"] = "bic",
     glob: bool = False,
     seasonal: bool = False,
     deterministic: DeterministicProcess | None = None,
@@ -1430,7 +1573,7 @@ def ardl_select_order(
         bic = call_cached_func(ARDLResults.bic, res)
         hqic = call_cached_func(ARDLResults.hqic, res)
 
-        return aic, bic, hqic
+        return InformationCriteria(aic, bic, hqic)
 
     base = ARDL(
         endog,
@@ -1642,6 +1785,17 @@ class UECM(ARDL):
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+    See Also
+    --------
+    statsmodels.tsa.ardl.ARDL
+        Autoregressive distributed lag model estimation
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregressive model estimation with optional exogenous regressors
+    statsmodels.tsa.statespace.sarimax.SARIMAX
+        Seasonal ARIMA model estimation with optional exogenous regressors
+    statsmodels.tsa.arima.model.ARIMA
+        ARIMA model estimation
+
     Notes
     -----
     The full specification of a UECM is
@@ -1665,17 +1819,6 @@ class UECM(ARDL):
     :math:`\epsilon_t` is a white noise shock. If ``causal`` is ``True``,
     then the 0-th lag of the exogenous variables is not included and the
     sum starts at ``m=1``.
-
-    See Also
-    --------
-    statsmodels.tsa.ardl.ARDL
-        Autoregressive distributed lag model estimation
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive model estimation with optional exogenous regressors
-    statsmodels.tsa.statespace.sarimax.SARIMAX
-        Seasonal ARIMA model estimation with optional exogenous regressors
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA model estimation
 
     Examples
     --------
@@ -1812,7 +1955,9 @@ class UECM(ARDL):
         dendog = np.full_like(self.data.endog, np.nan)
         dendog[1:] = np.diff(self.data.endog, axis=0)
         dlag = max(0, self._maxlag - 1)
-        self._endog_reg, self._endog = lagmat(dendog, dlag, original="sep")
+        self._endog_reg, self._endog = lagmat(
+            dendog, dlag, original="sep", use_namedtuple=False
+        )
         # 2. Deterministics
         self._deterministic_reg = self._deterministics.in_sample()
         # 3. Levels
@@ -2277,11 +2422,11 @@ class UECMResults(ARDLResults):
             sample-size specific set of critical values. Tables are only
             available for up to 10 components in the cointegrating
             relationship, so if more variables are included then simulation
-            is always used. The simulation computed the test statistic under
-            and assumption that the residuals are homoskedastic.
+            is always used. The simulation computes the test statistic under
+            an assumption that the residuals are homoskedastic.
         nsim : int
             Number of simulations to run when computing exact critical values.
-            Only used if ``asymptotic`` is ``True``.
+            Only used if ``asymptotic`` is ``False``.
         rng : {None, int, sequence[int], RandomState, Generator}, optional
             Random number generator or seed to use when simulating critical
             values. Must be provided if reproducible critical value and

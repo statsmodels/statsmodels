@@ -13,8 +13,12 @@ License: BSD-3
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy.special import comb
+
+from statsmodels.tools.validation import bool_like
 
 
 def _convert_to_multidim(x):
@@ -342,7 +346,24 @@ def mnc2mvsk(args):
 # TODO: no return, did it get lost in cut-paste?
 
 
-def cov2corr(cov, return_std=False):
+class Cov2CorrResult(NamedTuple):
+    """
+    Result of :func:`cov2corr` when the standard deviations are returned.
+
+    Parameters
+    ----------
+    corr : ndarray
+        Correlation matrix.
+    std : ndarray
+        Standard deviation taken from the diagonal of the covariance
+        matrix.
+    """
+
+    corr: np.ndarray
+    std: np.ndarray
+
+
+def cov2corr(cov, return_std=False, *, use_namedtuple: bool | None = None):
     """
     Convert covariance matrix to correlation matrix
 
@@ -353,27 +374,51 @@ def cov2corr(cov, return_std=False):
     return_std : bool
         If this is true then the standard deviation is also returned.
         By default only the correlation matrix is returned.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``Cov2CorrResult`` NamedTuple is
+        returned. When ``return_std=True`` a ``Cov2CorrResult`` is always
+        returned; it holds the same two elements as the legacy tuple, so it
+        unpacks and indexes identically. When ``return_std=False`` a bare
+        correlation matrix is returned unless ``use_namedtuple=True``, which
+        yields a ``Cov2CorrResult`` carrying the standard deviations too.
 
     Returns
     -------
-    corr : ndarray (subclass)
-        Correlation matrix.
-    std_ : ndarray
-        Standard deviation from the diagonal of cov, returned only if
-        return_std is True.
+    Cov2CorrResult or ndarray
+        When ``return_std=True`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        corr : ndarray (subclass)
+            Correlation matrix.
+        std : ndarray
+            Standard deviation from the diagonal of cov.
+
+        ``Cov2CorrResult`` has the same length and contents as the plain
+        ``(corr, std_)`` tuple it replaces, so it unpacks and indexes
+        identically. See
+        :class:`~statsmodels.stats.moment_helpers.Cov2CorrResult`.
+
+        When ``return_std=False`` and ``use_namedtuple`` is not True, a bare
+        correlation matrix is returned instead.
 
     Notes
     -----
     This function does not convert subclasses of ndarrays. This requires that
     division is defined elementwise. np.ma.array and np.matrix are allowed.
     """
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
     cov = np.asanyarray(cov)
     std_ = np.sqrt(np.diag(cov))
     corr = cov / np.outer(std_, std_)
-    if return_std:
-        return corr, std_
-    else:
-        return corr
+    # Cov2CorrResult has exactly the same length and contents as the legacy
+    # (corr, std_) tuple, so it unpacks and indexes identically and is always
+    # used when return_std is True.  When return_std is False a bare
+    # correlation matrix is returned, as before; pass use_namedtuple=True to
+    # always get a Cov2CorrResult.  The standard deviations are computed
+    # either way, so nothing needs to be None-filled.
+    if use_namedtuple or return_std:
+        return Cov2CorrResult(corr, std_)
+    return corr
 
 
 def corr2cov(corr, std):

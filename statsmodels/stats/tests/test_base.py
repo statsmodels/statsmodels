@@ -1,13 +1,15 @@
 import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
+import pytest
 
 from statsmodels.stats.base import HolderTuple
 
 
 def test_holdertuple():
-    ht = HolderTuple(statistic=5, pvalue=0.1, text="just something",
-                     extra=[1, 2, 4])
+    with pytest.warns(FutureWarning, match="HolderTuple is deprecated"):
+        ht = HolderTuple(statistic=5, pvalue=0.1, text="just something",
+                         extra=[1, 2, 4])
     assert_equal(len(ht), 2)
     assert_equal(ht[:], [5, 0.1])
     p, v = ht
@@ -31,8 +33,9 @@ def test_holdertuple():
 
 
 def test_holdertuple2():
-    ht = HolderTuple(tuple_=("statistic", "extra"), statistic=5, pvalue=0.1,
-                     text="just something", extra=[1, 2, 4])
+    with pytest.warns(FutureWarning, match="HolderTuple is deprecated"):
+        ht = HolderTuple(tuple_=("statistic", "extra"), statistic=5, pvalue=0.1,
+                         text="just something", extra=[1, 2, 4])
     assert_equal(len(ht), 2)
     assert_equal(ht[:], [5, [1, 2, 4]])
     p, v = ht

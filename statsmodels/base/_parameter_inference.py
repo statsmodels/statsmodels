@@ -4,10 +4,39 @@ Created on Wed May 30 15:11:09 2018
 @author: josef
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.base import compat_2tuple_unpack
+
+
+@compat_2tuple_unpack("statistic", "pvalue")
+class ScoreTestResult(NamedTuple):
+    """
+    Result of :func:`_lm_robust` and :func:`score_test`.
+
+    Parameters
+    ----------
+    statistic : float or ndarray
+        Score/Lagrange multiplier test statistic. This is a chisquare
+        statistic for ``hypothesis="joint"``, or an array of z-statistics,
+        one per constraint, for ``hypothesis="separate"``.
+    pvalue : float or ndarray
+        p-value(s) of the test, based on `distribution`.
+    distribution : {"chi2", "norm"}
+        Name of the reference distribution used for `pvalue`.
+    df : int or None
+        Degrees of freedom of the chi-square distribution, equal to the
+        number of constraints. Only set for the joint hypothesis test
+        (``distribution="chi2"``), otherwise None.
+    """
+
+    statistic: float
+    pvalue: float
+    distribution: str
+    df: int | None = None
 
 
 # this is a copy from stats._diagnostic_other to avoid circular imports
@@ -28,25 +57,26 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    constraint_matrix R : ndarray
+    constraint_matrix : ndarray
         Linear restriction matrix or Jacobian of nonlinear constraints
-    score_deriv_inv, Ainv : ndarray, symmetric, square
-        inverse of second derivative of objective function
+        (denoted `R` below).
+    score_deriv_inv : ndarray, symmetric, square
+        inverse of second derivative of objective function (denoted `Ainv`
+        below).
         TODO: could be inverse of OPG or any other estimator if information
         matrix equality holds
-    cov_score B :  ndarray, symmetric, square
-        covariance matrix of the score. This is the inner part of a sandwich
-        estimator.
-    cov_params V :  ndarray, symmetric, square
-        covariance of full parameter vector evaluated at constrained parameter
-        estimate. This can be specified instead of cov_score B.
+    cov_score : ndarray, symmetric, square
+        covariance matrix of the score (denoted `B` below). This is the
+        inner part of a sandwich estimator.
+    cov_params : ndarray, symmetric, square, optional
+        covariance of full parameter vector evaluated at constrained
+        parameter estimate (denoted `V` below). This can be specified
+        instead of cov_score.
 
     Returns
     -------
-    lm_stat : float
-        score/lagrange multiplier statistic
-    p-value : float
-        p-value of the LM test based on chisquare distribution
+    ScoreTestResult
+        See :class:`ScoreTestResult` for a description of the attributes.
 
     Notes
     -----
@@ -75,7 +105,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
         # TODO: check if usecase for pinv exists
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
-    return HolderTuple(
+    return ScoreTestResult(
         statistic=lm_stat,
         pvalue=pval,
         df=k_constraints,
@@ -124,7 +154,7 @@ def score_test(
     ----------
     exog_extra : None or array_like
         Explanatory variables that are jointly tested for inclusion in the
-        model, i.e. omitted variables.
+        model, i.e., omitted variables.
     params_constrained : array_like
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
@@ -142,11 +172,20 @@ def score_test(
         tests is used.
         If the cov_type argument is not None, then it will be used instead of
         the Wald cov_type given in fit.
+    cov_kwds : dict or None
+        Keyword arguments for the specified `cov_type`.
     k_constraints : int or None
         Number of constraints that were used in the estimation of params
         restricted relative to the number of exog in the model.
         This must be provided if no exog_extra are given. If exog_extra is
         not None, then k_constraints is assumed to be zero if it is None.
+    r_matrix : array_like or None
+        Restriction matrix for the constraints. If not provided, it is
+        constructed from `self.constraints` or from `exog_extra`.
+    scale : float or None
+        Optional scale to use in the score and Hessian calculation, for
+        example for the results of a fit_constrained estimation with fixed
+        scale.
     observed : bool
         If True, then the observed Hessian is used in calculating the
         covariance matrix of the score. If false then the expected
@@ -156,13 +195,12 @@ def score_test(
 
     Returns
     -------
-    chi2_stat : float
-        chisquare statistic for the score test
-    p-value : float
-        P-value of the score test based on the chisquare distribution.
-    df : int
-        Degrees of freedom used in the p-value calculation. This is equal
-        to the number of constraints.
+    ScoreTestResult
+        See :class:`ScoreTestResult` for a description of the attributes.
+        For ``hypothesis="joint"``, `statistic` and `pvalue` are the
+        chisquare test and `df` is the number of constraints. For
+        ``hypothesis="separate"``, `statistic` and `pvalue` are arrays
+        with one z-test per constraint, and `df` is None.
 
     Notes
     -----
@@ -292,7 +330,7 @@ def score_test(
         chi2stat = score.dot(np.linalg.solve(cov_score_test, score[:, None]))
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
-        return HolderTuple(
+        return ScoreTestResult(
             statistic=chi2stat,
             pvalue=pval,
             df=k_constraints,
@@ -303,7 +341,7 @@ def score_test(
         bse = np.sqrt(np.diag(cov_score_test))
         stat = diff / bse
         pval = stats.norm.sf(np.abs(stat)) * 2
-        return HolderTuple(
+        return ScoreTestResult(
             statistic=stat,
             pvalue=pval,
             distribution="norm",

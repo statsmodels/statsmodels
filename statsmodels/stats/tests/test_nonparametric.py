@@ -7,6 +7,7 @@ Author: Josef Perktold
 """
 
 from statsmodels.compat.python import lzip
+from statsmodels.compat.scipy import SP_LT_110
 
 from pathlib import Path
 
@@ -33,8 +34,10 @@ from statsmodels.stats.contingency_tables import (
     mcnemar,
 )
 from statsmodels.stats.nonparametric import (
+    JonckheereTerpstraResult,
     _compute_rank_placements,
     cohensd2problarger,
+    jonckheere_terpstra,
     prob_larger_continuous,
     rank_compare_2indep,
     rank_compare_2ordinal,
@@ -338,10 +341,14 @@ def test_brunnermunzel_one_sided():
     x, y = y, x
 
     # Results are compared with R's lawstat package.
-    u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative="smaller")
-    u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative="larger")
-    u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative="larger")
-    u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative="smaller")
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative="smaller")
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative="larger")
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative="larger")
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative="smaller")
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(p3, p4, significant=significant)
@@ -367,10 +374,12 @@ def test_brunnermunzel_two_sided():
 
     # Results are compared with R's lawstat package.
     res1 = rank_compare_2indep(x, y)
-    u1, p1 = res1
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        u1, p1 = res1
     t1 = res1.test_prob_superior(alternative="two-sided")
     res2 = rank_compare_2indep(y, x)
-    u2, p2 = res2
+    with pytest.warns(FutureWarning, match="Unpacking"):
+        u2, p2 = res2
     t2 = res2.test_prob_superior(alternative="two-sided")
 
     assert_approx_equal(p1, p2, significant=significant)
@@ -526,6 +535,185 @@ def test_rank_compare_vectorized():
         tost_i = res_i.tost_prob_superior(0.4, 0.6)
         assert_allclose(tost.statistic[i], tost_i.statistic, rtol=1e-14)
         assert_allclose(tost.pvalue[i], tost_i.pvalue, rtol=1e-14)
+
+
+def _jt_statistic_bruteforce(samples):
+    statistic = 0.0
+    for i, sample_low in enumerate(samples[:-1]):
+        for sample_high in samples[i + 1 :]:
+            for x_low in sample_low:
+                for x_high in sample_high:
+                    statistic += x_high > x_low
+                    statistic += 0.5 * (x_high == x_low)
+    return statistic
+
+
+def test_jonckheere_terpstra_exceptions():
+    samples = [
+        np.array([1, 2, 2, np.nan]),
+        np.array([2, 3, 4]),
+        np.array([3, 4, 5, 6]),
+    ]
+    with pytest.raises(ValueError, match="All observations must be finite"):
+        jonckheere_terpstra(samples, alternative="larger")
+
+
+def test_jonckheere_terpstra_larger_matches_kendalltau():
+    samples = [
+        np.array([1, 2, 2, 4]),
+        np.array([2, 3, 4]),
+        np.array([3, 4, 5, 6]),
+    ]
+    res = jonckheere_terpstra(samples, alternative="larger")
+
+    expected_stat = _jt_statistic_bruteforce(samples)
+    counts = [len(sample) for sample in samples]
+    group = np.repeat(np.arange(len(samples)), counts)
+    pooled = np.concatenate(samples)
+    expected = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="greater",
+    )
+    expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
+    assert_allclose(res.statistic, expected_stat, rtol=1e-13)
+    assert_allclose(res.tau, expected_statistic, rtol=1e-13)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
+
+
+def test_jonckheere_terpstra_smaller_and_two_sided():
+    samples = [
+        np.array([6, 5, 4, 4]),
+        np.array([4, 3, 2]),
+        np.array([2, 1, 1]),
+    ]
+    counts = [len(sample) for sample in samples]
+    group = np.repeat(np.arange(len(samples)), counts)
+    pooled = np.concatenate(samples)
+
+    res_small = jonckheere_terpstra(samples, alternative="smaller")
+    expected_small = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="less",
+    )
+    expected_small_statistic = (
+        expected_small.correlation if SP_LT_110 else expected_small.statistic
+    )
+    assert_allclose(res_small.statistic, _jt_statistic_bruteforce(samples))
+    assert_allclose(res_small.tau, expected_small_statistic, rtol=1e-13)
+    assert_allclose(res_small.pvalue, expected_small.pvalue, rtol=1e-13)
+
+    res_two = jonckheere_terpstra(samples, alternative="two-sided")
+    expected_two = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="two-sided",
+    )
+    assert_allclose(res_two.pvalue, expected_two.pvalue, rtol=1e-13)
+
+
+def test_jonckheere_terpstra_known_extreme_statistic():
+    samples = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
+    res = jonckheere_terpstra(samples)
+
+    assert_allclose(res.statistic, 12.0, rtol=1e-13)
+    assert_allclose(res.mean_null, 6.0, rtol=1e-13)
+    assert_(res.zstat > 0)
+
+
+def test_jonckheere_terpstra_minimal_nobs():
+    # Regression test for the `nobs > 2` guard in the variance formula:
+    # with two singleton samples, nobs == 2 and the (nobs - 2.0) term in
+    # the third variance component would divide by zero if the guard were
+    # removed. counts == [1, 1] also makes that component's x0 * y0
+    # numerator identically zero, so this only exercises the branch and
+    # the absence of a ZeroDivisionError/NaN, not a numerically distinct
+    # variance value. scipy.stats.kendalltau itself raises ZeroDivisionError
+    # for n=2 (see scipy gh-21678), so the expected values here are derived
+    # by hand instead of cross-checked against it.
+    samples = [np.array([1.0]), np.array([2.0])]
+    res = jonckheere_terpstra(samples, alternative="larger")
+
+    assert np.isfinite(res.statistic)
+    assert np.isfinite(res.var_null)
+    assert np.isfinite(res.pvalue)
+
+    assert_allclose(res.statistic, _jt_statistic_bruteforce(samples), rtol=1e-13)
+    assert_allclose(res.statistic, 1.0, rtol=1e-13)
+    assert_allclose(res.mean_null, 0.5, rtol=1e-13)
+    assert_allclose(res.var_null, 0.25, rtol=1e-13)
+    assert_allclose(res.zstat, 1.0, rtol=1e-13)
+    assert_allclose(res.pvalue, stats.norm.sf(1.0), rtol=1e-13)
+
+
+def test_jonckheere_terpstra_result_type():
+    samples = [np.array([1, 2]), np.array([3, 4]), np.array([5, 6])]
+    res = jonckheere_terpstra(samples)
+
+    assert isinstance(res, JonckheereTerpstraResult)
+    # positional unpacking follows the documented field order
+    assert res[0] == res.statistic
+    assert res[1] == res.pvalue
+    statistic, pvalue, *_ = res
+    assert statistic == res.statistic
+    assert pvalue == res.pvalue
+
+
+def test_jonckheere_terpstra_many_unequal_groups():
+    rng = np.random.default_rng(1234)
+    sizes = [2, 5, 3, 7, 4]
+    samples = [rng.integers(0, 6, size=size).astype(float) for size in sizes]
+    res = jonckheere_terpstra(samples, alternative="two-sided")
+
+    expected_stat = _jt_statistic_bruteforce(samples)
+    group = np.repeat(np.arange(len(samples)), sizes)
+    pooled = np.concatenate(samples)
+    expected = stats.kendalltau(
+        group,
+        pooled,
+        method="asymptotic",
+        alternative="two-sided",
+    )
+
+    assert res.k_groups == len(samples)
+    assert res.nobs == sum(sizes)
+    assert_allclose(res.statistic, expected_stat, rtol=1e-13)
+    expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
+    assert_allclose(res.tau, expected_statistic, rtol=1e-13)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-13)
+
+
+def test_jonckheere_terpstra_stats_api_export():
+    from statsmodels.stats import api as sms
+
+    assert sms.jonckheere_terpstra is jonckheere_terpstra
+
+
+@pytest.mark.parametrize(
+    ("samples", "alternative", "expected_message"),
+    [
+        ([np.array([1, 2])], "larger", "at least two ordered samples"),
+        ([np.array([]), np.array([1])], "larger", "zero length"),
+        ([np.array([1]), np.array([2])], "invalid", "alternative"),
+        (
+            [np.array([1, 1]), np.array([1, 1])],
+            "larger",
+            "variance is zero",
+        ),
+        (
+            [np.array([[1, 2], [3, 4]]), np.array([5, 6])],
+            "larger",
+            "one-dimensional",
+        ),
+    ],
+)
+def test_jonckheere_terpstra_invalid(samples, alternative, expected_message):
+    with pytest.raises(ValueError, match=expected_message):
+        jonckheere_terpstra(samples, alternative=alternative)
 
 
 cases_continuous = [

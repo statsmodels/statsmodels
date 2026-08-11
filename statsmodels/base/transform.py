@@ -213,6 +213,9 @@ class BoxCox:
         ----------
         x : array_like
             The untransformed data.
+        bounds : tuple
+            Numeric 2-tuple, that indicate the solution space for the lambda
+            parameter.
         options : dict
             The options (as a dict) to be passed to the optimizer.
 

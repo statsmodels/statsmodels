@@ -225,7 +225,6 @@ class RLM(base.LikelihoodModel):
         maxiter=50,
         tol=1e-8,
         scale_est="mad",
-        init=None,
         cov="H1",
         update_scale=True,
         conv="dev",
@@ -250,11 +249,6 @@ class RLM(base.LikelihoodModel):
             'H1', 'H2', or 'H3'
             Indicates how the covariance matrix is estimated.  Default is 'H1'.
             See rlm.RLMResults for more information.
-        init : str
-            Specifies method for the initial estimates of the parameters.
-            Default is None, which means that the least squares estimate
-            is used.  Currently it is the only available choice.
-            Deprecated and will be removed. There is no choice here.
         maxiter : int
             The maximum number of iterations to try. Default is 50.
         scale_est : str or HuberScale()
@@ -310,7 +304,7 @@ class RLM(base.LikelihoodModel):
             )
             wls_results = fake_wls.results(start_params)
 
-        if not init and not start_scale:
+        if not start_scale:
             self.scale = self._estimate_scale(wls_results.resid, scale_est)
         elif start_scale:
             self.scale = start_scale
@@ -556,7 +550,7 @@ class RLMResults(base.LikelihoodModelResults):
     def chisq(self):
         return (self.params / self.bse) ** 2
 
-    def summary(self, yname=None, xname=None, title=0, alpha=0.05, return_fmt="text"):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05, return_fmt="text"):
         """
         Summarize the fitted model
 
@@ -565,9 +559,9 @@ class RLMResults(base.LikelihoodModelResults):
         yname : str, optional
             Name of the dependent variable (optional)
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
@@ -599,8 +593,8 @@ class RLMResults(base.LikelihoodModelResults):
             ("Df Model:", None),
         ]
 
-        if title is not None:
-            title = "Robust linear Model Regression Results"
+        if title is None:
+            title = "Robust Linear Model Regression Results"
 
         # boiler plate
         from statsmodels.iolib.summary import Summary
@@ -641,9 +635,9 @@ class RLMResults(base.LikelihoodModelResults):
         Parameters
         ----------
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model
         yname : str, optional
             Name of the dependent variable (optional)
         title : str, optional

@@ -1,5 +1,5 @@
 """
-Methods for analyzing two-way contingency tables (i.e. frequency
+Methods for analyzing two-way contingency tables (i.e., frequency
 tables for observations that are cross-classified with respect to two
 categorical variables).
 
@@ -25,6 +25,7 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -497,7 +498,7 @@ class SquareTable(Table):
 
             * statistic : float
                 chisquare test statistic
-            * p-value : float
+            * pvalue : float
                 p-value of the test statistic based on chisquare distribution
             * df : int
                 degrees of freedom of the chisquare distribution
@@ -570,7 +571,7 @@ class SquareTable(Table):
         marginal distribution of the row factor is equal to the
         marginal distribution of the column factor.  For this to be
         meaningful, the two factors must have the same sample space
-        (i.e. the same categories).
+        (i.e., the same categories).
         """
 
         if self.table.shape[0] < 1:
@@ -963,10 +964,13 @@ class StratifiedTable:
         Either a list containing several 2x2 contingency tables, or
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
+    shift_zeros : bool
+        If True and any cell count is zero, add 0.5 to all cells of the
+        affected table(s).
 
     Notes
     -----
-    This results are based on a sampling model in which the units are
+    These results are based on a sampling model in which the units are
     independent both within and between strata.
     """
 
@@ -1225,7 +1229,7 @@ class StratifiedTable:
 
         statistic : float
             The chi^2 test statistic.
-        p-value : float
+        pvalue : float
             The p-value for the test.
         """
 
@@ -1400,7 +1404,26 @@ def mcnemar(table, exact=True, correction=True):
     return b
 
 
-def cochrans_q(x, return_object=True):
+class CochransQResult(NamedTuple):
+    """
+    Result of :func:`cochrans_q`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic.
+    pvalue : float
+        p-value from the chisquare distribution.
+    df : int
+        Degrees of freedom of the chisquare distribution.
+    """
+
+    statistic: float
+    pvalue: float
+    df: int
+
+
+def cochrans_q(x, return_object=None):
     """
     Cochran's Q test for identical binomial proportions
 
@@ -1409,17 +1432,35 @@ def cochrans_q(x, return_object=True):
     x : array_like, 2d (N, k)
         data with N cases and k variables
     return_object : bool
-        Return values as bunch instead of as individual values.
+        No longer used. ``cochrans_q`` always returns a
+        ``CochransQResult``, which supports both the attribute access of the
+        bunch that ``return_object=True`` used to produce and the positional
+        unpacking of the ``(statistic, pvalue, df)`` tuple that
+        ``return_object=False`` used to produce.
+
+        .. deprecated:: 0.15.0
+
+            ``return_object`` no longer affects the return value and will be
+            removed in statsmodels 0.16.0. Passing it raises a
+            ``FutureWarning``; simply stop passing it.
 
     Returns
     -------
-    Returns a bunch containing the following attributes, or the
-    individual values according to the value of `return_object`.
+    CochransQResult
+        A NamedTuple with fields:
 
-    statistic : float
-       test statistic
-    pvalue : float
-       pvalue from the chisquare distribution
+        statistic : float
+            test statistic
+        pvalue : float
+            pvalue from the chisquare distribution
+        df : int
+            degrees of freedom of the chisquare distribution
+
+        ``CochransQResult`` unpacks and indexes exactly like the
+        ``(statistic, pvalue, df)`` tuple that ``return_object=False``
+        returned, and exposes the same ``statistic``, ``pvalue`` and ``df``
+        attributes as the bunch that ``return_object=True`` returned. See
+        :class:`~statsmodels.stats.contingency_tables.CochransQResult`.
 
     Notes
     -----
@@ -1443,6 +1484,17 @@ def cochrans_q(x, return_object=True):
     https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
     """
+    if return_object is not None:
+        warnings.warn(
+            "The return_object keyword of cochrans_q no longer changes the "
+            "return value and will be removed in statsmodels 0.16.0. "
+            "cochrans_q now always returns a CochransQResult, which unpacks "
+            "as (statistic, pvalue, df) and also exposes .statistic, "
+            ".pvalue and .df. Stop passing return_object to silence this "
+            "warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     x = np.asarray(x, dtype=np.float64)
     gruni = np.unique(x)
@@ -1469,11 +1521,8 @@ def cochrans_q(x, return_object=True):
     df = k - 1
     pvalue = stats.chi2.sf(q_stat, df)
 
-    if return_object:
-        b = _Bunch()
-        b.statistic = q_stat
-        b.df = df
-        b.pvalue = pvalue
-        return b
-
-    return q_stat, pvalue, df
+    # CochransQResult replaces both legacy return paths at once: it unpacks
+    # as the (statistic, pvalue, df) tuple that return_object=False produced
+    # and carries the same attributes as the bunch that return_object=True
+    # produced, so a single return covers every caller.
+    return CochransQResult(q_stat, pvalue, df)

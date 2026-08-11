@@ -35,7 +35,7 @@ from __future__ import annotations
 from statsmodels.compat.numpy import inplace_reshape
 from statsmodels.compat.python import lrange, lzip
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -73,8 +73,11 @@ __all__ = [
     "GLSAR",
     "OLS",
     "WLS",
+    "CompareLRTestResult",
+    "ELTestResult",
     "PredictionResults",
     "RegressionResultsWrapper",
+    "YuleWalkerResult",
 ]
 
 dtrtri = get_lapack_funcs("trtri", dtype="float64", ilp64="preferred")
@@ -1169,7 +1172,7 @@ class OLS(WLS):
         **kwargs,
     ):
 
-        # In the future we could add support for other penalties, e.g. SCAD.
+        # In the future we could add support for other penalties, e.g., SCAD.
         if method not in ("elastic_net", "sqrt_lasso"):
             msg = f"Unknown method '{method}' for fit_regularized"
             raise ValueError(msg)
@@ -1309,8 +1312,14 @@ class GLSAR(GLS):
     Generalized Least Squares with AR covariance structure
 
     {base._model_params_doc}
-    rho : int
-        The order of the autoregressive covariance.
+    rho : int or array_like
+        If an integer is provided, it specifies the order of the
+        autoregressive process. The AR coefficients are initialized
+        to zero and estimated during iterative fitting.
+
+        If an array is provided, it specifies initial values for the
+        autoregressive coefficients. The length of the array determines
+        the AR order.
     {base._missing_param_doc + base._extra_param_doc}
 
     Notes
@@ -1426,7 +1435,9 @@ class GLSAR(GLS):
                     converged = True
                     break
                 last = results.params
-            self.rho, _ = yule_walker(results.resid, order=self.order, df=None)
+            self.rho, _ = yule_walker(
+                results.resid, order=self.order, df=None, use_namedtuple=False
+            )
             history["rho"].append(self.rho)
 
         # why not another call to self.initialize
@@ -1449,8 +1460,19 @@ class GLSAR(GLS):
         return results
 
     def whiten(self, x):
-        """
-        Whiten a series of columns according to an AR(p) covariance structure.
+        r"""
+        For an AR(p) process, the errors are modeled as
+
+        .. math::
+
+            u_t = \rho_1 u_{t-1} + \cdots + \rho_p u_{t-p} + \epsilon_t,
+
+        where :math:`\epsilon_t` is white noise. The corresponding whitening
+        transformation is
+
+        .. math::
+
+            \epsilon_t = u_t - \sum_{i=1}^{p} \rho_i u_{t-i}.
 
         Whitening using this method drops the initial p observations.
 
@@ -1463,9 +1485,7 @@ class GLSAR(GLS):
         -------
         ndarray
             The whitened data.
-
         """
-        # TODO: notation for AR process
         x = np.asarray(x, np.float64)
         _x = x.copy()
 
@@ -1475,11 +1495,21 @@ class GLSAR(GLS):
         return _x[self.order :]
 
 
-def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
-    """
-    Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
+class YuleWalkerResult(NamedTuple):
+    """Result of :func:`yule_walker`."""
 
-    Adjusted or maximum-likelihood estimator (mle)
+    rho: np.ndarray
+    sigma: float
+    Rinv: np.ndarray | None
+
+
+def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, *,
+                use_namedtuple: bool | None = None):
+    r"""
+    Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
+    The method provides either adjusted or maximum-likelihood estimates,
+    depending on the value of ``method``.
+
 
     Parameters
     ----------
@@ -1488,9 +1518,9 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
     order : int, optional
         The order of the autoregressive process.  Default is 1.
     method : str, optional
-       Method can be 'adjusted' or 'mle' and this determines
-       denominator in estimate of autocorrelation function (ACF) at
-       lag k. If 'mle', the denominator is n=X.shape[0], if 'adjusted'
+       Method can be 'adjusted' or 'mle' and determines the denominator
+       used to estimate the autocovariance at lag k.
+       If 'mle', the denominator is n=X.shape[0], if 'adjusted'
        the denominator is n-k.  The default is adjusted.
     df : int, optional
        Specifies the degrees of freedom. If `df` is supplied, then it
@@ -1501,13 +1531,37 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
         False.
     demean : bool
         True, the mean is subtracted from `X` before estimation.
+    use_namedtuple : bool, optional
+        Flag indicating whether to return the results as a
+        ``YuleWalkerResult`` NamedTuple instead of a plain tuple. If
+        ``None`` (the default), the current tuple-returning behavior is
+        used and a ``FutureWarning`` is issued. If ``inv`` is True,
+        a ``YuleWalkerResult`` is always returned.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.16.0 or after July 2027, whichever is later, the
+            default will change to returning a ``YuleWalkerResult``.
+            Set ``use_namedtuple=True`` to opt in now, or
+            ``use_namedtuple=False`` to silence the warning and keep the
+            current return type. ``YuleWalkerResult`` will become mandatory
+            in release 0.17.0 or after July 2028, whichever is later.
 
     Returns
     -------
+    YuleWalkerResult
+        If ``use_namedtuple=True``, a NamedTuple with fields ``rho``,
+        ``sigma``, and ``Rinv`` (``Rinv`` is ``None`` unless ``inv=True``).
+        See :class:`~statsmodels.regression.linear_model.YuleWalkerResult`.
+
+    Otherwise (the deprecated default), a plain tuple made up of:
+
     rho : ndarray
         AR(p) coefficients computed using the Yule-Walker method.
     sigma : float
         The estimate of the residual standard deviation.
+    Rinv : ndarray, optional
+        The inverse of R. Only returned if ``inv`` is True, otherwise ``None``.
 
     See Also
     --------
@@ -1515,8 +1569,31 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
 
     Notes
     -----
-    See https://en.wikipedia.org/wiki/Autoregressive_moving_average_model for
-    further details.
+    The Yule-Walker estimator is based on the autocorrelation structure of
+    a weakly stationary process. Under stationarity, the covariance between
+    two observations depends only on their lag:
+
+    .. math::
+
+        \operatorname{Cov}(X_t, X_{t-k}) = \gamma_k.
+
+    For an AR(p) process, the Yule-Walker equations can be written as
+
+    .. math::
+
+        R \phi = r,
+
+    where ``R`` is the Toeplitz autocovariance matrix constructed from the
+    estimated autocovariances at lags 0 through ``p - 1``, ``\phi`` is the
+    vector of AR(p) parameters, and ``r`` is the vector of estimated
+    autocovariances at lags 1 through ``p``.
+
+    In practice, the theoretical autocovariances are replaced by their
+    sample estimates.
+
+    The reference below formulates the Yule-Walker equations in terms of
+    autocorrelations, whereas this implementation uses autocovariances.
+    The two formulations are equivalent up to normalization by the variance.
 
     Examples
     --------
@@ -1531,25 +1608,13 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
     >>> sigma
     16.808022730464351
 
+    References
+    ----------
+    http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YWSourceFiles/YW-Eshel.pdf
     """
-    # TODO: define R better, look back at notes and technical notes on YW.
-    # First link here is useful
-    # http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    method = string_like(method, "method", options=("adjusted", "mle"))
 
-    method = string_like(method, "method", options=("adjusted", "unbiased", "mle"))
-    if method == "unbiased":
-        warnings.warn(
-            "unbiased is deprecated in factor of adjusted to reflect that the "
-            "term is adjusting the sample size used in the autocovariance "
-            "calculation rather than estimating an unbiased autocovariance. "
-            "After release 0.13, using 'unbiased' will raise.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        method = "adjusted"
-
-    if method not in ("adjusted", "mle"):
-        raise ValueError("ACF estimation method must be 'adjusted' or 'MLE'")
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
     if demean:
@@ -1585,10 +1650,22 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True):
         sigma = np.sqrt(sigmasq)
     else:
         sigma = np.nan
-    if inv:
-        return rho, sigma, np.linalg.inv(R)
-    else:
-        return rho, sigma
+    Rinv = np.linalg.inv(R) if inv else None
+
+    if use_namedtuple is None and not inv:
+        warnings.warn(
+            "yule_walker currently returns a plain tuple whose length "
+            "depends on the inv argument. In release 0.16 or after July "
+            "2028, whichever is later, the default behavior will switch "
+            "to returning a YuleWalkerResult NamedTuple. Set "
+            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "to keep the current behavior and silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if use_namedtuple or inv:
+        return YuleWalkerResult(rho, sigma, Rinv)
+    return rho, sigma
 
 
 def burg(endog, order=1, demean=True):
@@ -1652,6 +1729,22 @@ def burg(endog, order=1, demean=True):
     pacf, sigma = pacf_burg(endog, order, demean=demean)
     ar, _ = levinson_durbin_pacf(pacf)
     return ar, sigma[-1]
+
+
+class CompareLRTestResult(NamedTuple):
+    """Result of :meth:`RegressionResults.compare_lr_test`."""
+
+    lr_stat: float
+    p_value: float
+    df_diff: int
+
+
+class ELTestResult(NamedTuple):
+    """Result of :meth:`RegressionResults.el_test`."""
+    llr: float
+    pval: float
+    weights: np.ndarray | None
+    nuisance_params: np.ndarray | None
 
 
 class RegressionResults(base.LikelihoodModelResults):
@@ -1754,7 +1847,7 @@ class RegressionResults(base.LikelihoodModelResults):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05):
         """
         Compute the confidence interval of the fitted parameters.
 
@@ -1763,8 +1856,6 @@ class RegressionResults(base.LikelihoodModelResults):
         alpha : float, optional
             The `alpha` level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-            Columns to include in returned confidence intervals.
 
         Returns
         -------
@@ -1777,7 +1868,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         """
         # keep method for docstring for now
-        ci = super().conf_int(alpha=alpha, cols=cols)
+        ci = super().conf_int(alpha=alpha)
         return ci
 
     @cache_readonly
@@ -1952,7 +2043,7 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
-            # TODO: What if model includes implicit constant, e.g. all
+            # TODO: What if model includes implicit constant, e.g., all
             #       dummies but no constant regressor?
             # TODO: Restats as LM test by projecting orthogonalizing
             #       to constant?
@@ -2277,7 +2368,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value : float
             The p-value of the test statistic.
         df_diff : int
-            The degrees of freedom of the restriction, i.e. difference in df
+            The degrees of freedom of the restriction, i.e., difference in df
             between models.
 
         Notes
@@ -2360,7 +2451,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value : float
             The p-value of the test statistic.
         df_diff : int
-            The degrees of freedom of the restriction, i.e. difference in
+            The degrees of freedom of the restriction, i.e., difference in
             df between models.
 
         Notes
@@ -2414,14 +2505,20 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        lr_stat : float
-            The likelihood ratio which is chisquare distributed with df_diff
-            degrees of freedom.
-        p_value : float
-            The p-value of the test statistic.
-        df_diff : int
-            The degrees of freedom of the restriction, i.e. difference in df
-            between models.
+        CompareLRTestResult
+            A NamedTuple with fields:
+
+            lr_stat : float
+                The likelihood ratio which is chisquare distributed with
+                df_diff degrees of freedom.
+            p_value : float
+                The p-value of the test statistic.
+            df_diff : int
+                The degrees of freedom of the restriction, i.e., difference
+                in df between models.
+
+            The result supports tuple unpacking and indexing, so existing
+            code that treats it as a 3-tuple continues to work unchanged.
 
         Notes
         -----
@@ -2462,31 +2559,33 @@ class RegressionResults(base.LikelihoodModelResults):
         # TODO: put into separate function, needs tests
 
         # See mailing list discussion October 17,
-
         if large_sample:
-            return self.compare_lm_test(restricted, use_lr=True)
+            # compare_lm_test always returns a plain 3-tuple (lm_value,
+            # p_value, df_diff) today; unpack positionally so the result
+            # here is self-consistent regardless of `large_sample`.
+            lrstat, lr_pvalue, lrdf = self.compare_lm_test(restricted, use_lr=True)
+        else:
+            has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
+            has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
 
-        has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
-        has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
+            if has_robust1 or has_robust2:
+                warnings.warn(
+                    "Likelihood Ratio test is likely invalid with robust covariance, "
+                    "proceeding anyway",
+                    InvalidTestWarning,
+                    stacklevel=2,
+                )
 
-        if has_robust1 or has_robust2:
-            warnings.warn(
-                "Likelihood Ratio test is likely invalid with robust covariance, "
-                "proceeding anyway",
-                InvalidTestWarning,
-                stacklevel=2,
-            )
+            llf_full = self.llf
+            llf_restr = restricted.llf
+            df_full = self.df_resid
+            df_restr = restricted.df_resid
 
-        llf_full = self.llf
-        llf_restr = restricted.llf
-        df_full = self.df_resid
-        df_restr = restricted.df_resid
+            lrdf = df_restr - df_full
+            lrstat = -2 * (llf_restr - llf_full)
+            lr_pvalue = stats.chi2.sf(lrstat, lrdf)
 
-        lrdf = df_restr - df_full
-        lrstat = -2 * (llf_restr - llf_full)
-        lr_pvalue = stats.chi2.sf(lrstat, lrdf)
-
-        return lrstat, lr_pvalue, lrdf
+        return CompareLRTestResult(lrstat, lr_pvalue, lrdf)
 
     def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwargs):
         """
@@ -2647,7 +2746,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
-            if df_correction is not False:  # i.e. in [None, True]:
+            if df_correction is not False:  # i.e., in [None, True]:
                 # user did not explicitly set it to False
                 adjust_df = True
 
@@ -3272,6 +3371,8 @@ class OLSResults(RegressionResults):
         ret_params=0,
         method="nm",
         stochastic_exog=1,
+        *,
+        use_namedtuple: bool | None = None,
     ):
         """
         Test single or joint hypotheses using Empirical Likelihood.
@@ -3288,6 +3389,8 @@ class OLSResults(RegressionResults):
         ret_params : bool
             If true, returns the parameter vector that maximizes the likelihood
             ratio at b0_vals.  Also returns the weights.  The default is False.
+            Has no effect when ``len(param_nums) == len(params)``, since
+            there are then no nuisance parameters to report.
         method : str
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
@@ -3298,12 +3401,55 @@ class OLSResults(RegressionResults):
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
             regressors. The default is True.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``ELTestResult`` NamedTuple instead of a plain tuple. When the
+            nuisance parameters are produced -- ``ret_params`` is True and
+            ``len(param_nums) < len(params)`` -- the NamedTuple holds the
+            same four elements as the legacy tuple, so it unpacks
+            identically and is always returned, with no warning. Every
+            other combination returns the shorter legacy tuple by default
+            and issues a ``FutureWarning``.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later,
+                the default will change to returning an ``ELTestResult``.
+                Set ``use_namedtuple=True`` to opt in now, or
+                ``use_namedtuple=False`` to silence the warning and keep the
+                current return type.  ``ELTestResult`` will become mandatory
+                in release 0.17.0 or after July 2028, whichever is later.
 
         Returns
         -------
-        tuple
-            The p-value and -2 times the log-likelihood ratio for the
-            hypothesized values.
+        ELTestResult
+            A NamedTuple with fields ``llr``, ``pval``, ``weights`` and
+            ``nuisance_params`` (``weights`` is ``None`` unless
+            ``return_weights`` or ``ret_params`` is True;
+            ``nuisance_params`` is ``None`` unless ``ret_params`` is True
+            and ``len(param_nums) < len(params)``). See
+            :class:`~statsmodels.regression.linear_model.ELTestResult`.
+
+            This is returned whenever ``use_namedtuple=True``. It is also
+            returned by default when the nuisance parameters were
+            produced -- that is, when ``ret_params`` is True and
+            ``len(param_nums) < len(params)`` -- because the NamedTuple
+            then has exactly the same four elements as the legacy tuple
+            and so unpacks identically; that case is adopted silently.
+
+        Otherwise (the deprecated default), a plain tuple whose length
+        depends on `return_weights` and `ret_params`, made up of a subset
+        of:
+
+        llr : float
+            -2 times the log-likelihood ratio for the hypothesized values.
+        pval : float
+            The p-value of the test.
+        weights : ndarray, optional
+            The weights that optimize the likelihood ratio at b0_vals.
+        nuisance_params : ndarray, optional
+            The parameter vector that maximizes the likelihood ratio at
+            b0_vals.
 
         Examples
         --------
@@ -3322,8 +3468,10 @@ class OLSResults(RegressionResults):
         >>> (27.248146353888796, 1.7894660442330235e-07)
 
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts()  # to store weights
+        nuisance_params = None
         if len(param_nums) == len(params):
             llr = opt_fun_inst._opt_nuis_regress(
                 [],
@@ -3337,43 +3485,65 @@ class OLSResults(RegressionResults):
                 stochastic_exog=stochastic_exog,
             )
             pval = 1 - stats.chi2.cdf(llr, len(param_nums))
-            if return_weights:
-                return llr, pval, opt_fun_inst.new_weights
-            else:
-                return llr, pval
-        x0 = np.delete(params, param_nums)
-        args = (
-            param_nums,
-            self.model.endog,
-            self.model.exog,
-            self.model.nobs,
-            self.model.exog.shape[1],
-            params,
-            b0_vals,
-            stochastic_exog,
-        )
-        if method == "nm":
-            llr = optimize.fmin(
-                opt_fun_inst._opt_nuis_regress,
-                x0,
-                maxfun=10000,
-                maxiter=10000,
-                full_output=1,
-                disp=0,
-                args=args,
-            )[1]
-        if method == "powell":
-            llr = optimize.fmin_powell(
-                opt_fun_inst._opt_nuis_regress, x0, full_output=1, disp=0, args=args
-            )[1]
-
-        pval = 1 - stats.chi2.cdf(llr, len(param_nums))
-        if ret_params:
-            return llr, pval, opt_fun_inst.new_weights, opt_fun_inst.new_params
-        elif return_weights:
-            return llr, pval, opt_fun_inst.new_weights
+            weights = opt_fun_inst.new_weights if return_weights else None
         else:
-            return llr, pval
+            x0 = np.delete(params, param_nums)
+            args = (
+                param_nums,
+                self.model.endog,
+                self.model.exog,
+                self.model.nobs,
+                self.model.exog.shape[1],
+                params,
+                b0_vals,
+                stochastic_exog,
+            )
+            if method == "nm":
+                llr = optimize.fmin(
+                    opt_fun_inst._opt_nuis_regress,
+                    x0,
+                    maxfun=10000,
+                    maxiter=10000,
+                    full_output=1,
+                    disp=0,
+                    args=args,
+                )[1]
+            if method == "powell":
+                llr = optimize.fmin_powell(
+                    opt_fun_inst._opt_nuis_regress, x0, full_output=1, disp=0,
+                    args=args,
+                )[1]
+
+            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
+            if ret_params:
+                weights = opt_fun_inst.new_weights
+                nuisance_params = opt_fun_inst.new_params
+            elif return_weights:
+                weights = opt_fun_inst.new_weights
+            else:
+                weights = None
+
+        # ELTestResult always carries all four fields, so it unpacks
+        # identically to the legacy tuple only when the nuisance parameters
+        # were produced as well; in that case it is adopted silently.
+        unpacks_unchanged = nuisance_params is not None
+        if use_namedtuple is None and not unpacks_unchanged:
+            warnings.warn(
+                "el_test currently returns a plain tuple whose length "
+                "depends on the return_weights and ret_params arguments. "
+                "In release 0.16 or after July 2027, whichever is later, "
+                "the default behavior will switch to always returning an "
+                "ELTestResult NamedTuple. Set use_namedtuple=True to "
+                "switch now, or use_namedtuple=False to keep the current "
+                "behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple or unpacks_unchanged:
+            return ELTestResult(llr, pval, weights, nuisance_params)
+        if weights is not None:
+            return llr, pval, weights
+        return llr, pval
 
     def conf_int_el(
         self,
@@ -3459,6 +3629,7 @@ class OLSResults(RegressionResults):
                     np.array([param_num]),
                     method=method,
                     stochastic_exog=stochastic_exog,
+                    use_namedtuple=False,
                 )[0]
                 - r0
             )

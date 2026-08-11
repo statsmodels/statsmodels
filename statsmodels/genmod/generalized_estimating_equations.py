@@ -135,11 +135,6 @@ class ParameterConstraint:
         """
         Returns a vector that should be added to the offset vector to
         accommodate the constraint.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogenous data for the model.
         """
 
         return self._offset_increment
@@ -148,11 +143,6 @@ class ParameterConstraint:
         """
         Returns a linearly transformed exog matrix whose columns span
         the constrained model space.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogenous data for the model.
         """
         return self.exog_fulltrans[:, 0 : self.lhs0.shape[1]]
 
@@ -190,10 +180,10 @@ _gee_init_doc = """
     Parameters
     ----------
     endog : array_like
-        1d array of endogenous values (i.e. responses, outcomes,
+        1d array of endogenous values (i.e., responses, outcomes,
         dependent variables, or 'Y' values).
     exog : array_like
-        2d array of exogenous values (i.e. covariates, predictors,
+        2d array of exogenous values (i.e., covariates, predictors,
         independent variables, regressors, or 'X' values). A `nobs x
         k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
@@ -256,7 +246,7 @@ _gee_init_doc = """
     exog will change.
 
     The "robust" covariance type is the standard "sandwich estimator"
-    (e.g. Liang and Zeger (1986)).  It is the default here and in most
+    (e.g., Liang and Zeger (1986)).  It is the default here and in most
     other packages.  The "naive" estimator gives smaller standard
     errors, but is only correct if the working correlation structure
     is correctly specified.  The "bias reduced" estimator of Mancl and
@@ -343,7 +333,7 @@ _gee_fit_doc = """
     -----
     If convergence difficulties occur, increase the values of
     `first_dep_update` and/or `params_niter`.  Setting
-    `first_dep_update` to a greater value (e.g. ~10-20) causes the
+    `first_dep_update` to a greater value (e.g., ~10-20) causes the
     algorithm to move close to the GLM solution before attempting
     to identify the dependence structure.
 
@@ -756,12 +746,9 @@ class GEE(GLM):
             indicating the depth of the namespace to use. For example, the
             default ``eval_env=0`` uses the calling namespace.
             If you wish to use a "clean" environment set ``eval_env=-1``.
-
-        Optional arguments
-        ------------------
-        dep_data : str or array_like
+        dep_data : str or array_like, optional
             Data used for estimating the dependence structure.  See
-            specific dependence structure classes (e.g. Nested) for
+            specific dependence structure classes (e.g., Nested) for
             details.  If `dep_data` is a string, it is interpreted as
             a formula that is applied to `data`. If it is an array, it
             must be an array of strings corresponding to column names in
@@ -1589,7 +1576,7 @@ class GEE(GLM):
         scale : float or string
             If a float, this value is used as the scale parameter.
             If "X2", the scale parameter is always estimated using
-            Pearson's chi-square method (e.g. as in a quasi-Poisson
+            Pearson's chi-square method (e.g., as in a quasi-Poisson
             analysis).  If None, the default approach for the family
             is used to estimate the scale parameter.
 
@@ -1885,11 +1872,8 @@ class GEE(GLM):
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= 4 * scale
 
-        try:
-            from scipy.integrate import trapezoid
-        except ImportError:
-            # Remove after minimum is SciPy 1.7
-            from scipy.integrate import trapz as trapezoid
+        from scipy.integrate import trapezoid
+
         ql = trapezoid(qv, dx=xv[1] - xv[0])
 
         qicu = -2 * ql + 2 * self.exog.shape[1]
@@ -2134,7 +2118,7 @@ class GEEResults(GLMResults):
             self, focus_exog, frac, cond_means=cond_means, ax=ax
         )
 
-    def conf_int(self, alpha=0.05, cols=None, cov_type=None):
+    def conf_int(self, alpha=0.05, cov_type=None):
         """
         Returns confidence intervals for the fitted parameters.
 
@@ -2143,8 +2127,6 @@ class GEEResults(GLMResults):
         alpha : float, optional
              The `alpha` level for the confidence interval.  i.e., The
              default `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-             `cols` specifies which confidence intervals to return
         cov_type : str
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
@@ -2165,13 +2147,8 @@ class GEEResults(GLMResults):
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
 
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
+        lower = params - q * bse
+        upper = params + q * bse
         return np.asarray(lzip(lower, upper))
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
@@ -3264,6 +3241,10 @@ class _Multinomial(families.Family):
         nlevels : int
             The number of distinct categories for the multinomial
             distribution.
+        check_link : bool
+            If True (default), then an exception is raised if the link is
+            invalid for the family.
+            If False, then the link is not checked.
         """
         self._check_link = check_link
         self.initialize(nlevels)

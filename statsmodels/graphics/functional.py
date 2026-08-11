@@ -1,25 +1,17 @@
 """Module for functional boxplots"""
 
-from statsmodels.compat.numpy import NP_LT_123
 from statsmodels.compat.pandas import deprecate_kwarg
 
+import itertools
+from multiprocessing import Pool
+
 import numpy as np
+from scipy.optimize import brute, differential_evolution, fmin
 from scipy.special import comb
 
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-try:
-    from scipy.optimize import brute, differential_evolution, fmin
-
-    have_de_optim = True
-except ImportError:
-    from scipy.optimize import brute, fmin
-
-    have_de_optim = False
-import itertools
-from multiprocessing import Pool
 
 from . import utils
 
@@ -132,6 +124,14 @@ def _min_max_band(args):
             bounds : sequence
                 ``(min, max)`` pair for each components
             ks_gaussian : KDEMultivariate instance
+                The kernel density estimate used to compute the PDF of the
+                curve.
+            use_brute : bool
+                Use the brute force optimizer instead of the default
+                differential evolution to find the curves.
+            rng : {None, int, np.random.Generator, np.random.RandomState}
+                Value to pass to scipy.optimize.differential_evolution as
+                its `seed` argument.
 
     Returns
     -------
@@ -139,7 +139,7 @@ def _min_max_band(args):
         ``(max, min)`` curve values at `idx`
     """
     idx, (band, pca, bounds, ks_gaussian, use_brute, rng) = args
-    if have_de_optim and not use_brute:
+    if not use_brute:
         max_ = differential_evolution(
             _curve_constrained,
             bounds=bounds,
@@ -204,7 +204,7 @@ def hdrboxplot(
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
     ncomp : int, optional
-        Number of components to use.  If None, returns the as many as the
+        Number of components to use.  If None, returns as many as the
         smaller of the number of rows or columns in data.
     alpha : list of floats between 0 and 1, optional
         Extra quantile values to compute. Default is None
@@ -390,19 +390,13 @@ def hdrboxplot(
 
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
-    if NP_LT_123:
-        pvalues = [
-            np.percentile(pdf_r, (1 - alpha[i]) * 100, interpolation="linear")
-            for i in range(n_quantiles)
-        ]
-    else:
-        pvalues = [
-            np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
-            for i in range(n_quantiles)
-        ]
+    pvalues = [
+        np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
+        for i in range(n_quantiles)
+    ]
 
     # Find mean, outliers curves
-    if have_de_optim and not use_brute:
+    if not use_brute:
         median = differential_evolution(
             lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=rng
         ).x

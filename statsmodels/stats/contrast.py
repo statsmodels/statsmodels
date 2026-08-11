@@ -138,7 +138,7 @@ class ContrastResults:
             For F or Wald test, the return is a string.
         """
         if self.effect is not None:
-            # TODO: should also add some extra information, e.g. robust cov ?
+            # TODO: should also add some extra information, e.g., robust cov ?
             # TODO: can we infer names for constraints, xname in __init__ ?
             if title is None:
                 title = "Test for Constraints"
@@ -343,7 +343,7 @@ def contrastfromcols(L, D, pseudo=None):
     """
     From an n x p design matrix D and a matrix L, tries
     to determine a p x q contrast matrix C which
-    determines a contrast of full rank, i.e. the
+    determines a contrast of full rank, i.e., the
     n x q matrix
 
     dot(transpose(C), pinv(D))
@@ -589,6 +589,20 @@ class MultiCompResult:
     Class to hold return of t_test_pairwise
 
     Currently just a minimal class to hold attributes.
+
+    Attributes
+    ----------
+    result_frame : DataFrame
+        The results of the pairwise t_test and additional columns for
+        multiplicity corrected p-values, as returned by `t_test_multi`.
+    contrasts : ndarray
+        Restriction matrix of constraints used in the pairwise t_test.
+    term : object
+        The model_spec term for which pairwise comparisons were computed.
+    contrast_labels : list[str]
+        Labels for the pairwise comparisons of the levels.
+    term_encoding_matrix : ndarray
+        Contrast matrix for the encoding of the factor as defined by patsy.
     """
 
     def __init__(
@@ -622,7 +636,7 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
         at column with index `idx_start`.
     index : slice or ndarray
         Column index if constraints do not form a block in the full restriction
-        matrix, i.e. if parameters that are subject to restrictions are not
+        matrix, i.e., if parameters that are subject to restrictions are not
         consecutive in the list of parameters.
         If index is not None, then idx_start is ignored.
 
@@ -811,7 +825,7 @@ def _offset_constraint(r_matrix, params_est, params_alt):
     Returns
     -------
     ndarray
-        The offset, i.e. the difference between the value of the linear
+        The offset, i.e., the difference between the value of the linear
         constraint at `params_est` and at `params_alt`.
     """
     diff_est = r_matrix @ params_est
@@ -844,7 +858,7 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
-        If joint is True, then an array of noncentrality parameters will be
+        If joint is False, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
         This corresponds to the `t_test` in models and is not a quadratic
         form.
@@ -897,7 +911,7 @@ def wald_test_noncent_generic(
     joint : bool
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
-        If joint is True, then an array of noncentrality parameters will be
+        If joint is False, then an array of noncentrality parameters will be
         returned, where elements correspond to rows of the restriction matrix.
         This corresponds to the `t_test` in models and is not a quadratic
         form.

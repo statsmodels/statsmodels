@@ -28,6 +28,9 @@ from statsmodels.regression.linear_model import (
     GLS,
     OLS,
     WLS,
+    CompareLRTestResult,
+    ELTestResult,
+    YuleWalkerResult,
     burg,
     yule_walker,
 )
@@ -81,17 +84,6 @@ class CheckRegressionResults:
                 conf2[i][1],
                 rtol=10**-self.decimal_confidenceintervals,
             )
-
-    decimal_conf_int_subset = DECIMAL_4
-
-    def test_conf_int_subset(self):
-        if len(self.res1.params) > 1:
-            with pytest.warns(FutureWarning, match="cols is"):
-                ci1 = self.res1.conf_int(cols=(1, 2))
-            ci2 = self.res1.conf_int()[1:3]
-            assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
-        else:
-            pass
 
     decimal_scale = DECIMAL_4
 
@@ -751,7 +743,7 @@ class TestOLS_GLS_WLS_equivalence:
         params_1 = np.array([self.results[0].params] * len(self.results))
         assert_allclose(params, params_1)
 
-    def test_ss(self):
+    def test_bse(self):
         bse = np.array([r.bse for r in self.results])
         bse_1 = np.array([self.results[0].bse] * len(self.results))
         assert_allclose(bse, bse_1)
@@ -963,7 +955,9 @@ class TestYuleWalker:
         from statsmodels.datasets.sunspots import load
 
         data = load()
-        cls.rho, cls.sigma = yule_walker(data.endog, order=4, method="mle")
+        cls.rho, cls.sigma = yule_walker(
+            data.endog, order=4, method="mle", use_namedtuple=False
+        )
         cls.R_params = [
             1.2831003105694765,
             -0.45240924374091945,
@@ -973,6 +967,115 @@ class TestYuleWalker:
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
+
+
+def test_yule_walker_use_namedtuple_default_warns():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with pytest.warns(FutureWarning, match="use_namedtuple"):
+        res = yule_walker(data.endog, order=2)
+    assert not isinstance(res, YuleWalkerResult)
+
+
+def test_yule_walker_use_namedtuple_true():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, use_namedtuple=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is None
+    assert res[0] is res.rho
+    assert res[1] == res.sigma
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, inv=True, use_namedtuple=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is not None
+
+
+class TestCompareAndElTestNamedTuple:
+    @classmethod
+    def setup_class(cls):
+        rs = np.random.RandomState(12345)
+        nobs = 200
+        x = rs.standard_normal((nobs, 2))
+        y = 1 + x[:, 0] + rs.standard_normal(nobs)
+        exog_full = add_constant(x)
+        cls.res_full = OLS(y, exog_full).fit()
+        cls.res_restr = OLS(y, add_constant(x[:, 0])).fit()
+
+    def test_compare_lr_test_returns_namedtuple(self):
+        # compare_lr_test always returns three values, so it returns the
+        # NamedTuple unconditionally with no deprecation cycle.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.compare_lr_test(self.res_restr)
+        assert isinstance(res, CompareLRTestResult)
+        assert res[0] == res.lr_stat
+        assert res[1] == res.p_value
+        assert res[2] == res.df_diff
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res_large = self.res_full.compare_lr_test(
+                self.res_restr, large_sample=True
+            )
+        assert isinstance(res_large, CompareLRTestResult)
+
+    def test_el_test_use_namedtuple_default_warns(self):
+        with pytest.warns(FutureWarning, match="use_namedtuple"):
+            res = self.res_full.el_test(np.array([0.0]), np.array([1]))
+        assert not isinstance(res, ELTestResult)
+
+    def test_el_test_use_namedtuple_true_full(self):
+        # len(param_nums) == len(params): no nuisance parameters
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]), np.array([0, 1]), use_namedtuple=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+        assert res[0] == res.llr
+        assert res[1] == res.pval
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]),
+                np.array([0, 1]),
+                return_weights=True,
+                use_namedtuple=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is None
+
+    def test_el_test_use_namedtuple_true_nuisance(self):
+        # len(param_nums) < len(params): nuisance parameters present
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]), np.array([1]), use_namedtuple=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]),
+                np.array([1]),
+                ret_params=True,
+                use_namedtuple=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is not None
 
 
 class TestDataDimensions(CheckRegressionResults):
@@ -1080,7 +1183,7 @@ def test_fvalue_const_only():
 
 
 def test_conf_int_single_regressor():
-    # GH#706 single-regressor model (i.e. no intercept) with 1D exog
+    # GH#706 single-regressor model (i.e., no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
     rs = np.random.RandomState(3232121)
     y = pd.Series(rs.randn(10))

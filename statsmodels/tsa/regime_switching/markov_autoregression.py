@@ -77,7 +77,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         \varepsilon_t \\
         \varepsilon_t \sim N(0, \sigma_{S_t}^2)
 
-    i.e. the model is an autoregression with where the autoregressive
+    i.e., the model is an autoregression with where the autoregressive
     coefficients, the mean of the process (possibly including trend or
     regression effects) and the variance of the error term may be switching
     across regimes.

@@ -1,7 +1,5 @@
 """Correlation plot functions"""
 
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import calendar
 from typing import TYPE_CHECKING
 
@@ -148,7 +146,6 @@ def _plot_corr(
         ax.fill_between(lags, confint[:, 0] - acf_x, confint[:, 1] - acf_x, alpha=0.25)
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def plot_acf(
     x,
     ax=None,
@@ -187,7 +184,7 @@ def plot_acf(
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett's formula. The confidence intervals centered at 0 to simplify
-        detecting which estaimated autocorrelations are significantly
+        detecting which estimated autocorrelations are significantly
         different from 0. If None, no confidence intervals are plotted.
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
@@ -283,9 +280,7 @@ def plot_acf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
-    confint = None
-    # acf has different return type based on alpha
-    acf_x = acf(
+    acf_res = acf(
         x,
         nlags=nlags,
         alpha=alpha,
@@ -293,9 +288,11 @@ def plot_acf(
         bartlett_confint=bartlett_confint,
         adjusted=adjusted,
         missing=missing,
+        use_namedtuple=True,
     )
-    if alpha is not None:
-        acf_x, confint = acf_x[:2]
+    # use_namedtuple=True always yields an AcfResult; confint is None when
+    # alpha is None.
+    acf_x, confint = acf_res.acf, acf_res.confint
 
     _plot_corr(
         ax,
@@ -420,11 +417,12 @@ def plot_pacf(
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
-    confint = None
-    if alpha is None:
-        acf_x = pacf(x, nlags=nlags, alpha=alpha, method=method)
-    else:
-        acf_x, confint = pacf(x, nlags=nlags, alpha=alpha, method=method)
+    result = pacf(
+        x, nlags=nlags, alpha=alpha, method=method, use_namedtuple=True
+    )
+    # use_namedtuple=True always yields a PacfResult; confint is None when
+    # alpha is None.
+    acf_x, confint = result.pacf, result.confint
 
     _plot_corr(
         ax,
@@ -480,7 +478,7 @@ def plot_ccf(
         If True, negative lags are shown on the horizontal axis.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
-        plotted, e.g. if alpha=.05, 95 % confidence intervals are shown.
+        plotted, e.g., if alpha=.05, 95 % confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
         If True, shows vertical lines and markers for the correlation values.
@@ -530,12 +528,18 @@ def plot_ccf(
     if negative_lags:
         lags = -lags
 
-    ccf_res = ccf(x, y, adjusted=adjusted, fft=fft, alpha=alpha, nlags=nlags + 1)
-    if alpha is not None:
-        ccf_xy, confint = ccf_res
-    else:
-        ccf_xy = ccf_res
-        confint = None
+    ccf_res = ccf(
+        x,
+        y,
+        adjusted=adjusted,
+        fft=fft,
+        alpha=alpha,
+        nlags=nlags + 1,
+        use_namedtuple=True,
+    )
+    # use_namedtuple=True always yields a CcfResult; confint is None when
+    # alpha is None.
+    ccf_xy, confint = ccf_res.ccf, ccf_res.confint
 
     _plot_corr(
         ax,
@@ -601,7 +605,7 @@ def plot_pccf(
           intervening observations.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the
-        given level are plotted, e.g. if alpha=.05, 95 %
+        given level are plotted, e.g., if alpha=.05, 95 %
         confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
@@ -653,12 +657,12 @@ def plot_pccf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, True)
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
-    pccf_res = pccf(x, y, alpha=alpha, nlags=nlags, method=method)
-    if alpha is not None:
-        pccf_xy, confint = pccf_res
-    else:
-        pccf_xy = pccf_res
-        confint = None
+    pccf_res = pccf(
+        x, y, alpha=alpha, nlags=nlags, method=method, use_namedtuple=True
+    )
+    # use_namedtuple=True always yields a PccfResult; confint is None when
+    # alpha is None.
+    pccf_xy, confint = pccf_res.pccf, pccf_res.confint
 
     if irregular:
         lags = lags[lags > 0]
@@ -732,7 +736,7 @@ def plot_accf_grid(
         below the main diagonal.
     alpha : scalar, optional
         If a number is given, the confidence intervals for the given level are
-        plotted, e.g. if alpha=.05, 95 % confidence intervals are shown.
+        plotted, e.g., if alpha=.05, 95 % confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
         If True, shows vertical lines and markers for the correlation values.

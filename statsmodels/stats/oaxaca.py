@@ -110,7 +110,7 @@ class OaxacaBlinder:
     '3' is the column of which we want to explain or which indicates
     the two groups. In this case, it is if you rent.
 
-    >>> model = sm.OaxacaBlinder(df.endog, df.exog, 3, hasconst = False)
+    >>> model = sm.OaxacaBlinder(data.endog, data.exog, 3, hasconst = False)
     >>> model.two_fold().summary()
     Oaxaca-Blinder Two-fold Effects
     Unexplained Effect: 27.94091
@@ -406,10 +406,10 @@ class OaxacaBlinder:
             If true, bootstrapped standard errors will be calculated.
         two_fold_type : str, optional
             This method allows for the specific calculation of the
-            non-discriminatory model. There are four different types
-            available at this time: pooled, cotton, reimers, self_submitted.
-            Pooled is assumed and if a non-viable parameter is given,
-            pooled will be run.
+            non-discriminatory model. There are five different types
+            available at this time: pooled, nuemark, cotton, reimers,
+            self_submitted. Pooled is assumed and if a non-viable
+            parameter is given, pooled will be run.
 
             pooled - This type assumes that the pooled model's parameters
             (a normal regression) is the non-discriminatory model.

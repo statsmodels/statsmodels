@@ -17,7 +17,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
         An array of times (censoring times or event times)
     status : array_like
         Status at the event time, status==1 is the 'event'
-        (e.g. death, failure), meaning that the event occurs at the
+        (e.g., death, failure), meaning that the event occurs at the
         given value in `time`; status==0 indicates that censoring
         has occurred, meaning that the event occurs after the given
         value in `time`.
@@ -302,6 +302,7 @@ class CumIncidenceRight:
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
+        self.title = "" if not title else title
 
         if exog is not None:
             from ._kernel_estimates import _kernel_cumincidence
@@ -316,13 +317,13 @@ class CumIncidenceRight:
                                      dimred)
             self.times = x[0]
             self.cinc = x[1]
+            self.cinc_se = np.full_like(x[1], np.nan)
             return
 
         x = _calc_incidence_right(time, status, freq_weights)
         self.cinc = x[0]
         self.cinc_se = x[1]
         self.times = x[2]
-        self.title = "" if not title else title
 
 
 class SurvfuncRight:
@@ -340,7 +341,7 @@ class SurvfuncRight:
         An array of times (censoring times or event times)
     status : array_like
         Status at the event time, status==1 is the 'event'
-        (e.g. death, failure), meaning that the event
+        (e.g., death, failure), meaning that the event
         occurs at the given value in `time`; status==0
         indicates that censoring has occurred, meaning that
         the event occurs after the given value in `time`.
@@ -372,7 +373,7 @@ class SurvfuncRight:
         The number of subjects at risk just before each time value in
         `surv_times`.  Not available if exog is provided.
     n_events : array_like
-        The number of events (e.g. deaths) that occur at each point
+        The number of events (e.g., deaths) that occur at each point
         in `surv_times`.  Not available if exog is provided.
 
     Notes
@@ -405,6 +406,7 @@ class SurvfuncRight:
         if entry is not None:
             entry = self.entry = np.asarray(entry)
 
+        self.title = "" if not title else title
         if exog is not None:
             if entry is not None:
                 raise ValueError("exog and entry cannot both be present")
@@ -419,6 +421,10 @@ class SurvfuncRight:
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
+            self.surv_prob_se = np.full_like(x[1], np.nan)
+            self.n_risk = np.full_like(x[1], np.nan)
+            self.n_events = np.full_like(x[1], np.nan)
+
             return
 
         x = _calc_survfunc_right(time, status, weights=freq_weights,
@@ -429,7 +435,6 @@ class SurvfuncRight:
         self.surv_times = x[2]
         self.n_risk = x[4]
         self.n_events = x[5]
-        self.title = "" if not title else title
 
     def plot(self, ax=None):
         """
@@ -685,17 +690,17 @@ def survdiff(time, status, group, weight_type=None, strata=None,
         censored.
     group : array_like
         Indicators of the two groups
-    weight_type : str
+    weight_type : str, optional
         The following weight types are implemented:
-            None (default) : logrank test
-            fh : Fleming-Harrington, weights by S^(fh_p),
-                 requires exponent fh_p to be provided as keyword
-                 argument; the weights are derived from S defined at
-                 the previous event time, and the first weight is
-                 always 1.
-            gb : Gehan-Breslow, weights by the number at risk
-            tw : Tarone-Ware, weights by the square root of the number
-                 at risk
+
+        - None (default) : logrank test
+        - "fh" : Fleming-Harrington, weights by S^(fh_p), requires exponent
+          fh_p to be provided as keyword argument; the weights are derived
+          from S defined at the previous event time, and the first weight
+          is always 1.
+        - gb : Gehan-Breslow, weights by the number at risk
+        - tw : Tarone-Ware, weights by the square root of the number at risk
+
     strata : array_like
         Optional stratum indicators for a stratified test
     entry : array_like

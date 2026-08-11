@@ -22,6 +22,10 @@ import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import (
+    ErrorBand,
+    ForecastInterval,
+)
 from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
 
 DECIMAL_12 = 12
@@ -452,7 +456,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_forecast_interval(self):
         y = self.res.endog[: -self.p :]
-        point, lower, upper = self.res.forecast_interval(y, 5)
+        res = self.res.forecast_interval(y, 5)
+        assert isinstance(res, ForecastInterval)
+        point, lower, upper = res
+        assert point is res.point_forecast
+        assert lower is res.forc_lower
+        assert upper is res.forc_upper
 
     @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
@@ -994,10 +1003,16 @@ def test_irf_err_bands():
     irf = results.irf()
     # Smoke tests only
     rs = np.random.RandomState(2389711)
-    irf.err_band_sz1(rng=rs)
-    irf.err_band_sz2(rng=rs)
-    irf.err_band_sz3(rng=rs)
-    irf.errband_mc(rng=rs)
+    for res in (
+        irf.err_band_sz1(rng=rs),
+        irf.err_band_sz2(rng=rs),
+        irf.err_band_sz3(rng=rs),
+        irf.errband_mc(rng=rs),
+        irf.cum_errband_mc(rng=rs),
+    ):
+        assert isinstance(res, ErrorBand)
+        assert res[0] is res.lower
+        assert res[1] is res.upper
 
 
 @pytest.mark.matplotlib

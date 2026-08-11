@@ -91,8 +91,8 @@ class Mediation:
     >>> outcome = np.asarray(data["cong_mesg"])
     >>> outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
     ...                              return_type='dataframe')
-    >>> probit = sm.families.links.probit
-    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=Probit()))
+    >>> probit = sm.families.links.probit()
+    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit))
     >>> mediator = np.asarray(data["emo"])
     >>> mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
     ...                               return_type='dataframe')
@@ -106,7 +106,7 @@ class Mediation:
     A moderated mediation analysis.  The mediation effect is computed
     for people of age 20.
 
-    >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
+    >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income"
     >>> outcome_model = sm.GLM.from_formula(fml, data,
     ...                                      family=sm.families.Binomial())
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)

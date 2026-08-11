@@ -160,7 +160,7 @@ def get_lilliefors_table(dist="norm"):
         Table of critical values.
     """
     # function just to keep things together
-    # for this test alpha is sf probability, i.e. right tail probability
+    # for this test alpha is sf probability, i.e., right tail probability
 
     alpha = 1 - np.array(PERCENTILES) / 100.0
     alpha = alpha[::-1]
@@ -211,7 +211,7 @@ def pval_lf(d_max, n):
     the valid range.
 
     Precision for the pvalues is around 2 to 3 decimals. This approximation is
-    also used by other statistical packages (e.g. R:fBasics) but might not be
+    also used by other statistical packages (e.g., R:fBasics) but might not be
     the most precise available.
 
     References
@@ -257,7 +257,7 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     ksstat : float
         Kolmogorov-Smirnov test statistic with estimated mean and variance.
     pvalue : float
-        If the pvalue is lower than some threshold, e.g. 0.05, then we can
+        If the pvalue is lower than some threshold, e.g., 0.05, then we can
         reject the Null hypothesis that the sample comes from a normal
         distribution.
 

@@ -12,10 +12,10 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools._decorators import deprecated_alias
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
@@ -60,8 +60,6 @@ class SVAR(tsbase.TimeSeriesModel):
     ----------
     Hamilton (1994) Time Series Analysis
     """
-
-    y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
     def __init__(
         self, endog, svar_type, dates=None, freq=None, A=None, B=None, missing="none"
@@ -163,7 +161,7 @@ class SVAR(tsbase.TimeSeriesModel):
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
-            "n" - co constant, no trend
+            "n" - no constant, no trend
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}
             Estimation method for structural parameters
@@ -780,7 +778,9 @@ class SVARResults(SVARProcess, VARResults):
 
         Returns
         -------
-        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            ma_rep Monte Carlo standard errors.
 
         Notes
         -----
@@ -840,4 +840,4 @@ class SVARResults(SVARProcess, VARResults):
         )
         lower = ma_sort[index[0], :, :, :]
         upper = ma_sort[index[1], :, :, :]
-        return lower, upper
+        return ErrorBand(lower, upper)

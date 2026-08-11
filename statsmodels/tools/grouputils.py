@@ -60,7 +60,7 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
     -------
     uni_inv : ndarray
         Integer codes into `uni` that reconstruct the original `groups`
-        array, i.e. the group index of each observation.
+        array, i.e., the group index of each observation.
     uni_idx : ndarray
         Indices of the first occurrence of each unique group in the
         input.
@@ -113,7 +113,7 @@ def group_sums(x, group, use_bincount=True):
         ``x`` is only supported when ``use_bincount=False``.
     group : array_like of non-negative int
         Non-negative integer group labels of shape ``(nobs,)``. For predictable
-        indexing (e.g. ``result[group]``), groups should be coded as
+        indexing (e.g., ``result[group]``), groups should be coded as
         ``0, 1, ..., n_groups-1``.
     use_bincount : bool, default True
         Use ``np.bincount`` when True, otherwise a pure-Python group loop.
@@ -191,7 +191,7 @@ def dummy_sparse(groups):
     ----------
     groups : ndarray, int, 1d (nobs,)
         an array of group indicators for each observation. Group levels are
-        assumed to be defined as consecutive integers, i.e. range(n_groups)
+        assumed to be defined as consecutive integers, i.e., range(n_groups)
         where n_groups is the number of group levels. A group level with no
         observations for it will still produce a column of zeros.
 
@@ -206,35 +206,35 @@ def dummy_sparse(groups):
     >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
     >>> indi = dummy_sparse(g)
     >>> indi
-    <7x3 sparse matrix of type '<type 'numpy.int8'>'
-        with 7 stored elements in Compressed Sparse Row format>
+    <Compressed Sparse Row sparse array of dtype 'int8'
+        with 7 stored elements and shape (7, 3)>
     >>> indi.todense()
-    matrix([[1, 0, 0],
-            [1, 0, 0],
-            [0, 0, 1],
-            [0, 1, 0],
-            [0, 1, 0],
-            [0, 0, 1],
-            [1, 0, 0]], dtype=int8)
+    array([[1, 0, 0],
+           [1, 0, 0],
+           [0, 0, 1],
+           [0, 1, 0],
+           [0, 1, 0],
+           [0, 0, 1],
+           [1, 0, 0]], dtype=int8)
 
 
     current behavior with missing groups
     >>> g = np.array([0, 0, 2, 0, 2, 0])
     >>> indi = dummy_sparse(g)
     >>> indi.todense()
-    matrix([[1, 0, 0],
-            [1, 0, 0],
-            [0, 0, 1],
-            [1, 0, 0],
-            [0, 0, 1],
-            [1, 0, 0]], dtype=int8)
+    array([[1, 0, 0],
+           [1, 0, 0],
+           [0, 0, 1],
+           [1, 0, 0],
+           [0, 0, 1],
+           [1, 0, 0]], dtype=int8)
 
     """
     from scipy import sparse
 
     indptr = np.arange(len(groups) + 1)
     data = np.ones(len(groups), dtype=np.int8)
-    indi = sparse.csr_matrix((data, groups, indptr))
+    indi = sparse.csr_array((data, groups, indptr))
 
     return indi
 
@@ -459,7 +459,7 @@ class GroupSorted(Group):
     """
 
     def __init__(self, group, name=""):
-        super(self.__class__, self).__init__(group, name=name)
+        super().__init__(group, name=name)
 
         idx = (np.nonzero(np.diff(group))[0] + 1).tolist()
         self.groupidx = lzip([0, *idx], [*idx, len(group)])
@@ -525,7 +525,7 @@ def _is_hierarchical(x):
     -------
     bool
         True if `x` appears to represent hierarchical (MultiIndex-style)
-        groups, i.e. its first element is itself list-like. False
+        groups, i.e., its first element is itself list-like. False
         otherwise.
     """
     item = x[0]
@@ -585,7 +585,7 @@ class Grouping:
     index : index-like
         Can be a pandas MultiIndex, Index, or array-like. If array-like
         and hierarchical (more than one grouping variable), groups are
-        expected to be given as a tuple in each row, e.g. ``[('red', 1),
+        expected to be given as a tuple in each row, e.g., ``[('red', 1),
         ('red', 2), ('green', 1), ('green', 2)]``.
     names : list or str, optional
         The names to use for the groups. Should be a str if only one
@@ -597,12 +597,16 @@ class Grouping:
         The (possibly constructed) pandas index representing the
         groups.
     nobs : int
-        Number of observations, i.e. ``len(index)``.
+        Number of observations, i.e., ``len(index)``.
     nlevels : int
         Number of grouping levels.
     slices : list or None
         Cached slices of observations for each group of the first
         index level, set by :meth:`get_slices`.
+    counts : ndarray or None
+        Cached bincount of the integer labels for the level last
+        passed to :meth:`count_categories`, or None if
+        `count_categories` has not been called.
 
     Notes
     -----
@@ -782,11 +786,11 @@ class Grouping:
             If `is_sorted` is True and the index is not sorted, or if
             `unique` is True and the index has duplicate entries.
         """
-        if not index:
+        if index is None:
             index = self.index
         if is_sorted:
             test = pd.DataFrame(lrange(len(index)), index=index)
-            test_sorted = test.sort()
+            test_sorted = test.sort_index()
             if not test.index.equals(test_sorted.index):
                 raise Exception("Data is not be sorted")
         if unique:
@@ -991,46 +995,46 @@ class Grouping:
 
     def dummy_sparse(self, level=0):
         """
-        Create a sparse indicator from a group array with integer labels
+        Set `_dummies` to a sparse indicator from a group array with integer labels
 
         Parameters
         ----------
         level : int
             Grouping level used to form the sparse indicator.
 
-        Returns
-        -------
-        indi : ndarray, int8, 2d (nobs, n_groups)
-            an indicator array with one row per observation, that has 1 in the
-            column of the group level for that observation
+        Notes
+        -----
+        Sets the `_dummies` attribute to an indicator array, int8, 2d
+        (nobs, n_groups), with one row per observation, that has 1 in
+        the column of the group level for that observation.
 
         Examples
         --------
         >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
         >>> indi = dummy_sparse(g)
         >>> indi
-        <7x3 sparse matrix of type '<type 'numpy.int8'>'
-            with 7 stored elements in Compressed Sparse Row format>
+        <Compressed Sparse Row sparse array of dtype 'int8'
+            with 7 stored elements and shape (7, 3)>
         >>> indi.todense()
-        matrix([[1, 0, 0],
-                [1, 0, 0],
-                [0, 0, 1],
-                [0, 1, 0],
-                [0, 1, 0],
-                [0, 0, 1],
-                [1, 0, 0]], dtype=int8)
+        array([[1, 0, 0],
+               [1, 0, 0],
+               [0, 0, 1],
+               [0, 1, 0],
+               [0, 1, 0],
+               [0, 0, 1],
+               [1, 0, 0]], dtype=int8)
 
 
         current behavior with missing groups
         >>> g = np.array([0, 0, 2, 0, 2, 0])
         >>> indi = dummy_sparse(g)
         >>> indi.todense()
-        matrix([[1, 0, 0],
-                [1, 0, 0],
-                [0, 0, 1],
-                [1, 0, 0],
-                [0, 0, 1],
-                [1, 0, 0]], dtype=int8)
+        array([[1, 0, 0],
+               [1, 0, 0],
+               [0, 0, 1],
+               [1, 0, 0],
+               [0, 0, 1],
+               [1, 0, 0]], dtype=int8)
 
         """
         indi = dummy_sparse(self.labels[level])

@@ -51,6 +51,7 @@ class ExponentialSmoothing(MLEModel):
 
         * 'estimated'
         * 'concentrated'
+        * 'simple'
         * 'heuristic'
         * 'known'
 
@@ -126,7 +127,7 @@ class ExponentialSmoothing(MLEModel):
     Suppose that the seasonal order is `n_seasons = 4`. Then, because the
     initial state corresponds to time t=0 and the time t=1 is in the same
     season as time t=-3, the initial seasonal factor for time t=1 comes from
-    the lag "L3" initial seasonal factor (i.e. at time t=1 this will be both
+    the lag "L3" initial seasonal factor (i.e., at time t=1 this will be both
     the "L4" seasonal factor as well as the "L0", or current, seasonal factor).
 
     When the initial state is estimated (`initialization_method='estimated'`),
@@ -167,7 +168,7 @@ class ExponentialSmoothing(MLEModel):
         self.concentrate_scale = bool_like(concentrate_scale,
                                            "concentrate_scale")
 
-        # TODO: add validation for bounds (e.g. have all bounds, upper > lower)
+        # TODO: add validation for bounds (e.g., have all bounds, upper > lower)
         # TODO: add `bounds_method` argument to choose between "usual" and
         # "admissible" as in Hyndman et al. (2008)
         self.bounds = bounds
@@ -436,7 +437,7 @@ class ExponentialSmoothing(MLEModel):
                 1 / (1 + np.exp(-unconstrained[i])) * (high - low) + low)
             i += 1
 
-        # Phi in bounds (e.g. default is [0.8, 0.98])
+        # Phi in bounds (e.g., default is [0.8, 0.98])
         if self.damped_trend:
             low, high = self.bounds[3]
             constrained[i] = (
@@ -480,7 +481,7 @@ class ExponentialSmoothing(MLEModel):
             unconstrained[i] = np.log(tmp / (1 - tmp))
             i += 1
 
-        # Phi in bounds (e.g. default is [0.8, 0.98])
+        # Phi in bounds (e.g., default is [0.8, 0.98])
         if self.damped_trend:
             low, high = self.bounds[3]
             tmp = (constrained[i] - low) / (high - low)

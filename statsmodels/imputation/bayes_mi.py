@@ -31,7 +31,7 @@ class BayesGaussMI:
         The center matrix for the inverse Wishart prior distribution
         for the covariance matrix.  If not provided, the identity
         matrix is used.
-    cov_prior_df : positive float
+    cov_prior_df : positive float, optional
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
     rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
@@ -234,7 +234,7 @@ class MI:
     The imputer object must have an 'update' method, and a 'data'
     attribute that contains the current imputed dataset.
 
-    xfunc can be used to introduce domain constraints, e.g. when
+    xfunc can be used to introduce domain constraints, e.g., when
     imputing binary data the imputed continuous values can be rounded
     to 0/1.
     """
@@ -421,8 +421,9 @@ class MIResults(LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
-            Significance level for the confidence intervals
+        alpha : float, optional
+            Significance level for the confidence intervals.  Default is
+            0.05.
 
         Returns
         -------

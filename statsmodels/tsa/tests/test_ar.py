@@ -29,6 +29,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import (
     AutoReg,
     AutoRegResultsWrapper,
+    InformationCriteria,
     ar_select_order,
 )
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -549,6 +550,17 @@ def test_ar_select_order_smoke():
     ar_select_order(data, 4, seasonal=False)
     ar_select_order(data, 4, glob=True)
     ar_select_order(data, 4, glob=True, seasonal=True, period=12)
+
+
+def test_ar_select_order_ics_are_information_criteria():
+    data = sunspots.load().data["SUNACTIVITY"]
+    res = ar_select_order(data, 4)
+    assert len(res._ics) > 0
+    for _, ic in res._ics:
+        assert isinstance(ic, InformationCriteria)
+        assert ic[0] == ic.aic
+        assert ic[1] == ic.bic
+        assert ic[2] == ic.hqic
 
 
 def test_predict_ar_constant():

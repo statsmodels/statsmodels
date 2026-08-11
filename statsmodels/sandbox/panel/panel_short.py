@@ -58,7 +58,7 @@ def sum_outer_product_balanced(x, n_groups):
     # ... ? this is getting 3-dimensional  dot, tensordot?
     # needs (n_groups, k_vars, k_vars) array with sum over groups
     # NOT
-    # I only need this for x is 1d, i.e. residual
+    # I only need this for x is 1d, i.e., residual
 
 
 def whiten_individuals_loop(x, transform, group_iter):
@@ -215,7 +215,7 @@ class ShortPanelGLS(GLS):
             if hasattr(self, "pinv_wexog"):
                 del self.pinv_wexog
 
-            # fit with current cov, GLS, i.e. OLS on whitened endog, exog
+            # fit with current cov, GLS, i.e., OLS on whitened endog, exog
             results = self.fit()
             self.history["self_params"].append(results.params)
 

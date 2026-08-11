@@ -12,6 +12,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from statsmodels.tools.data import _to_pandas
+
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
 
@@ -249,7 +251,6 @@ class FormulaManager:
         ValueError
             If the selected engine is not available.
         """
-        # Patsy for now, to be changed to a user-settable variable before release
         _engine: Literal["patsy", "formulaic"]
 
         if engine is not None:
@@ -366,7 +367,7 @@ class FormulaManager:
             The string formula. If not a string, it is returned as is.
         data : DataFrame
             The data used to materialize the formula.
-        context
+        context : int or Mapping[str, Any]
             The context used to evaluate the formula.
 
         Returns
@@ -470,6 +471,8 @@ class FormulaManager:
             If pandas is True, returns one or more DataFrames. If False,
             returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
         """
+        # Convert Polars objects to pandas
+        data = _to_pandas(data)
         _check_data(data)
         data = _maybe_convert_data(data)
         if isinstance(eval_env, (int, np.integer)):
@@ -712,7 +715,8 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec
+        spec : {ModelSpec, DesignInfo}
+            The model specification to check for an intercept term.
 
         Returns
         -------
@@ -728,7 +732,8 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec
+        spec : {ModelSpec, DesignInfo}
+            The model specification whose terms are searched for the intercept.
 
         Returns
         -------
@@ -746,8 +751,11 @@ class FormulaManager:
 
         Parameters
         ----------
-        action
-        types
+        action : str
+            The action to take on missing values, e.g., "drop" or "raise".
+        types : Sequence[Any]
+            The types of missing values to consider, e.g., "None" or "NaN".
+            Only used when using patsy.
 
         Returns
         -------
@@ -800,11 +808,14 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+            The DataFrame with a model specification attached, or the model
+            specification itself.
 
         Returns
         -------
-
+        list[str]
+            The list of term names.
         """
         spec = self._ensure_spec(spec_or_frame)
         if self._using_patsy:
@@ -818,7 +829,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
 
         Returns
         -------
@@ -851,6 +862,7 @@ class FormulaManager:
 
     def get_model_spec(self, frame, optional=False):
         """
+        Get the model specification attached to a DataFrame.
 
         Parameters
         ----------
@@ -875,6 +887,7 @@ class FormulaManager:
 
     def get_slice(self, model_spec, term):
         """
+        Get the slice of columns associated with a model term.
 
         Parameters
         ----------
@@ -917,12 +930,12 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo
+        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
 
         Returns
         -------
         str
-            The human-readable description of the model specification.,
+            The human-readable description of the model specification.
         """
         spec = self._ensure_spec(spec_or_frame)
         if self._using_patsy:

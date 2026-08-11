@@ -420,35 +420,3 @@ class TestGMMMultTwostepCenter(CheckGMM):
         _, jpval, _ = self.res1.jtest()
 
         assert_allclose(jpval, J_p, rtol=5e-5, atol=0)
-
-
-if __name__ == "__main__":
-    tt = TestGMMAddOnestep()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMAddTwostep()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMMultOnestep()
-    tt.setup_class()
-    tt.test_basic()
-    # tt.test_other()
-
-    tt = TestGMMMultTwostep()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMMultTwostepDefault()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMMultTwostepCenter()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()

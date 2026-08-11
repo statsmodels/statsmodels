@@ -5,6 +5,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -19,6 +21,7 @@ from statsmodels.tools.sm_exceptions import (
     iteration_limit_doc,
 )
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import bool_like
 
 
 def clip_evals(x, value=0):  # threshold=0, value=0):
@@ -127,7 +130,7 @@ def corr_clipped(corr, threshold=1e-15):
     The smallest eigenvalue of the corrected correlation matrix is
     approximately equal to the ``threshold``. In examples, the
     smallest eigenvalue can be by a factor of 10 smaller than the threshold,
-    e.g. threshold 1e-8 can result in smallest eigenvalue in the range
+    e.g., threshold 1e-8 can result in smallest eigenvalue in the range
     between 1e-9 and 1e-8.
     If the threshold=0, then the smallest eigenvalue of the correlation matrix
     might be negative, but zero within a numerical error, for example in the
@@ -152,11 +155,35 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
-def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
+class CovNearestResult(NamedTuple):
+    """
+    Result of :func:`cov_nearest` when the intermediate results are
+    returned.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Corrected covariance matrix.
+    corr : ndarray
+        Corrected correlation matrix.
+    std : ndarray
+        Standard deviation taken from the diagonal of the input covariance
+        matrix.
+    """
+
+    cov: np.ndarray
+    corr: np.ndarray
+    std: np.ndarray
+
+
+def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
+                return_all=False, *, min_diag=None,
+                use_namedtuple: bool | None = None):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
-    This leaves the diagonal, i.e. the variance, unchanged
+    This leaves the diagonal, i.e., the variance, unchanged, unless ``min_diag``
+    is used to enforce a strictly positive diagonal (see below).
 
     Parameters
     ----------
@@ -174,15 +201,44 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
         if False (default), then only the covariance matrix is returned.
         If True, then correlation matrix and standard deviation are
         additionally returned.
+    min_diag : None or float
+        If None (default), the diagonal of ``cov`` is left unchanged. This
+        function converts the covariance matrix to a correlation matrix, which
+        is not defined if a diagonal element (variance) is zero or negative and
+        results in a matrix that contains ``nan``. If ``min_diag`` is a positive
+        float, then diagonal elements that are smaller than ``min_diag`` are
+        raised to ``min_diag`` before the conversion, and a ``SpecificationWarning``
+        is issued. This makes it possible to correct matrices with a zero or
+        negative diagonal, at the cost of changing those variances.
+    use_namedtuple : bool, optional
+        Flag controlling whether a ``CovNearestResult`` NamedTuple is
+        returned. When ``return_all=True`` a ``CovNearestResult`` is always
+        returned; it holds the same three elements as the legacy tuple, so
+        it unpacks and indexes identically. When ``return_all=False`` a bare
+        covariance matrix is returned unless ``use_namedtuple=True``, which
+        yields a ``CovNearestResult`` carrying the correlation matrix and
+        standard deviations too.
 
     Returns
     -------
-    cov_ : ndarray
-        corrected covariance matrix
-    corr_ : ndarray, (optional)
-        corrected correlation matrix
-    std_ : ndarray, (optional)
-        standard deviation
+    CovNearestResult or ndarray
+        When ``return_all=True`` (or ``use_namedtuple=True``), a NamedTuple
+        with fields:
+
+        cov : ndarray
+            corrected covariance matrix
+        corr : ndarray
+            corrected correlation matrix
+        std : ndarray
+            standard deviation
+
+        ``CovNearestResult`` has the same length and contents as the plain
+        ``(cov_, corr_, std_)`` tuple it replaces, so it unpacks and indexes
+        identically. See
+        :class:`~statsmodels.stats.correlation_tools.CovNearestResult`.
+
+        When ``return_all=False`` a bare corrected covariance matrix is
+        returned instead.
 
     See Also
     --------
@@ -206,6 +262,21 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
 
+    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    cov = np.asarray(cov)
+    if min_diag is not None:
+        diag = np.diag(cov)
+        if np.any(diag < min_diag):
+            warnings.warn(
+                f"Diagonal elements below min_diag={min_diag!r} have been "
+                "raised to min_diag; the corresponding variances are changed.",
+                SpecificationWarning,
+                stacklevel=2,
+            )
+            cov = cov.copy()
+            k = cov.shape[0]
+            cov[np.arange(k), np.arange(k)] = np.maximum(diag, min_diag)
+
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == "clipped":
         corr_ = corr_clipped(cov_, threshold=threshold)
@@ -214,10 +285,15 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
 
     cov_ = corr2cov(corr_, std_)
 
-    if return_all:
-        return cov_, corr_, std_
-    else:
-        return cov_
+    # CovNearestResult has exactly the same length and contents as the legacy
+    # (cov_, corr_, std_) tuple, so it unpacks and indexes identically and is
+    # always used when return_all is True.  When return_all is False a bare
+    # covariance matrix is returned, as before; pass use_namedtuple=True to
+    # always get a CovNearestResult.  The correlation matrix and standard
+    # deviations are computed either way, so nothing is None-filled.
+    if use_namedtuple or return_all:
+        return CovNearestResult(cov_, corr_, std_)
+    return cov_
 
 
 def _nmono_linesearch(
@@ -792,7 +868,7 @@ def cov_nearest_factor_homog(cov, rank, *, rng=None):
 
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of cov - k*I, which can
-    in turn be easily obtained form the eigen-decomposition of `cov`.
+    in turn be easily obtained from the eigen-decomposition of `cov`.
     Thus the problem can be reduced to a 1-dimensional search for k
     that does not require repeated eigen-decompositions.
 
@@ -890,7 +966,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Examples
     --------
-    Here X is a tall data matrix (e.g. with 100,000 rows and 50
+    Here X is a tall data matrix (e.g., with 100,000 rows and 50
     columns).  The row-wise correlation matrix of X is calculated
     and stored in sparse form, with all entries smaller than 0.3
     treated as 0.
@@ -935,8 +1011,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     ipos = np.concatenate(ipos_all)
     jpos = np.concatenate(jpos_all)
     cor_values = np.concatenate(cor_values)
-
-    cmat = sparse.coo_matrix((cor_values, (ipos, jpos)), (nrow, nrow))
+    cmat = sparse.coo_array((cor_values, (ipos, jpos)), (nrow, nrow))
 
     return cmat
 
@@ -1020,7 +1095,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     Use kernel averaging to estimate a multivariate covariance function
 
     The goal is to estimate a covariance function C(x, y) =
-    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g. representing
+    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g., representing
     locations in time or space), and Z(.) represents a multivariate
     process on R^p.
 
@@ -1034,7 +1109,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         The rows of exog are realizations of the process obtained at
         specified points.
     loc : array_like
-        The rows of loc are the locations (e.g. in space or time) at
+        The rows of loc are the locations (e.g., in space or time) at
         which the rows of exog are observed.
     groups : array_like
         The values of groups are labels for distinct independent copies

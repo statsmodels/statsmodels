@@ -26,11 +26,11 @@ The following references are collected after my initial implementation and is
 most likely not exactly what I used.
 
 The main articles on which the functions are directly based upon, are Boos 1992,
-Tauchen 1985 and Whitney 1985a. Wooldrige artificial regression is
+Tauchen 1985 and Newey 1985a. Wooldridge artificial regression is
 based on several articles and his text book.
 Background reading are the textbooks by Cameron and Trivedi, Wooldridge and
 Davidson and MacKinnon.
-Newey and MacFadden 1994 provide some of the theoretical background.
+Newey and McFadden 1994 provide some of the theoretical background.
 
 Poisson dispersion tests are based on Dean 1992 and articles and text books by
 Cameron and Trivedi.
@@ -138,14 +138,6 @@ Wooldridge, Jeffrey M. 1991a. “On the Application of Robust, Regression- Based
 Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
 of Econometrics 47 (1): 5-46. https://doi.org/10.1016/0304-4076(91)90076-P.
 
-Wooldridge, Jeffrey M. 1991b. “On the Application of Robust, Regression- Based
-Diagnostics to Models of Conditional Means and Conditional Variances.” Journal
-of Econometrics 47 (1): 5-46. https://doi.org/10.1016/0304-4076(91)90076-P.
-
-Wooldridge, Jeffrey M. 1991c. “Specification Testing and Quasi-Maximum-
-Likelihood Estimation.” Journal of Econometrics 48 (1-2): 29-55.
-https://doi.org/10.1016/0304-4076(91)90031-8.
-
 Wooldridge, Jeffrey M. 1994. “On the Limits of GLM for Specification Testing: A
 Comment on Gurmu and Trivedi.” Econometric Theory 10 (2): 409-18.
 https://doi.org/10.2307/3532875.
@@ -163,104 +155,6 @@ from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
-
-# deprecated dispersion functions, moved to discrete._diagnostic_count
-
-
-def dispersion_poisson(results):
-    """
-    Score/LM type tests for Poisson variance assumptions
-
-    .. deprecated:: 0.14
-
-       dispersion_poisson moved to discrete._diagnostic_count
-
-    Null Hypothesis is
-
-    H0: var(y) = E(y) and assuming E(y) is correctly specified
-    H1: var(y) ~= E(y)
-
-    The tests are based on the constrained model, i.e. the Poisson model.
-    The tests differ in their assumed alternatives, and in their maintained
-    assumptions.
-
-    Parameters
-    ----------
-    results : Poisson results instance
-        This can be a results instance for either a discrete Poisson or a GLM
-        with family Poisson.
-
-    Returns
-    -------
-    res : ndarray, shape (7, 2)
-       each row contains the test statistic and p-value for one of the 7 tests
-       computed here.
-    description : 2-D list of strings
-       Each test has two strings a descriptive name and a string for the
-       alternative hypothesis.
-    """
-    raise NotImplementedError(
-        "dispersion_poisson here is deprecated, use the version in "
-        "discrete._diagnostic_count"
-    )
-
-
-def dispersion_poisson_generic(
-    results,
-    exog_new_test,
-    exog_new_control=None,
-    include_score=False,
-    use_endog=True,
-    cov_type="HC3",
-    cov_kwds=None,
-    use_t=False,
-):
-    """
-    A variable addition test for the variance function
-
-    .. deprecated:: 0.14
-
-       dispersion_poisson_generic moved to discrete._diagnostic_count
-
-    This uses an artificial regression to calculate a variant of an LM or
-    generalized score test for the specification of the variance assumption
-    in a Poisson model. The performed test is a Wald test on the coefficients
-    of the `exog_new_test`.
-
-    Warning: insufficiently tested, especially for options
-
-    Parameters
-    ----------
-    results : results instance
-        Results instance of a fitted Poisson model.
-    exog_new_test : array_like
-        Additional exogenous variables to test, for the variable addition
-        test.
-    exog_new_control : array_like, optional
-        Additional exogenous variables to control for, in addition to the
-        `exog_new_test` variables.
-    include_score : bool, optional
-        If True, then the score of the mean function is added to the
-        control variables.
-    use_endog : bool, optional
-        If True (default), then the endog is used together with the
-        residuals to construct the dependent variable of the artificial
-        regression. If False, then the fitted values are used instead.
-    cov_type : str, optional
-        Covariance type used in the artificial OLS regression, passed to
-        the ``fit`` method. Default is "HC3".
-    cov_kwds : dict, optional
-        Keyword arguments for the covariance estimator specified by
-        `cov_type`.
-    use_t : bool, optional
-        If True, then the p-values for the artificial regression are
-        computed using the t distribution instead of the normal
-        distribution.
-    """
-    raise NotImplementedError(
-        "dispersion_poisson_generic here is deprecated, use the version in "
-        "discrete._diagnostic_count"
-    )
 
 
 class ResultsGeneric:
@@ -420,7 +314,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     generic version of Wooldridge procedure for test of conditional moments
 
     Limitation: This version allows only for one unconditional moment
-    restriction, i.e. resid is scalar for each observation.
+    restriction, i.e., resid is scalar for each observation.
     Another limitation is that it assumes independent observations, no
     correlation in residuals and weights cannot be replaced by cross-observation
     whitening.
@@ -657,7 +551,7 @@ def lm_robust_subset_parts(
     This is the same as lm_robust_subset with arguments in parts of
     partitioned matrices.
     This can be useful, when we have the parts based on different estimation
-    procedures, i.e. when we do not have the full unconstrained model.
+    procedures, i.e., when we do not have the full unconstrained model.
 
     Calculates mainly the covariance of the constraint part of the score.
 
@@ -677,9 +571,10 @@ def lm_robust_subset_parts(
         equality holds
     score_deriv_cu : ndarray
         first cross derivative of moment equation or second cross
-        derivative of objective function between.
+        derivative of objective function between the constrained and
+        unconstrained parts.
     cov_score_cc :  ndarray
-        covariance matrix of the score for the unconstrained part.
+        covariance matrix of the score for the constrained part.
         This is the inner part of a sandwich estimator.
     cov_score_cu :  ndarray
         covariance matrix of the score for the off-diagonal block, i.e.
@@ -696,7 +591,7 @@ def lm_robust_subset_parts(
 
     Notes
     -----
-    TODO: these function should just return the covariance of the score
+    TODO: these functions should just return the covariance of the score
     instead of calculating the score/lm test.
 
     Implementation similar to lm_robust_subset and is based on Boos 1992,
@@ -989,7 +884,7 @@ class CMTNewey:
     cov_moments : ndarray
         An estimate for the joint (expected) covariance of all moments. This
         can be a heteroscedasticity or correlation robust covariance estimate,
-        i.e. the inner part of a sandwich covariance.
+        i.e., the inner part of a sandwich covariance.
     moments_deriv : ndarray
         derivative of the moment function with respect to the parameters that
         are estimated
@@ -1013,14 +908,14 @@ class CMTNewey:
 
     not used, add as argument to methods or __init__?
     K cov for misspecification
-    or mispecification_deriv
+    or misspecification_deriv
 
     This follows the GMM version in Newey 1985a, not the MLE version in
     Newey 1985b. Newey uses the generalized information matrix equality in the
-    MLE version Newey (1985b).
+    MLE version of Newey (1985b).
 
     Newey 1985b Lemma 1 does not impose correctly specified likelihood, but
-    assumes it in the following. Lemma 1 in both articles are essentially the
+    assumes it in the following. Lemma 1 in both articles is essentially the
     same assuming D = H' W.
 
     References
@@ -1165,7 +1060,7 @@ class CMTTauchen:
     cov_moments : ndarray
         An estimate for the joint (expected) covariance of score and test
         moments. This can be a heteroscedasticity or correlation robust
-        covariance estimate, i.e. the inner part of a sandwich covariance.
+        covariance estimate, i.e., the inner part of a sandwich covariance.
     """
 
     def __init__(self, score, score_deriv, moments, moments_deriv, cov_moments):
@@ -1217,7 +1112,7 @@ class CMTTauchen:
         TODO: This can use generic ztest/ttest features and return
         ContrastResults
         """
-        diff = self.moments_constraint
+        diff = self.moments
         bse = np.sqrt(np.diag(self.cov_mom_constraints))
 
         # Newey uses a generalized inverse
@@ -1228,7 +1123,7 @@ class CMTTauchen:
     @cache_readonly
     def chisquare(self):
         """statistic, p-value and degrees of freedom of joint moment test"""
-        diff = self.moments  # _constraints
+        diff = self.moments  # moments are already the moment constraints
         cov = self.cov_mom_constraints
 
         # Newey uses a generalized inverse, we use it also here

@@ -63,24 +63,6 @@ def _check_convergence(criterion, iteration, atol, rtol):
     )
 
 
-# Remove after 0.13 when bic changes to bic llf
-class _ModuleVariable:
-    _value = None
-
-    @property
-    def use_bic_llf(self):
-        return self._value
-
-    def set_use_bic_llf(self, val):
-        if val not in (True, False, None):
-            raise ValueError("Must be True, False or None")
-        self._value = bool(val) if val is not None else val
-
-
-_use_bic_helper = _ModuleVariable()
-SET_USE_BIC_LLF = _use_bic_helper.set_use_bic_llf
-
-
 class GLM(base.LikelihoodModel):
     __doc__ = f"""
     Generalized Linear Models
@@ -99,10 +81,10 @@ class GLM(base.LikelihoodModel):
         and should be added by the user (models specified using a formula
         include an intercept by default). See `statsmodels.tools.add_constant`.
     family : family class instance
-        The default is Gaussian.  To specify the binomial distribution
-        family = sm.family.Binomial()
+        The default is Gaussian.  To specify the binomial distribution, use
+        family = sm.families.Binomial().
         Each family can take a link instance as an argument.  See
-        statsmodels.family.family for more information.
+        sm.families.family for more information.
     offset : array_like or None
         An offset to be included in the model.  If provided, must be
         an array whose length is the number of rows in exog.
@@ -156,19 +138,19 @@ class GLM(base.LikelihoodModel):
         The number of iterations that fit has run.  Initialized at 0.
     family : family class instance
         The distribution family of the model. Can be any family in
-        statsmodels.families.  Default is Gaussian.
+        sm.families.  Default is Gaussian.
     mu : ndarray
         The mean response of the transformed variable.  `mu` is the value of
         the inverse of the link function at lin_pred, where lin_pred is the
         linear predicted value of the WLS fit of the transformed variable.
         `mu` is only available after fit is called.  See
-        statsmodels.families.family.fitted of the distribution family for more
+        sm.families.family.fitted of the distribution family for more
         information.
     n_trials : ndarray
         See Notes. Note that `n_trials` is a reference to the data so that if
         data is already an array and it is changed, then `n_trials` changes
         as well. `n_trials` is the number of binomial trials and only available
-        with that distribution. See statsmodels.families.Binomial for more
+        with that distribution. See sm.families.Binomial for more
         information.
     normalized_cov_params : ndarray
         The p x p normalized covariance of the design / exogenous data.
@@ -184,7 +166,7 @@ class GLM(base.LikelihoodModel):
         fit is called.  The default is None.  See GLM.fit for more information.
     weights : ndarray
         The value of the weights after the last iteration of fit.  Only
-        available after fit is called.  See statsmodels.families.family for
+        available after fit is called.  See sm.families.family for
         the specific distribution weighting functions.
 
     Examples
@@ -663,7 +645,7 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         hessian : ndarray
-            Hessian, i.e. observed information, or expected information matrix.
+            Hessian, i.e., observed information, or expected information matrix.
         """
         if observed is None:
             if self._optim_hessian == "eim":
@@ -861,7 +843,7 @@ class GLM(base.LikelihoodModel):
             not None, then k_constraints is assumed to be zero if it is None.
         exog_extra : None or array_like
             Explanatory variables that are jointly tested for inclusion in the
-            model, i.e. omitted variables.
+            model, i.e., omitted variables.
         observed : bool
             If True, then the observed Hessian is used in calculating the
             covariance matrix of the score. If false then the expected
@@ -928,7 +910,7 @@ class GLM(base.LikelihoodModel):
         """
         Estimate the dispersion/scale.
 
-        Type of scale can be chose in the fit method.
+        Type of scale can be chosen in the fit method.
 
         Parameters
         ----------
@@ -937,17 +919,18 @@ class GLM(base.LikelihoodModel):
 
         Returns
         -------
-        Estimate of scale
+        float
+            Estimate of scale
+
+        See Also
+        --------
+        statsmodels.genmod.generalized_linear_model.GLM.fit
 
         Notes
         -----
         The default scale for Binomial, Poisson and Negative Binomial
         families is 1.  The default for the other families is Pearson's
         Chi-Square estimate.
-
-        See Also
-        --------
-        statsmodels.genmod.generalized_linear_model.GLM.fit
         """
         if not self.scaletype:
             if isinstance(
@@ -1027,7 +1010,7 @@ class GLM(base.LikelihoodModel):
         return power
 
     def predict(
-        self, params, exog=None, exposure=None, offset=None, which="mean", linear=None
+        self, params, exog=None, exposure=None, offset=None, which="mean"
     ):
         """
         Return predicted values for a design matrix
@@ -1047,17 +1030,10 @@ class GLM(base.LikelihoodModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. inverse of the model's link function of linear predictor.
+              i.e., inverse of the model's link function of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
-
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
 
         Returns
         -------
@@ -1072,12 +1048,6 @@ class GLM(base.LikelihoodModel):
 
         Exposure values must be strictly positive.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # Use fit offset if appropriate
         if offset is None and exog is None and self._has_offset:
             offset = self.offset
@@ -1690,7 +1660,7 @@ class GLM(base.LikelihoodModel):
         ----------
         constraints : formula expression or tuple
             If it is a tuple, then the constraint needs to be given by two
-            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            arrays (constraint_matrix, constraint_value), i.e., (R, q).
             Otherwise, the constraints can be given as strings or list of
             strings.
             see t_test for details
@@ -1909,8 +1879,8 @@ class GLMResults(base.LikelihoodModelResults):
         """
         Pearson residuals.  The Pearson residuals are defined as
         (`endog` - `mu`)/sqrt(VAR(`mu`)) where VAR is the distribution
-        specific variance function.  See statsmodels.families.family and
-        statsmodels.families.varfuncs for more information.
+        specific variance function.  See sm.families.family and
+        sm.families.varfuncs for more information.
         """
         return (
             np.sqrt(self._n_trials)
@@ -1923,7 +1893,7 @@ class GLMResults(base.LikelihoodModelResults):
     def resid_working(self):
         """
         Working residuals.  The working residuals are defined as
-        `resid_response`/link'(`mu`).  See statsmodels.family.links for the
+        `resid_response`/link'(`mu`).  See sm.family.links for the
         derivatives of the link functions.  They are defined analytically.
         """
         # Isn't self.resid_response is already adjusted by _n_trials?
@@ -1934,7 +1904,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_anscombe(self):
         """
-        Anscombe residuals.  See statsmodels.families.family for distribution-
+        Anscombe residuals.  See sm.families.family for distribution-
         specific Anscombe residuals. Currently, the unscaled residuals are
         provided. In a future version, the scaled residuals will be provided.
         """
@@ -1943,7 +1913,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_anscombe_scaled(self):
         """
-        Scaled Anscombe residuals.  See statsmodels.families.family for
+        Scaled Anscombe residuals.  See sm.families.family for
         distribution-specific Anscombe residuals.
         """
         return self.family.resid_anscombe(
@@ -1956,7 +1926,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_anscombe_unscaled(self):
         """
-        Unscaled Anscombe residuals.  See statsmodels.families.family for
+        Unscaled Anscombe residuals.  See sm.families.family for
         distribution-specific Anscombe residuals.
         """
         return self.family.resid_anscombe(
@@ -1966,7 +1936,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cached_data
     def resid_deviance(self):
         """
-        Deviance residuals.  See statsmodels.families.family for distribution-
+        Deviance residuals.  See sm.families.family for distribution-
         specific deviance residuals.
         """
         dev = self.family.resid_dev(
@@ -2035,7 +2005,7 @@ class GLMResults(base.LikelihoodModelResults):
     @cache_readonly
     def deviance(self):
         """
-        See statsmodels.families.family for the distribution-specific deviance
+        See sm.families.family for the distribution-specific deviance
         functions.
         """
         return self.family.deviance(
@@ -2100,7 +2070,7 @@ class GLMResults(base.LikelihoodModelResults):
     def llf(self):
         """
         Value of the log-likelihood function evaluated at params.
-        See statsmodels.families.family for distribution-specific
+        See sm.families.family for distribution-specific
         log-likelihoods.  The result uses the concentrated
         log-likelihood if the family is Gaussian and the link is linear,
         otherwise it uses the non-concentrated log-likelihood evaluated
@@ -2152,35 +2122,15 @@ class GLMResults(base.LikelihoodModelResults):
         """
         Bayes Information Criterion
 
-        `deviance` - `df_resid` * log(`nobs`)
-
-        .. warning::
-
-            The current definition is based on the deviance rather than the
-            log-likelihood. This is not consistent with the AIC definition,
-            and after 0.13 both will make use of the log-likelihood definition.
-
-        The log-likelihood version is defined
+        Based on the log-likelihood,
         -2 * `llf` + (`df_model` + 1)*log(n)
-        """
-        if _use_bic_helper.use_bic_llf not in (True, False):
-            warnings.warn(
-                "The bic value is computed using the deviance formula. After "
-                "0.13 this will change to the log-likelihood based formula. "
-                "This change has no impact on the relative rank of models "
-                "compared using BIC. You can directly access the "
-                "log-likelihood version using the `bic_llf` attribute. You "
-                "can suppress this message by calling "
-                "statsmodels.genmod.generalized_linear_model.SET_USE_BIC_LLF "
-                "with True to get the LLF-based version now or False to retain"
-                "the deviance version.",
-                FutureWarning,
-                stacklevel=2,
-            )
-        if bool(_use_bic_helper.use_bic_llf):
-            return self.bic_llf
 
-        return self.bic_deviance
+        See Also
+        --------
+        bic_llf
+        bic_deviance
+        """
+        return self.bic_llf
 
     @cached_value
     def bic_deviance(self):
@@ -2270,7 +2220,6 @@ class GLMResults(base.LikelihoodModelResults):
         offset=None,
         transform=True,
         which=None,
-        linear=None,
         average=False,
         agg_weights=None,
         row_labels=None,
@@ -2298,32 +2247,25 @@ class GLMResults(base.LikelihoodModelResults):
             first.
         which : 'mean', 'linear', 'var'(optional)
             Statistic to predict. Default is 'mean'.
-            If which is None, then the deprecated keyword "linear" applies.
+            If which is None, then the pre-0.14 backwards compatible
+            prediction results class is returned.
             If which is not None, then a generic Prediction results class will
             be returned. Some options are only available if which is not None.
             See notes.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. inverse of the model's link function of linear predictor.
+              i.e., inverse of the model's link function of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
 
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If which is None, then the linear keyword is used, otherwise it will
-            be ignored.
-            If True and which is None, the linear predicted values are returned.
-            If False or None, then the statistic specified by ``which`` will be
-            returned.
         average : bool
             Keyword is only used if ``which`` is not None.
             If average is True, then the mean prediction is computed, that is,
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Keyword is only used if ``which`` is not None.
             Aggregation weights, only used if average is True.
@@ -2351,7 +2293,7 @@ class GLMResults(base.LikelihoodModelResults):
         versions, and returns the mean and linear prediction results.
         If the ``which`` keyword is not None, then a generic prediction results
         class is returned and is not backwards compatible with the old prediction
-        results class, e.g. column names of summary_frame differ.
+        results class, e.g., column names of summary_frame differ.
         There are more choices for the returned predicted statistic using
         ``which``. More choices will be added in the next release.
         Two additional keywords, average and agg_weights, are now also
@@ -2874,49 +2816,3 @@ class GLMResultsWrapper(lm.RegressionResultsWrapper):
 
 
 wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
-
-if __name__ == "__main__":
-    from statsmodels.datasets import longley
-
-    data = longley.load()
-    # data.exog = add_constant(data.exog)
-    GLMmod = GLM(data.endog, data.exog).fit()
-    GLMT = GLMmod.summary(returns="tables")
-    # GLMT[0].extend_right(GLMT[1])
-    # print(GLMT[0])
-    # print(GLMT[2])
-    GLMTp = GLMmod.summary(title="Test GLM")
-    """
-From Stata
-. webuse beetle
-. glm r i.beetle ldose, family(binomial n) link(cloglog)
-
-Iteration 0:   log likelihood = -79.012269
-Iteration 1:   log likelihood =  -76.94951
-Iteration 2:   log likelihood = -76.945645
-Iteration 3:   log likelihood = -76.945645
-
-Generalized linear models                          No. of obs      =        24
-Optimization     : ML                              Residual df     =        20
-                                                   Scale parameter =         1
-Deviance         =  73.76505595                    (1/df) Deviance =  3.688253
-Pearson          =   71.8901173                    (1/df) Pearson  =  3.594506
-
-Variance function: V(u) = u*(1-u/n)                [Binomial]
-Link function    : g(u) = ln(-ln(1-u/n))           [Complementary log-log]
-
-                                                   AIC             =   6.74547
-Log likelihood   = -76.94564525                    BIC             =  10.20398
-
-------------------------------------------------------------------------------
-             |                 OIM
-           r |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
--------------+----------------------------------------------------------------
-      beetle |
-          2  |  -.0910396   .1076132    -0.85   0.398    -.3019576    .1198783
-          3  |  -1.836058   .1307125   -14.05   0.000     -2.09225   -1.579867
-             |
-       ldose |   19.41558   .9954265    19.50   0.000     17.46458    21.36658
-       _cons |  -34.84602    1.79333   -19.43   0.000    -38.36089   -31.33116
-------------------------------------------------------------------------------
-"""

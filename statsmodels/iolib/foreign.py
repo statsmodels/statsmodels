@@ -27,11 +27,11 @@ def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
         Data to be saved to a text file.
     names : list, optional
         If given names will be the column header in the text file.
-    fmt : str or sequence of strs
+    fmt : str or sequence of strs, optional
         A single format (%10.5f), a sequence of formats, or a
-        multi-format string, e.g. 'Iteration %d -- %10.5f', in which
+        multi-format string, e.g., 'Iteration %d -- %10.5f', in which
         case `delimiter` is ignored.
-    delimiter : str
+    delimiter : str, optional
         Character separating columns.
 
     See Also
@@ -115,7 +115,7 @@ def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
             ncol = X.shape[1]
 
         # `fmt` can be a string with multiple insertion points or a list of formats.
-        # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
+        # e.g., '%10.5f\t%10d' or ('%10.5f', '$10d')
         if isinstance(fmt, (list, tuple)):
             if len(fmt) != ncol:
                 raise AttributeError(f"fmt has wrong shape.  {fmt!s}")

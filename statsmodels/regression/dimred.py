@@ -222,9 +222,6 @@ class SlicedInverseReg(_DimReductionRegression):
 
         start_params = kwargs.get("start_params", None)
 
-        # Sample size per slice
-        slice_n = kwargs.get("slice_n", 20)
-
         # Number of slices
         n_slice = self.exog.shape[0] // slice_n
 

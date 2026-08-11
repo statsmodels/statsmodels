@@ -56,21 +56,21 @@ maintainers = [
 ]
 name = "statsmodels"
 dependencies = [
-    "numpy>=1.22.3,<3",  # released March 2022
+    "numpy>=1.23.5,<3",  # released March 2022
     "scipy>=1.8,!=1.9.2",  # released Feb 2022, 1.9.2 blocked due to bug
     "pandas>=1.4,!=2.1.0",  # released Feb 2022, 2.1.0 blocked due to bug
     "patsy>=0.5.6",  # released December 2023
     "packaging>=21.3",  # released Nov 2021
     "formulaic>=1.1.0",  # released December 2024
 ]
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
 test = [
     # test
-    "pytest>=8.4.1,<9",
-    # "pytest-randomly", <- Directly affects the global numpy random state
+    "pytest>=8.4.1,<10",
+    "pytest-randomly",
     "pytest-run-parallel",
     "pytest-xdist",
     "pytest-cov",
@@ -119,6 +119,10 @@ dev = [
     "flake8",
     "flake8-bugbear",
     "ruff",
+]
+polars = [
+    # Polars support
+    "polars>=1.0.0",
 ]
 
 [project.urls]
@@ -408,7 +412,7 @@ compat = ["statsmodels.compat", "setuptools"]
 "**/examples/**" = ["PTH"]
 [tool.pytest.ini_options]
 minversion = "8.4.1"
-addopts = "--strict --durations=30 --junitxml=test-data.xml"
+addopts = "--strict --durations=30 --junitxml=test-data.xml --randomly-dont-reset-seed"
 testpaths = "statsmodels"
 xfail_strict = true
 empty_parameter_set_mark = "fail_at_collect"
@@ -440,7 +444,13 @@ filterwarnings = [
     "error:After statsmodels 0.15 is released:FutureWarning:",
     "error:Passing `None` as the seed currently:FutureWarning:",
     "error:the 'random_state' keyword is deprecated:FutureWarning:",
-    "error:the 'seed' keyword is deprecated:FutureWarning:"
+    "error:the 'seed' keyword is deprecated:FutureWarning:",
+    "error:the 'center' keyword is deprecated:FutureWarning:",
+    "error:Unpacking:FutureWarning:",
+    "error:The test statistic is outside:statsmodels.tools.sm_exceptions.InterpolationWarning:",
+    "error:Fast medcouple algorithm:UserWarning:",
+    "error:medcouple is undefined:UserWarning:",
+    "error:Provided `endog` series:UserWarning:",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -459,6 +469,7 @@ markers = [
     "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
     "todo: mark a test as incomplete",
+    "polars: mark a test that requires polars",
     "singleton_randomstate: mark a test as changing the singleton RandomState",
     "joblib: mark a test as using joblib for parallel computation",
 ]

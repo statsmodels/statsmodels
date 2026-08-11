@@ -100,21 +100,21 @@ def do_trim_params(
     ----------
     params : ndarray
         model parameters.  Not including added variables.
-    k_params : Int
+    k_params : int
         Number of parameters
     alpha : ndarray
         regularization coefficients
-    score : Function.
+    score : function
         score(params) should return a 1-d vector of derivatives of the
         unpenalized objective function.
     passed : bool
         True if the QC check passed
-    trim_mode : 'auto, 'size', or 'off'
+    trim_mode : 'auto', 'size', or 'off'
         If not 'off', trim (set to zero) parameters that would have been zero
             if the solver reached the theoretical minimum.
         If 'auto', trim params using the Theory above.
         If 'size', trim params if they have very small absolute value.
-    size_trim_tol : float or 'auto' (default = 'auto')
+    size_trim_tol : float
         Threshold below which a parameter is trimmed. Used when
         trim_mode == 'size'.
     auto_trim_tol : float

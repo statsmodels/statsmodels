@@ -45,13 +45,11 @@ from packaging.version import Version, parse
 __all__ = [
     "NP_LT_2",
     "NP_LT_24",
-    "NP_LT_123",
     "inplace_reshape",
     "np_matrix_rank",
     "np_new_unique",
 ]
 
-NP_LT_123 = parse(np.__version__) < Version("1.22.99")
 NP_LT_2 = parse(np.__version__) < Version("1.99.99")
 NP_LT_24 = parse(np.__version__) < Version("2.3.99")
 

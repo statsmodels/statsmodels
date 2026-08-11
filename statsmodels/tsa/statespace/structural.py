@@ -154,7 +154,7 @@ class UnobservedComponents(MLEModel):
 
     - The element is included vs excluded (if the trend is included, there must
       also be a level included).
-    - The element is deterministic vs stochastic (i.e. whether or not the
+    - The element is deterministic vs stochastic (i.e., whether or not the
       variance on the error term is confined to be zero or not)
 
     The only additional parameters to be estimated via MLE are the variances of
@@ -345,7 +345,7 @@ class UnobservedComponents(MLEModel):
 
     **Regression effects**
 
-    Exogenous regressors can be pass to the `exog` argument. The regression
+    Exogenous regressors can be passed to the `exog` argument. The regression
     coefficients will be estimated by maximum likelihood unless
     `mle_regression=False`, in which case the regression coefficients will be
     included in the state vector where they are essentially estimated via
@@ -560,7 +560,7 @@ class UnobservedComponents(MLEModel):
 
         # Create the trend specification, if it was not given
         if self.trend_specification is None:
-            # trend specification may be none, e.g. if the model is only
+            # trend specification may be none, e.g., if the model is only
             # a stochastic cycle, etc.
             self.trend_specification = _mask_map.get(self.trend_mask)
 
@@ -944,7 +944,7 @@ class UnobservedComponents(MLEModel):
         if self.cycle:
             _start_params["cycle_var"] = var_resid
             # Clip this to make sure it is positive and strictly stationary
-            # (i.e. do not want negative or 1)
+            # (i.e., do not want negative or 1)
             _start_params["cycle_damp"] = np.clip(
                 np.linalg.pinv(resid[:-1, None]).dot(resid[1:])[0], 0, 0.99
             )
@@ -1057,7 +1057,7 @@ class UnobservedComponents(MLEModel):
 
         # Cycle parameters
         if self.cycle:
-            # Cycle frequency must be between between our bounds
+            # Cycle frequency must be between our bounds
             low, high = self.cycle_frequency_bound
             constrained[offset] = (1 / (1 + np.exp(-unconstrained[offset]))) * (
                 high - low
@@ -1096,7 +1096,7 @@ class UnobservedComponents(MLEModel):
 
         # Cycle parameters
         if self.cycle:
-            # Cycle frequency must be between between our bounds
+            # Cycle frequency must be between our bounds
             low, high = self.cycle_frequency_bound
             x = (constrained[offset] - low) / (high - low)
             unconstrained[offset] = np.log(x / (1 - x))
@@ -1574,7 +1574,7 @@ class UnobservedComponentsResults(MLEResults):
                         this component begins
         """
         # If present, state-vector regression coefficients always are last
-        # (i.e. they follow level/trend, seasonal, freq seasonal, cyclical, and
+        # (i.e., they follow level/trend, seasonal, freq seasonal, cyclical, and
         # autoregressive states). There is one state associated with each
         # regressor, and all are returned here.
         out = None
@@ -1764,7 +1764,7 @@ class UnobservedComponentsResults(MLEResults):
             ci_label = f"${(1 - alpha) * 100:.3g} \\%$ confidence interval"
 
             # Proxy artist for fill_between legend entry
-            # See e.g. https://matplotlib.org/1.3.1/users/legend_guide.html
+            # See e.g., https://matplotlib.org/1.3.1/users/legend_guide.html
             p = plt.Rectangle((0, 0), 1, 1, fc=ci_poly.get_facecolor()[0])
 
             # Legend

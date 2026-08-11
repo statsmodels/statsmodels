@@ -31,7 +31,7 @@ class _Grid:
         intervals of [0, 1] for each axis.
     eps : float
         If eps is not zero, then x values will be clipped to [eps, 1 - eps],
-        i.e. to the interior of the unit interval or hyper cube.
+        i.e., to the interior of the unit interval or hyper cube.
 
 
     Attributes
@@ -91,6 +91,10 @@ def cdf2prob_grid(cdf, prepend=0):
     ----------
     cdf : array_like
         Grid of cumulative probabilities with same shape as probs.
+    prepend : int, float or None
+        Value to prepend to the difference along each axis before taking
+        ``np.diff``. If None, then no value is prepended (i.e., the length
+        along each axis decreases by 1 relative to ``cdf``).
 
     Returns
     -------

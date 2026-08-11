@@ -25,7 +25,16 @@ from scipy.special import factorial
 
 
 class NdKernel:
-    """Generic N-dimensial kernel
+    """Generic N-dimensional kernel
+
+    Can be constructed from either
+    a) a list of n kernels which will be treated as
+    independent marginals on a gaussian copula (specified by H)
+    or b) a single univariate kernel which will be applied radially to the
+    mahalanobis distance defined by H.
+
+    In the case of the Gaussian these are both equivalent, and the second construction
+    is preferred.
 
     Parameters
     ----------
@@ -33,15 +42,9 @@ class NdKernel:
         The number of series for kernel estimates
     kernels : list
         kernels
-
-    Can be constructed from either
-    a) a list of n kernels which will be treated as
-    indepent marginals on a gaussian copula (specified by H)
-    or b) a single univariate kernel which will be applied radially to the
-    mahalanobis distance defined by H.
-
-    In the case of the Gaussian these are both equivalent, and the second constructiong
-    is preferred.
+    H : ndarray, optional
+        Kernel bandwidth matrix. If None, defaults to the (n, n) identity
+        matrix.
     """
 
     def __init__(self, n, kernels=None, H=None):
@@ -251,6 +254,9 @@ class CustomKernel:
             pdf of the kernel density
         nobs : int
             number of observations used in the KDE estimation
+        alpha : float
+            confidence level for the confidence interval, the default
+            alpha=0.05 corresponds to a 95% confidence interval.
 
         Returns
         -------

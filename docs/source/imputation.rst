@@ -58,3 +58,17 @@ Implementation Details
 Internally, this function uses
 `pandas.isnull <https://pandas.pydata.org/pandas-docs/stable/user_guide/missing_data.html#working-with-missing-data>`_.
 Anything that returns True from this function will be treated as missing data.
+
+
+Regression on Order Statistics
+-------------------------------
+
+:func:`~statsmodels.imputation.ros.impute_ros` imputes left-censored
+(non-detect) values in a dataset using Regression on Order Statistics (ROS).
+
+.. currentmodule:: statsmodels.imputation.ros
+
+.. autosummary::
+   :toctree: generated/
+
+   impute_ros

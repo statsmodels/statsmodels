@@ -16,14 +16,19 @@ References
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
+
+import warnings
+
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2
 
+from statsmodels.emplike.descriptive import EmpLikeTestResult
 from statsmodels.regression.linear_model import OLS, RegressionResults
 
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.validation import bool_like
 
 
 class ELOriginRegress:
@@ -71,7 +76,7 @@ class ELOriginRegress:
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
-            np.array([0]), np.array([0]), ret_params=1
+            np.array([0]), np.array([0]), ret_params=1, use_namedtuple=False
         )
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
@@ -157,6 +162,8 @@ class OriginResults(RegressionResults):
 
     # No covariance matrix so normal inference is not valid
     >>> fitted.conf_int()
+    Traceback (most recent call last):
+     ...
     TypeError: unsupported operand type(s) for *: 'instancemethod' and 'float'
     """
     def __init__(self, model, params, est_llr, llf_el):
@@ -166,7 +173,14 @@ class OriginResults(RegressionResults):
         self.llf_el = llf_el
 
     def el_test(
-        self, b0_vals, param_nums, method="nm", stochastic_exog=1, return_weights=0
+        self,
+        b0_vals,
+        param_nums,
+        method="nm",
+        stochastic_exog=1,
+        return_weights=0,
+        *,
+        use_namedtuple=None,
     ):
         """
         Returns the llr and p-value for a hypothesized parameter value
@@ -193,17 +207,44 @@ class OriginResults(RegressionResults):
         return_weights : bool
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False.
+        use_namedtuple : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
+                now, or ``use_namedtuple=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        llr : float
-            The log likelihood ratio for the hypothesized values.
-        pval : float
-            The p-value corresponding to `llr`.
-        weights : ndarray, optional
-            The observation weights that optimize the likelihood
-            ratio.  Only returned if `return_weights` is True.
+        EmpLikeTestResult or tuple
+            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            NamedTuple with fields:
+
+            llr : float
+                The log likelihood ratio for the hypothesized values.
+            pvalue : float
+                The p-value corresponding to ``llr``.
+            weights : ndarray or None
+                The observation weights that optimize the likelihood ratio.
+                ``None`` when ``return_weights`` is False, since they are
+                not computed in that case.
+
+            See :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
         test_res = self.model.fit().el_test(
@@ -212,14 +253,30 @@ class OriginResults(RegressionResults):
             method=method,
             stochastic_exog=stochastic_exog,
             return_weights=return_weights,
+            use_namedtuple=False,
         )
         llr_test = test_res[0]
         llr_res = llr_test - self.llr
         pval = chi2.sf(llr_res, self.model.exog.shape[1] - 1)
-        if return_weights:
-            return llr_res, pval, test_res[2]
-        else:
-            return llr_res, pval
+        # The weights come from the underlying OLSResults.el_test, which only
+        # computes them when return_weights is True, so they stay None here
+        # otherwise.
+        weights = test_res[2] if return_weights else None
+        if use_namedtuple is None and not return_weights:
+            warnings.warn(
+                "OriginResults.el_test currently returns a plain tuple whose "
+                "length depends on the return_weights argument. In release "
+                "0.16.0 or after July 2027, whichever is later, the default "
+                "behavior will switch to always returning an "
+                "EmpLikeTestResult NamedTuple. Set use_namedtuple=True to "
+                "switch now, or use_namedtuple=False to keep the current "
+                "behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if use_namedtuple or return_weights:
+            return EmpLikeTestResult(llr_res, pval, weights)
+        return llr_res, pval
 
     def conf_int_el(
         self,
@@ -274,9 +331,13 @@ class OriginResults(RegressionResults):
         def f(b0):
             b0 = np.array([b0])
             val = self.el_test(
-                b0, param_num, method=method, stochastic_exog=stochastic_exog
+                b0,
+                param_num,
+                method=method,
+                stochastic_exog=stochastic_exog,
+                use_namedtuple=True,
             )
-            return val[0] - r0
+            return val.llr - r0
 
         _param = np.squeeze(self.params[param_num])
         lowerl = optimize.brentq(f, np.squeeze(lower_bound), _param)

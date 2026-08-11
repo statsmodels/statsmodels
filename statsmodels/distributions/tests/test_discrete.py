@@ -20,7 +20,7 @@ from statsmodels.tools.tools import Bunch
 
 
 class TestGenpoisson_p:
-    # Test Generalized Poisson Destribution
+    # Test Generalized Poisson Distribution
 
     def test_pmf_p1(self):
         poisson_pmf = poisson.pmf(1, 1)

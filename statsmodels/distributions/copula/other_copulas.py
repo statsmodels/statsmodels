@@ -107,7 +107,7 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
         Bandwidth for Beta sampling. The beta copula corresponds to a kernel
         estimate of the distribution. bw=1 corresponds to the empirical beta
         copula. A small bandwidth like bw=0.001 corresponds to small noise
-        added to the empirical distribution. Larger bw, e.g. bw=10 corresponds
+        added to the empirical distribution. Larger bw, e.g., bw=10 corresponds
         to kernel estimate with more smoothing.
     k_func : None or callable
         The default kernel function is currently a beta function with 1 added

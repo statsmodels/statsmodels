@@ -45,10 +45,10 @@ def get_file_obj(fname, mode="r", encoding=None):
     ----------
     fname : str, path object or file-like object
         File to open / forward
-    mode : str
+    mode : str, optional
         Argument passed to the 'open' or 'gzip.open' function
-    encoding : str
-        For Python 3 only, specify the encoding of the file
+    encoding : str, optional
+        Specify the encoding of the file
 
     Returns
     -------

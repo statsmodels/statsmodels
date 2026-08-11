@@ -534,7 +534,7 @@ def get_prediction_linear(
     row_labels : list of str or None
         If row_labels are provided, then they will replace the generated
         labels.
-    pred_kwds :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
@@ -610,7 +610,7 @@ def get_prediction_monotonic(
     link : instance of link function
         If no link function is provided, then the `model.family.link` is
         used.
-    pred_kwds :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
@@ -693,7 +693,7 @@ def get_prediction_delta(
         predictions are computed for individual exog and then them mean over
         observation is used.
         If average is False, then the results are the predictions for all
-        observations, i.e. same length as ``exog``.
+        observations, i.e., same length as ``exog``.
     agg_weights : ndarray, optional
         Aggregation weights, only used if average is True.
         The weights are not normalized.
@@ -707,7 +707,7 @@ def get_prediction_delta(
     row_labels : list of str or None
         If row_labels are provided, then they will replace the generated
         labels.
-    pred_kwds :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
@@ -780,11 +780,11 @@ def get_prediction(
         predictions are computed for individual exog and then the average
         over observation is used.
         If average is False, then the results are the predictions for all
-        observations, i.e. same length as ``exog``.
+        observations, i.e., same length as ``exog``.
     agg_weights : ndarray, optional
         Aggregation weights, only used if average is True.
         The weights are not normalized.
-    pred_kwds :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset,
         exposure or additional exog in multi-part models like zero inflated
         models.

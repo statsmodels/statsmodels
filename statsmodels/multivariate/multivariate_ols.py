@@ -42,7 +42,7 @@ hypotheses : list[tuple]
     transform_M : 2D array or an array of strings or None, optional
         Left hand side transform matrix.
         If `None` or left out, it is set to a k_endog by k_endog
-        identity matrix (i.e. do not transform y matrix).
+        identity matrix (i.e., do not transform y matrix).
         If an array of strings, it will be passed to
         patsy.DesignInfo().linear_constraint based on endog_names.
 
@@ -56,7 +56,7 @@ hypotheses : list[tuple]
     on the dependent variables will be tested. Or 2) if model is created
     using a formula, `hypotheses` will be created according to
     `design_info`. 1) and 2) are equivalent if no additional variables
-    are created by the formula (e.g. dummy variables for categorical
+    are created by the formula (e.g., dummy variables for categorical
     variables and interaction terms)
 """
 
@@ -677,8 +677,8 @@ class MultivariateLSResults(LikelihoodModelResults):
             results, self.model.endog_names, self.model.exog_names
         )
 
-    def conf_int(self, alpha=0.05, cols=None):
-        confint = super().conf_int(alpha=alpha, cols=cols)
+    def conf_int(self, alpha=0.05):
+        confint = super().conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
 
     # copied from discrete
@@ -788,7 +788,7 @@ class MultivariateTestResults:
     endog_names : sequence[str]
         A list or other sequence of endogenous variables names
     exog_names : sequence[str]
-        A list of other sequence of exogenous variables names
+        A list or other sequence of exogenous variables names
 
     Attributes
     ----------

@@ -949,7 +949,7 @@ class ETSModel(base.StateSpaceMLEModel):
             default), additionally, the parameters
 
             * `initial_level` (:math:`l_{-1}`)
-            * `initial_trend` (:math:`l_{-1}`)
+            * `initial_trend` (:math:`b_{-1}`)
             * `initial_seasonal.0` (:math:`s_{-1}`)
             * ...
             * `initial_seasonal.<m-1>` (:math:`s_{-m}`)
@@ -1572,7 +1572,7 @@ class ETSResults(base.StateSpaceMLEResults):
             all existing datapoints prior to the `anchor`.  Type depends on the
             index of the given `endog` in the model. Two special cases are the
             strings 'start' and 'end'. `start` refers to beginning the
-            simulation at the first period of the sample (i.e. using the
+            simulation at the first period of the sample (i.e., using the
             initial values as simulation anchor), and `end` refers to
             beginning the simulation at the first period after the sample.
             Integer values can run from 0 to `nobs`, or can be negative to
@@ -2235,7 +2235,7 @@ class PredictionResults:
         if self.method == "simulated":
 
             sim_results = []
-            # first, perform "non-dynamic" simulations, i.e. simulations of
+            # first, perform "non-dynamic" simulations, i.e., simulations of
             # only one step, based on the previous step
             if nsmooth > 1:
                 if start_smooth == 0:

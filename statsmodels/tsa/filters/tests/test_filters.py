@@ -21,6 +21,7 @@ from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.tsa.filters.bk_filter import bkfilter
 from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.filtertools import (
+    CycleTrendResult,
     convolution_filter,
     recursive_filter,
 )
@@ -623,6 +624,14 @@ def test_hpfilter():
     assert_almost_equal(res, hpfilt_res, 6)
 
 
+def test_hpfilter_returns_cycletrendresult():
+    dta = macrodata.load_pandas().data["realgdp"].values
+    res = hpfilter(dta, 1600)
+    assert isinstance(res, CycleTrendResult)
+    assert res[0] is res.cycle
+    assert res[1] is res.trend
+
+
 def test_cfitz_filter():
     # Test Christiano-Fitzgerald Filter. Results taken from R.
     # NOTE: The Stata mata code and the matlab code it's based on are wrong.
@@ -838,6 +847,14 @@ def test_cfitz_filter():
     # do 1d
     cyc, trend = cffilter(dta[:, 1])
     assert_almost_equal(cyc, cfilt_res[:, 1], 8)
+
+
+def test_cffilter_returns_cycletrendresult():
+    dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
+    res = cffilter(dta)
+    assert isinstance(res, CycleTrendResult)
+    assert res[0] is res.cycle
+    assert res[1] is res.trend
 
 
 def test_bking_pandas():

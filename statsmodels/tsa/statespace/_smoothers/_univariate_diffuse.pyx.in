@@ -92,7 +92,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
         blas_int m_k_endog = model._k_endog
         blas_int m_k_states = model._k_states
         blas_int m_k_states2 = model._k_states2
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
@@ -620,8 +620,8 @@ cdef int {{prefix}}smoothed_state_autocov_univariate_diffuse({{prefix}}KalmanSmo
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
     # The below code was a test to see if the diffuse autocov could be
-    # relatively simply computed (i.e. which required certain terms to cancel
-    # out), but it appears that it cannot (i.e. it requires the computation of
+    # relatively simply computed (i.e., which required certain terms to cancel
+    # out), but it appears that it cannot (i.e., it requires the computation of
     # L2, which is nontrivial and not described by Durbin and Koopman).
     return 0
 

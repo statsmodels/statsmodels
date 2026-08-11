@@ -163,6 +163,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
+        the unique values found in groups are used as the two group labels.
     correction : bool
         Following the SAS manual, for samplesize below 50, the test
         statistic is corrected by 0.5. This can be turned off with
@@ -205,7 +206,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     This has not been verified against a reference implementation. In a short
     Monte Carlo simulation where both samples are normally distribute, the test
     seems to be correctly sized for larger number of observations (30 or
-    larger), but conservative (i.e. reject less often than nominal) with a
+    larger), but conservative (i.e., reject less often than nominal) with a
     sample size of 10 in each group.
 
     See Also
@@ -453,70 +454,18 @@ def median_test_ksample(x, groups):
 
 
 def cochrans_q(x):
-    """Cochran's Q test for identical effect of k treatments
-
-    Cochran's Q is a k-sample extension of the McNemar test. If there are only
-    two treatments, then Cochran's Q test and McNemar test are equivalent.
-
-    Test that the probability of success is the same for each treatment.
-    The alternative is that at least two treatments have a different
-    probability of success.
-
-    Parameters
-    ----------
-    x : array_like, 2d (N,k)
-        data with N cases and k variables
-
-    Returns
-    -------
-    q_stat : float
-       test statistic
-    pvalue : float
-       pvalue from the chisquare distribution
-
-    Notes
-    -----
-    In Wikipedia terminology, rows are blocks and columns are treatments.
-    The number of rows N, should be large for the chisquare distribution to be
-    a good approximation.
-    The Null hypothesis of the test is that all treatments have the
-    same effect.
-
-    References
-    ----------
-    https://en.wikipedia.org/wiki/Cochran_test
-    SAS Manual for NPAR TESTS
-
+    """
+    Deprecated. Will be removed after statsmodels 0.15.
     """
 
     warnings.warn(
         "Deprecated, use stats.cochrans_q instead", FutureWarning, stacklevel=2
     )
 
-    x = np.asarray(x)
-    gruni = np.unique(x)
-    N, k = x.shape
-    count_row_success = (x == gruni[-1]).sum(1, float)
-    count_col_success = (x == gruni[-1]).sum(0, float)
-    count_row_ss = count_row_success.sum()
-    count_col_ss = count_col_success.sum()
-    assert count_row_ss == count_col_ss  # just a calculation check
+    from statsmodels.stats.contingency_tables import cochrans_q as _cochrans_q
 
-    # this is SAS manual
-    q_stat = (
-        (k - 1)
-        * (k * np.sum(count_col_success**2) - count_col_ss**2)
-        / (k * count_row_ss - np.sum(count_row_success**2))
-    )
-
-    # Note: the denominator looks just like k times the variance of the
-    # columns
-
-    # Wikipedia uses a different, but equivalent expression
-    #    q_stat = (k-1) * (k *  np.sum(count_row_success**2) - count_row_ss**2) \
-    #             / (k * count_col_ss - np.sum(count_col_success**2))
-
-    return q_stat, stats.chi2.sf(q_stat, k - 1)
+    res = _cochrans_q(x)
+    return res.statistic, res.pvalue
 
 
 def mcnemar(x, y=None, exact=True, correction=True):
@@ -644,15 +593,3 @@ def symmetry_bowker(table):
     pval = stats.chi2.sf(stat, df)
 
     return stat, pval, df
-
-
-if __name__ == "__main__":
-
-    x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
-
-    print(Runs(x1).runs_test())
-    print(runstest_1samp(x1, cutoff="mean"))
-    print(runstest_2samp(np.arange(16, 0, -1), groups=x1))
-    print(TotalRunsProb(7, 9).cdf(11))
-    print(median_test_ksample(np.random.randn(100), np.random.randint(0, 2, 100)))
-    print(cochrans_q(np.random.randint(0, 2, (100, 8))))

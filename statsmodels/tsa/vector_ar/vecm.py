@@ -59,7 +59,7 @@ def select_order(
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
     seasons : int, default: 0
@@ -148,7 +148,7 @@ def _num_det_vars(det_string, seasons=0):
         * "lo" - linear trend outside the cointegration relation
         * "li" - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. "cili" or "colo" for linear
+        Combinations of these are possible (e.g., "cili" or "colo" for linear
         trend with intercept). See the docstring of the :class:`VECM`-class for
         more information.
     seasons : int
@@ -185,7 +185,7 @@ def _deterministic_to_exog(
 
     These information is taken from `deterministic` and `seasons` as well as
     from the `exog` and `exog_coint` arrays. The resulting array form can then
-    be used e.g. in VAR's __init__ method.
+    be used e.g., in VAR's __init__ method.
 
     Parameters
     ----------
@@ -288,7 +288,7 @@ def _endog_matrices(
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
     seasons : int, default: 0
@@ -620,14 +620,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
         * trace_stat and trace_stat_crit_vals
         * max_eig_stat and max_eig_stat_crit_vals
 
+    See Also
+    --------
+    statsmodels.tsa.vector_ar.vecm.select_coint_rank
+
     Notes
     -----
     The implementation might change to make more use of the existing VECM
     framework.
-
-    See Also
-    --------
-    statsmodels.tsa.vector_ar.vecm.select_coint_rank
 
     References
     ----------
@@ -868,10 +868,10 @@ class VECM(tsbase.TimeSeriesModel):
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). When using a constant term you have to
         choose whether you want to restrict it to the cointegration relation
-        (i.e. ``"ci"``) or leave it unrestricted (i.e. ``"co"``). Do not use
+        (i.e., ``"ci"``) or leave it unrestricted (i.e., ``"co"``). Do not use
         both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
         when using a linear term. See the Notes-section for more information.
     seasons : int, default: 0
@@ -1198,7 +1198,7 @@ class VECMResults:
         * ``"lo"`` - linear trend outside the cointegration relation
         * ``"li"`` - linear trend within the cointegration relation
 
-        Combinations of these are possible (e.g. ``"cili"`` or ``"colo"`` for
+        Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
     seasons : int, default: 0
@@ -1269,7 +1269,7 @@ class VECMResults:
     const : ndarray (neqs x 1) or (neqs x 0)
         If a constant deterministic term outside the cointegration is specified
         within the deterministic parameter, then `const` is the first column
-        of `det_coef_coint`. Otherwise it's an ndarray of size zero.
+        of `det_coef`. Otherwise it's an ndarray of size zero.
     seasonal : ndarray (neqs x seasons)
         If the `seasons` parameter is > 0, then seasonal contains the
         estimated coefficients corresponding to the seasonal terms. Otherwise
@@ -1278,7 +1278,7 @@ class VECMResults:
         If a linear deterministic term outside the cointegration is specified
         within the deterministic parameter, then `lin_trend` contains the
         corresponding estimated coefficients. As such it represents the
-        corresponding column of `det_coef_coint`. If there is no linear
+        corresponding column of `det_coef`. If there is no linear
         deterministic term outside the cointegration relation, then
         `lin_trend` is an ndarray of size zero.
     exog_coefs : ndarray (neqs x exog_coefs.shape[1])
@@ -1347,7 +1347,7 @@ class VECMResults:
         :math:`i=0, \\ldots, k_{ar}-1`.
     cov_var_repr : ndarray (neqs**2 * k_ar x neqs**2 * k_ar)
         This matrix is called :math:`\\Sigma^{co}_{\\alpha}` on p. 289 in [1]_.
-        It is needed e.g. for impulse-response-analysis.
+        It is needed e.g., for impulse-response-analysis.
     fittedvalues : ndarray (nobs x neqs)
         The predicted in-sample values of the models' endogenous variables.
     resid : ndarray (nobs x neqs)
@@ -1786,6 +1786,11 @@ class VECMResults:
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps
             rows will be considered.
+        exog_coint_fc : ndarray (steps x self.exog_coint.shape[1])
+            If self.exog_coint is not None, then information about the future
+            values of exog_coint have to be passed via this parameter. The
+            ndarray may be larger in it's first dimension. In this case only
+            the first steps rows will be considered.
 
         Returns
         -------
@@ -2091,7 +2096,7 @@ class VECMResults:
         variables in `caused` and those in `causing`" against |H1|:
         "Instantaneous causality between `caused` and `causing` exists".
         Note that instantaneous causality is a symmetric relation
-        (i.e. if `causing` is "instantaneously causing" `caused`, then also
+        (i.e., if `causing` is "instantaneously causing" `caused`, then also
         `caused` is "instantaneously causing" `causing`), thus the naming of
         the parameters (which is chosen to be in accordance with
         :meth:`test_granger_causality()`) may be misleading.
@@ -2183,7 +2188,7 @@ class VECMResults:
     def test_normality(self, signif=0.05):
         r"""
         Test assumption of normal-distributed errors using Jarque-Bera-style
-        omnibus :math:`\\chi^2` test.
+        omnibus :math:`\chi^2` test.
 
         Parameters
         ----------

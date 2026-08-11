@@ -93,12 +93,14 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         Default is `Y`.
     xname : list[str], optional
         Default is `X.#` for # in p the number of regressors.
-    title : str, optional
-        Default is 'Generalized linear model'.
-    alpha : float
+    title : str or int, optional
+        Title for the summary. If 0 (the default), the title is derived
+        from the model class, e.g., 'Generalized linear model' for a GLM
+        model.
+    alpha : float, optional
         The confidence interval, currently not implemented.
-    returns : str
-        One of 'text', 'table', 'csv', 'latex', 'html'.
+    returns : str, optional
+        One of 'print', 'text', 'table', 'csv', 'latex', 'html'.
     model_info : dict, optional
         Unused, retained for backward compatibility.
 
@@ -114,7 +116,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         - returns='csv' : a string of csv of the results, to import into
           a spreadsheet.
         - returns='latex' : not implemented yet.
-        - returns='HTML' : not implemented yet.
+        - returns='html' : not implemented yet.
 
     Notes
     -----
@@ -126,7 +128,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> ols_results = sm.OLS(data.endog, data.exog).results
-    >>> print ols_results.summary()
+    >>> print(ols_results.summary())
     ...
     """
     if title == 0:
@@ -608,7 +610,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     result : result instance
         the result instance with params and attributes in extras
     extras : list[str]
-        additional attributes to add below a parameter row, e.g. bse or tvalues
+        additional attributes to add below a parameter row, e.g., bse or tvalues
     endog_names : {list[str], None}
         names for rows of the parameter array (multivariate endog)
     exog_names : {list[str], None}
@@ -656,7 +658,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
 def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
                           use_t=True, keep_headers=True, endog_cols=False):
     """
-    Summary table for parameters that are 2d, e.g. multi-equation models
+    Summary table for parameters that are 2d, e.g., multi-equation models
 
     Parameters
     ----------
@@ -667,7 +669,7 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
     exog_names : {list[str], None}
         names for columns of the parameter array (exog)
     alpha : float
-        level for confidence intervals, default 0.95
+        level for confidence intervals, default 0.05
     use_t : bool
         indicator whether the p-values are based on the Student-t
         distribution (if True) or on the normal distribution (if False)

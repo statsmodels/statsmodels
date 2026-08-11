@@ -13,25 +13,6 @@ try:
 except ImportError:
     pass
 
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_mice.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
-
-def teardown_module():
-    if pdf_output:
-        pdf.close()
-
 
 def gendat():
     """
@@ -287,12 +268,11 @@ class TestMICEData:
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
                     plt.clf()
-                    fig = imp_data.plot_missing_pattern(
+                    imp_data.plot_missing_pattern(
                         row_order=row_order,
                         hide_complete_rows=hide_complete_rows,
                         color_row_patterns=color_row_patterns,
                     )
-                    close_or_save(pdf, fig)
                     close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -307,7 +287,6 @@ class TestMICEData:
         for plot_points in False, True:
             fig = imp_data.plot_bivariate("x2", "x4", plot_points=plot_points)
             fig.get_axes()[0].set_title("plot_bivariate")
-            close_or_save(pdf, fig)
             close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -322,7 +301,6 @@ class TestMICEData:
         for plot_points in False, True:
             fig = imp_data.plot_fit_obs("x4", plot_points=plot_points)
             fig.get_axes()[0].set_title("plot_fit_scatterplot")
-            close_or_save(pdf, fig)
             close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -337,7 +315,6 @@ class TestMICEData:
         for _ in False, True:
             fig = imp_data.plot_imputed_hist("x4")
             fig.get_axes()[0].set_title("plot_imputed_hist")
-            close_or_save(pdf, fig)
             close_figures()
 
 

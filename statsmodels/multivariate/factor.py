@@ -642,7 +642,7 @@ class FactorResults:
         principal components; not available under ML estimation.
     n_comp : int
         Number of components (factors)
-    nbs : int
+    nobs : int
         Number of observations
     fa_method : str
         The method used to obtain the decomposition, either 'pa' for
@@ -985,8 +985,8 @@ class FactorResults:
         Options except for highlighting are available for plain test or Latex
         usage:
 
-        >>> lds = res_u.get_loadings_frame(style='strings', decimals=3,
-        ...                                threshold=0.3)
+        >>> lds = res.get_loadings_frame(style='strings', decimals=3,
+        ...                              threshold=0.3)
         >>> print(lds.to_latex())
         """
 
@@ -1150,6 +1150,8 @@ class FactorResults:
         kurt : float
             Excess kurtosis
 
+        Notes
+        -----
         If excess kurtosis is known, provide as `kurt`.  Standard
         errors are only available if the model was fit using maximum
         likelihood.  If `endog` is not provided, `nobs` must be

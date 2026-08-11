@@ -313,13 +313,8 @@ betai = [beta[idx] for idx in betaindices]
 xifloat = [xx.view(float).reshape(nobs, -1) for xx in xi]
 clogit = TryCLogit(endog, xifloat, 2)
 
-debug = 0
-if debug:
-    res = optimize.fmin(clogit.loglike, np.ones(6))
 # estimated parameters from Greene:
 tab2324 = [-0.15501, -0.09612, 0.01329, 5.2074, 3.8690, 3.1632]
-if debug:
-    res2 = optimize.fmin(clogit.loglike, tab2324)
 
 res3 = optimize.fmin(clogit.loglike, np.zeros(6), maxfun=10000)
 # this has same numbers as Greene table 23.24, but different sequence

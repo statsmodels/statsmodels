@@ -131,7 +131,7 @@ class TestClark1989:
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
-        # used the univariate Kalman filtering approach (i.e. that the flag
+        # used the univariate Kalman filtering approach (i.e., that the flag
         # being set actually caused the filter to not use the conventional
         # filter)
         assert not self.conventional_results.filter_univariate
@@ -310,7 +310,7 @@ class MultivariateMissingGeneralObsCov:
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
-        # used the univariate Kalman filtering approach (i.e. that the flag
+        # used the univariate Kalman filtering approach (i.e., that the flag
         # being set actually caused the filter to not use the conventional
         # filter)
         assert not self.conventional_results.filter_univariate

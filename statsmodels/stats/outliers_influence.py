@@ -137,7 +137,7 @@ def reset_ramsey(res, degree=5):
     is augmented by powers 2 to degree of the fitted values. Then it performs
     an F-test whether these additional terms are significant.
 
-    If the p-value of the f-test is below a threshold, e.g. 0.1, then this
+    If the p-value of the f-test is below a threshold, e.g., 0.1, then this
     indicates that there might be additional non-linear effects in the model
     and that the linear model is mis-specified.
 
@@ -448,7 +448,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     GLM hat matrix in the case of Probit, which corresponds to family
     Binomial with a non-canonical link.
 
-    The extension to non-standard models, e.g. multi-link model like
+    The extension to non-standard models, e.g., multi-link model like
     BetaModel and the ZeroInflated models is still experimental and might still
     change.
     Additionally, ZeroInflated and some threshold models have a
@@ -456,7 +456,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     might also change.
 
     Warning: This does currently not work for constrained or penalized models,
-    e.g. models estimated with fit_constrained or fit_regularized.
+    e.g., models estimated with fit_constrained or fit_regularized.
 
     This has not yet been tested for correctness when offset or exposure
     are used, although they should be supported by the code.
@@ -479,7 +479,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     ):
         # this __init__ attaches attributes that we don't really need
         self.results = results = maybe_unwrap_results(results)
-        # TODO: check for extra params in e.g. NegBin
+        # TODO: check for extra params in e.g., NegBin
         self.nobs, self.k_vars = results.model.exog.shape
         self.k_params = np.size(results.params)
         self.endog = endog if endog is not None else results.model.endog
@@ -629,7 +629,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         of the model.
 
         Note: This might have nan values if second derivative, hessian_factor,
-        is positive, i.e. loglikelihood is not globally concave w.r.t. linear
+        is positive, i.e., loglikelihood is not globally concave w.r.t. linear
         predictor. (This occurred in an example for GeneralizedPoisson)
         """
         from statsmodels.genmod.generalized_linear_model import GLM
@@ -708,11 +708,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     def _get_prediction(self):
         # TODO: do we cache this or does it need to be a method
         # we only need unchanging parts, alpha for confint could change
-        with warnings.catch_warnings():
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.filterwarnings("ignore", message=msg, category=FutureWarning)
-            pred = self.results.get_prediction()
-        return pred
+        return self.results.get_prediction()
 
     @cache_readonly
     def d_fittedvalues(self):
@@ -740,7 +736,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         for the predicted mean provided by results.get_prediction.
         """
         # Note: this and the previous methods are for the response
-        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # and not for a weighted response, i.e., not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
         return self.d_fittedvalues / self._get_prediction.se
 
@@ -964,8 +960,8 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Uses original results, no nobs loop
 
-        Based on:
-
+        References
+        ----------
         Eubank, R. L. (1999). Nonparametric regression and spline
             smoothing. CRC press.
         Cook's distance. (n.d.). In Wikipedia. July 2019, from
@@ -1014,10 +1010,12 @@ class OLSInfluence(_BaseInfluenceMixin):
             The threshold to determine if the influence of an observation is large.
             The threshold is 2 * sqrt(k / n).
 
-        based on resid_studentized_external, uses results from
+        Notes
+        -----
+        Based on resid_studentized_external, uses results from
         leave-one-observation-out loop.
 
-        It is recommended that observations with dffits large than a
+        It is recommended that observations with dffits larger than a
         threshold of 2 sqrt{k / n} where k is the number of parameters, should
         be investigated.
 
@@ -1116,7 +1114,9 @@ class OLSInfluence(_BaseInfluenceMixin):
         """
         estimate of standard deviation of the residuals
 
-        See also ``resid_var``.
+        See Also
+        --------
+        resid_var
         """
         return np.sqrt(self.resid_var)
 
@@ -1458,7 +1458,7 @@ class GLMInfluence(MLEInfluence):
     Influence and outlier measures (experimental)
 
     This uses partly formulas specific to GLM, specifically cooks_distance
-    is based on the hessian, i.e. observed or expected information matrix and
+    is based on the hessian, i.e., observed or expected information matrix and
     not on cov_params, in contrast to MLEInfluence.
     Standardization for changes in parameters, in fittedvalues and in
     the linear predictor are based on cov_params.
@@ -1603,7 +1603,7 @@ class GLMInfluence(MLEInfluence):
         for linpred provided by results.get_prediction.
         """
         # Note: this and the previous methods are for the response
-        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # and not for a weighted response, i.e., not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
         return self.d_linpred / self._get_prediction.linpred.se
 
@@ -1660,7 +1660,7 @@ class GLMInfluence(MLEInfluence):
         offset = offset_ = init_kwds.pop("offset")
         exposure = exposure_ = init_kwds.pop("exposure")
         n_trials = init_kwds.pop("n_trials", None)
-        # family Binomial creates `n` i.e. `n_trials`
+        # family Binomial creates `n` i.e., `n_trials`
         # we need to reset it
         # TODO: figure out how to do this properly
         if hasattr(init_kwds["family"], "initialize"):

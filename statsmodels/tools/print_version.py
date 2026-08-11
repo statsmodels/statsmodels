@@ -18,7 +18,7 @@ def safe_version(module, attr="__version__", *others):
         The imported module to inspect.
     attr : str or list[str]
         Name of the attribute (or chain of nested attribute names) to
-        look up on ``module``, e.g. ``"__version__"`` or
+        look up on ``module``, e.g., ``"__version__"`` or
         ``["version", "version"]``.
     *others : str
         Additional attribute names to try, in order, if ``attr`` is not
@@ -45,9 +45,11 @@ def _show_versions_only():
     print("------------------")
     print("Python: {:d}.{:d}.{:d}.{}.{}".format(*sys.version_info[:]))
 
-    import os
-
-    sysname, nodename, release, version, machine = os.uname()
+    uname = platform.uname()
+    sysname = uname.system
+    release = uname.release
+    version = uname.version
+    machine = uname.machine
     print(f"OS: {sysname} {release} {version} {machine}")
     print(f"byteorder: {sys.byteorder}")
     print("LC_ALL: {}".format(os.environ.get("LC_ALL", "None")))
@@ -196,6 +198,7 @@ def show_versions(show_dirs=True):
     """
     if not show_dirs:
         _show_versions_only()
+        return
     print("\nINSTALLED VERSIONS")
     print("------------------")
     print("Python: {:d}.{:d}.{:d}.{}.{}".format(*sys.version_info[:]))

@@ -273,7 +273,7 @@ class DiscretizedCount(rv_discrete):
     kwds : keyword arguments
         The extra keyword arguments are used delegated to the ``__init__`` of
         the super class.
-        Their usage has not been checked, e.g. currently the support of the
+        Their usage has not been checked, e.g., currently the support of the
         distribution is assumed to be all non-negative integers.
 
     Notes

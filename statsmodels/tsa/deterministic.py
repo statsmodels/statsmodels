@@ -138,14 +138,8 @@ class DeterministicTerm(ABC):
             next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
             return pd.date_range(next_obs, freq=index.freq, periods=steps)
         elif isinstance(index, pd.RangeIndex):
-            assert isinstance(index, pd.RangeIndex)
-            try:
-                step = index.step
-                start = index.stop
-            except AttributeError:
-                # TODO: Remove after pandas min ver is 1.0.0+
-                step = index[-1] - index[-2] if len(index) > 1 else 1
-                start = index[-1] + step
+            step = index.step
+            start = index.stop
             stop = start + step * steps
             return pd.RangeIndex(start, stop, step=step)
         elif is_int_index(index) and np.all(np.diff(index) == 1):
@@ -986,8 +980,8 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
 
         Returns
         -------
-        TimeTrend
-            The TimeTrend instance.
+        CalendarTimeTrend
+            The CalendarTimeTrend instance.
         """
         constant = trend.startswith("c")
         order = 0
@@ -1071,8 +1065,8 @@ class DeterministicProcess:
     constant : bool, default False
         Whether to include a constant.
     order : int, default 0
-        The order of the tim trend to include. For example, 2 will include
-        both linear and quadratic terms. 0 exclude time trend terms.
+        The order of the time trend to include. For example, 2 will include
+        both linear and quadratic terms. 0 excludes time trend terms.
     seasonal : bool = False
         Whether to include seasonal dummies
     fourier : int = 0

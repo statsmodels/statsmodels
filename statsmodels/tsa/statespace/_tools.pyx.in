@@ -1174,7 +1174,7 @@ cdef int _{{prefix}}select_cov(int k_states, int k_posdef, int k_states_total,
         #
         # Combine a selection matrix and a covariance matrix to get
         # a simplified (but possibly singular) "selected" covariance
-        # matrix (see e.g. Durbin and Koopman p. 43)
+        # matrix (see e.g., Durbin and Koopman p. 43)
 
         # `tmp0` array used here, dimension $(m \times r)$
 
@@ -1480,7 +1480,7 @@ cpdef _{{prefix}}compute_smoothed_state_weights(
         # the predicted state at time t, that would mean we were computing
         # weights for the expectation of the time t state conditional on all
         # information dated time t-1 or earlier. So I thnk that j==t refers
-        # to the specific case that j = t and i = p_t, i.e. we have
+        # to the specific case that j = t and i = p_t, i.e., we have
         # incorporated all the information from time t. Then j = t but i < p_t
         # would follow the j < t formula.
         j = t

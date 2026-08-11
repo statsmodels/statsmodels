@@ -6,13 +6,13 @@ Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 Review of Economics and Statistics, 100(5), 831-843.
 """
 
-from statsmodels.compat.pandas import QUARTER_END
 
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 from statsmodels.tsa.filters.hamilton_filter import hamilton_filter
 
 # ---------------------------------------------------------------------------
@@ -33,6 +33,14 @@ def test_output_shapes_default():
     cycle, trend = hamilton_filter(x)
     assert cycle.shape == (50,)
     assert trend.shape == (50,)
+
+
+def test_returns_cycletrendresult():
+    x = np.ones(50)
+    res = hamilton_filter(x)
+    assert isinstance(res, CycleTrendResult)
+    assert res[0] is res.cycle
+    assert res[1] is res.trend
 
 
 def test_output_shapes_custom_h_p():
@@ -146,7 +154,7 @@ def test_pandas_name_suffix():
 
 
 def test_pandas_index_preserved():
-    idx = pd.date_range("2000Q1", periods=len(_QUARTERLY), freq=QUARTER_END)
+    idx = pd.period_range("2000Q1", periods=len(_QUARTERLY), freq="Q").to_timestamp()
     s = pd.Series(_QUARTERLY, index=idx, name="gdp")
     cycle, _ = hamilton_filter(s)
     assert (cycle.index == idx).all()

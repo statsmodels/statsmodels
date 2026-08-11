@@ -1232,7 +1232,10 @@ def check_smw_solver(p, q, r, s):
     y1 = f(x)
     assert_allclose(y1, y2)
 
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
+    A_sp = sparse.csr_array(A)
+    AtA_sp = sparse.csr_array(AtA)
+
+    f = _smw_solver(s, A_sp, AtA_sp, Qi, di)
     y1 = f(x)
     assert_allclose(y1, y2)
 

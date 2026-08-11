@@ -143,8 +143,6 @@ class RegularizedInvCovariance:
     ----------
     exog : array_like
         A weighted design matrix for covariance.
-    alpha : scalar
-        Regularizing constant.
     """
 
     def __init__(self, exog):
@@ -184,4 +182,12 @@ class RegularizedInvCovariance:
         self._approx_inv_cov = approx_inv_cov
 
     def approx_inv_cov(self):
+        """
+        Returns the approximate inverse covariance matrix
+
+        Returns
+        -------
+        array_like
+            A p x p matrix.
+        """
         return self._approx_inv_cov

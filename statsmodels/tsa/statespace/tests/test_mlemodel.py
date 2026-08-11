@@ -702,7 +702,7 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
 
 
 def test_basic_endog():
-    # Test various types of basic python endog inputs (e.g. lists, scalars...)
+    # Test various types of basic python endog inputs (e.g., lists, scalars...)
 
     # Check cannot call with non-array_like
     # fails due to checks in statsmodels base classes
@@ -847,7 +847,7 @@ def test_numpy_endog():
 
 
 def test_pandas_endog():
-    # Test various types of pandas endog inputs (e.g. TimeSeries, etc.)
+    # Test various types of pandas endog inputs (e.g., TimeSeries, etc.)
 
     # Example (failure): pandas.Series, no dates
     endog = pd.Series([1.0, 2.0])

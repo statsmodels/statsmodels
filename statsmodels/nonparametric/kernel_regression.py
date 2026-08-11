@@ -1,5 +1,5 @@
 """
-Multivariate Conditional and Unconditional Kernel Density Estimation
+Multivariate Conditional and Unconditional Kernel Regression
 with Mixed Data Types
 
 References
@@ -168,7 +168,7 @@ class KernelReg(GenericKDE):
             self._bw_method = "user-specified"
             return np.asarray(bw)
         else:
-            # The user specified a bandwidth selection method e.g. 'cv_ls'
+            # The user specified a bandwidth selection method e.g., 'cv_ls'
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
             if bw == "cv_ls":
@@ -443,9 +443,9 @@ class KernelReg(GenericKDE):
         Returns
         -------
         mean : ndarray
-            The regression result for the mean (i.e. the actual curve).
+            The regression result for the mean (i.e., the actual curve).
         mfx : ndarray
-            The marginal effects, i.e. the partial derivatives of the mean.
+            The marginal effects, i.e., the partial derivatives of the mean.
         """
         func = self.est[self.reg_type]
         if data_predict is None:
@@ -492,7 +492,7 @@ class KernelReg(GenericKDE):
 
                 - `*` : at 90% confidence level
                 - `**` : at 95% confidence level
-                - `***` : at 99* confidence level
+                - `***` : at 99% confidence level
                 - "Not Significant" : if not significant
         """
         var_pos = np.asarray(var_pos)
@@ -534,6 +534,12 @@ class KernelReg(GenericKDE):
         data : ndarray
             The data array, with the dependent variable in the first column
             and the independent variables in the remaining columns.
+
+        Returns
+        -------
+        ndarray
+            The minimum of the standard deviation and IQR / 1.349 for each
+            independent variable.
 
         References
         ----------
@@ -811,9 +817,9 @@ class KernelCensoredReg(KernelReg):
         Returns
         -------
         mean : ndarray
-            The regression result for the mean (i.e. the actual curve).
+            The regression result for the mean (i.e., the actual curve).
         mfx : ndarray
-            The marginal effects, i.e. the partial derivatives of the mean.
+            The marginal effects, i.e., the partial derivatives of the mean.
         """
         func = self.est[self.reg_type]
         if data_predict is None:
@@ -853,7 +859,7 @@ class TestRegCoefC:
         are tested for significance.
     test_vars : tuple, list of integers, array_like
         index of position of the continuous variables to be tested
-        for significance. E.g. (1,3,5) jointly tests variables at
+        for significance. e.g., (1,3,5) jointly tests variables at
         position 1,3 and 5 for significance.
     nboot : int, optional
         Number of bootstrap samples used to determine the distribution
@@ -1056,11 +1062,19 @@ class TestRegCoefD(TestRegCoefC):
         are tested for significance.
     test_vars : tuple, list of one element
         index of position of the discrete variable to be tested
-        for significance. E.g. (3) tests variable at
+        for significance. e.g., (3) tests variable at
         position 3 for significance.
     nboot : int, optional
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
+    rng : {int, Generator, RandomState}, optional
+        A seed to use. If None, will use the global RandomState.
+
+        .. deprecated:: 0.15.0
+
+            In release 0.17.0 or after January 2028, whichever comes sooner,
+            using None will initialize a new numpy.random.default_rng using
+            system entropy.
 
     Attributes
     ----------

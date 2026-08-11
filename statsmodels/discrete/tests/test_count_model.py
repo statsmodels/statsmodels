@@ -171,7 +171,7 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         ex_infl = model1.exog_infl[:10:2]
         offset = offset[:10:2]
         # # TODO: this raises with shape mismatch,
-        # # i.e. uses offset or exposure from model -> fix it or not?
+        # # i.e., uses offset or exposure from model -> fix it or not?
         # GLM.predict to setting offset and exposure to zero
         # fitted1_1 = self.res1.predict(exog=ex, exog_infl=ex_infl)
         # fitted3_1 = res3.predict(exog=ex, exog_infl=ex_infl)

@@ -1,6 +1,6 @@
 .. currentmodule:: statsmodels.stats.anova
 
-.. _anova:
+.. _anova_ref:
 
 ANOVA
 =====

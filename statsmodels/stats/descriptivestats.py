@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_extension_array_dtype
 
 if PD_LT_2:
     from pandas.core.dtypes.common import is_categorical_dtype
@@ -152,6 +153,16 @@ def sign_test(samp, mu0=0):
     p : float
         The p-value for the test.
 
+    Raises
+    ------
+    ValueError
+        If no observation differs from `mu0`. All values are then discarded
+        as ties and the test is not defined.
+
+    See Also
+    --------
+    scipy.stats.wilcoxon
+
     Notes
     -----
     The signs test returns
@@ -165,20 +176,18 @@ def sign_test(samp, mu0=0):
     and can be interpreted the same as for a t-test. The test-statistic
     is distributed Binom(min(N(+), N(-)), n_trials, .5) where n_trials
     equals N(+) + N(-).
-
-    See Also
-    --------
-    scipy.stats.wilcoxon
     """
     samp = np.asarray(samp)
     pos = np.sum(samp > mu0)
     neg = np.sum(samp < mu0)
+    if pos + neg == 0:
+        raise ValueError(
+            "The sign test is not defined when no observation differs from "
+            "mu0. Every value in samp is equal to mu0 (or samp is empty), and "
+            "tied values are discarded."
+        )
     M = (pos - neg) / 2.0
-    try:
-        p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
-    except AttributeError:
-        # Remove after min SciPy >= 1.7
-        p = stats.binom_test(min(pos, neg), pos + neg, 0.5)
+    p = stats.binomtest(min(pos, neg), pos + neg, 0.5).pvalue
     return M, p
 
 
@@ -309,7 +318,7 @@ class Description:
         alpha: float = 0.05,
         use_t: bool = False,
         percentiles: Sequence[int | float] = PERCENTILES,
-        ntop: bool = 5,
+        ntop: int = 5,
     ):
         data_arr = data
         if not isinstance(data, (pd.Series, pd.DataFrame)):
@@ -450,17 +459,11 @@ class Description:
         mode_freq[loc] = mode_counts[loc] / count.loc[loc]
         # TODO: Workaround for pandas AbstractMethodError in extension
         #  types. Remove when quantile is supported for these
-        _df = df
-        try:
-            from pandas.api.types import is_extension_array_dtype
-
-            _df = df.copy()
-            for col in df:
-                if is_extension_array_dtype(df[col].dtype):
-                    if _df[col].isna().any():
-                        _df[col] = _df[col].fillna(np.nan)
-        except ImportError:
-            pass
+        _df = df.copy()
+        for col in df:
+            if is_extension_array_dtype(df[col].dtype):
+                if _df[col].isna().any():
+                    _df[col] = _df[col].fillna(np.nan)
 
         if df.shape[1] > 0:
             iqr = _df.quantile(0.75) - _df.quantile(0.25)
@@ -566,7 +569,7 @@ class Description:
         for col, single in vc.items():
             if single.shape[0] >= self._ntop:
                 top[col] = single.index[: self._ntop]
-                freq[col] = np.asarray(single.iloc[:5])
+                freq[col] = np.asarray(single.iloc[: self._ntop])
             else:
                 val = list(single.index)
                 val += [None] * (self._ntop - len(val))

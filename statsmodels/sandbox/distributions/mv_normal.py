@@ -40,7 +40,7 @@ TODO:
 
 * more work: bivariate distributions,
   inherit from multivariate but overwrite some methods for better efficiency,
-  e.g. cdf and expect
+  e.g., cdf and expect
 
 I kept the original MVNormal0 class as reference, can be deleted
 
@@ -347,7 +347,7 @@ class BivariateNormal:
     #      or normalize before integration
 
     def __init__(self, mean, cov):
-        self.mean = mu
+        self.mean = mean
         self.cov = cov
         self.sigmax, self.sigmaxy, tmp, self.sigmay = np.ravel(cov)
         self.nvars = 2
@@ -422,7 +422,7 @@ class MVElliptical:
             dispersion matrix, covariance matrix in normal distribution, but
             only proportional to covariance matrix in t distribution
         args : list
-            distribution specific arguments, e.g. df for t distribution
+            distribution specific arguments, e.g., df for t distribution
         kwds : dict
             currently not used
 
@@ -567,7 +567,7 @@ class MVElliptical:
         return np.exp(self.logpdf(x))
 
     def standardize(self, x):
-        """standardize the random variable, i.e. subtract mean and whiten
+        """standardize the random variable, i.e., subtract mean and whiten
 
         Parameters
         ----------
@@ -596,7 +596,7 @@ class MVElliptical:
         return self.affine_transformed(-self.mean, self.cholsigmainv)
 
     def normalize(self, x):
-        """normalize the random variable, i.e. subtract mean and rescale
+        """normalize the random variable, i.e., subtract mean and rescale
 
         The distribution will have zero mean and sigma equal to correlation
 
@@ -739,7 +739,7 @@ class MVNormal0:
 
         Parameters
         ----------
-        X : array_like, 1d or 2d
+        x : array_like, 1d or 2d
             Data to be whitened, if 2d then each row contains an independent
             sample of the multivariate random vector
 
@@ -1044,10 +1044,8 @@ class MVT(MVElliptical):
         sigma : array_like, 2d
             dispersion matrix, covariance matrix in normal distribution, but
             only proportional to covariance matrix in t distribution
-        args : list
-            distribution specific arguments, e.g. df for t distribution
-        kwds : dict
-            currently not used
+        df : int or float
+            degrees of freedom of the multivariate t distribution
 
         """
         super().__init__(mean, sigma)
@@ -1218,100 +1216,3 @@ def quad2d(func=lambda x: 1, lower=(-10, -10), upper=(10, 10)):
     from scipy.integrate import dblquad
 
     return dblquad(fun, lower[0], upper[0], lambda y: lower[1], lambda y: upper[1])
-
-
-if __name__ == "__main__":
-
-    from numpy.testing import assert_almost_equal, assert_array_almost_equal
-
-    examples = ["mvn"]
-
-    mu = (0, 0)
-    covx = np.array([[1.0, 0.5], [0.5, 1.0]])
-    mu3 = [-1, 0.0, 2.0]
-    cov3 = np.array([[1.0, 0.5, 0.75], [0.5, 1.5, 0.6], [0.75, 0.6, 2.0]])
-
-    if "mvn" in examples:
-        bvn = BivariateNormal(mu, covx)
-        rvs = bvn.rvs(size=1000)
-        print(rvs.mean(0))
-        print(np.cov(rvs, rowvar=0))
-        print(bvn.expect())
-        print(bvn.cdf([0, 0]))
-        bvn1 = BivariateNormal(mu, np.eye(2))
-        bvn2 = BivariateNormal(mu, 4 * np.eye(2))
-
-        def fun(x):
-            return np.log(bvn1.pdf(x)) - np.log(bvn.pdf(x))
-
-        print(bvn1.expect(fun))
-        print(bvn1.kl(bvn2), bvn1.kl_mc(bvn2))
-        print(bvn2.kl(bvn1), bvn2.kl_mc(bvn1))
-        print(bvn1.kl(bvn), bvn1.kl_mc(bvn))
-        mvn = MVNormal(mu, covx)
-        mvn.pdf([0, 0])
-        mvn.pdf(np.zeros((2, 2)))
-        # np.dot(mvn.cholcovinv.T, mvn.cholcovinv) - mvn.covinv
-
-        cov3 = np.array([[1.0, 0.5, 0.75], [0.5, 1.5, 0.6], [0.75, 0.6, 2.0]])
-        mu3 = [-1, 0.0, 2.0]
-        mvn3 = MVNormal(mu3, cov3)
-        mvn3.pdf((0.0, 2.0, 3.0))
-        mvn3.logpdf((0.0, 2.0, 3.0))
-        # comparisons with R mvtnorm::dmvnorm
-        # decimal=14
-        #        mvn3.logpdf(cov3) - [-7.667977543898155, -6.917977543898155, -5.167977543898155]
-        #        # decimal 18
-        #        mvn3.pdf(cov3) - [0.000467562492721686, 0.000989829804859273, 0.005696077243833402]
-        #        # cheating new mean, same cov
-        #        mvn3.mean = np.array([0,0,0])
-        #        # decimal= 16
-        #        mvn3.pdf(cov3) - [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
-
-        # as asserts
-        r_val = [-7.667977543898155, -6.917977543898155, -5.167977543898155]
-        assert_array_almost_equal(mvn3.logpdf(cov3), r_val, decimal=14)
-        # decimal 18
-        r_val = [0.000467562492721686, 0.000989829804859273, 0.005696077243833402]
-        assert_array_almost_equal(mvn3.pdf(cov3), r_val, decimal=17)
-        # cheating new mean, same cov, too dangerous, got wrong instance in tests
-        # mvn3.mean = np.array([0,0,0])
-        mvn3c = MVNormal(np.array([0, 0, 0]), cov3)
-        r_val = [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
-        assert_array_almost_equal(mvn3c.pdf(cov3), r_val, decimal=16)
-
-        mvn3b = MVNormal((0, 0, 0), 1)
-
-        def fun(x):
-            return np.log(mvn3.pdf(x)) - np.log(mvn3b.pdf(x))
-
-        print(mvn3.expect_mc(fun))
-        print(mvn3.expect_mc(fun, size=200000))
-
-    mvt = MVT((0, 0), 1, 5)
-    assert_almost_equal(
-        mvt.logpdf(np.array([0.0, 0.0])), -1.837877066409345, decimal=15
-    )
-    assert_almost_equal(mvt.pdf(np.array([0.0, 0.0])), 0.1591549430918953, decimal=15)
-
-    mvt.logpdf(np.array([1.0, 1.0])) - (-3.01552989458359)
-
-    mvt1 = MVT((0, 0), 1, 1)
-    mvt1.logpdf(np.array([1.0, 1.0])) - (-3.48579549941151)  # decimal=16
-
-    rvs = mvt.rvs(100000)
-    assert_almost_equal(np.cov(rvs, rowvar=0), mvt.cov, decimal=1)
-
-    mvt31 = MVT(mu3, cov3, 1)
-    assert_almost_equal(
-        mvt31.pdf(cov3),
-        [0.0007276818698165781, 0.0009980625182293658, 0.0027661422056214652],
-        decimal=18,
-    )
-
-    mvt = MVT(mu3, cov3, 3)
-    assert_almost_equal(
-        mvt.pdf(cov3),
-        [0.000863777424247410, 0.001277510788307594, 0.004156314279452241],
-        decimal=17,
-    )

@@ -6,8 +6,6 @@ License: Simplified-BSD
 """
 from statsmodels.compat.pandas import deprecate_kwarg
 
-import warnings
-
 import numpy as np
 
 from statsmodels.tools.rng_qrng import check_random_state
@@ -252,7 +250,7 @@ class SimulationSmoother(KalmanSmoother):
             The prefix of the datatype. Usually only used internally.
         nobs : int, optional
             The number of observations to simulate. If set to anything other
-            than -1, only simulation will be performed (i.e. simulation
+            than -1, only simulation will be performed (i.e., simulation
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available. Default is -1,
             which uses the number of observations in the model.
@@ -268,7 +266,7 @@ class SimulationSmoother(KalmanSmoother):
                rng for passing a random number generator or seed.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
-            See `set_simulation_output` for more details.
+            See `get_simulation_output` for more details.
 
         Returns
         -------
@@ -414,7 +412,6 @@ class SimulationSmoothResults:
         self._generated_state = None
         self._simulated_state = None
         self._simulated_measurement_disturbance = None
-        self._simulated_state_disturbance = None
         self._simulated_state_disturbance = None
 
     @property
@@ -583,11 +580,9 @@ class SimulationSmoothResults:
     def simulate(
         self,
         simulation_output=-1,
-        disturbance_variates=None,
         measurement_disturbance_variates=None,
         state_disturbance_variates=None,
         initial_state_variates=None,
-        pretransformed=None,
         pretransformed_measurement_disturbance_variates=None,
         pretransformed_state_disturbance_variates=None,
         pretransformed_initial_state_variates=False,
@@ -621,7 +616,7 @@ class SimulationSmoothResults:
             be shaped (`k_states` x 1), where `k_states` is the same as in the
             state space model. If unspecified, but the model has been
             initialized, then that initialization is used. Usually only
-            specified if results are to be replicated (e.g. to enforce a seed)
+            specified if results are to be replicated (e.g., to enforce a seed)
             or for testing; if not specified, random variates are drawn.
         pretransformed_measurement_disturbance_variates : bool, optional
             If `measurement_disturbance_variates` is provided, this flag
@@ -651,67 +646,7 @@ class SimulationSmoothResults:
 
                random_state has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
-        disturbance_variates : bool, optional
-            Deprecated, please use pretransformed_measurement_shocks and
-            pretransformed_state_shocks instead.
-
-            .. deprecated:: 0.14.0
-
-               Use ``measurement_disturbance_variates`` and
-               ``state_disturbance_variates`` as replacements.
-
-        pretransformed : bool, optional
-            Deprecated, please use pretransformed_measurement_shocks and
-            pretransformed_state_shocks instead.
-
-            .. deprecated:: 0.14.0
-
-               Use ``pretransformed_measurement_disturbance_variates`` and
-               ``pretransformed_state_disturbance_variates`` as replacements.
         """
-        # Handle deprecated arguments
-        if disturbance_variates is not None:
-            msg = (
-                "`disturbance_variates` keyword is deprecated, use"
-                " `measurement_disturbance_variates` and"
-                " `state_disturbance_variates` instead."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if (
-                measurement_disturbance_variates is not None
-                or state_disturbance_variates is not None
-            ):
-                raise ValueError(
-                    "Cannot use `disturbance_variates` in"
-                    " combination with "
-                    " `measurement_disturbance_variates` or"
-                    " `state_disturbance_variates`."
-                )
-            if disturbance_variates is not None:
-                disturbance_variates = disturbance_variates.ravel()
-                n_mds = self.model.nobs * self.model.k_endog
-                measurement_disturbance_variates = disturbance_variates[:n_mds]
-                state_disturbance_variates = disturbance_variates[n_mds:]
-        if pretransformed is not None:
-            msg = (
-                "`pretransformed` keyword is deprecated, use"
-                " `pretransformed_measurement_disturbance_variates` and"
-                " `pretransformed_state_disturbance_variates` instead."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if (
-                pretransformed_measurement_disturbance_variates is not None
-                or pretransformed_state_disturbance_variates is not None
-            ):
-                raise ValueError(
-                    "Cannot use `pretransformed` in combination with "
-                    " `pretransformed_measurement_disturbance_variates` or"
-                    " `pretransformed_state_disturbance_variates`."
-                )
-            if pretransformed is not None:
-                pretransformed_measurement_disturbance_variates = pretransformed
-                pretransformed_state_disturbance_variates = pretransformed
-
         if pretransformed_measurement_disturbance_variates is None:
             pretransformed_measurement_disturbance_variates = False
         if pretransformed_state_disturbance_variates is None:

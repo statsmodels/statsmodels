@@ -92,7 +92,7 @@ class KalmanSmoother(KalmanFilter):
     smooth_alternative = OptionWrapper("smooth_method", SMOOTH_ALTERNATIVE)
     """(bool) Flag for alternative (modified Bryson-Frazier) smoothing"""
     smooth_classical = OptionWrapper("smooth_method", SMOOTH_CLASSICAL)
-    """(bool) Flag for classical (see e.g. Anderson and Moore, 1979) smoothing"""
+    """(bool) Flag for classical (see e.g., Anderson and Moore, 1979) smoothing"""
     smooth_univariate = OptionWrapper("smooth_method", SMOOTH_UNIVARIATE)
     """(bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing)"""
 
@@ -328,7 +328,7 @@ class KalmanSmoother(KalmanFilter):
         >>> mod.smooth_method
         17
         >>> mod.set_smooth_method(filter_univariate=False,
-                                  filter_collapsed=True)
+        ...                       filter_collapsed=True)
         >>> mod.smooth_method
         33
         >>> mod.set_smooth_method(smooth_method=1)
@@ -569,9 +569,9 @@ class SmootherResults(FilterResults):
         The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
     smoothed_measurement_disturbance : ndarray
-        The smoothed measurement at each time period.
+        The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
-        The smoothed state at each time period.
+        The smoothed state disturbance at each time period.
     smoothed_measurement_disturbance_cov : ndarray
         The smoothed measurement disturbance covariance matrices at each time
         period. If a non-diagonal observation covariance was diagonalized as
@@ -954,7 +954,7 @@ class SmootherResults(FilterResults):
               0 or -1, and the model is either time-invariant or time-varying,
               then the returned array is shaped `(*, *, nobs)` and each
               entry [:, :, t] contains Cov(t, t+j). Moreover, all entries are
-              available (i.e. there are no NaNs).
+              available (i.e., there are no NaNs).
 
             - If the model is time-varying and `lag < -1` and `extend_kwargs`
               is not provided, then the returned array is shaped
@@ -966,7 +966,7 @@ class SmootherResults(FilterResults):
               usual.
 
             More generally, the dimension of the last axis will be
-            `start - end`.
+            `end - start`.
 
         Notes
         -----
@@ -984,7 +984,7 @@ class SmootherResults(FilterResults):
         assigned to the variable `acov`, we will have `acov[..., 0]` and
         `acov[..., 1]` as matrices filled with NaN values.
 
-        Based only on the "current" results object (i.e. the Kalman smoother
+        Based only on the "current" results object (i.e., the Kalman smoother
         applied to the sample), there is not enough information to compute
         Cov(t, t+j) for the last `lag - 1` observations of the sample. However,
         the values can be computed for these time points using the transition
@@ -1100,7 +1100,7 @@ class SmootherResults(FilterResults):
             acov = out.transpose(0, 2, 1)
 
         # Squeeze the last axis or else reshape to have the same axis
-        # definitions as e.g. smoothed_state_cov
+        # definitions as e.g., smoothed_state_cov
         if t is not None:
             acov = acov[0]
         else:
@@ -1219,7 +1219,7 @@ class SmootherResults(FilterResults):
 
         Notes
         -----
-        This method computes the effect of new data (e.g. from a new data
+        This method computes the effect of new data (e.g., from a new data
         release) on smoothed forecasts produced by a state space model, as
         described in [1]_. It also computes the effect of revised data on
         smoothed forecasts.
@@ -1438,7 +1438,7 @@ class SmootherResults(FilterResults):
 
                 # Multiplication gives: t, j, m, p * t, j, m, p, k
                 # Sum along axis=2 gives: t, j, p, k
-                # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k
+                # Transpose to: t, j, k, p (i.e., like t, j, m, p but with k
                 # instead of m)
                 revision_weights = np.nansum(
                     smoothed_state_weights[..., None]
@@ -1874,9 +1874,9 @@ class SmootherResults(FilterResults):
             time `j` to the `m`-th state at time `t`. If the smoothed signal
             is being decomposed, then `state_intercept_contributions` are
             shaped `(nobs, k_endog, nobs, k_endog)`, where the
-            `(t, k, j, l)`-th element is the contribution of the `p`-th
-            observation at time `j` to the smoothed prediction of the `k`-th
-            observation at time `t`.
+            `(t, k, j, l)`-th element is the contribution of the `l`-th
+            state intercept at time `j` to the smoothed prediction of the
+            `k`-th observation at time `t`.
         prior_contributions : array
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` are
@@ -1918,14 +1918,14 @@ class SmootherResults(FilterResults):
         if decomposition_of == "smoothed_signal":
             # Multiplication gives: t, j, m, p * t, j, m, p, k
             # Sum along axis=2 gives: t, j, p, k
-            # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k instead
+            # Transpose to: t, j, k, p (i.e., like t, j, m, p but with k instead
             # of m)
             weights = np.nansum(weights[..., None] * ZT[:, None, :, None, :],
                                 axis=2).transpose(0, 1, 3, 2)
 
             # Multiplication gives: t, j, m, l * t, j, m, l, k
             # Sum along axis=2 gives: t, j, l, k
-            # Transpose to: t, j, k, l (i.e. like t, j, m, p but with k instead
+            # Transpose to: t, j, k, l (i.e., like t, j, m, p but with k instead
             # of m and l instead of p)
             state_intercept_weights = np.nansum(
                 state_intercept_weights[..., None] * ZT[:, None, :, None, :],
@@ -1933,7 +1933,7 @@ class SmootherResults(FilterResults):
 
             # Multiplication gives: t, m, l * t, m, l, k = t, m, l, k
             # Sum along axis=1 gives: t, l, k
-            # Transpose to: t, k, l (i.e. like t, m, l but with k instead of m)
+            # Transpose to: t, k, l (i.e., like t, m, l but with k instead of m)
             prior_weights = np.nansum(
                 prior_weights[..., None] * ZT[:, :, None, :],
                 axis=1).transpose(0, 2, 1)

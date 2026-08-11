@@ -96,7 +96,7 @@ class TrimmedMean:
     """
     Class for trimmed and winsorized one sample statistics
 
-    axis is None, i.e. ravelling, is not supported.
+    axis is None, i.e., ravelling, is not supported.
 
     Parameters
     ----------
@@ -111,7 +111,7 @@ class TrimmedMean:
         along ``axis``.
     axis : int
         The axis of reduce operations. By default axis=0, that is observations
-        are along the zero dimension, i.e. rows if 2-dim.
+        are along the zero dimension, i.e., rows if 2-dim.
     """
 
     def __init__(self, data, fraction, is_sorted=False, axis=0):

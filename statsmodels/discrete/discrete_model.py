@@ -318,15 +318,9 @@ class DiscreteModel(base.LikelihoodModel):
             See LikelihoodModelResults notes section for more information.
         disp : bool
             Set to True to print convergence messages.
-        fargs : tuple
-            Extra arguments passed to the likelihood function, i.e.,
-            loglike(x,*args).
         callback : callable callback(xk)
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        retall : bool
-            Set to True to return list of solutions at each iteration.
-            Available in Results object's mle_retvals attribute.
         alpha : non-negative scalar or numpy array (same size as parameters)
             The weight multiplying the l1 penalty term.
         trim_mode : 'auto, 'size', or 'off'
@@ -334,7 +328,7 @@ class DiscreteModel(base.LikelihoodModel):
             zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
             If 'size', trim params if they have very small absolute value.
-        size_trim_tol : float or 'auto' (default = 'auto')
+        size_trim_tol : float (default = 1e-4)
             Tolerance used when trim_mode == 'size'.
         auto_trim_tol : float
             Tolerance used when trim_mode == 'auto'.
@@ -493,7 +487,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         return cov_params
 
-    def predict(self, params, exog=None, which="mean", linear=None):
+    def predict(self, params, exog=None, which="mean"):
         """
         Predict response variable of a model given exogenous variables.
         """
@@ -542,7 +536,7 @@ class BinaryModel(DiscreteModel):
             if not self._continuous_ok and np.any(self.endog != np.round(self.endog)):
                 raise ValueError("endog must be binary, either 0 or 1")
 
-    def predict(self, params, exog=None, which="mean", linear=None, offset=None):
+    def predict(self, params, exog=None, which="mean", offset=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -557,36 +551,20 @@ class BinaryModel(DiscreteModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
-
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
+        offset : array_like, optional
+            Offset is added to the linear predictor with coefficient equal
+            to 1. If offset is not provided and exog is None, uses the
+            model's offset if present. If not, uses 0 as the default value.
 
         Returns
         -------
         array
             Fitted values at exog.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, "offset"):
             offset = self.offset
@@ -798,7 +776,7 @@ class MultinomialModel(BinaryModel):
         self.df_model *= self.J - 1  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J - 1)
 
-    def predict(self, params, exog=None, which="mean", linear=None):
+    def predict(self, params, exog=None, which="mean"):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -817,36 +795,16 @@ class MultinomialModel(BinaryModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
-
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
 
         Notes
         -----
         Column 0 is the base case, the rest conform to the rows of params
         shifted up one for the base case.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         if exog is None:  # do here to accommodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
@@ -1113,7 +1071,7 @@ class CountModel(DiscreteModel):
         return exog, offset, exposure
 
     def predict(
-        self, params, exog=None, exposure=None, offset=None, which="mean", linear=None
+        self, params, exog=None, exposure=None, offset=None, which="mean"
     ):
         """
         Predict response variable of a count model given exogenous variables
@@ -1138,37 +1096,16 @@ class CountModel(DiscreteModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' variance of endog implied by the likelihood model
             - 'prob' predicted probabilities for counts.
-
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
 
         Notes
         -----
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # the following is copied from GLM predict (without family/link check)
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, "offset"):
@@ -1573,7 +1510,7 @@ class Poisson(CountModel):
         ----------
         constraints : formula expression or tuple
             If it is a tuple, then the constraint needs to be given by two
-            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            arrays (constraint_matrix, constraint_value), i.e., (R, q).
             Otherwise, the constraints can be given as strings or list of
             strings.
             see t_test for details
@@ -1645,7 +1582,7 @@ class Poisson(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
 
         Notes
@@ -1809,7 +1746,6 @@ class Poisson(CountModel):
         exposure=None,
         offset=None,
         which="mean",
-        linear=None,
         y_values=None,
     ):
         """
@@ -1840,40 +1776,18 @@ class Poisson(CountModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
             - 'prob' return probabilities for counts from 0 to max(endog) or
               for y_values if those are provided.
 
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            The ``linear`` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear`` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
         y_values : array_like
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
         """
         # Note docstring is reused by other count models
-
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
 
         if which.startswith("lin"):
             which = "linear"
@@ -1884,7 +1798,6 @@ class Poisson(CountModel):
                 exposure=exposure,
                 offset=offset,
                 which=which,
-                linear=linear,
             )
         # TODO: add full set of which
         elif which == "var":
@@ -2156,7 +2069,7 @@ class GeneralizedPoisson(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
@@ -2231,7 +2144,7 @@ class GeneralizedPoisson(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
@@ -2780,7 +2693,7 @@ class Logit(BinaryModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
 
         Notes
@@ -3066,7 +2979,7 @@ class Probit(BinaryModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
 
         Notes
@@ -3420,7 +3333,7 @@ class MNLogit(MultinomialModel):
         Returns
         -------
         score : ndarray, (K * (J-1),)
-            The 2-d score vector, i.e. the first derivative of the
+            The 2-d score vector, i.e., the first derivative of the
             log-likelihood function, of the multinomial logit model evaluated at
             `params`.
 
@@ -3971,16 +3884,8 @@ class NegativeBinomial(CountModel):
         exposure=None,
         offset=None,
         which="mean",
-        linear=None,
         y_values=None,
     ):
-
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # avoid duplicate computation for get-distribution
         if which == "prob":
             distr = self.get_distribution(
@@ -4078,7 +3983,7 @@ class NegativeBinomial(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
@@ -4169,7 +4074,7 @@ class NegativeBinomial(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
@@ -4368,7 +4273,7 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         if self._transparams:
@@ -4409,7 +4314,7 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         score = np.sum(self.score_obs(params), axis=0)
@@ -4427,11 +4332,14 @@ class NegativeBinomialP(CountModel):
         ----------
         params : array-like
             The parameters of the model
+        endog : array_like, optional
+            Endogenous variable to use in place of the model's `endog`.
+            If None, the model's `endog` is used.
 
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         params = np.asarray(params)
@@ -4713,7 +4621,7 @@ class NegativeBinomialP(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
@@ -4788,7 +4696,7 @@ class NegativeBinomialP(CountModel):
             with warnings.catch_warnings():
                 # Preliminary fit used only to compute start_params; do not
                 # force warnings to be shown here, so that the caller's warning
-                # filters (e.g. filterwarnings("ignore")) are respected for
+                # filters (e.g., filterwarnings("ignore")) are respected for
                 # this internal fit. See GH#9179.
                 warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
@@ -4957,7 +4865,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.converged = mlefit.mle_retvals["converged"]
 
         if not hasattr(self, "cov_type"):
-            # do this only if super, i.e. mlefit did not already add cov_type
+            # do this only if super, i.e., mlefit did not already add cov_type
             # robust covariance
             if use_t is not None:
                 self.use_t = use_t
@@ -5221,7 +5129,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         exog=None,
         transform=True,
         which="mean",
-        linear=None,
         row_labels=None,
         average=False,
         agg_weights=None,
@@ -5246,11 +5153,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
             see the model.predict docstring
-        linear : bool
-            Linear has been replaced by the `which` keyword and will be
-            deprecated.
-            If linear is True, then `which` is ignored and the linear
-            prediction is returned.
         row_labels : list of str or None
             If row_labels are provided, then they will replace the generated
             labels.
@@ -5259,7 +5161,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Aggregation weights, only used if average is True.
             The weights are not normalized.
@@ -5290,11 +5192,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         -----
         Status: new in 0.14, experimental
         """
-
-        if linear is True:
-            # compatibility with old keyword
-            which = "linear"
-
         pred_kwds = kwargs
         # y_values is explicit so we can add it to the docstring
         if y_values is not None:
@@ -5441,6 +5338,9 @@ class DiscreteResults(base.LikelihoodModelResults):
             default title.
         alpha : float
             The significance level for the confidence intervals.
+        yname_list : list[str], optional
+            Names for the endogenous variables, used for the parameter
+            table. If None, the names are taken from `yname`.
 
         Returns
         -------
@@ -5685,6 +5585,19 @@ class PoissonResults(CountResults):
             The counts for which you want the probabilities. If n is None
             then the probabilities for each count from 0 to max(y) are
             given.
+        exog : array_like, optional
+            Design / exogenous data. If exog is None, model exog is used.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with
+            coefficient equal to 1. If exposure is not provided and exog
+            is None, uses the model's exposure if present.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog is None, uses
+            the model's offset if present.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True.
 
         Returns
         -------
@@ -6079,8 +5992,8 @@ class MultinomialResults(DiscreteResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + self.model.J - 1)
 
-    def conf_int(self, alpha=0.05, cols=None):
-        confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+    def conf_int(self, alpha=0.05):
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
 
     def get_prediction(self):

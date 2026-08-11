@@ -92,6 +92,6 @@ plt.show()
 R = [[0, 1, 0, 0], [0, 0, 1, 0]]
 
 # F test joint hypothesis R * beta = 0
-# i.e. coefficient on both dummy variables equal zero
+# i.e., coefficient on both dummy variables equal zero
 print("Test hypothesis that all groups have same intercept")
 print(res2.f_test(R))

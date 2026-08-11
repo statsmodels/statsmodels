@@ -523,7 +523,7 @@ class LikelihoodModel(Model):
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer
                     `scipy.optimize.minimize()`, for example 'method' - the
-                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    minimization method (e.g., 'L-BFGS-B'), or 'tol' - the
                     tolerance for termination. Other arguments are mapped from
                     explicit argument of `fit`:
                       - `args` <- `fargs`
@@ -767,7 +767,7 @@ class LikelihoodModel(Model):
 
         if hasattr(res_constr, "mle_retvals"):
             res._results.mle_retvals = res_constr.mle_retvals
-            # not available for not scipy optimization, e.g. glm irls
+            # not available for not scipy optimization, e.g., glm irls
             # TODO: what retvals should be required?
             # res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
             # res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
@@ -1305,7 +1305,11 @@ class Results:
         If no formula was used, then the provided exog needs to have the
         same number of columns as the original exog in the model. No
         transformation of the data is performed except converting it to
-        a numpy array.
+        a numpy array. In this case the columns are matched by position and
+        not by name, so a DataFrame must have its columns in the same order
+        as the exog used to fit the model; its column labels are ignored.
+        This differs from the formula case above, where the variables are
+        matched by name and the column order does not matter.
 
         Row indices as in pandas data frames are supported, and added to the
         returned prediction.
@@ -1945,7 +1949,7 @@ class LikelihoodModelResults(Results):
         invcov=None,
         use_f=None,
         df_constraints=None,
-        scalar=None,
+        scalar=True,
     ):
         """
         Compute a Wald-test for a joint linear hypothesis
@@ -1979,12 +1983,8 @@ class LikelihoodModelResults(Results):
             The number of constraints. If not provided the number of
             constraints is determined from r_matrix.
         scalar : bool, optional
-            Flag indicating whether the Wald test statistic should be returned
-            as a scalar float. The current behavior is to return an array.
-            This will switch to a scalar float after 0.14 is released. To
-            get the future behavior now, set scalar to True. To silence
-            the warning and retain the legacy behavior, set scalar to
-            False.
+            Flag indicating whether the Wald test statistic should be
+            returned as a scalar float (the default) or as an array.
 
         Returns
         -------
@@ -2009,7 +2009,7 @@ class LikelihoodModelResults(Results):
         where the rank of the covariance of the noise is not full.
         """
         use_f = bool_like(use_f, "use_f", strict=True, optional=True)
-        scalar = bool_like(scalar, "scalar", strict=True, optional=True)
+        scalar = bool_like(scalar, "scalar", strict=True)
         if use_f is None:
             # switch to use_t false if undefined
             use_f = hasattr(self, "use_t") and self.use_t
@@ -2080,16 +2080,6 @@ class LikelihoodModelResults(Results):
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
         df_resid = getattr(self, "df_resid_inference", self.df_resid)
-        if scalar is None:
-            warnings.warn(
-                "The behavior of wald_test will change after 0.14 to returning "
-                "scalar test statistic values. To get the future behavior now, "
-                "set scalar to True. To silence this message while retaining "
-                "the legacy behavior, set scalar to False.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            scalar = False
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
@@ -2101,7 +2091,7 @@ class LikelihoodModelResults(Results):
             )
 
     def wald_test_terms(
-        self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=None
+        self, skip_single=False, extra_constraints=None, combine_terms=None, scalar=True
     ):
         """
         Compute a sequence of Wald tests for terms over multiple columns
@@ -2124,12 +2114,8 @@ class LikelihoodModelResults(Results):
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
         scalar : bool, optional
-            Flag indicating whether the Wald test statistic should be returned
-            as a scalar float. The current behavior is to return an array.
-            This will switch to a scalar float after 0.14 is released. To
-            get the future behavior now, set scalar to True. To silence
-            the warning and retain the legacy behavior, set scalar to
-            False.
+            Flag indicating whether the Wald test statistic should be
+            returned as a scalar float (the default) or as an array.
 
         Returns
         -------
@@ -2225,7 +2211,13 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint, scalar=scalar)
-            row = [wt.statistic, wt.pvalue, constraint.shape[0]]
+            # Use rank-adjusted df from wald_test instead of
+            # constraint.shape[0] which ignores rank deficiency.
+            if use_t:
+                df_c = int(wt.df_num)
+            else:
+                df_c = int(wt.df_denom)
+            row = [wt.statistic, wt.pvalue, df_c]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
@@ -2313,7 +2305,7 @@ class LikelihoodModelResults(Results):
         ----------
         func : callable, f(params)
             Nonlinear function of the estimation parameters. The return of
-            the function can be vector valued, i.e. a 1-D array.
+            the function can be vector valued, i.e., a 1-D array.
         deriv : function or None
             First derivative or Jacobian of func. If deriv is None, then a
             numerical derivative will be used. If func returns a 1-D array,
@@ -2335,7 +2327,7 @@ class LikelihoodModelResults(Results):
 
         return nl
 
-    def conf_int(self, alpha=0.05, cols=None):
+    def conf_int(self, alpha=0.05):
         """
         Construct confidence interval for the fitted parameters
 
@@ -2344,15 +2336,6 @@ class LikelihoodModelResults(Results):
         alpha : float, optional
             The significance level for the confidence interval. The default
             `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-            Specifies which confidence intervals to return.
-
-        .. deprecated:: 0.13
-
-           cols is deprecated and will be removed after 0.14 is released.
-           cols only works when inputs are NumPy arrays and will fail
-           when using pandas Series or DataFrames as input. You can
-           subset the confidence intervals using slices.
 
         Returns
         -------
@@ -2383,7 +2366,7 @@ class LikelihoodModelResults(Results):
                [      -0.56251721,        0.460309  ],
                [     798.7875153 ,     2859.51541392]])
 
-        >>> results.conf_int(cols=(2,3))
+        >>> results.conf_int()[2:4]
         array([[-0.1115811 ,  0.03994274],
                [-3.12506664, -0.91539297]])
         """
@@ -2400,19 +2383,6 @@ class LikelihoodModelResults(Results):
         params = self.params
         lower = params - q * bse
         upper = params + q * bse
-        if cols is not None:
-            warnings.warn(
-                "cols is deprecated and will be removed after 0.14 is "
-                "released. cols only works when inputs are NumPy arrays and "
-                "will fail when using pandas Series or DataFrames as input. "
-                "Subsets of confidence intervals can be selected using slices "
-                "of the full confidence interval array.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            cols = np.asarray(cols)
-            lower = lower[cols]
-            upper = upper[cols]
         return np.asarray(lzip(lower, upper))
 
     def save(self, fname, remove_data=False):
@@ -2813,7 +2783,7 @@ class _LLRMixin:
             value llnull is stored.
         **kwargs
             Additional keyword arguments used as fit keyword arguments for the
-            null model. The override and model default values.
+            null model. These override the model default values.
 
         Notes
         -----
@@ -2999,7 +2969,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         which : str
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
-            see the model.predict docstring
+            See the model.predict docstring.
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
             exog through the formula. Default is True. E.g., if you fit
@@ -3008,14 +2978,14 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             their original form. Otherwise, you'd need to log the data
             first.
         row_labels : list of str or None
-            If row_lables are provided, then they will replace the generated
+            If row_labels are provided, then they will replace the generated
             labels.
         average : bool
             If average is True, then the mean prediction is computed, that is,
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Aggregation weights, only used if average is True.
             The weights are not normalized.

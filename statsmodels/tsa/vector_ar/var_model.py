@@ -20,7 +20,7 @@ from scipy import stats
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools._decorators import cache_readonly, deprecated_alias
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import array_like
@@ -33,6 +33,8 @@ from statsmodels.tsa.tsatools import duplication_matrix, unvec, vec
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
+    ErrorBand,
+    ForecastInterval,
     NormalityTestResults,
     WhitenessTestResults,
 )
@@ -67,7 +69,7 @@ def ma_rep(coefs, maxn=10):
 
     .. math:: y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
 
-    e.g. can recursively compute the \Phi_i matrices with \Phi_0 = I_k
+    e.g., can recursively compute the \Phi_i matrices with \Phi_0 = I_k
     """
     p, k, _ = coefs.shape
     phis = np.zeros((maxn + 1, k, k))
@@ -265,10 +267,10 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
         for i in range(1, p + 1):
             # slightly hackish
             if h - i <= 0:
-                # e.g. when h=1, h-1 = 0, which is y[-1]
+                # e.g., when h=1, h-1 = 0, which is y[-1]
                 prior_y = y[h - i - 1]
             else:
-                # e.g. when h=2, h-1=1, which is forcs[0]
+                # e.g., when h=2, h-1=1, which is forcs[0]
                 prior_y = forcs[h - i - 1]
 
             # i=1 is coefs[0]
@@ -315,7 +317,7 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1)
     forc_lower = point_forecast - q * sigma
     forc_upper = point_forecast + q * sigma
 
-    return point_forecast, forc_lower, forc_upper
+    return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
 
 def var_loglike(resid, omega, nobs):
@@ -562,8 +564,6 @@ class VAR(TimeSeriesModel):
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
 
-    y = deprecated_alias("y", "endog", remove_version="0.11.0")
-
     def __init__(self, endog, exog=None, dates=None, freq=None, missing="none"):
         super().__init__(endog, exog, dates, freq, missing=missing)
         if self.endog.ndim == 1:
@@ -656,7 +656,7 @@ class VAR(TimeSeriesModel):
         # todo: this code is only supporting deterministic terms as exog.
         # This means that all exog-variables have lag 0. If dealing with
         # different exogs is necessary, a `lags_exog`-parameter might make
-        # sense (e.g. a sequence of ints specifying lags).
+        # sense (e.g., a sequence of ints specifying lags).
         # Alternatively, leading zeros for exog-variables with smaller number
         # of lags than the maximum number of exog-lags might work.
         """
@@ -1281,12 +1281,15 @@ steps ({steps}) observations.
 
         Returns
         -------
-        point : ndarray
-            Mean value of forecast
-        lower : ndarray
-            Lower bound of confidence interval
-        upper : ndarray
-            Upper bound of confidence interval
+        ForecastInterval
+            A NamedTuple with fields:
+
+            point_forecast : ndarray
+                Mean value of forecast
+            forc_lower : ndarray
+                Lower bound of confidence interval
+            forc_upper : ndarray
+                Upper bound of confidence interval
 
         Notes
         -----
@@ -1302,7 +1305,7 @@ steps ({steps}) observations.
         forc_lower = point_forecast - q * sigma
         forc_upper = point_forecast + q * sigma
 
-        return point_forecast, forc_lower, forc_upper
+        return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
     def to_vecm(self):
         """to_vecm"""
@@ -1643,7 +1646,7 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def pvalues_endog_lagged(self):
-        """pvalues_endog_laggd"""
+        """pvalues_endog_lagged"""
         start = self.k_exog
         return self.pvalues[start:]
 
@@ -1680,16 +1683,23 @@ class VARResults(VARProcess):
         Parameters
         ----------
         steps : int
+            Number of steps ahead to compute forecast covariances for.
+        method : {"mse", "auto"}, default "mse"
+            If "mse", use the forecast MSE, ignoring parameter uncertainty.
+            If "auto", also take parameter uncertainty into account by adding
+            the forecast error covariance due to parameter uncertainty; this
+            is currently only supported if there is no exogenous data and the
+            trend is one of "n" or "c".
+
+        Returns
+        -------
+        covs : ndarray (steps x k x k)
 
         Notes
         -----
         .. math:: \Sigma_{\hat y}(h) = \Sigma_y(h) + \Omega(h) / T
 
         Ref: Lütkepohl pp. 96-97
-
-        Returns
-        -------
-        covs : ndarray (steps x k x k)
         """
         fc_cov = self.mse(steps)
         if method == "mse":
@@ -1748,13 +1758,15 @@ class VARResults(VARProcess):
         cum : bool, default False
             produce cumulative irf error bands
 
+        Returns
+        -------
+        ErrorBand
+            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            ma_rep Monte Carlo standard errors.
+
         Notes
         -----
         Lütkepohl (2005) Appendix D
-
-        Returns
-        -------
-        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
         ma_coll = self.irf_resim(
             orth=orth, repl=repl, steps=steps, rng=rng, burn=burn, cum=cum
@@ -1766,7 +1778,7 @@ class VARResults(VARProcess):
         upp_idx = int(round((1 - signif / 2) * repl) - 1)
         lower = ma_sort[low_idx, :, :, :]
         upper = ma_sort[upp_idx, :, :, :]
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     @deprecate_kwarg("seed", "rng")
     def irf_resim(self, orth=False, repl=1000, steps=10, rng=None, burn=100, cum=False):
@@ -1782,8 +1794,6 @@ class VARResults(VARProcess):
             number of Monte Carlo replications to perform
         steps : int, default 10
             number of impulse response periods
-        signif : float (0 < signif <1)
-            Significance level for error bars, defaults to 95% CI
         rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
             np.random seed for replications
         seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
@@ -1796,14 +1806,14 @@ class VARResults(VARProcess):
         cum : bool, default False
             produce cumulative irf error bands
 
+        Returns
+        -------
+        Array of simulated impulse response functions
+
         Notes
         -----
         .. [*] Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse
            Response." Econometrica 67: 1113-1155.
-
-        Returns
-        -------
-        Array of simulated impulse response functions
         """
         neqs = self.neqs
         k_ar = self.k_ar
@@ -1974,6 +1984,10 @@ class VARResults(VARProcess):
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level
 
+        Returns
+        -------
+        results : CausalityTestResults
+
         Notes
         -----
         Null hypothesis is that there is no Granger-causality for the indicated
@@ -1986,10 +2000,6 @@ class VARResults(VARProcess):
         Test H0: "`causing` does not Granger-cause the remaining variables of
         the system" against  H1: "`causing` is Granger-causal for the
         remaining variables".
-
-        Returns
-        -------
-        results : CausalityTestResults
 
         References
         ----------
@@ -2083,7 +2093,7 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        causing :
+        causing : int or str or sequence of int or str
             If int or str, test whether the corresponding variable is causing
             the variable(s) specified in caused.
             If sequence of int or str, test whether the corresponding
@@ -2091,8 +2101,6 @@ class VARResults(VARProcess):
         signif : float between 0 and 1, default 5 %
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level
-        verbose : bool
-            If True, print a table with the results.
 
         Returns
         -------
@@ -2125,7 +2133,7 @@ class VARResults(VARProcess):
         against H1: "Instantaneous causality between caused and causing
         exists".
 
-        Instantaneous causality is a symmetric relation (i.e. if causing is
+        Instantaneous causality is a symmetric relation (i.e., if causing is
         "instantaneously causing" caused, then also caused is "instantaneously
         causing" causing), thus the naming of the parameters (which is chosen
         to be in accordance with test_granger_causality()) may be misleading.
@@ -2468,6 +2476,11 @@ class FEVD:
         ----------
         periods : int, default None
             Defaults to number originally specified. Can be at most that number
+        figsize : tuple, default (10, 10)
+            Figure size (width, height in inches), passed to
+            `matplotlib.pyplot.subplots`.
+        **plot_kwds
+            Additional keyword arguments to pass to the bar plotting function.
         """
         import matplotlib.pyplot as plt
 

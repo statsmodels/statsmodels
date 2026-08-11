@@ -194,7 +194,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params : ndarray, optional
         Moving average coefficients, not including the zero lag, where the sign
         convention assumes the coefficients are part of the lag polynomial on
-        the right-hand-side of the ARMA definition (i.e. they have the same
+        the right-hand-side of the ARMA definition (i.e., they have the same
         sign from the usual econometrics convention in which the coefficients
         are on the right-hand-side of the ARMA definition).
     sigma2 : ndarray, optional
@@ -242,7 +242,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params : ndarray, optional
         Moving average coefficients, not including the zero lag, where the sign
         convention assumes the coefficients are part of the lag polynomial on
-        the right-hand-side of the ARMA definition (i.e. they have the same
+        the right-hand-side of the ARMA definition (i.e., they have the same
         sign from the usual econometrics convention in which the coefficients
         are on the right-hand-side of the ARMA definition).
     sigma2 : ndarray, optional

@@ -142,8 +142,8 @@ Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
 
 """
-
 from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.scipy import SP_LT_2
 
 from io import StringIO
 import tokenize
@@ -310,7 +310,7 @@ class MixedLMParams:
         Parameters
         ----------
         params : array_like
-            The mode parameters packed into a single vector.
+            The model parameters packed into a single vector.
         k_fe : int
             The number of covariates with fixed effects
         k_re : int
@@ -513,7 +513,10 @@ def _smw_solver(s, A, AtA, Qi, di):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(A):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         def solver(rhs):
             ql = A.T.dot(rhs)
@@ -588,7 +591,10 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(qmat):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         # There are faster but much more difficult ways to do this
         # https://stackoverflow.com/questions/19107617
@@ -1112,7 +1118,7 @@ class MixedLM(base.LikelihoodModel):
                     )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
-                        evc_mats.append(sparse.csr_matrix(mat))
+                        evc_mats.append(sparse.csr_array(mat))
                     else:
                         evc_mats.append(np.asarray(mat))
                 vc_mats.append(evc_mats)
@@ -1465,7 +1471,7 @@ class MixedLM(base.LikelihoodModel):
         Notes
         -----
         If P are the standard form parameters and R are the
-        transformed parameters (i.e. with the Cholesky square root
+        transformed parameters (i.e., with the Cholesky square root
         covariance and square root transformed variance components),
         then P[i] = lin[i] * R + R' * quad[i] * R
 
@@ -1569,9 +1575,9 @@ class MixedLM(base.LikelihoodModel):
         if any_sparse:
             for j, x in enumerate(ex):
                 if not sparse.issparse(x):
-                    ex[j] = sparse.csr_matrix(x)
+                    ex[j] = sparse.csr_array(x)
             ex = sparse.hstack(ex)
-            ex = sparse.csr_matrix(ex)
+            ex = sparse.csr_array(ex)
         else:
             ex = np.concatenate(ex, axis=1)
 
@@ -2406,7 +2412,7 @@ class MixedLM(base.LikelihoodModel):
             msg = f"Gradient optimization failed, |grad| = {gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
-        # Convert to the final parameterization (i.e. undo the square
+        # Convert to the final parameterization (i.e., undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
         params = MixedLMParams.from_packed(
@@ -2630,7 +2636,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         The standard errors of the fitted fixed effects coefficients
     bse_re : ndarray
         The standard errors of the fitted random effects covariance
-        matrix and variance components.  The first `k_re * (k_re + 1)`
+        matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
         the variance components.
@@ -2692,7 +2698,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
         Return the standard errors of the variance parameters
 
-        The first `k_re x (k_re + 1)` elements of the returned array
+        The first `k_re x (k_re + 1) / 2` elements of the returned array
         are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
         components.

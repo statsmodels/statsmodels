@@ -15,7 +15,7 @@ All penalties are subtracted from the log-likelihood, so greater
 penalty values correspond to a greater degree of penalization.
 
 The penalties should be smooth so that they can be subtracted from log
-likelihood functions and optimized using standard methods (i.e. L1
+likelihood functions and optimized using standard methods (i.e., L1
 penalties do not belong here).
 """
 
@@ -395,7 +395,7 @@ class SCADSmoothed(SCAD):
         value[mask] = 2 * self.aq2
 
         if self.restriction is not None and np.size(params) > 1:
-            # note: super returns 1d array for diag, i.e. hessian_diag
+            # note: super returns 1d array for diag, i.e., hessian_diag
             # TODO: weights are missing
             return (self.restriction.T * (weights * value)).dot(self.restriction)
         else:
@@ -507,7 +507,7 @@ class ConstraintsPenalty:
 
         if self.restriction is not None:
             # note: univariate penalty returns 1d array for diag,
-            # i.e. hessian_diag
+            # i.e., hessian_diag
             v = self.restriction.T * value * self.weights
             value = v.dot(self.restriction)
         else:

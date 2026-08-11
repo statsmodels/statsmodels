@@ -354,8 +354,8 @@ class MarkovSwitchingParams:
 
     Parameters are lexicographically ordered in the following way:
 
-    1. Named type string (e.g. "autoregressive")
-    2. Number (e.g. the first autoregressive parameter, then the second)
+    1. Named type string (e.g., "autoregressive")
+    2. Number (e.g., the first autoregressive parameter, then the second)
     3. Regime (if applicable)
 
     Parameter blocks are set using dictionary setter notation where the key
@@ -387,7 +387,7 @@ class MarkovSwitchingParams:
     There are three options for the dictionary key:
 
     - Regime number (zero-indexed)
-    - Named type string (e.g. "autoregressive")
+    - Named type string (e.g., "autoregressive")
     - Regime number and named type string
 
     In the above example, consider the following getters:
@@ -1804,7 +1804,7 @@ class HamiltonFilterResults:
         self.llf_obs = self.joint_loglikelihoods
         self.llf = np.sum(self.llf_obs)
 
-        # Subset transition if necessary (e.g. for Markov autoregression)
+        # Subset transition if necessary (e.g., for Markov autoregression)
         if self.regime_transition.shape[-1] > 1 and self.order > 0:
             self.regime_transition = self.regime_transition[..., self.order :]
 
@@ -1854,7 +1854,7 @@ class KimSmootherResults(HamiltonFilterResults):
     model : MarkovSwitchingModel
         The model object.
     result : dict
-        A dictionary containing two keys: 'smoothd_joint_probabilities' and
+        A dictionary containing two keys: 'smoothed_joint_probabilities' and
         'smoothed_marginal_probabilities'.
 
     Attributes
@@ -2210,9 +2210,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
         **kwargs
-            Additional arguments may required for forecasting beyond the end
+            Additional arguments may be required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
         Returns

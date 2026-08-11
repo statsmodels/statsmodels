@@ -73,7 +73,7 @@ class SARIMAXSpecification:
         `seasonal_order`.
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the polynomial as in `numpy.poly1d`, where
@@ -107,7 +107,7 @@ class SARIMAXSpecification:
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
     validate_specification : bool, optional
-        Whether or not to validate the model specification, e.g. that there
+        Whether or not to validate the model specification, e.g., that there
         is no overlap between the given AR and seasonal AR terms, that the
         differencing orders and seasonal periodicity are not invalid, and
         that the trend does not duplicate a constant column already present
@@ -157,7 +157,7 @@ class SARIMAXSpecification:
         Number of periods in a season.
     trend : str{'n','c','t','ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the polynomial as in `numpy.poly1d`, where
@@ -226,13 +226,13 @@ class SARIMAXSpecification:
     Examples
     --------
     >>> SARIMAXSpecification(order=(1, 0, 2))
-    SARIMAXSpecification(endog=y, order=(1, 0, 2))
+    SARIMAXSpecification(order=(1, 0, 2))
 
-    >>> spec = SARIMAXSpecification(ar_order=1, ma_order=2)
-    SARIMAXSpecification(endog=y, order=(1, 0, 2))
+    >>> SARIMAXSpecification(ar_order=1, ma_order=2)
+    SARIMAXSpecification(order=(1, 0, 2))
 
-    >>> spec = SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
-    SARIMAXSpecification(endog=y, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
+    >>> SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
+    SARIMAXSpecification(order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
     """
 
     def __init__(self, endog=None, exog=None, order=None,
@@ -423,13 +423,13 @@ class SARIMAXSpecification:
                                  " contains a column of constants.")
 
         # This contains the included exponents of the trend polynomial,
-        # where e.g. the constant term has exponent 0, a linear trend has
+        # where e.g., the constant term has exponent 0, a linear trend has
         # exponent 1, etc.
         self.trend_terms = np.where(self.trend_poly == 1)[0]
         # Trend order is either the degree of the trend polynomial, if all
         # exponents are included, or a list of included exponents. Here we need
-        # to make a distinction between a degree zero polynomial (i.e. a
-        # constant) and the zero polynomial (i.e. not even a constant). The
+        # to make a distinction between a degree zero polynomial (i.e., a
+        # constant) and the zero polynomial (i.e., not even a constant). The
         # former has `trend_order = 0`, while the latter has
         # `trend_order = None`.
         self.k_trend = len(self.trend_terms)
@@ -488,7 +488,7 @@ class SARIMAXSpecification:
         """
         (bool) Is autoregressive lag polynomial consecutive
 
-        I.e. does it include all lags up to and including the maximum lag.
+        i.e., does it include all lags up to and including the maximum lag.
         """
         return (self.max_seasonal_ar_order == 0 and
                 not isinstance(self.ar_order, list))
@@ -498,7 +498,7 @@ class SARIMAXSpecification:
         """
         (bool) Is moving average lag polynomial consecutive
 
-        I.e. does it include all lags up to and including the maximum lag.
+        i.e., does it include all lags up to and including the maximum lag.
         """
         return (self.max_seasonal_ma_order == 0 and
                 not isinstance(self.ma_order, list))
@@ -508,7 +508,7 @@ class SARIMAXSpecification:
         """
         (bool) Is the model integrated
 
-        I.e. does it have a nonzero `diff` or `seasonal_diff`.
+        i.e., does it have a nonzero `diff` or `seasonal_diff`.
         """
         return self.diff > 0 or self.seasonal_diff > 0
 
@@ -674,7 +674,8 @@ class SARIMAXSpecification:
         ValueError: Burg estimator does not support moving average components.
 
         >>> spec.validate_estimator('innovations')
-        ValueError: Burg estimator does not support autoregressive components.
+        ValueError: Innovations estimator does not support autoregressive
+                    components.
 
         >>> spec.validate_estimator('hannan_rissanen')  # returns None
         >>> spec.validate_estimator('innovations_mle')  # returns None
@@ -891,7 +892,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.validate_params([-0.5, 4.])  # returns None
         >>> spec.validate_params([-0.5, -2])
         ValueError: Non-positive variance term.
@@ -954,7 +955,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.constrain_params([10, -2])
         array([-0.99504,  4.     ])
         """
@@ -1014,7 +1015,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.unconstrain_params([-0.5, 4.])
         array([0.57735, 2.     ])
         """

@@ -71,7 +71,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
     nobs : int or float
         Sample size, number of observations.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     df : int or float
         Degrees of freedom. By default this is None, and ``df = nobs - 1``
@@ -84,7 +84,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
@@ -136,7 +136,7 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
     nobs : float or int
         number of observations
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     alternative : string, 'two-sided' (default), 'larger', 'smaller'
         extra argument to choose whether the power is calculated for a
@@ -148,7 +148,7 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
@@ -190,7 +190,7 @@ def normal_power_het(
     nobs : float or int
         number of observations
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     std_null : float
         standard deviation under the Null hypothesis without division by
@@ -206,7 +206,7 @@ def normal_power_het(
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
@@ -243,18 +243,18 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternativ
     alternative is in the tail where the test has power that increases
     with sample size.
     Use alpha/2 to compute the one tail approximation to the two-sided
-    test, i.e. consider only one tail of two-sided test.
+    test, i.e., consider only one tail of two-sided test.
 
     Parameters
     ----------
     diff : float
         difference in the estimated means or statistics under the alternative.
     power : float in interval (0,1)
-        power of the test, e.g. 0.8, is one minus the probability of a type II
+        power of the test, e.g., 0.8, is one minus the probability of a type II
         error. Power is the probability that the test correctly rejects the
         Null Hypothesis if the Alternative Hypothesis is true.
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
         Note: alpha is used for one tail. Use alpha/2 for two-sided
         alternative.
@@ -300,7 +300,7 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     nobs : int or float
         Total sample size, sum over all groups.
     alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     k_groups : int
         Number of groups in the one-way ANOVA. Default is 2.
@@ -311,7 +311,7 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
@@ -337,7 +337,7 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
         Numerator degrees of freedom.
         This corresponds to the number of constraints in Wald tests.
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     ncc : int
         degrees of freedom correction for non-centrality parameter.
@@ -346,7 +346,7 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -402,7 +402,7 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
         Denominator degrees of freedom.
         This corresponds to the df_resid in Wald tests.
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     ncc : int
         degrees of freedom correction for non-centrality parameter.
@@ -411,7 +411,7 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -512,7 +512,9 @@ class Power:
             The value solves the power equation given the remaining
             parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -552,6 +554,33 @@ class Power:
             else:
                 raise ValueError(
                     "Cannot detect an effect-size of 0. Try changing your effect-size."
+                )
+
+        # GH#9378 intercept impossible one-sided cases before root finding:
+        # if the effect size points into the tail opposite to the
+        # alternative, the attained power is smaller than alpha for any
+        # sample size, so no solution exists unless the requested power is
+        # also smaller than alpha.
+        alternative = kwds.get("alternative")
+        if key in ("nobs", "nobs1", "ratio") and alternative in (
+            "larger",
+            "smaller",
+        ):
+            effect_size = kwds["effect_size"]
+            wrong_sign = (
+                effect_size < 0
+                if alternative == "larger"
+                else effect_size > 0
+            )
+            if wrong_sign and kwds["power"] >= kwds["alpha"]:
+                raise ValueError(
+                    f"No solution exists for {key}: with alternative="
+                    f"{alternative!r} the attained power is smaller than "
+                    f"alpha for any {key} because effect_size is "
+                    f"{'negative' if effect_size < 0 else 'positive'}. A "
+                    "one-sided alternative requires an effect size with "
+                    "matching sign: positive for 'larger', negative for "
+                    "'smaller'."
                 )
 
         self._counter = 0
@@ -636,7 +665,7 @@ class Power:
             )
 
             # the root finder did not converge, so ``val`` is not a solution
-            # (it is the last point the solver evaluated, e.g. a bracket
+            # (it is the last point the solver evaluated, e.g., a bracket
             # bound). Report it in the warning for diagnostics, but return
             # nan instead so it cannot masquerade as a valid answer.
             warnings.warn(
@@ -791,7 +820,7 @@ class TTestPower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         df : int or float
             degrees of freedom. By default this is None, and the df from the
@@ -804,7 +833,7 @@ class TTestPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -842,10 +871,10 @@ class TTestPower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         alternative : str, 'two-sided' (default), 'larger', 'smaller'
@@ -859,7 +888,9 @@ class TTestPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -868,8 +899,6 @@ class TTestPower(Power):
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
 
-        Notes
-        -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
@@ -911,9 +940,9 @@ class TTestIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ratio : float
             ratio of the number of observations in sample 2 relative to
@@ -931,7 +960,7 @@ class TTestIndPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -972,12 +1001,12 @@ class TTestIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ratio : float
@@ -1041,11 +1070,11 @@ class NormalIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ratio : float
             ratio of the number of observations in sample 2 relative to
@@ -1058,7 +1087,7 @@ class NormalIndPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1103,14 +1132,14 @@ class NormalIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ratio : float
@@ -1218,7 +1247,7 @@ class FTestPower(Power):
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int
             degrees of freedom correction for non-centrality parameter.
@@ -1227,7 +1256,7 @@ class FTestPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1287,10 +1316,10 @@ class FTestPower(Power):
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ncc : int
@@ -1388,7 +1417,7 @@ class FTestPowerF2(Power):
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
         alpha : float in interval (0,1)
-            Significance level, e.g. 0.05, is the probability of a type I
+            Significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int
             Degrees of freedom correction for non-centrality parameter.
@@ -1397,7 +1426,7 @@ class FTestPowerF2(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1450,10 +1479,10 @@ class FTestPowerF2(Power):
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ncc : int
@@ -1512,7 +1541,7 @@ class FTestAnovaPower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         k_groups : int or float
             number of groups in the ANOVA or k-sample comparison. Default is 2.
@@ -1520,7 +1549,7 @@ class FTestAnovaPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1548,10 +1577,10 @@ class FTestAnovaPower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         k_groups : int or float
@@ -1636,7 +1665,7 @@ class GofChisquarePower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         n_bins : int
             number of bins or cells in the distribution.
@@ -1646,14 +1675,14 @@ class GofChisquarePower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
         from statsmodels.stats.gof import chisquare_power
 
-        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=0)
+        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=ddof)
 
     # method is only added to have explicit keywords and docstring
     def solve_power(
@@ -1678,10 +1707,10 @@ class GofChisquarePower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         n_bins : int
@@ -1731,9 +1760,9 @@ class _GofChisquareIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ratio : float
             ratio of the number of observations in sample 2 relative to
@@ -1748,7 +1777,7 @@ class _GofChisquareIndPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1787,12 +1816,12 @@ class _GofChisquareIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ratio : float

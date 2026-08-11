@@ -212,7 +212,7 @@ class Initialization:
         self.blocks = {}
 
         # Attributes handling initialization of the entire set of states
-        # `constant` is a vector of constant values (i.e. it is the vector
+        # `constant` is a vector of constant values (i.e., it is the vector
         # a from DK)
         self.initialization_type = None
         self.constant = np.zeros(self.k_states)
@@ -246,6 +246,8 @@ class Initialization:
 
         Parameters
         ----------
+        k_states : int
+            Number of states in the time series process.
         a : array_like, optional
             Vector of constant values describing the mean of the stationary
             component of the initial state.
@@ -298,7 +300,7 @@ class Initialization:
 
         References
         ----------
-        .. [*] Durbin, James, and Siem Jan Koopman. 2012.
+        .. [1] Durbin, James, and Siem Jan Koopman. 2012.
            Time Series Analysis by State Space Methods: Second Edition.
            Oxford University Press.
         """

@@ -56,7 +56,7 @@ class Reader:
         Parameters
         ----------
         data : str or list[str]
-           String with lines separated by '\n', or a list of lines.
+            String with lines separated by '\\n', or a list of lines.
         """
         if isinstance(data, list):
             self._str = data
@@ -208,7 +208,7 @@ class NumpyDocString(Mapping):
         if self._doc.eof():
             return False
 
-        l1 = self._doc.peek().strip()  # e.g. Parameters
+        l1 = self._doc.peek().strip()  # e.g., Parameters
 
         if l1.startswith(".. index::"):
             return True

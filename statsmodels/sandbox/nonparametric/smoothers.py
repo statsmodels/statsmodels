@@ -293,7 +293,7 @@ class PolySmoother:
 # class SmoothingSplineFixedDF(SmoothingSpline):
 #     """
 #     Fit smoothing spline with approximately df degrees of freedom
-#     used in the fit, i.e. so that self.trace() is approximately df.
+#     used in the fit, i.e., so that self.trace() is approximately df.
 #
 #     In general, df must be greater than the dimension of the null space
 #     of the Gram inner product. For cubic smoothing splines, this means

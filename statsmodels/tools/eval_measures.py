@@ -13,6 +13,19 @@ import numpy as np
 from statsmodels.tools.validation import array_like
 
 
+def _nan_reduction_result(arr, axis):
+    """Explicit nan with the shape a reduction of `arr` over `axis` would give.
+
+    Used for empty inputs, where the underlying numpy reduction has no
+    identity element. Returns a scalar when the reduction collapses the whole
+    array, otherwise an array of nan with the remaining shape.
+    """
+    if axis is None or arr.ndim <= 1:
+        return np.nan
+    axis = axis % arr.ndim
+    return np.full(arr.shape[:axis] + arr.shape[axis + 1 :], np.nan)
+
+
 def mse(x1, x2, axis=0):
     """
     Mean squared error
@@ -131,7 +144,11 @@ def maxabs(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.max(np.abs(x1 - x2), axis=axis)
+    absdiff = np.abs(x1 - x2)
+    if absdiff.size == 0:
+        # np.max has no identity element for an empty input
+        return _nan_reduction_result(absdiff, axis)
+    return np.max(absdiff, axis=axis)
 
 
 def meanabs(x1, x2, axis=0):
@@ -336,13 +353,16 @@ def iqr(x1, x2, axis=0):
 
     """
     x1 = array_like(x1, "x1", dtype=None, ndim=None)
-    x2 = array_like(x2, "x1", dtype=None, ndim=None)
+    x2 = array_like(x2, "x2", dtype=None, ndim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()
         axis = 0
     xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
+    if nobs == 0:
+        # no observations to take quantiles of
+        return _nan_reduction_result(xdiff, axis)
     idx = np.round((nobs - 1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
@@ -399,14 +419,14 @@ def aicc(llf, nobs, df_modelwc):
     aicc : float
         information criterion
 
-    References
-    ----------
-    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
-
     Notes
     -----
     Returns +inf if the effective degrees of freedom, defined as
     ``nobs - df_modelwc - 1.0``, is <= 0.
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
     """
     dof_eff = nobs - df_modelwc - 1.0

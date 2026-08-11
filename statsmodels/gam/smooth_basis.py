@@ -103,7 +103,7 @@ def _eval_bspline_basis(x, knots, degree, deriv="all", include_intercept=True):
         from scipy.interpolate import splev
     except ImportError as err:
         raise ImportError("spline functionality requires scipy") from err
-    # 'knots' are assumed to be already pre-processed. E.g. usually you
+    # 'knots' are assumed to be already pre-processed. e.g., usually you
     # want to include duplicate copies of boundary knots; you should do
     # that *before* calling this constructor.
     knots = np.sort(np.atleast_1d(np.asarray(knots, dtype=float)))
@@ -261,10 +261,8 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     x_min = x.min()
     x_max = x.max()
 
-    if degree < 0:
-        raise ValueError(f"degree must be greater than 0 (not {degree!r})")
-    if int(degree) != degree:
-        raise ValueError(f"degree must be an integer (not {degree!r})")
+    if degree < 0 or int(degree) != degree:
+        raise ValueError(f"degree must be an integer >= 0 (got {degree!r})")
 
     # These are guaranteed to all be 1d vectors by the code above
     # x = np.concatenate(tmp["xs"])
@@ -390,11 +388,8 @@ def get_covder2(smoother, k_points=3, integration_points=None,
         Approximation to the integral of the cross product of the
         `deriv`-th derivative of the smoother basis functions.
     """
-    try:
-        from scipy.integrate import simpson
-    except ImportError:
-        # Remove after SciPy 1.7 is the minimum version
-        from scipy.integrate import simps as simpson
+    from scipy.integrate import simpson
+
     knots = smoother.knots
     if integration_points is None:
         x = _get_integration_points(knots, k_points=k_points)
@@ -1338,7 +1333,9 @@ class CubicSplines(AdditiveGamSmoother):
                  variable_names=None):
         self.dfs = df
         self.constraints = constraints
-        self.transform = transform
+        # NOTE: cannot use `self.transform` here -- AdditiveGamSmoother
+        # defines a `transform(self, x_new)` method that this would shadow.
+        self.transform_arg = transform
         super().__init__(x, constraints=constraints,
                          variable_names=variable_names)
 
@@ -1348,7 +1345,7 @@ class CubicSplines(AdditiveGamSmoother):
             uv_smoother = UnivariateCubicSplines(
                             self.x[:, v], df=self.dfs[v],
                             constraints=self.constraints,
-                            transform=self.transform,
+                            transform=self.transform_arg,
                             variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
 

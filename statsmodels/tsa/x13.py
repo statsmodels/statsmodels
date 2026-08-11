@@ -6,8 +6,6 @@ Notes
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 import os
 from pathlib import Path
 import re
@@ -122,7 +120,7 @@ def _clean_order(order):
     ----------
     order : str
         The regular and, optionally, seasonal ARMA order as returned by
-        X12/X13, e.g. ``"(1 1 0)(0 1 1)"`` or ``"(1 1 0)"``.
+        X12/X13, e.g., ``"(1 1 0)(0 1 1)"`` or ``"(1 1 0)"``.
 
     Returns
     -------
@@ -417,7 +415,6 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_analysis(
     endog,
     maxorder=(2, 1),
@@ -519,9 +516,11 @@ def x13_arima_analysis(
 
     Returns
     -------
-    Bunch
-        A bunch object containing the listed attributes.
+    X13ArimaAnalysisResult
+        An object containing the listed attributes.
 
+        - observed : pandas.Series
+          The original ``endog`` series.
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series
@@ -581,13 +580,13 @@ def x13_arima_analysis(
 
         rawspec_text = None
 
-        try:
-            with Path(rawspec).open() as f:
-                rawspec_text = f.read()
-        except OSError as os_err:
-            if "{" in rawspec:
-                rawspec_text = rawspec
-            else:
+        if "{" in rawspec:
+            rawspec_text = rawspec
+        else:
+            try:
+                with Path(rawspec).open() as f:
+                    rawspec_text = f.read()
+            except Exception as os_err:
                 raise ValueError(
                     "rawspec argument provided but not valid path or spec string"
                 ) from os_err
@@ -666,16 +665,16 @@ def x13_arima_analysis(
         finally:
             try:  # sometimes this gives a permission denied error?
                 #   not sure why. no process should have these open
-                ftempin.name.unlink()
-                ftempout.name.unlink()
+                Path(ftempin.name).unlink()
+                Path(ftempout.name).unlink()
             except OSError:
-                if ftempin.name.exists():
+                if Path(ftempin.name).exists():
                     warn(
                         f"Failed to delete resource {ftempin.name}",
                         IOWarning,
                         stacklevel=2
                     )
-                if ftempout.name.exists():
+                if Path(ftempout.name).exists():
                     warn(
                         f"Failed to delete resource {ftempout.name}",
                         IOWarning,
@@ -712,7 +711,6 @@ def x13_arima_analysis(
     return res
 
 
-@deprecate_kwarg("forecast_years", "forecast_periods")
 def x13_arima_select_order(
     endog,
     maxorder=(2, 1),

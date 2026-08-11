@@ -274,7 +274,12 @@ class KStepAhead:
             initial size of data for fitting
         kall : bool
             if true. all values for up to k-step ahead are included in the test index.
-            If false, then only the k-th step ahead value is returnd
+            If false, then only the k-th step ahead value is returned
+        return_slice : bool
+            if true, then the iterator returns slice objects for train and
+            test indexes. If false, then boolean index arrays are returned
+            instead, for compatibility with the other iterators in this
+            module.
 
 
         Notes

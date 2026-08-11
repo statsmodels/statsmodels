@@ -181,17 +181,26 @@ class QIF(base.Model):
 
     def objective(self, params):
         """
-        Calculate the gradient of the QIF objective function.
+        Calculate the QIF objective function and its gradient.
 
         Parameters
         ----------
         params : array_like
-            The model parameters at which the gradient is evaluated.
+            The model parameters at which the objective function and
+            its gradient are evaluated.
 
         Returns
         -------
+        qif : float
+            The value of the QIF objective function.
         grad : array_like
             The gradient vector of the QIF objective function.
+        cmat : array_like
+            The estimated covariance matrix of the estimating
+            equations.
+        gn : array_like
+            The moment vector, i.e., the average of the estimating
+            equations over the groups.
         gn_deriv : array_like
             The gradients of each estimating equation with
             respect to the parameter.
@@ -289,6 +298,17 @@ class QIF(base.Model):
 
         The scale parameter for binomial and Poisson families is
         fixed at 1, otherwise it is estimated from the data.
+
+        Parameters
+        ----------
+        params : array_like
+            The regression coefficients at which the scale is
+            estimated.
+
+        Returns
+        -------
+        float
+            The estimated scale parameter.
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson)):
@@ -457,9 +477,9 @@ class QIFResults(base.LikelihoodModelResults):
         yname : str, optional
             Default is `y`
         xname : list[str], optional
-            Names for the exogenous variables, default is `var_#` for ## in
-            the number of regressors. Must match the number of parameters in
-            the model
+            Names for the exogenous variables, default is `var_#` where `#`
+            is the 0-based index of the regressor. Must match the number of
+            parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title

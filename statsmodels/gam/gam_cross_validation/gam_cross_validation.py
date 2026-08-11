@@ -20,7 +20,7 @@ class BaseCV(with_metaclass(ABCMeta)):
     Base class for cross validation over a given model
 
     Computes the cross validation error of a given model. All the cross
-    validation classes can be derived from this one (e.g. GamCV, LassoCV,...)
+    validation classes can be derived from this one (e.g., GamCV, LassoCV,...)
 
     Parameters
     ----------
