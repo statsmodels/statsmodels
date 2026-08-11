@@ -1519,7 +1519,8 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         The order of the autoregressive process.  Default is 1.
     method : str, optional
        Method can be 'adjusted' or 'mle' and determines the denominator
-       used to estimate the autocovariance at lag k. If 'mle', the denominator is n=X.shape[0], if 'adjusted'
+       used to estimate the autocovariance at lag k.
+       If 'mle', the denominator is n=X.shape[0], if 'adjusted'
        the denominator is n-k.  The default is adjusted.
     df : int, optional
        Specifies the degrees of freedom. If `df` is supplied, then it
