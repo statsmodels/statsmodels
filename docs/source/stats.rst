@@ -185,6 +185,8 @@ for the LinearModelResults, these methods are designed for use with OLS.
    sandwich_covariance.cov_cluster
    sandwich_covariance.cov_cluster_2groups
    sandwich_covariance.cov_white_simple
+   sandwich_covariance.weights_bartlett
+   sandwich_covariance.weights_uniform
 
 The following are standalone versions of the heteroscedasticity robust
 standard errors attached to LinearModelResults
@@ -248,9 +250,6 @@ Non-Parametric Tests
    median_test_ksample
    runstest_1samp
    runstest_2samp
-   cochrans_q
-   CochransQResult
-   Runs
 
 .. currentmodule:: statsmodels.stats.descriptivestats
 
@@ -756,6 +755,27 @@ inverse covariance or precision matrix.
    :toctree: generated/
 
    RegularizedInvCovariance
+
+Correlation Consistent at the Normal Distribution
+--------------------------------------------------
+
+Rank-based correlation estimators (Gaussian-rank, Spearman, Kendall's tau,
+and quadrant correlation) can be transformed so that they are consistent
+estimators of the Pearson correlation when the underlying data are jointly
+normal.
+
+.. module:: statsmodels.stats.covariance
+   :synopsis: Correlation and covariance estimators consistent at the normal distribution
+
+.. currentmodule:: statsmodels.stats.covariance
+
+.. autosummary::
+   :toctree: generated/
+
+   transform_corr_normal
+   corr_normal_scores
+   corr_quadrant
+   corr_rank
 
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.

@@ -194,3 +194,11 @@ The result class is:
    :toctree: generated/
 
    MixedLMResults
+
+Custom variance structures (the ``exog_vc`` argument to ``MixedLM``) are
+specified with:
+
+.. autosummary::
+   :toctree: generated/
+
+   VCSpec

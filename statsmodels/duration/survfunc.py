@@ -690,17 +690,17 @@ def survdiff(time, status, group, weight_type=None, strata=None,
         censored.
     group : array_like
         Indicators of the two groups
-    weight_type : str
+    weight_type : str, optional
         The following weight types are implemented:
-            None (default) : logrank test
-            fh : Fleming-Harrington, weights by S^(fh_p),
-                 requires exponent fh_p to be provided as keyword
-                 argument; the weights are derived from S defined at
-                 the previous event time, and the first weight is
-                 always 1.
-            gb : Gehan-Breslow, weights by the number at risk
-            tw : Tarone-Ware, weights by the square root of the number
-                 at risk
+
+        - None (default) : logrank test
+        - "fh" : Fleming-Harrington, weights by S^(fh_p), requires exponent
+          fh_p to be provided as keyword argument; the weights are derived
+          from S defined at the previous event time, and the first weight
+          is always 1.
+        - gb : Gehan-Breslow, weights by the number at risk
+        - tw : Tarone-Ware, weights by the square root of the number at risk
+
     strata : array_like
         Optional stratum indicators for a stratified test
     entry : array_like
