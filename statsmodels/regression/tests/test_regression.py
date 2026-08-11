@@ -1678,6 +1678,22 @@ def test_condition_number():
     assert_allclose(res.condition_number, np.linalg.cond(x))
 
 
+def test_condition_number_nonpositive_eigval():
+    # GH 9653
+    rs = np.random.RandomState(323218)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    for smallest_eigval in (0.0, -1e-12):
+        eigvals = res.eigenvals.copy()
+        eigvals[-1] = smallest_eigval
+        res._cache["eigenvals"] = eigvals
+        assert res.condition_number == np.inf
+        del res._cache["condition_number"]
+    del res._cache["eigenvals"]
+
+
 def test_slim_summary():
     rs = np.random.RandomState(323217)
     y = rs.standard_normal(100)
