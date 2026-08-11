@@ -6004,6 +6004,24 @@ class MultinomialResults(DiscreteResults):
         raise NotImplementedError("Use get_margeff instead")
 
     @cache_readonly
+    def resid_response(self):
+        """
+        The response residuals
+
+        Response residuals are defined to be
+
+        .. math:: y - p
+
+        where :math:`y` is the nobs x J indicator matrix of the observed
+        categories and :math:`p` are the predicted probabilities. The
+        residuals are a nobs x J array.
+        """
+        # `endog` holds the 1-dim category codes for the multinomial models,
+        # so the base class version does not conform with `predict`. `wendog`
+        # is the indicator matrix of the observed categories, which does.
+        return self.model.wendog - self.predict()
+
+    @cache_readonly
     def resid_misclassified(self):
         """
         Residuals indicating which observations are misclassified.
