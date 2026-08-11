@@ -14,8 +14,7 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.validation import array_like
-
+from statsmodels.tools.validation import array_like, int_like, string_like
 
 __all__ = ["LocalProjections"]
 
@@ -205,9 +204,9 @@ class LocalProjections:
     ----------
     endog : array_like, shape (T, n) or (T,)
         Endogenous variables.  A 1-D input is treated as a single variable.
-    shock_idx : int or list of int, optional
+    shock_idx : int or list[int], optional
         Column index/indices within *endog* whose contemporaneous value
-        enters as the shock.  Defaults to ``[0]`` (the first variable).
+        enters as the shock.  Defaults to ``0`` (the first variable).
     lags : int, optional
         Number of lagged values of *all* endog variables to include as
         controls.  Defaults to ``1``.
@@ -234,7 +233,7 @@ class LocalProjections:
     Examples
     --------
     >>> import numpy as np
-    >>> from statsmodels.tsa.vector_ar.lp import LocalProjections
+    >>> from statsmodels.tsa.api import LocalProjections
     >>> rng = np.random.default_rng(0)
     >>> T, n = 200, 2
     >>> e = rng.standard_normal((T, n))
@@ -248,7 +247,7 @@ class LocalProjections:
     def __init__(
         self,
         endog,
-        shock_idx=None,
+        shock_idx=0,
         lags=1,
         horizons=12,
         exog=None,
@@ -259,34 +258,34 @@ class LocalProjections:
         _endog_col_names = (list(endog.columns)
                             if isinstance(endog, pd.DataFrame) else None)
 
-        endog = array_like(endog, "endog", ndim=None)
+        endog = array_like(endog, "endog", ndim=2, maxdim=2, optional=False, dtype=float)
+        lags = int_like(lags, "lags", optional=False)
+        horizons = int_like(horizons, "horizons", optional=False)
+        exog = array_like(exog, "exog", ndim=2, maxdim=2, optional=True, dtype=float)
+        trend = string_like(trend, "trend", optional=False, options=("n", "c", "ct"))
+        nw_lags = int_like(nw_lags, "nw_lags", optional=True)
+
         if endog.ndim == 1:
             endog = endog[:, None]
-        if endog.ndim != 2:
-            raise ValueError("endog must be 1-D or 2-D.")
 
-        self.endog = np.asarray(endog, dtype=float)
-        T, n = self.endog.shape
+        self.endog = endog
+        t, n = self.endog.shape
 
-        if shock_idx is None:
-            shock_idx = [0]
-        elif isinstance(shock_idx, (int, np.integer)):
-            shock_idx = [int(shock_idx)]
+        if isinstance(shock_idx, (int, np.integer)):
+            shock_idx_list = [int(shock_idx)]
         else:
-            shock_idx = list(shock_idx)
-        for idx in shock_idx:
+            shock_idx_list = [int(val) for val in shock_idx]
+        for idx in shock_idx_list:
             if not (0 <= idx < n):
                 raise ValueError(
                     f"shock_idx={idx} out of range for endog with {n} columns."
                 )
-        self.shock_idx = shock_idx
+        self.shock_idx = shock_idx_list
 
         if lags < 0:
             raise ValueError("lags must be non-negative.")
         if horizons < 0:
             raise ValueError("horizons must be non-negative.")
-        if trend not in ("n", "c", "ct"):
-            raise ValueError("trend must be one of 'n', 'c', 'ct'.")
 
         self.lags = int(lags)
         self.horizons = int(horizons)
@@ -295,9 +294,7 @@ class LocalProjections:
 
         if exog is not None:
             exog = np.asarray(exog, dtype=float)
-            if exog.ndim == 1:
-                exog = exog[:, None]
-            if exog.shape[0] != T:
+            if exog.shape[0] != t:
                 raise ValueError(
                     "exog must have the same number of rows as endog."
                 )
@@ -308,11 +305,11 @@ class LocalProjections:
             self.endog_names = _endog_col_names
         else:
             self.endog_names = [f"y{i}" for i in range(n)]
-        self.shock_names = [self.endog_names[j] for j in shock_idx]
+        self.shock_names = [self.endog_names[j] for j in shock_idx_list]
 
         # Usable obs: first `lags` rows consumed by lag construction;
         # last `horizons` rows have no h-step-ahead LHS.
-        self._nobs = T - lags - horizons
+        self._nobs = t - lags - horizons
 
     # ------------------------------------------------------------------
     # Internal helpers

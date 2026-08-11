@@ -16,6 +16,7 @@ __all__ = [
     "ETSModel",
     "ExponentialSmoothing",
     "Holt",
+    "LocalProjections",
     "MarkovAutoregression",
     "MarkovRegression",
     "STLForecast",
@@ -67,6 +68,8 @@ __all__ = [
     "x13_arima_select_order",
     "zivot_andrews"
 ]
+
+from vector_ar.local_proj import LocalProjections
 
 from statsmodels.graphics import tsaplots as graphics
 

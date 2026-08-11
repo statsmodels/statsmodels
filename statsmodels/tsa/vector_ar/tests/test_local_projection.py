@@ -8,16 +8,15 @@ Projections. American Economic Review, 95(1), 161-182.
 """
 
 import numpy as np
-import pytest
 from numpy.testing import assert_allclose
+import pytest
 
-from statsmodels.tsa.vector_ar.lp import (
+from statsmodels.tsa.vector_ar.local_proj import (
     LocalProjections,
     LocalProjectionsResults,
     _hac_bandwidth,
     _nw_cov,
 )
-
 
 # ---------------------------------------------------------------------------
 # DGP helpers
@@ -27,7 +26,13 @@ from statsmodels.tsa.vector_ar.lp import (
 def _make_var1(T=300, n=2, seed=42):
     """Simulate a stable VAR(1) with known coefficient matrix A."""
     rng = np.random.default_rng(seed)
-    A = np.array([[0.5, 0.2], [0.0, 0.4]])  # lower-triangular, stable
+    if n == 2:
+        A = np.array([[0.5, 0.2], [0.0, 0.4]])  # lower-triangular, stable
+    else:
+        A = np.tril(rng.uniform(0, 1 / (n+1), size=(n,n)))
+        max_eig = np.linalg.eigvalsh(A).max()
+        # scale to ensure stability
+        A *= 0.9 / max_eig
     y = np.zeros((T, n))
     e = rng.standard_normal((T, n))
     for t in range(1, T):
@@ -96,67 +101,79 @@ def test_nw_cov_psd():
 
 
 def test_init_1d_endog():
-    y = np.random.randn(100)
+    rs = np.random.default_rng(238291)
+    y = rs.standard_normal(100)
     lp = LocalProjections(y)
     assert lp.endog.shape == (100, 1)
 
 
 def test_init_2d_endog():
-    y = np.random.randn(150, 3)
+    rs = np.random.default_rng(238291)
+    y = rs.standard_normal((150, 3))
     lp = LocalProjections(y, shock_idx=1)
     assert lp.endog.shape == (150, 3)
 
 
 def test_init_default_shock_idx():
-    lp = LocalProjections(np.random.randn(100, 2))
+    rs = np.random.default_rng(238291)
+    lp = LocalProjections(rs.standard_normal((100, 2)))
     assert lp.shock_idx == [0]
 
 
 def test_init_multiple_shocks():
-    lp = LocalProjections(np.random.randn(100, 3), shock_idx=[0, 2])
+    rs = np.random.default_rng(238291)
+    lp = LocalProjections(rs.standard_normal((100, 3)), shock_idx=[0, 2])
     assert lp.shock_idx == [0, 2]
 
 
 def test_init_int_shock_idx():
-    lp = LocalProjections(np.random.randn(100, 3), shock_idx=2)
+    rs = np.random.default_rng(238291)
+    lp = LocalProjections(rs.standard_normal((100, 3)), shock_idx=2)
     assert lp.shock_idx == [2]
 
 
 def test_init_bad_shock_idx_raises():
+    rs = np.random.default_rng(238291)
     with pytest.raises(ValueError, match="out of range"):
-        LocalProjections(np.random.randn(100, 2), shock_idx=5)
+        LocalProjections(rs.standard_normal((100, 2)), shock_idx=5)
 
 
 def test_init_negative_lags_raises():
+    rs = np.random.default_rng(238291)
     with pytest.raises(ValueError, match="lags"):
-        LocalProjections(np.random.randn(100, 2), lags=-1)
+        LocalProjections(rs.standard_normal((100, 2)), lags=-1)
 
 
 def test_init_negative_horizons_raises():
+    rs = np.random.default_rng(238291)
     with pytest.raises(ValueError, match="horizons"):
-        LocalProjections(np.random.randn(100, 2), horizons=-1)
+        LocalProjections(rs.standard_normal((100, 2)), horizons=-1)
 
 
 def test_init_bad_trend_raises():
+    rs = np.random.default_rng(238291)
     with pytest.raises(ValueError, match="trend"):
-        LocalProjections(np.random.randn(100, 2), trend="x")
+        LocalProjections(rs.standard_normal((100, 2)), trend="x")
 
 
 def test_init_exog_wrong_length_raises():
+    rs = np.random.default_rng(238291)
     with pytest.raises(ValueError, match="exog"):
-        LocalProjections(np.random.randn(100, 2),
-                         exog=np.random.randn(50, 2))
+        LocalProjections(rs.standard_normal((100, 2)),
+                         exog=rs.standard_normal((50, 2)))
 
 
 def test_init_too_few_obs_raises():
-    y = np.random.randn(10, 2)
+    rs = np.random.default_rng(238291)
+    y = rs.standard_normal((10, 2))
     with pytest.raises(ValueError, match="Not enough"):
         LocalProjections(y, lags=5, horizons=10).fit()
 
 
 def test_nobs_computed_correctly():
     T, lags, horizons = 200, 4, 8
-    lp = LocalProjections(np.random.randn(T, 2), lags=lags, horizons=horizons)
+    rs = np.random.default_rng(238291)
+    lp = LocalProjections(rs.standard_normal((T, 2)), lags=lags, horizons=horizons)
     assert lp._nobs == T - lags - horizons
 
 
@@ -379,3 +396,16 @@ def test_repr():
     r = repr(res)
     assert "LocalProjectionsResults" in r
     assert "horizons=6" in r
+
+@pytest.mark.matplotlib
+def test_plot_irfs(close_figures):
+    import matplotlib.figure
+
+    y, _ = _make_var1(T=200, n=4)
+    res = LocalProjections(y, lags=1, horizons=6).fit()
+    fig = res.plot_irfs()
+    assert isinstance(fig, matplotlib.figure.Figure)
+
+    res = LocalProjections(y, lags=1, shock_idx=[0, 1], horizons=6).fit()
+    fig = res.plot_irfs()
+    assert isinstance(fig, matplotlib.figure.Figure)
