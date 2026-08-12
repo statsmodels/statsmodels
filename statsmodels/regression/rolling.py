@@ -157,7 +157,7 @@ class RollingWLS:
         Model.__init__(self, endog, exog, missing="none", hasconst=False)
         self.k_constant = k_const
         self.data.const_idx = const_idx
-        self._y = array_like(endog, "endog")
+        self._y = array_like(endog, "endog", ndim=1)
         nobs = self._y.shape[0]
         self._x = array_like(exog, "endog", ndim=2, shape=(nobs, None))
         window = int_like(window, "window", optional=True)

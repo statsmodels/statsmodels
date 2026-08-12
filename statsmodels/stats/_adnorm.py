@@ -36,7 +36,7 @@ def anderson_statistic(x, dist="norm", fit=True, params=(), axis=0):
     {float, ndarray}
         The Anderson-Darling statistic.
     """
-    x = array_like(x, "x", ndim=None)
+    x = array_like(x, "x", mindim=None)
     fit = bool_like(fit, "fit")
     axis = int_like(axis, "axis")
     y = np.sort(x, axis=axis)

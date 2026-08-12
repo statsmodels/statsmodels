@@ -24,7 +24,9 @@ def use_pandas(request):
 
 def gen_data(dim, use_pandas):
     if dim == 1:
-        out = np.empty(10,)
+        out = np.empty(
+            10,
+        )
         if use_pandas:
             out = pd.Series(out)
     elif dim == 2:
@@ -70,8 +72,8 @@ class TestArrayLike:
         a = array_like(data, "a", ndim=2, shape=(20, None))
         assert a.shape == (20, 10)
         with pytest.raises(
-                ValueError,
-                match=r"Provided shape \(20,\) does not have the correct dimension",
+            ValueError,
+            match=r"Provided shape \(20,\) does not have the correct dimension",
         ):
             array_like(data, "a", ndim=2, shape=(20,))
         assert a.shape == (20, 10)
@@ -110,7 +112,10 @@ class TestArrayLike:
         assert a.shape == (5, 6, 7)
         a = array_like(data, "a", ndim=5)
         assert a.shape == (5, 6, 7, 1, 1)
-        with pytest.raises(ValueError, match=r"Provided shape \(10,\) does not have the correct dimension"):
+        with pytest.raises(
+            ValueError,
+            match=r"Provided shape \(10,\) does not have the correct dimension",
+        ):
             array_like(data, "a", ndim=3, shape=(10,))
         with pytest.raises(ValueError, match="a is required to have shape"):
             array_like(data, "a", ndim=3, shape=(None, None, 5))
@@ -419,3 +424,16 @@ def test_bool_like(boolean):
 def test_not_bool_like():
     with pytest.raises(TypeError):
         bool_like(np.array([True, True]), boolean)
+
+
+def test_array_like_mindim():
+    x = 1
+    arr = array_like(x, "x", mindim=1)
+    assert arr.shape == (1,)
+    arr = array_like(x, "x", mindim=2)
+    assert arr.shape == (1, 1)
+    arr = array_like(x, "x", mindim=3)
+    assert arr.shape == (1, 1, 1)
+    y = [1, 2]
+    arr = array_like(y, "y", mindim=2)
+    assert arr.shape == (2, 1)

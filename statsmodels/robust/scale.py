@@ -53,7 +53,7 @@ def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
     mad : float
         `mad` = median(abs(`a` - center))/`c`
     """
-    a = array_like(a, "a", ndim=None)
+    a = array_like(a, "a", mindim=None)
     c = float_like(c, "c")
     if not a.size:
         center_val = 0.0
@@ -96,7 +96,7 @@ def iqr(a, c=GAUSSIAN_IQR, axis=0):
     float or ndarray
         The normalized interquartile range.
     """
-    a = array_like(a, "a", ndim=None)
+    a = array_like(a, "a", mindim=None)
     c = float_like(c, "c")
 
     if a.ndim == 0:
@@ -135,7 +135,7 @@ def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
     float or ndarray
         The Qn robust estimator of scale.
     """
-    a = array_like(a, "a", ndim=None, dtype=np.float64, contiguous=True, order="C")
+    a = array_like(a, "a", mindim=None, dtype=np.float64, contiguous=True, order="C")
     c = float_like(c, "c")
     if a.ndim == 0:
         raise ValueError("a should have at least one dimension")
