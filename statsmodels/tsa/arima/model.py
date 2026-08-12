@@ -432,33 +432,32 @@ class ARIMA(sarimax.SARIMAX):
 
             # Now, estimate parameters
             if method == "yule_walker":
-                _est_result = yule_walker(
-                    endog, ar_order=order[0], demean=False,
-                    **method_kwargs)
-                p, fit_details = _est_result.parameters, _est_result.other_results
+                p, fit_details = yule_walker(
+                    endog, ar_order=order[0], demean=False, **method_kwargs
+                    )
             elif method == "burg":
-                _est_result = burg(endog, ar_order=order[0],
-                                    demean=False, **method_kwargs)
-                p, fit_details = _est_result.parameters, _est_result.other_results
+                p, fit_details = burg(
+                    endog, ar_order=order[0], demean=False, **method_kwargs
+                    )
             elif method == "hannan_rissanen":
-                _est_result = hannan_rissanen(
-                    endog, ar_order=order[0],
-                    ma_order=order[2], demean=False, **method_kwargs)
-                p, fit_details = _est_result.parameters, _est_result.other_results
+                p, fit_details = hannan_rissanen(
+                    endog, ar_order=order[0], ma_order=order[2], demean=False, **method_kwargs
+                    )
             elif method == "innovations":
-                _est_result = innovations(
-                    endog, ma_order=order[2], demean=False,
-                    **method_kwargs)
-                p, fit_details = _est_result.parameters, _est_result.other_results
+                p, fit_details = innovations(
+                    endog, ma_order=order[2], demean=False, **method_kwargs
+                    )
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
             elif method == "innovations_mle":
-                _est_result = innovations_mle(
-                    endog, order=order,
+                p, fit_details = innovations_mle(
+                    endog,
+                    order=order,
                     seasonal_order=seasonal_order,
-                    demean=False, **method_kwargs)
-                p, fit_details = _est_result.parameters, _est_result.other_results
+                    demean=False,
+                    **method_kwargs
+                    )
 
         # In all cases except method='statespace', we now need to extract the
         # parameters and, optionally, create a new results object

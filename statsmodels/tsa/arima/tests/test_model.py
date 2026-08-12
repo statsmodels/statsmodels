@@ -175,10 +175,9 @@ def test_statespace():
     assert_allclose(res.params, desired_p.params, atol=1e-4)
 
     # SARMA(1, 0)x(1, 0)4, no trend
-    _result = statespace(
+    desired_p, _ = statespace(
         endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), include_constant=False
     )
-    desired_p, _spec = _result.parameters, _result.other_results
     mod = ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), trend="n")
     res = mod.fit(method="statespace")
     # Note: atol is required only due to precision issues on Windows

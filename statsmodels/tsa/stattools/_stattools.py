@@ -310,7 +310,7 @@ def adfuller(
     Returns
     -------
     ADFullerResult
-        If ``result_object=True``, a result object with fields ``adf``,
+        If ``result_object=True``, a result object with fields ``stat``,
         ``pvalue``, ``usedlag``, ``nobs``, ``critical_values``, ``icbest``,
         and ``resstore`` (``icbest``/``resstore`` are ``None`` when not
         computed). See :class:`~statsmodels.tsa.stattools.ADFullerResult`.
@@ -318,7 +318,7 @@ def adfuller(
     Otherwise (the deprecated default), a plain tuple whose length depends
     on `store` and `autolag`, made up of a subset of:
 
-    adf : float
+    stat : float
         The test statistic.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
@@ -2720,9 +2720,6 @@ class DieboldMarianoResult:
     """
     Result of :func:`diebold_mariano_test`.
 
-    Does not support unpacking (its fields are heterogeneous and rarely
-    all used together), but ``len(result) == 4``.
-
     Parameters
     ----------
     stat : float
@@ -2737,13 +2734,13 @@ class DieboldMarianoResult:
         variance of the loss differential.
     harvey_adj_factor : float or None
         The finite-sample adjustment factor of Harvey et al. (1997) that
-        was applied to ``dm_stat``. ``None`` unless ``harvey_adj`` was
+        was applied to ``stat``. ``None`` unless ``harvey_adj`` was
         True.
 
     Notes
     -----
-    Unpacks as ``stat, pvalue = result``. The other two fields are only available
-    through attribute access.
+    Unpacks as ``stat, pvalue = result``. The other two fields are only
+    available through attribute access.
     """
 
     stat: float
@@ -2823,7 +2820,7 @@ def diebold_mariano_test(
     Returns
     -------
     DieboldMarianoResult
-        A named tuple containing the DM test statistic, its p-value, and
+        A result object containing the DM test statistic, its p-value, and
         the Harvey et al. (1997) adjustment factor, if applicable.
 
     Notes
@@ -2853,7 +2850,7 @@ def diebold_mariano_test(
     ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used. This differs from
     some presentations of the DM test that always use ``horizon - 1``
     lags; pass ``lags=horizon - 1`` explicitly to reproduce that
-    parameterization. Under the null, ``dm_stat`` is asymptotically
+    parameterization. Under the null, ``stat`` is asymptotically
     standard normal.
 
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
@@ -2925,7 +2922,7 @@ def diebold_mariano_test(
     ...     return ratio - np.log(ratio) - 1
 
     >>> res = diebold_mariano_test(y, forecast_a, forecast_b, criterion=qlike)
-    >>> res.dm_stat, res.pvalue  # doctest: +SKIP
+    >>> res.stat, res.pvalue  # doctest: +SKIP
     """
 
     y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
@@ -3060,7 +3057,7 @@ class KPSSResult:
         elif item == 1:
             return self.pvalue
         else:
-            raise IndexError(f"Index {item} out of range for KpssResult")
+            raise IndexError(f"Index {item} out of range for KPSSResult")
 
     def __len__(self) -> int:
         return 2
@@ -3112,7 +3109,7 @@ def kpss(
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
     result_object : bool, optional
-        Flag indicating whether to return the results as a ``KpssResult``
+        Flag indicating whether to return the results as a ``KPSSResult``
         instead of a plain tuple. If ``None`` (the default), the
         current tuple-returning behavior is used and a ``FutureWarning`` is
         issued.
@@ -3120,7 +3117,7 @@ def kpss(
         .. deprecated:: 0.15.0
 
             In release 0.16.0 or after July 2027, whichever is later, the
-            default will change to always return a ``KpssResult``. Set
+            default will change to always return a ``KPSSResult``. Set
             ``result_object=True`` to opt in now, or
             ``result_object=False`` to silence the warning and keep the
             current return type.
@@ -3128,14 +3125,14 @@ def kpss(
     Returns
     -------
     KPSSResult
-        If ``result_object=True``, a result object with fields ``kpss_stat``,
+        If ``result_object=True``, a result object with fields ``stat``,
         ``pvalue``, ``lags``, ``crit``, and ``resstore`` (``resstore`` is
         ``None`` when not computed). See
-        :class:`~statsmodels.tsa.stattools.KpssResult`.
+        :class:`~statsmodels.tsa.stattools.KPSSResult`.
 
     Otherwise (the deprecated default), a plain tuple made up of:
 
-    kpss_stat : float
+    stat : float
         The KPSS test statistic.
     pvalue : float
         The p-value of the test. The p-value is interpolated from
@@ -3279,7 +3276,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
             "depends on the store argument (and which silently drops "
             "`lags` when store=True). In release 0.16 or after July 2027, "
             "whichever is later, the default behavior will switch to "
-            "always returning a KpssResult. Set "
+            "always returning a KPSSResult. Set "
             "result_object=True to switch now, or result_object=False "
             "to keep the current behavior and silence this warning.",
             FutureWarning,
@@ -3377,8 +3374,8 @@ class RURResult:
 
     Notes
     -----
-    Unpacks as ``rur_stat, pvalue, crit = result``. ``resstore`` is not included
-    in the unpacking, but is available as an attribute.
+    Unpacks as ``stat, pvalue = result``. Other values are only accessible
+    using attributes.
     """
 
     stat: float
@@ -3396,7 +3393,7 @@ class RURResult:
         elif item == 1:
             return self.pvalue
         else:
-            raise IndexError(f"Index {item} out of range for RangeUnitRootTestResult")
+            raise IndexError(f"Index {item} out of range for RURResult")
 
     def __len__(self) -> int:
         return 2
@@ -3426,8 +3423,8 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
         the RUR statistic (default is False).
     result_object : bool, optional
         Flag indicating whether to return the results as a
-        ``RangeUnitRootTestResult`` instead of a plain tuple. When
-        ``store=True`` ``RangeUnitRootTestResult`` holds the same four
+        ``RURResult`` instead of a plain tuple. When
+        ``store=True`` ``RURResult`` holds the same four
         values as the legacy tuple, so it is always returned, with no
         warning. When ``store=False`` the legacy three-element tuple is
         returned by default and a ``FutureWarning`` is issued.
@@ -3436,7 +3433,7 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
-            ``RangeUnitRootTestResult``. Set ``result_object=True`` to opt
+            ``RURResult``. Set ``result_object=True`` to opt
             in now, or ``result_object=False`` to silence the warning and
             keep the current return type.
 
@@ -3444,14 +3441,14 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     -------
     RURResult
         If ``result_object=True``, a result object with fields
-        ``rur_stat``, ``pvalue``, ``crit``, and ``resstore`` (``resstore``
+        ``stat``, ``pvalue``, ``crit``, and ``resstore`` (``resstore``
         is ``None`` when not computed). See
-        :class:`~statsmodels.tsa.stattools.RangeUnitRootTestResult`.
+        :class:`~statsmodels.tsa.stattools.RURResult`.
 
     Otherwise (the deprecated default), a plain tuple whose length depends
     on `store`, made up of a subset of:
 
-    rur_stat : float
+    stat : float
         The RUR test statistic.
     pvalue : float
         The p-value of the test. The p-value is interpolated from
@@ -3572,10 +3569,10 @@ look-up table. The actual p-value is {direction} than the p-value returned.
             "range_unit_root_test currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
             "after July 2027, whichever is later, the default behavior "
-            "will switch to always returning a RangeUnitRootTestResult. "
+            "will switch to always returning a RURResult. "
             "Set result_object=True to switch now, or "
             "result_object=False to keep the current behavior and "
-            "silence this w arning.",
+            "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )

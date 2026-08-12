@@ -290,7 +290,7 @@ def plot_acf(
         missing=missing,
         result_object=True,
     )
-    # use_namedtuple=True always yields an AcfResult; confint is None when
+    # result_object=True always yields an AcfResult; confint is None when
     # alpha is None.
     acf_x, confint = acf_res.acf, acf_res.confint
 
@@ -420,7 +420,7 @@ def plot_pacf(
     result = pacf(
         x, nlags=nlags, alpha=alpha, method=method, result_object=True
     )
-    # use_namedtuple=True always yields a PacfResult; confint is None when
+    # result_object=True always yields a PacfResult; confint is None when
     # alpha is None.
     acf_x, confint = result.pacf, result.confint
 
@@ -537,7 +537,7 @@ def plot_ccf(
         nlags=nlags + 1,
         result_object=True,
     )
-    # use_namedtuple=True always yields a CcfResult; confint is None when
+    # result_object=True always yields a CcfResult; confint is None when
     # alpha is None.
     ccf_xy, confint = ccf_res.ccf, ccf_res.confint
 
@@ -660,7 +660,7 @@ def plot_pccf(
     pccf_res = pccf(
         x, y, alpha=alpha, nlags=nlags, method=method, result_object=True
     )
-    # use_namedtuple=True always yields a PccfResult; confint is None when
+    # result_object=True always yields a PccfResult; confint is None when
     # alpha is None.
     pccf_xy, confint = pccf_res.pccf, pccf_res.confint
 
