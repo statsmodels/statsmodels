@@ -251,9 +251,9 @@ def test_fc():
                 alpha=0.05,
                 exog_future=exog_future,
             )
-            obt = obtained[0]  # forecast
-            obt_l = obtained[1]  # lower bound
-            obt_u = obtained[2]  # upper bound
+            obt = obtained.point_forecast  # forecast
+            obt_l = obtained.forc_lower  # lower bound
+            obt_u = obtained.forc_upper  # upper bound
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]

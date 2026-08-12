@@ -556,9 +556,8 @@ class ARDL(AutoReg):
         """Construct and format model regressors"""
         # TODO: Missing adjustment
         self._maxlag = max(self._lags) if self._lags else 0
-        _endog_reg, _endog = lagmat(
-            self.data.endog, self._maxlag, original="sep", use_namedtuple=False
-        )
+        _lagmat_result = lagmat(self.data.endog, self._maxlag, original="sep")
+        _endog_reg, _endog = _lagmat_result.lags, _lagmat_result.leads
         assert isinstance(_endog, np.ndarray)
         assert isinstance(_endog_reg, np.ndarray)
         self._endog_reg, self._endog = _endog_reg, _endog
@@ -1441,22 +1440,26 @@ class ARDLOrderSelectionResults(AROrderSelectionResults):
     """
 
     def __init__(self, model, ics, trend, seasonal, period):
-        _ics = (((0,), (0, 0, 0)),)
+        _ics = (((0,), InformationCriteria(0, 0, 0)),)
         super().__init__(model, _ics, trend, seasonal, period)
 
         def _to_dict(d):
             return d[0], dict(d[1:])
 
-        self._aic = pd.Series({v[0]: _to_dict(k) for k, v in ics.items()}, dtype=object)
+        self._aic = pd.Series(
+            {v.aic: _to_dict(k) for k, v in ics.items()}, dtype=object
+        )
         self._aic.index.name = self._aic.name = "AIC"
         self._aic = self._aic.sort_index()
 
-        self._bic = pd.Series({v[1]: _to_dict(k) for k, v in ics.items()}, dtype=object)
+        self._bic = pd.Series(
+            {v.bic: _to_dict(k) for k, v in ics.items()}, dtype=object
+        )
         self._bic.index.name = self._bic.name = "BIC"
         self._bic = self._bic.sort_index()
 
         self._hqic = pd.Series(
-            {v[2]: _to_dict(k) for k, v in ics.items()}, dtype=object
+            {v.hqic: _to_dict(k) for k, v in ics.items()}, dtype=object
         )
         self._hqic.index.name = self._hqic.name = "HQIC"
         self._hqic = self._hqic.sort_index()
@@ -1661,10 +1664,9 @@ def ardl_select_order(
                     key.append((var, val - 1 if val - 1 >= 0 else None))
             key = tuple(key)
             ics[key] = compute_ics(y, x, always_df)
-    index = {"aic": 0, "bic": 1, "hqic": 2}[ic]
     lowest = np.inf
-    for key in ics:
-        val = ics[key][index]
+    for key, value in ics.items():
+        val = getattr(value, ic)
         if val < lowest:
             lowest = val
             selected_order = key
@@ -1955,9 +1957,8 @@ class UECM(ARDL):
         dendog = np.full_like(self.data.endog, np.nan)
         dendog[1:] = np.diff(self.data.endog, axis=0)
         dlag = max(0, self._maxlag - 1)
-        self._endog_reg, self._endog = lagmat(
-            dendog, dlag, original="sep", use_namedtuple=False
-        )
+        _lagmat_result = lagmat(dendog, dlag, original="sep")
+        self._endog_reg, self._endog = _lagmat_result.lags, _lagmat_result.leads
         # 2. Deterministics
         self._deterministic_reg = self._deterministics.in_sample()
         # 3. Levels

@@ -1282,7 +1282,7 @@ steps ({steps}) observations.
         Returns
         -------
         ForecastInterval
-            A NamedTuple with fields:
+            A result object with fields:
 
             point_forecast : ndarray
                 Mean value of forecast
@@ -1662,9 +1662,12 @@ class VARResults(VARProcess):
         """
         Plot forecast
         """
-        mid, lower, upper = self.forecast_interval(
+        _forecast_result = self.forecast_interval(
             self.endog[-self.k_ar :], steps, alpha=alpha
         )
+        mid = _forecast_result.point_forecast
+        lower = _forecast_result.forc_lower
+        upper = _forecast_result.forc_upper
         fig = plotting.plot_var_forc(
             self.endog,
             mid,
@@ -1761,7 +1764,7 @@ class VARResults(VARProcess):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            A result object with fields ``lower`` and ``upper``, arrays of
             ma_rep Monte Carlo standard errors.
 
         Notes

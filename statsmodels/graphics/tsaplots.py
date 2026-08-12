@@ -288,9 +288,9 @@ def plot_acf(
         bartlett_confint=bartlett_confint,
         adjusted=adjusted,
         missing=missing,
-        use_namedtuple=True,
+        result_object=True,
     )
-    # use_namedtuple=True always yields an AcfResult; confint is None when
+    # result_object=True always yields an AcfResult; confint is None when
     # alpha is None.
     acf_x, confint = acf_res.acf, acf_res.confint
 
@@ -418,9 +418,9 @@ def plot_pacf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     result = pacf(
-        x, nlags=nlags, alpha=alpha, method=method, use_namedtuple=True
+        x, nlags=nlags, alpha=alpha, method=method, result_object=True
     )
-    # use_namedtuple=True always yields a PacfResult; confint is None when
+    # result_object=True always yields a PacfResult; confint is None when
     # alpha is None.
     acf_x, confint = result.pacf, result.confint
 
@@ -535,9 +535,9 @@ def plot_ccf(
         fft=fft,
         alpha=alpha,
         nlags=nlags + 1,
-        use_namedtuple=True,
+        result_object=True,
     )
-    # use_namedtuple=True always yields a CcfResult; confint is None when
+    # result_object=True always yields a CcfResult; confint is None when
     # alpha is None.
     ccf_xy, confint = ccf_res.ccf, ccf_res.confint
 
@@ -658,9 +658,9 @@ def plot_pccf(
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
     pccf_res = pccf(
-        x, y, alpha=alpha, nlags=nlags, method=method, use_namedtuple=True
+        x, y, alpha=alpha, nlags=nlags, method=method, result_object=True
     )
-    # use_namedtuple=True always yields a PccfResult; confint is None when
+    # result_object=True always yields a PccfResult; confint is None when
     # alpha is None.
     pccf_xy, confint = pccf_res.pccf, pccf_res.confint
 

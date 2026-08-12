@@ -37,7 +37,7 @@ def cffilter(x, low=6, high=32, drift=True):
     Returns
     -------
     CycleTrendResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         cycle : array_like
             The features of x between the periodicities low and high.

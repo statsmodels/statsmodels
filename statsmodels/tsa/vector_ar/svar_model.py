@@ -779,7 +779,7 @@ class SVARResults(SVARProcess, VARResults):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``, arrays of
+            A result object with fields ``lower`` and ``upper``, arrays of
             ma_rep Monte Carlo standard errors.
 
         Notes

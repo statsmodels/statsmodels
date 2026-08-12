@@ -1726,8 +1726,9 @@ def burg(endog, order=1, demean=True):
         raise ValueError("order must be an integer larger than 1")
     if demean:
         endog = endog - endog.mean()
-    pacf, sigma = pacf_burg(endog, order, demean=demean)
-    ar, _ = levinson_durbin_pacf(pacf)
+    _pacf_burg_result = pacf_burg(endog, order, demean=demean)
+    pacf, sigma = _pacf_burg_result.pacf, _pacf_burg_result.sigma2
+    ar = levinson_durbin_pacf(pacf).arcoefs
     return ar, sigma[-1]
 
 

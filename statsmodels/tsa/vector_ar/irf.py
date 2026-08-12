@@ -182,6 +182,8 @@ class BaseIRAnalysis:
         if plot_stderr is False:
             stderr = None
         elif err_bands is not None:
+            if isinstance(err_bands, ErrorBand):
+                err_bands = (err_bands.lower, err_bands.upper)
             expected_shape = (2, self.periods + 1, self.neqs, self.neqs)
             if np.asarray(err_bands).shape != expected_shape:
                 raise ValueError(
@@ -192,11 +194,12 @@ class BaseIRAnalysis:
         elif stderr_type == "asym":
             stderr = self.cov(orth=orth)
         elif stderr_type == "mc":
-            stderr = self.errband_mc(
+            _err_band = self.errband_mc(
                 orth=orth, svar=svar, repl=repl, signif=signif, rng=rng
             )
+            stderr = (_err_band.lower, _err_band.upper)
         elif stderr_type == "sz1":
-            stderr = self.err_band_sz1(
+            _err_band = self.err_band_sz1(
                 orth=orth,
                 svar=svar,
                 repl=repl,
@@ -204,8 +207,9 @@ class BaseIRAnalysis:
                 rng=rng,
                 component=component,
             )
+            stderr = (_err_band.lower, _err_band.upper)
         elif stderr_type == "sz2":
-            stderr = self.err_band_sz2(
+            _err_band = self.err_band_sz2(
                 orth=orth,
                 svar=svar,
                 repl=repl,
@@ -213,8 +217,9 @@ class BaseIRAnalysis:
                 rng=rng,
                 component=component,
             )
+            stderr = (_err_band.lower, _err_band.upper)
         else:  # stderr_type == "sz3":
-            stderr = self.err_band_sz3(
+            _err_band = self.err_band_sz3(
                 orth=orth,
                 svar=svar,
                 repl=repl,
@@ -222,6 +227,7 @@ class BaseIRAnalysis:
                 rng=rng,
                 component=component,
             )
+            stderr = (_err_band.lower, _err_band.upper)
 
         fig = plotting.irf_grid_plot(
             irfs,
@@ -308,6 +314,8 @@ class BaseIRAnalysis:
         if not plot_stderr:
             stderr = None
         elif err_bands is not None:
+            if isinstance(err_bands, ErrorBand):
+                err_bands = (err_bands.lower, err_bands.upper)
             expected_shape = (2, self.periods + 1, self.neqs, self.neqs)
             if np.asarray(err_bands).shape != expected_shape:
                 raise ValueError(
@@ -320,7 +328,10 @@ class BaseIRAnalysis:
         elif stderr_type == "asym":
             stderr = self.cum_effect_cov(orth=orth)
         else:  # stderr_type == "mc"
-            stderr = self.cum_errband_mc(orth=orth, repl=repl, signif=signif, rng=rng)
+            _err_band = self.cum_errband_mc(
+                orth=orth, repl=repl, signif=signif, rng=rng
+            )
+            stderr = (_err_band.lower, _err_band.upper)
 
         fig = plotting.irf_grid_plot(
             cum_effects,
@@ -442,7 +453,7 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``.
+            A result object with fields ``lower`` and ``upper``.
         """
         model = self.model
         periods = self.periods
@@ -509,7 +520,7 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``.
+            A result object with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -595,7 +606,7 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``.
+            A result object with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -682,7 +693,7 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``.
+            A result object with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -917,7 +928,7 @@ class IRAnalysis(BaseIRAnalysis):
         Returns
         -------
         ErrorBand
-            A NamedTuple with fields ``lower`` and ``upper``.
+            A result object with fields ``lower`` and ``upper``.
         """
         model = self.model
         periods = self.periods

@@ -891,9 +891,16 @@ class TestVARExtras:
         fci3 = res_lin_trend2.forecast_interval(
             res_lin_trend2.endog[-2:], h, exog_future=exf2
         )
-        assert_allclose(fci2, fci1, rtol=1e-12, atol=1e-12)
-        assert_allclose(fci3, fci1, rtol=1e-12, atol=1e-12)
-        assert_allclose(fci3, fci2, rtol=1e-12, atol=1e-12)
+        for field in ("point_forecast", "forc_lower", "forc_upper"):
+            assert_allclose(
+                getattr(fci2, field), getattr(fci1, field), rtol=1e-12, atol=1e-12
+            )
+            assert_allclose(
+                getattr(fci3, field), getattr(fci1, field), rtol=1e-12, atol=1e-12
+            )
+            assert_allclose(
+                getattr(fci3, field), getattr(fci2, field), rtol=1e-12, atol=1e-12
+            )
 
     def test_multiple_simulations(self):
         res0 = self.res0

@@ -34,7 +34,7 @@ def durbin_levinson(endog, ar_order=0, demean=True, adjusted=False):
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : list of SARIMAXParams objects
             List elements correspond to estimates at different `ar_order`.

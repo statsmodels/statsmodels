@@ -433,27 +433,31 @@ class ARIMA(sarimax.SARIMAX):
             # Now, estimate parameters
             if method == "yule_walker":
                 p, fit_details = yule_walker(
-                    endog, ar_order=order[0], demean=False,
-                    **method_kwargs)
+                    endog, ar_order=order[0], demean=False, **method_kwargs
+                    )
             elif method == "burg":
-                p, fit_details = burg(endog, ar_order=order[0],
-                                      demean=False, **method_kwargs)
+                p, fit_details = burg(
+                    endog, ar_order=order[0], demean=False, **method_kwargs
+                    )
             elif method == "hannan_rissanen":
                 p, fit_details = hannan_rissanen(
-                    endog, ar_order=order[0],
-                    ma_order=order[2], demean=False, **method_kwargs)
+                    endog, ar_order=order[0], ma_order=order[2], demean=False, **method_kwargs
+                    )
             elif method == "innovations":
                 p, fit_details = innovations(
-                    endog, ma_order=order[2], demean=False,
-                    **method_kwargs)
+                    endog, ma_order=order[2], demean=False, **method_kwargs
+                    )
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
             elif method == "innovations_mle":
                 p, fit_details = innovations_mle(
-                    endog, order=order,
+                    endog,
+                    order=order,
                     seasonal_order=seasonal_order,
-                    demean=False, **method_kwargs)
+                    demean=False,
+                    **method_kwargs
+                    )
 
         # In all cases except method='statespace', we now need to extract the
         # parameters and, optionally, create a new results object

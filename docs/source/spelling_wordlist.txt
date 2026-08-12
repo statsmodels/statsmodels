@@ -2545,14 +2545,14 @@ qrng
 ppfcond
 reparameterizations
 ADFullerResult
-RangeUnitRootTestResult
+RURResult
 LagmatResult
 PacfResult
 CcfResult
 PccfResult
 AcfResult
 CycleTrendResult
-KpssResult
+KPSSResult
 InformationCriteria
 ForecastInterval
 ErrorBand

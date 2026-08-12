@@ -79,7 +79,8 @@ class TestSVAR:
         assert isinstance(errband2, ErrorBand)
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8
-        assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)
+        assert_allclose(errband1.lower, errband2.lower, rtol=1e-8, atol=atol)
+        assert_allclose(errband1.upper, errband2.upper, rtol=1e-8, atol=atol)
 
 
 def test_oneparam():
