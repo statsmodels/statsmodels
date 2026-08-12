@@ -461,7 +461,10 @@ as a check on VAR-based impulse responses, at some cost in efficiency.
 Standard errors are Newey-West HAC-corrected to account for the induced
 MA(:math:`h`) serial correlation in the :math:`h`-step-ahead residuals.
 
-See Jordà (2005) [3]_ for details.
+See Jordà (2005) [3]_ for details, and the :doc:`Local Projections example
+notebook <examples/notebooks/generated/local_projections>` for a full
+worked application estimating a fiscal-multiplier-style impulse response
+and comparing it against a VAR.
 
 .. currentmodule:: statsmodels.tsa.vector_ar.local_proj
 .. autosummary::

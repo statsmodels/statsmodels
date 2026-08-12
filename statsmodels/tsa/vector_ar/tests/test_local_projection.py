@@ -11,6 +11,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.local_proj import (
     LocalProjections,
     LocalProjectionsResults,
@@ -498,3 +499,86 @@ def test_plot_irfs(close_figures):
     res = LocalProjections(y, lags=1, shock_idx=[0, 1], horizons=6).fit()
     fig = res.plot_irfs()
     assert isinstance(fig, matplotlib.figure.Figure)
+
+
+# ---------------------------------------------------------------------------
+# Cross-check against an independent R implementation.
+#
+# statsmodels/tsa/vector_ar/tests/results/results_local_proj.R replicates
+# the LocalProjections regression construction (_build_regressors / fit)
+# using base R's lm() for OLS and sandwich::NeweyWest() for the HAC
+# covariance, on the real macrodata series already used in
+# docs/source/vector_ar.rst. The R script also cross-checks its own
+# hand-rolled Newey-West formula against sandwich::NeweyWest directly and
+# confirms they agree exactly, so this is a genuine independent check of
+# both the OLS point estimates and the HAC standard errors, not just two
+# copies of the same formula.
+# ---------------------------------------------------------------------------
+
+
+def _macrodata_log_diff(columns):
+    mdata = sm.datasets.macrodata.load_pandas().data
+    return np.log(mdata[columns]).diff().dropna()
+
+
+def test_against_r_base_case():
+    endog = _macrodata_log_diff(["realgdp", "realcons", "realinv"])
+    res = LocalProjections(
+        endog.values, shock_idx=0, lags=2, horizons=4, trend="c", nw_lags=4
+    ).fit()
+
+    # From results_local_proj.R, "Base case irfs"/"Base case stderr"
+    # (rows: horizon 0..4; columns: realgdp, realcons, realinv).
+    r_irfs = np.array([
+        [1.00000000000, 0.52364991703, 3.8482300128],
+        [0.17178466121, 0.09970743380, 1.1253122078],
+        [0.18322583380, 0.07627130443, 0.7568887880],
+        [-0.03403189708, 0.07068916493, -0.5903675451],
+        [0.08371270402, -0.05310649472, 0.6617451473],
+    ])
+    r_stderr = np.array([
+        [0.0, 0.06609432437, 0.3147000764],
+        [0.08948095300, 0.06672041817, 0.5282957309],
+        [0.07638810462, 0.05843115593, 0.4409788183],
+        [0.08192150214, 0.06149871824, 0.4797675369],
+        [0.07948064894, 0.06632669683, 0.3442574755],
+    ])
+
+    assert_allclose(res.irfs[:, :, 0], r_irfs, atol=1e-6)
+    # h=0 own-response stderr is ~0 by construction (perfect fit, see
+    # test_h0_response_equals_one_by_construction); both R and Python only
+    # agree on that entry up to floating-point noise, not to atol=1e-6.
+    assert_allclose(res.stderr[1:, :, 0], r_stderr[1:], atol=1e-6)
+    assert res.stderr[0, 0, 0] < 1e-8
+
+
+def test_against_r_with_exog():
+    endog = _macrodata_log_diff(["realgdp"])
+    exog = _macrodata_log_diff(["realgovt"])
+    res = LocalProjections(
+        endog.values,
+        shock_idx=0,
+        lags=1,
+        horizons=3,
+        trend="c",
+        nw_lags=3,
+        exog=exog.values,
+    ).fit()
+
+    # From results_local_proj.R, "Exog case irfs"/"Exog case stderr".
+    r_irfs = np.array([
+        [1.00000000000],
+        [0.28437561944],
+        [0.25751285158],
+        [0.07016128423],
+    ])
+    r_stderr = np.array([
+        [0.0],
+        [0.07910772625],
+        [0.08614744242],
+        [0.08139100144],
+    ])
+
+    assert_allclose(res.irfs[:, :, 0], r_irfs, atol=1e-6)
+    assert_allclose(res.stderr[1:, :, 0], r_stderr[1:], atol=1e-6)
+    assert res.stderr[0, 0, 0] < 1e-8
