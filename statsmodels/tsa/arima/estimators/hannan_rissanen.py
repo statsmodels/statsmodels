@@ -55,7 +55,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
         other_results : Bunch

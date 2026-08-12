@@ -25,7 +25,7 @@ def hpfilter(x, lamb=1600):
     Returns
     -------
     CycleTrendResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         cycle : ndarray
             The estimated cycle in the data given lamb.

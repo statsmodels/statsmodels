@@ -89,7 +89,7 @@ def gls(
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
             Contains the parameter estimates from the final iteration.
@@ -232,24 +232,28 @@ def gls(
         # Step 2: ARMA
         # TODO: allow estimator-specific kwargs?
         if arma_estimator == "yule_walker":
-            p_arma, res_arma = yule_walker(
+            _arma_result = yule_walker(
                 resid, ar_order=spec.ar_order, demean=False, **arma_estimator_kwargs
             )
+            p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         elif arma_estimator == "burg":
             _check_arma_estimator_kwargs(arma_estimator_kwargs, "burg")
-            p_arma, res_arma = burg(resid, ar_order=spec.ar_order, demean=False)
+            _arma_result = burg(resid, ar_order=spec.ar_order, demean=False)
+            p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         elif arma_estimator == "innovations":
             _check_arma_estimator_kwargs(arma_estimator_kwargs, "innovations")
-            out, res_arma = innovations(resid, ma_order=spec.ma_order, demean=False)
+            _arma_result = innovations(resid, ma_order=spec.ma_order, demean=False)
+            out, res_arma = _arma_result.parameters, _arma_result.other_results
             p_arma = out[-1]
         elif arma_estimator == "hannan_rissanen":
-            p_arma, res_arma = hannan_rissanen(
+            _arma_result = hannan_rissanen(
                 resid,
                 ar_order=spec.ar_order,
                 ma_order=spec.ma_order,
                 demean=False,
                 **arma_estimator_kwargs,
             )
+            p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         else:
             # For later iterations, use a "warm start" for parameter estimates
             # (speeds up estimation and convergence)
@@ -270,7 +274,7 @@ def gls(
                 spec.seasonal_order[3],
             )
             if arma_estimator == "innovations_mle":
-                p_arma, res_arma = innovations_mle(
+                _arma_result = innovations_mle(
                     resid,
                     order=tmp_order,
                     seasonal_order=tmp_seasonal_order,
@@ -279,7 +283,7 @@ def gls(
                     **arma_estimator_kwargs,
                 )
             else:
-                p_arma, res_arma = statespace(
+                _arma_result = statespace(
                     resid,
                     order=tmp_order,
                     seasonal_order=tmp_seasonal_order,
@@ -287,6 +291,8 @@ def gls(
                     start_params=start_params,
                     **arma_estimator_kwargs,
                 )
+            p_arma = _arma_result.parameters
+            res_arma = _arma_result.other_results
 
         ar_params = p_arma.ar_params
         seasonal_ar_params = p_arma.seasonal_ar_params

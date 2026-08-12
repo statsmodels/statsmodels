@@ -902,10 +902,12 @@ class UnobservedComponents(MLEModel):
         # (Use the HP filter to get initial estimates of variances)
         _start_params = {}
         if self.level:
-            resid, trend1 = hpfilter(endog)
+            _hp_result = hpfilter(endog)
+            resid, trend1 = _hp_result.cycle, _hp_result.trend
 
             if self.stochastic_trend:
-                cycle2, trend2 = hpfilter(trend1)
+                _hp_result2 = hpfilter(trend1)
+                cycle2, trend2 = _hp_result2.cycle, _hp_result2.trend
                 _start_params["trend_var"] = np.std(trend2) ** 2
                 if self.stochastic_level:
                     _start_params["level_var"] = np.std(cycle2) ** 2

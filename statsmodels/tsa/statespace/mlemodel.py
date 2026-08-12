@@ -3657,11 +3657,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             test_statistics = []
             p_values = []
             for i in range(self.model.k_endog):
-                test_statistic, p_value = breakvar_heteroskedasticity_test(
+                _het_result = breakvar_heteroskedasticity_test(
                     resid[i, d:], subset_length=h, alternative=alternative, use_f=use_f
                 )
-                test_statistics.append(test_statistic)
-                p_values.append(p_value)
+                test_statistics.append(_het_result.stat)
+                p_values.append(_het_result.pvalue)
 
             output = np.c_[test_statistics, p_values]
         else:

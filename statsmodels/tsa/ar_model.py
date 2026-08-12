@@ -334,7 +334,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         hold_back = self._hold_back
         exog_names = []
         endog_names = self.endog_names
-        x, y = lagmat(self.endog, maxlag, original="sep", use_namedtuple=False)
+        _lagmat_result = lagmat(self.endog, maxlag, original="sep")
+        x, y = _lagmat_result.lags, _lagmat_result.leads
         exog_names.extend([endog_names + f".L{lag}" for lag in self._lags])
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
@@ -2186,8 +2187,7 @@ def ar_select_order(
             lags = lags or 0
             ics.append((lags, compute_ics(res)))
 
-    key_loc = {"aic": 0, "bic": 1, "hqic": 2}[ic]
-    ics = sorted(ics, key=lambda x: x[1][key_loc])
+    ics = sorted(ics, key=lambda x: getattr(x[1], ic))
     selected_model = ics[0][0]
     mod = AutoReg(
         endog,
@@ -2222,12 +2222,12 @@ class AROrderSelectionResults:
         self._trend = trend
         self._seasonal = seasonal
         self._period = period
-        aic = sorted(ics, key=lambda r: r[1][0])
-        self._aic = {key: val[0] for key, val in aic}
-        bic = sorted(ics, key=lambda r: r[1][1])
-        self._bic = {key: val[1] for key, val in bic}
-        hqic = sorted(ics, key=lambda r: r[1][2])
-        self._hqic = {key: val[2] for key, val in hqic}
+        aic = sorted(ics, key=lambda r: r[1].aic)
+        self._aic = {key: val.aic for key, val in aic}
+        bic = sorted(ics, key=lambda r: r[1].bic)
+        self._bic = {key: val.bic for key, val in bic}
+        hqic = sorted(ics, key=lambda r: r[1].hqic)
+        self._hqic = {key: val.hqic for key, val in hqic}
 
     @property
     def model(self) -> AutoReg:

@@ -912,12 +912,12 @@ def test_fc():
             obtained_w_intervals_exog = results_sm_exog[ds][dt].predict(
                 steps=STEPS, alpha=ALPHA, exog_fc=exog_fc
             )
-            obt = obtained_w_intervals[0]  # forecast
-            obt_l = obtained_w_intervals[1]  # lower bound
-            obt_u = obtained_w_intervals[2]  # upper bound
-            obt_exog = obtained_w_intervals_exog[0]
-            obt_exog_l = obtained_w_intervals_exog[1]
-            obt_exog_u = obtained_w_intervals_exog[2]
+            obt = obtained_w_intervals.point_forecast  # forecast
+            obt_l = obtained_w_intervals.forc_lower  # lower bound
+            obt_u = obtained_w_intervals.forc_upper  # upper bound
+            obt_exog = obtained_w_intervals_exog.point_forecast
+            obt_exog_l = obtained_w_intervals_exog.forc_lower
+            obt_exog_u = obtained_w_intervals_exog.forc_upper
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -967,12 +967,12 @@ def test_fc():
             obtained_w_intervals_exog_coint = results_sm_exog_coint[ds][dt].predict(
                 steps=STEPS, alpha=ALPHA, exog_coint_fc=exog_coint_fc
             )
-            obt = obtained_w_intervals[0]  # forecast
-            obt_l = obtained_w_intervals[1]  # lower bound
-            obt_u = obtained_w_intervals[2]  # upper bound
-            obt_exog_coint = obtained_w_intervals_exog_coint[0]
-            obt_exog_coint_l = obtained_w_intervals_exog_coint[1]
-            obt_exog_coint_u = obtained_w_intervals_exog_coint[2]
+            obt = obtained_w_intervals.point_forecast  # forecast
+            obt_l = obtained_w_intervals.forc_lower  # lower bound
+            obt_u = obtained_w_intervals.forc_upper  # upper bound
+            obt_exog_coint = obtained_w_intervals_exog_coint.point_forecast
+            obt_exog_coint_l = obtained_w_intervals_exog_coint.forc_lower
+            obt_exog_coint_u = obtained_w_intervals_exog_coint.forc_upper
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]

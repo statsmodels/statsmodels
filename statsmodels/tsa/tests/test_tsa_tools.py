@@ -202,9 +202,10 @@ class TestLagmat:
     def test_sep_return(self):
         data = self.random_data
         n = data.shape[0]
-        lagmat, leads = stattools.lagmat(
-            data, 3, trim="none", original="sep", use_namedtuple=False
+        _result = stattools.lagmat(
+            data, 3, trim="none", original="sep", result_object=False
         )
+        lagmat, leads = _result.lags, _result.leads
         expected = np.zeros((n + 3, 4))
         for i in range(4):
             expected[i : i + n, i] = data
@@ -213,42 +214,42 @@ class TestLagmat:
         assert_equal(expected_lags, lagmat)
         assert_equal(expected_leads, leads)
 
-    def test_sep_return_default_is_namedtuple(self):
-        # LagmatResult has the same length and contents as the legacy
-        # (lags, leads) tuple, so it is adopted without a warning.
+    def test_sep_return_default_is_result_object(self):
+        # LagmatResult is always used for original="sep".
         data = self.random_data
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = stattools.lagmat(data, 3, trim="none", original="sep")
-            # The NamedTuple is used whenever it unpacks identically, so
-            # use_namedtuple=False cannot opt out of it here.
+            # The result object is used whenever it matches the legacy
+            # tuple's contents, so result_object=False cannot opt out of
+            # it here.
             opted_out = stattools.lagmat(
-                data, 3, trim="none", original="sep", use_namedtuple=False
+                data, 3, trim="none", original="sep", result_object=False
             )
+            # Unpacking is a stable, non-deprecated part of the API.
+            lags, leads = res
         assert isinstance(res, LagmatResult)
         assert isinstance(opted_out, LagmatResult)
         assert len(res) == 2
-        # ...and it still unpacks like the legacy 2-tuple
-        lags, leads = res
         assert isinstance(lags, np.ndarray)
         assert_array_almost_equal(lags, res.lags)
         assert_array_almost_equal(leads, res.leads)
 
-    def test_sep_return_use_namedtuple_true(self):
+    def test_sep_return_result_object_true(self):
         data = self.random_data
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             res = stattools.lagmat(
-                data, 3, trim="none", original="sep", use_namedtuple=True
+                data, 3, trim="none", original="sep", result_object=True
             )
+            assert res[0] is res.lags
+            assert res[1] is res.leads
         assert isinstance(res, LagmatResult)
-        assert res[0] is res.lags
-        assert res[1] is res.leads
 
     def test_non_sep_original_never_warns(self):
         # Only original="sep" returns more than one value, so the other
-        # values must stay silent.  An explicit use_namedtuple=True still
-        # returns the NamedTuple, with leads left as None because the
+        # values must stay silent.  An explicit result_object=True still
+        # returns the result object, with leads left as None because the
         # original was either excluded or folded into lags.
         data = self.random_data
         with warnings.catch_warnings():
@@ -256,10 +257,10 @@ class TestLagmat:
             lags_ex = stattools.lagmat(data, 3, trim="none", original="ex")
             lags_in = stattools.lagmat(data, 3, trim="none", original="in")
             nt_ex = stattools.lagmat(
-                data, 3, trim="none", original="ex", use_namedtuple=True
+                data, 3, trim="none", original="ex", result_object=True
             )
             nt_in = stattools.lagmat(
-                data, 3, trim="none", original="in", use_namedtuple=True
+                data, 3, trim="none", original="in", result_object=True
             )
         assert isinstance(lags_ex, np.ndarray)
         assert isinstance(lags_in, np.ndarray)
@@ -342,12 +343,14 @@ class TestLagmat:
         lags_np = stattools.lagmat(data.values, 3, trim="none", original="ex")
         assert_equal(lags, lags_np)
 
-        lags, lead = stattools.lagmat(
-            data, 3, trim="forward", original="sep", use_namedtuple=False
+        _result = stattools.lagmat(
+            data, 3, trim="forward", original="sep", result_object=False
         )
-        lags_np, lead_np = stattools.lagmat(
-            data.values, 3, trim="forward", original="sep", use_namedtuple=False
+        lags, lead = _result.lags, _result.leads
+        _result_np = stattools.lagmat(
+            data.values, 3, trim="forward", original="sep", result_object=False
         )
+        lags_np, lead_np = _result_np.lags, _result_np.leads
         assert_equal(lags, lags_np)
         assert_equal(lead, lead_np)
 
@@ -374,14 +377,15 @@ class TestLagmat:
             self.macro_df, 3, trim="both", original="ex", use_pandas=True
         )
         assert_frame_equal(lags, expected.iloc[:, 4:])
-        lags, lead = stattools.lagmat(
+        _result = stattools.lagmat(
             self.macro_df,
             3,
             trim="both",
             original="sep",
             use_pandas=True,
-            use_namedtuple=False,
+            result_object=False,
         )
+        lags, lead = _result.lags, _result.leads
         assert_frame_equal(lags, expected.iloc[:, 4:])
         assert_frame_equal(lead, expected.iloc[:, :4])
 
@@ -427,14 +431,15 @@ class TestLagmat:
             self.macro_df, 3, trim="forward", original="ex", use_pandas=True
         )
         assert_frame_equal(lags, expected.iloc[:, 4:])
-        lags, lead = stattools.lagmat(
+        _result = stattools.lagmat(
             self.macro_df,
             3,
             trim="forward",
             original="sep",
             use_pandas=True,
-            use_namedtuple=False,
+            result_object=False,
         )
+        lags, lead = _result.lags, _result.leads
         assert_frame_equal(lags, expected.iloc[:, 4:])
         assert_frame_equal(lead, expected.iloc[:, :4])
 
@@ -486,14 +491,15 @@ class TestLagmat:
             self.series, 3, trim="forward", original="ex", use_pandas=True
         )
         assert_frame_equal(lags, expected.iloc[:, 1:])
-        lags, lead = stattools.lagmat(
+        _result = stattools.lagmat(
             self.series,
             3,
             trim="forward",
             original="sep",
             use_pandas=True,
-            use_namedtuple=False,
+            result_object=False,
         )
+        lags, lead = _result.lags, _result.leads
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
 
@@ -515,14 +521,15 @@ class TestLagmat:
             self.series, 3, trim="both", original="ex", use_pandas=True
         )
         assert_frame_equal(lags, expected.iloc[:, 1:])
-        lags, lead = stattools.lagmat(
+        _result = stattools.lagmat(
             self.series,
             3,
             trim="both",
             original="sep",
             use_pandas=True,
-            use_namedtuple=False,
+            result_object=False,
         )
+        lags, lead = _result.lags, _result.leads
         assert_frame_equal(lead, expected.iloc[:, :1])
         assert_frame_equal(lags, expected.iloc[:, 1:])
 
@@ -565,11 +572,11 @@ class TestLagmat:
     @pytest.mark.parametrize("original", ["in", "ex", "sep"])
     def test_lagmat_0(self, original):
         x = np.arange(100, dtype=float)
-        scalar = stattools.lagmat(x, 0, original=original, use_namedtuple=False)
-        array = stattools.lagmat(x, [0], original=original, use_namedtuple=False)
+        scalar = stattools.lagmat(x, 0, original=original, result_object=False)
+        array = stattools.lagmat(x, [0], original=original, result_object=False)
         if original == "sep":
-            scalar, x_scalar = scalar
-            array, x_array = array
+            scalar, x_scalar = scalar.lags, scalar.leads
+            array, x_array = array.lags, array.leads
             assert x_scalar.shape == x_array.shape
             assert x_scalar.shape == (x.shape[0], 1)
         assert array.shape == scalar.shape

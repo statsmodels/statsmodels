@@ -620,7 +620,8 @@ def test_hpfilter():
         ]
     )
     dta = macrodata.load_pandas().data["realgdp"].values
-    res = column_stack(hpfilter(dta, 1600))
+    _result = hpfilter(dta, 1600)
+    res = column_stack((_result.cycle, _result.trend))
     assert_almost_equal(res, hpfilt_res, 6)
 
 
@@ -842,10 +843,10 @@ def test_cfitz_filter():
         ]
     )
     dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
-    cyc, trend = cffilter(dta)
+    cyc = cffilter(dta).cycle
     assert_almost_equal(cyc, cfilt_res, 8)
     # do 1d
-    cyc, trend = cffilter(dta[:, 1])
+    cyc = cffilter(dta[:, 1]).cycle
     assert_almost_equal(cyc, cfilt_res[:, 1], 8)
 
 
@@ -883,16 +884,16 @@ def test_cfitz_pandas():
     dta = macrodata.load_pandas().data
     index = date_range(start="1959-01-01", end="2009-10-01", freq=QUARTER_END)
     dta.index = index
-    cycle, trend = cffilter(dta["infl"])
-    ndcycle, ndtrend = cffilter(dta["infl"].values)
+    cycle, _ = cffilter(dta["infl"])
+    ndcycle = cffilter(dta["infl"].values).cycle
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
     assert_equal(cycle.name, "infl_cycle")
 
     # 2d
-    cycle, trend = cffilter(dta[["infl", "unemp"]])
-    ndcycle, ndtrend = cffilter(dta[["infl", "unemp"]].values)
+    cycle, _ = cffilter(dta[["infl", "unemp"]])
+    ndcycle = cffilter(dta[["infl", "unemp"]].values).cycle
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
@@ -903,8 +904,8 @@ def test_hpfilter_pandas():
     dta = macrodata.load_pandas().data
     index = date_range(start="1959-01-01", end="2009-10-01", freq=QUARTER_END)
     dta.index = index
-    cycle, trend = hpfilter(dta["realgdp"])
-    ndcycle, ndtrend = hpfilter(dta["realgdp"].values)
+    cycle = hpfilter(dta["realgdp"]).cycle
+    ndcycle = hpfilter(dta["realgdp"].values).cycle
     assert_equal(cycle.values, ndcycle)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))

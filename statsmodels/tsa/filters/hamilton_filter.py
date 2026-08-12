@@ -38,7 +38,7 @@ def hamilton_filter(x, h=8, p=4):
     Returns
     -------
     CycleTrendResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         cycle : ndarray or Series
             Estimated cyclical component.  The first ``p + h - 1`` values

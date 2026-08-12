@@ -33,7 +33,7 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
             Contains the parameter estimates from the final iteration.
