@@ -16,6 +16,7 @@ __all__ = [
     "ETSModel",
     "ExponentialSmoothing",
     "Holt",
+    "LocalProjections",
     "MarkovAutoregression",
     "MarkovRegression",
     "STLForecast",
@@ -116,6 +117,7 @@ from .stattools import (
     zivot_andrews,
 )
 from .tsatools import add_lag, add_trend, detrend, lagmat, lagmat2ds
+from .vector_ar.local_proj import LocalProjections
 from .vector_ar.svar_model import SVAR
 from .vector_ar.var_model import VAR
 from .vector_ar.vecm import VECM
