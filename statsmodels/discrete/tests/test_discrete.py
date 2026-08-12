@@ -3753,6 +3753,28 @@ def test_mlogit_t_test():
     assert_allclose(wt.statistic, 5.68660562, rtol=1e-8)
 
 
+def test_mnlogit_resid_response():
+    # GH7096, resid_response raised ValueError because the base class
+    # subtracted the nobs x J predicted probabilities from the 1-dim endog
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    res = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+    resid = res.resid_response
+    assert_equal(resid.shape, (res.model.endog.shape[0], res.model.J))
+    assert_allclose(resid, res.model.wendog - res.predict(), rtol=1e-13)
+    # each row is an indicator vector minus a probability vector
+    assert_allclose(resid.sum(1), np.zeros(res.model.endog.shape[0]), atol=1e-10)
+
+    # with two categories this reduces to the binary response residual
+    data = load_spector()
+    exog = sm.add_constant(data.exog, prepend=False)
+    res_mnl = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    res_logit = Logit(data.endog, exog).fit(method="newton", disp=0)
+    assert_allclose(res_mnl.resid_response[:, 1], res_logit.resid_response, rtol=1e-7)
+    assert_allclose(res_mnl.resid_response[:, 0], -res_logit.resid_response, rtol=1e-7)
+
+
 def _fit_logit_for_summary():
     data = load_spector()
     data.exog = sm.add_constant(data.exog, prepend=False)
