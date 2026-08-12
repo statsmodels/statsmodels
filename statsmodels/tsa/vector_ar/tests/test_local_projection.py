@@ -30,7 +30,7 @@ def _make_var1(T=300, n=2, seed=42):
     if n == 2:
         A = np.array([[0.5, 0.2], [0.0, 0.4]])  # lower-triangular, stable
     else:
-        A = np.tril(rng.uniform(0, 1 / (n+1), size=(n,n)))
+        A = np.tril(rng.uniform(0, 1 / (n + 1), size=(n, n)))
         max_eig = np.linalg.eigvalsh(A).max()
         # scale to ensure stability
         A *= 0.9 / max_eig
@@ -160,8 +160,7 @@ def test_init_bad_trend_raises():
 def test_init_exog_wrong_length_raises():
     rs = np.random.default_rng(238291)
     with pytest.raises(ValueError, match="exog"):
-        LocalProjections(rs.standard_normal((100, 2)),
-                         exog=rs.standard_normal((50, 2)))
+        LocalProjections(rs.standard_normal((100, 2)), exog=rs.standard_normal((50, 2)))
 
 
 def test_init_too_few_obs_raises():
@@ -280,10 +279,8 @@ def test_conf_int_lower_le_irf_le_upper():
 def test_conf_int_width_increases_with_alpha():
     y, _ = _make_var1()
     res = LocalProjections(y, lags=1, horizons=5).fit()
-    width_90 = (res.conf_int(alpha=0.10)[..., 1]
-                - res.conf_int(alpha=0.10)[..., 0])
-    width_95 = (res.conf_int(alpha=0.05)[..., 1]
-                - res.conf_int(alpha=0.05)[..., 0])
+    width_90 = res.conf_int(alpha=0.10)[..., 1] - res.conf_int(alpha=0.10)[..., 0]
+    width_95 = res.conf_int(alpha=0.05)[..., 1] - res.conf_int(alpha=0.05)[..., 0]
     assert np.all(width_95 >= width_90)
 
 
@@ -466,6 +463,7 @@ def test_zero_lags():
 
 def test_pandas_dataframe_input():
     import pandas as pd
+
     y, _ = _make_var1(T=200)
     df = pd.DataFrame(y, columns=["gdp", "infl"])
     lp = LocalProjections(df, shock_idx=0, lags=1, horizons=4)
@@ -486,6 +484,7 @@ def test_repr():
     r = repr(res)
     assert "LocalProjectionsResults" in r
     assert "horizons=6" in r
+
 
 @pytest.mark.matplotlib
 def test_plot_irfs(close_figures):
@@ -529,20 +528,24 @@ def test_against_r_base_case():
 
     # From results_local_proj.R, "Base case irfs"/"Base case stderr"
     # (rows: horizon 0..4; columns: realgdp, realcons, realinv).
-    r_irfs = np.array([
-        [1.00000000000, 0.52364991703, 3.8482300128],
-        [0.17178466121, 0.09970743380, 1.1253122078],
-        [0.18322583380, 0.07627130443, 0.7568887880],
-        [-0.03403189708, 0.07068916493, -0.5903675451],
-        [0.08371270402, -0.05310649472, 0.6617451473],
-    ])
-    r_stderr = np.array([
-        [0.0, 0.06609432437, 0.3147000764],
-        [0.08948095300, 0.06672041817, 0.5282957309],
-        [0.07638810462, 0.05843115593, 0.4409788183],
-        [0.08192150214, 0.06149871824, 0.4797675369],
-        [0.07948064894, 0.06632669683, 0.3442574755],
-    ])
+    r_irfs = np.array(
+        [
+            [1.00000000000, 0.52364991703, 3.8482300128],
+            [0.17178466121, 0.09970743380, 1.1253122078],
+            [0.18322583380, 0.07627130443, 0.7568887880],
+            [-0.03403189708, 0.07068916493, -0.5903675451],
+            [0.08371270402, -0.05310649472, 0.6617451473],
+        ]
+    )
+    r_stderr = np.array(
+        [
+            [0.0, 0.06609432437, 0.3147000764],
+            [0.08948095300, 0.06672041817, 0.5282957309],
+            [0.07638810462, 0.05843115593, 0.4409788183],
+            [0.08192150214, 0.06149871824, 0.4797675369],
+            [0.07948064894, 0.06632669683, 0.3442574755],
+        ]
+    )
 
     assert_allclose(res.irfs[:, :, 0], r_irfs, atol=1e-6)
     # h=0 own-response stderr is ~0 by construction (perfect fit, see
@@ -566,18 +569,22 @@ def test_against_r_with_exog():
     ).fit()
 
     # From results_local_proj.R, "Exog case irfs"/"Exog case stderr".
-    r_irfs = np.array([
-        [1.00000000000],
-        [0.28437561944],
-        [0.25751285158],
-        [0.07016128423],
-    ])
-    r_stderr = np.array([
-        [0.0],
-        [0.07910772625],
-        [0.08614744242],
-        [0.08139100144],
-    ])
+    r_irfs = np.array(
+        [
+            [1.00000000000],
+            [0.28437561944],
+            [0.25751285158],
+            [0.07016128423],
+        ]
+    )
+    r_stderr = np.array(
+        [
+            [0.0],
+            [0.07910772625],
+            [0.08614744242],
+            [0.08139100144],
+        ]
+    )
 
     assert_allclose(res.irfs[:, :, 0], r_irfs, atol=1e-6)
     assert_allclose(res.stderr[1:, :, 0], r_stderr[1:], atol=1e-6)
