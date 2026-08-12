@@ -53,7 +53,8 @@ def _nw_cov(X, resid, nlags):
 
 
 class LocalProjectionsResults:
-    """Results from a fitted :class:`LocalProjections` model.
+    """
+    Results from a fitted :class:`LocalProjections` model.
 
     Attributes
     ----------
@@ -183,7 +184,8 @@ class LocalProjectionsResults:
 
 
 class LocalProjections:
-    r"""Local Projections estimator for impulse response functions.
+    r"""
+    Local Projections estimator for impulse response functions.
 
     For each horizon :math:`h = 0, 1, \ldots, H`, the impulse response is
     estimated by running a separate OLS regression
@@ -225,6 +227,35 @@ class LocalProjections:
         the bandwidth at horizon :math:`h` is
         ``max(h, ceil(4*(max(h,1)/100)^{2/9}))``.
 
+    See Also
+    --------
+    statsmodels.tsa.vector_ar.var_model.VAR : Vector autoregression model,
+        whose Cholesky-orthogonalized impulse responses are the VAR-based
+        analogue of the estimator here.
+    statsmodels.tsa.vector_ar.svar_model.SVAR : Structural vector
+        autoregression model, for identification schemes other than a
+        simple recursive ordering.
+    statsmodels.tsa.vector_ar.irf.IRAnalysis : Impulse response object
+        returned by :meth:`VAR.fit`, sharing the same "shock ordered
+        first" identification assumption.
+
+    Notes
+    -----
+    Identification follows a recursive (Cholesky-style) scheme in which the
+    variable(s) named by `shock_idx` are assumed to be ordered first, i.e.
+    contemporaneously exogenous to the remaining variables in `endog`: only
+    the *lagged* values of the other variables enter each regression, never
+    their current-period values. This is the same "shock ordered first"
+    assumption underlying Cholesky-orthogonalized VAR impulse responses
+    (see :class:`~statsmodels.tsa.vector_ar.irf.IRAnalysis`), and the fitted
+    coefficient on `shock_idx` only has a structural impulse-response
+    interpretation to the extent that assumption is credible for the data
+    at hand. When `shock_idx` names more than one column, those columns
+    enter the regression together as ordinary simultaneous regressors with
+    no orthogonalization among themselves; their coefficients are only
+    separately identified as shocks if those variables are themselves
+    mutually contemporaneously exogenous.
+
     References
     ----------
     Jordà, Ò. (2005). Estimation and Inference of Impulse Responses by Local
@@ -258,15 +289,12 @@ class LocalProjections:
         _endog_col_names = (list(endog.columns)
                             if isinstance(endog, pd.DataFrame) else None)
 
-        endog = array_like(endog, "endog", ndim=2, maxdim=2, optional=False, dtype=float)
+        endog = array_like(endog, "endog", ndim=2, optional=False, dtype=float)
         lags = int_like(lags, "lags", optional=False)
         horizons = int_like(horizons, "horizons", optional=False)
-        exog = array_like(exog, "exog", ndim=2, maxdim=2, optional=True, dtype=float)
+        exog = array_like(exog, "exog", ndim=2, optional=True, dtype=float)
         trend = string_like(trend, "trend", optional=False, options=("n", "c", "ct"))
         nw_lags = int_like(nw_lags, "nw_lags", optional=True)
-
-        if endog.ndim == 1:
-            endog = endog[:, None]
 
         self.endog = endog
         t, n = self.endog.shape
@@ -350,7 +378,14 @@ class LocalProjections:
         if self.trend in ("c", "ct"):
             parts.append(np.ones((n_obs, 1)))
         if self.trend == "ct":
-            parts.append(np.arange(t_start, t_end, dtype=float)[:, None])
+            # Centered (mean zero) time index rather than the raw absolute
+            # sample position: leaves the fitted shock coefficients and
+            # fitted values unchanged (only the intercept absorbs the
+            # shift) while keeping the trend column well-conditioned
+            # against the constant column for long series.
+            idx = np.arange(n_obs, dtype=float)
+            idx -= idx.mean()
+            parts.append(idx[:, None])
 
         return np.concatenate(parts, axis=1), shock_cols
 

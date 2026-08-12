@@ -343,6 +343,95 @@ def test_fit_with_exog():
 
 
 # ---------------------------------------------------------------------------
+# 1-D vs. 2-D-single-column input equivalence
+#
+# endog and exog can each be supplied as a 1-D array or as a 2-D array with
+# a single column; both must be accepted, normalized to shape (T, 1), and
+# -- for a given underlying dataset -- must produce numerically identical
+# fitted results regardless of which encoding was used.
+# ---------------------------------------------------------------------------
+
+
+def _shape_variants(rng, T):
+    """A single-variable dataset in both its 1-D and 2-D(1 col) encodings."""
+    x_1d = rng.standard_normal(T)
+    return {"1d": x_1d, "2d": x_1d[:, None]}
+
+
+@pytest.mark.parametrize("endog_kind", ["1d", "2d"])
+@pytest.mark.parametrize("exog_kind", ["none", "1d", "2d"])
+def test_single_column_shape_combinations(endog_kind, exog_kind):
+    rng = np.random.default_rng(20240917)
+    T = 150
+    endog_variants = _shape_variants(rng, T)
+    exog_variants = _shape_variants(rng, T)
+
+    endog = endog_variants[endog_kind]
+    exog = None if exog_kind == "none" else exog_variants[exog_kind]
+
+    lp = LocalProjections(endog, lags=1, horizons=4, exog=exog)
+    assert lp.endog.shape == (T, 1)
+    if exog is None:
+        assert lp.exog is None
+    else:
+        assert lp.exog.shape == (T, 1)
+
+    res = lp.fit()
+    assert res.irfs.shape == (5, 1, 1)
+    assert res.stderr.shape == (5, 1, 1)
+    assert np.all(np.isfinite(res.irfs))
+    assert np.all(np.isfinite(res.stderr))
+
+
+def test_single_column_shape_combinations_agree():
+    """The 1-D/2-D(1 col) distinction must be purely cosmetic: reshaping
+    either endog or exog from 1-D to 2-D(1 col) -- with the underlying data
+    held fixed -- must not change the fitted result. (Comparing across
+    different *exog* content, e.g. "none" vs. "1d", is intentionally not
+    done here: including exog is a genuinely different regression and is
+    not expected to agree with excluding it.)"""
+    rng = np.random.default_rng(20240917)
+    T = 150
+    endog_variants = _shape_variants(rng, T)
+    exog_variants = _shape_variants(rng, T)
+
+    results = {}
+    for endog_kind in ("1d", "2d"):
+        for exog_kind in ("none", "1d", "2d"):
+            exog = None if exog_kind == "none" else exog_variants[exog_kind]
+            lp = LocalProjections(
+                endog_variants[endog_kind], lags=1, horizons=4, exog=exog
+            )
+            results[(endog_kind, exog_kind)] = lp.fit()
+
+    # Reshaping endog (1d vs. 2d) must not matter, for each fixed exog.
+    for exog_kind in ("none", "1d", "2d"):
+        assert_allclose(
+            results[("1d", exog_kind)].irfs,
+            results[("2d", exog_kind)].irfs,
+            atol=1e-10,
+        )
+        assert_allclose(
+            results[("1d", exog_kind)].stderr,
+            results[("2d", exog_kind)].stderr,
+            atol=1e-10,
+        )
+
+    # Reshaping exog (1d vs. 2d) must not matter, for each fixed endog.
+    for endog_kind in ("1d", "2d"):
+        assert_allclose(
+            results[(endog_kind, "1d")].irfs,
+            results[(endog_kind, "2d")].irfs,
+            atol=1e-10,
+        )
+        assert_allclose(
+            results[(endog_kind, "1d")].stderr,
+            results[(endog_kind, "2d")].stderr,
+            atol=1e-10,
+        )
+
+
+# ---------------------------------------------------------------------------
 # nw_lags override
 # ---------------------------------------------------------------------------
 

@@ -454,6 +454,8 @@ New Features and Enhancements
 - Add the Diebold-Mariano test of equal predictive accuracy. :pr:`10066`
 - Add the Pesaran-Timmermann test of directional predictive accuracy. :pr:`10055`
 - Add local false discovery rate estimation (``local_fdr_correction``). :pr:`10069`
+- Add ``LocalProjections``, a Jordà (2005) local-projections estimator for
+  impulse response functions with Newey-West HAC standard errors. :pr:`9871`
 
 .. rubric:: Performance
 
