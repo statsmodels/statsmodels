@@ -352,8 +352,8 @@ def iqr(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they must broadcast.
 
     """
-    x1 = array_like(x1, "x1", dtype=None, ndim=None)
-    x2 = array_like(x2, "x2", dtype=None, ndim=None)
+    x1 = array_like(x1, "x1", dtype=None, mindim=None)
+    x2 = array_like(x2, "x2", dtype=None, mindim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()

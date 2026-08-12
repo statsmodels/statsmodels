@@ -180,8 +180,8 @@ def proportion_confint(
     """
     is_scalar = np.isscalar(count) and np.isscalar(nobs)
     is_pandas = isinstance(count, (pd.Series, pd.DataFrame))
-    count_a = array_like(count, "count", optional=False, ndim=None)
-    nobs_a = array_like(nobs, "nobs", optional=False, ndim=None)
+    count_a = array_like(count, "count", optional=False, mindim=None)
+    nobs_a = array_like(nobs, "nobs", optional=False, mindim=None)
 
     def _check(x: np.ndarray, name: str) -> np.ndarray:
         if np.issubdtype(x.dtype, np.integer):

@@ -41,9 +41,11 @@ def _right_squeeze(arr, stop_dim=0):
 def array_like(
     obj,
     name,
+    *,
     dtype=np.double,
-    ndim=1,
+    ndim=None,
     maxdim=None,
+    mindim: int = 1,
     shape=None,
     order=None,
     contiguous=False,
@@ -70,6 +72,9 @@ def array_like(
     maxdim : {int, None}
         Maximum allowed dimension.  Use ``maxdim`` instead of ``ndim`` when
         inputs are allowed to have ndim 1, 2, ..., or maxdim.
+    mindim : {int, None}
+        Minimum allowed dimension.  Arrays with ndim < mindim will be reshaped
+        to have ndim = mindim by adding singleton dimensions on the right.
     shape : {tuple[int], None}
         Required shape obj.  If None, no check is performed. Partially
         restricted shapes can be checked using None. See examples.
@@ -150,7 +155,9 @@ def array_like(
         if arr.ndim > maxdim:
             msg = f"{name} must have ndim <= {maxdim}"
             raise ValueError(msg)
-    elif ndim is not None:
+    if mindim is not None and arr.ndim < mindim:
+        arr = np.reshape(arr, arr.shape + (1,) * (mindim - arr.ndim))
+    if ndim is not None:
         if arr.ndim > ndim:
             arr = _right_squeeze(arr, stop_dim=ndim)
         elif arr.ndim < ndim:
