@@ -5108,6 +5108,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         cov_kwds=None,
         k_constraints=None,
         observed=True,
+        *,
+        return_object: bool | None = None,
     ):
 
         res = pinfer.score_test(
@@ -5119,6 +5121,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             cov_kwds=cov_kwds,
             k_constraints=k_constraints,
             observed=observed,
+            return_object=return_object,
         )
         return res
 

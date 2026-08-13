@@ -3368,11 +3368,9 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
         the RUR statistic (default is False).
     result_object : bool, optional
         Flag indicating whether to return the results as a
-        ``RURResult`` instead of a plain tuple. When
-        ``store=True`` ``RURResult`` holds the same four
-        values as the legacy tuple, so it is always returned, with no
-        warning. When ``store=False`` the legacy three-element tuple is
-        returned by default and a ``FutureWarning`` is issued.
+        ``RURResult`` instead of a plain tuple. The legacy tuple (whose
+        length depends on `store`) is returned by default and a
+        ``FutureWarning`` is issued.
 
         .. deprecated:: 0.15.0
 
@@ -3509,7 +3507,7 @@ look-up table. The actual p-value is {direction} than the p-value returned.
     else:
         rstore = None
 
-    if result_object is None and not store:
+    if result_object is None:
         warnings.warn(
             "range_unit_root_test currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
@@ -3521,8 +3519,10 @@ look-up table. The actual p-value is {direction} than the p-value returned.
             FutureWarning,
             stacklevel=2,
         )
-    if result_object or store:
+    if result_object:
         return RURResult(rur_stat, p_value, crit_dict, rstore)
+    if store:
+        return rur_stat, p_value, crit_dict, rstore
     return rur_stat, p_value, crit_dict
 
 

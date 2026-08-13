@@ -1714,7 +1714,7 @@ class TestRUR:
     def test_store(self):
         with pytest.warns(InterpolationWarning):
             result = range_unit_root_test(self.x, True, result_object=False)
-        store = result.resstore
+        _, _, _, store = result
 
         # assert attributes, and make sure they're correct
         assert_equal(store.nobs, len(self.x))
