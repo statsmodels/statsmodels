@@ -38,8 +38,11 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
     See Also
     --------
     MultiComparison
+        Class for pairwise comparisons of multiple groups.
     tukeyhsd
+        Compute simultaneous Tukey HSD comparisons from summary data.
     statsmodels.sandbox.stats.multicomp.TukeyHSDResults
+        Results from a Tukey HSD comparison.
 
     Notes
     -----
