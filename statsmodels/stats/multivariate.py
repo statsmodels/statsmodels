@@ -38,6 +38,11 @@ class HotellingResult(LimitedIterationMixin[float]):
         Hotelling's T-squared statistic.
     distr : str
         Name of the reference distribution used for `pvalue`, ``"F"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -319,6 +324,11 @@ class CovTestResult(LimitedIterationMixin[float]):
     cov_null : ndarray or None
         Covariance matrix under the null hypothesis. Only set by
         :func:`test_cov`, otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -622,6 +632,11 @@ class CovOnewayResult(LimitedIterationMixin[float]):
         approximation.
     distr_f : str
         Name of the F reference distribution, ``"F"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

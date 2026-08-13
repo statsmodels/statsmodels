@@ -162,6 +162,11 @@ class ChisquareProbResult(LimitedIterationMixin[float]):
         Fitted auxiliary OLS regression used to compute `statistic`.
     distribution : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -280,6 +285,11 @@ class DispersionResults(LimitedIterationMixin[np.ndarray]):
         Description of the alternative variance assumption of each test.
     name : str
         Descriptive title for the collection of tests.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -528,6 +538,11 @@ class ZeroinflationJHResult(LimitedIterationMixin[float]):
         covariance matrix is singular.
     distribution : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -661,6 +676,11 @@ class ZeroModificationTestResult(LimitedIterationMixin[float]):
         Degrees of freedom of the chi-square distribution, always 1.
     distribution : str
         Name of the reference distribution used for `pvalue`, ``"normal"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

@@ -2441,7 +2441,7 @@ class UECMResults(ARDLResults):
         Returns
         -------
         BoundsTestResult
-            Named tuple containing ``stat``, ``crit_vals``, ``p_values``,
+            Named tuple containing ``statistic``, ``crit_vals``, ``p_values``,
             ``null`` and ``alternative``. The statistic is the F-type
             test statistic favored in PSS.
 

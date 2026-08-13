@@ -1687,6 +1687,11 @@ class ScoreTestProportionsResult(LimitedIterationMixin[float]):
     prop2_null : float
         Constrained estimate of the second proportion under the null
         hypothesis.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -1899,6 +1904,11 @@ class Proportions2indepTestResult(LimitedIterationMixin[float]):
     prop2_null : float or None
         Constrained estimate of the second proportion under the null
         hypothesis. Only set if ``method="score"``, otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -2265,6 +2275,11 @@ class TostProportionsResult(LimitedIterationMixin[float]):
         margin.
     title : str
         Descriptive title of the equivalence test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

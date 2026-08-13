@@ -32,6 +32,11 @@ class ScoreTestResult(LimitedIterationMixin[float]):
         Degrees of freedom of the chi-square distribution, equal to the
         number of constraints. Only set for the joint hypothesis test
         (``distribution="chi2"``), otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

@@ -143,7 +143,7 @@ class ANOVA(_ANOVAOpt):
         -------
         ANOVAResult or tuple
             If ``result_object=True`` or ``return_weights=True``, a
-            NamedTuple with fields ``llr``, ``pvalue``, ``mu`` and
+            NamedTuple with fields ``statistic``, ``pvalue``, ``mu`` and
             ``weights``. See
             :class:`~statsmodels.emplike.elanova.ANOVAResult`.
 

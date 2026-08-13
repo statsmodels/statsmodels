@@ -201,8 +201,8 @@ class ADFullerResult(LimitedIterationMixin[float]):
 
     Notes
     -----
-    Unpacks as ``stat, pvalue = result``. Other values are only accessible
-    using attributes.
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     statistic: float
@@ -218,7 +218,7 @@ class ADFullerResult(LimitedIterationMixin[float]):
     def __repr__(self) -> str:
         return f"""\
 {self.__class__.__name__}
-ADF Statistic: {self.stat:0.5f}
+ADF Statistic: {self.statistic:0.5f}
 P-value: {self.pvalue:0.5f}
 Used Lag: {self.usedlag}
 Nobs: {self.nobs}
@@ -295,7 +295,7 @@ def adfuller(
     Returns
     -------
     ADFullerResult
-        If ``result_object=True``, a result object with fields ``stat``,
+        If ``result_object=True``, a result object with fields ``statistic``,
         ``pvalue``, ``usedlag``, ``nobs``, ``critical_values``, ``icbest``,
         and ``resstore`` (``icbest``/``resstore`` are ``None`` when not
         computed). See :class:`~statsmodels.tsa.stattools.ADFullerResult`.
@@ -2718,12 +2718,12 @@ class DieboldMarianoResult(LimitedIterationMixin[float]):
         variance of the loss differential.
     harvey_adj_factor : float or None
         The finite-sample adjustment factor of Harvey et al. (1997) that
-        was applied to ``stat``. ``None`` unless ``harvey_adj`` was
+        was applied to ``statistic``. ``None`` unless ``harvey_adj`` was
         True.
 
     Notes
     -----
-    Unpacks as ``stat, pvalue = result``. The other two fields are only
+    Unpacks as ``statistic, pvalue = result``. The other two fields are only
     available through attribute access.
     """
 
@@ -2821,7 +2821,7 @@ def diebold_mariano_test(
     ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used. This differs from
     some presentations of the DM test that always use ``horizon - 1``
     lags; pass ``lags=horizon - 1`` explicitly to reproduce that
-    parameterization. Under the null, ``stat`` is asymptotically
+    parameterization. Under the null, ``statistic`` is asymptotically
     standard normal.
 
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
@@ -2893,7 +2893,7 @@ def diebold_mariano_test(
     ...     return ratio - np.log(ratio) - 1
 
     >>> res = diebold_mariano_test(y, forecast_a, forecast_b, criterion=qlike)
-    >>> res.stat, res.pvalue  # doctest: +SKIP
+    >>> res.statistic, res.pvalue  # doctest: +SKIP
     """
 
     y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
@@ -3008,8 +3008,8 @@ class KPSSResult(LimitedIterationMixin[float]):
 
     Notes
     -----
-    Unpacks as ``stat, pvalue = result``. Other values are only available
-    through attribute access.
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    available through attribute access.
     """
 
     statistic: float
@@ -3023,7 +3023,7 @@ class KPSSResult(LimitedIterationMixin[float]):
     def __repr__(self) -> str:
         return f"""\
 {self.__class__.__name__}
-KPSS Statistic: {self.stat:0.5f}
+KPSS Statistic: {self.statistic:0.5f}
 P-value: {self.pvalue:0.5f}
 Lags: {self.lags}
 Critical Values: {self.crit}
@@ -3083,7 +3083,7 @@ def kpss(
     Returns
     -------
     KPSSResult
-        If ``result_object=True``, a result object with fields ``stat``,
+        If ``result_object=True``, a result object with fields ``statistic``,
         ``pvalue``, ``lags``, ``crit``, and ``resstore`` (``resstore`` is
         ``None`` when not computed). See
         :class:`~statsmodels.tsa.stattools.KPSSResult`.
@@ -3332,8 +3332,8 @@ class RURResult(LimitedIterationMixin[float]):
 
     Notes
     -----
-    Unpacks as ``stat, pvalue = result``. Other values are only accessible
-    using attributes.
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     statistic: float
@@ -3346,7 +3346,7 @@ class RURResult(LimitedIterationMixin[float]):
     def __repr__(self) -> str:
         return f"""\
 {self.__class__.__name__}
-RUR Statistic: {self.stat:0.5f}
+RUR Statistic: {self.statistic:0.5f}
 P-value: {self.pvalue:0.5f}
 Critical Values: {self.crit}
 """
@@ -3386,7 +3386,7 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     -------
     RURResult
         If ``result_object=True``, a result object with fields
-        ``stat``, ``pvalue``, ``crit``, and ``resstore`` (``resstore``
+        ``statistic``, ``pvalue``, ``crit``, and ``resstore`` (``resstore``
         is ``None`` when not computed). See
         :class:`~statsmodels.tsa.stattools.RURResult`.
 

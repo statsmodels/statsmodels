@@ -85,6 +85,11 @@ class ProbSuperiorResult(LimitedIterationMixin[float]):
         distribution was used.
     distribution : {"normal", "t"}
         Name of the reference distribution used for `pvalue`.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -115,6 +120,11 @@ class TostProbSuperiorResult(LimitedIterationMixin[float]):
         for the upper threshold test.
     title : str
         Descriptive title of the equivalence test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -182,6 +192,11 @@ class RankCompareResult(LimitedIterationMixin[float]):
     use_t : bool
         Whether the t distribution (True) or normal distribution (False)
         is used for `pvalue` and inference in the instance methods.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

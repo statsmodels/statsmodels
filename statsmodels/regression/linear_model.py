@@ -2512,10 +2512,10 @@ class RegressionResults(base.LikelihoodModelResults):
         CompareLRTestResult
             A NamedTuple with fields:
 
-            lr_stat : float
+            statistic : float
                 The likelihood ratio which is chisquare distributed with
                 df_diff degrees of freedom.
-            p_value : float
+            pvalue : float
                 The p-value of the test statistic.
             df_diff : int
                 The degrees of freedom of the restriction, i.e., difference

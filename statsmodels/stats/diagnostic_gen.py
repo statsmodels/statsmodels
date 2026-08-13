@@ -46,6 +46,11 @@ class ChisquareBinningResult(LimitedIterationMixin[float]):
         Chisquare contribution of each bin, before summing across bins.
     indices : list of ndarray
         Indices of the original observations included in each bin.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

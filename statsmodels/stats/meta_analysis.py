@@ -35,6 +35,11 @@ class HomogeneityTestResult(LimitedIterationMixin[float]):
         minus 1.
     distr : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

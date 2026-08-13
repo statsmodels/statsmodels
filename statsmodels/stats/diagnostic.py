@@ -171,7 +171,7 @@ def compare_cox(
     Returns
     -------
     NonNestedTestResult
-        If ``result_object=True``, a NamedTuple with fields ``tstat``,
+        If ``result_object=True``, a NamedTuple with fields ``statistic``,
         ``pvalue``, and ``res_store`` (``res_store`` is ``None`` when not
         computed). See
         :class:`~statsmodels.stats.diagnostic.NonNestedTestResult`.
@@ -280,7 +280,7 @@ def compare_j(results_x, results_z, store=False, *, result_object: bool | None =
     Returns
     -------
     NonNestedTestResult
-        If ``result_object=True``, a NamedTuple with fields ``tstat``,
+        If ``result_object=True``, a NamedTuple with fields ``statistic``,
         ``pvalue``, and ``res_store`` (``res_store`` is ``None`` when not
         computed). See
         :class:`~statsmodels.stats.diagnostic.NonNestedTestResult`.

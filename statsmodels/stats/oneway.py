@@ -603,6 +603,11 @@ class AnovaResult(LimitedIterationMixin[float]):
     pvalue2 : float or None
         p-value based on degrees of freedom as in Brown-Forsythe 1974.
         Only set if ``use_var="bf"``, otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -889,6 +894,11 @@ class EquivalenceOnewayResult(LimitedIterationMixin[float]):
     type_effectsize : str
         Description of the effect size type used for `effectsize` and
         `crit_es`, determined by `margin_type`.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -1417,6 +1427,11 @@ class ScaleAnovaResult(LimitedIterationMixin[float]):
     pvalue2 : float or None
         p-value based on degrees of freedom as in Brown-Forsythe 1974.
         Only set if ``method="bf"``, otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -1569,6 +1584,11 @@ class ScaleEquivalenceResult(LimitedIterationMixin[float]):
         `crit_es`, determined by `margin_type`.
     x_transformed : list of ndarray
         The centered and transformed data used to compute the test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")

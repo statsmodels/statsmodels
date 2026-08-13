@@ -68,6 +68,11 @@ class PoissonTestResult(LimitedIterationMixin[float]):
         The observed rate, ``count / nobs``.
     nobs : array_like
         Total exposure time, same as the `nobs` argument to `test_poisson`.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -760,6 +765,11 @@ class PoissonTest2indepResult(LimitedIterationMixin[float]):
         Constrained maximum likelihood estimates of the two rates under
         the null hypothesis, ``(rate1_cmle, rate2_cmle)``. Only set for
         ``compare="diff"`` and ``method="score"``, otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -1327,6 +1337,11 @@ class TostPoissonResult(LimitedIterationMixin[float]):
         margin.
     title : str
         Descriptive title of the equivalence test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -1483,6 +1498,11 @@ class NonequivalencePoissonResult(LimitedIterationMixin[float]):
         Results instance for the one-sided test at the upper boundary.
     title : str
         Descriptive title of the non-equivalence test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -1826,6 +1846,11 @@ class PowerRatioResult(LimitedIterationMixin[float]):
         Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
     alpha : float
         Significance level used for the power computation.
+
+    Notes
+    -----
+    Unpacks as a length-1 sequence, ``(power,) = result``. Other values are
+    only accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
@@ -1998,6 +2023,11 @@ class PowerEquivalenceResult(LimitedIterationMixin[float]):
         Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
     alpha : float
         Significance level used for the power computation.
+
+    Notes
+    -----
+    Unpacks as a length-1 sequence, ``(power,) = result``. Other values are
+    only accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
@@ -2290,6 +2320,11 @@ class PowerDiffResult(LimitedIterationMixin[float]):
         Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
     alpha : float
         Significance level used for the power computation.
+
+    Notes
+    -----
+    Unpacks as a length-1 sequence, ``(power,) = result``. Other values are
+    only accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
@@ -2493,6 +2528,11 @@ class PowerNegbinRatioResult(LimitedIterationMixin[float]):
         Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
     alpha : float
         Significance level used for the power computation.
+
+    Notes
+    -----
+    Unpacks as a length-1 sequence, ``(power,) = result``. Other values are
+    only accessible using attributes.
     """
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
