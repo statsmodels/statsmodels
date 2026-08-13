@@ -2359,6 +2359,8 @@ class GLMResults(base.LikelihoodModelResults):
         cov_kwds=None,
         k_constraints=None,
         observed=True,
+        *,
+        return_object: bool | None = None,
     ):
 
         if self.model._has_freq_weights is True:
@@ -2390,6 +2392,7 @@ class GLMResults(base.LikelihoodModelResults):
             k_constraints=k_constraints,
             scale=None,
             observed=observed,
+            return_object=return_object,
         )
 
         self.model.df_resid = mod_df_resid

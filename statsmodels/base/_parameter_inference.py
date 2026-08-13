@@ -28,10 +28,10 @@ class ScoreTestResult(LimitedIterationMixin[float]):
         p-value(s) of the test, based on `distribution`.
     distribution : {"chi2", "norm"}
         Name of the reference distribution used for `pvalue`.
-    df : int or None
-        Degrees of freedom of the chi-square distribution, equal to the
-        number of constraints. Only set for the joint hypothesis test
-        (``distribution="chi2"``), otherwise None.
+    k_constraint : int or None
+        Number of constraints tested, equal to the degrees of freedom of
+        the chi-square distribution. Only set for the joint hypothesis
+        test (``distribution="chi2"``), otherwise None.
 
     Notes
     -----
@@ -44,7 +44,7 @@ class ScoreTestResult(LimitedIterationMixin[float]):
     statistic: float
     pvalue: float
     distribution: str
-    df: int | None = None
+    k_constraint: int | None = None
 
 
 # this is a copy from stats._diagnostic_other to avoid circular imports
@@ -116,7 +116,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
     return ScoreTestResult(
         statistic=lm_stat,
         pvalue=pval,
-        df=k_constraints,
+        k_constraint=k_constraints,
         distribution="chi2",
     )
 
@@ -132,6 +132,8 @@ def score_test(
     r_matrix=None,
     scale=None,
     observed=True,
+    *,
+    return_object: bool | None = None,
 ):
     """score test for restrictions or for omitted variables
 
@@ -200,15 +202,25 @@ def score_test(
         information matrix is used. This currently only applies to GLM where
         EIM is available.
         Warning: This option might still change.
+    return_object : bool, optional
+        No longer used. ``score_test`` always returns a ``ScoreTestResult``,
+        which unpacks as the ``(statistic, pvalue)`` tuple this function has
+        always returned, with ``k_constraint`` (and ``distribution``)
+        available as attributes.
+
+        .. deprecated:: 0.15.0
+
+            This parameter has no effect and will be removed in a future
+            release.
 
     Returns
     -------
     ScoreTestResult
         See :class:`ScoreTestResult` for a description of the attributes.
         For ``hypothesis="joint"``, `statistic` and `pvalue` are the
-        chisquare test and `df` is the number of constraints. For
+        chisquare test and `k_constraint` is the number of constraints. For
         ``hypothesis="separate"``, `statistic` and `pvalue` are arrays
-        with one z-test per constraint, and `df` is None.
+        with one z-test per constraint, and `k_constraint` is None.
 
     Notes
     -----
@@ -341,7 +353,7 @@ def score_test(
         return ScoreTestResult(
             statistic=chi2stat,
             pvalue=pval,
-            df=k_constraints,
+            k_constraint=k_constraints,
             distribution="chi2",
         )
     elif hypothesis == "separate":
