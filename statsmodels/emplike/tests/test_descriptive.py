@@ -32,7 +32,7 @@ class TestDescriptiveStatistics(GenRes):
         super().setup_class()
 
     def test_test_mean(self):
-        res = self.res1.test_mean(14, use_namedtuple=True)
+        res = self.res1.test_mean(14, result_object=True)
         assert_almost_equal(res[:2], self.res2.test_mean_14, 4)
 
     def test_test_mean_weights(self):
@@ -45,7 +45,7 @@ class TestDescriptiveStatistics(GenRes):
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
     def test_test_var(self):
-        res = self.res1.test_var(3, use_namedtuple=True)
+        res = self.res1.test_var(3, result_object=True)
         assert_almost_equal(res[:2], self.res2.test_var_3, 4)
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
@@ -60,7 +60,7 @@ class TestDescriptiveStatistics(GenRes):
 
     def test_mv_test_mean(self):
         assert_almost_equal(
-            self.mvres1.mv_test_mean(np.array([14, 56]), use_namedtuple=True)[:2],
+            self.mvres1.mv_test_mean(np.array([14, 56]), result_object=True)[:2],
             self.res2.mv_test_mean,
             4,
         )
@@ -74,7 +74,7 @@ class TestDescriptiveStatistics(GenRes):
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
     def test_test_skew(self):
-        res = self.res1.test_skew(0, use_namedtuple=True)
+        res = self.res1.test_skew(0, result_object=True)
         assert_almost_equal(res[:2], self.res2.test_skew, 4)
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
@@ -88,8 +88,8 @@ class TestDescriptiveStatistics(GenRes):
         skew_ci = self.res1.ci_skew()
         lower_lim = skew_ci[0]
         upper_lim = skew_ci[1]
-        ul_pval = self.res1.test_skew(lower_lim, use_namedtuple=True).pvalue
-        ll_pval = self.res1.test_skew(upper_lim, use_namedtuple=True).pvalue
+        ul_pval = self.res1.test_skew(lower_lim, result_object=True).pvalue
+        ll_pval = self.res1.test_skew(upper_lim, result_object=True).pvalue
         assert_almost_equal(ul_pval, 0.050000, 4)
         assert_almost_equal(ll_pval, 0.050000, 4)
 
@@ -101,7 +101,7 @@ class TestDescriptiveStatistics(GenRes):
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
     def test_test_kurt(self):
-        res = self.res1.test_kurt(0, use_namedtuple=True)
+        res = self.res1.test_kurt(0, result_object=True)
         assert_almost_equal(res[:2], self.res2.test_kurt_0, 4)
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
@@ -110,22 +110,22 @@ class TestDescriptiveStatistics(GenRes):
         kurt_ci = self.res1.ci_kurt(upper_bound=0.5, lower_bound=-1.5)
         lower_lim = kurt_ci[0]
         upper_lim = kurt_ci[1]
-        ul_pval = self.res1.test_kurt(upper_lim, use_namedtuple=True).pvalue
-        ll_pval = self.res1.test_kurt(lower_lim, use_namedtuple=True).pvalue
+        ul_pval = self.res1.test_kurt(upper_lim, result_object=True).pvalue
+        ll_pval = self.res1.test_kurt(lower_lim, result_object=True).pvalue
         assert_almost_equal(ul_pval, 0.050000, 4)
         assert_almost_equal(ll_pval, 0.050000, 4)
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
     def test_joint_skew_kurt(self):
         assert_almost_equal(
-            self.res1.test_joint_skew_kurt(0, 0, use_namedtuple=True)[:2],
+            self.res1.test_joint_skew_kurt(0, 0, result_object=True)[:2],
             self.res2.test_joint_skew_kurt,
             4,
         )
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
     def test_test_corr(self):
-        res = self.mvres1.test_corr(0.5, use_namedtuple=True)
+        res = self.mvres1.test_corr(0.5, result_object=True)
         assert_almost_equal(res[:2], self.res2.test_corr, 4)
 
     @pytest.mark.thread_unsafe("calculation sets attributes and is not thread safe")
@@ -133,8 +133,8 @@ class TestDescriptiveStatistics(GenRes):
         corr_ci = self.mvres1.ci_corr()
         lower_lim = corr_ci[0]
         upper_lim = corr_ci[1]
-        ul_pval = self.mvres1.test_corr(upper_lim, use_namedtuple=True).pvalue
-        ll_pval = self.mvres1.test_corr(lower_lim, use_namedtuple=True).pvalue
+        ul_pval = self.mvres1.test_corr(upper_lim, result_object=True).pvalue
+        ll_pval = self.mvres1.test_corr(lower_lim, result_object=True).pvalue
         assert_almost_equal(ul_pval, 0.050000, 4)
         assert_almost_equal(ll_pval, 0.050000, 4)
 
@@ -191,8 +191,8 @@ def test_univariate_namedtuple(attr, args):
     # opting in or out is silent either way
     with warnings.catch_warnings():
         warnings.simplefilter("error", FutureWarning)
-        opted_in = meth(*args, use_namedtuple=True)
-        opted_out = meth(*args, use_namedtuple=False)
+        opted_in = meth(*args, result_object=True)
+        opted_out = meth(*args, result_object=False)
     assert isinstance(opted_in, EmpLikeTestResult)
     assert opted_in.weights is not None
     assert len(opted_out) == 2

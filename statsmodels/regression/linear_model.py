@@ -1436,7 +1436,7 @@ class GLSAR(GLS):
                     break
                 last = results.params
             self.rho, _ = yule_walker(
-                results.resid, order=self.order, df=None, use_namedtuple=False
+                results.resid, order=self.order, df=None, result_object=False
             )
             history["rho"].append(self.rho)
 
@@ -1504,7 +1504,7 @@ class YuleWalkerResult(NamedTuple):
 
 
 def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, *,
-                use_namedtuple: bool | None = None):
+                result_object: bool | None = None):
     r"""
     Estimate AR(p) parameters from a sequence using the Yule-Walker equations.
     The method provides either adjusted or maximum-likelihood estimates,
@@ -1531,7 +1531,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         False.
     demean : bool
         True, the mean is subtracted from `X` before estimation.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as a
         ``YuleWalkerResult`` NamedTuple instead of a plain tuple. If
         ``None`` (the default), the current tuple-returning behavior is
@@ -1542,15 +1542,15 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to returning a ``YuleWalkerResult``.
-            Set ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            Set ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type. ``YuleWalkerResult`` will become mandatory
             in release 0.17.0 or after July 2028, whichever is later.
 
     Returns
     -------
     YuleWalkerResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``rho``,
+        If ``result_object=True``, a NamedTuple with fields ``rho``,
         ``sigma``, and ``Rinv`` (``Rinv`` is ``None`` unless ``inv=True``).
         See :class:`~statsmodels.regression.linear_model.YuleWalkerResult`.
 
@@ -1612,7 +1612,7 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     ----------
     http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YWSourceFiles/YW-Eshel.pdf
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     method = string_like(method, "method", options=("adjusted", "mle"))
 
     # TODO: Require??
@@ -1652,18 +1652,18 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         sigma = np.nan
     Rinv = np.linalg.inv(R) if inv else None
 
-    if use_namedtuple is None and not inv:
+    if result_object is None and not inv:
         warnings.warn(
             "yule_walker currently returns a plain tuple whose length "
             "depends on the inv argument. In release 0.16 or after July "
             "2028, whichever is later, the default behavior will switch "
             "to returning a YuleWalkerResult NamedTuple. Set "
-            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "result_object=True to switch now, or result_object=False "
             "to keep the current behavior and silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or inv:
+    if result_object or inv:
         return YuleWalkerResult(rho, sigma, Rinv)
     return rho, sigma
 
@@ -1735,15 +1735,15 @@ def burg(endog, order=1, demean=True):
 class CompareLRTestResult(NamedTuple):
     """Result of :meth:`RegressionResults.compare_lr_test`."""
 
-    lr_stat: float
-    p_value: float
+    statistic: float
+    pvalue: float
     df_diff: int
 
 
 class ELTestResult(NamedTuple):
     """Result of :meth:`RegressionResults.el_test`."""
-    llr: float
-    pval: float
+    statistic: float
+    pvalue: float
     weights: np.ndarray | None
     nuisance_params: np.ndarray | None
 
@@ -2512,10 +2512,10 @@ class RegressionResults(base.LikelihoodModelResults):
         CompareLRTestResult
             A NamedTuple with fields:
 
-            lr_stat : float
+            statistic : float
                 The likelihood ratio which is chisquare distributed with
                 df_diff degrees of freedom.
-            p_value : float
+            pvalue : float
                 The p-value of the test statistic.
             df_diff : int
                 The degrees of freedom of the restriction, i.e., difference
@@ -3376,7 +3376,7 @@ class OLSResults(RegressionResults):
         method="nm",
         stochastic_exog=1,
         *,
-        use_namedtuple: bool | None = None,
+        result_object: bool | None = None,
     ):
         """
         Test single or joint hypotheses using Empirical Likelihood.
@@ -3405,7 +3405,7 @@ class OLSResults(RegressionResults):
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
             regressors. The default is True.
-        use_namedtuple : bool, optional
+        result_object : bool, optional
             Flag indicating whether to return the results as an
             ``ELTestResult`` NamedTuple instead of a plain tuple. When the
             nuisance parameters are produced -- ``ret_params`` is True and
@@ -3419,22 +3419,22 @@ class OLSResults(RegressionResults):
 
                 In release 0.16.0 or after July 2027, whichever is later,
                 the default will change to returning an ``ELTestResult``.
-                Set ``use_namedtuple=True`` to opt in now, or
-                ``use_namedtuple=False`` to silence the warning and keep the
+                Set ``result_object=True`` to opt in now, or
+                ``result_object=False`` to silence the warning and keep the
                 current return type.  ``ELTestResult`` will become mandatory
                 in release 0.17.0 or after July 2028, whichever is later.
 
         Returns
         -------
         ELTestResult
-            A NamedTuple with fields ``llr``, ``pval``, ``weights`` and
+            A NamedTuple with fields ``statistic``, ``pvalue``, ``weights`` and
             ``nuisance_params`` (``weights`` is ``None`` unless
             ``return_weights`` or ``ret_params`` is True;
             ``nuisance_params`` is ``None`` unless ``ret_params`` is True
             and ``len(param_nums) < len(params)``). See
             :class:`~statsmodels.regression.linear_model.ELTestResult`.
 
-            This is returned whenever ``use_namedtuple=True``. It is also
+            This is returned whenever ``result_object=True``. It is also
             returned by default when the nuisance parameters were
             produced -- that is, when ``ret_params`` is True and
             ``len(param_nums) < len(params)`` -- because the NamedTuple
@@ -3472,7 +3472,7 @@ class OLSResults(RegressionResults):
         >>> (27.248146353888796, 1.7894660442330235e-07)
 
         """
-        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+        result_object = bool_like(result_object, "result_object", optional=True)
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts()  # to store weights
         nuisance_params = None
@@ -3531,19 +3531,19 @@ class OLSResults(RegressionResults):
         # identically to the legacy tuple only when the nuisance parameters
         # were produced as well; in that case it is adopted silently.
         unpacks_unchanged = nuisance_params is not None
-        if use_namedtuple is None and not unpacks_unchanged:
+        if result_object is None and not unpacks_unchanged:
             warnings.warn(
                 "el_test currently returns a plain tuple whose length "
                 "depends on the return_weights and ret_params arguments. "
                 "In release 0.16 or after July 2027, whichever is later, "
                 "the default behavior will switch to always returning an "
-                "ELTestResult NamedTuple. Set use_namedtuple=True to "
-                "switch now, or use_namedtuple=False to keep the current "
+                "ELTestResult NamedTuple. Set result_object=True to "
+                "switch now, or result_object=False to keep the current "
                 "behavior and silence this warning.",
                 FutureWarning,
                 stacklevel=2,
             )
-        if use_namedtuple or unpacks_unchanged:
+        if result_object or unpacks_unchanged:
             return ELTestResult(llr, pval, weights, nuisance_params)
         if weights is not None:
             return llr, pval, weights
@@ -3633,7 +3633,7 @@ class OLSResults(RegressionResults):
                     np.array([param_num]),
                     method=method,
                     stochastic_exog=stochastic_exog,
-                    use_namedtuple=False,
+                    result_object=False,
                 )[0]
                 - r0
             )

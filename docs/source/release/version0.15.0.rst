@@ -100,7 +100,7 @@ The migration follows a single rule:
   ``store=True`` paths of the ``stats.diagnostic`` tests.
 - Where adopting it would change how many values are unpacked, the legacy
   tuple is still returned and a ``FutureWarning`` is raised. Pass
-  ``use_namedtuple=True`` to opt in now, or ``use_namedtuple=False`` to keep
+  ``result_object=True`` to opt in now, or ``result_object=False`` to keep
   the current behaviour and silence the warning. The default changes in 0.16.
 
 Functions whose result shape never varied were converted outright, with no
@@ -318,8 +318,8 @@ This applies to:
   and :func:`~statsmodels.graphics.regressionplots.plot_partregress` with
   ``ret_coords=False``.
 
-Pass ``use_namedtuple=True`` to adopt the new result now, or
-``use_namedtuple=False`` to keep the old return type and silence the warning.
+Pass ``result_object=True`` to adopt the new result now, or
+``result_object=False`` to keep the old return type and silence the warning.
 The default becomes the ``NamedTuple`` in 0.16.
 
 ``RegressionResults.compare_lr_test`` always returned three values, so it was

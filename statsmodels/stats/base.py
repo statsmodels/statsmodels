@@ -5,6 +5,8 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
+from collections.abc import Iterator
+from typing import ClassVar, Generic, TypeVar
 import warnings
 
 import numpy as np
@@ -19,9 +21,10 @@ class HolderTuple(Holder):
     .. deprecated:: 0.15
         ``HolderTuple`` is no longer used internally by statsmodels. Result
         classes that used to subclass ``HolderTuple`` have been replaced by
-        documented ``NamedTuple`` classes; those that need the same 2-tuple
-        unpacking behavior are decorated with
-        :func:`~statsmodels.stats.base.compat_2tuple_unpack`.
+        documented dataclass (or ``NamedTuple``) result classes; those that
+        need the same limited ``(statistic, pvalue)`` unpacking are frozen
+        dataclasses that subclass
+        :class:`~statsmodels.stats.base.LimitedIterationMixin`.
         ``HolderTuple`` will be removed after statsmodels 0.16 is released.
 
     Parameters
@@ -62,77 +65,63 @@ class HolderTuple(Holder):
         return np.array(list(self.tuple), dtype=dtype, copy=copy)
 
 
-def compat_2tuple_unpack(*field_names):
+_V = TypeVar("_V")
+
+
+class LimitedIterationMixin(Generic[_V]):
     """
-    Class decorator giving a NamedTuple HolderTuple-compatible unpacking.
+    Base class giving a dataclass tuple-like access to some fields.
 
-    Several results classes that used to subclass ``HolderTuple`` have been
-    replaced by plain ``NamedTuple`` classes with many more fields.
-    ``HolderTuple`` only ever unpacked into a fixed, short tuple (by
-    default ``(statistic, pvalue)``), so existing code may do
-    ``statistic, pvalue = result``. Decorating the replacement NamedTuple
-    with ``@compat_2tuple_unpack("statistic", "pvalue")`` keeps that
-    working (with a deprecation warning) during a transition period,
-    instead of unpacking every field and raising ``ValueError``.
+    Several result classes were changed from ``NamedTuple`` subclasses to
+    frozen :func:`~dataclasses.dataclass` instances, so that additional
+    fields can be added over time without changing what iteration and
+    unpacking return. A dataclass is not iterable and cannot be indexed, so
+    this mixin restores limited, tuple-like access to a fixed subset of the
+    fields, matching the ``(statistic, pvalue)`` (or single-value) unpacking
+    of the result classes they replaced. Concretely it adds
 
-    This only overrides ``__iter__``, which controls unpacking, iteration,
-    ``list(result)`` and ``tuple(result)``. Indexing (``result[0]``),
-    attribute access, and equality are unaffected since they operate on
-    the underlying tuple directly rather than through ``__iter__``.
+    - ``__iter__``, so that ``a, b = result`` and ``list(result)`` yield the
+      selected fields in order,
+    - ``__getitem__``, so that ``result[0]`` indexes into the same fields,
+      and
+    - ``__len__``, returning the number of selected fields.
 
-    ``_asdict``, ``_replace``, and ``__getnewargs__`` (used by ``pickle``
-    and ``copy.deepcopy``) are also overridden to bypass the restricted
-    ``__iter__`` and continue operating on all fields; without this they
-    would silently truncate to just `field_names`, since the standard
-    library implementations of those methods iterate over ``self``.
+    All other fields remain available through attribute access only, which
+    is the preferred API. Unlike the ``NamedTuple`` classes these replaced,
+    iteration and indexing are permanently restricted to ``_iter_fields`` and
+    do not emit a warning.
 
-    Parameters
-    ----------
-    *field_names : str
-        Names of the fields that unpacking should yield, in order. These
-        must be a prefix consistent with how many values the replaced
-        ``HolderTuple`` used to unpack into (commonly ``("statistic",
-        "pvalue")``, or a single field for a ``HolderTuple`` constructed
-        with a custom ``tuple_`` argument).
+    Subclassing a plain base class (rather than applying a decorator that
+    attaches ``__iter__``/``__getitem__``/``__len__`` at runtime) keeps these
+    methods, and their return type, visible to static type checkers: ``a, b
+    = result`` and ``result[0]`` are typed as ``_V``, and ``len(result)`` is
+    recognized. Parametrize the mixin with the common type of the selected
+    fields and set ``_iter_fields``::
+
+        @dataclass(frozen=True, slots=True)
+        class SomeResult(LimitedIterationMixin[float]):
+            _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+            statistic: float
+            pvalue: float
+            extra: float
+
+    ``_iter_fields`` must be annotated ``ClassVar`` so that ``@dataclass``
+    does not treat it as a field.
     """
 
-    def decorator(cls):
-        names = ", ".join(field_names)
-        first = field_names[0]
+    __slots__ = ()
+    _iter_fields: ClassVar[tuple[str, ...]]
 
-        def __iter__(self):
-            warnings.warn(
-                f"Unpacking {type(self).__name__} currently returns only "
-                f"({names}) for backwards compatibility with the "
-                "Holder-based API it replaced. Starting in statsmodels "
-                "0.16, unpacking will return all fields like a standard "
-                "tuple. Use named attribute access instead, e.g., "
-                f"``result.{first}``.",
-                FutureWarning,
-                stacklevel=3,
-            )
-            for name in field_names:
-                yield getattr(self, name)
+    def __iter__(self) -> Iterator[_V]:
+        for name in self._iter_fields:
+            yield getattr(self, name)
 
-        def _asdict(self):
-            return dict(zip(self._fields, tuple.__iter__(self), strict=True))
+    def __getitem__(self, index: int) -> _V:
+        return tuple(self)[index]
 
-        def _replace(self, /, **kwds):
-            result = self._make(map(kwds.pop, self._fields, tuple.__iter__(self)))
-            if kwds:
-                raise ValueError(f"Got unexpected field names: {list(kwds)!r}")
-            return result
-
-        def __getnewargs__(self):
-            return tuple(tuple.__iter__(self))
-
-        cls.__iter__ = __iter__
-        cls._asdict = _asdict
-        cls._replace = _replace
-        cls.__getnewargs__ = __getnewargs__
-        return cls
-
-    return decorator
+    def __len__(self) -> int:
+        return len(self._iter_fields)
 
 
 class AllPairsResults:

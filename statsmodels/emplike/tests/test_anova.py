@@ -15,7 +15,7 @@ DATA = np.asarray(star98.load().exog)[:30, 1:3]
 def test_anova():
     res1 = ANOVA([DATA[:, 0], DATA[:, 1]])
     res2 = ANOVAResults()
-    res = res1.compute_ANOVA(use_namedtuple=True)
+    res = res1.compute_ANOVA(result_object=True)
     assert_almost_equal(res[:2], res2.compute_ANOVA[:2], 4)
     assert_almost_equal(res[2], res2.compute_ANOVA[2], 4)
     assert_almost_equal(
@@ -44,8 +44,8 @@ def test_anova_namedtuple():
     # opting in or out is silent either way
     with warnings.catch_warnings():
         warnings.simplefilter("error", FutureWarning)
-        opted_in = res1.compute_ANOVA(use_namedtuple=True)
-        opted_out = res1.compute_ANOVA(use_namedtuple=False)
+        opted_in = res1.compute_ANOVA(result_object=True)
+        opted_out = res1.compute_ANOVA(result_object=False)
     assert isinstance(opted_in, ANOVAResult)
     assert opted_in.weights is not None
     assert_equal(len(opted_out), 3)

@@ -73,7 +73,7 @@ class BoundsTestResult(NamedTuple):
 
     Parameters
     ----------
-    stat : float
+    statistic : float
         The F-type test statistic favored in PSS.
     crit_vals : DataFrame
         The critical values for the test statistic, with columns "lower"
@@ -87,7 +87,7 @@ class BoundsTestResult(NamedTuple):
         The alternative hypothesis, "Possible Cointegration".
     """
 
-    stat: float
+    statistic: float
     crit_vals: pd.DataFrame
     p_values: pd.Series
     null: str
@@ -96,7 +96,7 @@ class BoundsTestResult(NamedTuple):
     def __repr__(self):
         return f"""\
 {self.__class__.__name__}
-Stat: {self.stat:0.5f}
+Stat: {self.statistic:0.5f}
 Upper P-value: {self.p_values["upper"]:0.3g}
 Lower P-value: {self.p_values["lower"]:0.3g}
 Null: {self.null}
@@ -2441,7 +2441,7 @@ class UECMResults(ARDLResults):
         Returns
         -------
         BoundsTestResult
-            Named tuple containing ``stat``, ``crit_vals``, ``p_values``,
+            Named tuple containing ``statistic``, ``crit_vals``, ``p_values``,
             ``null`` and ``alternative``. The statistic is the F-type
             test statistic favored in PSS.
 

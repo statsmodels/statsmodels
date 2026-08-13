@@ -274,8 +274,7 @@ class TestMetaK1:
         # assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
         # assert_allclose(res3.h2, res.H2, atol=1e-10)
         th = res3.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th.statistic, th.pvalue
         df = th.df
         assert_allclose(pv, res.QEp, atol=1e-10)
         assert_allclose(q, res.QE, atol=1e-10)
@@ -301,8 +300,7 @@ class TestMetaK1:
         assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)
         assert_allclose(res3.h2, res.H2, atol=1e-10)
         th = res3.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th
         df = th.df
         assert_allclose(pv, res.QEp, atol=1e-10)
         assert_allclose(q, res.QE, atol=1e-10)
@@ -340,8 +338,7 @@ class TestMetaK1:
         assert_allclose(ci[2][1], res_fes.ci_ub, atol=1e-10)
 
         th = res3.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th
         df = th.df
         assert_allclose(pv, res_dls.QEp, atol=1e-10)
         assert_allclose(q, res_dls.QE, atol=1e-10)
@@ -380,8 +377,7 @@ class TestMetaBinOR:
         assert_allclose(res1.sd_eff_w_re_hksj, res2.seTE_random, rtol=1e-13)
 
         th = res1.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th
         df = th.df
         assert_allclose(q, res2.Q, rtol=1e-13)
         assert_allclose(pv, res2.pval_Q, rtol=1e-13)

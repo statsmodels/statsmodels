@@ -134,13 +134,13 @@ def _check_nested_results(results_x, results_z):
 class NonNestedTestResult(NamedTuple):
     """Result of :func:`compare_cox` and :func:`compare_j`."""
 
-    tstat: float
+    statistic: float
     pvalue: float
     res_store: ResultsStore | None
 
 
 def compare_cox(
-    results_x, results_z, store=False, *, use_namedtuple: bool | None = None
+    results_x, results_z, store=False, *, result_object: bool | None = None
 ):
     """
     Compute the Cox test for non-nested models
@@ -153,7 +153,7 @@ def compare_cox(
         result instance of second model
     store : bool, default False
         If true, then the intermediate results are returned.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as a
         ``NonNestedTestResult`` NamedTuple instead of a plain tuple. When
         ``store=True`` the NamedTuple holds the same three elements as the
@@ -164,14 +164,14 @@ def compare_cox(
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
-            ``NonNestedTestResult``. Set ``use_namedtuple=True`` to opt in
-            now, or ``use_namedtuple=False`` to silence the warning and
+            ``NonNestedTestResult``. Set ``result_object=True`` to opt in
+            now, or ``result_object=False`` to silence the warning and
             keep the current return type.
 
     Returns
     -------
     NonNestedTestResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``tstat``,
+        If ``result_object=True``, a NamedTuple with fields ``statistic``,
         ``pvalue``, and ``res_store`` (``res_store`` is ``None`` when not
         computed). See
         :class:`~statsmodels.stats.diagnostic.NonNestedTestResult`.
@@ -201,7 +201,7 @@ def compare_cox(
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
        5th edition. (2002).
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     if _check_nested_results(results_x, results_z):
         raise ValueError(NESTED_ERROR.format(test="Cox comparison"))
     x = results_x.model.exog
@@ -233,24 +233,24 @@ def compare_cox(
     else:
         res = None
 
-    if use_namedtuple is None and not store:
+    if result_object is None and not store:
         warnings.warn(
             "compare_cox currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
             "July 2027, whichever is later, the default behavior will "
             "switch to always returning a NonNestedTestResult NamedTuple. "
-            "Set use_namedtuple=True to switch now, or "
-            "use_namedtuple=False to keep the current behavior and "
+            "Set result_object=True to switch now, or "
+            "result_object=False to keep the current behavior and "
             "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or store:
+    if result_object or store:
         return NonNestedTestResult(q, pval, res)
     return q, pval
 
 
-def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None = None):
+def compare_j(results_x, results_z, store=False, *, result_object: bool | None = None):
     """
     Compute the J-test for non-nested models
 
@@ -262,7 +262,7 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
         The result instance of second model.
     store : bool, default False
         If true, then the intermediate results are returned.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as a
         ``NonNestedTestResult`` NamedTuple instead of a plain tuple. When
         ``store=True`` the NamedTuple holds the same three elements as the
@@ -273,14 +273,14 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
-            ``NonNestedTestResult``. Set ``use_namedtuple=True`` to opt in
-            now, or ``use_namedtuple=False`` to silence the warning and
+            ``NonNestedTestResult``. Set ``result_object=True`` to opt in
+            now, or ``result_object=False`` to silence the warning and
             keep the current return type.
 
     Returns
     -------
     NonNestedTestResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``tstat``,
+        If ``result_object=True``, a NamedTuple with fields ``statistic``,
         ``pvalue``, and ``res_store`` (``res_store`` is ``None`` when not
         computed). See
         :class:`~statsmodels.stats.diagnostic.NonNestedTestResult`.
@@ -310,7 +310,7 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
        5th edition. (2002).
     """
     # TODO: Allow cov to be specified
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     if _check_nested_results(results_x, results_z):
         raise ValueError(NESTED_ERROR.format(test="J comparison"))
     y = results_x.model.endog
@@ -328,19 +328,19 @@ def compare_j(results_x, results_z, store=False, *, use_namedtuple: bool | None 
     else:
         res = None
 
-    if use_namedtuple is None and not store:
+    if result_object is None and not store:
         warnings.warn(
             "compare_j currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
             "July 2027, whichever is later, the default behavior will "
             "switch to always returning a NonNestedTestResult NamedTuple. "
-            "Set use_namedtuple=True to switch now, or "
-            "use_namedtuple=False to keep the current behavior and "
+            "Set result_object=True to switch now, or "
+            "result_object=False to keep the current behavior and "
             "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or store:
+    if result_object or store:
         return NonNestedTestResult(tstat, pval, res)
     return tstat, pval
 
@@ -790,7 +790,7 @@ def acorr_lm(
     ddof=0,
     cov_type="nonrobust",
     cov_kwds=None,
-    use_namedtuple: bool | None = None,
+    result_object: bool | None = None,
 ):
     """
     Lagrange Multiplier tests for autocorrelation
@@ -823,7 +823,7 @@ def acorr_lm(
     cov_kwds : dict, default None
         Dictionary of covariance options passed to ``OLS.fit``. See OLS.fit for
         more details.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as an ``LMTestResult``
         NamedTuple instead of a plain tuple. When ``store=True`` the
         NamedTuple holds the same five elements as the legacy tuple, so it
@@ -835,14 +835,14 @@ def acorr_lm(
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``LMTestResult``. Set
-            ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type.
 
     Returns
     -------
     LMTestResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``lm``,
+        If ``result_object=True``, a NamedTuple with fields ``lm``,
         ``lmpval``, ``fval``, ``fpval``, and ``res_store`` (``res_store``
         is ``None`` when not computed). See
         :class:`~statsmodels.stats.diagnostic.LMTestResult`.
@@ -880,7 +880,7 @@ def acorr_lm(
     cov_type = string_like(cov_type, "cov_type")
     cov_kwds = {} if cov_kwds is None else cov_kwds
     cov_kwds = dict_like(cov_kwds, "cov_kwds")
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     nobs = resid.shape[0]
     if period is not None and nlags is None:
         maxlag = min(nobs // 5, 2 * period)
@@ -917,24 +917,24 @@ def acorr_lm(
     else:
         res_store = None
 
-    if use_namedtuple is None and not store:
+    if result_object is None and not store:
         warnings.warn(
             "acorr_lm currently returns a plain tuple whose length "
             "depends on the store argument. In release 0.16 or after "
             "July 2027, whichever is later, the default behavior will "
             "switch to always returning an LMTestResult NamedTuple. Set "
-            "use_namedtuple=True to switch now, or use_namedtuple=False "
+            "result_object=True to switch now, or result_object=False "
             "to keep the current behavior and silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or store:
+    if result_object or store:
         return LMTestResult(lm, lmpval, fval, fpval, res_store)
     return lm, lmpval, fval, fpval
 
 
 def het_arch(
-    resid, nlags=None, store=False, ddof=0, *, use_namedtuple: bool | None = None
+    resid, nlags=None, store=False, ddof=0, *, result_object: bool | None = None
 ):
     """
     Engle's Test for Autoregressive Conditional Heteroscedasticity (ARCH)
@@ -952,7 +952,7 @@ def het_arch(
         are recommendations to correct the degrees of freedom by the number
         of parameters that have been estimated, for example ddof=p+q for an
         ARMA(p,q).
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as an ``LMTestResult``
         NamedTuple instead of a plain tuple. When ``store=True`` the
         NamedTuple holds the same five elements as the legacy tuple, so it
@@ -964,14 +964,14 @@ def het_arch(
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``LMTestResult``. Set
-            ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type.
 
     Returns
     -------
     LMTestResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``lm``,
+        If ``result_object=True``, a NamedTuple with fields ``lm``,
         ``lmpval``, ``fval``, ``fpval``, and ``res_store`` (``res_store``
         is ``None`` when not computed). See
         :class:`~statsmodels.stats.diagnostic.LMTestResult`.
@@ -995,12 +995,12 @@ def het_arch(
     verified against R:FinTS::ArchTest
     """
     return acorr_lm(
-        resid**2, nlags=nlags, store=store, ddof=ddof, use_namedtuple=use_namedtuple
+        resid**2, nlags=nlags, store=store, ddof=ddof, result_object=result_object
     )
 
 
 def acorr_breusch_godfrey(
-    res, nlags=None, store=False, *, use_namedtuple: bool | None = None
+    res, nlags=None, store=False, *, result_object: bool | None = None
 ):
     """
     Breusch-Godfrey Lagrange Multiplier tests for residual autocorrelation
@@ -1016,7 +1016,7 @@ def acorr_breusch_godfrey(
     store : bool, default False
         If store is true, then an additional class instance that contains
         intermediate results is returned.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as an ``LMTestResult``
         NamedTuple instead of a plain tuple. When ``store=True`` the
         NamedTuple holds the same five elements as the legacy tuple, so it
@@ -1028,14 +1028,14 @@ def acorr_breusch_godfrey(
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return an ``LMTestResult``. Set
-            ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type.
 
     Returns
     -------
     LMTestResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``lm``,
+        If ``result_object=True``, a NamedTuple with fields ``lm``,
         ``lmpval``, ``fval``, ``fpval``, and ``res_store`` (``res_store``
         is ``None`` when not computed). See
         :class:`~statsmodels.stats.diagnostic.LMTestResult`.
@@ -1065,7 +1065,7 @@ def acorr_breusch_godfrey(
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
       5th edition. (2002).
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     x = np.asarray(res.resid).squeeze()
     if x.ndim != 1:
         raise ValueError(
@@ -1105,19 +1105,19 @@ def acorr_breusch_godfrey(
     else:
         res_store = None
 
-    if use_namedtuple is None and not store:
+    if result_object is None and not store:
         warnings.warn(
             "acorr_breusch_godfrey currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
             "after July 2027, whichever is later, the default behavior "
             "will switch to always returning an LMTestResult NamedTuple. "
-            "Set use_namedtuple=True to switch now, or "
-            "use_namedtuple=False to keep the current behavior and "
+            "Set result_object=True to switch now, or "
+            "result_object=False to keep the current behavior and "
             "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or store:
+    if result_object or store:
         return LMTestResult(lm, lmpval, fval, fpval, res_store)
     return lm, lmpval, fval, fpval
 
@@ -1296,7 +1296,7 @@ def het_goldfeldquandt(
     alternative="increasing",
     store=False,
     *,
-    use_namedtuple: bool | None = None,
+    result_object: bool | None = None,
 ):
     """
     Goldfeld-Quandt homoskedasticity test
@@ -1330,7 +1330,7 @@ def het_goldfeldquandt(
         p-value calculation.
     store : bool, default False
         Flag indicating to return the regression results
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag indicating whether to return the results as a
         ``GoldfeldQuandtResult`` NamedTuple instead of a plain tuple. When
         ``store=True`` the NamedTuple holds the same four elements as the
@@ -1341,14 +1341,14 @@ def het_goldfeldquandt(
 
             In release 0.16.0 or after July 2027, whichever is later, the
             default will change to always return a
-            ``GoldfeldQuandtResult``. Set ``use_namedtuple=True`` to opt
-            in now, or ``use_namedtuple=False`` to silence the warning and
+            ``GoldfeldQuandtResult``. Set ``result_object=True`` to opt
+            in now, or ``result_object=False`` to silence the warning and
             keep the current return type.
 
     Returns
     -------
     GoldfeldQuandtResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``fval``,
+        If ``result_object=True``, a NamedTuple with fields ``fval``,
         ``pval``, ``ordering``, and ``res_store`` (``res_store`` is
         ``None`` when not computed). See
         :class:`~statsmodels.stats.diagnostic.GoldfeldQuandtResult`.
@@ -1375,7 +1375,7 @@ def het_goldfeldquandt(
     Results are identical to R, but the drop option is defined differently.
     (sorting by idx not tested yet)
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     x = np.asarray(x)
     y = np.asarray(y)  # **2
     nobs, nvars = x.shape
@@ -1431,19 +1431,19 @@ F-statistic ={fval:8.4f} and p-value ={fpval:8.4f}"""
     else:
         res = None
 
-    if use_namedtuple is None and not store:
+    if result_object is None and not store:
         warnings.warn(
             "het_goldfeldquandt currently returns a plain tuple whose "
             "length depends on the store argument. In release 0.16 or "
             "after July 2027, whichever is later, the default behavior "
             "will switch to always returning a GoldfeldQuandtResult "
-            "NamedTuple. Set use_namedtuple=True to switch now, or "
-            "use_namedtuple=False to keep the current behavior and "
+            "NamedTuple. Set result_object=True to switch now, or "
+            "result_object=False to keep the current behavior and "
             "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or store:
+    if result_object or store:
         return GoldfeldQuandtResult(fval, fpval, ordering, res)
     return fval, fpval, ordering
 

@@ -504,7 +504,7 @@ class AFTResults(OptAFT):
         uncens_exog = exog[uncensored, :]
         reg_model = OLS(uncens_endog, uncens_exog).fit()
         llr, pval, new_weights = reg_model.el_test(
-            b0_vals, param_nums, return_weights=True, use_namedtuple=False
+            b0_vals, param_nums, return_weights=True, result_object=False
         )  # Needs to be changed
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs

@@ -33,7 +33,7 @@ class TestOrigin(GenRes):
         assert_almost_equal(self.res1.llf_el, self.res2.test_llf_hat, 4)
 
     def test_hypothesis_beta1(self):
-        res = self.res1.el_test([.0034], [1], use_namedtuple=True)
+        res = self.res1.el_test([.0034], [1], result_object=True)
         assert_almost_equal(res.llr, self.res2.test_llf_hypoth, 4)
 
     def test_el_test_namedtuple(self):
@@ -55,7 +55,7 @@ class TestOrigin(GenRes):
         # weights are not computed when they are not requested
         with warnings.catch_warnings():
             warnings.simplefilter("error", FutureWarning)
-            opted_in = self.res1.el_test([.0034], [1], use_namedtuple=True)
+            opted_in = self.res1.el_test([.0034], [1], result_object=True)
         assert isinstance(opted_in, EmpLikeTestResult)
         assert opted_in.weights is None
 

@@ -39,7 +39,7 @@ jobs:
           python -m pip install ruff flake8 flake8-bugbear
 
       - name: ruff check
-        run: ruff check statsmodels docs tools
+        run: ruff check .
 
       - name: flake8
-        run: flake8 statsmodels docs tools
+        run: flake8 .

@@ -3660,7 +3660,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 _het_result = breakvar_heteroskedasticity_test(
                     resid[i, d:], subset_length=h, alternative=alternative, use_f=use_f
                 )
-                test_statistics.append(_het_result.stat)
+                test_statistics.append(_het_result.statistic)
                 p_values.append(_het_result.pvalue)
 
             output = np.c_[test_statistics, p_values]

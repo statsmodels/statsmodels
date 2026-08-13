@@ -188,7 +188,7 @@ class KDEUnivariate:
                 gridsize=gridsize,
                 clip=clip,
                 cut=cut,
-                use_namedtuple=False,
+                result_object=False,
             )
         else:
             density, grid, bw = kdensity(
@@ -200,7 +200,7 @@ class KDEUnivariate:
                 gridsize=gridsize,
                 clip=clip,
                 cut=cut,
-                use_namedtuple=False,
+                result_object=False,
             )
         self.density = density
         self.support = grid
@@ -343,7 +343,7 @@ def kdensity(
     cut=3,
     retgrid=True,
     *,
-    use_namedtuple: bool | None = None,
+    result_object: bool | None = None,
 ):
     """
     Rosenblatt-Parzen univariate kernel density estimator
@@ -395,28 +395,28 @@ def kdensity(
         -/+ cut*bw*{min(x) or max(x)}
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag controlling whether a ``KDEResult`` NamedTuple is returned.
         When ``retgrid`` is True (the default) a ``KDEResult`` is always
         returned; it holds the same three elements as the legacy
         ``(density, grid, bw)`` tuple, so it unpacks and indexes
         identically. When ``retgrid=False`` the legacy ``(density, bw)``
-        tuple is returned unless ``use_namedtuple=True``.
+        tuple is returned unless ``result_object=True``.
 
         .. deprecated:: 0.15.0
 
             When ``retgrid=False``, in release 0.16.0 or after July 2027,
             whichever is later, the default will change to return a
             ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
-            ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type. ``KDEResult`` will be mandatory in 0.17
             or after July 2028, whichever is later.
 
     Returns
     -------
     KDEResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
+        If ``result_object=True``, a NamedTuple with fields ``density``,
         ``grid``, and ``bw``. ``grid`` is always populated, including when
         ``retgrid=False``, because it is computed regardless. See
         :class:`~statsmodels.nonparametric.kde.KDEResult`.
@@ -436,7 +436,7 @@ def kdensity(
     Creates an intermediate (`gridsize` x `nobs`) array. Use FFT for a more
     computationally efficient version.
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     x = np.asarray(x)
     if x.ndim == 1:
         x = x[:, None]
@@ -502,19 +502,19 @@ def kdensity(
     # and contents as the legacy (density, grid, bw) tuple, so it is adopted
     # with no deprecation.  Only retgrid=False changes shape, from a 2-tuple
     # to the 3-field KDEResult, so that is the only path that warns.
-    if use_namedtuple is None and not retgrid:
+    if result_object is None and not retgrid:
         warnings.warn(
             "kdensity currently returns a plain (density, bw) tuple when "
             "retgrid=False. In release 0.16 or after July 2027, whichever "
             "is later, the default behavior will switch to always "
             "returning a KDEResult NamedTuple, which also carries the "
-            "grid. Set use_namedtuple=True to switch now, or "
-            "use_namedtuple=False to keep the current behavior and "
+            "grid. Set result_object=True to switch now, or "
+            "result_object=False to keep the current behavior and "
             "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or retgrid:
+    if result_object or retgrid:
         # `grid` is always computed, so it is returned even when
         # retgrid=False rather than being None-filled.
         return KDEResult(dens, grid, bw)
@@ -532,7 +532,7 @@ def kdensityfft(
     cut=3,
     retgrid=True,
     *,
-    use_namedtuple: bool | None = None,
+    result_object: bool | None = None,
 ):
     """
     Rosenblatt-Parzen univariate kernel density estimator
@@ -587,28 +587,28 @@ def kdensityfft(
         -/+ cut*bw*{x.min() or x.max()}
     retgrid : bool
         Whether or not to return the grid over which the density is estimated.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag controlling whether a ``KDEResult`` NamedTuple is returned.
         When ``retgrid`` is True (the default) a ``KDEResult`` is always
         returned; it holds the same three elements as the legacy
         ``(density, grid, bw)`` tuple, so it unpacks and indexes
         identically. When ``retgrid=False`` the legacy ``(density, bw)``
-        tuple is returned unless ``use_namedtuple=True``.
+        tuple is returned unless ``result_object=True``.
 
         .. deprecated:: 0.15.0
 
             When ``retgrid=False``, in release 0.16.0 or after July 2027,
             whichever is later, the default will change to return a
             ``KDEResult`` rather than a ``(density, bw)`` tuple. Set
-            ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type. ``KDEResult`` will be mandatory in 0.17
             or after July 2028, whichever is later.
 
     Returns
     -------
     KDEResult
-        If ``use_namedtuple=True``, a NamedTuple with fields ``density``,
+        If ``result_object=True``, a NamedTuple with fields ``density``,
         ``grid``, and ``bw``. ``grid`` is always populated, including when
         ``retgrid=False``, because it is computed regardless. See
         :class:`~statsmodels.nonparametric.kde.KDEResult`.
@@ -644,7 +644,7 @@ def kdensityfft(
         the Fast Fourier Transform*. Journal of the Royal Statistical Society.
         Series C. 31.2, 93-9.
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     x = np.asarray(x)
     # will not work for two columns.
     x = x[np.logical_and(x > clip[0], x < clip[1])]
@@ -711,19 +711,19 @@ def kdensityfft(
     # and contents as the legacy (density, grid, bw) tuple, so it is adopted
     # with no deprecation.  Only retgrid=False changes shape, from a 2-tuple
     # to the 3-field KDEResult, so that is the only path that warns.
-    if use_namedtuple is None and not retgrid:
+    if result_object is None and not retgrid:
         warnings.warn(
             "kdensityfft currently returns a plain (density, bw) tuple "
             "when retgrid=False. In release 0.16 or after July 2027, "
             "whichever is later, the default behavior will switch to "
             "always returning a KDEResult NamedTuple, which also carries "
-            "the grid. Set use_namedtuple=True to switch now, or "
-            "use_namedtuple=False to keep the current behavior and "
+            "the grid. Set result_object=True to switch now, or "
+            "result_object=False to keep the current behavior and "
             "silence this warning.",
             FutureWarning,
             stacklevel=2,
         )
-    if use_namedtuple or retgrid:
+    if result_object or retgrid:
         # `grid` is always computed, so it is returned even when
         # retgrid=False rather than being None-filled.
         return KDEResult(f, grid, bw)

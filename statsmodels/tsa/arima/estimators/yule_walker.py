@@ -68,7 +68,7 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     method = "adjusted" if adjusted else "mle"
     p.ar_params, sigma = linear_model.yule_walker(
         endog, order=ar_order, demean=demean, method=method,
-        use_namedtuple=False)
+        result_object=False)
     p.sigma2 = sigma**2
 
     # Construct other results

@@ -4,7 +4,8 @@ Created on Fri Sep 15 12:53:45 2017
 Author: Josef Perktold
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from scipy import stats
 
 from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, SingularMatrixWarning
 
 
@@ -141,8 +142,8 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
     return fig
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ChisquareProbResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ChisquareProbResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_chisquare_prob`.
 
@@ -161,7 +162,14 @@ class ChisquareProbResult(NamedTuple):
         Fitted auxiliary OLS regression used to compute `statistic`.
     distribution : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -260,8 +268,8 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     return res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class DispersionResults(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class DispersionResults(LimitedIterationMixin[np.ndarray]):
     """
     Result of :func:`test_poisson_dispersion`.
 
@@ -277,7 +285,14 @@ class DispersionResults(NamedTuple):
         Description of the alternative variance assumption of each test.
     name : str
         Descriptive title for the collection of tests.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: np.ndarray
     pvalue: np.ndarray
@@ -505,8 +520,8 @@ def _test_poisson_dispersion_generic(
     return stat_ols, pval_ols
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ZeroinflationJHResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ZeroinflationJHResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_poisson_zeroinflation_jh`.
 
@@ -523,7 +538,14 @@ class ZeroinflationJHResult(NamedTuple):
         covariance matrix is singular.
     distribution : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -627,8 +649,8 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     return res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ZeroModificationTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ZeroModificationTestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_poisson_zeroinflation_broek` and
     :func:`test_poisson_zeros`.
@@ -654,7 +676,14 @@ class ZeroModificationTestResult(NamedTuple):
         Degrees of freedom of the chi-square distribution, always 1.
     distribution : str
         Name of the reference distribution used for `pvalue`, ``"normal"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
