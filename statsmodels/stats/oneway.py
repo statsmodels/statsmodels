@@ -6,13 +6,14 @@ License: BSD-3
 
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass, fields
+from typing import ClassVar, NamedTuple
 
 import numpy as np
 from scipy import stats
 from scipy.special import ncfdtrinc
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 
 # functions that use scipy.special instead of boost based function in stats
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
@@ -559,8 +560,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     return ci_res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class AnovaResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class AnovaResult(LimitedIterationMixin[float]):
     """
     Result of :func:`anova_generic` and :func:`anova_oneway`.
 
@@ -603,6 +604,8 @@ class AnovaResult(NamedTuple):
         p-value based on degrees of freedom as in Brown-Forsythe 1974.
         Only set if ``use_var="bf"``, otherwise None.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -853,8 +856,8 @@ def anova_oneway(
     return res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class EquivalenceOnewayResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class EquivalenceOnewayResult(LimitedIterationMixin[float]):
     """
     Result of :func:`equivalence_oneway_generic` and :func:`equivalence_oneway`.
 
@@ -887,6 +890,8 @@ class EquivalenceOnewayResult(NamedTuple):
         Description of the effect size type used for `effectsize` and
         `crit_es`, determined by `margin_type`.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1364,8 +1369,8 @@ def simulate_power_equivalence_oneway(
     return res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ScaleAnovaResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ScaleAnovaResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_scale_oneway`.
 
@@ -1413,6 +1418,8 @@ class ScaleAnovaResult(NamedTuple):
         p-value based on degrees of freedom as in Brown-Forsythe 1974.
         Only set if ``method="bf"``, otherwise None.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1517,12 +1524,15 @@ def test_scale_oneway(
         welch_correction=True,
         trim_frac=trim_frac_anova,
     )
-    res = ScaleAnovaResult(data_transformed=xxd, **res0._asdict())
+    res = ScaleAnovaResult(
+        data_transformed=xxd,
+        **{f.name: getattr(res0, f.name) for f in fields(res0)},
+    )
     return res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ScaleEquivalenceResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ScaleEquivalenceResult(LimitedIterationMixin[float]):
     """
     Result of :func:`equivalence_scale_oneway`.
 
@@ -1560,6 +1570,8 @@ class ScaleEquivalenceResult(NamedTuple):
     x_transformed : list of ndarray
         The centered and transformed data used to compute the test.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1663,5 +1675,8 @@ def equivalence_scale_oneway(
         welch_correction=True,
         trim_frac=trim_frac_anova,
     )
-    res = ScaleEquivalenceResult(x_transformed=xxd, **res0._asdict())
+    res = ScaleEquivalenceResult(
+        x_transformed=xxd,
+        **{f.name: getattr(res0, f.name) for f in fields(res0)},
+    )
     return res

@@ -58,7 +58,7 @@ class TransformCorrNormalResult(NamedTuple):
 
 
 def transform_corr_normal(
-    corr, method, return_var=False, possdef=True, *, use_namedtuple: bool | None = None
+    corr, method, return_var=False, possdef=True, *, result_object: bool | None = None
 ):
     """
     Transform correlation matrix to be consistent at normal distribution
@@ -79,19 +79,19 @@ def transform_corr_normal(
     possdef : not implemented yet
         Check whether resulting correlation matrix for positive semidefinite
         and return a positive semidefinite approximation if not.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag controlling whether a ``TransformCorrNormalResult`` NamedTuple
         is returned. When ``return_var=True`` a
         ``TransformCorrNormalResult`` is always returned; it holds the same
         two elements as the legacy tuple, so it unpacks and indexes
         identically. When ``return_var=False`` a bare correlation matrix is
-        returned unless ``use_namedtuple=True``, which yields a
+        returned unless ``result_object=True``, which yields a
         ``TransformCorrNormalResult`` with ``var`` set to ``None``.
 
     Returns
     -------
     TransformCorrNormalResult or ndarray
-        When ``return_var=True`` (or ``use_namedtuple=True``), a NamedTuple
+        When ``return_var=True`` (or ``result_object=True``), a NamedTuple
         with fields:
 
         corr : ndarray
@@ -106,7 +106,7 @@ def transform_corr_normal(
         indexes identically. See
         :class:`~statsmodels.stats.covariance.TransformCorrNormalResult`.
 
-        When ``return_var=False`` and ``use_namedtuple`` is not True, a bare
+        When ``return_var=False`` and ``result_object`` is not True, a bare
         correlation matrix is returned instead.
 
     Notes
@@ -132,7 +132,7 @@ def transform_corr_normal(
        https://doi.org/10.1007/s10260-010-0142-z.
 
     """
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     method = method.lower()
     rho = np.asarray(corr)
 
@@ -204,9 +204,9 @@ def transform_corr_normal(
     # the legacy (corr_n, var) tuple, so it unpacks and indexes identically
     # and is always used when return_var is True.  When return_var is False a
     # bare correlation matrix is returned, as before; pass
-    # use_namedtuple=True to always get a TransformCorrNormalResult, with
+    # result_object=True to always get a TransformCorrNormalResult, with
     # var left as None since it is only computed when requested.
-    if use_namedtuple or return_var:
+    if result_object or return_var:
         return TransformCorrNormalResult(corr_n, var)
     return corr_n
 

@@ -10,13 +10,14 @@ License: BSD-3
 from statsmodels.compat.python import lzip
 
 from collections.abc import Callable
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar, NamedTuple
 
 import numpy as np
 import pandas as pd
 from scipy import optimize, stats
 
-from statsmodels.stats.base import AllPairsResults, compat_2tuple_unpack
+from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tools.validation import array_like
@@ -1661,8 +1662,8 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True
         ), prob_indep
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ScoreTestProportionsResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ScoreTestProportionsResult(LimitedIterationMixin[float]):
     """
     Result of :func:`score_test_proportions_2indep`.
 
@@ -1687,6 +1688,8 @@ class ScoreTestProportionsResult(NamedTuple):
         Constrained estimate of the second proportion under the null
         hypothesis.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1745,7 +1748,7 @@ def score_test_proportions_2indep(
     -------
     ScoreTestProportionsResult or tuple
         If return_results is True (default), then a
-        :class:`ScoreTestProportionsResult` namedtuple is returned.
+        :class:`ScoreTestProportionsResult` result object is returned.
         If return_results is False, then only a plain ``(statistic,
         pvalue)`` tuple is returned.
 
@@ -1862,8 +1865,8 @@ def score_test_proportions_2indep(
         return statistic, pvalue
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class Proportions2indepTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class Proportions2indepTestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_proportions_2indep`.
 
@@ -1897,6 +1900,8 @@ class Proportions2indepTestResult(NamedTuple):
         Constrained estimate of the second proportion under the null
         hypothesis. Only set if ``method="score"``, otherwise None.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -2022,7 +2027,7 @@ def test_proportions_2indep(
     -------
     Proportions2indepTestResult or tuple
         If return_results is True (default), then a
-        :class:`Proportions2indepTestResult` namedtuple is returned.
+        :class:`Proportions2indepTestResult` result object is returned.
         If return_results is False, then only a plain ``(statistic,
         pvalue)`` tuple is returned.
 
@@ -2236,8 +2241,8 @@ def test_proportions_2indep(
         return statistic, pvalue
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class TostProportionsResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class TostProportionsResult(LimitedIterationMixin[float]):
     """
     Result of :func:`tost_proportions_2indep`.
 
@@ -2261,6 +2266,8 @@ class TostProportionsResult(NamedTuple):
     title : str
         Descriptive title of the equivalence test.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float

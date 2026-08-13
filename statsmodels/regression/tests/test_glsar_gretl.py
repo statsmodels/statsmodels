@@ -114,7 +114,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.wresid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.wresid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=4)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
@@ -145,7 +145,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.wresid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.wresid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
 
@@ -356,7 +356,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.resid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.resid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 

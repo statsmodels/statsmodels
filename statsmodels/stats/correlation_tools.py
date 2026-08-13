@@ -178,7 +178,7 @@ class CovNearestResult(NamedTuple):
 
 def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
                 return_all=False, *, min_diag=None,
-                use_namedtuple: bool | None = None):
+                result_object: bool | None = None):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
@@ -210,19 +210,19 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
         raised to ``min_diag`` before the conversion, and a ``SpecificationWarning``
         is issued. This makes it possible to correct matrices with a zero or
         negative diagonal, at the cost of changing those variances.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag controlling whether a ``CovNearestResult`` NamedTuple is
         returned. When ``return_all=True`` a ``CovNearestResult`` is always
         returned; it holds the same three elements as the legacy tuple, so
         it unpacks and indexes identically. When ``return_all=False`` a bare
-        covariance matrix is returned unless ``use_namedtuple=True``, which
+        covariance matrix is returned unless ``result_object=True``, which
         yields a ``CovNearestResult`` carrying the correlation matrix and
         standard deviations too.
 
     Returns
     -------
     CovNearestResult or ndarray
-        When ``return_all=True`` (or ``use_namedtuple=True``), a NamedTuple
+        When ``return_all=True`` (or ``result_object=True``), a NamedTuple
         with fields:
 
         cov : ndarray
@@ -262,7 +262,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
 
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     cov = np.asarray(cov)
     if min_diag is not None:
         diag = np.diag(cov)
@@ -288,10 +288,10 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
     # CovNearestResult has exactly the same length and contents as the legacy
     # (cov_, corr_, std_) tuple, so it unpacks and indexes identically and is
     # always used when return_all is True.  When return_all is False a bare
-    # covariance matrix is returned, as before; pass use_namedtuple=True to
+    # covariance matrix is returned, as before; pass result_object=True to
     # always get a CovNearestResult.  The correlation matrix and standard
     # deviations are computed either way, so nothing is None-filled.
-    if use_namedtuple or return_all:
+    if result_object or return_all:
         return CovNearestResult(cov_, corr_, std_)
     return cov_
 

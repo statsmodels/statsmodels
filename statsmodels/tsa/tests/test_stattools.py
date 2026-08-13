@@ -1071,7 +1071,7 @@ class TestBreakvarHeteroskedasticityTest:
             self.f.sf(expected_statistic, 2, 2),
         )
         _result = breakvar_heteroskedasticity_test(input_residuals)
-        actual_statistic, actual_pvalue = _result.stat, _result.pvalue
+        actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
 
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
@@ -1114,7 +1114,7 @@ class TestBreakvarHeteroskedasticityTest:
             ]
         )
         _result = breakvar_heteroskedasticity_test(input_residuals)
-        actual_statistic, actual_pvalue = _result.stat, _result.pvalue
+        actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
 
         assert_equal(actual_statistic, expected_statistic)
         assert_equal(actual_pvalue, expected_pvalue)
@@ -1133,7 +1133,7 @@ class TestBreakvarHeteroskedasticityTest:
             input_residuals,
             subset_length=subset_length,
         )
-        actual_statistic, actual_pvalue = _result.stat, _result.pvalue
+        actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
 
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
@@ -1153,7 +1153,7 @@ class TestBreakvarHeteroskedasticityTest:
             input_residuals,
             alternative=alternative,
         )
-        actual_statistic, actual_pvalue = _result.stat, _result.pvalue
+        actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
@@ -1169,7 +1169,7 @@ class TestBreakvarHeteroskedasticityTest:
             input_residuals,
             use_f=False,
         )
-        actual_statistic, actual_pvalue = _result.stat, _result.pvalue
+        actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
@@ -1563,7 +1563,7 @@ class TestKPSS:
                 res = kpss(self.x, "c", nlags=3, result_object=True)
         assert isinstance(res, KPSSResult)
         assert res.resstore is None
-        assert res[0] == res.stat
+        assert res[0] == res.statistic
         assert res[1] == res.pvalue
         assert res.lags == 3
         assert isinstance(res.crit, dict)
@@ -1726,7 +1726,7 @@ class TestRUR:
             res = range_unit_root_test(self.x, result_object=True)
         assert isinstance(res, RURResult)
         assert res.resstore is None
-        assert res[0] == res.stat
+        assert res[0] == res.statistic
         assert res[1] == res.pvalue
         assert isinstance(res.crit, dict)
 
@@ -1980,18 +1980,18 @@ def test_diebold_mariano_test():
     maxlags = int(np.ceil(len(d) ** (1 / 3)))
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
 
-    assert_almost_equal(res1.stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res1.statistic, res.tvalues[0], DECIMAL_3)
     assert_almost_equal(res1.pvalue, res.pvalues[0], DECIMAL_3)
 
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
 
-    assert_almost_equal(res2.stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res2.statistic, res.tvalues[0], DECIMAL_3)
     assert_almost_equal(res2.pvalue, res.pvalues[0], DECIMAL_3)
 
     d = np.abs(y - f1) - np.abs(y - f2)
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
 
-    assert_almost_equal(res3.stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res3.statistic, res.tvalues[0], DECIMAL_3)
     assert_almost_equal(res3.pvalue, res.pvalues[0], DECIMAL_3)
 
     y += 10
@@ -2001,7 +2001,7 @@ def test_diebold_mariano_test():
     d = np.abs((y - f1) / y) - np.abs((y - f2) / y)
     res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": maxlags})
 
-    assert_almost_equal(res4.stat, res.tvalues[0], DECIMAL_3)
+    assert_almost_equal(res4.statistic, res.tvalues[0], DECIMAL_3)
     assert_almost_equal(res4.pvalue, res.pvalues[0], DECIMAL_3)
 
 
@@ -2016,7 +2016,7 @@ def test_diebold_mariano_harvey_adj():
     direct_factor = np.sqrt((100 + 1 - (2 * 3) + ((3 * 2) / 100)) / 100)
     assert_almost_equal(res_yes.harvey_adj_factor, direct_factor)
     assert res_yes.pvalue > res_no.pvalue
-    assert np.abs(res_no.stat) > np.abs(res_yes.stat)
+    assert np.abs(res_no.statistic) > np.abs(res_yes.statistic)
     assert len(res_no) == 2
 
 
@@ -2025,13 +2025,13 @@ def test_diebold_mariano_equiv():
     y, f1, f2 = rs.standard_normal((3, 100))
     res = diebold_mariano_test(y, f1, f2)
     res_poly = diebold_mariano_test(y, f1, f2, criterion="poly", power=2)
-    assert_almost_equal(res.stat, res_poly.stat)
+    assert_almost_equal(res.statistic, res_poly.statistic)
 
     res = diebold_mariano_test(y, f1, f2, criterion="mad")
     res_mae = diebold_mariano_test(y, f1, f2, criterion="mae")
     res_poly = diebold_mariano_test(y, f1, f2, criterion="poly", power=1)
-    assert_almost_equal(res.stat, res_poly.stat)
-    assert_almost_equal(res_mae.stat, res_poly.stat)
+    assert_almost_equal(res.statistic, res_poly.statistic)
+    assert_almost_equal(res_mae.statistic, res_poly.statistic)
 
 
 @pytest.mark.smoke
@@ -2048,7 +2048,7 @@ def test_diebold_mariano_callable_smoke():
         return ratio - np.log(ratio) - 1
 
     res = diebold_mariano_test(y, forecast_a, forecast_b, criterion=qlike)
-    assert np.isfinite(res.stat)
+    assert np.isfinite(res.statistic)
     assert 0 <= res.pvalue <= 1
 
 
@@ -2389,7 +2389,7 @@ def test_adfuller_result_object_true_returns_result_object(adfuller_data):
         res = adfuller(adfuller_data, result_object=True)
     assert isinstance(res, ADFullerResult)
     # still positionally indexable like the legacy tuple
-    assert res[0] == res.stat
+    assert res[0] == res.statistic
     assert res[1] == res.pvalue
     assert res.resstore is None
 
@@ -2412,7 +2412,7 @@ def test_adfuller_result_object_matches_legacy_values(adfuller_data):
         warnings.simplefilter("ignore", FutureWarning)
         legacy = adfuller(adfuller_data)
         nt = adfuller(adfuller_data, result_object=True)
-    assert_almost_equal(nt.stat, legacy[0])
+    assert_almost_equal(nt.statistic, legacy[0])
     assert_almost_equal(nt.pvalue, legacy[1])
     assert nt.usedlag == legacy[2]
     assert nt.nobs == legacy[3]
@@ -2729,7 +2729,7 @@ def test_stattools_fixed_arity_result_objects():
     a = acf(x, nlags=10, fft=False)
     res = q_stat(a[1:], nobs=len(x))
     assert isinstance(res, QStatResult)
-    assert res[0] is res.stat
+    assert res[0] is res.statistic
     assert res[1] is res.pvalue
 
     res = pacf_burg(x, nlags=5)
@@ -2752,7 +2752,7 @@ def test_stattools_fixed_arity_result_objects():
 
     res = breakvar_heteroskedasticity_test(x)
     assert isinstance(res, BreakvarHeteroskedasticityResult)
-    assert res[0] == res.stat
+    assert res[0] == res.statistic
     assert res[1] == res.pvalue
 
     y1 = (x + rs.standard_normal(200))[:, None]

@@ -5,12 +5,13 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.moment_helpers import cov2corr
 from statsmodels.tools.validation import array_like
 
@@ -20,8 +21,8 @@ def _logdet(x):
     return np.linalg.slogdet(x)[1]
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class HotellingResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class HotellingResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_mvmean` and :func:`test_mvmean_2indep`.
 
@@ -38,6 +39,8 @@ class HotellingResult(NamedTuple):
     distr : str
         Name of the reference distribution used for `pvalue`, ``"F"``.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -63,7 +66,7 @@ def test_mvmean(data, mean_null=0, return_results=True):
     Returns
     -------
     HotellingResult
-        Namedtuple with attributes statistic, pvalue, t2 and df.
+        Result object with attributes statistic, pvalue, t2 and df.
     (statistic, pvalue) : tuple
         If return_results is false, then only the test statistic and the
         pvalue are returned.
@@ -103,7 +106,7 @@ def test_mvmean_2indep(data1, data2):
     Returns
     -------
     HotellingResult
-        Namedtuple with attributes statistic, pvalue, t2 and df.
+        Result object with attributes statistic, pvalue, t2 and df.
     """
     x1 = array_like(data1, "x1", ndim=2)
     x2 = array_like(data2, "x2", ndim=2)
@@ -295,8 +298,8 @@ to the formula collection in Bartlett 1954 for several of them.
 """  # pylint: disable=W0105
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class CovTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class CovTestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_cov`, :func:`test_cov_spherical`,
     :func:`test_cov_diagonal` and :func:`test_cov_blockdiagonal`.
@@ -317,6 +320,8 @@ class CovTestResult(NamedTuple):
         Covariance matrix under the null hypothesis. Only set by
         :func:`test_cov`, otherwise None.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -346,7 +351,7 @@ def test_cov(cov, nobs, cov_null):
     Returns
     -------
     CovTestResult
-        Namedtuple with ``statistic, pvalue`` and other attributes like
+        Result object with ``statistic, pvalue`` and other attributes like
         ``df``.
 
     References
@@ -413,7 +418,7 @@ def test_cov_spherical(cov, nobs):
     Returns
     -------
     CovTestResult
-        Namedtuple with ``statistic, pvalue`` and other attributes like
+        Result object with ``statistic, pvalue`` and other attributes like
         ``df``.
 
     References
@@ -469,7 +474,7 @@ def test_cov_diagonal(cov, nobs):
     Returns
     -------
     CovTestResult
-        Namedtuple with ``statistic, pvalue`` and other attributes like
+        Result object with ``statistic, pvalue`` and other attributes like
         ``df``.
 
     References
@@ -552,7 +557,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     Returns
     -------
     CovTestResult
-        Namedtuple with ``statistic, pvalue`` and other attributes like
+        Result object with ``statistic, pvalue`` and other attributes like
         ``df``.
 
     References
@@ -586,8 +591,8 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     )
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class CovOnewayResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class CovOnewayResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_cov_oneway`.
 
@@ -618,6 +623,8 @@ class CovOnewayResult(NamedTuple):
     distr_f : str
         Name of the F reference distribution, ``"F"``.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -659,7 +666,7 @@ def test_cov_oneway(cov_list, nobs_list):
     Returns
     -------
     CovOnewayResult
-        Namedtuple containing test statistic and pvalues for both chisquare
+        Result object containing test statistic and pvalues for both chisquare
         and F distribution based tests, identified by the name ending
         "_chi2" and "_f". Attributes ``statistic, pvalue`` refer to the
         F-test version.

@@ -349,7 +349,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
         exog_others,
         obs_labels=False,
         ax=ax,
-        use_namedtuple=False,
+        result_object=False,
     )
     ax.set_title("Partial regression plot", fontsize="large")
     # ax.set_ylabel("Fitted values")
@@ -371,7 +371,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
 
 class PartRegressPlotResult(NamedTuple):
     """
-    Result of :func:`plot_partregress` when ``use_namedtuple=True``.
+    Result of :func:`plot_partregress` when ``result_object=True``.
 
     Parameters
     ----------
@@ -402,7 +402,7 @@ def plot_partregress(
     ret_coords=False,
     eval_env=1,
     *,
-    use_namedtuple: bool | None = None,
+    result_object: bool | None = None,
     **kwargs,
 ):
     """
@@ -444,21 +444,21 @@ def plot_partregress(
     eval_env : int
         Patsy eval environment if user functions and formulas are used in
         defining endog or exog.
-    use_namedtuple : bool, optional
+    result_object : bool, optional
         Flag controlling whether a ``PartRegressPlotResult`` NamedTuple is
         returned. When ``ret_coords`` is True a ``PartRegressPlotResult``
         is always returned; it holds the same two elements as the legacy
         ``(fig, coords)`` tuple, so it unpacks and indexes identically.
         Otherwise a bare figure is returned unless
-        ``use_namedtuple=True``.
+        ``result_object=True``.
 
         .. deprecated:: 0.15.0
 
             When ``ret_coords=False``, in release 0.16.0 or after July
             2027, whichever is later, the default will change to return a
             ``PartRegressPlotResult`` rather than a bare figure. Set
-            ``use_namedtuple=True`` to opt in now, or
-            ``use_namedtuple=False`` to silence the warning and keep the
+            ``result_object=True`` to opt in now, or
+            ``result_object=False`` to silence the warning and keep the
             current return type.
     **kwargs
         The keyword arguments passed to plot for the points.
@@ -466,7 +466,7 @@ def plot_partregress(
     Returns
     -------
     PartRegressPlotResult or Figure
-        When ``ret_coords`` is True (or ``use_namedtuple=True``), a
+        When ``ret_coords`` is True (or ``result_object=True``), a
         NamedTuple with fields:
 
         fig : Figure
@@ -510,7 +510,7 @@ def plot_partregress(
     >>> sm.graphics.plot_partregress(endog='murder', exog_i='hs_grad',
     ...                              exog_others=['urban', 'poverty', 'single'],
     ...                              data=crime_data.data, obs_labels=False,
-    ...                              use_namedtuple=True)
+    ...                              result_object=True)
     >>> plt.show()
 
     .. plot:: plots/graphics_regression_partregress.py
@@ -520,7 +520,7 @@ def plot_partregress(
     """
     # NOTE: there is no interaction between possible missing data and
     # obs_labels yet, so this will need to be tweaked a bit for this case
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     label_kwargs = {} if label_kwargs is None else label_kwargs
     title_kwargs = {} if title_kwargs is None else title_kwargs
     fig, ax = utils.create_mpl_ax(ax)
@@ -617,14 +617,14 @@ def plot_partregress(
     # and indexes identically and is adopted with no deprecation.  Only
     # ret_coords=False changes shape, from a bare figure to the two-field
     # NamedTuple, so that is the only path that warns.
-    if use_namedtuple is None and not ret_coords:
+    if result_object is None and not ret_coords:
         warnings.warn(
             "plot_partregress currently returns a bare figure when "
             "ret_coords=False. In release 0.16 or after July 2027, "
             "whichever is later, the default behavior will switch to "
             "always returning a PartRegressPlotResult NamedTuple, which "
-            "also carries the coordinates. Set use_namedtuple=True to "
-            "switch now, or use_namedtuple=False to keep the current "
+            "also carries the coordinates. Set result_object=True to "
+            "switch now, or result_object=False to keep the current "
             "behavior and silence this warning.",
             FutureWarning,
             stacklevel=2,
@@ -632,9 +632,9 @@ def plot_partregress(
     # PartRegressPlotResult has exactly the same length and contents as the
     # legacy (fig, coords) tuple, so it unpacks and indexes identically and
     # is always used when ret_coords=True.  Otherwise a bare figure is
-    # returned, as before; pass use_namedtuple=True to always get a
+    # returned, as before; pass result_object=True to always get a
     # PartRegressPlotResult.
-    if use_namedtuple or ret_coords:
+    if result_object or ret_coords:
         return PartRegressPlotResult(fig, coords)
     return fig
 
@@ -733,7 +733,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
             ax=ax,
             title_kwargs=title_kwargs,
             obs_labels=False,
-            use_namedtuple=False,
+            result_object=False,
         )
         ax.set_title("")
 

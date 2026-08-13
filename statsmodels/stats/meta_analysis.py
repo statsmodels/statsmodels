@@ -6,19 +6,20 @@ License: BSD-3
 
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.tools.validation import float_like
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class HomogeneityTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class HomogeneityTestResult(LimitedIterationMixin[float]):
     """
     Result of :meth:`CombineResults.test_homogeneity`.
 
@@ -35,6 +36,8 @@ class HomogeneityTestResult(NamedTuple):
     distr : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float

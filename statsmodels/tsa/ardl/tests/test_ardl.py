@@ -816,7 +816,7 @@ def test_bounds_test(case):
         5: 6.785325,
     }
     bounds_result = res.bounds_test(case)
-    assert_allclose(bounds_result.stat, expected[case])
+    assert_allclose(bounds_result.statistic, expected[case])
     assert "BoundsTestResult" in str(bounds_result)
 
 
@@ -866,7 +866,7 @@ def test_bounds_test_simulate_order():
     bounds_result = res.bounds_test(3)
     assert "BoundsTestResult" in str(bounds_result)
     bounds_result_sim = res.bounds_test(3, asymptotic=False, nsim=10_000, rng=[1, 2, 3])
-    assert_allclose(bounds_result.stat, bounds_result_sim.stat)
+    assert_allclose(bounds_result.statistic, bounds_result_sim.statistic)
     assert (bounds_result_sim.p_values > bounds_result.p_values).all()
 
 

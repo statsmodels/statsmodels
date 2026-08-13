@@ -9,13 +9,14 @@ License: BSD-3
 """
 
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar, NamedTuple
 
 import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
     _tstat_generic,
@@ -68,8 +69,8 @@ def rankdata_2samp(x1, x2):
     return rank1, rank2, ranki1, ranki2
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ProbSuperiorResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ProbSuperiorResult(LimitedIterationMixin[float]):
     """
     Result of :meth:`RankCompareResult.test_prob_superior`.
 
@@ -86,14 +87,16 @@ class ProbSuperiorResult(NamedTuple):
         Name of the reference distribution used for `pvalue`.
     """
 
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
     statistic: float
     pvalue: float
     df: float | None
     distribution: str
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class TostProbSuperiorResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class TostProbSuperiorResult(LimitedIterationMixin[float]):
     """
     Result of :meth:`RankCompareResult.tost_prob_superior`.
 
@@ -114,6 +117,8 @@ class TostProbSuperiorResult(NamedTuple):
         Descriptive title of the equivalence test.
     """
 
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
     statistic: float
     pvalue: float
     results_larger: ProbSuperiorResult
@@ -121,8 +126,8 @@ class TostProbSuperiorResult(NamedTuple):
     title: str
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class RankCompareResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class RankCompareResult(LimitedIterationMixin[float]):
     """
     Results for rank comparison
 
@@ -178,6 +183,8 @@ class RankCompareResult(NamedTuple):
         Whether the t distribution (True) or normal distribution (False)
         is used for `pvalue` and inference in the instance methods.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -268,7 +275,7 @@ class RankCompareResult(NamedTuple):
         Returns
         -------
         ProbSuperiorResult
-            Namedtuple with the following main attributes
+            Result object with the following main attributes
 
             statistic : float
                 Test statistic for z- or t-test
@@ -325,7 +332,7 @@ class RankCompareResult(NamedTuple):
         Returns
         -------
         TostProbSuperiorResult
-            Namedtuple with the following main attributes
+            Result object with the following main attributes
 
             pvalue : float
                 Pvalue of the equivalence test given by the larger pvalue of

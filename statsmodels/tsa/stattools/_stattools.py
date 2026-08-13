@@ -6,7 +6,7 @@ from statsmodels.compat.python import lzip
 from statsmodels.compat.scipy import _next_regular
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, NamedTuple
+from typing import ClassVar, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -17,6 +17,7 @@ from scipy.signal import correlate
 
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.stats._results_store import ResultsStore
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     InfeasibleTestError,
@@ -36,9 +37,6 @@ from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
 
 ArrayLike1D = np.ndarray | pd.Series | list[float]
 
@@ -176,13 +174,13 @@ def _autolag(
 
 
 @dataclass(frozen=True, slots=True, repr=False)
-class ADFullerResult:
+class ADFullerResult(LimitedIterationMixin[float]):
     """
     Result of :func:`adfuller`.
 
     Parameters
     ----------
-    stat : float
+    statistic : float
         The test statistic.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
@@ -207,7 +205,7 @@ class ADFullerResult:
     using attributes.
     """
 
-    stat: float
+    statistic: float
     pvalue: float
     usedlag: int
     nobs: int
@@ -215,20 +213,7 @@ class ADFullerResult:
     icbest: float | None
     resstore: ResultsStore | None
 
-    def __iter__(self) -> Iterator[float]:
-        yield self.stat
-        yield self.pvalue
-
-    def __getitem__(self, item: int) -> float:
-        if item == 0:
-            return self.stat
-        elif item == 1:
-            return self.pvalue
-        else:
-            raise IndexError(f"Index {item} out of range for ADFullerResult")
-
-    def __len__(self) -> int:
-        return 2
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     def __repr__(self) -> str:
         return f"""\
@@ -318,7 +303,7 @@ def adfuller(
     Otherwise (the deprecated default), a plain tuple whose length depends
     on `store` and `autolag`, made up of a subset of:
 
-    stat : float
+    statistic : float
         The test statistic.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
@@ -785,13 +770,13 @@ class QStatResult(NamedTuple):
 
     Parameters
     ----------
-    stat : ndarray
+    statistic : ndarray
         Ljung-Box Q-statistic for autocorrelation parameters.
     pvalue : ndarray
         P-value of the Q statistic.
     """
 
-    stat: np.ndarray
+    statistic: np.ndarray
     pvalue: np.ndarray
 
 
@@ -812,7 +797,7 @@ def q_stat(x, nobs):
     QStatResult
         A result object with fields:
 
-        qstat : ndarray
+        statistic : ndarray
             Ljung-Box Q-statistic for autocorrelation parameters.
         pvalue : ndarray
             P-value of the Q statistic.
@@ -1050,8 +1035,7 @@ def acf(
 
     qstat_vals = pvalue = None
     if qstat:
-        _qstat_result = q_stat(acf[1:], nobs=nobs)  # drop lag 0
-        qstat_vals, pvalue = _qstat_result.stat, _qstat_result.pvalue
+        qstat_vals, pvalue = q_stat(acf[1:], nobs=nobs)  # drop lag 0
 
     # AcfResult always carries all four fields, matching the legacy tuple's
     # contents only when both qstat and alpha were requested; in that case
@@ -1133,7 +1117,7 @@ def pacf_yw(
         warnings.simplefilter("once", ValueWarning)
         pacf.extend(
             [
-                yule_walker(x, k, method=method, use_namedtuple=False)[0][-1]
+                yule_walker(x, k, method=method, result_object=False)[0][-1]
                 for k in range(1, nlags + 1)
             ]
         )
@@ -2201,13 +2185,13 @@ class BreakvarHeteroskedasticityResult(NamedTuple):
 
     Parameters
     ----------
-    stat : float or ndarray
+    statistic : float or ndarray
         Test statistic(s) H(h).
     pvalue : float or ndarray
         p-value(s) of test statistic(s).
     """
 
-    stat: float | np.ndarray
+    statistic: float | np.ndarray
     pvalue: float | np.ndarray
 
 
@@ -2716,13 +2700,13 @@ def coint(
 
 
 @dataclass(frozen=True, slots=True)
-class DieboldMarianoResult:
+class DieboldMarianoResult(LimitedIterationMixin[float]):
     """
     Result of :func:`diebold_mariano_test`.
 
     Parameters
     ----------
-    stat : float
+    statistic : float
         The Diebold-Mariano test statistic. Asymptotically standard normal
         under the null of equal predictive accuracy, or Student's t with
         ``nobs - 1`` degrees of freedom when the Harvey et al. (1997)
@@ -2743,25 +2727,12 @@ class DieboldMarianoResult:
     available through attribute access.
     """
 
-    stat: float
+    statistic: float
     pvalue: float
     lags: int
     harvey_adj_factor: float | None
 
-    def __iter__(self) -> Iterator[float]:
-        yield self.stat
-        yield self.pvalue
-
-    def __getitem__(self, item: int) -> float:
-        if item == 0:
-            return self.stat
-        elif item == 1:
-            return self.pvalue
-        else:
-            raise IndexError(f"Index {item} out of range for DieboldMarianoResult")
-
-    def __len__(self) -> int:
-        return 2
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
 
 def diebold_mariano_test(
@@ -3013,13 +2984,13 @@ def has_missing(data):
 
 
 @dataclass(frozen=True, slots=True, repr=False)
-class KPSSResult:
+class KPSSResult(LimitedIterationMixin[float]):
     """
     Result of :func:`kpss`.
 
     Parameters
     ----------
-    stat : float
+    statistic : float
         The KPSS test statistic.
     pvalue : float
         The p-value of the test. The p-value is interpolated from Table 1
@@ -3041,26 +3012,13 @@ class KPSSResult:
     through attribute access.
     """
 
-    stat: float
+    statistic: float
     pvalue: float
     lags: int
     crit: dict[str, float]
     resstore: ResultsStore | None
 
-    def __iter__(self) -> Iterator[float]:
-        yield self.stat
-        yield self.pvalue
-
-    def __getitem__(self, item: int) -> float:
-        if item == 0:
-            return self.stat
-        elif item == 1:
-            return self.pvalue
-        else:
-            raise IndexError(f"Index {item} out of range for KPSSResult")
-
-    def __len__(self) -> int:
-        return 2
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     def __repr__(self) -> str:
         return f"""\
@@ -3132,7 +3090,7 @@ def kpss(
 
     Otherwise (the deprecated default), a plain tuple made up of:
 
-    stat : float
+    statistic : float
         The KPSS test statistic.
     pvalue : float
         The p-value of the test. The p-value is interpolated from
@@ -3352,13 +3310,13 @@ def _kpss_autolag(resids, nobs):
 
 
 @dataclass(frozen=True, slots=True, repr=False)
-class RURResult:
+class RURResult(LimitedIterationMixin[float]):
     """
     Result of :func:`range_unit_root_test` when ``result_object=True``.
 
     Parameters
     ----------
-    stat : float
+    statistic : float
         The RUR test statistic.
     pvalue : float
         The p-value of the test. The p-value is interpolated from Table 1
@@ -3378,25 +3336,12 @@ class RURResult:
     using attributes.
     """
 
-    stat: float
+    statistic: float
     pvalue: float
     crit: dict[str, float]
     resstore: ResultsStore | None
 
-    def __iter__(self) -> Iterator[float]:
-        yield self.stat
-        yield self.pvalue
-
-    def __getitem__(self, item: int) -> float:
-        if item == 0:
-            return self.stat
-        elif item == 1:
-            return self.pvalue
-        else:
-            raise IndexError(f"Index {item} out of range for RURResult")
-
-    def __len__(self) -> int:
-        return 2
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     def __repr__(self) -> str:
         return f"""\
@@ -3448,7 +3393,7 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     Otherwise (the deprecated default), a plain tuple whose length depends
     on `store`, made up of a subset of:
 
-    stat : float
+    statistic : float
         The RUR test statistic.
     pvalue : float
         The p-value of the test. The p-value is interpolated from
@@ -3758,7 +3703,7 @@ class ZivotAndrewsUnitRoot:
 
         Parameters
         ----------
-        stat : float
+        statistic : float
             The ZA test statistic
         model : {"c","t","ct"}
             The model used when computing the ZA statistic. "c" is default.
@@ -3932,7 +3877,7 @@ class ZivotAndrewsUnitRoot:
 
         Returns
         -------
-        zastat : float
+        statistic : float
             The test statistic.
         pvalue : float
             The pvalue based on MC-derived critical values.

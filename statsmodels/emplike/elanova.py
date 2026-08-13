@@ -28,7 +28,7 @@ class ANOVAResult(NamedTuple):
 
     Parameters
     ----------
-    llr : float
+    statistic : float
         -2 times the log-likelihood ratio, the test statistic.
     pvalue : float
         The p-value of the test statistic.
@@ -39,7 +39,7 @@ class ANOVAResult(NamedTuple):
         The observation weights that maximize the likelihood.
     """
 
-    llr: float
+    statistic: float
     pvalue: float
     mu: float
     weights: np.ndarray | None
@@ -103,7 +103,7 @@ class ANOVA(_ANOVAOpt):
             self.nobs = self.nobs + len(i)
 
     def compute_ANOVA(
-        self, mu=None, mu_start=0, return_weights=False, *, use_namedtuple=None
+        self, mu=None, mu_start=0, return_weights=False, *, result_object=None
     ):
         """
         Returns -2 log likelihood, the pvalue and the maximum likelihood
@@ -122,7 +122,7 @@ class ANOVA(_ANOVAOpt):
         return_weights : bool
             if TRUE, returns the weights on observations that maximize the
             likelihood.  Default is FALSE.
-        use_namedtuple : bool, optional
+        result_object : bool, optional
             Flag indicating whether to return the results as an
             ``ANOVAResult`` NamedTuple instead of a plain tuple. When
             ``return_weights=True`` the NamedTuple holds the same four
@@ -135,14 +135,14 @@ class ANOVA(_ANOVAOpt):
 
                 In release 0.16.0 or after July 2027, whichever is later, the
                 default will change to always return an ``ANOVAResult``. Set
-                ``use_namedtuple=True`` to opt in now, or
-                ``use_namedtuple=False`` to silence the warning and keep the
+                ``result_object=True`` to opt in now, or
+                ``result_object=False`` to silence the warning and keep the
                 current return type.
 
         Returns
         -------
         ANOVAResult or tuple
-            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            If ``result_object=True`` or ``return_weights=True``, a
             NamedTuple with fields ``llr``, ``pvalue``, ``mu`` and
             ``weights``. See
             :class:`~statsmodels.emplike.elanova.ANOVAResult`.
@@ -150,7 +150,7 @@ class ANOVA(_ANOVAOpt):
             Otherwise (the deprecated default), the plain
             ``(llr, pvalue, mu)`` tuple.
         """
-        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+        result_object = bool_like(result_object, "result_object", optional=True)
         if mu is not None:
             llr = self._opt_common_mu(mu)
             mu_common = mu
@@ -162,18 +162,18 @@ class ANOVA(_ANOVAOpt):
             mu_common = float(np.squeeze(res[0]))
         pval = 1 - chi2.cdf(llr, self.num_groups - 1)
 
-        if use_namedtuple is None and not return_weights:
+        if result_object is None and not return_weights:
             warnings.warn(
                 "ANOVA.compute_ANOVA currently returns a plain tuple whose "
                 "length depends on the return_weights argument. In release "
                 "0.16.0 or after July 2027, whichever is later, the default "
                 "behavior will switch to always returning an ANOVAResult "
-                "NamedTuple. Set use_namedtuple=True to switch now, or "
-                "use_namedtuple=False to keep the current behavior and "
+                "NamedTuple. Set result_object=True to switch now, or "
+                "result_object=False to keep the current behavior and "
                 "silence this warning.",
                 FutureWarning,
                 stacklevel=2,
             )
-        if use_namedtuple or return_weights:
+        if result_object or return_weights:
             return ANOVAResult(llr, pval, mu_common, self.new_weights)
         return llr, pval, mu_common

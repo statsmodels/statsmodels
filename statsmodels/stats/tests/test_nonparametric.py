@@ -341,14 +341,10 @@ def test_brunnermunzel_one_sided():
     x, y = y, x
 
     # Results are compared with R's lawstat package.
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative="smaller")
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative="larger")
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative="larger")
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative="smaller")
+    u1, p1 = rank_compare_2indep(x, y).test_prob_superior(alternative="smaller")
+    u2, p2 = rank_compare_2indep(y, x).test_prob_superior(alternative="larger")
+    u3, p3 = rank_compare_2indep(x, y).test_prob_superior(alternative="larger")
+    u4, p4 = rank_compare_2indep(y, x).test_prob_superior(alternative="smaller")
 
     assert_approx_equal(p1, p2, significant=significant)
     assert_approx_equal(p3, p4, significant=significant)
@@ -374,12 +370,10 @@ def test_brunnermunzel_two_sided():
 
     # Results are compared with R's lawstat package.
     res1 = rank_compare_2indep(x, y)
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        u1, p1 = res1
+    u1, p1 = res1
     t1 = res1.test_prob_superior(alternative="two-sided")
     res2 = rank_compare_2indep(y, x)
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        u2, p2 = res2
+    u2, p2 = res2
     t2 = res2.test_prob_superior(alternative="two-sided")
 
     assert_approx_equal(p1, p2, significant=significant)

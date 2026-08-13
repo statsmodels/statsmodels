@@ -6,12 +6,13 @@ License: BSD-3
 
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.effect_size import (
     NoncentralityChisquareResult,
     _noncentrality_chisquare,
@@ -19,8 +20,8 @@ from statsmodels.stats.effect_size import (
 from statsmodels.tools.sm_exceptions import ModelWarning
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ChisquareBinningResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ChisquareBinningResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_chisquare_binning`.
 
@@ -46,6 +47,8 @@ class ChisquareBinningResult(NamedTuple):
     indices : list of ndarray
         Indices of the original observations included in each bin.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float

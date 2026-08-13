@@ -6,13 +6,14 @@ License: BSD-3
 
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 from scipy import optimize, stats
 
 from statsmodels.stats._inference_tools import _mover_confint
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 
 # shorthand
@@ -46,8 +47,8 @@ method_names_poisson_1samp = {
 }
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class PoissonTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class PoissonTestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_poisson`.
 
@@ -68,6 +69,8 @@ class PoissonTestResult(NamedTuple):
     nobs : array_like
         Total exposure time, same as the `nobs` argument to `test_poisson`.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -110,7 +113,7 @@ def test_poisson(
     Returns
     -------
     PoissonTestResult
-        Namedtuple with test statistic, pvalue and other attributes.
+        Result object with test statistic, pvalue and other attributes.
 
     Notes
     -----
@@ -726,8 +729,8 @@ method_names_poisson_2indep = {
 }
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class PoissonTest2indepResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class PoissonTest2indepResult(LimitedIterationMixin[float]):
     """
     Result of :func:`test_poisson_2indep`.
 
@@ -758,6 +761,8 @@ class PoissonTest2indepResult(NamedTuple):
         the null hypothesis, ``(rate1_cmle, rate2_cmle)``. Only set for
         ``compare="diff"`` and ``method="score"``, otherwise None.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1296,8 +1301,8 @@ def etest_poisson_2indep(
     return stat_sample, pvalue
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class TostPoissonResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class TostPoissonResult(LimitedIterationMixin[float]):
     """
     Result of :func:`tost_poisson_2indep`.
 
@@ -1323,6 +1328,8 @@ class TostPoissonResult(NamedTuple):
     title : str
         Descriptive title of the equivalence test.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1456,8 +1463,8 @@ def tost_poisson_2indep(
     return res
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class NonequivalencePoissonResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class NonequivalencePoissonResult(LimitedIterationMixin[float]):
     """
     Result of :func:`nonequivalence_poisson_2indep`.
 
@@ -1477,6 +1484,8 @@ class NonequivalencePoissonResult(NamedTuple):
     title : str
         Descriptive title of the non-equivalence test.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -1788,8 +1797,8 @@ def confint_poisson_2indep(
     return ci
 
 
-@compat_2tuple_unpack("power")
-class PowerRatioResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class PowerRatioResult(LimitedIterationMixin[float]):
     """
     Result of :func:`power_poisson_ratio_2indep`.
 
@@ -1818,6 +1827,8 @@ class PowerRatioResult(NamedTuple):
     alpha : float
         Significance level used for the power computation.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
 
     power: float
     p_pooled: None
@@ -1892,7 +1903,7 @@ def power_poisson_ratio_2indep(
     PowerRatioResult or float
         If return_results is False, then only the power is returned as a
         float. If return_results is True (default), then a
-        :class:`PowerRatioResult` namedtuple is returned; it behaves like
+        :class:`PowerRatioResult` result object is returned; it behaves like
         the scalar power in numeric comparisons (e.g., ``assert_allclose``),
         while also exposing `std_null`, `std_alt` and other attributes.
 
@@ -1954,8 +1965,8 @@ def power_poisson_ratio_2indep(
     return pow_
 
 
-@compat_2tuple_unpack("power")
-class PowerEquivalenceResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class PowerEquivalenceResult(LimitedIterationMixin[float]):
     """
     Result of :func:`power_equivalence_poisson_2indep` and
     :func:`power_equivalence_neginb_2indep`.
@@ -1988,6 +1999,8 @@ class PowerEquivalenceResult(NamedTuple):
     alpha : float
         Significance level used for the power computation.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
 
     power: float
     power_margins: np.ndarray
@@ -2059,7 +2072,7 @@ def power_equivalence_poisson_2indep(
     PowerEquivalenceResult or float
         If return_results is False (default), then only the power is
         returned as a float. If return_results is True, then a
-        :class:`PowerEquivalenceResult` namedtuple is returned; it behaves
+        :class:`PowerEquivalenceResult` result object is returned; it behaves
         like the scalar power in numeric comparisons (e.g.
         ``assert_allclose``), while also exposing `std_null_low`,
         `std_null_upp`, `std_alt` and other attributes.
@@ -2248,8 +2261,8 @@ def _std_2poisson_power(
     return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
-@compat_2tuple_unpack("power")
-class PowerDiffResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class PowerDiffResult(LimitedIterationMixin[float]):
     """
     Result of :func:`power_poisson_diff_2indep`.
 
@@ -2278,6 +2291,8 @@ class PowerDiffResult(NamedTuple):
     alpha : float
         Significance level used for the power computation.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
 
     power: float
     rates_alt: tuple
@@ -2341,7 +2356,7 @@ def power_poisson_diff_2indep(
     PowerDiffResult or float
         If return_results is False, then only the power is returned as a
         float. If return_results is True (default), then a
-        :class:`PowerDiffResult` namedtuple is returned; it behaves like
+        :class:`PowerDiffResult` result object is returned; it behaves like
         the scalar power in numeric comparisons (e.g., ``assert_allclose``),
         while also exposing `std_null`, `std_alt` and other attributes.
 
@@ -2451,8 +2466,8 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0
     return v * nobs_ratio, r1, r2
 
 
-@compat_2tuple_unpack("power")
-class PowerNegbinRatioResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class PowerNegbinRatioResult(LimitedIterationMixin[float]):
     """
     Result of :func:`power_negbin_ratio_2indep`.
 
@@ -2479,6 +2494,8 @@ class PowerNegbinRatioResult(NamedTuple):
     alpha : float
         Significance level used for the power computation.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
 
     power: float
     std_null: float
@@ -2550,7 +2567,7 @@ def power_negbin_ratio_2indep(
     PowerNegbinRatioResult or float
         If return_results is False, then only the power is returned as a
         float. If return_results is True (default), then a
-        :class:`PowerNegbinRatioResult` namedtuple is returned; it behaves
+        :class:`PowerNegbinRatioResult` result object is returned; it behaves
         like the scalar power in numeric comparisons (e.g.
         ``assert_allclose``), while also exposing `std_null`, `std_alt`
         and other attributes.
@@ -2678,7 +2695,7 @@ def power_equivalence_neginb_2indep(
     PowerEquivalenceResult or float
         If return_results is False, then only the power is returned as a
         float. If return_results is True (default), then a
-        :class:`PowerEquivalenceResult` namedtuple is returned; it behaves
+        :class:`PowerEquivalenceResult` result object is returned; it behaves
         like the scalar power in numeric comparisons (e.g.
         ``assert_allclose``), while also exposing `std_null_low`,
         `std_null_upp`, `std_alt` and other attributes.

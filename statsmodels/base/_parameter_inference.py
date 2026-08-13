@@ -4,16 +4,17 @@ Created on Wed May 30 15:11:09 2018
 @author: josef
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ScoreTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ScoreTestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`_lm_robust` and :func:`score_test`.
 
@@ -32,6 +33,8 @@ class ScoreTestResult(NamedTuple):
         number of constraints. Only set for the joint hypothesis test
         (``distribution="chi2"``), otherwise None.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
