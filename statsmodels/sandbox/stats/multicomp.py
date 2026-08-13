@@ -622,20 +622,45 @@ class TukeyHSDResults:
 
     Attributes
     ----------
-    reject : array of boolean, True if we reject Null for group pair
-    meandiffs : pairwise mean differences
-    confint : confidence interval for pairwise mean differences
-    std_pairs : standard deviation of pairwise mean differences
-    q_crit : critical value of studentized range statistic at given alpha
-    halfwidths : half widths of simultaneous confidence interval
-    pvalues : adjusted p-values from the HSD test
+    reject : ndarray
+        Boolean array indicating whether the null hypothesis is rejected for
+        each group pair.
+    meandiffs : ndarray
+        Pairwise mean differences.
+    confint : ndarray
+        Confidence intervals for the pairwise mean differences.
+    std_pairs : ndarray
+        Standard deviations of the pairwise mean differences.
+    q_crit : float or ndarray
+        Critical value or values of the studentized range statistic at the
+        specified significance level.
+    halfwidths : ndarray
+        Half widths of the simultaneous confidence intervals. This attribute
+        is available after calling `plot_simultaneous`.
+    pvalues : ndarray
+        Adjusted p-values from the HSD test.
+    reject2 : ndarray
+        Alternative boolean rejection decisions based on the confidence
+        intervals.
+    df_total : float or ndarray
+        Total degrees of freedom used for each pairwise comparison.
+    df_total_hsd : float
+        Total degrees of freedom used for the HSD critical value.
+    variance : float or ndarray
+        Variance estimate or estimates used in the pairwise comparisons.
+    alpha : float
+        Significance level used for the test.
+    group_t : ndarray
+        Treatment group label for each pairwise comparison.
+    group_c : ndarray
+        Control group label for each pairwise comparison.
+    data : ndarray
+        Original response data from the `MultiComparison` instance.
+    groups : ndarray
+        Original group labels from the `MultiComparison` instance.
+    groupsunique : ndarray
+        Unique group labels from the `MultiComparison` instance.
 
-    Notes
-    -----
-    halfwidths is only available after call to `plot_simultaneous`.
-
-    Other attributes contain information about the data from the
-    MultiComparison instance: data, df_total, groups, groupsunique, variance.
     """
 
     def __init__(
