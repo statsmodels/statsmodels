@@ -169,10 +169,14 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         adjusted. When `use_t` is also True, then pvalues are
         computed using the Student's t distribution using the
         corrected values. These may differ substantially from
-        p-values based on the normal is the number of groups is
+        p-values based on the normal if the number of groups is
         small.
         If False, then `df_resid` of the results instance is not
         adjusted.
+
+      Currently only supported for linear regression models (OLS, WLS)
+      that expose `wexog`/`wendog`; not available for GLM or discrete
+      models.
 
     - 'cluster-jk': clustered covariance estimator via the cluster-jk
 
@@ -195,10 +199,14 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         adjusted. When `use_t` is also True, then pvalues are
         computed using the Student's t distribution using the
         corrected values. These may differ substantially from
-        p-values based on the normal is the number of groups is
+        p-values based on the normal if the number of groups is
         small.
         If False, then `df_resid` of the results instance is not
         adjusted.
+
+      Currently only supported for linear regression models (OLS, WLS)
+      that expose `wexog`/`wendog`; not available for GLM or discrete
+      models.
 
     - 'hac-groupsum': Driscoll and Kraay, heteroscedasticity and
       autocorrelation robust covariance for panel data
@@ -283,7 +291,9 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
     res.use_t = use_t
 
     adjust_df = False
-    if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
+    if cov_type.lower() in [
+        "cluster", "cluster-crv3", "cluster-jk", "hac-panel", "hac-groupsum"
+    ]:
         df_correction = kwds.get("df_correction", None)
         # TODO: check also use_correction, do I need all combinations?
 
@@ -327,11 +337,14 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
             weights_func=weights_func,
             use_correction=use_correction,
         )
-    elif cov_type.lower() == "cluster":
+    elif cov_type.lower() in ("cluster", "cluster-crv3", "cluster-jk"):
         # cluster robust standard errors, one- or two-way
+
+        crv_type = cov_type.lower()
 
         groups = kwds["groups"]
         if not hasattr(groups, "shape"):
+            groups = [np.squeeze(np.asarray(group)) for group in groups]
             groups = np.asarray(groups).T
         if groups.ndim >= 2:
             groups = groups.squeeze()
@@ -345,7 +358,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
                 self.n_groups = n_groups = len(np.unique(groups))
             res.cov_params_default = sw.cov_cluster(
-                self, groups, use_correction=use_correction
+                self, groups, use_correction=use_correction, crv_type=crv_type
             )
         elif groups.ndim == 2:
             if hasattr(groups, "values"):
@@ -361,11 +374,11 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
             # Note: sw.cov_cluster_2groups has 3 returns
 
             res.cov_params_default = sw.cov_cluster_2groups(
-                self, groups, use_correction=use_correction
+                self, groups, use_correction=use_correction, crv_type=crv_type
             )[0]
         else:
             raise ValueError("only two groups are supported")
-        res.cov_kwds["description"] = descriptions["cluster"]
+        res.cov_kwds["description"] = descriptions[crv_type]
     elif cov_type.lower() == "hac-panel":
         # cluster robust standard errors
 

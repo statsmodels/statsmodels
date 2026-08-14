@@ -421,7 +421,7 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
-def _cluster_jackknife(results, group, center):
+def _cluster_jackknife(results, group, center, hessian_inv):
 
     '''
     Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife.
@@ -432,58 +432,86 @@ def _cluster_jackknife(results, group, center):
     Parameters
     ----------
     results : result instance
-        need to contain regression results, uses ...
-    group : pd.Series
-        pd.Series containing the clustering variable
-    center: str
+        need to contain regression results, uses results.model.wexog,
+        results.model.wendog and results.params
+    group : ndarray
+        Integer-valued index of clusters or groups, one entry per
+        observation, already recoded to a dense range so that
+        ``np.unique(group)`` visits every cluster.
+    center : str
         character specifying how to center the coefficients from all jacknife samples
-        (each dropping one observational unit/cluster). By default the coefficients are
+        (each dropping one cluster). By default the coefficients are
         centered by the original full-sample "estimate", or alternatively by their
         "mean" across the sample.
+    hessian_inv : ndarray (k_vars, k_vars)
+        Inverse of the full-sample ``X'X`` (e.g. ``results.normalized_cov_params``),
+        reused instead of recomputing ``X'X`` from scratch.
 
     Returns
     -------
     H : ndarray (k_vars, k_vars)
         cluster jackknife estimate of a robust covariance matrix for the parameter estimates
     '''
+    model = results.model
+    if not hasattr(model, "wexog") or not hasattr(model, "wendog"):
+        raise TypeError(
+            "crv_type='cluster-crv3'/'cluster-jk' require a linear "
+            "regression model (e.g. OLS or WLS) exposing `wexog`/`wendog`; "
+            f"got a {type(model).__name__} model instance."
+        )
 
-    X = results.model.wexog
-    Y = results.model.wendog
+    X = np.asarray(model.wexog)
+    Y = np.asarray(model.wendog)
+    group = np.asarray(group)
 
     k_params = X.shape[1]
 
-    # inverse hessian precomputed?
-    tXX = np.transpose(X) @ X
+    tXX = np.linalg.inv(hessian_inv)
     tXy = np.transpose(X) @ Y
-    beta_hat = results.params
+    beta_hat = np.asarray(results.params)
 
     clusters = np.unique(group)
     n_groups = len(clusters)
 
     beta_jack = np.zeros((n_groups, k_params))
 
-    # compute leave-one-out regression coefficients (aka clusterjacks')
+    # compute leave-one-cluster-out regression coefficients (aka
+    # clusterjacks'), masking each cluster by its own label, not by the
+    # position of that label in `clusters`
     for ixg, g in enumerate(clusters):
 
-        Xg = X[np.equal(ixg, group)]
-        Yg = Y[np.equal(ixg, group)]
+        mask = group == g
+        Xg = X[mask]
+        Yg = Y[mask]
         tXgXg = np.transpose(Xg) @ Xg
-        # jackknife regression coefficient
-        beta_jack[ixg,:] = (
-            np.linalg.pinv(tXX - tXgXg) @ (tXy - np.transpose(Xg) @ Yg)
-        ).flatten()
-
+        design_g = tXX - tXgXg
+        rhs_g = tXy - np.transpose(Xg) @ Yg
+        # Use an explicit (tolerance-based) rank check rather than relying
+        # on np.linalg.solve to raise on singular input: design_g is a
+        # difference of two independently-rounded sums, so a structurally
+        # singular case (e.g. a column that is constant within cluster g)
+        # generally shows up as *near*-zero pivots rather than an exact
+        # zero, which LU-based solve can silently push through.
+        if np.linalg.matrix_rank(design_g) < k_params:
+            g_display = g.item() if hasattr(g, "item") else g
+            raise ValueError(
+                "Cannot compute the cluster jackknife/CRV3 covariance: "
+                f"removing cluster {g_display!r} leaves a rank-deficient design "
+                "matrix. This typically happens when a regressor (e.g. a "
+                "fixed effect) is constant within, or perfectly collinear "
+                "across, individual clusters, so the leave-one-cluster-out "
+                "estimate is not identified for that cluster."
+            )
+        beta_jack[ixg, :] = np.linalg.solve(design_g, rhs_g).flatten()
 
     # optional: beta_bar in MNW (2022)
     if center == 'estimate':
         beta_center = beta_hat
     else:
-        beta_center = np.mean(beta_jack, axis = 0)
+        beta_center = np.mean(beta_jack, axis=0)
 
-    H = np.zeros((k_params, k_params))
-    for ixg, g in enumerate(clusters):
-        beta_centered = beta_jack[ixg,:] - beta_center
-        H += np.outer(beta_centered, beta_centered)
+    beta_centered = beta_jack - beta_center
+    H = beta_centered.T @ beta_centered
 
     return H
 
@@ -720,6 +748,12 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
     same result as Stata in UCLA example and same as Peterson
 
     """
+    if crv_type not in ("cluster", "cluster-crv3", "cluster-jk"):
+        raise ValueError(
+            "crv_type must be one of 'cluster', 'cluster-crv3' or "
+            f"'cluster-jk', got {crv_type!r}"
+        )
+
     # TODO: currently used version of groupsums requires 2d resid
     xu, hessian_inv = _get_sandwich_arrays(results, cov_type="clu")
 
@@ -741,6 +775,11 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
                     ((nobs-1.) / float(nobs - k_params)))
 
     else:
+        if n_groups < 2:
+            raise ValueError(
+                f"crv_type={crv_type!r} requires at least 2 clusters, "
+                f"found {n_groups}."
+            )
 
         if crv_type == 'cluster-crv3':
             center = 'estimate'
@@ -748,7 +787,7 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
         else:
             center = 'mean'
 
-        cov_c = _cluster_jackknife(results, group, center)
+        cov_c = _cluster_jackknife(results, group, center, hessian_inv)
 
         if use_correction:
             cov_c *= (n_groups -1.) / n_groups
@@ -795,6 +834,17 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_ty
 
     verified against Peterson's table, (4 decimal print precision)
     """
+    if crv_type != "cluster":
+        raise NotImplementedError(
+            "Two-way clustering is only supported for crv_type='cluster' "
+            f"(CRV1); got crv_type={crv_type!r}. The additive two-way "
+            "combination cov0 + cov1 - cov01 (Cameron, Gelbach and Miller, "
+            "2011) is only valid for the CRV1 sandwich estimator -- "
+            "applying it to the CRV3/cluster-jackknife estimator does not "
+            "generally produce a positive semi-definite covariance matrix. "
+            "Use one-way clustering (a single `groups` array) with "
+            "crv_type='cluster-crv3' or 'cluster-jk'."
+        )
 
     if group2 is None:
         if group.ndim != 2 or group.shape[1] != 2:

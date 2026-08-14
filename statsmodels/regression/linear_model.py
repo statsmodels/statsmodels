@@ -2669,7 +2669,7 @@ class RegressionResults(base.LikelihoodModelResults):
             adjusted. When `use_t` is also True, then pvalues are
             computed using the Student's t distribution using the
             corrected values. These may differ substantially from
-            p-values based on the normal is the number of groups is
+            p-values based on the normal if the number of groups is
             small.
             If False, then `df_resid` of the results instance is not
             adjusted.
@@ -2696,7 +2696,7 @@ class RegressionResults(base.LikelihoodModelResults):
             adjusted. When `use_t` is also True, then pvalues are
             computed using the Student's t distribution using the
             corrected values. These may differ substantially from
-            p-values based on the normal is the number of groups is
+            p-values based on the normal if the number of groups is
             small.
             If False, then `df_resid` of the results instance is not
             adjusted.
@@ -2805,7 +2805,9 @@ class RegressionResults(base.LikelihoodModelResults):
         res.use_t = use_t
 
         adjust_df = False
-        if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
+        if cov_type.lower() in [
+            "cluster", "cluster-crv3", "cluster-jk", "hac-panel", "hac-groupsum"
+        ]:
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
             if df_correction is not False:  # i.e., in [None, True]:
@@ -2858,6 +2860,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
             groups = kwargs['groups']
             if not hasattr(groups, 'shape'):
+                groups = [np.squeeze(np.asarray(group)) for group in groups]
                 groups = np.asarray(groups).T
 
             if groups.ndim >= 2:
@@ -2891,7 +2894,7 @@ class RegressionResults(base.LikelihoodModelResults):
                     self, groups, use_correction=use_correction, crv_type = crv_type)[0]
             else:
                 raise ValueError("only two groups are supported")
-            res.cov_kwds["description"] = descriptions["cluster"]
+            res.cov_kwds["description"] = descriptions[crv_type]
 
         elif cov_type.lower() == "hac-panel":
             # cluster robust standard errors
