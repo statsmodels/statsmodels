@@ -311,8 +311,8 @@ _gee_fit_doc = """
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
         is the total sample size.  If `ddof_scale` is None, the
-        number of covariates (including an intercept if present)
-        is used.
+        rank of the design matrix is used, so that `N - ddof_scale`
+        is `df_resid`.
     scaling_factor : float, optional
         The estimated covariance of the parameter estimates is
         scaled by this value.  Default is 1, Stata uses N / (N - g),
@@ -679,9 +679,11 @@ class GEE(GLM):
         # Total sample size
         group_ns = [len(y) for y in self.endog_li]
         self.nobs = sum(group_ns)
-        # The following are column based, not on rank see #1928
-        self.df_model = self.exog.shape[1] - 1  # assumes constant
-        self.df_resid = self.nobs - self.exog.shape[1]
+        # Rank based, matching the other models, so that a singular design
+        # cannot give a negative df_resid or a negative scale, see #1928
+        rank = np.linalg.matrix_rank(self.exog)
+        self.df_model = rank - 1  # assumes constant
+        self.df_resid = self.nobs - rank
 
         # Skip the covariance updates if all groups have a single
         # observation (reduces to fitting a GLM).
@@ -917,7 +919,7 @@ class GEE(GLM):
             return None
 
         if not hasattr(self, "ddof_scale"):
-            self.ddof_scale = self.exog.shape[1]
+            self.ddof_scale = self.nobs - self.df_resid
 
         if not hasattr(self, "scaling_factor"):
             self.scaling_factor = 1
@@ -1312,7 +1314,7 @@ class GEE(GLM):
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
         if ddof_scale is None:
-            self.ddof_scale = self.exog.shape[1]
+            self.ddof_scale = self.nobs - self.df_resid
         else:
             if not ddof_scale >= 0:
                 raise ValueError("ddof_scale must be a non-negative number or None")
@@ -1563,7 +1565,7 @@ class GEE(GLM):
         ddof_scale : int, optional
             Value to subtract from `nobs` when calculating the
             denominator degrees of freedom for t-statistics, defaults
-            to the number of columns in `exog`.
+            to the rank of `exog`.
         update_assoc : int, optional
             The dependence parameters are updated every `update_assoc`
             iterations of the mean structure parameter updates.
@@ -1611,7 +1613,7 @@ class GEE(GLM):
         # Subtract this number from the total sample size when
         # normalizing the scale parameter estimate.
         if ddof_scale is None:
-            self.ddof_scale = self.exog.shape[1]
+            self.ddof_scale = self.nobs - self.df_resid
         else:
             if not ddof_scale >= 0:
                 raise ValueError("ddof_scale must be a non-negative number or None")
