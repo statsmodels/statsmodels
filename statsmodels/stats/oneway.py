@@ -256,10 +256,10 @@ class FstatEffectSizeResult(NamedTuple):
     eps2 : array_like
         Squared epsilon effect size, computed as
         ``(f2 - df1 / df2) / (f2 + 1)``.
-    eps2_ : array_like
+    eps2_alt : array_like
         Squared epsilon effect size, computed with the alternative
         expression ``(f_stat - 1) / (f_stat + df2 / df1)``.
-    omega2_ : array_like
+    omega2_alt : array_like
         Squared omega effect size, computed with the alternative
         expression ``(f_stat - 1) / (f_stat + (df2 + 1) / df1)``.
     """
@@ -268,8 +268,8 @@ class FstatEffectSizeResult(NamedTuple):
     eta2: np.ndarray
     omega2: np.ndarray
     eps2: np.ndarray
-    eps2_: np.ndarray
-    omega2_: np.ndarray
+    eps2_alt: np.ndarray
+    omega2_alt: np.ndarray
 
 
 def _fstat2effectsize(f_stat, df):
@@ -316,12 +316,17 @@ def _fstat2effectsize(f_stat, df):
     df1, df2 = df
     f2 = f_stat * df1 / df2
     eta2 = f2 / (f2 + 1)
-    omega2_ = (f_stat - 1) / (f_stat + (df2 + 1) / df1)
+    omega2_alt = (f_stat - 1) / (f_stat + (df2 + 1) / df1)
     omega2 = (f2 - df1 / df2) / (f2 + 1 + 1 / df2)  # rewrite
-    eps2_ = (f_stat - 1) / (f_stat + df2 / df1)
+    eps2_alt = (f_stat - 1) / (f_stat + df2 / df1)
     eps2 = (f2 - df1 / df2) / (f2 + 1)  # rewrite
     return FstatEffectSizeResult(
-        f2=f2, eta2=eta2, omega2=omega2, eps2=eps2, eps2_=eps2_, omega2_=omega2_
+        f2=f2,
+        eta2=eta2,
+        omega2=omega2,
+        eps2=eps2,
+        eps2_alt=eps2_alt,
+        omega2_alt=omega2_alt,
     )
 
 
@@ -560,7 +565,7 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     return ci_res
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class AnovaResult(LimitedIterationMixin[float]):
     """
     Result of :func:`anova_generic` and :func:`anova_oneway`.
@@ -580,7 +585,7 @@ class AnovaResult(LimitedIterationMixin[float]):
         Numerator degrees of freedom.
     df_denom : float
         Denominator degrees of freedom used for `pvalue`.
-    nobs_t : float
+    nobs_total : float
         Total number of observations across all samples.
     n_groups : int
         Number of samples being compared.
@@ -617,7 +622,7 @@ class AnovaResult(LimitedIterationMixin[float]):
     df: tuple
     df_num: float
     df_denom: float
-    nobs_t: float
+    nobs_total: float
     n_groups: int
     means: np.ndarray
     nobs: np.ndarray
@@ -726,7 +731,7 @@ def anova_generic(
         df=(df_num, df_denom),
         df_num=df_num,
         df_denom=df_denom,
-        nobs_t=nobs_t,
+        nobs_total=nobs_t,
         n_groups=n_groups,
         means=means,
         nobs=nobs,
@@ -1115,7 +1120,7 @@ def equivalence_oneway(
     res = equivalence_oneway_generic(
         f_stat,
         res0.n_groups,
-        res0.nobs_t,
+        res0.nobs_total,
         equiv_margin,
         res0.df,
         alpha=0.05,
@@ -1379,54 +1384,22 @@ def simulate_power_equivalence_oneway(
     return res
 
 
-@dataclass(frozen=True, slots=True)
-class ScaleAnovaResult(LimitedIterationMixin[float]):
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ScaleAnovaResult(AnovaResult):
     """
     Result of :func:`test_scale_oneway`.
 
-    Has the same attributes as :class:`AnovaResult`, computed on the
-    transformed data, plus `data_transformed`.
+    Extends :class:`AnovaResult`, computed on the transformed data, with
+    one additional field.
 
     Parameters
     ----------
-    statistic : float
-        Test statistic for k-sample mean comparison which is approximately
-        F-distributed.
-    pvalue : float
-        If ``method="bf"``, then the p-value is based on corrected degrees
-        of freedom following Mehrotra 1997.
-    df : tuple
-        Degrees of freedom ``(df_num, df_denom)`` for the F-distribution
-        used for `pvalue`.
-    df_num : float
-        Numerator degrees of freedom.
-    df_denom : float
-        Denominator degrees of freedom used for `pvalue`.
-    nobs_t : float
-        Total number of observations across all samples.
-    n_groups : int
-        Number of samples being compared.
-    means : ndarray
-        Mean of each sample of the transformed data.
-    nobs : ndarray
-        Number of observations in each sample.
-    vars_ : ndarray
-        Residual (within) variance of each sample of the transformed data.
-    use_var : {"unequal", "equal", "bf"}
-        The `method` option that was used to compute the test.
-    welch_correction : bool
-        Whether the Welch correction was included in the test statistic.
     data_transformed : list of ndarray
         The centered and transformed data used to compute the test.
-    df2 : tuple or None
-        Degrees of freedom ``(df_num2, df_denom)`` for the Brown-Forsythe
-        1974 p-value. Only set if ``method="bf"``, otherwise None.
-    df_num2 : float or None
-        Numerator degrees of freedom for the Brown-Forsythe 1974 p-value.
-        Only set if ``method="bf"``, otherwise None.
-    pvalue2 : float or None
-        p-value based on degrees of freedom as in Brown-Forsythe 1974.
-        Only set if ``method="bf"``, otherwise None.
+
+    See Also
+    --------
+    AnovaResult
 
     Notes
     -----
@@ -1434,24 +1407,7 @@ class ScaleAnovaResult(LimitedIterationMixin[float]):
     accessible using attributes.
     """
 
-    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
-
-    statistic: float
-    pvalue: float
-    df: tuple
-    df_num: float
-    df_denom: float
-    nobs_t: float
-    n_groups: int
-    means: np.ndarray
-    nobs: np.ndarray
-    vars_: np.ndarray
-    use_var: str
-    welch_correction: bool
     data_transformed: list
-    df2: tuple | None = None
-    df_num2: float | None = None
-    pvalue2: float | None = None
 
 
 def test_scale_oneway(

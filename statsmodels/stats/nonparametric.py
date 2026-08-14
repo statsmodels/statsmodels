@@ -165,12 +165,12 @@ class RankCompareResult(LimitedIterationMixin[float]):
         Estimated variance of `statistic`.
     var_prob : float
         Estimated variance of `prob1` (and `prob2`).
-    nobs1 : int
+    nobs_1 : int
         Number of observations in sample 1.
-    nobs2 : int
+    nobs_2 : int
         Number of observations in sample 2.
     nobs : int
-        Total number of observations, ``nobs1 + nobs2``.
+        Total number of observations, ``nobs_1 + nobs_2``.
     mean1 : float
         Mean rank of sample 1 in the pooled sample.
     mean2 : float
@@ -209,8 +209,8 @@ class RankCompareResult(LimitedIterationMixin[float]):
     var2: float
     var: float
     var_prob: float
-    nobs1: int
-    nobs2: int
+    nobs_1: int
+    nobs_2: int
     nobs: int
     mean1: float
     mean2: float
@@ -650,7 +650,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     return RankCompareResult(statistic=wbfn, pvalue=pvalue, s1=S1, s2=S2,
                              var1=var1, var2=var2, var=var,
                              var_prob=var_prob,
-                             nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                             nobs_1=nobs1, nobs_2=nobs2, nobs=nobs,
                              mean1=meanr1, mean2=meanr2,
                              prob1=prob1, prob2=prob2,
                              somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
@@ -732,7 +732,7 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     res = RankCompareResult(statistic=None, pvalue=None, s1=None, s2=None,
                             var1=var1, var2=var2, var=var,
                             var_prob=var_prob,
-                            nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                            nobs_1=nobs1, nobs_2=nobs2, nobs=nobs,
                             mean1=None, mean2=None,
                             prob1=prob1, prob2=prob2,
                             somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
@@ -760,7 +760,7 @@ class JonckheereTerpstraResult(NamedTuple):
         The alternative hypothesis that was tested.
     nobs : int
         Total number of observations across all samples.
-    k_groups : int
+    n_groups : int
         Number of samples, i.e., the number of ordered groups.
     counts : ndarray
         Number of observations in each sample.
@@ -782,7 +782,7 @@ class JonckheereTerpstraResult(NamedTuple):
     distribution: str
     alternative: str
     nobs: int
-    k_groups: int
+    n_groups: int
     counts: np.ndarray
     mean_null: float
     var_null: float
@@ -960,7 +960,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
         distribution="normal",
         alternative=alternative,
         nobs=nobs,
-        k_groups=n_groups,
+        n_groups=n_groups,
         counts=counts,
         mean_null=mean_null,
         var_null=var_s / 4.0,
@@ -1050,9 +1050,9 @@ class RankPlacementsResult(NamedTuple):
 
     Parameters
     ----------
-    n_1 : int
+    nobs_1 : int
         Number of observations in the first sample.
-    n_2 : int
+    nobs_2 : int
         Number of observations in the second sample.
     overall_ranks_pooled : ndarray
         Ranks of the pooled sample.
@@ -1070,8 +1070,8 @@ class RankPlacementsResult(NamedTuple):
         Placements of the second sample in the pooled sample.
     """
 
-    n_1: int
-    n_2: int
+    nobs_1: int
+    nobs_2: int
     overall_ranks_pooled: np.ndarray
     overall_ranks_1: np.ndarray
     overall_ranks_2: np.ndarray
@@ -1115,15 +1115,15 @@ def _compute_rank_placements(x1, x2) -> RankPlacementsResult:
     thought of as measures of the degree of overlap or
     separation between two samples.
     """
-    n_1 = len(x1)
-    n_2 = len(x2)
+    nobs_1 = len(x1)
+    nobs_2 = len(x2)
 
     # Overall ranks for each obs among combined sample
     overall_ranks_pooled = rankdata(
         np.r_[x1, x2], method="average"
     )
-    overall_ranks_1 = overall_ranks_pooled[:n_1]
-    overall_ranks_2 = overall_ranks_pooled[n_1:]
+    overall_ranks_1 = overall_ranks_pooled[:nobs_1]
+    overall_ranks_2 = overall_ranks_pooled[nobs_1:]
     # Within group ranks for each obs
     within_group_ranks_1 = rankdata(x1, method="average")
     within_group_ranks_2 = rankdata(x2, method="average")
@@ -1132,8 +1132,8 @@ def _compute_rank_placements(x1, x2) -> RankPlacementsResult:
     placements_2 = overall_ranks_2 - within_group_ranks_2
 
     return RankPlacementsResult(
-        n_1=n_1,
-        n_2=n_2,
+        nobs_1=nobs_1,
+        nobs_2=nobs_2,
         overall_ranks_pooled=overall_ranks_pooled,
         overall_ranks_1=overall_ranks_1,
         overall_ranks_2=overall_ranks_2,
@@ -1313,8 +1313,8 @@ def samplesize_rank_compare_onetail(
         reference_sample,
     )
     # Extra few bytes of name binding for explicitness & readability
-    n_syn = rank_place.n_1
-    n_ref = rank_place.n_2
+    n_syn = rank_place.nobs_1
+    n_ref = rank_place.nobs_2
     overall_ranks_pooled = rank_place.overall_ranks_pooled
     placements_syn = rank_place.placements_1
     placements_ref = rank_place.placements_2

@@ -1325,7 +1325,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         References
         ----------
         .. [Harvey1989] Harvey, Andrew C. 1989. Forecasting, Structural Time Series Models
-        and the Kalman Filter. Cambridge University Press.
+           and the Kalman Filter. Cambridge University Press.
         """
         params = np.array(params, ndmin=1)
 

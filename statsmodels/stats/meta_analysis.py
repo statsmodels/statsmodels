@@ -33,7 +33,7 @@ class HomogeneityTestResult(LimitedIterationMixin[float]):
     df : float
         Degrees of freedom, equal to the number of studies or samples
         minus 1.
-    distr : str
+    distribution : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
 
     Notes
@@ -47,7 +47,7 @@ class HomogeneityTestResult(LimitedIterationMixin[float]):
     statistic: float
     pvalue: float
     df: float
-    distr: str
+    distribution: str
 
 
 class CombineResults:
@@ -227,7 +227,7 @@ class CombineResults:
         """
         pvalue = stats.chi2.sf(self.q, self.k - 1)
         res = HomogeneityTestResult(
-            statistic=self.q, pvalue=pvalue, df=self.k - 1, distr="chi2"
+            statistic=self.q, pvalue=pvalue, df=self.k - 1, distribution="chi2"
         )
         return res
 

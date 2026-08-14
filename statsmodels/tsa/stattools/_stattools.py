@@ -2540,7 +2540,7 @@ class CointResult(NamedTuple):
     pvalue : float
         MacKinnon's approximate, asymptotic p-value based on MacKinnon
         (1994).
-    crit_value : ndarray
+    critical_values : ndarray
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels based on regression curve. This depends on the number of
         observations.
@@ -2548,7 +2548,7 @@ class CointResult(NamedTuple):
 
     coint_t: float
     pvalue: float
-    crit_value: np.ndarray
+    critical_values: np.ndarray
 
 
 def coint(
@@ -2616,7 +2616,7 @@ def coint(
         pvalue : float
             MacKinnon's approximate, asymptotic p-value based on MacKinnon
             (1994).
-        crit_value : ndarray
+        critical_values : ndarray
             Critical values for the test statistic at the 1 %, 5 %, and
             10 % levels based on regression curve. This depends on the
             number of observations.

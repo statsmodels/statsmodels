@@ -1817,10 +1817,10 @@ def confint_poisson_2indep(
     return ci
 
 
-@dataclass(frozen=True, slots=True)
-class PowerRatioResult(LimitedIterationMixin[float]):
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PowerResult(LimitedIterationMixin[float]):
     """
-    Result of :func:`power_poisson_ratio_2indep`.
+    Common base for the power-computation result classes in this module.
 
     Behaves like the scalar `power` when converted to an array, e.g., with
     ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
@@ -1830,20 +1830,15 @@ class PowerRatioResult(LimitedIterationMixin[float]):
     ----------
     power : float
         Power of the test.
-    p_pooled : None
-        Not currently computed, reserved for future use.
-    std_null : float
-        Standard error of the test statistic under the null hypothesis
-        (without ``sqrt(nobs1)``).
     std_alt : float
         Standard error of the test statistic under the alternative
-        hypothesis (without ``sqrt(nobs1)``).
-    nobs1 : float or int
+        hypothesis (without ``sqrt(nobs_1)``).
+    nobs_1 : float or int
         Number of observations in sample 1.
-    nobs2 : float or int
+    nobs_2 : float or int
         Number of observations in sample 2.
     nobs_ratio : float
-        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+        Sample size ratio, ``nobs_2 = nobs_ratio * nobs_1``.
     alpha : float
         Significance level used for the power computation.
 
@@ -1856,16 +1851,56 @@ class PowerRatioResult(LimitedIterationMixin[float]):
     _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
 
     power: float
-    p_pooled: None
-    std_null: float
     std_alt: float
-    nobs1: float
-    nobs2: float
+    nobs_1: float
+    nobs_2: float
     nobs_ratio: float
     alpha: float
 
     def __array__(self, dtype=None, copy=None):
         return np.asarray(self.power, dtype=dtype)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PowerRatioResult(PowerResult):
+    """
+    Result of :func:`power_poisson_ratio_2indep`.
+
+    Extends :class:`PowerResult` with `p_pooled` and `std_null`.
+
+    Parameters
+    ----------
+    power : float
+        Power of the test.
+    p_pooled : float or None
+        Not currently computed, reserved for future use.
+    std_null : float
+        Standard error of the test statistic under the null hypothesis
+        (without ``sqrt(nobs_1)``).
+    std_alt : float
+        Standard error of the test statistic under the alternative
+        hypothesis (without ``sqrt(nobs_1)``).
+    nobs_1 : float or int
+        Number of observations in sample 1.
+    nobs_2 : float or int
+        Number of observations in sample 2.
+    nobs_ratio : float
+        Sample size ratio, ``nobs_2 = nobs_ratio * nobs_1``.
+    alpha : float
+        Significance level used for the power computation.
+
+    See Also
+    --------
+    PowerResult
+
+    Notes
+    -----
+    Unpacks as a length-1 sequence, ``(power,) = result``. Other values are
+    only accessible using attributes.
+    """
+
+    p_pooled: float | None
+    std_null: float
 
 
 def power_poisson_ratio_2indep(
@@ -1980,8 +2015,8 @@ def power_poisson_ratio_2indep(
             p_pooled=p_pooled,
             std_null=std_null,
             std_alt=std_alt,
-            nobs1=nobs1,
-            nobs2=nobs2,
+            nobs_1=nobs1,
+            nobs_2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
         )
@@ -1990,15 +2025,14 @@ def power_poisson_ratio_2indep(
     return pow_
 
 
-@dataclass(frozen=True, slots=True)
-class PowerEquivalenceResult(LimitedIterationMixin[float]):
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PowerEquivalenceResult(PowerResult):
     """
     Result of :func:`power_equivalence_poisson_2indep` and
     :func:`power_equivalence_neginb_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g., with
-    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
-    be compared directly against a plain power value.
+    Extends :class:`PowerResult` with `power_margins`, `std_null_low` and
+    `std_null_upp`.
 
     Parameters
     ----------
@@ -2015,14 +2049,18 @@ class PowerEquivalenceResult(LimitedIterationMixin[float]):
     std_alt : float
         Standard error of the test statistic under the alternative
         hypothesis.
-    nobs1 : float or int
+    nobs_1 : float or int
         Number of observations in sample 1.
-    nobs2 : float or int
+    nobs_2 : float or int
         Number of observations in sample 2.
     nobs_ratio : float
-        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+        Sample size ratio, ``nobs_2 = nobs_ratio * nobs_1``.
     alpha : float
         Significance level used for the power computation.
+
+    See Also
+    --------
+    PowerResult
 
     Notes
     -----
@@ -2030,20 +2068,9 @@ class PowerEquivalenceResult(LimitedIterationMixin[float]):
     only accessible using attributes.
     """
 
-    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
-
-    power: float
     power_margins: np.ndarray
     std_null_low: float
     std_null_upp: float
-    std_alt: float
-    nobs1: float
-    nobs2: float
-    nobs_ratio: float
-    alpha: float
-
-    def __array__(self, dtype=None, copy=None):
-        return np.asarray(self.power, dtype=dtype)
 
 
 def power_equivalence_poisson_2indep(
@@ -2156,8 +2183,8 @@ def power_equivalence_poisson_2indep(
             std_null_low=std_null_low,
             std_null_upp=std_null_upp,
             std_alt=std_alternative,
-            nobs1=nobs1,
-            nobs2=nobs2,
+            nobs_1=nobs1,
+            nobs_2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
         )
@@ -2291,14 +2318,12 @@ def _std_2poisson_power(
     return rates_pooled, np.sqrt(v0), np.sqrt(v1)
 
 
-@dataclass(frozen=True, slots=True)
-class PowerDiffResult(LimitedIterationMixin[float]):
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PowerDiffResult(PowerResult):
     """
     Result of :func:`power_poisson_diff_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g., with
-    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
-    be compared directly against a plain power value.
+    Extends :class:`PowerResult` with `rates_alt` and `std_null`.
 
     Parameters
     ----------
@@ -2308,18 +2333,22 @@ class PowerDiffResult(LimitedIterationMixin[float]):
         The two rates under the alternative hypothesis, ``(rate1, rate2)``.
     std_null : float
         Standard error of the test statistic under the null hypothesis
-        (without ``sqrt(nobs1)``).
+        (without ``sqrt(nobs_1)``).
     std_alt : float
         Standard error of the test statistic under the alternative
-        hypothesis (without ``sqrt(nobs1)``).
-    nobs1 : float or int
+        hypothesis (without ``sqrt(nobs_1)``).
+    nobs_1 : float or int
         Number of observations in sample 1.
-    nobs2 : float or int
+    nobs_2 : float or int
         Number of observations in sample 2.
     nobs_ratio : float
-        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+        Sample size ratio, ``nobs_2 = nobs_ratio * nobs_1``.
     alpha : float
         Significance level used for the power computation.
+
+    See Also
+    --------
+    PowerResult
 
     Notes
     -----
@@ -2327,19 +2356,8 @@ class PowerDiffResult(LimitedIterationMixin[float]):
     only accessible using attributes.
     """
 
-    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
-
-    power: float
     rates_alt: tuple
     std_null: float
-    std_alt: float
-    nobs1: float
-    nobs2: float
-    nobs_ratio: float
-    alpha: float
-
-    def __array__(self, dtype=None, copy=None):
-        return np.asarray(self.power, dtype=dtype)
 
 
 def power_poisson_diff_2indep(
@@ -2434,8 +2452,8 @@ def power_poisson_diff_2indep(
             rates_alt=(rate2 + diff, rate2),
             std_null=std_null,
             std_alt=std_alt,
-            nobs1=nobs1,
-            nobs2=nobs_ratio * nobs1,
+            nobs_1=nobs1,
+            nobs_2=nobs_ratio * nobs1,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
         )
@@ -2501,14 +2519,12 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0
     return v * nobs_ratio, r1, r2
 
 
-@dataclass(frozen=True, slots=True)
-class PowerNegbinRatioResult(LimitedIterationMixin[float]):
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PowerNegbinRatioResult(PowerResult):
     """
     Result of :func:`power_negbin_ratio_2indep`.
 
-    Behaves like the scalar `power` when converted to an array, e.g., with
-    ``np.asarray`` or in ``numpy.testing.assert_allclose``, so that it can
-    be compared directly against a plain power value.
+    Extends :class:`PowerResult` with `std_null`.
 
     Parameters
     ----------
@@ -2516,18 +2532,22 @@ class PowerNegbinRatioResult(LimitedIterationMixin[float]):
         Power of the test.
     std_null : float
         Standard error of the test statistic under the null hypothesis
-        (without ``sqrt(nobs1)``).
+        (without ``sqrt(nobs_1)``).
     std_alt : float
         Standard error of the test statistic under the alternative
-        hypothesis (without ``sqrt(nobs1)``).
-    nobs1 : float or int
+        hypothesis (without ``sqrt(nobs_1)``).
+    nobs_1 : float or int
         Number of observations in sample 1.
-    nobs2 : float or int
+    nobs_2 : float or int
         Number of observations in sample 2.
     nobs_ratio : float
-        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+        Sample size ratio, ``nobs_2 = nobs_ratio * nobs_1``.
     alpha : float
         Significance level used for the power computation.
+
+    See Also
+    --------
+    PowerResult
 
     Notes
     -----
@@ -2535,18 +2555,7 @@ class PowerNegbinRatioResult(LimitedIterationMixin[float]):
     only accessible using attributes.
     """
 
-    _iter_fields: ClassVar[tuple[str, ...]] = ("power",)
-
-    power: float
     std_null: float
-    std_alt: float
-    nobs1: float
-    nobs2: float
-    nobs_ratio: float
-    alpha: float
-
-    def __array__(self, dtype=None, copy=None):
-        return np.asarray(self.power, dtype=dtype)
 
 
 def power_negbin_ratio_2indep(
@@ -2669,8 +2678,8 @@ def power_negbin_ratio_2indep(
             power=pow_,
             std_null=std_null,
             std_alt=std_alt,
-            nobs1=nobs1,
-            nobs2=nobs2,
+            nobs_1=nobs1,
+            nobs_2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
         )
@@ -2812,8 +2821,8 @@ def power_equivalence_neginb_2indep(
             std_null_low=std_null_low,
             std_null_upp=std_null_upp,
             std_alt=std_alternative,
-            nobs1=nobs1,
-            nobs2=nobs2,
+            nobs_1=nobs1,
+            nobs_2=nobs2,
             nobs_ratio=nobs_ratio,
             alpha=alpha,
         )

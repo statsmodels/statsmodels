@@ -384,7 +384,7 @@ class ChisquareResult(NamedTuple):
         Degrees of freedom of the (potentially noncentral) chisquare
         distribution used to compute ``pvalue``, equal to
         ``n_bins - 1 - ddof``.
-    distr : {"chi2", "ncx2"}
+    distribution : {"chi2", "ncx2"}
         The name of the distribution used to compute ``pvalue``: ``"chi2"``
         when ``value`` is 0, otherwise ``"ncx2"`` (the noncentral chisquare
         distribution).
@@ -393,7 +393,7 @@ class ChisquareResult(NamedTuple):
     chisq: float
     pvalue: float
     df: int
-    distr: str
+    distribution: str
 
 
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
@@ -471,15 +471,17 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     chisq = ((f_obs - f_exp)**2 / f_exp).sum(0)
     if value == 0:
         pvalue = stats.chi2.sf(chisq, df)
-        distr = "chi2"
+        distribution = "chi2"
     else:
         pvalue = stats.ncx2.sf(chisq, df, value**2 * nobs)
-        distr = "ncx2"
+        distribution = "ncx2"
 
     if return_basic:
         return chisq, pvalue
     else:
-        return ChisquareResult(chisq=chisq, pvalue=pvalue, df=df, distr=distr)
+        return ChisquareResult(
+            chisq=chisq, pvalue=pvalue, df=df, distribution=distribution
+        )
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):

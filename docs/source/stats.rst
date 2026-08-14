@@ -602,6 +602,7 @@ functions for statistical power
 .. autosummary::
    :toctree: generated
 
+   PowerResult
    power_poisson_ratio_2indep
    PowerRatioResult
    power_equivalence_poisson_2indep
