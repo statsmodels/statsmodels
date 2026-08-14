@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Thu Feb 11 09:19:30 2021
 
@@ -6,12 +5,16 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import warnings
 
 import numpy as np
 from scipy import interpolate, stats
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 # helper functions to work on a grid of cdf and pdf, histogram
+
 
 class _Grid:
     """Create Grid values and indices, grid in [0, 1]^d
@@ -28,7 +31,7 @@ class _Grid:
         intervals of [0, 1] for each axis.
     eps : float
         If eps is not zero, then x values will be clipped to [eps, 1 - eps],
-        i.e. to the interior of the unit interval or hyper cube.
+        i.e., to the interior of the unit interval or hyper cube.
 
 
     Attributes
@@ -48,8 +51,8 @@ class _Grid:
         x_marginal = [np.arange(ki) / (ki - 1) for ki in k_grid]
 
         idx_flat = np.column_stack(
-                np.unravel_index(np.arange(np.product(k_grid)), k_grid)
-                ).astype(float)
+            np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
+        ).astype(float)
         x_flat = idx_flat / idx_flat.max(0)
         if eps != 0:
             x_marginal = [np.clip(xi, eps, 1 - eps) for xi in x_marginal]
@@ -88,6 +91,10 @@ def cdf2prob_grid(cdf, prepend=0):
     ----------
     cdf : array_like
         Grid of cumulative probabilities with same shape as probs.
+    prepend : int, float or None
+        Value to prepend to the difference along each axis before taking
+        ``np.diff``. If None, then no value is prepended (i.e., the length
+        along each axis decreases by 1 relative to ``cdf``).
 
     Returns
     -------
@@ -140,8 +147,8 @@ def average_grid(values, coords=None, _method="slicing"):
 
     elif _method == "convolve":
         from scipy import signal
-        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim),
-                            mode="valid")
+
+        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim), mode="valid")
 
     if coords is not None:
         dx = np.array(1)
@@ -175,21 +182,40 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     -----
     This function is intended for internal use and will be generalized in
     future. API will change.
+
+    changed in 0.14 to support k_dim > 2.
+
+
     """
     pc = np.asarray(mat)
     converged = False
+
     for _ in range(maxiter):
-        pc = pc / pc.sum(0) / pc.sum(1)[:, None]
+        pc0 = pc.copy()
+        for ax in range(pc.ndim):
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
+            pc0 /= pc.sum(axis=axs, keepdims=True)
+        pc = pc0
         pc /= pc.sum()
-        if np.ptp(pc.sum(0)) < tol:
-            if np.ptp(pc.sum(1)) < tol:
-                converged = True
-                break
+
+        # check convergence
+        mptps = []
+        for ax in range(pc.ndim):
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
+            marg = pc.sum(axis=axs, keepdims=False)
+            mptps.append(np.ptp(marg))
+        if max(mptps) < tol:
+            converged = True
+            break
+
     if not converged:
-        import warnings
         from statsmodels.tools.sm_exceptions import ConvergenceWarning
-        warnings.warn("Iterations did not converge, maxiter reached",
-                      ConvergenceWarning)
+
+        warnings.warn(
+            "Iterations did not converge, maxiter reached",
+            ConvergenceWarning,
+            stacklevel=2,
+        )
     return pc
 
 
@@ -240,8 +266,9 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     future. API will change.
     """
     data = np.asarray(data)
+    k_dim = data.shape[-1]
     k = k_bins + 1
-    g2 = _Grid([k, k], eps=0)
+    g2 = _Grid([k] * k_dim, eps=0)
     if use_ranks:
         data = _rankdata_no_ties(data) / (data.shape[0] + 1)
         # alternatives: scipy handles ties, but uses np.apply_along_axis
@@ -252,7 +279,7 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     return freqr
 
 
-def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
+def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False, rng=None):
     """Histogram probabilities as approximation to a copula density.
 
     Parameters
@@ -261,9 +288,24 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
         Instance of a copula class. Only the ``pdf`` method is used.
     k_bins : int
         Number of bins along each dimension in the approximating histogram.
-    use_ranks : bool
-        If use_rank is True, then data will be converted to ranks without
-        tie handling.
+    force_uniform : bool
+        If true, then the pdf grid will be adjusted to have uniform margins
+        using `nearest_matrix_margin`.
+        If false, then no adjustment is done and the margins may not be exactly
+        uniform.
+    use_pdf : bool
+        If false, then the grid cell probabilities will be computed from the
+        copula cdf.
+        If true, then the density, ``pdf``, is used and cell probabilities
+        are approximated by averaging the pdf of the cell corners. This is
+        only useful if the cdf is not available.
+    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        The source of the random variables to use in cdf calculation, if
+        needed. If `rng` is None, a new ``Generator`` is created using
+        fresh entropy from the operating system. If `rng` is an int or
+        array of ints, a new ``Generator`` is created, seeded with `rng`.
+        If `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
@@ -271,28 +313,48 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True):
         Probability that random variable falls in given bin. This corresponds
         to a discrete distribution, and is not scaled to bin size to form a
         piecewise uniform, histogram density.
-        Bin probabilities are a 2-dim array with k_bins rows and k_bins
-        columns with first random variable in rows and second in columns.
+        Bin probabilities are a k-dim array with k_bins segments in each
+        dimensionrows.
 
     Notes
     -----
     This function is intended for internal use and will be generalized in
     future. API will change.
     """
+    k_dim = copula.k_dim
     k = k_bins + 1
-    g = _Grid([k, k], eps=0.1 / k_bins)
-    pdfg = copula.pdf(g.x_flat).reshape(k, k, order="F")
-    # correct for bin size
-    pdfg *= 1 / k**2
-    ag = average_grid(pdfg)
-    if force_uniform:
-        pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+    ks = tuple([k] * k_dim)
+
+    if use_pdf:
+        g = _Grid([k] * k_dim, eps=0.1 / k_bins)
+        pdfg = copula.pdf(g.x_flat).reshape(*ks)
+        # correct for bin size
+        pdfg *= 1 / k**k_dim
+        ag = average_grid(pdfg)
+        if force_uniform:
+            pdf_grid = nearest_matrix_margins(ag, maxiter=100, tol=1e-8)
+        else:
+            pdf_grid = ag / ag.sum()
     else:
-        pdf_grid = ag / ag.sum()
+        g = _Grid([k] * k_dim, eps=1e-6)
+        rng = check_random_state(rng)
+        try:
+            # This is a hack because some copula CDFs are approximate and use
+            # random variates in their calculation, while most do not.
+            cdfg = copula.cdf(g.x_flat, rng=rng).reshape(*ks)
+        except TypeError:
+            cdfg = copula.cdf(g.x_flat).reshape(*ks)
+        # correct for bin size
+        pdf_grid = cdf2prob_grid(cdfg, prepend=None)
+        # TODO: check boundary approximation, eg. undefined at zero
+        # for now just normalize
+        pdf_grid /= pdf_grid.sum()
+
     return pdf_grid
 
 
 # functions to evaluate bernstein polynomials
+
 
 def _eval_bernstein_1d(x, fvals, method="binom"):
     """Evaluate 1-dimensional bernstein polynomial given grid of values.
@@ -322,7 +384,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
     k_terms = fvals.shape[-1]
     xx = np.asarray(x)
     k = np.arange(k_terms).astype(float)
-    n = k_terms - 1.
+    n = k_terms - 1.0
 
     if method.lower() == "binom":
         # Divide by 0 RuntimeWarning here
@@ -331,7 +393,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
             poly_base = stats.binom.pmf(k, n, xx[..., None])
         bp_values = (fvals * poly_base).sum(-1)
     elif method.lower() == "bpoly":
-        bpb = interpolate.BPoly(fvals[:, None], [0., 1])
+        bpb = interpolate.BPoly(fvals[:, None], [0.0, 1])
         bp_values = bpb(x)
     elif method.lower() == "beta":
         # Divide by 0 RuntimeWarning here
@@ -377,8 +439,9 @@ def _eval_bernstein_2d(x, fvals):
     k2 = np.arange(k_terms[1]).astype(float)
 
     # we are building a nobs x n1 x n2 array
-    poly_base = (stats.binom.pmf(k1[None, :, None], n1, x1[:, None, None]) *
-                 stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None]))
+    poly_base = stats.binom.pmf(
+        k1[None, :, None], n1, x1[:, None, None]
+    ) * stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None])
     bp_values = (fvals * poly_base).sum(-1).sum(-1)
 
     return bp_values
@@ -413,7 +476,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.zeros(x.shape[0])
     for i in range(k_dim):
         ki = np.arange(k_terms[i]).astype(float)
-        for _ in range(i+1):
+        for _ in range(i + 1):
             ki = ki[..., None]
         ni = k_terms[i] - 1
         xi = xx[:, i]
@@ -422,7 +485,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.exp(poly_base)
     bp_values = fvals.T[..., None] * poly_base
 
-    for i in range(k_dim):
+    for _ in range(k_dim):
         bp_values = bp_values.sum(0)
 
     return bp_values

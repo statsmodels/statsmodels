@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
 """
 Test VAR Model
 """
-from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.pandas import (
+    QUARTER_END,
+    _infer_freq_returns_offset,
+    assert_index_equal,
+)
 from statsmodels.compat.python import lrange
 
-from io import BytesIO, StringIO
-import os
-import sys
+from io import BytesIO
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -19,8 +21,12 @@ from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
-import statsmodels.tsa.vector_ar.util as util
-from statsmodels.tsa.vector_ar.var_model import VAR, var_acf
+from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import (
+    ErrorBand,
+    ForecastInterval,
+)
+from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -30,10 +36,11 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 
 
-@pytest.fixture()
-def bivariate_var_data(reset_randomstate):
+@pytest.fixture
+def bivariate_var_data():
     """A bivariate dataset for VAR estimation"""
-    e = np.random.standard_normal((252, 2))
+    rs = np.random.RandomState(2382178)
+    e = rs.standard_normal((252, 2))
     y = np.zeros_like(e)
     y[:2] = e[:2]
     for i in range(2, 252):
@@ -41,7 +48,7 @@ def bivariate_var_data(reset_randomstate):
     return y
 
 
-@pytest.fixture()
+@pytest.fixture
 def bivariate_var_result(bivariate_var_data):
     """A bivariate VARResults for reuse"""
     mod = VAR(bivariate_var_data)
@@ -143,12 +150,8 @@ class RResults:
         data = var_results.__dict__
 
         self.names = data["coefs"].dtype.names
-        self.params = data["coefs"].view(
-            (float, len(self.names)), type=np.ndarray
-        )
-        self.stderr = data["stderr"].view(
-            (float, len(self.names)), type=np.ndarray
-        )
+        self.params = data["coefs"].view((float, len(self.names)), type=np.ndarray)
+        self.stderr = data["stderr"].view((float, len(self.names)), type=np.ndarray)
 
         self.irf = data["irf"].item()
         self.orth_irf = data["orthirf"].item()
@@ -172,15 +175,6 @@ class RResults:
         self.causality = data["causality"]
 
 
-_orig_stdout = None
-
-
-def setup_module():
-    global _orig_stdout
-    _orig_stdout = sys.stdout
-    sys.stdout = StringIO()
-
-
 class CheckIRF:
     ref = None
     res = None
@@ -200,6 +194,7 @@ class CheckIRF:
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_irf(self, close_figures):
         self.irf.plot()
@@ -212,6 +207,7 @@ class CheckIRF:
         self.irf.plot(orth=True)
         self.irf.plot(impulse=0, response=1, orth=True)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_cum_effects(self, close_figures):
         self.irf.plot_cum_effects()
@@ -221,12 +217,11 @@ class CheckIRF:
         self.irf.plot_cum_effects(orth=True)
         self.irf.plot_cum_effects(impulse=0, response=1, orth=True)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
-    def test_plot_figsizes(self):
+    def test_plot_figsizes(self, close_figures):
         assert_equal(self.irf.plot().get_size_inches(), (10, 10))
-        assert_equal(
-            self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10)
-        )
+        assert_equal(self.irf.plot(figsize=(14, 10)).get_size_inches(), (14, 10))
 
         assert_equal(self.irf.plot_cum_effects().get_size_inches(), (10, 10))
         assert_equal(
@@ -242,51 +237,50 @@ class CheckFEVD:
     # ---------------------------------------------------------------------------
     # FEVD tests
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_fevd_plot(self, close_figures):
-        self.fevd.plot()
+        import matplotlib.pyplot as plt
+
+        assert isinstance(self.fevd.plot(), plt.Figure)
 
     def test_fevd_repr(self):
-        self.fevd
+        assert hasattr(self.fevd, "plot")
+        assert hasattr(self.fevd, "cov")
 
     def test_fevd_summary(self):
         self.fevd.summary()
 
-    @pytest.mark.xfail(
-        reason="FEVD.cov() is not implemented",
-        raises=NotImplementedError,
-        strict=True,
-    )
     def test_fevd_cov(self):
         # test does not crash
         # not implemented
-        covs = self.fevd.cov()
-        raise NotImplementedError
+        with pytest.raises(NotImplementedError):
+            self.fevd.cov()
 
 
 class TestVARResults(CheckIRF, CheckFEVD):
-    @classmethod
-    def setup_class(cls):
-        cls.p = 2
 
-        cls.data = get_macrodata()
-        cls.model = VAR(cls.data)
-        cls.names = cls.model.endog_names
+    def setup_method(self):
+        self.p = 2
 
-        cls.ref = RResults()
-        cls.k = len(cls.ref.names)
-        cls.res = cls.model.fit(maxlags=cls.p)
+        self.data = get_macrodata()
+        self.model = VAR(self.data)
+        self.names = self.model.endog_names
 
-        cls.irf = cls.res.irf(cls.ref.nirfs)
-        cls.nahead = cls.ref.nahead
+        self.ref = RResults()
+        self.k = len(self.ref.names)
+        self.res = self.model.fit(maxlags=self.p)
 
-        cls.fevd = cls.res.fevd()
+        self.irf = self.res.irf(self.ref.nirfs)
+        self.nahead = self.ref.nahead
+
+        self.fevd = self.res.fevd()
 
     def test_constructor(self):
         # make sure this works with no names
         ndarr = self.data.view((float, 3), type=np.ndarray)
         model = VAR(ndarr)
-        res = model.fit(self.p)
+        model.fit(self.p)
 
     def test_names(self):
         assert_equal(self.model.endog_names, self.ref.names)
@@ -295,7 +289,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.endog_names, self.ref.names)
 
     def test_get_eq_index(self):
-        assert type(self.res.names) is list  # noqa: E721
+        assert type(self.res.names) is list
 
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
@@ -304,14 +298,14 @@ class TestVARResults(CheckIRF, CheckFEVD):
             assert_equal(idx, i)
             assert_equal(idx, idx2)
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             self.res.get_eq_index("foo")
 
     @pytest.mark.smoke
     def test_repr(self):
         # just want this to work
-        foo = str(self.res)
-        bar = repr(self.res)
+        str(self.res)
+        repr(self.res)
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.ref.params, DECIMAL_3)
@@ -319,7 +313,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_cov_params(self):
         # do nothing for now
-        self.res.cov_params
+        assert isinstance(self.res.cov_params(), np.ndarray)
 
     @pytest.mark.smoke
     def test_cov_ybar(self):
@@ -327,15 +321,16 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     @pytest.mark.smoke
     def test_tstat(self):
-        self.res.tvalues
+        assert isinstance(self.res.tvalues, np.ndarray)
 
     @pytest.mark.smoke
     def test_pvalues(self):
-        self.res.pvalues
+        assert isinstance(self.res.pvalues, np.ndarray)
 
     @pytest.mark.smoke
     def test_summary(self):
         summ = self.res.summary()
+        assert "Summary of " in str(summ)
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
@@ -356,9 +351,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         ics = ["aic", "fpe", "hqic", "bic"]
 
         for ic in ics:
-            res = self.model.fit(maxlags=10, ic=ic, verbose=True)
+            # Smoke test
+            self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        with pytest.raises(Exception):
+        with pytest.raises(TypeError):
             self.model.fit(ic="foo")
 
     def test_nobs(self):
@@ -397,7 +393,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         _ = self.res.test_causality(self.names[0], self.names[1])
         _ = self.res.test_causality(0, 1)
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             self.res.test_causality(0, 1, kind="foo")
 
     def test_causality_no_lags(self):
@@ -408,7 +404,9 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_select_order(self):
         result = self.model.fit(10, ic="aic", verbose=True)
+        assert isinstance(result.params, np.ndarray)
         result = self.model.fit(10, ic="fpe", verbose=True)
+        assert isinstance(result.params, np.ndarray)
 
         # bug
         model = VAR(self.model.endog)
@@ -449,6 +447,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_acorr(self):
         acorrs = self.res.acorr(10)
+        assert acorrs.shape == (11, 3, 3)
 
     @pytest.mark.smoke
     def test_forecast(self):
@@ -457,20 +456,30 @@ class TestVARResults(CheckIRF, CheckFEVD):
     @pytest.mark.smoke
     def test_forecast_interval(self):
         y = self.res.endog[: -self.p :]
-        point, lower, upper = self.res.forecast_interval(y, 5)
+        res = self.res.forecast_interval(y, 5)
+        assert isinstance(res, ForecastInterval)
+        point, lower, upper = res
+        assert point is res.point_forecast
+        assert lower is res.forc_lower
+        assert upper is res.forc_upper
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_sim(self, close_figures):
-        self.res.plotsim(steps=100)
+        rs = np.random.RandomState(923298321)
+        self.res.plotsim(steps=100, rng=rs)
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot(self, close_figures):
         self.res.plot()
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_acorr(self, close_figures):
         self.res.plot_acorr()
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_forecast(self, close_figures):
         self.res.plot_forecast(5)
@@ -499,14 +508,20 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.bic, res3.bic)
         assert_almost_equal(res2.stderr, res3.stderr)
 
-    def test_pickle(self):
-        fh = BytesIO()
-        # test wrapped results load save pickle
-        del self.res.model.data.orig_endog
-        self.res.save(fh)
-        fh.seek(0, 0)
-        res_unpickled = self.res.__class__.load(fh)
-        assert type(res_unpickled) is type(self.res)  # noqa: E721
+
+def test_pickle():
+    # Removed from class to allow thread safe testing
+    fh = BytesIO()
+    p = 2
+    data = get_macrodata()
+    model = VAR(data)
+    res = model.fit(maxlags=p)
+    # test wrapped results load save pickle
+    del res.model.data.orig_endog
+    res.save(fh)
+    fh.seek(0, 0)
+    res_unpickled = res.__class__.load(fh)
+    assert type(res_unpickled) is type(res)
 
 
 class E1_Results:
@@ -569,18 +584,18 @@ class E1_Results:
         )
 
 
-basepath = os.path.split(__file__)[0]
-resultspath = os.path.join(basepath, "results")
+basepath = Path(__file__).parent
+resultspath = basepath / "results"
 
 
 def get_lutkepohl_data(name="e2"):
-    path = os.path.join(resultspath, f"{name}.dat")
+    path = Path(resultspath).joinpath(f"{name}.dat")
 
     return util.parse_lutkepohl_data(path)
 
 
 def test_lutkepohl_parse():
-    files = ["e%d" % i for i in range(1, 7)]
+    files = [f"e{i:d}" for i in range(1, 7)]
 
     for f in files:
         get_lutkepohl_data(f)
@@ -600,7 +615,7 @@ class TestVARResultsLutkepohl:
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        cls.model = VAR(adj_data[:-16], dates=dates[1:-16], freq="BQ-MAR")
+        cls.model = VAR(adj_data[:-16], dates=dates[1:-16], freq=f"B{QUARTER_END}-MAR")
         cls.res = cls.model.fit(maxlags=cls.p)
         cls.irf = cls.res.irf(10)
         cls.lut = E1_Results()
@@ -623,20 +638,17 @@ class TestVARResultsLutkepohl:
     def test_irf_stderr(self):
         irf_stderr = self.irf.stderr(orth=False)
         for i in range(1, 1 + len(self.lut.irf_stderr)):
-            assert_almost_equal(
-                np.round(irf_stderr[i], 3), self.lut.irf_stderr[i - 1]
-            )
+            assert_almost_equal(np.round(irf_stderr[i], 3), self.lut.irf_stderr[i - 1])
 
     def test_cum_irf_stderr(self):
         stderr = self.irf.cum_effect_stderr(orth=False)
         for i in range(1, 1 + len(self.lut.cum_irf_stderr)):
-            assert_almost_equal(
-                np.round(stderr[i], 3), self.lut.cum_irf_stderr[i - 1]
-            )
+            assert_almost_equal(np.round(stderr[i], 3), self.lut.cum_irf_stderr[i - 1])
 
     def test_lr_effect_stderr(self):
         stderr = self.irf.lr_effect_stderr(orth=False)
         orth_stderr = self.irf.lr_effect_stderr(orth=True)
+        assert orth_stderr.shape == stderr.shape
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)
 
 
@@ -659,13 +671,13 @@ def test_var_constant():
     d = datetime.datetime.now()
     delta = datetime.timedelta(days=1)
     index = []
-    for i in range(data.shape[0]):
+    for _ in range(data.shape[0]):
         index.append(d)
         d += delta
 
     data.index = DatetimeIndex(index)
 
-    # with pytest.warns(ValueWarning):  #does not silence warning in test output
+    # with pytest.warns(ValueWarning):  # does not silence warning in test output
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=ValueWarning)
         model = VAR(data)
@@ -680,11 +692,14 @@ def test_var_trend():
     model = VAR(data)
     results = model.fit(4)  # , trend = 'c')
     irf = results.irf(10)
+    assert irf.irfs.shape == (11, 3, 3)
 
     data_nc = data - data.mean(0)
     model_nc = VAR(data_nc)
-    results_nc = model_nc.fit(4, trend="n")
+    # Fit once with a trend
+    model_nc.fit(4, trend="n")
     with pytest.raises(ValueError):
+        # Attempt to change the trend
         model.fit(4, trend="t")
 
 
@@ -735,7 +750,7 @@ class TestVARExtras:
         mean_lr = res0.mean()
         assert_allclose(mean_lr, fc20[-1], rtol=5e-4)
 
-        ysim = res0.simulate_var(seed=987128)
+        ysim = res0.simulate_var(rng=987128)
         assert_allclose(ysim.mean(0), mean_lr, rtol=0.1)
         # initialization does not use long run intercept, see #4542
         assert_allclose(ysim[0], res0.intercept, rtol=1e-10)
@@ -743,19 +758,17 @@ class TestVARExtras:
 
         data = self.data
         resl1 = self.resl1
-        y_sim_init = res0.simulate_var(seed=987128, initial_values=data[-k_ar:])
-        y_sim_init_2 = res0.simulate_var(seed=987128, initial_values=data[-1])
+        y_sim_init = res0.simulate_var(rng=987128, initial_values=data[-k_ar:])
+        y_sim_init_2 = res0.simulate_var(rng=987128, initial_values=data[-1])
         assert_allclose(y_sim_init[:k_ar], data[-k_ar:])
         assert_allclose(y_sim_init_2[0], data[-1])
-        assert_allclose(y_sim_init_2[k_ar-1], data[-1])
+        assert_allclose(y_sim_init_2[k_ar - 1], data[-1])
 
-        y_sim_init_3 = resl1.simulate_var(seed=987128, initial_values=data[-1])
+        y_sim_init_3 = resl1.simulate_var(rng=987128, initial_values=data[-1])
         assert_allclose(y_sim_init_3[0], data[-1])
 
         n_sim = 900
-        ysimz = res0.simulate_var(
-            steps=n_sim, offset=np.zeros((n_sim, 3)), seed=987128
-        )
+        ysimz = res0.simulate_var(steps=n_sim, offset=np.zeros((n_sim, 3)), rng=987128)
         zero3 = np.zeros(3)
         assert_allclose(ysimz.mean(0), zero3, atol=0.4)
         # initialization does not use long run intercept, see #4542
@@ -768,8 +781,10 @@ class TestVARExtras:
         assert_equal(res0.k_exog, 1)
         assert_equal(res0.k_ar, 2)
 
-        irf = res0.irf()
+        # Smoke test
+        res0.irf()
 
+    @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_process_plotting(self, close_figures):
         # Partially a smoke test
@@ -778,7 +793,8 @@ class TestVARExtras:
         fc20 = res0.forecast(res0.endog[-k_ar:], 20)
         irf = res0.irf()
 
-        res0.plotsim()
+        rs = np.random.RandomState(429238921)
+        res0.plotsim(rng=rs)
         res0.plot_acorr()
 
         fig = res0.plot_forecast(20)
@@ -790,8 +806,8 @@ class TestVARExtras:
         fcp = fig.axes[2].get_children()[1].get_ydata()[-20:]
         assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
-        fig_asym = irf.plot()
-        fig_mc = irf.plot(stderr_type="mc", repl=1000, seed=987128)
+        fig_asym = irf.plot(rng=rs)
+        fig_mc = irf.plot(stderr_type="mc", repl=1000, rng=987128)
 
         for k in range(3):
             a = fig_asym.axes[1].get_children()[k].get_ydata()
@@ -844,13 +860,11 @@ class TestVARExtras:
         # TODO: intercept differs by 4e-3, others are < 1e-12
         assert_allclose(res_lin_trend.params, res_lin_trend1.params, rtol=5e-3)
         assert_allclose(res_lin_trend.params, res_lin_trend2.params, rtol=5e-3)
-        assert_allclose(
-            res_lin_trend1.params, res_lin_trend2.params, rtol=1e-10
-        )
+        assert_allclose(res_lin_trend1.params, res_lin_trend2.params, rtol=1e-10)
 
-        y1 = res_lin_trend.simulate_var(seed=987128)
-        y2 = res_lin_trend1.simulate_var(seed=987128)
-        y3 = res_lin_trend2.simulate_var(seed=987128)
+        y1 = res_lin_trend.simulate_var(rng=987128)
+        y2 = res_lin_trend1.simulate_var(rng=987128)
+        y3 = res_lin_trend2.simulate_var(rng=987128)
         assert_allclose(y2.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y2.mean(0), rtol=1e-12)
@@ -858,18 +872,12 @@ class TestVARExtras:
         h = 10
         fc1 = res_lin_trend.forecast(res_lin_trend.endog[-2:], h)
         exf = np.arange(len(data), len(data) + h)
-        fc2 = res_lin_trend1.forecast(
-            res_lin_trend1.endog[-2:], h, exog_future=exf
-        )
+        fc2 = res_lin_trend1.forecast(res_lin_trend1.endog[-2:], h, exog_future=exf)
         with pytest.raises(ValueError, match="exog_future only has"):
             wrong_exf = np.arange(len(data), len(data) + h // 2)
-            res_lin_trend1.forecast(
-                res_lin_trend1.endog[-2:], h, exog_future=wrong_exf
-            )
+            res_lin_trend1.forecast(res_lin_trend1.endog[-2:], h, exog_future=wrong_exf)
         exf2 = exf[:, None] ** [0, 1]
-        fc3 = res_lin_trend2.forecast(
-            res_lin_trend2.endog[-2:], h, exog_future=exf2
-        )
+        fc3 = res_lin_trend2.forecast(res_lin_trend2.endog[-2:], h, exog_future=exf2)
         assert_allclose(fc2, fc1, rtol=1e-12, atol=1e-12)
         assert_allclose(fc3, fc1, rtol=1e-12, atol=1e-12)
         assert_allclose(fc3, fc2, rtol=1e-12, atol=1e-12)
@@ -883,9 +891,16 @@ class TestVARExtras:
         fci3 = res_lin_trend2.forecast_interval(
             res_lin_trend2.endog[-2:], h, exog_future=exf2
         )
-        assert_allclose(fci2, fci1, rtol=1e-12, atol=1e-12)
-        assert_allclose(fci3, fci1, rtol=1e-12, atol=1e-12)
-        assert_allclose(fci3, fci2, rtol=1e-12, atol=1e-12)
+        for field in ("point_forecast", "forc_lower", "forc_upper"):
+            assert_allclose(
+                getattr(fci2, field), getattr(fci1, field), rtol=1e-12, atol=1e-12
+            )
+            assert_allclose(
+                getattr(fci3, field), getattr(fci1, field), rtol=1e-12, atol=1e-12
+            )
+            assert_allclose(
+                getattr(fci3, field), getattr(fci2, field), rtol=1e-12, atol=1e-12
+            )
 
     def test_multiple_simulations(self):
         res0 = self.res0
@@ -893,16 +908,16 @@ class TestVARExtras:
         neqs = res0.neqs
         init = self.data[-k_ar:]
 
-        sim1 = res0.simulate_var(seed=987128, steps=10)
-        sim2 = res0.simulate_var(seed=987128, steps=10, nsimulations=2)
+        sim1 = res0.simulate_var(rng=987128, steps=10)
+        sim2 = res0.simulate_var(rng=987128, steps=10, nsimulations=2)
         assert_equal(sim2.shape, (2, 10, neqs))
         assert_allclose(sim1, sim2[0])
 
         sim2_init = res0.simulate_var(
-            seed=987128, steps=10, initial_values=init, nsimulations=2
+            rng=987128, steps=10, initial_values=init, nsimulations=2
         )
-        assert_allclose(sim2_init[0,:k_ar], init)
-        assert_allclose(sim2_init[1,:k_ar], init)
+        assert_allclose(sim2_init[0, :k_ar], init)
+        assert_allclose(sim2_init[1, :k_ar], init)
 
 
 def test_var_cov_params_pandas(bivariate_var_data):
@@ -917,12 +932,11 @@ def test_var_cov_params_pandas(bivariate_var_data):
     assert_index_equal(cov.index, index)
 
 
-def test_summaries_exog(reset_randomstate):
-    y = np.random.standard_normal((500, 6))
+def test_summaries_exog():
+    rs = np.random.RandomState(2182378)
+    y = rs.standard_normal((500, 6))
     df = pd.DataFrame(y)
-    cols = ["endog_{0}".format(i) for i in range(2)] + [
-        "exog_{0}".format(i) for i in range(4)
-    ]
+    cols = [f"endog_{i}" for i in range(2)] + [f"exog_{i}" for i in range(4)]
     df.columns = cols
     df.index = pd.date_range("1-1-1950", periods=500, freq="MS")
     endog = df.iloc[:, :2]
@@ -943,16 +957,18 @@ def test_summaries_exog(reset_randomstate):
     assert "exog_3" in summ
 
 
-def test_whiteness_nlag(reset_randomstate):
+def test_whiteness_nlag():
     # GH 6686
-    y = np.random.standard_normal((200, 2))
+    rs = np.random.RandomState(233078)
+    y = rs.standard_normal((200, 2))
     res = VAR(y).fit(maxlags=1, ic=None)
     with pytest.raises(ValueError, match="The whiteness test can only"):
         res.test_whiteness(1)
 
 
-def test_var_maxlag(reset_randomstate):
-    y = np.random.standard_normal((22, 10))
+def test_var_maxlag():
+    rs = np.random.RandomState(2382378)
+    y = rs.standard_normal((22, 10))
     VAR(y).fit(maxlags=None, ic="aic")
     with pytest.raises(ValueError, match="maxlags is too large"):
         VAR(y).fit(maxlags=8, ic="aic")
@@ -973,15 +989,15 @@ def test_correct_nobs():
     mdata = mdata[["realgdp", "realcons", "realinv"]]
     mdata.index = pd.DatetimeIndex(quarterly)
     data = np.log(mdata).diff().dropna()
-    data.index.freq = data.index.inferred_freq
+    with _infer_freq_returns_offset():
+        data.index.freq = data.index.inferred_freq
     data_exog = pd.DataFrame(index=data.index)
-    data_exog["exovar1"] = np.random.normal(size=data_exog.shape[0])
+    rs = np.random.RandomState(238971)
+    data_exog["exovar1"] = rs.normal(size=data_exog.shape[0])
     # make a VAR model
     model = VAR(endog=data, exog=data_exog)
     results = model.fit(maxlags=1)
-    irf = results.irf_resim(
-        orth=False, repl=100, steps=10, seed=1, burn=100, cum=False
-    )
+    irf = results.irf_resim(orth=False, repl=100, steps=10, rng=1, burn=100, cum=False)
     assert irf.shape == (100, 11, 3, 3)
 
 
@@ -992,7 +1008,55 @@ def test_irf_err_bands():
     model = VAR(data)
     results = model.fit(maxlags=2)
     irf = results.irf()
-    bands_sz1 = irf.err_band_sz1()
-    bands_sz2 = irf.err_band_sz2()
-    bands_sz3 = irf.err_band_sz3()
-    bands_mc = irf.errband_mc()
+    # Smoke tests only
+    rs = np.random.RandomState(2389711)
+    for res in (
+        irf.err_band_sz1(rng=rs),
+        irf.err_band_sz2(rng=rs),
+        irf.err_band_sz3(rng=rs),
+        irf.errband_mc(rng=rs),
+        irf.cum_errband_mc(rng=rs),
+    ):
+        assert isinstance(res, ErrorBand)
+        assert res[0] is res.lower
+        assert res[1] is res.upper
+
+
+@pytest.mark.matplotlib
+def test_irf_plot_err_bands_kwarg(close_figures):
+    # test that user can pass precalculated error bands to plot and plot_cum_effects
+    data = get_macrodata()
+    model = VAR(data)
+    results = model.fit(maxlags=2)
+    irf = results.irf()
+
+    # Precalculate
+    err_bands = irf.errband_mc(repl=10)
+
+    # Use in plot (bypassing internal calculation)
+    fig1 = irf.plot(err_bands=err_bands, stderr_type="mc")
+    assert fig1 is not None
+
+    cum_err_bands = irf.cum_errband_mc(repl=10)
+    fig2 = irf.plot_cum_effects(err_bands=cum_err_bands, stderr_type="mc")
+    assert fig2 is not None
+
+
+def test_0_lag():
+    # GH 9412
+    rs = np.random.RandomState(20260112)
+    y = rs.randn(500, 2)
+    results = VAR(y).fit(maxlags=0, ic="bic", trend="c")
+    assert results.params.shape == (1, 2)
+    fcasts = results.forecast(y, steps=5)
+    assert_allclose(fcasts, np.ones((5, 1)) * results.params)
+
+
+def test_forecast_wrong_shape_params():
+    # GH 9412
+    rs = np.random.RandomState(233751)
+    y = rs.rand(300, 2)
+    mod = VAR(y)
+    results = mod.fit(maxlags=1, ic="aic", trend="c")
+    with pytest.raises(ValueError):
+        forecast(y, results.params, results.params, steps=5)

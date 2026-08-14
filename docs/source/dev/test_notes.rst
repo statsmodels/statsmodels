@@ -10,7 +10,25 @@ environment to build statsmodels from source. We recommend that you develop
 using a development install of statsmodels in a `venv` by running:
 
 .. code-block:: bash
+
     python -m venv .venv
+
+Activate the environment before installing. On Linux/macOS:
+
+.. code-block:: bash
+
+    source .venv/bin/activate
+
+On Windows:
+
+.. code-block:: bash
+
+    .venv\Scripts\activate
+
+Then install statsmodels in editable mode:
+
+.. code-block:: bash
+
     python -m pip install -e ".[develop]"
 
 from the root directory of the git repository. The flag ``-e`` is for editable.

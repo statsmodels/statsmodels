@@ -27,7 +27,7 @@ program save_results
     args i
     replace mod = e(cmdline) in `i'
     replace llf = e(ll) in `i'
-    
+
     matrix b = e(b)
     local params = ""
     local params = string(b[1,1])

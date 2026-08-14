@@ -58,10 +58,10 @@ est = dict(
     vcetype="OIM",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson)",
 )
 
 params_table = np.array([
@@ -82,10 +82,10 @@ params_table = np.array([
     -1.6401464308471,  .10097472438129, -14.929200770398,  1.3262427864914,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     2.690651253e-09,  1.942168909e-06,  9.445812833e-08,  4.703695025e-06,
@@ -102,19 +102,19 @@ cov = np.array([
     .01688876616272, -1.4489146451821,  .36484063612427, -4.0741043266703,
     17.196555889636]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -31.927328308098,                7,
     77.854656616197,   83.68715002459])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     35.226364135742,  .16681243479252,  .98022246360779,  8.1965742111206,
@@ -131,9 +131,9 @@ predicted = np.array([
     .14003194868565,  .53462094068527,  .38791963458061,  .08045063912868,
     1.9790935516357,  .31954729557037,  .20208616554737]).reshape(17, 3)
 
-predicted_colnames = 'predict_mu predict_linpred_std predict_hat'.split()
+predicted_colnames = "predict_mu predict_linpred_std predict_hat".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 resids = np.array([
     1.773634314537,   1.773634314537,  .29638093709946,  .29637759923935,
@@ -163,10 +163,10 @@ resids = np.array([
     -.97909361124039, -.97909361124039, -.77151334285736, -.77000600099564,
     -.69597083330154, -.49471819400787]).reshape(17, 6)
 
-resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
-                   'resid_deviance', 'resid_pearson', 'resid_working']
+resids_colnames = ["score_factor", "resid_response", "resid_anscombe",
+                   "resid_deviance", "resid_pearson", "resid_working"]
 
-resids_rownames = ['r'+str(n) for n in range(1, 18)]
+resids_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_none_nonrobust = ParamsTableTestBunch(
@@ -246,10 +246,10 @@ est = dict(
     vcetype="OIM",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson)",
 )
 
 params_table = np.array([
@@ -270,10 +270,10 @@ params_table = np.array([
     -2.0285927097411,  .04249979172538, -12.903972605867, -.22203098961573,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     1.612355372e-09,  1.270985149e-06,  8.789752394e-08, -1.636449642e-07,
@@ -290,19 +290,19 @@ cov = np.array([
     .01900717143416, -.95915288407306,  -.0298149336078, -3.6510403528048,
     10.466833738501]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     33, np.nan, -52.969418473462,                7,
     119.93883694692,  130.41438987719])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .16658315062523,  .96612107753754,  7.3026847839355,
@@ -319,9 +319,9 @@ predicted = np.array([
     .08065843582153,  .56681954860687,  .28863781690598,  .04722274839878,
     1.8914022445679,  .21889741718769,  .09062857925892]).reshape(17, 3)
 
-predicted_colnames = 'predict_mu predict_linpred_std predict_hat'.split()
+predicted_colnames = "predict_mu predict_linpred_std predict_hat".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 resids = np.array([
     2.1847612857819,  2.1847612857819,  .36650228500366,  .36649596691132,
@@ -351,10 +351,10 @@ resids = np.array([
     -.89140218496323, -.89140218496323,  -.7140833735466,  -.7128586769104,
     -.64815932512283, -.47129172086716]).reshape(17, 6)
 
-resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
-                   'resid_deviance', 'resid_pearson', 'resid_working']
+resids_colnames = ["score_factor", "resid_response", "resid_anscombe",
+                   "resid_deviance", "resid_pearson", "resid_working"]
 
-resids_rownames = ['r'+str(n) for n in range(1, 18)]
+resids_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_fweight_nonrobust = ParamsTableTestBunch(
@@ -434,10 +434,10 @@ est = dict(
     vcetype="OIM",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson)",
 )
 
 params_table = np.array([
@@ -458,10 +458,10 @@ params_table = np.array([
     -1.4560032727052,  .14539171490364, -15.397629710457,  2.2716261149733,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     3.129866310e-09,  2.467206465e-06,  1.706246053e-07, -3.176637541e-07,
@@ -478,19 +478,19 @@ cov = np.array([
     .03689627396044, -1.8618850102603, -.05787604759173, -7.0873136260377,
     20.317971374744]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -27.287276183298,                7,
     68.574552366597,   74.40704577499])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .23209382593632,  1.8754115104675,  7.3026847839355,
@@ -507,9 +507,9 @@ predicted = np.array([
     .15657225251198,  .56681954860687,  .40214782953262,  .09166768193245,
     1.8914022445679,  .30498126149178,  .17592607438564]).reshape(17, 3)
 
-predicted_colnames = 'predict_mu predict_linpred_std predict_hat'.split()
+predicted_colnames = "predict_mu predict_linpred_std predict_hat".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 resids = np.array([
     2.1847612857819,  2.1847612857819,  .36650228500366,  .36649596691132,
@@ -539,10 +539,10 @@ resids = np.array([
     -.89140218496323, -.89140218496323,  -.7140833735466,  -.7128586769104,
     -.64815932512283, -.47129172086716]).reshape(17, 6)
 
-resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
-                   'resid_deviance', 'resid_pearson', 'resid_working']
+resids_colnames = ["score_factor", "resid_response", "resid_anscombe",
+                   "resid_deviance", "resid_pearson", "resid_working"]
 
-resids_rownames = ['r'+str(n) for n in range(1, 18)]
+resids_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_aweight_nonrobust = ParamsTableTestBunch(
@@ -621,10 +621,10 @@ est = dict(
     vcetype="Robust",
     hac_lag="15",
     marginsok="default",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     predict="glim_p",
     cmd="glm",
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson)",
 )
 
 params_table = np.array([
@@ -645,10 +645,10 @@ params_table = np.array([
     -1.930316639948,   .0535676165153, -13.226803418595,  .10079982311137,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.932124278e-10,  1.512127962e-06,  1.877263788e-07, -4.562869239e-06,
@@ -665,19 +665,19 @@ cov = np.array([
     .02694184589715, -.82275604425197, -.64859219982217, -12.482192460755,
     11.559736577902]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -52.969418473462,                7,
     119.93883694692,  125.77133035532])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .06858423352242,  7.3026847839355,  .25687274336815,
@@ -690,9 +690,9 @@ predicted = np.array([
     .93375068902969,  .39795544743538,  .56681954860687,  .31529840826988,
     1.8914022445679,  .26116076111794]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 resids = np.array([
     2.1847612857819,  2.1847612857819,  .36650228500366,  .36649596691132,
@@ -722,10 +722,10 @@ resids = np.array([
     -.89140218496323, -.89140218496323,  -.7140833735466,  -.7128586769104,
     -.64815932512283, -.47129172086716]).reshape(17, 6)
 
-resids_colnames = ['score_factor', 'resid_response', 'resid_anscombe',
-                   'resid_deviance', 'resid_pearson', 'resid_working']
+resids_colnames = ["score_factor", "resid_response", "resid_anscombe",
+                   "resid_deviance", "resid_pearson", "resid_working"]
 
-resids_rownames = ['r'+str(n) for n in range(1, 18)]
+resids_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_pweight_nonrobust = ParamsTableTestBunch(
@@ -778,10 +778,10 @@ est = dict(
     deviance_s=18.59164098607571,
     dispers=1.859164098607571,
     deviance=18.59164098607571,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -827,10 +827,10 @@ params_table = np.array([
     -1.9519494471841,  .05094420680386, -13.630884274485,  .02792629057847,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     1.249250764e-09,  2.158351725e-06,  1.068227835e-07, -5.170410321e-06,
@@ -847,19 +847,19 @@ cov = np.array([
     .02948709519544, -.69004336039169, -.75843860743141, -12.691830440798,
     12.141423008836]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -31.927328308098,                7,
     77.854656616197,   83.68715002459])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     35.226364135742,  .05631958693266,  8.1965742111206,  .14089094102383,
@@ -872,9 +872,9 @@ predicted = np.array([
     .97933322191238,  .50227928161621,  .53462094068527,  .40906101465225,
     1.9790935516357,  .33805811405182]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_none_hc1 = ParamsTableTestBunch(
@@ -924,10 +924,10 @@ est = dict(
     deviance_s=23.34969514421719,
     dispers=.8980651978545075,
     deviance=23.34969514421719,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -975,10 +975,10 @@ params_table = np.array([
     -2.1301515097173,  .03315910688542, -12.601655431235, -.52434816424841,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     6.936358517e-10,  1.301395377e-06,  1.497821854e-07, -4.758016826e-06,
@@ -995,19 +995,19 @@ cov = np.array([
     .02761179707845, -.70545315416752, -.75098089879076, -11.062121016981,
     9.49257545307]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     33, np.nan, -52.969418473462,                7,
     119.93883694692,  130.41438987719])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .06608480215073,  7.3026847839355,  .23366995155811,
@@ -1020,9 +1020,9 @@ predicted = np.array([
     .93375068902969,  .35320028662682,  .56681954860687,  .26245352625847,
     1.8914022445679,  .20374123752117]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_fweight_hc1 = ParamsTableTestBunch(
@@ -1072,10 +1072,10 @@ est = dict(
     deviance_s=12.02863083186947,
     dispers=1.202863083186947,
     deviance=12.02863083186947,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1123,10 +1123,10 @@ params_table = np.array([
     -1.9303166399474,  .05356761651539, -13.226803418597,  .10079982311369,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.932124278e-10,  1.512127962e-06,  1.877263788e-07, -4.562869239e-06,
@@ -1143,19 +1143,19 @@ cov = np.array([
     .02694184589718, -.82275604425296, -.64859219982256, -12.482192460764,
     11.55973657791]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -27.287276183298,                7,
     68.574552366597,   74.40704577499])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .06858423352242,  7.3026847839355,  .25687274336815,
@@ -1168,9 +1168,9 @@ predicted = np.array([
     .93375068902969,  .39795544743538,  .56681954860687,  .31529840826988,
     1.8914022445679,  .26116076111794]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_aweight_hc1 = ParamsTableTestBunch(
@@ -1220,10 +1220,10 @@ est = dict(
     deviance_s=23.34969514421719,
     dispers=2.33496951442172,
     deviance=23.34969514421719,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(robust)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(robust)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1271,10 +1271,10 @@ params_table = np.array([
     -1.930316639948,   .0535676165153, -13.226803418595,  .10079982311137,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.932124278e-10,  1.512127962e-06,  1.877263788e-07, -4.562869239e-06,
@@ -1291,19 +1291,19 @@ cov = np.array([
     .02694184589715, -.82275604425197, -.64859219982217, -12.482192460755,
     11.559736577902]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -52.969418473462,                7,
     119.93883694692,  125.77133035532])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .06858423352242,  7.3026847839355,  .25687274336815,
@@ -1316,9 +1316,9 @@ predicted = np.array([
     .93375068902969,  .39795544743538,  .56681954860687,  .31529840826988,
     1.8914022445679,  .26116076111794]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_pweight_hc1 = ParamsTableTestBunch(
@@ -1369,10 +1369,10 @@ est = dict(
     dispers=1.859164098607571,
     deviance=18.59164098607571,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree, family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1419,10 +1419,10 @@ params_table = np.array([
     -2.1543029981246,  .03121641791743, -12.989398647377, -.61355933652912,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     1.679728039e-09,  4.034336761e-06,  1.735749447e-07, -5.093610363e-06,
@@ -1439,19 +1439,19 @@ cov = np.array([
     .03351736744645, -.27357574414228, -.47102547759356, -6.5824964755966,
     9.9676584988266]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -31.927328308098,                7,
     77.854656616197,   83.68715002459])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     35.226364135742,  .05941947177052,  8.1965742111206,  .09018591046333,
@@ -1464,9 +1464,9 @@ predicted = np.array([
     .97933322191238,   .5560839176178,  .53462094068527,    .419488966465,
     1.9790935516357,   .3438538312912]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_none_clu1 = ParamsTableTestBunch(
@@ -1517,10 +1517,10 @@ est = dict(
     dispers=.8980651978545075,
     deviance=23.34969514421719,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1569,10 +1569,10 @@ params_table = np.array([
     -2.0549026875586,  .03988840483712, -12.822785889672, -.30321770581092,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.624223101e-10,  2.413510691e-06,  3.123995891e-07, -4.358439015e-06,
@@ -1589,19 +1589,19 @@ cov = np.array([
     .03844868195577, -.74146699290106, -.35118919402718, -8.3518020608948,
     10.200525036608]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     33, np.nan, -52.969418473462,                7,
     119.93883694692,  130.41438987719])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .07249507308006,  7.3026847839355,  .17909966409206,
@@ -1614,9 +1614,9 @@ predicted = np.array([
     .93375068902969,  .39217269420624,  .56681954860687,  .27232182025909,
     1.8914022445679,  .24083258211613]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_fweight_clu1 = ParamsTableTestBunch(
@@ -1667,10 +1667,10 @@ est = dict(
     dispers=1.202863083186947,
     deviance=12.02863083186947,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1719,10 +1719,10 @@ params_table = np.array([
     -2.054902687558,  .03988840483718, -12.822785889674, -.30321770580895,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.624223101e-10,  2.413510691e-06,  3.123995891e-07, -4.358439015e-06,
@@ -1739,19 +1739,19 @@ cov = np.array([
     .03844868195581, -.74146699290197, -.35118919402768, -8.3518020609031,
     10.200525036615]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -27.287276183298,                7,
     68.574552366597,   74.40704577499])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .07249507308006,  7.3026847839355,  .17909966409206,
@@ -1764,9 +1764,9 @@ predicted = np.array([
     .93375068902969,  .39217269420624,  .56681954860687,  .27232182025909,
     1.8914022445679,  .24083258211613]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_aweight_clu1 = ParamsTableTestBunch(
@@ -1817,10 +1817,10 @@ est = dict(
     dispers=2.33496951442172,
     deviance=23.34969514421719,
     phi=1,
-    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(cluster id)",  # noqa:E501
+    cmdline="glm executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], family(poisson) vce(cluster id)",
     cmd="glm",
     predict="glim_p",
-    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",  # noqa:E501
+    marginsnotok="stdp Anscombe Cooksd Deviance Hat Likelihood Pearson Response Score Working ADJusted STAndardized STUdentized MODified",
     marginsok="default",
     hac_lag="15",
     vcetype="Robust",
@@ -1869,10 +1869,10 @@ params_table = np.array([
     -2.0549026875586,  .03988840483712, -12.822785889672, -.30321770581092,
     np.nan,  1.9599639845401,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.624223101e-10,  2.413510691e-06,  3.123995891e-07, -4.358439015e-06,
@@ -1889,19 +1889,19 @@ cov = np.array([
     .03844868195577, -.74146699290106, -.35118919402718, -8.3518020608948,
     10.200525036608]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, np.nan, -52.969418473462,                7,
     119.93883694692,  125.77133035532])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     34.815238952637,  .07249507308006,  7.3026847839355,  .17909966409206,
@@ -1914,9 +1914,9 @@ predicted = np.array([
     .93375068902969,  .39217269420624,  .56681954860687,  .27232182025909,
     1.8914022445679,  .24083258211613]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_linpred_std'.split()
+predicted_colnames = "predict_mu predict_linpred_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_poisson_pweight_clu1 = ParamsTableTestBunch(
@@ -1948,7 +1948,7 @@ est = dict(
     df_r=10,
     df_m=6,
     N=17,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(robust)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(robust)",
     title="Linear regression",
     marginsok="XB default",
     vce="robust",
@@ -1981,10 +1981,10 @@ params_table = np.array([
     -1.3490638528633,  .20706938025917,  -181.5942144553,  44.625632675673,
     10,  2.2281388519863,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     1.011467379e-06,  .00038778854684, -.00038909911416,  .00356508765632,
@@ -2001,19 +2001,19 @@ cov = np.array([
     20.934058595259, -270.19382562804, -324.24739845086,  2907.4556071681,
     2577.0148125439]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, -55.235569128348, -47.541220455815,                7,
     109.08244091163,  114.91493432002])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     23.018356323242,  11.030969619751,  7.6487560272217,  3.2376720905304,
@@ -2026,9 +2026,9 @@ predicted = np.array([
     -1.4647831916809,  2.8729522228241, -3.5234127044678,  3.7701880931854,
     3.9779393672943,  1.9573417901993]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_std'.split()
+predicted_colnames = "predict_mu predict_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_wls_aweight_robust = ParamsTableTestBunch(
@@ -2061,7 +2061,7 @@ est = dict(
     df_m=6,
     N=17,
     N_clust=9,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(cluster id)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [aweight=fweight], vce(cluster id)",
     title="Linear regression",
     marginsok="XB default",
     vce="cluster",
@@ -2095,10 +2095,10 @@ params_table = np.array([
     -1.3641369923608,   .2096627597382, -184.25349799498,  47.284916215355,
     8,  2.3060041352042,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     1.072767789e-06,  .00042569049255, -.00044272344175,  .00386796354086,
@@ -2115,19 +2115,19 @@ cov = np.array([
     24.653552354067, -283.16728769825, -366.49477518415,  3532.1379707168,
     2520.3795908825]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, -55.235569128348, -47.541220455815,                7,
     109.08244091163,  114.91493432002])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     23.018356323242,  11.727355003357,  7.6487560272217,  3.4638004302979,
@@ -2140,9 +2140,9 @@ predicted = np.array([
     -1.4647831916809,  2.4376966953278, -3.5234127044678,  3.5529434680939,
     3.9779393672943,  1.7075037956238]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_std'.split()
+predicted_colnames = "predict_mu predict_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_wls_aweight_clu1 = ParamsTableTestBunch(
@@ -2175,7 +2175,7 @@ est = dict(
     df_m=6,
     N=33,
     N_clust=9,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], vce(cluster id)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [fweight=fweight], vce(cluster id)",
     title="Linear regression",
     marginsok="XB default",
     vce="cluster",
@@ -2209,10 +2209,10 @@ params_table = np.array([
     -1.5553554751584,  .15847103736706, -170.02060237022,   33.05202059059,
     8,  2.3060041352042,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     8.252059913e-07,  .00032745422504, -.00034055649365,  .00297535656989,
@@ -2229,19 +2229,19 @@ cov = np.array([
     18.96427104159, -217.82099053713, -281.91905783396,  2717.0292082435,
     1938.753531448]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     33,  -107.2219871315, -92.285898531876,                7,
     198.57179706375,  209.04734999402])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     23.018356323242,  10.285571098328,  7.6487560272217,  3.0379540920258,
@@ -2254,9 +2254,9 @@ predicted = np.array([
     -1.4647831916809,  2.1380014419556, -3.5234127044678,  3.1161375045776,
     3.9779393672943,  1.4975799322128]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_std'.split()
+predicted_colnames = "predict_mu predict_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_wls_fweight_clu1 = ParamsTableTestBunch(
@@ -2289,7 +2289,7 @@ est = dict(
     df_m=6,
     N=17,
     N_clust=9,
-    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], vce(cluster id)",  # noqa:E501
+    cmdline="regress executions income perpoverty perblack LN_VC100k96 south degree [pweight=fweight], vce(cluster id)",
     title="Linear regression",
     marginsok="XB default",
     vce="cluster",
@@ -2323,10 +2323,10 @@ params_table = np.array([
     -1.3641369923608,   .2096627597382, -184.25349799498,  47.284916215355,
     8,  2.3060041352042,                0]).reshape(7, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                         'south', 'degree', '_cons']
+params_table_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                         "south", "degree", "_cons"]
 
 cov = np.array([
     1.072767789e-06,  .00042569049255, -.00044272344175,  .00386796354086,
@@ -2343,19 +2343,19 @@ cov = np.array([
     24.653552354067, -283.16728769825, -366.49477518415,  3532.1379707168,
     2520.3795908825]).reshape(7, 7)
 
-cov_colnames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_colnames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
-cov_rownames = ['income', 'perpoverty', 'perblack', 'LN_VC100k96',
-                'south', 'degree', '_cons']
+cov_rownames = ["income", "perpoverty", "perblack", "LN_VC100k96",
+                "south", "degree", "_cons"]
 
 infocrit = np.array([
     17, -55.235569128348, -47.541220455815,                7,
     109.08244091163,  114.91493432002])
 
-infocrit_colnames = 'N ll0 ll df AIC BIC'.split()
+infocrit_colnames = "N ll0 ll df AIC BIC".split()
 
-infocrit_rownames = '.'.split()
+infocrit_rownames = ".".split()
 
 predicted = np.array([
     23.018356323242,  11.727355003357,  7.6487560272217,  3.4638004302979,
@@ -2368,9 +2368,9 @@ predicted = np.array([
     -1.4647831916809,  2.4376966953278, -3.5234127044678,  3.5529434680939,
     3.9779393672943,  1.7075037956238]).reshape(17, 2)
 
-predicted_colnames = 'predict_mu predict_std'.split()
+predicted_colnames = "predict_mu predict_std".split()
 
-predicted_rownames = ['r'+str(n) for n in range(1, 18)]
+predicted_rownames = ["r"+str(n) for n in range(1, 18)]
 
 
 results_wls_pweight_clu1 = ParamsTableTestBunch(

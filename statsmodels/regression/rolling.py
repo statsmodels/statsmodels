@@ -7,16 +7,13 @@ multiplication.
 Copyright (c) 2019 Kevin Sheppard
 License: 3-clause BSD
 """
-from statsmodels.compat.numpy import lstsq
 from statsmodels.compat.pandas import (
-    Appender,
-    Substitution,
     cache_readonly,
     call_cached_func,
     get_cached_doc,
 )
 
-from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series
@@ -24,10 +21,12 @@ from scipy import stats
 
 from statsmodels.base import model
 from statsmodels.base.model import LikelihoodModelResults, Model
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.regression.linear_model import (
     RegressionModel,
     RegressionResults,
 )
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.validation import array_like, int_like, string_like
 
 
@@ -37,20 +36,17 @@ def strip4(line):
     return line
 
 
-RollingStore = namedtuple(
-    "RollingStore",
-    [
-        "params",
-        "ssr",
-        "llf",
-        "nobs",
-        "s2",
-        "xpxi",
-        "xeex",
-        "centered_tss",
-        "uncentered_tss",
-    ],
-)
+class RollingStore(NamedTuple):
+    params: np.ndarray
+    ssr: np.ndarray
+    llf: np.ndarray
+    nobs: np.ndarray
+    s2: np.ndarray
+    xpxi: np.ndarray
+    xeex: np.ndarray
+    centered_tss: np.ndarray
+    uncentered_tss: np.ndarray
+
 
 common_params = "\n".join(map(strip4, model._model_params_doc.split("\n")))
 window_parameters = """\
@@ -62,7 +58,7 @@ window : int
 weight_parameters = """
 weights : array_like, optional
     A 1d array of weights.  If you supply 1/W then the variables are
-    pre- multiplied by 1/sqrt(W).  If no weights are supplied the
+    pre-multiplied by 1/sqrt(W).  If no weights are supplied the
     default value is 1 and WLS results are the same as OLS.
 """
 
@@ -75,7 +71,7 @@ missing : str, default "drop"
     Available options are "drop", "skip" and "raise". If "drop", any
     observations with nans are dropped and the estimates are computed using
     only the non-missing values in each window. If 'skip' blocks containing
-    missing values are skipped and the corresponding results contains NaN.
+    missing values are skipped and the corresponding results contain NaN.
     If 'raise', an error is raised. Default is 'drop'.
 expanding : bool, default False
     If True, then the initial observations after min_nobs are filled using
@@ -109,6 +105,7 @@ categories) rather than an explicit constant (e.g., a column of 1s).
 Examples
 --------
 >>> from statsmodels.regression.rolling import Rolling%(model)s
+>>> from statsmodels.tools.tools import add_constant
 >>> from statsmodels.datasets import longley
 >>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
@@ -120,7 +117,8 @@ Use params_only to skip all calculations except parameter estimation
 >>> rolling_params = mod.fit(params_only=True)
 
 Use expanding and min_nobs to fill the initial results using an
-expanding scheme until window observation, and the roll.
+expanding scheme until window observations are available, after which
+rolling is used.
 
 >>> mod = Rolling%(model)s(data.endog, exog, window=60, min_nobs=12,
 ... expanding=True)
@@ -159,7 +157,7 @@ class RollingWLS:
         Model.__init__(self, endog, exog, missing="none", hasconst=False)
         self.k_constant = k_const
         self.data.const_idx = const_idx
-        self._y = array_like(endog, "endog")
+        self._y = array_like(endog, "endog", ndim=1)
         nobs = self._y.shape[0]
         self._x = array_like(exog, "endog", ndim=2, shape=(nobs, None))
         window = int_like(window, "window", optional=True)
@@ -236,7 +234,7 @@ class RollingWLS:
             else:
                 _, wy, wx, _, _ = self._get_data(idx)
                 if method == "lstsq":
-                    params = lstsq(wx, wy)[0]
+                    params = np.linalg.lstsq(wx, wy)[0]
                 else:  # 'pinv'
                     wxpwxiwxp = np.linalg.pinv(wx)
                     params = wxpwxiwxp @ wy
@@ -298,12 +296,12 @@ class RollingWLS:
         params_only=False,
     ):
         """
-        Estimate model parameters.
+        Estimate model parameters
 
         Parameters
         ----------
         method : {'inv', 'lstsq', 'pinv'}
-            Method to use when computing the the model parameters.
+            Method to use when computing the model parameters.
 
             * 'inv' - use moving windows inner-products and matrix inversion.
               This method is the fastest, but may be less accurate than the
@@ -316,7 +314,7 @@ class RollingWLS:
 
             * nonrobust - The classic OLS covariance estimator
             * HCCM, HC0 - White heteroskedasticity robust covariance
-        cov_kwds : dict
+        cov_kwds : dict, optional
             Unused
         reset : int, optional
             Interval to recompute the moving window inner products used to
@@ -333,6 +331,7 @@ class RollingWLS:
         -------
         RollingRegressionResults
             Estimation results where all pre-sample values are nan-filled.
+
         """
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
@@ -394,30 +393,30 @@ class RollingWLS:
         if eval_env is None:
             eval_env = 2
         elif eval_env == -1:
-            from patsy import EvalEnvironment
-
-            eval_env = EvalEnvironment({})
+            mgr = FormulaManager()
+            eval_env = mgr.get_empty_eval_env()
         else:
             eval_env += 1  # we're going down the stack again
         missing = kwargs.get("missing", "skip")
-        from patsy import NAAction, dmatrices
 
-        na_action = NAAction(on_NA="raise", NA_types=[])
-        result = dmatrices(
+        na_action = FormulaManager().get_na_action(action="raise", types=[])
+
+        mgr = FormulaManager()
+        result = mgr.get_matrices(
             formula,
             data,
-            eval_env,
-            return_type="dataframe",
-            NA_action=na_action,
+            eval_env=eval_env,
+            pandas=True,
+            na_action=na_action,
         )
 
         endog, exog = result
         if (endog.ndim > 1 and endog.shape[1] > 1) or endog.ndim > 2:
             raise ValueError(
                 "endog has evaluated to an array with multiple "
-                "columns that has shape {0}. This occurs when "
+                f"columns that has shape {endog.shape}. This occurs when "
                 "the variable converted to endog is non-numeric"
-                " (e.g., bool or str).".format(endog.shape)
+                " (e.g., bool or str)."
             )
 
         kwargs.update({"missing": missing, "window": window})
@@ -479,6 +478,7 @@ class RollingRegressionResults:
         p-values.
     cov_type : str
         Name of covariance estimator
+
     """
 
     _data_in_cache = tuple()
@@ -639,6 +639,7 @@ class RollingRegressionResults:
             the returned covariance is a DataFrame with a MultiIndex with
             key (observation, variable), so that the covariance for
             observation with index i is cov.loc[i].
+
         """
         return self._wrap(self._cov_params)
 
@@ -673,7 +674,7 @@ class RollingRegressionResults:
                 rp = p[i : i + 1] @ r.T
                 denom = rp.shape[1]
                 inv_cov = np.linalg.inv(rvcvr[i])
-                stat[i] = (rp @ inv_cov @ rp.T) / denom
+                stat[i] = np.squeeze(rp @ inv_cov @ rp.T) / denom
             return stat
 
     @cache_readonly
@@ -702,7 +703,7 @@ class RollingRegressionResults:
             with np.errstate(invalid="ignore"):
                 return stats.norm.sf(np.abs(self.tvalues)) * 2
 
-    def _conf_int(self, alpha, cols):
+    def _conf_int(self, alpha):
         bse = np.asarray(self.bse)
 
         if self.use_t:
@@ -717,22 +718,16 @@ class RollingRegressionResults:
         params = np.asarray(self.params)
         lower = params - q * bse
         upper = params + q * bse
-        if cols is not None:
-            cols = np.asarray(cols)
-            lower = lower[:, cols]
-            upper = upper[:, cols]
-        return np.asarray(list(zip(lower, upper)))
+        return np.asarray(list(zip(lower, upper, strict=True)))
 
     @Appender(LikelihoodModelResults.conf_int.__doc__)
-    def conf_int(self, alpha=0.05, cols=None):
-        ci = self._conf_int(alpha, cols)
+    def conf_int(self, alpha=0.05):
+        ci = self._conf_int(alpha)
         if not self._use_pandas:
             return ci
         ci_names = ("lower", "upper")
         row_names = self.model.data.row_labels
         col_names = self.model.data.param_names
-        if cols is not None:
-            col_names = [col_names[i] for i in cols]
         mi = MultiIndex.from_product((col_names, ci_names))
         ci = np.reshape(np.swapaxes(ci, 1, 2), (ci.shape[0], -1))
         return DataFrame(ci, columns=mi, index=row_names)
@@ -787,11 +782,12 @@ class RollingRegressionResults:
         -------
         Figure
             The matplotlib Figure object.
+
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
         if alpha is not None:
-            ci = self._conf_int(alpha, None)
+            ci = self._conf_int(alpha)
 
         row_labels = self.model.data.row_labels
         if row_labels is None:
@@ -812,9 +808,9 @@ class RollingRegressionResults:
                     variable_idx.append(variable)
                 else:
                     msg = (
-                        "variable {0} is not an integer and was not found "
+                        "variable {} is not an integer and was not found "
                         "in the list of variable "
-                        "names: {1}".format(
+                        "names: {}".format(
                             variables[i], ", ".join(param_names)
                         )
                     )

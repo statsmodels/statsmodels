@@ -1,18 +1,55 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed May 30 15:11:09 2018
 
 @author: josef
 """
 
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
 from scipy import stats
 
+from statsmodels.stats.base import LimitedIterationMixin
+
+
+@dataclass(frozen=True, slots=True)
+class ScoreTestResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`_lm_robust` and :func:`score_test`.
+
+    Parameters
+    ----------
+    statistic : float or ndarray
+        Score/Lagrange multiplier test statistic. This is a chisquare
+        statistic for ``hypothesis="joint"``, or an array of z-statistics,
+        one per constraint, for ``hypothesis="separate"``.
+    pvalue : float or ndarray
+        p-value(s) of the test, based on `distribution`.
+    distribution : {"chi2", "norm"}
+        Name of the reference distribution used for `pvalue`.
+    k_constraint : int or None
+        Number of constraints tested, equal to the degrees of freedom of
+        the chi-square distribution. Only set for the joint hypothesis
+        test (``distribution="chi2"``), otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    distribution: str
+    k_constraint: int | None = None
+
 
 # this is a copy from stats._diagnostic_other to avoid circular imports
-def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
-               cov_params=None):
-    '''general formula for score/LM test
+def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=None):
+    """general formula for score/LM test
 
     generalized score or lagrange multiplier test for implicit constraints
 
@@ -28,30 +65,31 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
     score : ndarray, 1-D
         derivative of objective function at estimated parameters
         of constrained model
-    constraint_matrix R : ndarray
+    constraint_matrix : ndarray
         Linear restriction matrix or Jacobian of nonlinear constraints
-    score_deriv_inv, Ainv : ndarray, symmetric, square
-        inverse of second derivative of objective function
+        (denoted `R` below).
+    score_deriv_inv : ndarray, symmetric, square
+        inverse of second derivative of objective function (denoted `Ainv`
+        below).
         TODO: could be inverse of OPG or any other estimator if information
         matrix equality holds
-    cov_score B :  ndarray, symmetric, square
-        covariance matrix of the score. This is the inner part of a sandwich
-        estimator.
-    cov_params V :  ndarray, symmetric, square
-        covariance of full parameter vector evaluated at constrained parameter
-        estimate. This can be specified instead of cov_score B.
+    cov_score : ndarray, symmetric, square
+        covariance matrix of the score (denoted `B` below). This is the
+        inner part of a sandwich estimator.
+    cov_params : ndarray, symmetric, square, optional
+        covariance of full parameter vector evaluated at constrained
+        parameter estimate (denoted `V` below). This can be specified
+        instead of cov_score.
 
     Returns
     -------
-    lm_stat : float
-        score/lagrange multiplier statistic
-    p-value : float
-        p-value of the LM test based on chisquare distribution
+    ScoreTestResult
+        See :class:`ScoreTestResult` for a description of the attributes.
 
     Notes
     -----
 
-    '''
+    """
     # shorthand alias
     R, Ainv, B, V = constraint_matrix, score_deriv_inv, cov_score, cov_params
 
@@ -70,16 +108,33 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score,
         else:
             inner = R.dot(V).dot(R.T)
 
-        #lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
-        # Let's assume inner is invertible, TODO: check if usecase for pinv exists
+        # lm_stat2 = wscore.dot(np.linalg.pinv(inner).dot(wscore))
+        # Let's assume inner is invertible,
+        # TODO: check if usecase for pinv exists
         lm_stat = wscore.dot(np.linalg.solve(inner, wscore))
     pval = stats.chi2.sf(lm_stat, k_constraints)
-    return lm_stat, pval, k_constraints
+    return ScoreTestResult(
+        statistic=lm_stat,
+        pvalue=pval,
+        k_constraint=k_constraints,
+        distribution="chi2",
+    )
 
 
-def score_test(self, exog_extra=None, params_constrained=None,
-               hypothesis='joint', cov_type=None, cov_kwds=None,
-               k_constraints=None, r_matrix=None, scale=None, observed=True):
+def score_test(
+    self,
+    exog_extra=None,
+    params_constrained=None,
+    hypothesis="joint",
+    cov_type=None,
+    cov_kwds=None,
+    k_constraints=None,
+    r_matrix=None,
+    scale=None,
+    observed=True,
+    *,
+    return_object: bool | None = None,
+):
     """score test for restrictions or for omitted variables
 
     Null Hypothesis : constraints are satisfied
@@ -109,7 +164,7 @@ def score_test(self, exog_extra=None, params_constrained=None,
     ----------
     exog_extra : None or array_like
         Explanatory variables that are jointly tested for inclusion in the
-        model, i.e. omitted variables.
+        model, i.e., omitted variables.
     params_constrained : array_like
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
@@ -127,27 +182,45 @@ def score_test(self, exog_extra=None, params_constrained=None,
         tests is used.
         If the cov_type argument is not None, then it will be used instead of
         the Wald cov_type given in fit.
+    cov_kwds : dict or None
+        Keyword arguments for the specified `cov_type`.
     k_constraints : int or None
         Number of constraints that were used in the estimation of params
         restricted relative to the number of exog in the model.
         This must be provided if no exog_extra are given. If exog_extra is
         not None, then k_constraints is assumed to be zero if it is None.
+    r_matrix : array_like or None
+        Restriction matrix for the constraints. If not provided, it is
+        constructed from `self.constraints` or from `exog_extra`.
+    scale : float or None
+        Optional scale to use in the score and Hessian calculation, for
+        example for the results of a fit_constrained estimation with fixed
+        scale.
     observed : bool
         If True, then the observed Hessian is used in calculating the
         covariance matrix of the score. If false then the expected
         information matrix is used. This currently only applies to GLM where
         EIM is available.
         Warning: This option might still change.
+    return_object : bool, optional
+        No longer used. ``score_test`` always returns a ``ScoreTestResult``,
+        which unpacks as the ``(statistic, pvalue)`` tuple this function has
+        always returned, with ``k_constraint`` (and ``distribution``)
+        available as attributes.
+
+        .. deprecated:: 0.15.0
+
+            This parameter has no effect and will be removed in a future
+            release.
 
     Returns
     -------
-    chi2_stat : float
-        chisquare statistic for the score test
-    p-value : float
-        P-value of the score test based on the chisquare distribution.
-    df : int
-        Degrees of freedom used in the p-value calculation. This is equal
-        to the number of constraints.
+    ScoreTestResult
+        See :class:`ScoreTestResult` for a description of the attributes.
+        For ``hypothesis="joint"``, `statistic` and `pvalue` are the
+        chisquare test and `k_constraint` is the number of constraints. For
+        ``hypothesis="separate"``, `statistic` and `pvalue` are arrays
+        with one z-test per constraint, and `k_constraint` is None.
 
     Notes
     -----
@@ -177,29 +250,29 @@ def score_test(self, exog_extra=None, params_constrained=None,
     cov_type = cov_type if cov_type is not None else self.cov_type
 
     if observed is False:
-        hess_kwd = {'observed': False}
+        hess_kwd = {"observed": False}
     else:
         hess_kwd = {}
 
     if exog_extra is None:
 
-        if hasattr(self, 'constraints'):
+        if hasattr(self, "constraints"):
             if isinstance(self.constraints, tuple):
                 r_matrix = self.constraints[0]
             else:
                 r_matrix = self.constraints.coefs
             k_constraints = r_matrix.shape[0]
 
-        else:
-            if k_constraints is None:
-                raise ValueError('if exog_extra is None, then k_constraints'
-                                 'needs to be given')
+        elif k_constraints is None:
+            raise ValueError(
+                "if exog_extra is None, then k_constraints needs to be given"
+            )
 
         # we need to use results scale as additional parameter
         if scale is not None:
             # we need to use results scale as additional parameter, gh #7840
-            score_kwd = {'scale': scale}
-            hess_kwd['scale'] = scale
+            score_kwd = {"scale": scale}
+            hess_kwd["scale"] = scale
         else:
             score_kwd = {}
 
@@ -209,16 +282,18 @@ def score_test(self, exog_extra=None, params_constrained=None,
         hessian = model.hessian(params_constrained, **hess_kwd)
 
     else:
-        if cov_type == 'V':
-            raise ValueError('if exog_extra is not None, then cov_type cannot '
-                             'be V')
-        if hasattr(self, 'constraints'):
-            raise NotImplementedError('if exog_extra is not None, then self'
-                                      'should not be a constrained fit result')
+        if cov_type == "V":
+            raise ValueError("if exog_extra is not None, then cov_type cannot be V")
+        if hasattr(self, "constraints"):
+            raise NotImplementedError(
+                "if exog_extra is not None, then self"
+                "should not be a constrained fit result"
+            )
 
         if isinstance(exog_extra, tuple):
-            sh = _scorehess_extra(self, params_constrained, *exog_extra,
-                                  hess_kwds=hess_kwd)
+            sh = _scorehess_extra(
+                self, params_constrained, *exog_extra, hess_kwds=hess_kwd
+            )
             score_obs, hessian, k_constraints, r_matrix = sh
             score = score_obs.sum(0)
         else:
@@ -229,27 +304,26 @@ def score_test(self, exog_extra=None, params_constrained=None,
             # requires nonsingular (no added perfect collinearity)
             k_constraints += ex.shape[1] - model.exog.shape[1]
             # TODO use diag instead of full np.eye
-            r_matrix = np.eye(len(self.params) + k_constraints
-                              )[-k_constraints:]
+            r_matrix = np.eye(len(self.params) + k_constraints)[-k_constraints:]
 
             score_factor = model.score_factor(params_constrained)
             if score_factor.ndim == 1:
-                score_obs = (score_factor[:, None] * ex)
+                score_obs = score_factor[:, None] * ex
             else:
                 sf = score_factor
                 score_obs = np.column_stack((sf[:, :1] * ex, sf[:, 1:]))
             score = score_obs.sum(0)
-            hessian_factor = model.hessian_factor(params_constrained,
-                                                  **hess_kwd)
+            hessian_factor = model.hessian_factor(params_constrained, **hess_kwd)
             # see #4714
             from statsmodels.genmod.generalized_linear_model import GLM
+
             if isinstance(model, GLM):
                 hessian_factor *= -1
             hessian = np.dot(ex.T * hessian_factor, ex)
 
-    if cov_type == 'nonrobust':
+    if cov_type == "nonrobust":
         cov_score_test = -hessian
-    elif cov_type.upper() == 'HC0':
+    elif cov_type.upper() == "HC0":
         hinv = -np.linalg.inv(hessian)
         cov_score = nobs * np.cov(score_obs.T)
         # temporary to try out
@@ -259,37 +333,46 @@ def score_test(self, exog_extra=None, params_constrained=None,
         # https://github.com/statsmodels/statsmodels/pull/2096#issuecomment-393646205
         # cov_score_test_inv = cov_lm_robust(score, r_matrix, hinv,
         #                                   cov_score, cov_params=None)
-    elif cov_type.upper() == 'V':
+    elif cov_type.upper() == "V":
         # TODO: this does not work, V in fit_constrained results is singular
         # we need cov_params without the zeros in it
         hinv = -np.linalg.inv(hessian)
         cov_score = nobs * np.cov(score_obs.T)
         V = self.cov_params_default
         # temporary to try out
-        chi2stat = _lm_robust(score, r_matrix, hinv, cov_score, cov_params=V)
-        pval = stats.chi2.sf(chi2stat, k_constraints)
-        return chi2stat, pval
+        lm = _lm_robust(score, r_matrix, hinv, cov_score, cov_params=V)
+        return lm
     else:
         msg = 'Only cov_type "nonrobust" and "HC0" are available.'
         raise NotImplementedError(msg)
 
-    if hypothesis == 'joint':
+    if hypothesis == "joint":
         chi2stat = score.dot(np.linalg.solve(cov_score_test, score[:, None]))
         pval = stats.chi2.sf(chi2stat, k_constraints)
         # return a stats results instance instead?  Contrast?
-        return chi2stat, pval, k_constraints
-    elif hypothesis == 'separate':
+        return ScoreTestResult(
+            statistic=chi2stat,
+            pvalue=pval,
+            k_constraint=k_constraints,
+            distribution="chi2",
+        )
+    elif hypothesis == "separate":
         diff = score
         bse = np.sqrt(np.diag(cov_score_test))
         stat = diff / bse
-        pval = stats.norm.sf(np.abs(stat))*2
-        return stat, pval
+        pval = stats.norm.sf(np.abs(stat)) * 2
+        return ScoreTestResult(
+            statistic=stat,
+            pvalue=pval,
+            distribution="norm",
+        )
     else:
         raise NotImplementedError('only hypothesis "joint" is available')
 
 
-def _scorehess_extra(self, params=None, exog_extra=None,
-                     exog2_extra=None, hess_kwds=None):
+def _scorehess_extra(
+    self, params=None, exog_extra=None, exog2_extra=None, hess_kwds=None
+):
     """Experimental helper function for variable addition score test.
 
     This uses score and hessian factor at the params which should be the
@@ -337,11 +420,10 @@ def _scorehess_extra(self, params=None, exog_extra=None,
     # print(r_matrix.shape, k_cm, k_cp, k_mean_new, k_prec_new)
     # print(index_mean, index_prec)
     r_matrix[:k_cm, index_mean] = np.eye(k_cm)
-    r_matrix[k_cm: k_cm + k_cp, index_prec] = np.eye(k_cp)
+    r_matrix[k_cm : k_cm + k_cp, index_prec] = np.eye(k_cp)
 
     if hasattr(model, "score_hessian_factor"):
-        sf, hf = model.score_hessian_factor(params, return_hessian=True,
-                                            **hess_kwds)
+        sf, hf = model.score_hessian_factor(params, return_hessian=True, **hess_kwds)
     else:
         sf = model.score_factor(params)
         hf = model.hessian_factor(params, **hess_kwds)
@@ -376,11 +458,9 @@ def im_ratio(results):
 
 
 def tic(results):
-    """Takeuchi information criterion for misspecified models
-
-    """
+    """Takeuchi information criterion for misspecified models"""
     imr = getattr(results, "im_ratio", im_ratio(results))
-    tic = - 2 * results.llf + 2 * np.trace(imr)
+    tic = -2 * results.llf + 2 * np.trace(imr)
     return tic
 
 
@@ -391,7 +471,7 @@ def gbic(results, gbicp=False):
     ----------
     Lv, Jinchi, and Jun S. Liu. 2014. "Model Selection Principles in
     Misspecified Models." Journal of the Royal Statistical Society.
-    Series B (Statistical Methodology) 76 (1): 141–67.
+    Series B (Statistical Methodology) 76 (1): 141-67.
 
     """
     self = getattr(results, "_results", results)
@@ -399,6 +479,6 @@ def gbic(results, gbicp=False):
     nobs = k_params + self.df_resid
     imr = getattr(results, "im_ratio", im_ratio(results))
     imr_logdet = np.linalg.slogdet(imr)[1]
-    gbic = -2 * self.llf + k_params * np.log(nobs) - imr_logdet  # LL equ. (20)
-    gbicp = gbic + np.trace(imr)  # LL equ. (23)
-    return gbic, gbicp
+    gbic_val = -2 * self.llf + k_params * np.log(nobs) - imr_logdet  # LL equ. (20)
+    gbicp_val = gbic_val + np.trace(imr)  # LL equ. (23)
+    return gbic_val, gbicp_val

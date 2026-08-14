@@ -8,10 +8,10 @@ from statsmodels.tsa.holtwinters.model import (
 from statsmodels.tsa.holtwinters.results import HoltWintersResults
 
 __all__ = [
+    "PY_SMOOTHERS",
+    "SMOOTHERS",
     "ExponentialSmoothing",
-    "SimpleExpSmoothing",
     "Holt",
     "HoltWintersResults",
-    "SMOOTHERS",
-    "PY_SMOOTHERS",
+    "SimpleExpSmoothing",
 ]

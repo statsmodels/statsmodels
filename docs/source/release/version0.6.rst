@@ -47,7 +47,7 @@ covariates.
                 cov_struct=sm.cov_struct.Independence(), 
                 family=sm.families.Poisson())
    mdf = md.fit()
-   print mdf.summary()
+   print(mdf.summary())
 
 
 The dependence structure in a GEE is treated as a nuisance parameter
@@ -77,10 +77,8 @@ Adding functionality to look at seasonality in plots. Two new functions are :fun
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).astype(str)
     dta = dta.set_index('YEAR').T.unstack()
-    dates = map(lambda x : pd.datetools.parse('1 '+' '.join(x)),
-                                           dta.index.values)
-
-    dta.index = pd.DatetimeIndex(dates, freq='M')
+    date_str = [f"{yr}-{mo}-01" for yr, mo in dta.index.values]
+    dta.index = pd.DatetimeIndex(pd.to_datetime(date_str,format="%Y-%b-%d"), freq='MS')
     fig = sm.tsa.graphics.month_plot(dta)
 
 .. currentmodule:: statsmodels.tsa
@@ -98,9 +96,8 @@ We added a naive seasonal decomposition tool in the same vein as R's ``decompose
 
     dta = sm.datasets.co2.load_pandas().data
     # deal with missing values. see issue
-    dta.co2.interpolate(inplace=True)
-
-    res = sm.tsa.seasonal_decompose(dta.co2)
+    co2 = dta.co2.interpolate()
+    res = sm.tsa.seasonal_decompose(co2)
     res.plot()
 
 
@@ -131,7 +128,7 @@ longitudinal study:
     data = sm.datasets.get_rdataset('dietox', 'geepack', cache=True).data
     md = smf.mixedlm("Weight ~ Time", data, groups=data["Pig"])
     mdf = md.fit()
-    print mdf.summary()
+    print(mdf.summary())
 
 The statsmodels LME framework currently supports post-estimation
 inference via Wald tests and confidence intervals on the coefficients,
@@ -151,13 +148,13 @@ It is now possible to call out to X-12-ARIMA or X-13ARIMA-SEATS from statsmodels
     import statsmodels.api as sm
 
     dta = sm.datasets.co2.load_pandas().data
-    dta.co2.interpolate(inplace=True)
-    dta = dta.resample('M').last()
+    co2 = dta.co2.interpolate()
+    co2 = co2.resample('M').last()
 
     res = sm.tsa.x13_arima_select_order(dta.co2)
     print(res.order, res.sorder)
 
-    results = sm.tsa.x13_arima_analysis(dta.co2)
+    results = sm.tsa.x13_arima_analysis(co2)
 
     fig = results.plot()
     fig.set_size_inches(12, 5)

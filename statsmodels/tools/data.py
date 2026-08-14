@@ -1,31 +1,62 @@
-"""
-Compatibility tools for various data structure inputs
-"""
+"""Compatibility tools for various data structure inputs"""
+
+from statsmodels.compat.numpy import NP_LT_2
+from statsmodels.compat.pandas import infer_freq
+
 import numpy as np
 import pandas as pd
 
+try:
+    import polars as pl
+    _POLARS_TYPES = (pl.DataFrame, pl.Series)
+except ImportError:
+    _POLARS_TYPES = ()
+
 
 def _check_period_index(x, freq="M"):
-    from pandas import PeriodIndex, DatetimeIndex
+    from pandas import DatetimeIndex, PeriodIndex
+
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
     if x.index.freq is not None:
         inferred_freq = x.index.freqstr
     else:
-        inferred_freq = pd.infer_freq(x.index)
+        inferred_freq = infer_freq(x.index)
+        if isinstance(inferred_freq, pd.tseries.offsets.BaseOffset):
+            inferred_freq = inferred_freq.freqstr
     if not inferred_freq.startswith(freq):
-        raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
-                                                                freq))
+        raise ValueError(f"Expected frequency {freq}. Got {inferred_freq}")
+
+
+def is_series(obj):
+    """Return whether obj is a pandas Series"""
+    return isinstance(obj, pd.Series)
 
 
 def is_data_frame(obj):
+    """Return whether obj is a pandas DataFrame"""
     return isinstance(obj, pd.DataFrame)
 
 
 def is_design_matrix(obj):
-    from patsy import DesignMatrix
+    """Return whether obj is a patsy DesignMatrix"""
+    try:
+        from patsy import DesignMatrix
+    except ImportError:
+        return False
+
     return isinstance(obj, DesignMatrix)
+
+
+def is_model_matrix(obj):
+    """Return whether obj is a formulaic ModelMatrix"""
+    try:
+        from formulaic import ModelMatrix
+    except ImportError:
+        return False
+
+    return isinstance(obj, ModelMatrix)
 
 
 def _is_structured_ndarray(obj):
@@ -34,24 +65,32 @@ def _is_structured_ndarray(obj):
 
 def interpret_data(data, colnames=None, rownames=None):
     """
-    Convert passed data structure to form required by estimation classes
+    Convert a data structure to the form required by estimation classes
 
     Parameters
     ----------
     data : array_like
+        Data to convert.
     colnames : sequence or None
-        May be part of data structure
+        Column names. May be part of the data structure.
     rownames : sequence or None
+        Row names. May be part of the data structure.
 
     Returns
     -------
-    (values, colnames, rownames) : (homogeneous ndarray, list)
+    values : ndarray
+        Converted, homogeneous data values.
+    colnames : list
+        Column names.
+    rownames : sequence or None
+        Row names, if available.
+
     """
     if isinstance(data, np.ndarray):
         values = np.asarray(data)
 
         if colnames is None:
-            colnames = ['Y_%d' % i for i in range(values.shape[1])]
+            colnames = [f"Y_{i:d}" for i in range(values.shape[1])]
     elif is_data_frame(data):
         # XXX: hack
         data = data.dropna()
@@ -59,60 +98,110 @@ def interpret_data(data, colnames=None, rownames=None):
         colnames = data.columns
         rownames = data.index
     else:  # pragma: no cover
-        raise TypeError('Cannot handle input type {typ}'
-                        .format(typ=type(data).__name__))
+        raise TypeError(
+            f"Cannot handle input type {type(data).__name__}"
+        )
 
     if not isinstance(colnames, list):
         colnames = list(colnames)
 
     # sanity check
     if len(colnames) != values.shape[1]:
-        raise ValueError('length of colnames does not match number '
-                         'of columns in data')
+        raise ValueError(
+            "length of colnames does not match number of columns in data"
+        )
 
     if rownames is not None and len(rownames) != len(values):
-        raise ValueError('length of rownames does not match number '
-                         'of rows in data')
+        raise ValueError("length of rownames does not match number of rows in data")
 
     return values, colnames, rownames
 
 
 def struct_to_ndarray(arr):
+    """Convert a structured ndarray to a homogeneous ndarray view"""
     return arr.view((float, (len(arr.dtype.names),)), type=np.ndarray)
 
 
 def _is_using_ndarray_type(endog, exog):
-    return (type(endog) is np.ndarray and
-            (type(exog) is np.ndarray or exog is None))
+    return type(endog) is np.ndarray and (type(exog) is np.ndarray or exog is None)
 
 
 def _is_using_ndarray(endog, exog):
-    return (isinstance(endog, np.ndarray) and
-            (isinstance(exog, np.ndarray) or exog is None))
+    return isinstance(endog, np.ndarray) and (
+        isinstance(exog, np.ndarray) or exog is None
+    )
+
+
+def _is_using_ndarray_like(endog, exog):
+    return hasattr(endog, "__array__") and hasattr(exog, "__array__")
 
 
 def _is_using_pandas(endog, exog):
     from statsmodels.compat.pandas import data_klasses as klasses
-    return (isinstance(endog, klasses) or isinstance(exog, klasses))
+
+    return isinstance(endog, klasses) or isinstance(exog, klasses)
 
 
-def _is_array_like(endog, exog):
-    try:  # do it like this in case of mixed types, ie., ndarray and list
-        endog = np.asarray(endog)
-        exog = np.asarray(exog)
-        return True
-    except:
-        return False
+def _is_using_pandas_like(endog, exog):
+    return hasattr(endog, "__dataframe__") or hasattr(exog, "__dataframe__")
 
 
 def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
-    return (is_design_matrix(endog) and
-            (is_design_matrix(exog) or exog is None))
+    return is_design_matrix(endog) and (is_design_matrix(exog) or exog is None)
+
+
+def _is_using_formulaic(endog, exog):
+    # we get this when a structured array is passed through a formula
+    return is_model_matrix(endog) and (is_model_matrix(exog) or exog is None)
 
 
 def _is_recarray(data):
+    """Return whether data is a recarray"""
+    if NP_LT_2:
+        return isinstance(data, np.core.recarray)
+    else:
+        return isinstance(data, np.rec.recarray)
+
+
+def _as_array_with_name(obj, default_name):
     """
-    Returns true if data is a recarray
+    Call np.asarray() on obj and attempt to get the name if it is a Series
+
+    Parameters
+    ----------
+    obj : array_like
+        Array, or pandas Series, to convert to an array.
+    default_name : str
+        The default name to return in case the object isn't a pd.Series or has
+        no name attribute.
+
+    Returns
+    -------
+    array_and_name : tuple[np.ndarray, str]
+        The data cast to an ndarray and the series name or None.
+
     """
-    return isinstance(data, np.core.recarray)
+    if is_series(obj):
+        return (np.asarray(obj), obj.name)
+    return (np.asarray(obj), default_name)
+
+
+def _to_pandas(obj):
+    """
+    Convert a Polars DataFrame/Series to a pandas object via .to_pandas().
+
+    Parameters
+    ----------
+    obj : array_like
+        Input object to potentially convert
+
+    Returns
+    -------
+    obj_converted : object
+        Returns a pandas DataFrame/Series if obj is a Polars DataFrame/Series.
+        Returns the original object unchanged otherwise.
+    """
+    if _POLARS_TYPES and isinstance(obj, _POLARS_TYPES):
+        return obj.to_pandas()
+    return obj

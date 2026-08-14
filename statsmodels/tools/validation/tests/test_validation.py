@@ -1,19 +1,19 @@
 from collections import OrderedDict
+from types import MappingProxyType
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from statsmodels.tools.validation import (
-    array_like,
     PandasWrapper,
+    array_like,
     bool_like,
     dict_like,
     float_like,
     int_like,
     string_like,
 )
-
 from statsmodels.tools.validation.validation import _right_squeeze
 
 
@@ -24,7 +24,9 @@ def use_pandas(request):
 
 def gen_data(dim, use_pandas):
     if dim == 1:
-        out = np.empty(10,)
+        out = np.empty(
+            10,
+        )
         if use_pandas:
             out = pd.Series(out)
     elif dim == 2:
@@ -69,7 +71,11 @@ class TestArrayLike:
         assert a.ndim == 2
         a = array_like(data, "a", ndim=2, shape=(20, None))
         assert a.shape == (20, 10)
-        a = array_like(data, "a", ndim=2, shape=(20,))
+        with pytest.raises(
+            ValueError,
+            match=r"Provided shape \(20,\) does not have the correct dimension",
+        ):
+            array_like(data, "a", ndim=2, shape=(20,))
         assert a.shape == (20, 10)
         a = array_like(data, "a", ndim=2, shape=(None, 10))
         assert a.shape == (20, 10)
@@ -81,7 +87,7 @@ class TestArrayLike:
         assert a.shape == (20, 10, 1)
 
         with pytest.raises(ValueError, match="a is required to have shape"):
-            array_like(data, "a", ndim=2, shape=(10,))
+            array_like(data, "a", ndim=2, shape=(10, 10))
         with pytest.raises(ValueError, match="a is required to have shape"):
             array_like(data, "a", ndim=2, shape=(20, 20))
         with pytest.raises(ValueError, match="a is required to have shape"):
@@ -106,7 +112,10 @@ class TestArrayLike:
         assert a.shape == (5, 6, 7)
         a = array_like(data, "a", ndim=5)
         assert a.shape == (5, 6, 7, 1, 1)
-        with pytest.raises(ValueError, match="a is required to have shape"):
+        with pytest.raises(
+            ValueError,
+            match=r"Provided shape \(10,\) does not have the correct dimension",
+        ):
             array_like(data, "a", ndim=3, shape=(10,))
         with pytest.raises(ValueError, match="a is required to have shape"):
             array_like(data, "a", ndim=3, shape=(None, None, 5))
@@ -124,7 +133,7 @@ class TestArrayLike:
         data = np.empty((2, 1, 2))
         a = array_like(data, "a", ndim=3)
         assert a.shape == (2, 1, 2)
-        data = np.empty((2))
+        data = np.empty(2)
         a = array_like(data, "a", ndim=3)
         assert a.shape == (2, 1, 1)
         data = np.empty((2, 1))
@@ -165,6 +174,12 @@ class TestArrayLike:
         data = gen_data(2, use_pandas)
         a = array_like(data, "a", ndim=2)
         assert type(a[1:]) is np.ndarray
+
+    def test_none(self):
+        assert array_like(None, "a", optional=True) is None
+        # None is not array_like, and must not be converted to nan
+        with pytest.raises(TypeError, match="a must be array_like, not None"):
+            array_like(None, "a")
 
 
 def test_right_squeeze():
@@ -247,7 +262,7 @@ def test_wrap_pandas_append_non_string():
     assert wrapped.name == expected
 
     a = gen_data(2, True)
-    a.columns = [i for i in range(a.shape[1])]
+    a.columns = list(range(a.shape[1]))
     b = gen_data(2, False)
     wrapped = PandasWrapper(a).wrap(b, append="appended")
     expected = [f"{c}_appended" for c in a.columns]
@@ -270,13 +285,23 @@ def test_optional_dict_like(dict_type):
 
 
 def test_optional_dict_like_error():
+    # strict only accepts a dict, so the message must not offer a Mapping
+    match = r"value must be a dict$"
+    for value in ([], {"a"}, "a"):
+        with pytest.raises(TypeError, match=match):
+            dict_like(value, "value", optional=True)
+    # without strict any Mapping is accepted, which the message reports
     match = r"value must be a dict or dict_like \(i.e., a Mapping\)"
-    with pytest.raises(TypeError, match=match):
-        dict_like([], "value", optional=True)
-    with pytest.raises(TypeError, match=match):
-        dict_like({"a"}, "value", optional=True)
-    with pytest.raises(TypeError, match=match):
-        dict_like("a", "value", optional=True)
+    for value in ([], {"a"}, "a"):
+        with pytest.raises(TypeError, match=match):
+            dict_like(value, "value", optional=True, strict=False)
+
+
+def test_dict_like_strict_mapping():
+    proxy = MappingProxyType({"a": 1})
+    assert dict_like(proxy, "value", strict=False) is proxy
+    with pytest.raises(TypeError, match=r"value must be a dict$"):
+        dict_like(proxy, "value")
 
 
 def test_string():
@@ -292,9 +317,14 @@ def test_string():
         string_like(b"4", "value")
     with pytest.raises(
         ValueError,
-        match="value must be one of: 'apple'," " 'banana', 'cherry'",
+        match="value must be one of: 'apple', 'banana', 'cherry'",
     ):
         string_like("date", "value", options=("apple", "banana", "cherry"))
+    # None is only allowed when optional is True
+    with pytest.raises(TypeError, match="value must be a string"):
+        string_like(None, "value")
+    with pytest.raises(TypeError, match="value must be a string"):
+        string_like(None, "value", options=("apple", "banana", "cherry"))
 
 
 def test_optional_string():
@@ -355,7 +385,7 @@ def integer(request):
         complex(2.3 + 0j),
         "apple",
         1.0 + 0j,
-        np.timedelta64(2),
+        np.timedelta64(2, "s"),
     )
 )
 def not_integer(request):
@@ -394,3 +424,16 @@ def test_bool_like(boolean):
 def test_not_bool_like():
     with pytest.raises(TypeError):
         bool_like(np.array([True, True]), boolean)
+
+
+def test_array_like_mindim():
+    x = 1
+    arr = array_like(x, "x", mindim=1)
+    assert arr.shape == (1,)
+    arr = array_like(x, "x", mindim=2)
+    assert arr.shape == (1, 1)
+    arr = array_like(x, "x", mindim=3)
+    assert arr.shape == (1, 1, 1)
+    y = [1, 2]
+    arr = array_like(y, "y", mindim=2)
+    assert arr.shape == (2, 1)

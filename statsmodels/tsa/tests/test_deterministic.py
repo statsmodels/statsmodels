@@ -1,7 +1,12 @@
-from statsmodels.compat.pandas import PD_LT_1_0_0, is_int_index
+from statsmodels.compat.pandas import (
+    MONTH_END,
+    QUARTER_END,
+    YEAR_END,
+    is_int_index,
+)
 from statsmodels.compat.pytest import pytest_warns
 
-from typing import Hashable, Tuple
+from collections.abc import Hashable
 
 import numpy as np
 import pandas as pd
@@ -19,21 +24,16 @@ from statsmodels.tsa.deterministic import (
 )
 
 
-@pytest.fixture(scope="module", params=[True, False])
+@pytest.fixture(scope="module")
 def time_index(request):
-    idx = pd.date_range("2000-01-01", periods=833, freq="B")
-    if request.param:
-        return idx.to_period("B")
-    return idx
+    return pd.date_range("2000-01-01", periods=833, freq="B")
 
 
-@pytest.fixture(
-    scope="module", params=["range", "period", "datetime", "fib", "int64"]
-)
+@pytest.fixture(scope="module", params=["range", "period", "datetime", "fib", "int64"])
 def index(request):
     param = request.param
     if param in ("period", "datetime"):
-        idx = pd.date_range("2000-01-01", periods=137, freq="M")
+        idx = pd.date_range("2000-01-01", periods=137, freq=MONTH_END)
         if param == "period":
             idx = idx.to_period("M")
     elif param == "range":
@@ -46,17 +46,15 @@ def index(request):
             fib.append(fib[-2] + fib[-1])
         idx = pd.Index(fib)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError
     return idx
 
 
-@pytest.fixture(scope="module", params=[None, "period", False, "list"])
+@pytest.fixture(scope="module", params=[None, False, "list"])
 def forecast_index(request):
     idx = pd.date_range("2000-01-01", periods=400, freq="B")
     if request.param is None:
         return None
-    elif request.param == "period":
-        return idx.to_period("B")
     elif request.param == "list":
         return list(idx)
     return idx
@@ -68,14 +66,8 @@ def test_time_trend_smoke(index, forecast_index):
     tt.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2 ** 63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -100,14 +92,8 @@ def test_seasonality_smoke(index, forecast_index):
     s.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2 ** 63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -128,14 +114,8 @@ def test_fourier_smoke(index, forecast_index):
     f.in_sample(index)
     steps = 83 if forecast_index is None else len(forecast_index)
     warn = None
-    if (
-        is_int_index(index)
-        and np.any(np.diff(index) != 1)
-        or (
-            type(index) is pd.Index
-            and max(index) > 2 ** 63
-            and forecast_index is None
-        )
+    if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
+        type(index) is pd.Index and max(index) > 2**63 and forecast_index is None
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -150,7 +130,7 @@ def test_fourier_smoke(index, forecast_index):
 
 @pytest.mark.smoke
 def test_calendar_time_trend_smoke(time_index, forecast_index):
-    ct = CalendarTimeTrend("A", order=2)
+    ct = CalendarTimeTrend(YEAR_END, order=2)
     ct.in_sample(time_index)
     steps = 83 if forecast_index is None else len(forecast_index)
     ct.out_of_sample(steps, time_index, forecast_index)
@@ -164,7 +144,7 @@ def test_calendar_time_trend_smoke(time_index, forecast_index):
 
 @pytest.mark.smoke
 def test_calendar_fourier_smoke(time_index, forecast_index):
-    cf = CalendarFourier("A", 2)
+    cf = CalendarFourier(YEAR_END, 2)
     cf.in_sample(time_index)
     steps = 83 if forecast_index is None else len(forecast_index)
     cf.out_of_sample(steps, time_index, forecast_index)
@@ -197,14 +177,14 @@ def test_calendar_seasonality(time_index, forecast_index, freq_period):
 
 def test_forbidden_index():
     index = pd.RangeIndex(0, 10)
-    ct = CalendarTimeTrend("A", order=2)
+    ct = CalendarTimeTrend(YEAR_END, order=2)
     with pytest.raises(TypeError, match="CalendarTimeTrend terms can only"):
         ct.in_sample(index)
 
 
 def test_calendar_time_trend_base(time_index):
-    ct = CalendarTimeTrend("M", True, order=3, base_period="1960-1-1")
-    ct2 = CalendarTimeTrend("M", True, order=3)
+    ct = CalendarTimeTrend(MONTH_END, True, order=3, base_period="1960-1-1")
+    ct2 = CalendarTimeTrend(MONTH_END, True, order=3)
     assert ct != ct2
     str(ct)
     str(ct2)
@@ -214,14 +194,14 @@ def test_calendar_time_trend_base(time_index):
 
 def test_invalid_freq_period(time_index):
     with pytest.raises(ValueError, match="The combination of freq="):
-        CalendarSeasonality("H", "A")
+        CalendarSeasonality("h", YEAR_END)
     cs = CalendarSeasonality("B", "W")
     with pytest.raises(ValueError, match="freq is B but index contains"):
         cs.in_sample(pd.date_range("2000-1-1", periods=10, freq="D"))
 
 
 def test_check_index_type():
-    ct = CalendarTimeTrend("A", True, order=3)
+    ct = CalendarTimeTrend(YEAR_END, True, order=3)
     idx = pd.RangeIndex(0, 20)
     with pytest.raises(TypeError, match="CalendarTimeTrend terms can only"):
         ct._check_index_type(idx, pd.DatetimeIndex)
@@ -263,7 +243,7 @@ def test_time_trend(index):
     pd.testing.assert_index_equal(const.index, index)
     warn = None
     if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
-        type(index) is pd.Index and max(index) > 2 ** 63
+        type(index) is pd.Index and max(index) > 2**63
     ):
         warn = UserWarning
     with pytest_warns(warn):
@@ -288,9 +268,7 @@ def test_time_trend(index):
     short = tt.in_sample(index[:-50])
     with pytest_warns(warn):
         remainder = tt.out_of_sample(50, index[:-50])
-    direct = tt.out_of_sample(
-        steps=50, index=index[:-50], forecast_index=index[-50:]
-    )
+    direct = tt.out_of_sample(steps=50, index=index[:-50], forecast_index=index[-50:])
     combined = pd.concat([short, remainder], axis=0)
     if isinstance(index, (pd.DatetimeIndex, pd.RangeIndex)):
         pd.testing.assert_frame_equal(combined, final)
@@ -304,7 +282,7 @@ def test_seasonality(index):
     assert s.is_dummy
     assert exog.shape == (index.shape[0], 12)
     pd.testing.assert_index_equal(exog.index, index)
-    assert np.all(exog.sum(1) == 1.0)
+    assert np.all(exog.sum(axis=1) == 1.0)
     assert list(exog.columns) == [f"s({i},12)" for i in range(1, 13)]
     expected = np.zeros((index.shape[0], 12))
     for i in range(12):
@@ -313,13 +291,13 @@ def test_seasonality(index):
 
     warn = None
     if (is_int_index(index) and np.any(np.diff(index) != 1)) or (
-        type(index) is pd.Index and max(index) > 2 ** 63
+        type(index) is pd.Index and max(index) > 2**63
     ):
         warn = UserWarning
     with pytest_warns(warn):
         fcast = s.out_of_sample(steps=12, index=index)
     assert fcast.iloc[0, len(index) % 12] == 1.0
-    assert np.all(fcast.sum(1) == 1)
+    assert np.all(fcast.sum(axis=1) == 1)
 
     s = Seasonality(period=7, initial_period=3)
     exog = s.in_sample(index)
@@ -359,15 +337,15 @@ def test_fourier(index):
     assert list(terms.columns) == cols
 
 
-@pytest.mark.skipif(PD_LT_1_0_0, reason="bug in old pandas")
 def test_index_like():
     idx = np.empty((100, 2))
     with pytest.raises(TypeError, match="index must be a pandas"):
         DeterministicTerm._index_like(idx)
 
 
-def test_calendar_fourier(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+def test_calendar_fourier():
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -395,8 +373,9 @@ def test_calendar_fourier(reset_randomstate):
     np.testing.assert_allclose(expected, terms.values)
 
 
-def test_calendar_time_trend(reset_randomstate):
-    inc = np.abs(np.random.standard_normal(1000))
+def test_calendar_time_trend():
+    rs = np.random.RandomState(43437243)
+    inc = np.abs(rs.standard_normal(1000))
     inc = np.cumsum(inc)
     inc = 10 * inc / inc[-1]
     offset = (24 * 3600 * inc).astype(np.int64)
@@ -411,9 +390,7 @@ def test_calendar_time_trend(reset_randomstate):
     assert list(terms.columns) == cols
 
     inc = 1 + offset / (24 * 3600)
-    expected = []
-    for i in range(4):
-        expected.append(inc ** i)
+    expected = [inc**i for i in range(4)]
     expected = np.column_stack(expected)
     np.testing.assert_allclose(expected, terms.values)
 
@@ -434,60 +411,60 @@ def test_calendar_time_trend(reset_randomstate):
 
 def test_calendar_seasonal_period_w():
     period = "W"
-    index = pd.date_range("2000-01-03", freq="H", periods=600)
-    cs = CalendarSeasonality("H", period=period)
+    index = pd.date_range("2000-01-03", freq="h", periods=600)
+    cs = CalendarSeasonality("h", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 168] == 1.0
 
     index = pd.date_range("2000-01-03", freq="B", periods=600)
     cs = CalendarSeasonality("B", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 5] == 1.0
 
     index = pd.date_range("2000-01-03", freq="D", periods=600)
     cs = CalendarSeasonality("D", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 7] == 1.0
 
 
 def test_calendar_seasonal_period_d():
     period = "D"
-    index = pd.date_range("2000-01-03", freq="H", periods=600)
-    cs = CalendarSeasonality("H", period=period)
+    index = pd.date_range("2000-01-03", freq="h", periods=600)
+    cs = CalendarSeasonality("h", period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 24] == 1.0
 
 
 def test_calendar_seasonal_period_q():
     period = "Q"
-    index = pd.date_range("2000-01-01", freq="M", periods=600)
-    cs = CalendarSeasonality("M", period=period)
+    index = pd.date_range("2000-01-01", freq=MONTH_END, periods=600)
+    cs = CalendarSeasonality(MONTH_END, period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 3] == 1.0
 
 
 def test_calendar_seasonal_period_a():
-    period = "A"
-    index = pd.date_range("2000-01-01", freq="M", periods=600)
-    cs = CalendarSeasonality("M", period=period)
+    period = "Y"
+    index = pd.date_range("2000-01-01", freq=MONTH_END, periods=600)
+    cs = CalendarSeasonality(MONTH_END, period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, i % 12] == 1.0
 
-    cs = CalendarSeasonality("Q", period=period)
+    cs = CalendarSeasonality(QUARTER_END, period=period)
     terms = cs.in_sample(index)
-    assert np.all(terms.sum(1) == 1.0)
+    assert np.all(terms.sum(axis=1) == 1.0)
     for i in range(index.shape[0]):
         assert terms.iloc[i, (i % 12) // 3] == 1.0
 
@@ -518,6 +495,20 @@ def test_deterministic_process(
     assert isinstance(terms, pd.DataFrame)
 
 
+@pytest.mark.parametrize("drop", [True, False])
+def test_out_of_sample_without_in_sample(drop):
+    # GH: out_of_sample()/range() on a fresh DeterministicProcess used to raise
+    # a bare ``AssertionError`` when drop=False, because the lazy in_sample()
+    # call that populates _retain_cols was gated on self._drop.
+    idx = pd.RangeIndex(0, 10)
+    fresh = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    primed.in_sample()
+    pd.testing.assert_frame_equal(fresh.out_of_sample(5), primed.out_of_sample(5))
+    fresh2 = DeterministicProcess(idx, constant=True, order=1, drop=drop)
+    pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
+
+
 def test_deterministic_process_errors(time_index):
     with pytest.raises(ValueError, match="seasonal and fourier"):
         DeterministicProcess(time_index, seasonal=True, fourier=2, period=5)
@@ -527,15 +518,13 @@ def test_deterministic_process_errors(time_index):
 
 def test_range_error():
     idx = pd.Index([0, 1, 1, 2, 3, 5, 8, 13])
-    dp = DeterministicProcess(
-        idx, constant=True, order=2, seasonal=True, period=2
-    )
+    dp = DeterministicProcess(idx, constant=True, order=2, seasonal=True, period=2)
     with pytest.raises(TypeError, match="The index in the deterministic"):
         dp.range(0, 12)
 
 
 def test_range_index_basic():
-    idx = pd.date_range("2000-1-1", freq="M", periods=120)
+    idx = pd.date_range("2000-1-1", freq=MONTH_END, periods=120)
     dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True)
     dp.range("2001-1-1", "2008-1-1")
     dp.range("2001-1-1", "2015-1-1")
@@ -559,9 +548,7 @@ def test_range_index_basic():
     dp.range(130, 150)
 
     idx = pd.RangeIndex(0, 120)
-    dp = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     dp.range(0, 100)
     dp.range(100, 150)
     dp.range(120, 150)
@@ -571,14 +558,10 @@ def test_range_index_basic():
 
 
 def test_range_casting():
-    idx = np.arange(120)
-    dp = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    idx = np.arange(120).astype(np.int64)
+    dp = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     idx = pd.RangeIndex(0, 120)
-    dp2 = DeterministicProcess(
-        idx, constant=True, order=1, seasonal=True, period=12
-    )
+    dp2 = DeterministicProcess(idx, constant=True, order=1, seasonal=True, period=12)
     pd.testing.assert_frame_equal(dp.in_sample(), dp2.in_sample())
     pd.testing.assert_frame_equal(dp.range(100, 150), dp2.range(100, 150))
 
@@ -595,15 +578,9 @@ def test_additional_terms(time_index):
     dp = DeterministicProcess(time_index, additional_terms=add_terms)
     dp2 = DeterministicProcess(time_index, constant=True, order=1)
     pd.testing.assert_frame_equal(dp.in_sample(), dp2.in_sample())
-    with pytest.raises(
-        ValueError, match="One or more terms in additional_terms"
-    ):
-        DeterministicProcess(
-            time_index, additional_terms=add_terms + add_terms
-        )
-    with pytest.raises(
-        ValueError, match="One or more terms in additional_terms"
-    ):
+    with pytest.raises(ValueError, match="One or more terms in additional_terms"):
+        DeterministicProcess(time_index, additional_terms=add_terms + add_terms)
+    with pytest.raises(ValueError, match="One or more terms in additional_terms"):
         DeterministicProcess(
             time_index, constant=True, order=1, additional_terms=add_terms
         )
@@ -624,7 +601,7 @@ def test_drop_two_consants(time_index):
     [
         pd.RangeIndex(0, 200),
         pd.Index(np.arange(200)),
-        pd.date_range("2000-1-1", freq="M", periods=200),
+        pd.date_range("2000-1-1", freq="MS", periods=200),
         pd.period_range("2000-1-1", freq="M", periods=200),
     ],
 )
@@ -640,7 +617,7 @@ def test_determintic_term_equiv(index):
 
 class DummyTerm(DeterministicTerm):
     @property
-    def _eq_attr(self) -> Tuple[Hashable, ...]:
+    def _eq_attr(self) -> tuple[Hashable, ...]:
         return ("Dummy",)
 
     def __str__(self) -> str:
@@ -664,13 +641,14 @@ class DummyTerm(DeterministicTerm):
     def in_sample(self, index: pd.Index) -> pd.DataFrame:
         nobs = index.shape[0]
         terms = np.empty((index.shape[0], 12))
+        rs = np.random.RandomState(43437243)
         for i in range(0, 12, 2):
             if i == 0:
                 value = 1
             elif i == 2:
                 value = np.arange(nobs)
             elif i == 4:
-                value = np.random.standard_normal(nobs)
+                value = rs.standard_normal(nobs)
             elif i == 6:
                 value = np.zeros(nobs)
                 value[::2] = 1
@@ -689,7 +667,8 @@ class DummyTerm(DeterministicTerm):
         forecast_index: pd.Index = None,
     ) -> pd.DataFrame:
         fcast_index = self._extend_index(index, steps, forecast_index)
-        terms = np.random.standard_normal((steps, 12))
+        rs = np.random.RandomState(4343)
+        terms = rs.standard_normal((steps, 12))
 
         return pd.DataFrame(terms, columns=self.columns, index=fcast_index)
 

@@ -1,13 +1,12 @@
-import os
+from pathlib import Path
 
 import numpy as np
-from numpy import genfromtxt
+import pandas as pd
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
-path = os.path.join(cur_dir, "results_arima_forecasts.csv")
-with open(path, "rb") as fd:
-    forecast_results = genfromtxt(fd, names=True, delimiter=",", dtype=float)
+path = cur_dir / "results_arima_forecasts.csv"
+forecast_results = pd.read_csv(path)
 
 # NOTE:
 # stata gives no indication of no convergence for 112 CSS but gives a
@@ -55,17 +54,17 @@ class ARIMA111:
             # these bse are approx [.205811, .0457010, .0897565]
 
             # from stata
-            # forecast = genfromtxt(open(cur_dir+"/arima111_forecasts.csv"),
-            #                delimiter=",", skip_header=1, usecols=[1,2,3,4,5])
+            # forecast = pd.read_csv(open(cur_dir+"/arima111_forecasts.csv"))
+            # forecast = forecast.iloc[:, 1:].to_numpy()
             # self.forecast = forecast[203:,1]
             # self.fcerr = forecast[203:,2]
             # self.fc_conf_int = forecast[203:,3:]
 
             # from gretl
-            self.forecast = forecast_results['fc111c'][-25:]
-            self.forecasterr = forecast_results['fc111cse'][-25:]
-            self.forecast_dyn = forecast_results['fc111cdyn']
-            self.forecasterr_dyn = forecast_results['fc111cdynse']
+            self.forecast = forecast_results["fc111c"][-25:]
+            self.forecasterr = forecast_results["fc111cse"][-25:]
+            self.forecast_dyn = forecast_results["fc111cdyn"]
+            self.forecasterr_dyn = forecast_results["fc111cdynse"]
         else:
             # coefs, bse, tvalues, and pvalues taken from R because gretl
             # uses mean not constant
@@ -185,15 +184,15 @@ class ARIMA111:
             # forecasting is not any different for css
             # except you lose the first p+1 observations for in-sample
             # these results are from x-12 arima
-            self.forecast = forecast_results['fc111c_css'][-25:]
-            self.forecasterr = forecast_results['fc111cse_css'][-25:]
-            self.forecast_dyn = forecast_results['fc111cdyn_css']
-            self.forecasterr_dyn = forecast_results['fc111cdynse_css']
+            self.forecast = forecast_results["fc111c_css"][-25:]
+            self.forecasterr = forecast_results["fc111cse_css"][-25:]
+            self.forecast_dyn = forecast_results["fc111cdyn_css"]
+            self.forecasterr_dyn = forecast_results["fc111cdynse_css"]
 
 
 class ARIMA211:
     def __init__(self, method="mle"):
-        if method == 'mle':
+        if method == "mle":
             # from stata
             from .arima111_results import results
 
@@ -228,10 +227,10 @@ class ARIMA211:
             self.bse = np.sqrt(np.diag(self.cov_params))
             # these bse are approx [0.248376, 0.102617, 0.0871312, 0.0696346]
 
-            self.forecast = forecast_results['fc211c'][-25:]
-            self.forecasterr = forecast_results['fc211cse'][-25:]
-            self.forecast_dyn = forecast_results['fc211cdyn'][-25:]
-            self.forecasterr_dyn = forecast_results['fc211cdynse'][-25:]
+            self.forecast = forecast_results["fc211c"][-25:]
+            self.forecasterr = forecast_results["fc211cse"][-25:]
+            self.forecast_dyn = forecast_results["fc211cdyn"][-25:]
+            self.forecasterr_dyn = forecast_results["fc211cdynse"][-25:]
         else:
             from .arima211_css_results import results
 
@@ -263,10 +262,10 @@ class ARIMA211:
             self.bse = np.sqrt(np.diag(self.cov_params))
             # forecasting is not any different for css
             # except you lose the first p+1 observations for in-sample
-            self.forecast = forecast_results['fc111c_css'][-25:]
-            self.forecasterr = forecast_results['fc111cse_css'][-25:]
-            self.forecast_dyn = forecast_results['fc111cdyn_css']
-            self.forecasterr_dyn = forecast_results['fc111cdynse_css']
+            self.forecast = forecast_results["fc111c_css"][-25:]
+            self.forecasterr = forecast_results["fc111cse_css"][-25:]
+            self.forecast_dyn = forecast_results["fc111cdyn_css"]
+            self.forecasterr_dyn = forecast_results["fc111cdynse_css"]
 
 
 class ARIMA112:
@@ -298,10 +297,10 @@ class ARIMA112:
             self.bse = np.sqrt(np.diag(self.cov_params))
 
             # from gretl
-            self.forecast = forecast_results['fc112c'][-25:]
-            self.forecasterr = forecast_results['fc112cse'][-25:]
-            self.forecast_dyn = forecast_results['fc112cdyn']
-            self.forecasterr_dyn = forecast_results['fc112cdynse']
+            self.forecast = forecast_results["fc112c"][-25:]
+            self.forecasterr = forecast_results["fc112cse"][-25:]
+            self.forecast_dyn = forecast_results["fc112cdyn"]
+            self.forecasterr_dyn = forecast_results["fc112cdynse"]
 
             # unpack stata results
             self.__dict__ = results
@@ -444,7 +443,7 @@ class ARIMA112:
             # self.cov_params = cov_params + cov_params.T - \
             #                np.diag(np.diag(cov_params))
             # self.bse = np.sqrt(np.diag(self.cov_params))
-            self.forecast = forecast_results['fc112c_css'][-25:]
-            self.forecasterr = forecast_results['fc112cse_css'][-25:]
-            self.forecast_dyn = forecast_results['fc112cdyn_css']
-            self.forecasterr_dyn = forecast_results['fc112cdynse_css']
+            self.forecast = forecast_results["fc112c_css"][-25:]
+            self.forecasterr = forecast_results["fc112cse_css"][-25:]
+            self.forecast_dyn = forecast_results["fc112cdyn_css"]
+            self.forecasterr_dyn = forecast_results["fc112cdynse_css"]
