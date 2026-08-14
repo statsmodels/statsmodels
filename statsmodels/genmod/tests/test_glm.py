@@ -2794,11 +2794,9 @@ class TestRegularized:
 
     @staticmethod
     def _load_enet_data(dtype):
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        data = np.loadtxt(
-            os.path.join(cur_dir, "results", "enet_%s.csv" % dtype),
-            delimiter=",",
-        )
+        cur_dir = Path(__file__).resolve().parent
+        file_path = cur_dir / "results" / f"enet_{dtype}.csv"
+        data = np.loadtxt(file_path, delimiter=",")
         return data[:, 0], data[:, 1:]
 
     def test_regularized_l1_slsqp_vs_discrete(self):
