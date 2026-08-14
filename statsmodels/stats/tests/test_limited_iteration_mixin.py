@@ -231,7 +231,7 @@ CASES = [
         pvalue_f=0.1, df_f=(2, 30), distr_f="F",
     )),
     (ADFullerResult, dict(
-        statistic=-2.0, pvalue=0.3, usedlag=1, nobs=100,
+        statistic=-2.0, pvalue=0.3, lags=1, nobs=100,
         critical_values={"1%": -3.5, "5%": -2.9, "10%": -2.6}, icbest=None,
         resstore=None,
     )),
@@ -240,12 +240,12 @@ CASES = [
     )),
     (KPSSResult, dict(
         statistic=0.3, pvalue=0.1, lags=3,
-        crit={"10%": 0.347, "5%": 0.463, "2.5%": 0.574, "1%": 0.739},
+        critical_values={"10%": 0.347, "5%": 0.463, "2.5%": 0.574, "1%": 0.739},
         resstore=None,
     )),
     (RURResult, dict(
         statistic=1.5, pvalue=0.5,
-        crit={"10%": 1.35, "5%": 1.21, "2.5%": 1.10, "1%": 0.98},
+        critical_values={"10%": 1.35, "5%": 1.21, "2.5%": 1.10, "1%": 0.98},
         resstore=None,
     )),
 ]

@@ -34,7 +34,7 @@ def test_adf_autolag():
             # min-ic lag of dfgls in Stata is also 2, or 9 for maic with notrend
             assert_equal(st2.usedlag, 2)
 
-        # same result with lag fixed at usedlag of autolag
+        # same result with lag fixed at lags of autolag
         adf2 = tsast.adfuller(
             x, maxlag=2, autolag=None, regression=tr, result_object=False
         )

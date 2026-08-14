@@ -267,7 +267,7 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
     else:
         # Note: above is only for z stats
         tau_coef = _tau_largeps[regression][N-1]
-    return norm.cdf(polyval(tau_coef[::-1], teststat))
+    return float(norm.cdf(polyval(tau_coef[::-1], teststat)))
 
 
 # These are the new estimates from MacKinnon 2010

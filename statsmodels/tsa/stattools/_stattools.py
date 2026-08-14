@@ -184,7 +184,7 @@ class ADFullerResult(LimitedIterationMixin[float]):
         The test statistic.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
-    usedlag : int
+    lags : int
         The number of lags used.
     nobs : int
         The number of observations used for the ADF regression and
@@ -207,7 +207,7 @@ class ADFullerResult(LimitedIterationMixin[float]):
 
     statistic: float
     pvalue: float
-    usedlag: int
+    lags: int
     nobs: int
     critical_values: dict[str, float]
     icbest: float | None
@@ -220,7 +220,7 @@ class ADFullerResult(LimitedIterationMixin[float]):
 {self.__class__.__name__}
 ADF Statistic: {self.statistic:0.5f}
 P-value: {self.pvalue:0.5f}
-Used Lag: {self.usedlag}
+Used Lag: {self.lags}
 Nobs: {self.nobs}
 Critical Values: {self.critical_values}
 """
@@ -296,7 +296,7 @@ def adfuller(
     -------
     ADFullerResult
         If ``result_object=True``, a result object with fields ``statistic``,
-        ``pvalue``, ``usedlag``, ``nobs``, ``critical_values``, ``icbest``,
+        ``pvalue``, ``lags``, ``nobs``, ``critical_values``, ``icbest``,
         and ``resstore`` (``icbest``/``resstore`` are ``None`` when not
         computed). See :class:`~statsmodels.tsa.stattools.ADFullerResult`.
 
@@ -307,12 +307,12 @@ def adfuller(
         The test statistic.
     pvalue : float
         MacKinnon's approximate p-value based on MacKinnon (1994, 2010).
-    usedlag : int
+    lags : int
         The number of lags used.
     nobs : int
         The number of observations used for the ADF regression and calculation
         of the critical values.
-    critical values : dict
+    critical_values : dict
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010).
     icbest : float
@@ -351,7 +351,7 @@ def adfuller(
         University, Dept of Economics, Working Papers.  Available at
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     maxlag = int_like(maxlag, "maxlag", optional=True)
     regression = string_like(regression, "regression", options=("c", "ct", "ctt", "n"))
     autolag = string_like(
@@ -439,7 +439,7 @@ def adfuller(
     else:
         resols = OLS(xdshort, xdall[:, : usedlag + 1]).fit()
 
-    adfstat = resols.tvalues[0]
+    adfstat = float(resols.tvalues[0])
     #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
     # nobs/(1-np.sum(resols.params[1:-(trendorder+1)])) (resols.params[0] - 1)
@@ -2999,7 +2999,7 @@ class KPSSResult(LimitedIterationMixin[float]):
         is, if the p-value is outside the interval (0.01, 0.1).
     lags : int
         The truncation lag parameter.
-    crit : dict[str, float]
+    critical_values : dict[str, float]
         The critical values at 10%, 5%, 2.5% and 1%. Based on Kwiatkowski
         et al. (1992).
     resstore : ResultsStore or None
@@ -3015,7 +3015,7 @@ class KPSSResult(LimitedIterationMixin[float]):
     statistic: float
     pvalue: float
     lags: int
-    crit: dict[str, float]
+    critical_values: dict[str, float]
     resstore: ResultsStore | None
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -3026,7 +3026,7 @@ class KPSSResult(LimitedIterationMixin[float]):
 KPSS Statistic: {self.statistic:0.5f}
 P-value: {self.pvalue:0.5f}
 Lags: {self.lags}
-Critical Values: {self.crit}
+Critical Values: {self.critical_values}
 """
 
 
@@ -3323,7 +3323,7 @@ class RURResult(LimitedIterationMixin[float]):
         in Aparicio et al. (2006), and a boundary point is returned if the
         test statistic is outside the table of critical values, that is,
         if the p-value is outside the interval (0.01, 0.1).
-    crit : dict[str, float]
+    critical_values : dict[str, float]
         The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
         al. (2006).
     resstore : ResultsStore or None
@@ -3338,7 +3338,7 @@ class RURResult(LimitedIterationMixin[float]):
 
     statistic: float
     pvalue: float
-    crit: dict[str, float]
+    critical_values: dict[str, float]
     resstore: ResultsStore | None
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
@@ -3348,7 +3348,7 @@ class RURResult(LimitedIterationMixin[float]):
 {self.__class__.__name__}
 RUR Statistic: {self.statistic:0.5f}
 P-value: {self.pvalue:0.5f}
-Critical Values: {self.crit}
+Critical Values: {self.critical_values}
 """
 
 

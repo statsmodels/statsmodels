@@ -1566,7 +1566,7 @@ class TestKPSS:
         assert res[0] == res.statistic
         assert res[1] == res.pvalue
         assert res.lags == 3
-        assert isinstance(res.crit, dict)
+        assert isinstance(res.critical_values, dict)
 
     def test_result_object_true_with_store(self):
         with pytest.warns(InterpolationWarning, match="The test statistic is"):
@@ -1728,7 +1728,7 @@ class TestRUR:
         assert res.resstore is None
         assert res[0] == res.statistic
         assert res[1] == res.pvalue
-        assert isinstance(res.crit, dict)
+        assert isinstance(res.critical_values, dict)
 
     def test_result_object_true_with_store(self):
         with pytest.warns(InterpolationWarning, match="The test statistic is"):
@@ -2414,7 +2414,7 @@ def test_adfuller_result_object_matches_legacy_values(adfuller_data):
         nt = adfuller(adfuller_data, result_object=True)
     assert_almost_equal(nt.statistic, legacy[0])
     assert_almost_equal(nt.pvalue, legacy[1])
-    assert nt.usedlag == legacy[2]
+    assert nt.lags == legacy[2]
     assert nt.nobs == legacy[3]
     assert nt.critical_values == legacy[4]
     assert_almost_equal(nt.icbest, legacy[5])
