@@ -1316,12 +1316,12 @@ def test_coint():
 
             assert_allclose(res1[i].coint_t, res[i][0], rtol=1e-11)
             r2 = res[i][1:]
-            r1 = res1[i].crit_value
+            r1 = res1[i].critical_values
             assert_allclose(r1, r2, rtol=0, atol=6e-7)
 
     # use default autolag #4490
     res1_0 = coint(y[:, 0], y[:, 1], trend="ct", maxlag=4)
-    assert_allclose(res1_0.crit_value, res_egranger["ct"][0][1:], rtol=0, atol=6e-7)
+    assert_allclose(res1_0.critical_values, res_egranger["ct"][0][1:], rtol=0, atol=6e-7)
     # the following is just a regression test
     assert_allclose(
         [res1_0.coint_t, res1_0.pvalue],
@@ -2760,4 +2760,4 @@ def test_stattools_fixed_arity_result_objects():
     assert isinstance(res, CointResult)
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
-    assert res[2] is res.crit_value
+    assert res[2] is res.critical_values

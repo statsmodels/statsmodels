@@ -832,9 +832,9 @@ def test_bounds_test_simulation(case):
     bounds_result = res.bounds_test(
         case=case, asymptotic=False, rng=[1, 2, 3, 4], nsim=10_000
     )
-    assert (bounds_result.p_values >= 0.0).all()
-    assert (bounds_result.p_values <= 1.0).all()
-    assert (bounds_result.crit_vals > 0.0).all().all()
+    assert (bounds_result.pvalue >= 0.0).all()
+    assert (bounds_result.pvalue <= 1.0).all()
+    assert (bounds_result.critical_values > 0.0).all().all()
 
 
 @pytest.mark.parametrize(
@@ -850,9 +850,9 @@ def test_bounds_test_rng(rng):
     )
     res = mod.fit()
     bounds_result = res.bounds_test(case=3, asymptotic=False, rng=rng, nsim=10_000)
-    assert (bounds_result.p_values >= 0.0).all()
-    assert (bounds_result.p_values <= 1.0).all()
-    assert (bounds_result.crit_vals > 0.0).all().all()
+    assert (bounds_result.pvalue >= 0.0).all()
+    assert (bounds_result.pvalue <= 1.0).all()
+    assert (bounds_result.critical_values > 0.0).all().all()
 
 
 def test_bounds_test_simulate_order():
@@ -867,7 +867,7 @@ def test_bounds_test_simulate_order():
     assert "BoundsTestResult" in str(bounds_result)
     bounds_result_sim = res.bounds_test(3, asymptotic=False, nsim=10_000, rng=[1, 2, 3])
     assert_allclose(bounds_result.statistic, bounds_result_sim.statistic)
-    assert (bounds_result_sim.p_values > bounds_result.p_values).all()
+    assert (bounds_result_sim.pvalue > bounds_result.pvalue).all()
 
 
 def test_resids_ardl_uecm():

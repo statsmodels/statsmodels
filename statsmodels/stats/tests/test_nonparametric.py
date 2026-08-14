@@ -673,7 +673,7 @@ def test_jonckheere_terpstra_many_unequal_groups():
         alternative="two-sided",
     )
 
-    assert res.k_groups == len(samples)
+    assert res.n_groups == len(samples)
     assert res.nobs == sum(sizes)
     assert_allclose(res.statistic, expected_stat, rtol=1e-13)
     expected_statistic = expected.correlation if SP_LT_110 else expected.statistic
@@ -717,8 +717,8 @@ cases_continuous = [
         np.array([6.6, 7.7, 8.8, 9.9, 10.1]),
         # Expected ranks and placements
         Holder(
-            n_1=5,
-            n_2=5,
+            nobs_1=5,
+            nobs_2=5,
             overall_ranks_pooled=np.arange(1, 11),
             overall_ranks_1=np.arange(1, 6),
             overall_ranks_2=np.arange(6, 11),
@@ -736,8 +736,8 @@ cases_ordinal = [
         np.array([4, 5, 6, 7, 8]),
         # Expected ranks and placements
         Holder(
-            n_1=5,
-            n_2=5,
+            nobs_1=5,
+            nobs_2=5,
             # First two ties are (1+2)/2=1.5, next two are (3+4)/2=3.5
             overall_ranks_pooled=np.array([1.5, 1.5, 3.5, 3.5, 5, 6, 7, 8, 9, 10]),
             overall_ranks_1=np.array([1.5, 1.5, 3.5, 3.5, 5]),
@@ -754,8 +754,8 @@ cases_ordinal = [
         np.array([4, 5, 6, 7, 8]),
         # Expected ranks and placements
         Holder(
-            n_1=5,
-            n_2=5,
+            nobs_1=5,
+            nobs_2=5,
             # Ties at (2+3)/2=2.5, (4+5)/2=4.5, (6+7)/2=6.5
             # So 2 -> 2.5, 4 -> 4.5, 5 -> 6.5
             overall_ranks_pooled=np.array(
@@ -787,8 +787,8 @@ def test_compute_rank_placements(test_cases):
     """
     x1, x2, expected_holder = test_cases
     res = _compute_rank_placements(x1, x2)
-    assert_allclose(res.n_1, expected_holder.n_1)
-    assert_allclose(res.n_2, expected_holder.n_2)
+    assert_allclose(res.nobs_1, expected_holder.nobs_1)
+    assert_allclose(res.nobs_2, expected_holder.nobs_2)
     assert_allclose(res.overall_ranks_pooled, expected_holder.overall_ranks_pooled)
     assert_allclose(res.overall_ranks_1, expected_holder.overall_ranks_1)
     assert_allclose(res.overall_ranks_2, expected_holder.overall_ranks_2)

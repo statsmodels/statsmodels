@@ -75,10 +75,10 @@ class BoundsTestResult(NamedTuple):
     ----------
     statistic : float
         The F-type test statistic favored in PSS.
-    crit_vals : DataFrame
+    critical_values : DataFrame
         The critical values for the test statistic, with columns "lower"
         and "upper" indexed by percentile.
-    p_values : Series
+    pvalue : Series
         The p-values corresponding to the "lower" and "upper" bounds of
         the test statistic.
     null : str
@@ -88,8 +88,8 @@ class BoundsTestResult(NamedTuple):
     """
 
     statistic: float
-    crit_vals: pd.DataFrame
-    p_values: pd.Series
+    critical_values: pd.DataFrame
+    pvalue: pd.Series
     null: str
     alternative: str
 
@@ -97,8 +97,8 @@ class BoundsTestResult(NamedTuple):
         return f"""\
 {self.__class__.__name__}
 Stat: {self.statistic:0.5f}
-Upper P-value: {self.p_values["upper"]:0.3g}
-Lower P-value: {self.p_values["lower"]:0.3g}
+Upper P-value: {self.pvalue["upper"]:0.3g}
+Lower P-value: {self.pvalue["lower"]:0.3g}
 Null: {self.null}
 Alternative: {self.alternative}
 """
@@ -2441,9 +2441,9 @@ class UECMResults(ARDLResults):
         Returns
         -------
         BoundsTestResult
-            Named tuple containing ``statistic``, ``crit_vals``, ``p_values``,
-            ``null`` and ``alternative``. The statistic is the F-type
-            test statistic favored in PSS.
+            Named tuple containing ``statistic``, ``critical_values``,
+            ``pvalue``, ``null`` and ``alternative``. The statistic is the
+            F-type test statistic favored in PSS.
 
         Notes
         -----

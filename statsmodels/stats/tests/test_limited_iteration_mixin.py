@@ -128,7 +128,9 @@ CASES = [
         statistic=1.0, pvalue=0.1, pvalue_smaller=0.2, pvalue_larger=0.8,
         chi2=1.0, pvalue_chi2=0.1, df_chi2=1, distribution="normal",
     )),
-    (HomogeneityTestResult, dict(statistic=1.0, pvalue=0.1, df=2.0, distr="chi2")),
+    (HomogeneityTestResult, dict(
+        statistic=1.0, pvalue=0.1, df=2.0, distribution="chi2",
+    )),
     (PoissonTestResult, dict(
         statistic=1.0, pvalue=0.1, distribution="normal", method="score",
         alternative="two-sided", rate=0.5, nobs=20.0,
@@ -148,20 +150,20 @@ CASES = [
         results_smaller=_p2i, title="nonequiv",
     )),
     (PowerRatioResult, dict(
-        power=0.8, p_pooled=None, std_null=0.1, std_alt=0.1, nobs1=20.0,
-        nobs2=20.0, nobs_ratio=1.0, alpha=0.05,
+        power=0.8, p_pooled=None, std_null=0.1, std_alt=0.1, nobs_1=20.0,
+        nobs_2=20.0, nobs_ratio=1.0, alpha=0.05,
     )),
     (PowerEquivalenceResult, dict(
         power=0.8, power_margins=np.array([0.1, 0.2]), std_null_low=0.1,
-        std_null_upp=0.1, std_alt=0.1, nobs1=20.0, nobs2=20.0,
+        std_null_upp=0.1, std_alt=0.1, nobs_1=20.0, nobs_2=20.0,
         nobs_ratio=1.0, alpha=0.05,
     )),
     (PowerDiffResult, dict(
         power=0.8, rates_alt=(2.0, 1.5), std_null=0.1, std_alt=0.1,
-        nobs1=20.0, nobs2=20.0, nobs_ratio=1.0, alpha=0.05,
+        nobs_1=20.0, nobs_2=20.0, nobs_ratio=1.0, alpha=0.05,
     )),
     (PowerNegbinRatioResult, dict(
-        power=0.8, std_null=0.1, std_alt=0.1, nobs1=20.0, nobs2=20.0,
+        power=0.8, std_null=0.1, std_alt=0.1, nobs_1=20.0, nobs_2=20.0,
         nobs_ratio=1.0, alpha=0.05,
     )),
     (ScoreTestProportionsResult, dict(
@@ -179,7 +181,7 @@ CASES = [
     )),
     (AnovaResult, dict(
         statistic=1.0, pvalue=0.1, df=(2.0, 30.0), df_num=2.0, df_denom=30.0,
-        nobs_t=33.0, n_groups=3, means=np.array([1.0, 2.0, 3.0]),
+        nobs_total=33.0, n_groups=3, means=np.array([1.0, 2.0, 3.0]),
         nobs=np.array([10, 11, 12]), vars_=np.array([1.0, 1.0, 1.0]),
         use_var="unequal", welch_correction=True,
     )),
@@ -190,7 +192,7 @@ CASES = [
     )),
     (ScaleAnovaResult, dict(
         statistic=1.0, pvalue=0.1, df=(2.0, 30.0), df_num=2.0, df_denom=30.0,
-        nobs_t=33.0, n_groups=3, means=np.array([1.0, 2.0, 3.0]),
+        nobs_total=33.0, n_groups=3, means=np.array([1.0, 2.0, 3.0]),
         nobs=np.array([10, 11, 12]), vars_=np.array([1.0, 1.0, 1.0]),
         use_var="unequal", welch_correction=True, data_transformed=[1, 2, 3],
     )),
@@ -208,7 +210,7 @@ CASES = [
     )),
     (RankCompareResult, dict(
         statistic=1.0, pvalue=0.1, s1=1.0, s2=1.0, var1=1.0, var2=1.0,
-        var=1.0, var_prob=1.0, nobs1=10, nobs2=10, nobs=20, mean1=1.0,
+        var=1.0, var_prob=1.0, nobs_1=10, nobs_2=10, nobs=20, mean1=1.0,
         mean2=1.0, prob1=0.5, prob2=0.5, somersd1=0.0, somersd2=0.0,
         df=None, use_t=False,
     )),
@@ -219,16 +221,16 @@ CASES = [
         chi2_stat_groups=np.array([0.5, 0.5]), indices=[[0], [1]],
     )),
     (HotellingResult, dict(
-        statistic=1.0, pvalue=0.1, df=(3, 47), t2=4.0, distr="F",
+        statistic=1.0, pvalue=0.1, df=(3, 47), t2=4.0, distribution="F",
     )),
     (CovTestResult, dict(
-        statistic=1.0, pvalue=0.1, df=6.0, distr="chi2", null="equal value",
-        cov_null=None,
+        statistic=1.0, pvalue=0.1, df=6.0, distribution="chi2",
+        null="equal value", cov_null=None,
     )),
     (CovOnewayResult, dict(
         statistic=1.0, pvalue=0.1, statistic_base=1.0, statistic_chi2=1.0,
-        pvalue_chi2=0.1, df_chi2=2.0, distr_chi2="chi2", statistic_f=1.0,
-        pvalue_f=0.1, df_f=(2, 30), distr_f="F",
+        pvalue_chi2=0.1, df_chi2=2.0, distribution_chi2="chi2",
+        statistic_f=1.0, pvalue_f=0.1, df_f=(2, 30), distribution_f="F",
     )),
     (ADFullerResult, dict(
         statistic=-2.0, pvalue=0.3, lags=1, nobs=100,

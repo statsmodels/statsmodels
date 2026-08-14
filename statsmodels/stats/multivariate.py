@@ -36,7 +36,7 @@ class HotellingResult(LimitedIterationMixin[float]):
         Numerator and denominator degrees of freedom of the F distribution.
     t2 : float
         Hotelling's T-squared statistic.
-    distr : str
+    distribution : str
         Name of the reference distribution used for `pvalue`, ``"F"``.
 
     Notes
@@ -51,7 +51,7 @@ class HotellingResult(LimitedIterationMixin[float]):
     pvalue: float
     df: tuple
     t2: float
-    distr: str
+    distribution: str
 
 
 def test_mvmean(data, mean_null=0, return_results=True):
@@ -88,7 +88,9 @@ def test_mvmean(data, mean_null=0, return_results=True):
     df = (k_vars, nobs - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
     if return_results:
-        res = HotellingResult(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
+        res = HotellingResult(
+            statistic=statistic, pvalue=pvalue, df=df, t2=t2, distribution="F"
+        )
         return res
     else:
         return statistic, pvalue
@@ -132,7 +134,9 @@ def test_mvmean_2indep(data1, data2):
     statistic = t2 / factor
     df = (k_vars, nobs_t - 1 - k_vars)
     pvalue = stats.f.sf(statistic, df[0], df[1])
-    return HotellingResult(statistic=statistic, pvalue=pvalue, df=df, t2=t2, distr="F")
+    return HotellingResult(
+        statistic=statistic, pvalue=pvalue, df=df, t2=t2, distribution="F"
+    )
 
 
 def confint_mvmean(data, lin_transf=None, alpha=0.05, simult=False):
@@ -317,7 +321,7 @@ class CovTestResult(LimitedIterationMixin[float]):
         p-value based on the chi-square distribution.
     df : float
         Degrees of freedom of the chi-square distribution.
-    distr : str
+    distribution : str
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
     null : str
         Short description of the null hypothesis being tested.
@@ -336,7 +340,7 @@ class CovTestResult(LimitedIterationMixin[float]):
     statistic: float
     pvalue: float
     df: float
-    distr: str
+    distribution: str
     null: str
     cov_null: np.ndarray | None = None
 
@@ -398,7 +402,7 @@ def test_cov(cov, nobs, cov_null):
         statistic=statistic,
         pvalue=pvalue,
         df=df,
-        distr="chi2",
+        distribution="chi2",
         null="equal value",
         cov_null=cov_null,
     )
@@ -456,7 +460,7 @@ def test_cov_spherical(cov, nobs):
     df = k * (k + 1) / 2 - 1
     pvalue = stats.chi2.sf(statistic, df)
     return CovTestResult(
-        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="spherical"
+        statistic=statistic, pvalue=pvalue, df=df, distribution="chi2", null="spherical"
     )
 
 
@@ -505,7 +509,7 @@ def test_cov_diagonal(cov, nobs):
     df = k * (k - 1) / 2
     pvalue = stats.chi2.sf(statistic, df)
     return CovTestResult(
-        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="diagonal"
+        statistic=statistic, pvalue=pvalue, df=df, distribution="chi2", null="diagonal"
     )
 
 
@@ -597,7 +601,11 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     df = a2 / 2
     pvalue = stats.chi2.sf(statistic, df)
     return CovTestResult(
-        statistic=statistic, pvalue=pvalue, df=df, distr="chi2", null="block-diagonal"
+        statistic=statistic,
+        pvalue=pvalue,
+        df=df,
+        distribution="chi2",
+        null="block-diagonal",
     )
 
 
@@ -621,7 +629,7 @@ class CovOnewayResult(LimitedIterationMixin[float]):
         p-value based on the chi-square approximation.
     df_chi2 : float
         Degrees of freedom of the chi-square approximation.
-    distr_chi2 : str
+    distribution_chi2 : str
         Name of the chi-square reference distribution, ``"chi2"``.
     statistic_f : float
         Test statistic of the F approximation, same value as `statistic`.
@@ -630,7 +638,7 @@ class CovOnewayResult(LimitedIterationMixin[float]):
     df_f : tuple
         Numerator and denominator degrees of freedom of the F
         approximation.
-    distr_f : str
+    distribution_f : str
         Name of the F reference distribution, ``"F"``.
 
     Notes
@@ -647,11 +655,11 @@ class CovOnewayResult(LimitedIterationMixin[float]):
     statistic_chi2: float
     pvalue_chi2: float
     df_chi2: float
-    distr_chi2: str
+    distribution_chi2: str
     statistic_f: float
     pvalue_f: float
     df_f: tuple
-    distr_f: str
+    distribution_f: str
 
 
 def test_cov_oneway(cov_list, nobs_list):
@@ -738,9 +746,9 @@ def test_cov_oneway(cov_list, nobs_list):
         statistic_chi2=statistic_chi2,
         pvalue_chi2=pvalue_chi2,
         df_chi2=df_chi2,
-        distr_chi2="chi2",
+        distribution_chi2="chi2",
         statistic_f=statistic_f,
         pvalue_f=pvalue_f,
         df_f=df_f,
-        distr_f="F",
+        distribution_f="F",
     )

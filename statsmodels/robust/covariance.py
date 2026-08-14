@@ -446,11 +446,8 @@ class CovOGKResult(NamedTuple):
     ----------
     cov : ndarray
         Estimated covariance, either raw OGK or reweighted OGK.
-    loc : ndarray
-        Estimated location, either from raw OGK or reweighted OGK. Alias
-        of `mean`.
     mean : ndarray
-        Estimated location, alias of `loc`.
+        Estimated location, either from raw OGK or reweighted OGK.
     mask : ndarray or None
         Boolean mask of observations kept in the reweighting step, or None
         if `reweight` was None.
@@ -478,7 +475,6 @@ class CovOGKResult(NamedTuple):
     """
 
     cov: np.ndarray
-    loc: np.ndarray
     mean: np.ndarray
     mask: np.ndarray | None
     mahalanobis_raw: np.ndarray | None
@@ -624,10 +620,8 @@ def cov_ogk(
     if rescale_raw:
         cov_raw *= scale_factor_raw
 
-    # duplicate name loc mean center, choose consistent naming
     res = CovOGKResult(
         cov=cov,
-        loc=loc,
         mean=loc,
         mask=mask,
         mahalanobis_raw=d,
