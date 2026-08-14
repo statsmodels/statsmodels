@@ -122,9 +122,9 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     >>> dot_plot(points=point_values, lines=label_values)
     """
 
-    from matplotlib import transforms
-
     fig, ax = utils.create_mpl_ax(ax)
+
+    from matplotlib import transforms
 
     # Convert to numpy arrays if that is not what we are given.
     points = np.asarray(points)

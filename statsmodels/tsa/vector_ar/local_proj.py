@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.validation import array_like, int_like, string_like
 
@@ -127,7 +128,7 @@ class LocalProjectionsResults:
         -------
         fig : matplotlib.figure.Figure
         """
-        import matplotlib.pyplot as plt
+        plt = _import_mpl()
 
         var_names = self.model.endog_names
         shock_names = self.model.shock_names

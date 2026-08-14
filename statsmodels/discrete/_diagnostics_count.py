@@ -3,7 +3,6 @@ Created on Fri Sep 15 12:53:45 2017
 
 Author: Josef Perktold
 """
-
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -12,6 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, SingularMatrixWarning
@@ -114,7 +114,7 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
         label0, label1 = "freq", label
 
     if fig is None:
-        import matplotlib.pyplot as plt
+        plt = _import_mpl()
 
         fig = plt.figure(figsize=(8, 12))
     ax1 = fig.add_subplot(311)

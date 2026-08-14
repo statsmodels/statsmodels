@@ -38,18 +38,13 @@ unknown. Journal of the American Statistical Association, Vol 64, No. 325.
 (1969), pp. 387-389.
 """
 
-from functools import partial
+from functools import cache, partial
 
 import numpy as np
 from scipy import stats
 
 from statsmodels.tools.validation import string_like
 
-from ._lilliefors_critical_values import (
-    PERCENTILES,
-    asymp_critical_values,
-    critical_values,
-)
 from .tabledist import TableDist
 
 
@@ -142,6 +137,7 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     return np.max([d_plus, d_min])
 
 
+@cache
 def get_lilliefors_table(dist="norm"):
     """
     Generates tables for significance levels of Lilliefors test statistics
@@ -162,6 +158,17 @@ def get_lilliefors_table(dist="norm"):
     # function just to keep things together
     # for this test alpha is sf probability, i.e., right tail probability
 
+    # deferred import: this table is a large, generated module (~380 lines
+    # of literal arrays) that is only needed when a Lilliefors test is
+    # actually run, so import it lazily and cache the resulting TableDist
+    # (via lru_cache on this function) rather than paying the parsing cost
+    # at package import time.
+    from ._lilliefors_critical_values import (
+        PERCENTILES,
+        asymp_critical_values,
+        critical_values,
+    )
+
     alpha = 1 - np.array(PERCENTILES) / 100.0
     alpha = alpha[::-1]
     dist = "normal" if dist == "norm" else dist
@@ -179,10 +186,6 @@ def get_lilliefors_table(dist="norm"):
 
     lf = TableDist(alpha, size, crit_lf, asymptotic=asymp_fn)
     return lf
-
-
-lilliefors_table_norm = get_lilliefors_table(dist="norm")
-lilliefors_table_expon = get_lilliefors_table(dist="exp")
 
 
 def pval_lf(d_max, n):
@@ -291,14 +294,15 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     if dist == "norm":
         z = (x - x.mean()) / x.std(ddof=1)
         test_d = stats.norm.cdf
-        lilliefors_table = lilliefors_table_norm
     elif dist == "exp":
         z = x / x.mean()
         test_d = stats.expon.cdf
-        lilliefors_table = lilliefors_table_expon
         pvalmethod = "table"
     else:
         raise ValueError("Invalid dist parameter, must be 'norm' or 'exp'")
+    # deferred/cached: only builds (and imports) the critical-value table
+    # for the distribution actually requested
+    lilliefors_table = get_lilliefors_table(dist=dist)
 
     min_nobs = 4 if dist == "norm" else 3
     if nobs < min_nobs:

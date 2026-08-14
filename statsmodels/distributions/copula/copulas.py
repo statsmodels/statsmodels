@@ -19,6 +19,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.graphics import utils
+from statsmodels.graphics.utils import _import_mpl
 
 
 class CopulaDistribution:
@@ -435,7 +436,7 @@ class Copula(ABC):
             `ax` is connected.
 
         """
-        from matplotlib import pyplot as plt
+        plt = _import_mpl()
 
         if self.k_dim != 2:
             import warnings

@@ -131,8 +131,6 @@ def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
     Figure
         The figure that holds the instance.
     """
-    from matplotlib.patches import Ellipse
-
     fig, ax = utils.create_mpl_ax(ax)
 
     x = np.asarray(x)
@@ -161,6 +159,8 @@ def add_ellipse(x, y, ax=None, alpha=0.95, **ellipse_kwargs):
     ellipse_kwds = dict(edgecolor="blue", facecolor="none", linewidth=1.5)
     if ellipse_kwargs:
         ellipse_kwds.update(ellipse_kwargs)
+
+    from matplotlib.patches import Ellipse
 
     ellipse = Ellipse((mean_x, mean_y), width, height, angle=angle, **ellipse_kwds)
     ax.add_patch(ellipse)

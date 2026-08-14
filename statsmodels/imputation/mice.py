@@ -120,6 +120,7 @@ import pandas as pd
 
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.graphics import utils as gutils
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.rng_qrng import check_random_state
 
@@ -626,14 +627,12 @@ class MICEData:
             miss = miss[:, ix]
             cols = [cols[i] for i in ix]
 
-        from matplotlib.colors import LinearSegmentedColormap
-
-        from statsmodels.graphics import utils as gutils
-
         if ax is None:
             fig, ax = gutils.create_mpl_ax(ax)
         else:
             fig = ax.get_figure()
+
+        from matplotlib.colors import LinearSegmentedColormap
 
         if color_row_patterns:
             x = 2 ** np.arange(miss.shape[1])

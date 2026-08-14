@@ -7,6 +7,8 @@ Author: josef-pktd
 License: BSD(3clause)
 """
 
+from statsmodels.graphics.utils import _import_mpl
+
 from . import stattools as stt
 
 
@@ -56,7 +58,7 @@ class TsaDescriptive:
         spdr = self.periodogram()[:nfreq]  # (w)
 
         if fig is None:
-            import matplotlib.pyplot as plt
+            plt = _import_mpl()
             fig = plt.figure()
         ax = fig.add_subplot(2, 2, 1)
         namestr = f" for {self.name}" if self.name else ""

@@ -266,11 +266,12 @@ class FormulaManager:
                 f"Unknown engine: {_engine}. Only patsy and formulaic are supported."
             )
         # Ensure selected engine is available
-        msg_base = " is not available. Please install patsy."
-        if _engine == "patsy" and not HAVE_PATSY:
-            raise ImportError(f"patsy {msg_base}.")
-        if _engine == "formulaic" and not HAVE_FORMULAIC:
-            raise ImportError(f"formulaic {msg_base}.")
+        msg = f"{_engine} is not available. Please install {_engine}."
+        if (
+                (_engine == "patsy" and not HAVE_PATSY) or
+                (_engine == "formulaic" and not HAVE_FORMULAIC)
+        ):
+            raise ImportError(msg)
 
         return _engine
 
