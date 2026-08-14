@@ -983,7 +983,7 @@ class TestOLSRobustClusterJK:
         dtapa_exog = dtapa.exog[:200]
         cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
         cls.N = cls.exog.shape[0]
-        cls.id = pd.Series(range(0, cls.N))
+        cls.id = pd.Series(range(cls.N))
         cls.firm = dtapa.data.firm[:200]
         cls.G = len(np.unique(cls.firm))
 
@@ -1064,7 +1064,7 @@ class TestWLSRobustClusterJK:
         dtapa_exog = dtapa.exog[:200]
         cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
         cls.N = cls.exog.shape[0]
-        cls.id = pd.Series(range(0, cls.N))
+        cls.id = pd.Series(range(cls.N))
         cls.firm = dtapa.data.firm[:200]
         cls.G = len(np.unique(cls.firm))
         cls.weights = np.arange(1, cls.N+1, 1)
