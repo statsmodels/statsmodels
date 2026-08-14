@@ -5079,8 +5079,8 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         References
         ----------
-        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
-        Inference; Springer New York.
+        .. [BurnhamAnderson2002] Burnham KP, Anderson KR (2002). Model Selection
+           and Multimodel Inference; Springer New York.
         """
         crit = crit.lower()
         k_extra = getattr(self.model, "k_extra", 0)

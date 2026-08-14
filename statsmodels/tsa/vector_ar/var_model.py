@@ -1787,7 +1787,8 @@ class VARResults(VARProcess):
     def irf_resim(self, orth=False, repl=1000, steps=10, rng=None, burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
-        Used for Sims-Zha error band calculation.
+
+        Used for Sims-Zha ([SimsZha1999]_) error band calculation.
 
         Parameters
         ----------
@@ -1815,8 +1816,8 @@ class VARResults(VARProcess):
 
         Notes
         -----
-        .. [*] Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse
-           Response." Econometrica 67: 1113-1155.
+        .. [SimsZha1999] Sims, Christoper A., and Tao Zha. 1999. "Error Bands
+           for Impulse Responses". Econometrica 67: 1113-1155.
         """
         neqs = self.neqs
         k_ar = self.k_ar

@@ -1782,26 +1782,28 @@ class MQuantileNorm(RobustNorm):
     -----
     This is mainly for base norms that are not redescending, like HuberT or
     LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
-    in the case of non-redescending Norms.)
+    in the case of non-redescending Norms.) See [BianchiEtAl2015]_,
+    [BrecklingChambers1988]_, [Jones1994]_, and [NeweyPowell1987]_ for more
+    information.
 
     Expectiles are M-quantiles with the LeastSquares as base norm.
 
     References
     ----------
-    .. [*] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic Properties
-       and Variance Estimators of the M-Quantile Regression Coefficients
+    .. [BianchiEtAl2015] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic
+       Properties and Variance Estimators of the M-Quantile Regression Coefficients
        Estimators.” Communications in Statistics - Theory and Methods 44 (11):
        2416-29. doi:10.1080/03610926.2013.791375.
 
-    .. [*] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
+    .. [BrecklingChambers1988] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
        Biometrika 75 (4): 761-71. doi:10.2307/2336317.
 
-    .. [*] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
+    .. [Jones1994] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
        Statistics & Probability Letters 20 (2): 149-53.
        doi:10.1016/0167-7152(94)90031-0.
 
-    .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
-       Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
+    .. [NeweyPowell1987] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric
+       Least Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
        doi:10.2307/1911031.
     """
 
