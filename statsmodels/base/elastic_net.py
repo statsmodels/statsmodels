@@ -95,7 +95,8 @@ def _coord_descent(model, alpha, L1_wt, start_params, maxiter, cnvrg_tol,
 
     Helper for `fit_elasticnet`; ``alpha`` must be a vector with one
     penalty weight per coefficient.  Returns the estimated parameters,
-    the number of iterations, and the convergence status.
+    the number of sweeps through the coordinates that were completed,
+    and the convergence status.
     """
     k_exog = model.exog.shape[1]
 
@@ -169,7 +170,9 @@ def _coord_descent(model, alpha, L1_wt, start_params, maxiter, cnvrg_tol,
     # Set approximate zero coefficients to be exactly zero
     params[np.abs(params) < zero_tol] = 0
 
-    return params, itr, converged
+    # itr is the zero-based index of the last sweep that was run;
+    # itr + 1 is the number of sweeps completed.
+    return params, itr + 1, converged
 
 
 def _l1_slsqp(model, alpha, start_params, maxiter, loglike_kwds, score_kwds,
@@ -234,10 +237,10 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     model : model object
         A statsmodels object implementing ``loglike``, ``score``, and
         ``hessian``.
-    method : {'coord_descent', 'l1_slsqp'}
-        The algorithm used to fit the model.  'coord_descent' (with
-        'elastic_net' accepted as a synonym) uses coordinate descent
-        and supports the full elastic net penalty.  'l1_slsqp' solves a
+    method : {'coord_descent', 'elastic_net', 'l1_slsqp'}
+        The algorithm used to fit the model.  'coord_descent' and
+        'elastic_net' are synonyms and use coordinate descent, which
+        supports the full elastic net penalty.  'l1_slsqp' solves a
         smooth constrained reformulation of the L1 problem with slsqp,
         an interior point style method, and only supports the lasso
         penalty (``L1_wt`` must be 1).
@@ -403,7 +406,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     refit.regularized = True
     refit.converged = converged
     refit.method = method
-    refit.fit_history = {"iteration": itr + 1}
+    refit.fit_history = {"iteration": itr}
 
     # Restore df in model class, see issue #1723 for discussion.
     model.df_model, model.df_resid = p, q

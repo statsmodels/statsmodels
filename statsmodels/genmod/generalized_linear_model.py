@@ -1586,7 +1586,7 @@ class GLM(base.LikelihoodModel):
             If 'auto', trim params using the theoretical optimality
             conditions.  If 'size', trim params if they have very small
             absolute value.
-        size_trim_tol : float or 'auto'
+        size_trim_tol : float
             Tolerance used when trim_mode is 'size'.
         auto_trim_tol : float
             Tolerance used when trim_mode is 'auto'.
@@ -1599,7 +1599,12 @@ class GLM(base.LikelihoodModel):
             Requested accuracy as used by slsqp (default 1e-10).
         """
 
-        if kwargs.get("L1_wt", 1) == 0:
+        if method not in ("elastic_net", "l1_slsqp"):
+            raise ValueError(
+                "method for fit_regularized must be elastic_net or l1_slsqp"
+            )
+
+        if method == "elastic_net" and kwargs.get("L1_wt", 1) == 0:
             return self._fit_ridge(alpha, start_params, opt_method)
 
         from statsmodels.base.elastic_net import fit_elasticnet
@@ -1611,14 +1616,10 @@ class GLM(base.LikelihoodModel):
                 "cnvrg_tol": 1e-10,
                 "zero_tol": 1e-10,
             }
-        elif method == "l1_slsqp":
+        else:
             # l1_slsqp uses an interior point style method, in contrast
             # to the coordinate descent used by elastic_net.
             defaults = {"maxiter": 1000}
-        else:
-            raise ValueError(
-                "method for fit_regularized must be elastic_net or l1_slsqp"
-            )
 
         defaults.update(kwargs)
 
