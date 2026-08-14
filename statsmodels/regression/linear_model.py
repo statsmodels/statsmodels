@@ -165,15 +165,19 @@ _fit_regularized_doc = r"""
         The cvxopt module is required to estimate a model using the square
         root lasso.
 
+        The implementation is based on [FriedmanEtAl2008]_ and
+        [BelloniEtAl2011]_.
+
         References
         ----------
-        .. [*] Friedman, Hastie, Tibshirani (2008).  Regularization paths for
-           generalized linear models via coordinate descent.  Journal of
-           Statistical Software 33(1), 1-22 Feb 2010.
+        .. [FriedmanEtAl2008] Friedman, Hastie, Tibshirani (2008).
+           Regularization paths for generalized linear models via coordinate
+           descent.  Journal of Statistical Software 33(1), 1-22 Feb 2010.
 
-        .. [*] A Belloni, V Chernozhukov, L Wang (2011).  Square-root Lasso:
-           pivotal recovery of sparse signals via conic programming.
-           Biometrika 98(4), 791-806. https://arxiv.org/pdf/1009.5689.pdf
+        .. [BelloniEtAl2011] A Belloni, V Chernozhukov, L Wang (2011).
+           Square-root Lasso: pivotal recovery of sparse signals via conic
+           programming. Biometrika 98(4), 791-806.
+           https://arxiv.org/pdf/1009.5689.pdf
         """
 
 
@@ -2120,9 +2124,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         References
         ----------
-        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
-        Inference; Springer New York.
-
+        .. [BurnhamAnderson2002] Burnham KP, Anderson KR (2002). Model Selection
+           and Multimodel Inference; Springer New York.
         """
         crit = crit.lower()
         k_params = self.df_model + self.k_constant + dk_params

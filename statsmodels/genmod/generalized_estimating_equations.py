@@ -1835,14 +1835,14 @@ class GEE(GLM):
         will differ from the values reported by other packages.  However only
         the differences between two QIC values calculated for different models
         using the same data are meaningful.  Our QIC should produce the same
-        QIC differences as other software.
+        QIC differences as other software. See [Pan2001]_ for details.
 
         When using the QIC for models with unknown scale parameter, use a
         common estimate of the scale parameter for all models being compared.
 
         References
         ----------
-        .. [*] W. Pan (2001).  Akaike's information criterion in generalized
+        .. [Pan2001] W. Pan (2001).  Akaike's information criterion in generalized
                estimating equations.  Biometrics (57) 1.
         """
 

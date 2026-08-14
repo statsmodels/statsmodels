@@ -1316,17 +1316,16 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        This method is from Harvey (1989), which shows that the information
-        matrix only depends on terms from the gradient. This implementation is
-        partially analytic and partially numeric approximation, therefore,
+        This method is from [Harvey1989]_, which shows that the information
+        matrix only depends on terms from the gradient. This implementation
+        is partially analytic and partially numeric approximation, therefore,
         because it uses the analytic formula for the information matrix, with
         numerically computed elements of the gradient.
 
         References
         ----------
-        Harvey, Andrew C. 1990.
-        Forecasting, Structural Time Series Models and the Kalman Filter.
-        Cambridge University Press.
+        .. [Harvey1989] Harvey, Andrew C. 1989. Forecasting, Structural Time Series Models
+        and the Kalman Filter. Cambridge University Press.
         """
         params = np.array(params, ndmin=1)
 
@@ -3354,12 +3353,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         where :math:`Q` is the state covariance matrix. Note that the Lütkepohl
         definitions do not apply to all state space models, and should be used
-        with care outside of SARIMAX and VARMAX models.
+        with care outside of SARIMAX and VARMAX models. See [Lütkepohl2007]_
+        for more details.
 
         References
         ----------
-        .. [*] Lütkepohl, Helmut. 2007. *New Introduction to Multiple Time*
-           *Series Analysis.* Berlin: Springer.
+        .. [Lütkepohl2007] Lütkepohl, Helmut. 2005. New Introduction to Multiple Time
+           Series Analysis. Berlin: Springer.
         """
         criteria = criteria.lower()
         method = method.lower()
