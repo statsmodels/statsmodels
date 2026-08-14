@@ -463,7 +463,7 @@ def _cluster_jackknife(results, group, center):
     beta_jack = np.zeros((n_groups, k_params))
 
     # compute leave-one-out regression coefficients (aka clusterjacks')
-    for ixg, g in enumerate(clusters):
+    for ixg, _ in enumerate(clusters):
 
         Xg = X[np.equal(ixg, group)]
         Yg = Y[np.equal(ixg, group)]
@@ -481,7 +481,7 @@ def _cluster_jackknife(results, group, center):
         beta_center = np.mean(beta_jack, axis = 0)
 
     H = np.zeros((k_params, k_params))
-    for ixg, g in enumerate(clusters):
+    for ixg, _ in enumerate(clusters):
         beta_centered = beta_jack[ixg,:] - beta_center
         H += np.outer(beta_centered, beta_centered)
 
