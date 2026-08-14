@@ -36,7 +36,6 @@ from statsmodels.tsa.ar_model import (
     InformationCriteria,
     sumofsq,
 )
-from statsmodels.tsa.ardl import pss_critical_values
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tsa.base.prediction import PredictionResults
@@ -2483,6 +2482,10 @@ class UECMResults(ARDLResults):
            approaches to the analysis of level relationships. Journal of
            applied econometrics, 16(3), 289-326.
         """
+        # deferred import: pss_critical_values holds large tables that are
+        # only needed when a bounds test is actually run
+        from statsmodels.tsa.ardl import pss_critical_values
+
         model = self.model
         trend: Literal["n", "c", "ct"]
         if case == 1:
@@ -2552,6 +2555,10 @@ class UECMResults(ARDLResults):
 
 
 def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
+    # deferred import: pss_critical_values holds large tables that are
+    # only needed when a bounds test is actually run
+    from statsmodels.tsa.ardl import pss_critical_values
+
     key = (k, case, i1)
     large_p = pss_critical_values.large_p[key]
     small_p = pss_critical_values.small_p[key]
@@ -2570,6 +2577,10 @@ def _pss_simulate(
     nsim: int,
     rng: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
 ) -> tuple[pd.DataFrame, pd.Series]:
+    # deferred import: pss_critical_values holds large tables that are
+    # only needed when a bounds test is actually run
+    from statsmodels.tsa.ardl import pss_critical_values
+
     rs: np.random.RandomState | np.random.Generator = check_random_state(rng)
 
     def _vectorized_ols_resid(rhs, lhs):

@@ -2,6 +2,7 @@ from statsmodels.compat.python import lrange
 
 import numpy as np
 
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.tsa.vector_ar import util
 
 
@@ -31,7 +32,7 @@ class MPLConfigurator:
 #
 def plot_mts(Y, names=None, index=None):
     """Plot multiple time series"""
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     k = Y.shape[1]
     rows, cols = k, 1
@@ -63,7 +64,7 @@ def plot_var_forc(
     plot_stderr=True,
     legend_options=None,
 ):
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     n, k = prior.shape
     rows, cols = k, 1
@@ -128,7 +129,7 @@ def plot_with_error(
         The kind of error bars being plotted. One of "asym", "mc", "sz1",
         "sz2", or "sz3".
     """
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     if axes is None:
         axes = plt.gca()
@@ -174,7 +175,7 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None, err_bound=None)
     Figure
         The figure containing the grid of autocorrelation plots.
     """
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     config = MPLConfigurator()
     config.set_fontsize(fontsize)
@@ -198,7 +199,7 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, xlabel=None, err_bound=None)
 
 
 def acorr_plot(acorr, linewidth=8, xlabel=None, ax=None):
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     if ax is None:
         ax = plt.gca()
@@ -220,7 +221,7 @@ def plot_acorr_with_error():
 
 
 def adjust_subplots(**kwds):
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     passed_kwds = {
         "bottom": 0.05,
@@ -294,7 +295,7 @@ def irf_grid_plot(
     Figure
         The figure containing the grid of impulse response plots.
     """
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     if subplot_params is None:
         subplot_params = {}

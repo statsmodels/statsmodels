@@ -19,6 +19,7 @@ import pandas as pd
 from scipy import stats
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
@@ -2486,7 +2487,7 @@ class FEVD:
         **plot_kwds
             Additional keyword arguments to pass to the bar plotting function.
         """
-        import matplotlib.pyplot as plt
+        plt = _import_mpl()
 
         k = self.neqs
         periods = periods or self.periods

@@ -37,6 +37,7 @@ import warnings
 import numpy as np
 from scipy import optimize, special, stats
 
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.tools.rootfinding import brentq_expanding
 
 
@@ -745,8 +746,8 @@ class Power:
         from statsmodels.graphics import utils
         from statsmodels.graphics.plottools import rainbow
 
+        plt = _import_mpl()
         fig, ax = utils.create_mpl_ax(ax)
-        import matplotlib.pyplot as plt
 
         colormap = plt.cm.Dark2  # pylint: disable-msg=E1101
         plt_alpha = 1  # 0.75
