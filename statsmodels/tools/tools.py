@@ -504,9 +504,9 @@ def matrix_rank(m, tol=None, method="qr"):
 
     Notes
     -----
-    When using a QR factorization, the rank is determined by the number of
-    elements on the leading diagonal of the R matrix that are above tol
-    in absolute value.
+    When using a QR factorization, the factorization is column pivoted and
+    the rank is determined by the number of elements on the leading diagonal
+    of the R matrix that are above tol in absolute value.
 
     """
     m = array_like(m, "m", ndim=2)
@@ -516,7 +516,11 @@ def matrix_rank(m, tol=None, method="qr"):
         m = m.T @ m
         return np.linalg.matrix_rank(m, tol=tol, hermitian=True)
     elif method == "qr":
-        (r,) = scipy.linalg.qr(m, mode="r")
+        # The pivoted factorization orders the diagonal of R by decreasing
+        # magnitude, which makes the number of diagonal elements above tol a
+        # rank estimate and keeps tol keyed to the largest of them. Without
+        # pivoting the count depends on the order of the columns of m.
+        r, _ = scipy.linalg.qr(m, mode="r", pivoting=True)
         abs_diag = np.abs(np.diag(r))
         if tol is None:
             tol = abs_diag[0] * m.shape[1] * np.finfo(float).eps
