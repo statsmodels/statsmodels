@@ -307,23 +307,25 @@ class RegressionModel(base.LikelihoodModel):
         raise NotImplementedError("Subclasses must implement.")
 
     def fit(
-        self,
-        method: Literal["pinv", "qr"] = "pinv",
-        cov_type: Literal[
-            "nonrobust",
-            "fixed scale",
-            "HC0",
-            "HC1",
-            "HC2",
-            "HC3",
-            "HAC",
-            "hac-panel",
-            "hac-groupsum",
-            "cluster",
-        ] = "nonrobust",
-        cov_kwds=None,
-        use_t: bool | None = None,
-        **kwargs,
+            self,
+            method: Literal["pinv", "qr"] = "pinv",
+            cov_type: Literal[
+                "nonrobust",
+                "fixed scale",
+                "HC0",
+                "HC1",
+                "HC2",
+                "HC3",
+                "HAC",
+                "hac-panel",
+                "hac-groupsum",
+                "cluster",
+                "cluster-jk",
+                "cluster-crv3",
+            ] = "nonrobust",
+            cov_kwds=None,
+            use_t: bool | None = None,
+            **kwargs
     ):
         """
         Full fit of the model.
@@ -2646,7 +2648,60 @@ class RegressionResults(base.LikelihoodModelResults):
           ``use_correction``: bool, optional
             If true, use small sample correction
 
-        - 'cluster': clustered covariance estimator
+        - 'cluster': clustered covariance estimator (CRV1)
+
+          ``groups`` : array_like[int], required :
+            Integer-valued index of clusters or groups.
+
+          ``use_correction``: bool, optional
+            If True the sandwich covariance is calculated with a small
+            sample correction.
+            If False the sandwich covariance is calculated without
+            small sample correction.
+
+          ``df_correction``: bool, optional
+            If True (default), then the degrees of freedom for the
+            inferential statistics and hypothesis tests, such as
+            pvalues, f_pvalue, conf_int, and t_test and f_test, are
+            based on the number of groups minus one instead of the
+            total number of observations minus the number of explanatory
+            variables. `df_resid` of the results instance is also
+            adjusted. When `use_t` is also True, then pvalues are
+            computed using the Student's t distribution using the
+            corrected values. These may differ substantially from
+            p-values based on the normal if the number of groups is
+            small.
+            If False, then `df_resid` of the results instance is not
+            adjusted.
+
+
+        - 'cluster-crv3': clustered covariance estimator (CRV3)
+
+          ``groups`` : array_like[int], required :
+            Integer-valued index of clusters or groups.
+
+          ``use_correction``: bool, optional
+            If True the sandwich covariance is calculated with a small
+            sample correction.
+            If False the sandwich covariance is calculated without
+            small sample correction.
+
+          ``df_correction``: bool, optional
+            If True (default), then the degrees of freedom for the
+            inferential statistics and hypothesis tests, such as
+            pvalues, f_pvalue, conf_int, and t_test and f_test, are
+            based on the number of groups minus one instead of the
+            total number of observations minus the number of explanatory
+            variables. `df_resid` of the results instance is also
+            adjusted. When `use_t` is also True, then pvalues are
+            computed using the Student's t distribution using the
+            corrected values. These may differ substantially from
+            p-values based on the normal if the number of groups is
+            small.
+            If False, then `df_resid` of the results instance is not
+            adjusted.
+
+        - 'cluster-jk': clustered covariance estimator via a cluster-jk
 
           ``groups`` : array_like[int], required :
             Integer-valued index of clusters or groups.
@@ -2729,8 +2784,8 @@ class RegressionResults(base.LikelihoodModelResults):
             kwargs["weights_func"] = kwargs.pop("kernel")
         if "weights_func" in kwargs and not callable(kwargs["weights_func"]):
             kwargs["weights_func"] = sw.kernel_dict[kwargs["weights_func"]]
-
         # TODO: make separate function that returns a robust cov plus info
+
         use_self = kwargs.pop("use_self", False)
         if use_self:
             res = self
@@ -2741,28 +2796,36 @@ class RegressionResults(base.LikelihoodModelResults):
                 normalized_cov_params=self.normalized_cov_params,
                 scale=self.scale,
             )
-
         res.cov_type = cov_type
         # use_t might already be defined by the class, and already set
+
         if use_t is None:
             use_t = self.use_t
         res.cov_kwds = {"use_t": use_t}  # store for information
         res.use_t = use_t
 
         adjust_df = False
-        if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
+        if cov_type.lower() in [
+            "cluster",
+            "cluster-crv3",
+            "cluster-jk",
+            "hac-panel",
+            "hac-groupsum",
+        ]:
             df_correction = kwargs.get("df_correction", None)
             # TODO: check also use_correction, do I need all combinations?
+
             if df_correction is not False:  # i.e., in [None, True]:
                 # user did not explicitly set it to False
-                adjust_df = True
 
+                adjust_df = True
         res.cov_kwds["adjust_df"] = adjust_df
 
         # verify and set kwargs, and calculate cov
         # TODO: this should be outsourced in a function so we can reuse it in
         #       other models
         # TODO: make it DRYer   repeated code for checking kwargs
+        n_groups = 0
         if cov_type in ["fixed scale", "fixed_scale"]:
             res.cov_kwds["description"] = descriptions["fixed_scale"]
 
@@ -2778,6 +2841,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = getattr(self, "cov_" + cov_type.upper())
         elif cov_type.lower() == "hac":
             # TODO: check if required, default in cov_hac_simple
+
             maxlags = kwargs["maxlags"]
             res.cov_kwds["maxlags"] = maxlags
             weights_func = kwargs.get("weights_func", sw.weights_bartlett)
@@ -2794,16 +2858,21 @@ class RegressionResults(base.LikelihoodModelResults):
                 weights_func=weights_func,
                 use_correction=use_correction,
             )
-        elif cov_type.lower() == "cluster":
+        elif cov_type.lower() in ["cluster", "cluster-crv3", "cluster-jk"]:
             # cluster robust standard errors, one- or two-way
+
+            if cov_type.lower() == "cluster-jk":
+                crv_type = "cluster-jk"
+            elif cov_type.lower() == "cluster-crv3":
+                crv_type = "cluster-crv3"
+            else:
+                crv_type = "cluster"
             groups = kwargs["groups"]
             if not hasattr(groups, "shape"):
                 groups = [np.squeeze(np.asarray(group)) for group in groups]
                 groups = np.asarray(groups).T
-
             if groups.ndim >= 2:
                 groups = groups.squeeze()
-
             res.cov_kwds["groups"] = groups
             use_correction = kwargs.get("use_correction", True)
             res.cov_kwds["use_correction"] = use_correction
@@ -2811,39 +2880,40 @@ class RegressionResults(base.LikelihoodModelResults):
                 if adjust_df:
                     # need to find number of groups
                     # duplicate work
+
                     self.n_groups = n_groups = len(np.unique(groups))
                 res.cov_params_default = sw.cov_cluster(
-                    self, groups, use_correction=use_correction
+                    self, groups, use_correction=use_correction, crv_type=crv_type
                 )
-
             elif groups.ndim == 2:
                 if hasattr(groups, "values"):
                     groups = groups.values
-
                 if adjust_df:
                     # need to find number of groups
                     # duplicate work
+
                     n_groups0 = len(np.unique(groups[:, 0]))
                     n_groups1 = len(np.unique(groups[:, 1]))
                     self.n_groups = (n_groups0, n_groups1)
                     n_groups = min(n_groups0, n_groups1)  # use for adjust_df
-
                 # Note: sw.cov_cluster_2groups has 3 returns
+
                 res.cov_params_default = sw.cov_cluster_2groups(
-                    self, groups, use_correction=use_correction
+                    self, groups, use_correction=use_correction, crv_type=crv_type
                 )[0]
             else:
                 raise ValueError("only two groups are supported")
-            res.cov_kwds["description"] = descriptions["cluster"]
-
+            res.cov_kwds["description"] = descriptions[crv_type]
         elif cov_type.lower() == "hac-panel":
             # cluster robust standard errors
+
             res.cov_kwds["time"] = time = kwargs.get("time", None)
             res.cov_kwds["groups"] = groups = kwargs.get("groups", None)
             # TODO: nlags is currently required
             # nlags = kwargs.get('nlags', True)
             # res.cov_kwds['nlags'] = nlags
             # TODO: `nlags` or `maxlags`
+
             res.cov_kwds["maxlags"] = maxlags = kwargs["maxlags"]
             use_correction = kwargs.get("use_correction", "hac")
             res.cov_kwds["use_correction"] = use_correction
@@ -2856,6 +2926,7 @@ class RegressionResults(base.LikelihoodModelResults):
             elif time is not None:
                 time = np.asarray(time)
                 # TODO: clumsy time index in cov_nw_panel
+
                 tt = (np.nonzero(time[1:] < time[:-1])[0] + 1).tolist()
                 nobs_ = len(time)
             else:
@@ -2870,14 +2941,15 @@ class RegressionResults(base.LikelihoodModelResults):
                 use_correction=use_correction,
             )
             res.cov_kwds["description"] = descriptions["HAC-Panel"]
-
         elif cov_type.lower() == "hac-groupsum":
             # Driscoll-Kraay standard errors
+
             res.cov_kwds["time"] = time = kwargs["time"]
             # TODO: nlags is currently required
             # nlags = kwargs.get('nlags', True)
             # res.cov_kwds['nlags'] = nlags
             # TODO: `nlags` or `maxlags`
+
             res.cov_kwds["maxlags"] = maxlags = kwargs["maxlags"]
             use_correction = kwargs.get("use_correction", "cluster")
             res.cov_kwds["use_correction"] = use_correction
@@ -2885,6 +2957,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds["weights_func"] = weights_func
             if adjust_df:
                 # need to find number of groups
+
                 tt = np.nonzero(time[1:] < time[:-1])[0] + 1
                 self.n_groups = n_groups = len(tt) + 1
             res.cov_params_default = sw.cov_nw_groupsum(
@@ -2900,8 +2973,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 "cov_type not recognized. See docstring for available options "
                 "and spelling"
             )
-
-        if adjust_df:
+        if n_groups and adjust_df:
             # Note: df_resid is used for scale and others, add new attribute
             res.df_resid_inference = n_groups - 1
 
