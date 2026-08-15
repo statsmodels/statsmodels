@@ -2652,7 +2652,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster': clustered covariance estimator (CRV1)
 
-          ``groups`` : array_like[int], required :
+          ``groups`` : array_like of int, required :
             Integer-valued index of clusters or groups.
 
           ``use_correction``: bool, optional
@@ -2679,7 +2679,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster-crv3': clustered covariance estimator (CRV3)
 
-          ``groups`` : array_like[int], required :
+          ``groups`` : array_like of int, required :
             Integer-valued index of clusters or groups.
 
           ``use_correction``: bool, optional
@@ -2705,7 +2705,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster-jk': clustered covariance estimator via a cluster-jk
 
-          ``groups`` : array_like[int], required :
+          ``groups`` : array_like of int, required :
             Integer-valued index of clusters or groups.
 
           ``use_correction``: bool, optional
@@ -2755,9 +2755,9 @@ class RegressionResults(base.LikelihoodModelResults):
           specified by group indicators or by increasing time periods. One of
           ``groups`` or ``time`` is required. # TODO: we need more options here
 
-          ``groups`` : array_like[int]
+          ``groups`` : array_like of int
             indicator for groups
-          ``time`` : array_like[int]
+          ``time`` : array_like of int
             index of time periods
           ``maxlags`` : int, required
             number of lags to use
