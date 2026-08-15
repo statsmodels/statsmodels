@@ -1031,6 +1031,15 @@ class TestCompareAndElTestNamedTuple:
             )
         assert isinstance(res_large, CompareLRTestResult)
 
+    def test_el_test_invalid_method_raises(self):
+        # An unsupported `method` used to fall through both `if` branches
+        # with no `else`, leaving `llr` unassigned and raising
+        # UnboundLocalError instead of a clear ValueError.
+        with pytest.raises(ValueError):
+            self.res_full.el_test(
+                np.array([0.0]), np.array([1]), method="unknown"
+            )
+
     def test_el_test_result_object_default_warns(self):
         with pytest.warns(FutureWarning, match="result_object"):
             res = self.res_full.el_test(np.array([0.0]), np.array([1]))

@@ -3552,6 +3552,7 @@ class OLSResults(RegressionResults):
 
         """
         result_object = bool_like(result_object, "result_object", optional=True)
+        method = string_like(method, "method", options=("nm", "powell"))
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts()  # to store weights
         nuisance_params = None
