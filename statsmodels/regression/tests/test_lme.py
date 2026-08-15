@@ -1057,6 +1057,40 @@ def test_handle_missing():
                 assert_equal(len(result1.fittedvalues), result1.nobs)
 
 
+def test_from_formula_missing_kwarg_forwarded():
+    # GH: MixedLM.from_formula captured its own `missing` argument but
+    # never forwarded it to Model.from_formula's **kwargs. That meant the
+    # parent class's own default ("drop") was silently used regardless of
+    # what the caller passed, which desynced the already-computed `groups`
+    # array (built from the un-dropped data) from the row-dropped
+    # exog/endog and crashed with a confusing, unrelated IndexError during
+    # fit() instead of raising a clear error about the missing data.
+    rs = np.random.RandomState(23423)
+    n = 50
+    df = pd.DataFrame(
+        {
+            "y": rs.normal(size=n),
+            "x": rs.normal(size=n),
+            "g": np.repeat(np.arange(10), 5),
+        }
+    )
+    df.loc[0, "y"] = np.nan
+
+    for kwargs in ({}, {"missing": "none"}, {"missing": "raise"}):
+        with pytest.raises(Exception) as excinfo:
+            MixedLM.from_formula("y ~ x", groups="g", data=df, **kwargs)
+        # Before the fix this raised IndexError from misaligned groups vs.
+        # exog/endog instead of a clear missing-data error.
+        assert not isinstance(excinfo.value, IndexError)
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df, missing="drop")
+    assert model.exog.shape[0] == n - 1
+    assert model.endog.shape[0] == n - 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.fit()
+
+
 def test_summary_col():
     from statsmodels.iolib.summary2 import summary_col
 
