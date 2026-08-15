@@ -429,6 +429,8 @@ numpydoc_xref_aliases.update(
         "DataFrame": "pandas.DataFrame",
         "Series": "pandas.Series",
         "MLEResults": "statsmodels.tsa.statespace.mlemodel.MLEResults",
+        "RandomState": "numpy.random.RandomState",
+        "Generator": "numpy.random.Generator",
     }
 )
 

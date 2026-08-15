@@ -87,24 +87,24 @@ _fit_regularized_doc = r"""
 
         Parameters
         ----------
-        method : str
+        method : {'elastic_net', 'sqrt_lasso'}, optional
             Either 'elastic_net' or 'sqrt_lasso'.
-        alpha : scalar or array_like
+        alpha : scalar or array_like, optional
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        L1_wt : scalar
+        L1_wt : scalar, optional
             The fraction of the penalty given to the L1 penalty term.
             Must be between 0 and 1 (inclusive).  If 0, the fit is a
             ridge fit, if 1 it is a lasso fit.
-        start_params : array_like
+        start_params : array_like, optional
             Starting values for ``params``.
-        profile_scale : bool
+        profile_scale : bool, optional
             If True the penalized fit is computed using the profile
             (concentrated) log-likelihood for the Gaussian model.
             Otherwise the fit uses the residual sum of squares.
-        refit : bool
+        refit : bool, optional
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
@@ -335,14 +335,14 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : str, optional
+        method : {'pinv', 'qr'}, optional
             Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
             to solve the least squares problem. "qr" uses the QR
             factorization.
         cov_type : str, optional
             See `regression.linear_model.RegressionResults` for a description
             of the available covariance estimators.
-        cov_kwds : list or None, optional
+        cov_kwds : dict or None, optional
             See `linear_model.RegressionResults.get_robustcov_results` for a
             description required keywords for alternative covariance
             estimators.
@@ -442,7 +442,7 @@ class RegressionModel(base.LikelihoodModel):
 
         Returns
         -------
-        array_like
+        ndarray
             An array of fitted values.
 
         Notes
@@ -468,9 +468,9 @@ class RegressionModel(base.LikelihoodModel):
             The model parameters (regression coefficients).
         scale : scalar
             The variance parameter.
-        exog : array_like
+        exog : array_like, optional
             The predictor variable matrix.
-        dist_class : class
+        dist_class : callable, optional
             A random number generator class.  Must take 'loc' and 'scale'
             as arguments and return a random number generator implementing
             an ``rvs`` method for simulating random values. Defaults to normal.
@@ -505,7 +505,7 @@ class GLS(RegressionModel):
     Generalized Least Squares
 
     {base._model_params_doc}
-    sigma : scalar or array
+    sigma : scalar or array_like, optional
         The array or scalar `sigma` is the weighting matrix of the covariance.
         The default is None for no scaling.  If `sigma` is a scalar, it is
         assumed that `sigma` is an n x n diagonal matrix with the given
@@ -519,8 +519,9 @@ class GLS(RegressionModel):
     ----------
     pinv_wexog : ndarray
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
-    cholsigmainv : ndarray
+    cholsigmainv : ndarray or None
         The transpose of the Cholesky decomposition of the pseudoinverse.
+        None if `sigma` is None.
     df_model : float
         p - 1, where p is the number of regressors including the intercept.
     df_resid : float
@@ -531,8 +532,9 @@ class GLS(RegressionModel):
         The number of observations n.
     normalized_cov_params : ndarray
         p x p array :math:`(X^{{T}}\Sigma^{{-1}}X)^{{-1}}`
-    sigma : ndarray
+    sigma : ndarray or None
         `sigma` is the n x n covariance structure of the error terms.
+        None if `sigma` was not provided.
     wexog : ndarray
         Design matrix whitened by `cholsigmainv`
     wendog : ndarray
@@ -833,7 +835,7 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        array_like
+        ndarray
             The whitened values sqrt(weights)*X.
 
         """
@@ -950,7 +952,7 @@ class OLS(WLS):
 
     Attributes
     ----------
-    weights : scalar
+    weights : ndarray
         Has an attribute weights = array(1.0) due to inheritance from WLS.
 
     See Also
@@ -1017,7 +1019,7 @@ class OLS(WLS):
         ----------
         params : array_like
             The coefficients with which to estimate the log-likelihood.
-        scale : float or None
+        scale : None or float
             If None, return the profile (concentrated) log likelihood
             (profiled over the scale parameter), else return the
             log-likelihood using the given scale value.
@@ -1076,7 +1078,7 @@ class OLS(WLS):
         params : array_like
             The parameter vector at which the score function is
             computed.
-        scale : float or None
+        scale : None or float
             If None, return the profile (concentrated) log likelihood
             (profiled over the scale parameter), else return the
             log-likelihood using the given scale value.
@@ -1116,7 +1118,7 @@ class OLS(WLS):
         ----------
         params : array_like
             The parameter vector at which the Hessian is computed.
-        scale : float or None
+        scale : None or float
             If None, return the profile (concentrated) log likelihood
             (profiled over the scale parameter), else return the
             log-likelihood using the given scale value.
@@ -1318,7 +1320,7 @@ class GLSAR(GLS):
     Generalized Least Squares with AR covariance structure
 
     {base._model_params_doc}
-    rho : int or array_like
+    rho : int or array_like, optional
         If an integer is provided, it specifies the order of the
         autoregressive process. The AR coefficients are initialized
         to zero and estimated during iterative fitting.
@@ -1523,19 +1525,19 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
         A 1d array.
     order : int, optional
         The order of the autoregressive process.  Default is 1.
-    method : str, optional
-       Method can be 'adjusted' or 'mle' and determines the denominator
-       used to estimate the autocovariance at lag k.
+    method : {'adjusted', 'mle'}, optional
+       Method determines the denominator used to estimate the
+       autocovariance at lag k.
        If 'mle', the denominator is n=X.shape[0], if 'adjusted'
        the denominator is n-k.  The default is adjusted.
     df : int, optional
        Specifies the degrees of freedom. If `df` is supplied, then it
        is assumed the X has `df` degrees of freedom rather than `n`.
        Default is None.
-    inv : bool
+    inv : bool, optional
         If inv is True the inverse of R is also returned.  Default is
         False.
-    demean : bool
+    demean : bool, optional
         True, the mean is subtracted from `X` before estimation.
     result_object : bool, optional
         Flag indicating whether to return the results as a
@@ -2111,9 +2113,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        crit : string
+        crit : {'aic', 'bic', 'aicc', 'hqic'}
             One of 'aic', 'bic', 'aicc' or 'hqic'.
-        dk_params : int or float
+        dk_params : int or float, optional
             Correction to the number of parameters used in the information
             criterion. By default, only mean parameters are included, the
             scale parameter is not included in the parameter count.
@@ -2360,12 +2362,12 @@ class RegressionResults(base.LikelihoodModelResults):
             current model. The result instance of the restricted model
             is required to have two attributes, residual sum of
             squares, `ssr`, residual degrees of freedom, `df_resid`.
-        demean : bool
+        demean : bool, optional
             Flag indicating whether to demean the scores based on the
             residuals from the restricted model.  If True, the covariance of
             the scores are used and the LM test is identical to the large
             sample version of the LR test.
-        use_lr : bool
+        use_lr : bool, optional
             A flag indicating whether to estimate the covariance of the model
             scores using the unrestricted model. Setting this to True improves
             the power of the test.
@@ -2508,7 +2510,7 @@ class RegressionResults(base.LikelihoodModelResults):
             attributes, residual sum of squares, `ssr`, residual degrees of
             freedom, `df_resid`.
 
-        large_sample : bool
+        large_sample : bool, optional
             Flag indicating whether to use a heteroskedasticity robust version
             of the LR test, which is a modified LM test.
 
@@ -2638,7 +2640,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-          ``maxlags`` :  integer, required
+          ``maxlags`` : int, required
             number of lags to use
 
           ``kernel`` : {callable, str}, optional
@@ -2733,7 +2735,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
           ``time`` : array_like, required
             index of time periods
-          ``maxlags`` : integer, required
+          ``maxlags`` : int, required
             number of lags to use
           ``kernel`` : {callable, str}, optional
             The available kernels are ['bartlett', 'uniform']. The default is
@@ -3225,7 +3227,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        yname : str
+        yname : str, optional
             The name of the dependent variable (optional).
         xname : list[str], optional
             Names for the exogenous variables. Default is `var_##` for ## in
@@ -3234,9 +3236,9 @@ class RegressionResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             The significance level for the confidence intervals.
-        float_format : str
+        float_format : str, optional
             The format for floats in parameters summary.
 
         Returns
@@ -3395,7 +3397,7 @@ class OLSResults(RegressionResults):
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             The method to use in the outlier test.  Must be one of:
 
             - `bonferroni` : one-step correction
@@ -3408,16 +3410,16 @@ class OLSResults(RegressionResults):
             - `fdr_by` : Benjamini/Yekutieli
 
             See `statsmodels.stats.multitest.multipletests` for details.
-        alpha : float
+        alpha : float, optional
             The familywise error rate (FWER).
-        labels : None or array_like
+        labels : None or array_like, optional
             If `labels` is not None, then it will be used as index to the
             returned pandas DataFrame. See also Returns below.
-        order : bool
+        order : bool, optional
             Whether or not to order the results by the absolute value of the
             studentized residuals. If labels are provided they will also be
             sorted.
-        cutoff : None or float in [0, 1]
+        cutoff : None or float in [0, 1], optional
             If cutoff is not None, then the return only includes observations
             with multiple testing corrected p-values strictly below the cutoff.
             The returned array or dataframe can be empty if t.
@@ -3462,19 +3464,19 @@ class OLSResults(RegressionResults):
             The hypothesized value of the parameter to be tested.
         param_nums : 1darray
             The parameter number to be tested.
-        return_weights : bool
+        return_weights : bool, optional
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals. The default is False.
-        ret_params : bool
+        ret_params : bool, optional
             If true, returns the parameter vector that maximizes the likelihood
             ratio at b0_vals.  Also returns the weights.  The default is False.
             Has no effect when ``len(param_nums) == len(params)``, since
             there are then no nuisance parameters to report.
-        method : str
+        method : {'nm', 'powell'}, optional
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             The default is 'nm'.
-        stochastic_exog : bool
+        stochastic_exog : bool, optional
             When True, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
@@ -3638,21 +3640,21 @@ class OLSResults(RegressionResults):
 
         Parameters
         ----------
-        param_num : float
+        param_num : int
             The parameter for which the confidence interval is desired.
-        sig : float
+        sig : float, optional
             The significance level.  Default is 0.05.
-        upper_bound : float
+        upper_bound : float, optional
             The maximum value the upper limit can be.  Default is the
             99.9% confidence value under OLS assumptions.
-        lower_bound : float
+        lower_bound : float, optional
             The minimum value the lower limit can be.  Default is the 99.9%
             confidence value under OLS assumptions.
-        method : str
+        method : {'nm', 'powell'}, optional
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             The default is 'nm'.
-        stochastic_exog : bool
+        stochastic_exog : bool, optional
             When True, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for

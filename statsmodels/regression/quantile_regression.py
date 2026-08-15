@@ -40,9 +40,9 @@ class QuantReg(RegressionModel):
 
     Parameters
     ----------
-    endog : array_like or dataframe
+    endog : array_like
         Endogenous/response variable.
-    exog : array_like or dataframe
+    exog : array_like
         Exogenous/explanatory variable(s).
 
     Notes
@@ -101,9 +101,9 @@ class QuantReg(RegressionModel):
 
         Parameters
         ----------
-        q : float
+        q : float, optional
             Quantile must be strictly between 0 and 1.
-        vcov : str
+        vcov : {'robust', 'iid'}, optional
             Method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
@@ -111,7 +111,7 @@ class QuantReg(RegressionModel):
               in Greene 6th edition)
             - iid : iid errors (as in Stata 12)
 
-        kernel : str
+        kernel : {'biw', 'cos', 'epa', 'gau', 'par'}, optional
             Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
@@ -121,7 +121,7 @@ class QuantReg(RegressionModel):
             - gau: Gaussian
             - par: Parzen
 
-        bandwidth : str
+        bandwidth : {'hsheather', 'bofinger', 'chamberlain'}, optional
             Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
@@ -129,9 +129,9 @@ class QuantReg(RegressionModel):
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
-        max_iter : int
+        max_iter : int, optional
             Maximum number of iterations.
-        p_tol : float
+        p_tol : float, optional
             Convergence tolerance for the iterative parameter estimates.
         **kwargs
             Additional keyword arguments, accepted for API compatibility.
@@ -393,7 +393,7 @@ class QuantRegResults(RegressionResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals.
 
         Returns

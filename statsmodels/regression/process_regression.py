@@ -239,18 +239,18 @@ class ProcessMLE(base.LikelihoodModel):
         The design matrix for the scaling structure
     exog_smooth : array_like
         The design matrix for the smoothness structure
-    exog_noise : array_like
+    exog_noise : None or array_like
         The design matrix for the additive white noise. The
         linear predictor is the log of the white noise standard
         deviation.  If None, there is no additive noise (the
         process is observed directly).
-    time : array_like (1-dimensional)
+    time : array_like, 1d
         The univariate index values, used to calculate distances
         between observations in the same group, which determines
         their correlations.
-    groups : array_like (1-dimensional)
+    groups : array_like, 1d
         The group values.
-    cov : a ProcessCovariance instance
+    cov : ProcessCovariance instance, optional
         Defaults to GaussianCovariance.
     **kwargs
         Additional keyword arguments passed to the model constructor.
@@ -359,9 +359,9 @@ class ProcessMLE(base.LikelihoodModel):
             `exog`.
         data : array_like
             The data to which the formulas are applied.
-        subset : array_like
+        subset : array_like, optional
             Not currently supported, must be None if provided.
-        drop_cols : array_like
+        drop_cols : array_like, optional
             Not currently supported, must be None if provided.
         scale_formula : str
             The formula for the scaling structure (required keyword
@@ -369,7 +369,7 @@ class ProcessMLE(base.LikelihoodModel):
         smooth_formula : str
             The formula for the smoothness structure (required
             keyword argument).
-        noise_formula : str
+        noise_formula : None or str, optional
             The formula for the (log) standard deviation of the
             additive white noise (optional keyword argument). If not
             provided, the model does not include additive white
@@ -676,11 +676,11 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array_like
+        start_params : array_like, optional
             Optional starting values.
-        method : str or array of str
+        method : str or list[str], optional
             Method or sequence of methods for scipy optimize.
-        maxiter : int
+        maxiter : int or array_like, optional
             The maximum number of iterations in the optimization.
         **kwargs
             Additional keyword arguments passed to the optimizer.
@@ -774,10 +774,10 @@ class ProcessMLE(base.LikelihoodModel):
         smooth_params : array_like
             The regression parameters for the smoothing part
             of the covariance structure.
-        scale_data : DataFrame
+        scale_data : array_like
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth_data : DataFrame
+        smooth_data : array_like
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 
@@ -821,7 +821,7 @@ class ProcessMLE(base.LikelihoodModel):
         params : array_like
             The model parameters, may be truncated to include only mean
             parameters.
-        exog : array_like
+        exog : array_like, optional
             The design matrix for the mean structure.  If not provided,
             the model's design matrix is used.
         *args
@@ -998,7 +998,7 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         title : str, optional
             Title for the summary. If not None, this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals.
 
         Returns
