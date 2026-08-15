@@ -2825,7 +2825,7 @@ class RegressionResults(base.LikelihoodModelResults):
         # TODO: this should be outsourced in a function so we can reuse it in
         #       other models
         # TODO: make it DRYer   repeated code for checking kwargs
-
+        n_groups = 0
         if cov_type in ["fixed scale", "fixed_scale"]:
             res.cov_kwds["description"] = descriptions["fixed_scale"]
 
@@ -2973,10 +2973,10 @@ class RegressionResults(base.LikelihoodModelResults):
                 "cov_type not recognized. See docstring for available options "
                 "and spelling"
             )
-        if adjust_df:
+        if n_groups and adjust_df:
             # Note: df_resid is used for scale and others, add new attribute
-
             res.df_resid_inference = n_groups - 1
+
         return res
 
     @Appender(pred.get_prediction.__doc__)

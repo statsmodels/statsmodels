@@ -1192,7 +1192,8 @@ class TestClusterJackknifeRegressions:
         # and the result should be far from all-zero (the failure mode when
         # the leave-one-cluster-out mask silently selected zero rows)
 
-        assert np.max(np.abs(res_shifted.cov_params())) > 1e-6
+        cov_params = np.asarray(res_shifted.cov_params())
+        assert np.max(np.abs(cov_params)) > 1e-6
 
     @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
     def test_two_way_clustering_not_supported(self, cov_type):
