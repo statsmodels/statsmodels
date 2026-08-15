@@ -129,7 +129,7 @@ def _min_max_band(args):
             use_brute : bool
                 Use the brute force optimizer instead of the default
                 differential evolution to find the curves.
-            rng : {None, int, np.random.Generator, np.random.RandomState}
+            rng : {None, int, numpy.random.Generator, numpy.random.RandomState}
                 Value to pass to scipy.optimize.differential_evolution as
                 its `seed` argument.
 
@@ -232,13 +232,13 @@ def hdrboxplot(
     use_brute : bool
         Use the brute force optimizer instead of the default differential
         evolution to find the curves. Default is False.
-    rng : {None, int, np.random.Generator, np.random.RandomState}, optional
+    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
         Value to pass to scipy.optimize.differential_evolution as its `seed`
         argument. If an int, a new Generator seeded with that value is used
         by scipy. If a Generator or RandomState instance, that instance is
         used directly. If None, then the default RandomState provided by
         np.random is used.
-    seed : {None, int, np.random.Generator, np.random.RandomState}, optional
+    seed : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
         .. deprecated:: 0.15
 
            seed has been deprecated. In-line with SPEC-007, use
@@ -429,12 +429,12 @@ def hdrboxplot(
         use_brute : bool
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        rng : {None, int, np.random.Generator, np.random.RandomState}, optional
+        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
             Value to pass to scipy.optimize.differential_evolution as its
             `seed` argument. If an int, a new Generator seeded with that
             value is used by scipy. If a Generator or RandomState instance,
             that instance is used directly. If None, then the default
-            RandomState provided by np.random is used.
+            RandomState provided by numpy.random is used.
 
         Returns
         -------

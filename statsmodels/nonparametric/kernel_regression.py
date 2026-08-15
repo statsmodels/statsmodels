@@ -95,7 +95,7 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    rng : {int, np.random.Generator, np.random.RandomState}, optional
+    rng : {int, numpy.random.Generator, numpy.random.RandomState}, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
