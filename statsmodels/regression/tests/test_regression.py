@@ -802,6 +802,11 @@ class TestWLS_CornerCases:
         with pytest.raises(ValueError):
             WLS(self.endog, self.exog, weights=weights)
 
+    def test_whiten_wrong_ndim(self):
+        mod = WLS(self.endog, self.exog, weights=1)
+        with pytest.raises(ValueError):
+            mod.whiten(np.ones((2, 2, 2)))
+
 
 class TestWLSExogWeights(CheckRegressionResults):
     # Test WLS with Greene's credit card data
@@ -1025,6 +1030,15 @@ class TestCompareAndElTestNamedTuple:
                 self.res_restr, large_sample=True
             )
         assert isinstance(res_large, CompareLRTestResult)
+
+    def test_el_test_invalid_method_raises(self):
+        # An unsupported `method` used to fall through both `if` branches
+        # with no `else`, leaving `llr` unassigned and raising
+        # UnboundLocalError instead of a clear ValueError.
+        with pytest.raises(ValueError):
+            self.res_full.el_test(
+                np.array([0.0]), np.array([1]), method="unknown"
+            )
 
     def test_el_test_result_object_default_warns(self):
         with pytest.warns(FutureWarning, match="result_object"):

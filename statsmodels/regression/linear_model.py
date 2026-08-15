@@ -844,6 +844,8 @@ class WLS(RegressionModel):
             return x * np.sqrt(self.weights)
         elif x.ndim == 2:
             return np.sqrt(self.weights)[:, None] * x
+        else:
+            raise ValueError("x must be 1 or 2 dimensional")
 
     def loglike(self, params):
         r"""
@@ -3550,6 +3552,7 @@ class OLSResults(RegressionResults):
 
         """
         result_object = bool_like(result_object, "result_object", optional=True)
+        method = string_like(method, "method", options=("nm", "powell"))
         params = np.copy(self.params)
         opt_fun_inst = _ELRegOpts()  # to store weights
         nuisance_params = None

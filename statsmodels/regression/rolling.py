@@ -336,6 +336,9 @@ class RollingWLS:
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
         )
+        cov_type = string_like(
+            cov_type, "cov_type", options=("nonrobust", "HCCM", "HC0"), lower=False
+        )
         reset = int_like(reset, "reset", optional=True)
         reset = self._y.shape[0] if reset is None else reset
         if reset < 1:

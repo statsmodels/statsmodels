@@ -1131,6 +1131,7 @@ class MixedLM(base.LikelihoodModel):
         kwargs["exog_re"] = exog_re
         kwargs["exog_vc"] = exog_vc
         kwargs["groups"] = groups
+        kwargs["missing"] = missing
         advance_eval_env(kwargs)
         mod = super().from_formula(formula, data, *args, **kwargs)
 
