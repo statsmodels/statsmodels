@@ -67,10 +67,10 @@ class GLSHet(WLS):
         The independent variables.
     exog_var : array_like, 1d or 2d
         Regressors, explanatory variables for the variance.
-    weights : array_like or None
+    weights : None or array_like, optional
         If weights are given, then they are used in the first step
         estimation.
-    link : link function or None
+    link : None or callable, optional
         If None, then the variance is assumed to be a linear combination of
         the exog_var. If given, then ... not tested yet.
 
