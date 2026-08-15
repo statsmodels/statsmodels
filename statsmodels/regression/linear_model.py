@@ -844,6 +844,8 @@ class WLS(RegressionModel):
             return x * np.sqrt(self.weights)
         elif x.ndim == 2:
             return np.sqrt(self.weights)[:, None] * x
+        else:
+            raise ValueError("x must be 1 or 2 dimensional")
 
     def loglike(self, params):
         r"""

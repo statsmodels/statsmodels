@@ -802,6 +802,11 @@ class TestWLS_CornerCases:
         with pytest.raises(ValueError):
             WLS(self.endog, self.exog, weights=weights)
 
+    def test_whiten_wrong_ndim(self):
+        mod = WLS(self.endog, self.exog, weights=1)
+        with pytest.raises(ValueError):
+            mod.whiten(np.ones((2, 2, 2)))
+
 
 class TestWLSExogWeights(CheckRegressionResults):
     # Test WLS with Greene's credit card data
