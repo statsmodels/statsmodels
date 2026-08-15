@@ -421,9 +421,9 @@ def _HCCM2(hessian_inv, scale):
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
-def _cluster_jackknife(results, group, center, hessian_inv):
 
-    '''
+def _cluster_jackknife(results, group, center, hessian_inv):
+    """
     Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife.
     For reference, see "Fast and Reliable Jackknife and Bootstrap
     Methods for Cluster-Robust Inference", MacKinnon, Nielsen & Webb, Queens
@@ -451,7 +451,7 @@ def _cluster_jackknife(results, group, center, hessian_inv):
     -------
     H : ndarray (k_vars, k_vars)
         cluster jackknife estimate of a robust covariance matrix for the parameter estimates
-    '''
+    """
     model = results.model
     if not hasattr(model, "wexog") or not hasattr(model, "wendog"):
         raise TypeError(
@@ -459,7 +459,6 @@ def _cluster_jackknife(results, group, center, hessian_inv):
             "regression model (e.g. OLS or WLS) exposing `wexog`/`wendog`; "
             f"got a {type(model).__name__} model instance."
         )
-
     X = np.asarray(model.wexog)
     Y = np.asarray(model.wendog)
     group = np.asarray(group)
@@ -478,6 +477,7 @@ def _cluster_jackknife(results, group, center, hessian_inv):
     # compute leave-one-cluster-out regression coefficients (aka
     # clusterjacks'), masking each cluster by its own label, not by the
     # position of that label in `clusters`
+
     for ixg, g in enumerate(clusters):
 
         mask = group == g
@@ -492,6 +492,7 @@ def _cluster_jackknife(results, group, center, hessian_inv):
         # singular case (e.g. a column that is constant within cluster g)
         # generally shows up as *near*-zero pivots rather than an exact
         # zero, which LU-based solve can silently push through.
+
         if np.linalg.matrix_rank(design_g) < k_params:
             g_display = g.item() if hasattr(g, "item") else g
             raise ValueError(
@@ -503,20 +504,21 @@ def _cluster_jackknife(results, group, center, hessian_inv):
                 "estimate is not identified for that cluster."
             )
         beta_jack[ixg, :] = np.linalg.solve(design_g, rhs_g).flatten()
-
     # optional: beta_bar in MNW (2022)
-    if center == 'estimate':
+
+    if center == "estimate":
         beta_center = beta_hat
     else:
         beta_center = np.mean(beta_jack, axis=0)
-
     beta_centered = beta_jack - beta_center
     H = beta_centered.T @ beta_centered
 
     return H
 
 
-#TODO: other kernels, move ?
+# TODO: other kernels, move ?
+
+
 def weights_bartlett(nlags):
     """
     Bartlett weights for HAC
@@ -536,7 +538,8 @@ def weights_bartlett(nlags):
     """
 
     # with lag zero
-    return 1 - np.arange(nlags+1)/(nlags+1.)
+
+    return 1 - np.arange(nlags + 1) / (nlags + 1.0)
 
 
 def weights_uniform(nlags):
@@ -558,11 +561,11 @@ def weights_uniform(nlags):
     """
 
     # with lag zero
-    return np.ones(nlags+1)
+
+    return np.ones(nlags + 1)
 
 
-kernel_dict = {"bartlett": weights_bartlett,
-               "uniform": weights_uniform}
+kernel_dict = {"bartlett": weights_bartlett, "uniform": weights_uniform}
 
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
@@ -600,16 +603,14 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
         x = x[:, None]
     n_periods = x.shape[0]
     if nlags is None:
-        nlags = int(np.floor(4 * (n_periods / 100.)**(2./9.)))
-
+        nlags = int(np.floor(4 * (n_periods / 100.0) ** (2.0 / 9.0)))
     weights = weights_func(nlags)
 
     S = weights[0] * np.dot(x.T, x)  # weights[0] just for completeness, is 1
 
-    for lag in range(1, nlags+1):
+    for lag in range(1, nlags + 1):
         s = np.dot(x[lag:].T, x[:-lag])
         S += weights[lag] * (s + s.T)
-
     return S
 
 
@@ -634,7 +635,6 @@ def S_white_simple(x):
     """
     if x.ndim == 1:
         x = x[:, None]
-
     return np.dot(x.T, x)
 
 
@@ -711,12 +711,14 @@ def cov_crosssection_0(results, group):
     """this one is still wrong, use cov_cluster instead"""
 
     # TODO: currently used version of groupsums requires 2d resid
+
     scale = S_crosssection(results.resid[:, None], group)
     scale = np.squeeze(scale)
     cov = _HCCM1(results, scale)
     return cov
 
-def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
+
+def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
     """
     Cluster robust covariance matrix
 
@@ -753,48 +755,48 @@ def cov_cluster(results, group, use_correction=True, crv_type = 'cluster'):
             "crv_type must be one of 'cluster', 'cluster-crv3' or "
             f"'cluster-jk', got {crv_type!r}"
         )
-
     # TODO: currently used version of groupsums requires 2d resid
+
     xu, hessian_inv = _get_sandwich_arrays(results, cov_type="clu")
 
     if not hasattr(group, "dtype") or group.dtype != np.dtype("int"):
         clusters, group = np.unique(group, return_inverse=True)
     else:
         clusters = np.unique(group)
-
     nobs, k_params = xu.shape
     n_groups = len(clusters)  # replace with stored group attributes if available
 
-    if crv_type == 'cluster':
+    if crv_type == "cluster":
 
         scale = S_crosssection(xu, group)
         cov_c = _HCCM2(hessian_inv, scale)
 
         if use_correction:
-            cov_c *= (n_groups / (n_groups - 1.) *
-                    ((nobs-1.) / float(nobs - k_params)))
-
+            cov_c *= (
+                n_groups / (n_groups - 1.0) * ((nobs - 1.0) / float(nobs - k_params))
+            )
     else:
         if n_groups < 2:
             raise ValueError(
                 f"crv_type={crv_type!r} requires at least 2 clusters, "
                 f"found {n_groups}."
             )
-
-        if crv_type == 'cluster-crv3':
-            center = 'estimate'
+        if crv_type == "cluster-crv3":
+            center = "estimate"
         # cluster-jk
-        else:
-            center = 'mean'
 
+        else:
+            center = "mean"
         cov_c = _cluster_jackknife(results, group, center, hessian_inv)
 
         if use_correction:
-            cov_c *= (n_groups -1.) / n_groups
-
+            cov_c *= (n_groups - 1.0) / n_groups
     return cov_c
 
-def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_type = 'cluster'):
+
+def cov_cluster_2groups(
+    results, group, group2=None, use_correction=True, crv_type="cluster"
+):
     """
     Cluster robust covariance matrix for two groups/clusters
 
@@ -845,32 +847,42 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True, crv_ty
             "Use one-way clustering (a single `groups` array) with "
             "crv_type='cluster-crv3' or 'cluster-jk'."
         )
-
     if group2 is None:
         if group.ndim != 2 or group.shape[1] != 2:
-            raise ValueError("if group2 is not given, then groups needs to be "
-                             "an array with two columns")
+            raise ValueError(
+                "if group2 is not given, then groups needs to be "
+                "an array with two columns"
+            )
         group0 = group[:, 0]
         group1 = group[:, 1]
     else:
         group0 = group
         group1 = group2
         group = (group0, group1)
+    cov0 = cov_cluster(
+        results, group0, use_correction=use_correction, crv_type=crv_type
+    )
+    # [0] because we get still also returns bse
 
-    cov0 = cov_cluster(results, group0, use_correction=use_correction, crv_type=crv_type)
-    #[0] because we get still also returns bse
-    cov1 = cov_cluster(results, group1, use_correction=use_correction, crv_type=crv_type)
+    cov1 = cov_cluster(
+        results, group1, use_correction=use_correction, crv_type=crv_type
+    )
 
     # cov of cluster formed by intersection of two groups
-    cov01 = cov_cluster(results,
-                        combine_indices(group)[0],
-                        use_correction=use_correction,
-                        crv_type=crv_type)
+
+    cov01 = cov_cluster(
+        results,
+        combine_indices(group)[0],
+        use_correction=use_correction,
+        crv_type=crv_type,
+    )
 
     # robust cov matrix for union of groups
+
     cov_both = cov0 + cov1 - cov01
 
     # return all three (for now?)
+
     return cov_both, cov0, cov1
 
 

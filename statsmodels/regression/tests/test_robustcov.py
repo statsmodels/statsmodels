@@ -965,13 +965,13 @@ def test_qr_equiv(cov_info):
     assert_allclose(pinv_fit.bse, qr_fit.bse)
 
 
-
 class TestOLSRobustClusterJK:
 
     @classmethod
     def setup_class(cls):
 
         from statsmodels.datasets import grunfeld
+
         dtapa = grunfeld.data.load_pandas()
 
         cls.dtapa_endog = dtapa.endog[:200]
@@ -985,78 +985,68 @@ class TestOLSRobustClusterJK:
     def test_hc3_vs_crv3(self):
 
         # test hc3 vs crv3 inference
+
         res_hc3 = OLS(self.dtapa_endog, self.exog).fit(
-            cov_type = "HC3",
-            use_correction = False
+            cov_type="HC3", use_correction=False
         )
 
         res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
-            cov_type = "cluster-crv3",
-            cov_kwds={'groups': self.id, 'use_correction' : False}
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.id, "use_correction": False},
         )
 
-        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
-        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol=1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol=1e-06)
 
     def test_cr3_vs_r(self):
 
         res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
-            cov_type = "cluster-crv3",
-            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
         )
 
         res_crv3_jk = OLS(self.dtapa_endog, self.exog).fit(
-            cov_type = "cluster-jk",
-            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+            cov_type="cluster-jk",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
         )
 
         # check the actual .fit()-produced covariance against the R reference
+
+        assert_allclose(res2.results_cluster_crv3.cov, res_crv3.cov_params(), rtol=1e-6)
         assert_allclose(
-            res2.results_cluster_crv3.cov,
-            res_crv3.cov_params(),
-            rtol = 1e-6
-        )
-        assert_allclose(
-            res2.results_cluster_crv_jk.cov,
-            res_crv3_jk.cov_params(),
-            rtol = 1e-6
+            res2.results_cluster_crv_jk.cov, res_crv3_jk.cov_params(), rtol=1e-6
         )
 
         # and cross-check the standalone helper agrees with the .fit() path
+
         assert_allclose(
             res_crv3.cov_params(),
             sw.cov_cluster(res_crv3, self.firm, True, "cluster-crv3"),
-            rtol = 1e-6
+            rtol=1e-6,
         )
         assert_allclose(
             res_crv3_jk.cov_params(),
             sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jk"),
-            rtol = 1e-6
+            rtol=1e-6,
         )
 
+        assert_allclose(res_crv3.tvalues, res2.results_cluster_crv3.tvalues, rtol=1e-6)
         assert_allclose(
-            res_crv3.tvalues,
-            res2.results_cluster_crv3.tvalues,
-            rtol = 1e-6
-        )
-        assert_allclose(
-            res_crv3_jk.tvalues,
-            res2.results_cluster_crv_jk.tvalues,
-            rtol = 1e-6
+            res_crv3_jk.tvalues, res2.results_cluster_crv_jk.tvalues, rtol=1e-6
         )
 
-        def pvalue(x,G):
+        def pvalue(x, G):
             return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
 
         assert_allclose(
             pvalue(res_crv3.tvalues, self.G),
             res2.results_cluster_crv3.pvalues,
-            rtol = 1e-6
+            rtol=1e-6,
         )
         assert_allclose(
             pvalue(res_crv3_jk.tvalues, self.G),
             res2.results_cluster_crv_jk.pvalues,
-            rtol = 1e-6
+            rtol=1e-6,
         )
 
 
@@ -1066,6 +1056,7 @@ class TestWLSRobustClusterJK:
     def setup_class(cls):
 
         from statsmodels.datasets import grunfeld
+
         dtapa = grunfeld.data.load_pandas()
 
         cls.dtapa_endog = dtapa.endog[:200]
@@ -1075,70 +1066,62 @@ class TestWLSRobustClusterJK:
         cls.id = pd.Series(range(cls.N))
         cls.firm = dtapa.data.firm[:200]
         cls.G = len(np.unique(cls.firm))
-        cls.weights = np.arange(1, cls.N+1, 1)
+        cls.weights = np.arange(1, cls.N + 1, 1)
 
     def test_hc3_vs_crv3(self):
 
         # test hc3 vs crv3 inference
+
         res_hc3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "HC3",
-            use_correction = False
+            cov_type="HC3", use_correction=False
         )
 
         res_crv3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "cluster-crv3",
-            cov_kwds={'groups': self.id, 'use_correction' : False}
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.id, "use_correction": False},
         )
 
-        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol = 1e-06)
-        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol = 1e-06)
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol=1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol=1e-06)
 
     def test_cr3_vs_r(self):
 
         res_crv3_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "cluster-crv3",
-            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
         )
 
         res_crv3_jk_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
-            cov_type = "cluster-jk",
-            cov_kwds={'groups': self.firm, 'use_correction':True, 'use_t':True}
+            cov_type="cluster-jk",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
         )
 
         assert_allclose(
-            res2.results_cluster_crv3_wls.cov,
-            res_crv3_wls.cov_params(),
-            rtol = 1e-6
+            res2.results_cluster_crv3_wls.cov, res_crv3_wls.cov_params(), rtol=1e-6
         )
         assert_allclose(
-            res2.results_cluster_crv_jk_wls.cov,
-            res_crv3_jk_wls.cov_params(),
-            rtol = 1e-6
+            res2.results_cluster_crv_jk_wls.cov, res_crv3_jk_wls.cov_params(), rtol=1e-6
         )
 
         assert_allclose(
-            res_crv3_wls.tvalues,
-            res2.results_cluster_crv3_wls.tvalues,
-            rtol = 1e-6
+            res_crv3_wls.tvalues, res2.results_cluster_crv3_wls.tvalues, rtol=1e-6
         )
         assert_allclose(
-            res_crv3_jk_wls.tvalues,
-            res2.results_cluster_crv_jk_wls.tvalues,
-            rtol = 1e-6
+            res_crv3_jk_wls.tvalues, res2.results_cluster_crv_jk_wls.tvalues, rtol=1e-6
         )
 
-        def pvalue(x,G):
+        def pvalue(x, G):
             return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
 
         assert_allclose(
             pvalue(res_crv3_wls.tvalues, self.G),
             res2.results_cluster_crv3_wls.pvalues,
-            rtol = 1e-6
+            rtol=1e-6,
         )
         assert_allclose(
             pvalue(res_crv3_jk_wls.tvalues, self.G),
             res2.results_cluster_crv_jk_wls.pvalues,
-            rtol = 1e-6
+            rtol=1e-6,
         )
 
 
@@ -1171,6 +1154,7 @@ class TestClusterJackknifeRegressions:
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets import grunfeld
+
         dtapa = grunfeld.data.load_pandas()
 
         cls.dtapa_endog = dtapa.endog[:200]
@@ -1181,6 +1165,7 @@ class TestClusterJackknifeRegressions:
         cls.G = len(np.unique(cls.firm))
         # integer-coded, already-contiguous cluster labels equivalent to
         # `firm`, plus a shifted (non 0-indexed, non-contiguous) version
+
         _, firm_codes = np.unique(cls.firm, return_inverse=True)
         cls.firm_codes = firm_codes.astype(int)
         cls.firm_codes_shifted = cls.firm_codes + 1001
@@ -1195,11 +1180,10 @@ class TestClusterJackknifeRegressions:
             cov_type=cov_type,
             cov_kwds={"groups": self.firm_codes_shifted, "use_correction": True},
         )
-        assert_allclose(
-            res_contig.cov_params(), res_shifted.cov_params(), rtol=1e-10
-        )
+        assert_allclose(res_contig.cov_params(), res_shifted.cov_params(), rtol=1e-10)
         # sanity: string labels always went through the reindexing branch,
         # so they were never affected by this bug -- results should match
+
         res_str = OLS(self.dtapa_endog, self.exog).fit(
             cov_type=cov_type,
             cov_kwds={"groups": self.firm, "use_correction": True},
@@ -1207,6 +1191,7 @@ class TestClusterJackknifeRegressions:
         assert_allclose(res_contig.cov_params(), res_str.cov_params(), rtol=1e-10)
         # and the result should be far from all-zero (the failure mode when
         # the leave-one-cluster-out mask silently selected zero rows)
+
         assert np.max(np.abs(res_shifted.cov_params())) > 1e-6
 
     @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
@@ -1281,9 +1266,7 @@ class TestClusterJackknifeRegressions:
 
         res_nocorr = OLS(self.dtapa_endog, self.exog).fit(
             cov_type=cov_type,
-            cov_kwds={
-                "groups": self.firm, "use_t": True, "df_correction": False
-            },
+            cov_kwds={"groups": self.firm, "use_t": True, "df_correction": False},
         )
         assert not hasattr(res_nocorr, "df_resid_inference")
 
@@ -1305,6 +1288,7 @@ class TestClusterJKvsRSandwich:
     @classmethod
     def setup_class(cls):
         from statsmodels.datasets import grunfeld
+
         dtapa = grunfeld.data.load_pandas()
 
         cls.dtapa_endog = dtapa.endog[:200]
@@ -1356,6 +1340,7 @@ class TestClusterJKvsRSandwich:
         # they implement the same estimator -- this pins that down so a
         # future edit can't silently let the two reference sources drift
         # apart without a visible test failure.
+
         assert_allclose(
             res2.results_cluster_crv3_sandwich_r.cov,
             res2.results_cluster_crv3.cov,
