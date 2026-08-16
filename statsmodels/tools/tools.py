@@ -43,7 +43,7 @@ def drop_missing(y, x=None, axis=1):
         Additional data with observations possibly containing NaN
         values. If provided, an observation is dropped if it is
         missing in either `y` or `x`.
-    axis : int
+    axis : int, optional
         Axis along which to look for missing observations.  Default is 1, i.e.,
         observations in rows.
 
@@ -90,10 +90,10 @@ def add_constant(data, prepend=True, has_constant="skip"):
     ----------
     data : array_like
         A column-ordered design matrix.
-    prepend : bool
+    prepend : bool, optional
         If True (default), the constant is in the first column. If False, the
         constant is appended (last column).
-    has_constant : str {'raise', 'add', 'skip'}
+    has_constant : {'raise', 'add', 'skip'}, optional
         Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if any column has a constant value. Using 'add' will add a
@@ -193,7 +193,7 @@ def pinv_extended(x, rcond=1e-15):
     ----------
     x : array_like
         The array to invert, 2d.
-    rcond : float
+    rcond : float, optional
         Singular values below ``rcond * max(singular values)`` are
         treated as zero.
 
@@ -443,7 +443,7 @@ def _ensure_2d(x, ndarray=False):
     ----------
     x : ndarray, Series, DataFrame or None
         Input to verify dimensions, and to transform as necessary
-    ndarray : bool
+    ndarray : bool, optional
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a
         DataFrame.
@@ -491,7 +491,7 @@ def matrix_rank(m, tol=None, method="qr"):
     tol : float, optional
         The tolerance to use when testing the matrix rank. If not provided
         an appropriate value is selected.
-    method : {"ip", "qr", "svd"}
+    method : {"ip", "qr", "svd"}, optional
         The method used. "ip" uses the inner-product of a normalized version
         of m and then computes the rank using NumPy's matrix_rank.
         "qr" uses a QR decomposition and is the default. "svd" defers to

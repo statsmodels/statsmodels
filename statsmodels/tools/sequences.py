@@ -14,10 +14,13 @@ def discrepancy(sample, bounds=None):
     ----------
     sample : array_like (n_samples, k_vars)
         The sample to compute the discrepancy from.
-    bounds : tuple or array_like ([min, k_vars], [max, k_vars])
-        Desired range of transformed data. The transformation apply the bounds
-        on the sample and not the theoretical space, unit cube. Thus min and
-        max values of the sample will coincide with the bounds.
+    bounds : ndarray, optional
+        Desired range of transformed data, of shape (2, k_vars) giving the
+        lower and upper bound for each variable. The transformation applies
+        the bounds to the sample and not the theoretical space, unit cube.
+        Thus min and max values of the sample will coincide with the
+        bounds. If None, the sample is assumed to already lie in the unit
+        hypercube.
 
     Returns
     -------
@@ -68,7 +71,7 @@ def primes_from_2_to(n):
 
     Returns
     -------
-    primes : list(int)
+    primes : ndarray
         Primes in ``2 <= p < n``.
 
     References
@@ -135,9 +138,9 @@ def van_der_corput(n_sample, base=2, start_index=0):
     ----------
     n_sample : int
         Number of element of the sequence.
-    base : int
+    base : int, optional
         Base of the sequence.
-    start_index : int
+    start_index : int, optional
         Index to start the sequence from.
 
     Returns
@@ -174,16 +177,19 @@ def halton(dim, n_sample, bounds=None, start_index=0):
         Dimension of the parameter space.
     n_sample : int
         Number of samples to generate in the parameter space.
-    bounds : tuple or array_like ([min, k_vars], [max, k_vars])
-        Desired range of transformed data. The transformation apply the bounds
-        on the sample and not the theoretical space, unit cube. Thus min and
-        max values of the sample will coincide with the bounds.
-    start_index : int
+    bounds : ndarray, optional
+        Desired range of transformed data, of shape (2, dim) giving the
+        lower and upper bound for each variable. The transformation applies
+        the bounds to the sample and not the theoretical space, unit cube.
+        Thus min and max values of the sample will coincide with the
+        bounds. If None, the sample is assumed to already lie in the unit
+        hypercube.
+    start_index : int, optional
         Index to start the sequence from.
 
     Returns
     -------
-    sequence : array_like (n_samples, k_vars)
+    sequence : ndarray of shape (n_sample, dim)
         Sequence of Halton.
 
     References

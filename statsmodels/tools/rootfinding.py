@@ -66,30 +66,30 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     ----------
     func : callable
         function for which we find the root ``x`` such that ``func(x) = 0``
-    low : float or None
+    low : float or None, optional
         lower bound for brentq
-    upp : float or None
+    upp : float or None, optional
         upper bound for brentq
-    args : tuple
+    args : tuple, optional
         optional additional arguments for ``func``
-    xtol : float
+    xtol : float, optional
         parameter x tolerance given to brentq
-    start_low : float (positive) or None
+    start_low : float (positive) or None, optional
         starting bound for expansion with increasing ``x``. It needs to be
         positive. If None, then it is set to 1.
-    start_upp : float (negative) or None
+    start_upp : float (negative) or None, optional
         starting bound for expansion with decreasing ``x``. It needs to be
         negative. If None, then it is set to -1.
-    increasing : bool or None
+    increasing : bool or None, optional
         If None, then the function is evaluated at the initial bounds to
         determine whether the function is increasing or not. If increasing is
         True (False), then it is assumed that the function is monotonically
         increasing (decreasing).
-    max_it : int
+    max_it : int, optional
         maximum number of expansion steps.
-    maxiter_bq : int
+    maxiter_bq : int, optional
         maximum number of iterations of brentq.
-    factor : float
+    factor : float, optional
         expansion factor for step of shifting the bounds interval, default is
         10.
     full_output : bool, optional
