@@ -131,7 +131,7 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         psi function.
         If True, then use computation then the psi function can have jump
         discontinuities.
-    bracket : None or tuple, optional
+    bracket : tuple, optional
         Bracket with lower and upper bounds to use for scipy.optimize.brentq.
         If None, than a default bracket, currently [0.1, 10], is used.
 
