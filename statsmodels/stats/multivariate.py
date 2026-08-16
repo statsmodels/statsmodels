@@ -62,9 +62,9 @@ def test_mvmean(data, mean_null=0, return_results=True):
     ----------
     data : array_like
         data with observations in rows and variables in columns
-    mean_null : array_like
+    mean_null : array_like, optional
         mean of the multivariate data under the null hypothesis
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance is returned. If False, then only
         the test statistic and pvalue are returned.
 
@@ -149,14 +149,14 @@ def confint_mvmean(data, lin_transf=None, alpha=0.05, simult=False):
     ----------
     data : array_like
         data with observations in rows and variables in columns
-    lin_transf : array_like or None
+    lin_transf : array_like or None, optional
         The linear transformation or contrast matrix for transforming the
         vector of means. If this is None, then the identity matrix is used
         which specifies the means themselves.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
-    simult : bool
+    simult : bool, optional
         If ``simult`` is False (default), then the pointwise confidence
         interval is returned.
         Otherwise, a simultaneous confidence interval is returned.
@@ -214,20 +214,20 @@ def confint_mvmean_fromstats(
 
     Parameters
     ----------
-    mean : ndarray
+    mean : array_like
         Mean of the multivariate data.
-    cov : ndarray
+    cov : array_like
         Covariance matrix of the multivariate data.
     nobs : int
         Number of observations used in the estimation of mean and cov.
-    lin_transf : array_like or None
+    lin_transf : array_like or None, optional
         The linear transformation or contrast matrix for transforming the
         vector of means. If this is None, then the identity matrix is used
         which specifies the means themselves.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         confidence level for the confidence interval, commonly used is
         alpha=0.05.
-    simult : bool
+    simult : bool, optional
         If simult is False (default), then pointwise confidence interval is
         returned.
         Otherwise, a simultaneous confidence interval is returned.
@@ -325,7 +325,7 @@ class CovTestResult(LimitedIterationMixin[float]):
         Name of the reference distribution used for `pvalue`, ``"chi2"``.
     null : str
         Short description of the null hypothesis being tested.
-    cov_null : ndarray or None
+    cov_null : ndarray or None, optional
         Covariance matrix under the null hypothesis. Only set by
         :func:`test_cov`, otherwise None.
 
@@ -359,7 +359,7 @@ def test_cov(cov, nobs, cov_null):
         i.e., `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
-    cov_null : ndarray
+    cov_null : array_like
         covariance under the null hypothesis
 
     Returns
@@ -521,7 +521,7 @@ def _get_blocks(mat, block_len):
     ----------
     mat : ndarray
         Square matrix.
-    block_len : list
+    block_len : list of int
         List of length of each square diagonal block.
 
     Returns
@@ -565,7 +565,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
         i.e., `ddof=1`.
     nobs : int
         number of observations used in the estimation of the covariance
-    block_len : list
+    block_len : list of int
         list of length of each square block
 
     Returns
@@ -682,7 +682,7 @@ def test_cov_oneway(cov_list, nobs_list):
     cov_list : list of array_like
         Covariance matrices of the sample, estimated with denominator
         ``(N - 1)``, i.e., `ddof=1`.
-    nobs_list : list
+    nobs_list : list of int
         List of the number of observations used in the estimation of the
         covariance for each sample.
 

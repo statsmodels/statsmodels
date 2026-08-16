@@ -315,7 +315,7 @@ def _get_sandwich_arrays(results, cov_type=""):
     ----------
     results : result instance or tuple
         A results instance, or a tuple of (jac, hessian_inv).
-    cov_type : str
+    cov_type : str, optional
         If "clu", then the score array is not rescaled by frequency
         weights when the model defines ``freq_weights``.
 
@@ -434,7 +434,7 @@ def _cluster_jackknife(results, group, center, hessian_inv):
     results : result instance
         need to contain regression results, uses results.model.wexog,
         results.model.wendog and results.params
-    group : ndarray
+    group : array_like of int
         Integer-valued index of clusters or groups, one entry per
         observation, already recoded to a dense range so that
         ``np.unique(group)`` visits every cluster.
@@ -579,10 +579,10 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     ----------
     x : ndarray (nobs,) or (nobs, k_var)
         data, for HAC this is array of x_i * u_i
-    nlags : int or None
+    nlags : int or None, optional
         highest lag to include in kernel window. If None, then
         nlags = floor(4(T/100)^(2/9)) is used.
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
 
@@ -652,14 +652,14 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
 
     Parameters
     ----------
-    x : ndarray (nobs,) or (nobs, k_var)
+    x : array_like (nobs,) or (nobs, k_var)
         data, for HAC this is array of x_i * u_i
-    time : ndarray, (nobs,)
-        timeindes, assumed to be integers range(n_periods)
-    nlags : int or None
+    time : array_like of int, (nobs,)
+        time index, assumed to be integers in range(n_periods)
+    nlags : int or None, optional
         highest lag to include in kernel window. If None, then
         nlags = floor[4(T/100)^(2/9)] is used.
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
 
@@ -692,9 +692,9 @@ def S_crosssection(x, group):
 
     Parameters
     ----------
-    x : ndarray (nobs,) or (nobs, k_var)
+    x : array_like (nobs,) or (nobs, k_var)
         data, for HAC this is array of x_i * u_i
-    group : ndarray, (nobs,)
+    group : array_like of int, (nobs,)
         group or cluster indicator for each observation
 
     Returns
@@ -730,11 +730,11 @@ def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    group : array_like[int] :
+    group : array_like of int
         Integer-valued index of clusters or groups.
-    use_correction : bool
+    use_correction : bool, optional
        If true (default), then the small sample correction factor is used.
-    crv_type : str
+    crv_type : {"cluster", "cluster-crv3", "cluster-jk"}, optional
        If 'cluster' (default), compute a CRV1 robust variance covariance matrix.
        If 'cluster-crv3', compute a CRV3 robust variance covariance matrix.
        If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife.
@@ -811,12 +811,14 @@ def cov_cluster_2groups(
        each cluster dimension.
     group2 : ndarray, optional
        Group/cluster indicator for the second cluster dimension.
-    use_correction : bool
+    use_correction : bool, optional
        If true (default), then the small sample correction factor is used.
-    crv_type : str
-       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.
-       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix.
-       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife.
+    crv_type : {"cluster"}, optional
+       Only 'cluster' (default), computing the additive two-way CRV1
+       combination ``cov0 + cov1 - cov01``, is supported here. Passing
+       'cluster-crv3' or 'cluster-jk' raises ``NotImplementedError``; use
+       :func:`cov_cluster` directly with one-way clustering for those
+       options.
 
 
     Returns
@@ -895,7 +897,7 @@ def cov_white_simple(results, use_correction=True):
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    use_correction : bool
+    use_correction : bool, optional
        If true (default), then a small sample correction factor is used.
 
     Returns
@@ -942,13 +944,13 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    nlags : int or None
+    nlags : int or None, optional
         highest lag to include in kernel window. If None, then
         nlags = floor[4(T/100)^(2/9)] is used.
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
-    use_correction : bool
+    use_correction : bool, optional
         If true (default), then a small sample correction factor is used.
 
     Returns
@@ -1069,22 +1071,22 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    nlags : int or None
+    nlags : int
         Highest lag to include in kernel window. Currently, no default
         because the optimal length will depend on the number of observations
         per cross-sectional unit.
     groupidx : list of tuple
         each tuple should contain the start and end index for an individual.
         (groupidx might change in future).
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
-    use_correction : 'cluster' or 'hac' or False
+    use_correction : {"hac", "cluster", False}, optional
         If False, then no small sample correction is used.
-        If 'cluster' (default), then the same correction as in cov_cluster is
+        If 'cluster', then the same correction as in cov_cluster is
         used.
-        If 'hac', then the same correction as in single time series, cov_hac
-        is used.
+        If 'hac' (default), then the same correction as in single time
+        series, cov_hac is used.
 
 
     Returns
@@ -1151,15 +1153,15 @@ def cov_nw_groupsum(
         Highest lag to include in kernel window. Currently, no default
         because the optimal length will depend on the number of observations
         per cross-sectional unit.
-    time : ndarray of int
+    time : array_like of int
         this should contain the coding for the time period of each observation.
         time periods should be integers in range(maxT) where maxT is obs of i
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
-    use_correction : 'cluster' or 'hac' or False
-        If False, then no small sample correction is used.
-        If 'hac' (default), then the same correction as in single time series, cov_hac
+    use_correction : {"hac", "cluster", False}, optional
+        If False (default), then no small sample correction is used.
+        If 'hac', then the same correction as in single time series, cov_hac
         is used.
         If 'cluster', then the same correction as in cov_cluster is
         used.

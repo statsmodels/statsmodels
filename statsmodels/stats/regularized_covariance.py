@@ -11,9 +11,9 @@ def _calc_nodewise_row(exog, idx, alpha):
 
     Parameters
     ----------
-    exog : array_like
+    exog : ndarray
         The weighted design matrix for the current partition.
-    idx : scalar
+    idx : int
         Index of the current variable.
     alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
@@ -23,8 +23,8 @@ def _calc_nodewise_row(exog, idx, alpha):
 
     Returns
     -------
-    array_like
-        An array-like object of length p-1.
+    ndarray
+        An array of length p-1.
 
     Notes
     -----
@@ -55,11 +55,11 @@ def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
 
     Parameters
     ----------
-    exog : array_like
+    exog : ndarray
         The weighted design matrix for the current partition.
     nodewise_row : array_like
         The nodewise_row values for the current variable.
-    idx : scalar
+    idx : int
         Index of the current variable.
     alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
@@ -101,13 +101,13 @@ def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l):
         A list of array-like object where each object corresponds to
         the nodewise_row values for the corresponding variable, should
         be length p.
-    nodewise_weight_l : list
-        A list of scalars where each scalar corresponds to the nodewise_weight
+    nodewise_weight_l : ndarray
+        An array of scalars where each scalar corresponds to the nodewise_weight
         value for the corresponding variable, should be length p.
 
     Returns
     -------
-    array_like
+    ndarray
         A p x p matrix.
 
     Notes
@@ -136,12 +136,12 @@ class RegularizedInvCovariance:
 
     Parameters
     ----------
-    exog : array_like
+    exog : ndarray
         A weighted design matrix for covariance.
 
     Attributes
     ----------
-    exog : array_like
+    exog : ndarray
         A weighted design matrix for covariance.
     """
 
@@ -158,7 +158,7 @@ class RegularizedInvCovariance:
 
         Parameters
         ----------
-        alpha : scalar
+        alpha : scalar, optional
             Regularizing constant.
         """
 
@@ -187,7 +187,7 @@ class RegularizedInvCovariance:
 
         Returns
         -------
-        array_like
+        ndarray
             A p x p matrix.
         """
         return self._approx_inv_cov

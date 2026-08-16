@@ -146,17 +146,21 @@ class RankCompareResult(LimitedIterationMixin[float]):
 
     Parameters
     ----------
-    statistic : float
-        The Brunner-Munzel W statistic.
-    pvalue : float
+    statistic : float or None
+        The Brunner-Munzel W statistic. None if not computed from ranks,
+        e.g., for results returned by `rank_compare_2ordinal`.
+    pvalue : float or None
         p-value based on the t distribution if `use_t` is True, otherwise
-        based on the normal distribution.
-    s1 : float
+        based on the normal distribution. None if not computed, e.g., for
+        results returned by `rank_compare_2ordinal`.
+    s1 : float or None
         Variance-like quantity for sample 1 used in the Brunner-Munzel
-        statistic.
-    s2 : float
+        statistic. None if not computed, e.g., for results returned by
+        `rank_compare_2ordinal`.
+    s2 : float or None
         Variance-like quantity for sample 2 used in the Brunner-Munzel
-        statistic.
+        statistic. None if not computed, e.g., for results returned by
+        `rank_compare_2ordinal`.
     var1 : float
         Estimated variance contribution of sample 1 to `prob1`.
     var2 : float
@@ -171,10 +175,12 @@ class RankCompareResult(LimitedIterationMixin[float]):
         Number of observations in sample 2.
     nobs : int
         Total number of observations, ``nobs_1 + nobs_2``.
-    mean1 : float
-        Mean rank of sample 1 in the pooled sample.
-    mean2 : float
-        Mean rank of sample 2 in the pooled sample.
+    mean1 : float or None
+        Mean rank of sample 1 in the pooled sample. None if not computed
+        from ranks, e.g., for results returned by `rank_compare_2ordinal`.
+    mean2 : float or None
+        Mean rank of sample 2 in the pooled sample. None if not computed
+        from ranks, e.g., for results returned by `rank_compare_2ordinal`.
     prob1 : float
         Probability that a random draw from sample 1 is stochastically
         larger than a random draw from sample 2,
@@ -231,13 +237,13 @@ class RankCompareResult(LimitedIterationMixin[float]):
 
         Parameters
         ----------
-        value : float
+        value : float, optional
             Value, default 0, shifts the confidence interval,
             e.g., ``value=0.5`` centers the confidence interval at zero.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : str
+        alternative : {"two-sided", "larger", "smaller"}, optional
             The alternative hypothesis, H1, has to be one of the following
 
                * 'two-sided' : H1: ``prob - value`` not equal to 0.
@@ -278,9 +284,9 @@ class RankCompareResult(LimitedIterationMixin[float]):
 
         Parameters
         ----------
-        value : float
+        value : float, optional
             Value of the probability under the Null hypothesis.
-        alternative : str
+        alternative : {"two-sided", "larger", "smaller"}, optional
             The alternative hypothesis, H1, has to be one of the following
 
                * 'two-sided' : H1: ``prob - value`` not equal to 0.
@@ -394,12 +400,12 @@ class RankCompareResult(LimitedIterationMixin[float]):
 
         Parameters
         ----------
-        const, slope : float
+        const, slope : float, optional
             Constant and slope for linear (affine) transformation.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : str
+        alternative : {"two-sided", "larger", "smaller"}, optional
             The alternative hypothesis, H1, has to be one of the following
 
                * 'two-sided' : H1: ``prob - value`` not equal to 0.
@@ -440,7 +446,7 @@ class RankCompareResult(LimitedIterationMixin[float]):
 
         Parameters
         ----------
-        prob : float in (0, 1)
+        prob : float in (0, 1), optional
             Probability to be converted to Cohen's d effect size.
             If prob is None, then the ``prob1`` attribute is used.
 
@@ -460,9 +466,9 @@ class RankCompareResult(LimitedIterationMixin[float]):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Significance level for confidence intervals. Coverage is 1 - alpha
-        xname : None or list of str
+        xname : list of str, optional
             If None, then each row has a name column with generic names.
             If xname is a list of strings, then it will be included as part
             of those names.
@@ -526,7 +532,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     ----------
     x1, x2 : array_like
         Array of samples, should be one-dimensional.
-    use_t : boolean
+    use_t : bool, optional
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
         If use_t is false, then the normal distribution is used.
@@ -678,10 +684,10 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     count2 : array_like
         Counts of the second sample, number of categories and ordering needs
         to be the same as for sample 1.
-    ddof : scalar
+    ddof : int, optional
         Degrees of freedom correction for variance estimation. The default
         ddof=1 corresponds to `rank_compare_2indep`.
-    use_t : bool
+    use_t : bool, optional
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
         If use_t is false, then the normal distribution is used.
@@ -805,7 +811,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
         Sequence containing at least two one-dimensional samples of numeric,
         finite observations, in the order implied by the alternative
         hypothesis.
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         Defines the alternative hypothesis. The following options are
         available:
 
@@ -817,7 +823,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
     -------
     res : JonckheereTerpstraResult
         A NamedTuple with the Jonckheere-Terpstra statistic, pvalue and related
-        quantities. The key fieleds are``statistic`` and ``pvalue``. See
+        quantities. The key fields are ``statistic`` and ``pvalue``. See
         :class:`JonckheereTerpstraResult` for the full list of fields.
 
     See Also

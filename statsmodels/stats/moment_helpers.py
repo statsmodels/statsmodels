@@ -83,7 +83,7 @@ def mnc2mc(mnc, wmean=True):
     ----------
     mnc : array_like
         Non-central moments, with the first element equal to the mean.
-    wmean : bool
+    wmean : bool, optional
         If True (default), the first returned moment is the mean instead
         of zero.
 
@@ -371,7 +371,7 @@ def cov2corr(cov, return_std=False, *, result_object: bool | None = None):
     ----------
     cov : array_like, 2d
         Covariance matrix, see Notes.
-    return_std : bool
+    return_std : bool, optional
         If this is true then the standard deviation is also returned.
         By default only the correlation matrix is returned.
     result_object : bool, optional

@@ -92,26 +92,27 @@ def test_chisquare_binning(
         If those sums are unequal and all expected values are smaller or equal
         to 1, then they are interpreted as probabilities and will be rescaled
         to match counts.
-    sort_var : array_like
+    sort_var : array_like, optional
         1-dimensional array for binning. Groups will be formed according to
         quantiles of the sorted array ``sort_var``, so that group sizes have
-        equal or approximately equal sizes.
-    bins : int
+        equal or approximately equal sizes. If None, the original order of
+        ``counts`` and ``expected`` is used for binning instead.
+    bins : int, optional
         Number of bins or groups to use for binning the data based on
         ``sort_var``. Default is 10.
-    df : int
+    df : int, optional
         Degrees of freedom of the chisquare distribution used to compute
         the p-value of the test. If None, then the degrees of freedom are
         computed from the number of groups and choices, depending on
         whether ``ordered`` is True or False.
-    ordered : bool
+    ordered : bool, optional
         If True, the degrees of freedom for the ordinal case are used when
         ``df`` is not provided. Default is False, i.e., the multinomial
         (unordered) case.
-    sort_method : str
+    sort_method : str, optional
         Sorting method used by ``numpy.argsort`` when binning by
         ``sort_var``. Default is "quicksort".
-    alpha_nc : float
+    alpha_nc : float, optional
         Significance level used in the computation of the noncentrality
         parameter confidence interval. Default is 0.05.
 

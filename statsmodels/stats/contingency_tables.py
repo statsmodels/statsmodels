@@ -94,7 +94,7 @@ class Table:
     ----------
     table : array_like
         A contingency table.
-    shift_zeros : bool
+    shift_zeros : bool, optional
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
@@ -146,13 +146,14 @@ class Table:
         data : array_like
             The raw data, from which a contingency table is constructed
             using the first two columns.
-        shift_zeros : bool
+        shift_zeros : bool, optional
             If True and any cell count is zero, add 0.5 to all values
             in the table.
 
         Returns
         -------
-        A Table instance.
+        Table
+            A Table instance.
         """
 
         if isinstance(data, pd.DataFrame):
@@ -172,14 +173,15 @@ class Table:
 
         Returns
         -------
-        A bunch containing the following attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            The chi^2 test statistic.
-        df : int
-            The degrees of freedom of the reference distribution
-        pvalue : float
-            The p-value for the test.
+            * statistic : float
+                The chi^2 test statistic.
+            * df : int
+                The degrees of freedom of the reference distribution.
+            * pvalue : float
+                The p-value for the test.
         """
 
         statistic = np.asarray(self.chi2_contribs).sum()
@@ -201,27 +203,28 @@ class Table:
 
         Parameters
         ----------
-        row_scores : array_like
+        row_scores : array_like, optional
             An array of numeric row scores
-        col_scores : array_like
+        col_scores : array_like, optional
             An array of numeric column scores
 
         Returns
         -------
-        A bunch with the following attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            The test statistic.
-        null_mean : float
-            The expected value of the test statistic under the null
-            hypothesis.
-        null_sd : float
-            The standard deviation of the test statistic under the
-            null hypothesis.
-        zscore : float
-            The Z-score for the test statistic.
-        pvalue : float
-            The p-value for the test.
+            * statistic : float
+                The test statistic.
+            * null_mean : float
+                The expected value of the test statistic under the null
+                hypothesis.
+            * null_sd : float
+                The standard deviation of the test statistic under the
+                null hypothesis.
+            * zscore : float
+                The Z-score for the test statistic.
+            * pvalue : float
+                The p-value for the test.
 
         Notes
         -----
@@ -284,10 +287,12 @@ class Table:
 
         Returns
         -------
-        row : ndarray
-            Marginal row probabilities
-        col : ndarray
-            Marginal column probabilities
+        row : ndarray or Series
+            Marginal row probabilities. A Series if `table_orig` is a
+            DataFrame, otherwise an ndarray.
+        col : ndarray or Series
+            Marginal column probabilities. A Series if `table_orig` is a
+            DataFrame, otherwise an ndarray.
         """
 
         n = self.table.sum()
@@ -451,7 +456,7 @@ class SquareTable(Table):
     table : array_like
         A square contingency table, or DataFrame that is converted
         to a square form.
-    shift_zeros : bool
+    shift_zeros : bool, optional
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
@@ -487,7 +492,7 @@ class SquareTable(Table):
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             The method for testing symmetry. Currently must be 'bowker'
             for Bowker's test.
 
@@ -547,7 +552,7 @@ class SquareTable(Table):
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             Either 'stuart_maxwell' or 'bhapkar', leading to two different
             estimates of the covariance matrix for the estimated
             difference between the row margins and the column margins.
@@ -640,9 +645,9 @@ class SquareTable(Table):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the interval.
-        float_format : str
+        float_format : str, optional
             Used to format numeric values in the table.
         """
 
@@ -671,8 +676,8 @@ class Table2x2(SquareTable):
     ----------
     table : array_like
         A 2x2 contingency table
-    shift_zeros : bool
-        If true, 0.5 is added to all cells of the table if any cell is
+    shift_zeros : bool, optional
+        If True, 0.5 is added to all cells of the table if any cell is
         equal to zero.
 
     Notes
@@ -708,9 +713,14 @@ class Table2x2(SquareTable):
         data : array_like
             The raw data, the first column defines the rows and the
             second column defines the columns.
-        shift_zeros : bool
+        shift_zeros : bool, optional
             If True, and if there are any zeros in the contingency
             table, add 0.5 to all four cells of the table.
+
+        Returns
+        -------
+        Table2x2
+            A Table2x2 instance.
         """
 
         if isinstance(data, pd.DataFrame):
@@ -746,7 +756,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the odds ratio.
         """
 
@@ -758,7 +768,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the log odds ratio.
         """
 
@@ -772,10 +782,10 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -793,10 +803,10 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -835,7 +845,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the risk ratio.
         """
 
@@ -847,7 +857,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the log risk ratio.
         """
 
@@ -861,10 +871,10 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -881,10 +891,10 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -897,12 +907,12 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the confidence
             intervals.
-        float_format : str
+        float_format : str, optional
             Used to format the numeric values in the table.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -964,7 +974,7 @@ class StratifiedTable:
         Either a list containing several 2x2 contingency tables, or
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
-    shift_zeros : bool
+    shift_zeros : bool, optional
         If True and any cell count is zero, add 0.5 to all cells of the
         affected table(s).
 
@@ -1020,15 +1030,15 @@ class StratifiedTable:
 
         Parameters
         ----------
-        var1 : int or string
+        var1 : int or str
             The column index or name of `data` specifying the variable
             defining the rows of the contingency table.  The variable
             must have only two distinct values.
-        var2 : int or string
+        var2 : int or str
             The column index or name of `data` specifying the variable
             defining the columns of the contingency table.  The variable
             must have only two distinct values.
-        strata : int or string
+        strata : int or str
             The column index or name of `data` specifying the variable
             defining the strata.
         data : array_like
@@ -1070,7 +1080,7 @@ class StratifiedTable:
 
         Parameters
         ----------
-        correction : bool
+        correction : bool, optional
             If True, use the continuity correction when calculating the
             test statistic.
 
@@ -1160,10 +1170,10 @@ class StratifiedTable:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1191,10 +1201,10 @@ class StratifiedTable:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1219,18 +1229,19 @@ class StratifiedTable:
 
         Parameters
         ----------
-        adjust : bool
+        adjust : bool, optional
             Use the 'Tarone' adjustment to achieve the chi^2
             asymptotic distribution.
 
         Returns
         -------
-        A bunch containing the following attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            The chi^2 test statistic.
-        pvalue : float
-            The p-value for the test.
+            * statistic : float
+                The chi^2 test statistic.
+            * pvalue : float
+                The p-value for the test.
         """
 
         table = self.table
@@ -1275,12 +1286,12 @@ class StratifiedTable:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence intervals.
-        float_format : str
+        float_format : str, optional
             Used for formatting numeric values in the summary.
-        method : str
+        method : str, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
@@ -1338,27 +1349,28 @@ def mcnemar(table, exact=True, correction=True):
     Parameters
     ----------
     table : array_like
-        A square contingency table.
-    exact : bool
-        If exact is true, then the binomial distribution will be used.
-        If exact is false, then the chisquare distribution will be
+        A 2x2 contingency table.
+    exact : bool, optional
+        If exact is True, then the binomial distribution will be used.
+        If exact is False, then the chisquare distribution will be
         used, which is the approximation to the distribution of the
         test statistic for large sample sizes.
-    correction : bool
-        If true, then a continuity correction is used for the chisquare
-        distribution (if exact is false.)
+    correction : bool, optional
+        If True, then a continuity correction is used for the chisquare
+        distribution (if exact is False.)
 
     Returns
     -------
-    A bunch with attributes:
+    Bunch
+        A bunch with attributes
 
-    statistic : float or int, array
-        The test statistic is the chisquare statistic if exact is
-        false. If the exact binomial distribution is used, then this
-        contains the min(n1, n2), where n1, n2 are cases that are zero
-        in one sample but one in the other sample.
-    pvalue : float or array
-        p-value of the null hypothesis of equal marginal distributions.
+        * statistic : float
+            The test statistic is the chisquare statistic if exact is
+            False. If the exact binomial distribution is used, then this
+            contains the min(n1, n2), where n1, n2 are cases that are zero
+            in one sample but one in the other sample.
+        * pvalue : float
+            p-value of the null hypothesis of equal marginal distributions.
 
     Notes
     -----
@@ -1431,7 +1443,7 @@ def cochrans_q(x, return_object=None):
     ----------
     x : array_like, 2d (N, k)
         data with N cases and k variables
-    return_object : bool
+    return_object : bool, optional
         No longer used. ``cochrans_q`` always returns a
         ``CochransQResult``, which supports both the attribute access of the
         bunch that ``return_object=True`` used to produce and the positional

@@ -44,10 +44,10 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         Otherwise, statistics will be weighted corresponding to nobs.
         Only relative sizes are relevant, any proportional change to nobs does
         not change the effect size.
-    use_var : {"unequal", "equal", "bf"}
+    use_var : {"unequal", "equal", "bf"}, optional
         If ``use_var`` is "unequal", then the variances can differ across
         samples and the effect size for Welch anova will be computed.
-    ddof_between : int
+    ddof_between : int, optional
         Degrees of freedom correction for the weighted between sum of squares.
         The denominator is ``nobs_total - ddof_between``
         This can be used to match differences across reference literature.
@@ -192,10 +192,10 @@ class EffectSizeFsquResult(NamedTuple):
 
     Parameters
     ----------
-    f2 : float
+    f2 : float or ndarray
         Squared Cohen's f effect size, the signal to noise ratio
         ``var_explained / var_residual``.
-    eta2 : float
+    eta2 : float or ndarray
         Squared eta effect size, the proportion of explained variance
         ``var_explained / var_total``.
     """
@@ -217,10 +217,10 @@ def convert_effectsize_fsqu(f2=None, eta2=None):
 
     Parameters
     ----------
-    f2 : None or float
+    f2 : None or array_like, optional
        Squared Cohen's F effect size. If f2 is not None, then eta2 will be
        computed.
-    eta2 : None or float
+    eta2 : None or array_like, optional
        Squared eta effect size. If f2 is None and eta2 is not None, then f2 is
        computed.
 
@@ -246,20 +246,20 @@ class FstatEffectSizeResult(NamedTuple):
 
     Parameters
     ----------
-    f2 : array_like
+    f2 : float or ndarray
         Squared Cohen's f effect size, ``f_stat * df1 / df2``.
-    eta2 : array_like
+    eta2 : float or ndarray
         Squared eta effect size, ``f2 / (f2 + 1)``.
-    omega2 : array_like
+    omega2 : float or ndarray
         Squared omega effect size, computed as
         ``(f2 - df1 / df2) / (f2 + 1 + 1 / df2)``.
-    eps2 : array_like
+    eps2 : float or ndarray
         Squared epsilon effect size, computed as
         ``(f2 - df1 / df2) / (f2 + 1)``.
-    eps2_alt : array_like
+    eps2_alt : float or ndarray
         Squared epsilon effect size, computed with the alternative
         expression ``(f_stat - 1) / (f_stat + df2 / df1)``.
-    omega2_alt : array_like
+    omega2_alt : float or ndarray
         Squared omega effect size, computed with the alternative
         expression ``(f_stat - 1) / (f_stat + (df2 + 1) / df1)``.
     """
@@ -427,9 +427,9 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
         - df1 : numerator degrees of freedom, number of constraints
         - df2 : denominator degrees of freedom, df_resid
 
-    alpha : float, default 0.05
+    alpha : float, optional
         Significance level for the confidence interval.
-    alternative : {"two-sided"}
+    alternative : {"two-sided"}, optional
         Other alternatives have not been implemented.
 
     Returns
@@ -471,10 +471,10 @@ class ConfintEffectSizeResult(NamedTuple):
 
     Parameters
     ----------
-    f2 : float
+    f2 : ndarray
         Squared Cohen's f effect size at the confidence limits of the
         noncentrality parameter.
-    eta2 : float
+    eta2 : ndarray
         Squared eta effect size at the confidence limits of the
         noncentrality parameter.
     ci_omega2 : ndarray
@@ -517,9 +517,9 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
         - df1 : numerator degrees of freedom, number of constraints
         - df2 : denominator degrees of freedom, df_resid
 
-    alpha : float, default 0.05
+    alpha : float, optional
         Significance level for the confidence interval.
-    nobs : int, default None
+    nobs : int, optional
         Total number of observations. If None, then it is set to
         ``df1 + df2 + 1``.
 
@@ -642,28 +642,26 @@ def anova_generic(
 
     Parameters
     ----------
-    means : array_like
+    means : ndarray
         Mean of samples to be compared
     variances : float or array_like
         Residual (within) variance of each sample or pooled.
         If ``variances`` is scalar, then it is interpreted as pooled variance
         that is the same for all samples, ``use_var`` will be ignored.
         Otherwise, the variances are used depending on the ``use_var`` keyword.
-    nobs : int or array_like
-        Number of observations for the samples.
-        If nobs is scalar, then it is assumed that all samples have the same
-        number ``nobs`` of observation, i.e., a balanced sample case.
-        Otherwise, statistics will be weighted corresponding to nobs.
-        Only relative sizes are relevant, any proportional change to nobs does
-        not change the effect size.
-    use_var : {"unequal", "equal", "bf"}
+    nobs : ndarray
+        Number of observations for each sample. Statistics are weighted
+        corresponding to nobs. Only relative sizes are relevant, any
+        proportional change to nobs does not change the effect size.
+    use_var : {"unequal", "equal", "bf"}, optional
         If ``use_var`` is "unequal", then the variances can differ across
         samples and the effect size for Welch anova will be computed.
-    welch_correction : bool
+    welch_correction : bool, optional
         If this is false, then the Welch correction to the test statistic is
         not included. This allows the computation of an effect size measure
         that corresponds more closely to Cohen's f.
-    info : not used yet
+    info : optional
+        Not used yet.
 
     Returns
     -------
@@ -757,10 +755,10 @@ def anova_oneway(
         The data can be provided as a tuple or list of arrays or in long
         format with outcome observations in ``data`` and group membership in
         ``groups``.
-    groups : ndarray or Series
+    groups : ndarray or Series, optional
         If data is in long format, then groups is needed as indicator to which
         group or sample and observations belongs.
-    use_var : {"unequal", "equal" or "bf"}
+    use_var : {"unequal", "equal", "bf"}, optional
         `use_var` specified how to treat heteroscedasticity, unequal variance,
         across samples. Three approaches are available
 
@@ -776,11 +774,11 @@ def anova_oneway(
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
 
-    welch_correction : bool
+    welch_correction : bool, optional
         If this is false, then the Welch correction to the test statistic is
         not included. This allows the computation of an effect size measure
         that corresponds more closely to Cohen's f.
-    trim_frac : float in [0, 0.5)
+    trim_frac : float in [0, 0.5), optional
         Optional trimming for Anova with trimmed mean and winsorized variances.
         With the default trim_frac equal to zero, the oneway Anova statistics
         are computed without trimming. If `trim_frac` is larger than zero,
@@ -951,9 +949,9 @@ def equivalence_oneway_generic(
         - df1 : numerator degrees of freedom, number of constraints
         - df2 : denominator degrees of freedom, df_resid
 
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the hypothesis test.
-    margin_type : "f2" or "wellek"
+    margin_type : {"f2", "wellek"}, optional
         Type of effect size used for equivalence margin.
 
     Returns
@@ -1059,10 +1057,10 @@ def equivalence_oneway(
     equiv_margin : float
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
-    groups : ndarray or Series
+    groups : ndarray or Series, optional
         If data is in long format, then groups is needed as indicator to which
         group or sample and observations belongs.
-    use_var : {"unequal", "equal" or "bf"}
+    use_var : {"unequal", "equal", "bf"}, optional
         `use_var` specified how to treat heteroscedasticity, unequal variance,
         across samples. Three approaches are available
 
@@ -1078,11 +1076,11 @@ def equivalence_oneway(
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
 
-    welch_correction : bool
+    welch_correction : bool, optional
         If this is false, then the Welch correction to the test statistic is
         not included. This allows the computation of an effect size measure
         that corresponds more closely to Cohen's f.
-    trim_frac : float in [0, 0.5)
+    trim_frac : float in [0, 0.5), optional
         Optional trimming for Anova with trimmed mean and winsorized variances.
         With the default trim_frac equal to zero, the oneway Anova statistics
         are computed without trimming. If `trim_frac` is larger than zero,
@@ -1092,7 +1090,7 @@ def equivalence_oneway(
         `trim_frac` has to be smaller than 0.5, however, if the fraction is
         so large that there are not enough observations left over, then `nan`
         will be returned.
-    margin_type : "f2" or "wellek"
+    margin_type : {"f2", "wellek"}, optional
         Type of effect size used for equivalence margin, either squared
         Cohen's f or Wellek's psi. Default is "f2".
 
@@ -1151,7 +1149,7 @@ def _power_equivalence_oneway_emp(f_stat, n_groups, nobs, eps, df, alpha=0.05):
         Equivalence margin in terms of effect size given by Wellek's psi.
     df : tuple
         Degrees of freedom for F distribution.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the hypothesis test.
 
     Returns
@@ -1188,15 +1186,15 @@ def power_equivalence_oneway(
         with `margin_type`. default is squared Cohen's f.
     nobs_t : ndarray
         Total number of observations summed over all groups.
-    n_groups : int
+    n_groups : int, optional
         Number of groups in oneway comparison. If margin_type is "wellek",
         then either ``n_groups`` or ``df`` has to be given.
-    df : tuple
+    df : tuple, optional
         Degrees of freedom for F distribution,
         ``df = (n_groups - 1, nobs_t - n_groups)``
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the hypothesis test.
-    margin_type : "f2" or "wellek"
+    margin_type : {"f2", "wellek"}, optional
         Type of effect size used for equivalence margin, either squared
         Cohen's f or Wellek's psi. Default is "f2".
 
@@ -1297,22 +1295,22 @@ def simulate_power_equivalence_oneway(
     equiv_margin : float
         Equivalence margin in terms of effect size. Effect size can be
         chosen with `margin_type`. default is squared Cohen's f.
-    vars_ : array_like or None
+    vars_ : array_like, optional
         Variances of the samples used to simulate the data. If None, then
         unit variance, i.e., standard deviation equal to 1, is used for all
         samples.
-    k_mc : int
+    k_mc : int, optional
         Number of Monte Carlo replications.
-    trim_frac : float in [0, 0.5)
+    trim_frac : float in [0, 0.5), optional
         Optional trimming for Anova with trimmed mean and winsorized
         variances, see `trim_frac` in `anova_oneway`.
-    options_var : list of str or None
+    options_var : list of str, optional
         List of `use_var` options that are used in the loop over Monte
         Carlo replications. If None, then
         ``["unequal", "equal", "bf"]`` is used.
-    margin_type : "f2" or "wellek"
+    margin_type : {"f2", "wellek"}, optional
         Type of effect size used for equivalence margin.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -1431,7 +1429,7 @@ def test_scale_oneway(
         Data for k independent samples, with k >= 2. The data can be provided
         as a tuple or list of arrays or in long format with outcome
         observations in ``data`` and group membership in ``groups``.
-    method : {"unequal", "equal" or "bf"}
+    method : {"unequal", "equal", "bf"}, optional
         How to treat heteroscedasticity across samples. This is used as
         `use_var` option in `anova_oneway` and refers to the variance of the
         transformed data, i.e., assumption is on 4th moment if squares are used
@@ -1450,16 +1448,16 @@ def test_scale_oneway(
             results instance, ``df_denom2`` and ``p_value2``.
             This is the default.
 
-    center : "median", "mean", "trimmed" or float
+    center : {"median", "mean", "trimmed"} or float, optional
         Statistic used for centering observations. If a float, then this
         value is used to center. Default is median.
-    transform : "abs", "square" or callable
+    transform : {"abs", "square", "identity"} or callable, optional
         Transformation for the centered observations. If a callable, then this
         function is called on the centered data.
         Default is absolute value.
-    trim_frac_mean : float in [0, 0.5)
+    trim_frac_mean : float in [0, 0.5), optional
         Trim fraction for the trimmed mean when `center` is "trimmed"
-    trim_frac_anova : float in [0, 0.5)
+    trim_frac_anova : float in [0, 0.5), optional
         Optional trimming for Anova with trimmed mean and Winsorized variances.
         With the default trim_frac equal to zero, the oneway Anova statistics
         are computed without trimming. If `trim_frac` is larger than zero,
@@ -1591,7 +1589,7 @@ def equivalence_scale_oneway(
     equiv_margin : float
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
-    method : {"unequal", "equal" or "bf"}
+    method : {"unequal", "equal", "bf"}, optional
         How to treat heteroscedasticity across samples. This is used as
         `use_var` option in `anova_oneway` and refers to the variance of the
         transformed data, i.e., assumption is on 4th moment if squares are used
@@ -1609,16 +1607,16 @@ def equivalence_scale_oneway(
             degrees of freedom are available as additional attributes in the
             results instance, ``df_denom2`` and ``p_value2``.
             This is the default.
-    center : "median", "mean", "trimmed" or float
+    center : {"median", "mean", "trimmed"} or float, optional
         Statistic used for centering observations. If a float, then this
         value is used to center. Default is median.
-    transform : "abs", "square" or callable
+    transform : {"abs", "square", "identity"} or callable, optional
         Transformation for the centered observations. If a callable, then this
         function is called on the centered data.
         Default is absolute value.
-    trim_frac_mean : float in [0, 0.5)
+    trim_frac_mean : float in [0, 0.5), optional
         Trim fraction for the trimmed mean when `center` is "trimmed"
-    trim_frac_anova : float in [0, 0.5)
+    trim_frac_anova : float in [0, 0.5), optional
         Optional trimming for Anova with trimmed mean and Winsorized variances.
         With the default trim_frac equal to zero, the oneway Anova statistics
         are computed without trimming. If `trim_frac` is larger than zero,
