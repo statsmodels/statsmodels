@@ -5,6 +5,7 @@ Test functions for models.tools
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 from statsmodels.compat.python import lrange
 
+import itertools
 import string
 
 import numpy as np
@@ -217,6 +218,21 @@ def test_estimable():
             isestimable(np.ones((n,)), X)
     with pytest.raises(ValueError):
         isestimable(np.eye(4), X)
+
+
+@pytest.mark.parametrize("method", ["ip", "qr", "svd"])
+def test_matrix_rank_column_order(method):
+    # the rank of a matrix is a property of its column space, so it does not
+    # depend on the order the columns are given in. The regressor here is
+    # measured on a much larger scale than the intercept, which is the case
+    # that separates a tolerance taken from the leading diagonal element of
+    # the R matrix from one taken from the largest.
+    x = 1e3 * np.arange(1.0, 41.0) / 7.0
+    exog = np.column_stack((np.ones(40), x, 2.0 * x))
+
+    for cols in itertools.permutations(range(exog.shape[1])):
+        rank = tools.matrix_rank(exog[:, list(cols)], method=method)
+        assert_equal(rank, 2, err_msg=f"column order {cols}")
 
 
 def test_pandas_const_series():
