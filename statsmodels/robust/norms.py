@@ -1236,10 +1236,10 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        bp : float in [0.05, 0.5] or None
+        bp : float in [0.05, 0.5] or None, optional
             Required breakdown point
             Either bp or eff has to be specified, but not both.
-        eff : float or None
+        eff : float or None, optional
             Required asymptotic efficiency.
             Either bp or eff has to be specified, but not both.
 
@@ -1927,7 +1927,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
 
     Parameters
     ----------
-    a : ndarray
+    a : array_like
         Array over which the location parameter is to be estimated
     scale : ndarray
         Scale parameter to be used in M-estimator
