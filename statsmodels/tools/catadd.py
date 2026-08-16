@@ -12,7 +12,7 @@ def add_indep(x, varnames, dtype=None):
     x : array_like
         Candidate columns. If `x` is a 2-dimensional ndarray, columns are
         assumed to represent variables and rows observations.
-    varnames : list[str]
+    varnames : list of str
         Names corresponding to the columns in `x`.
     dtype : dtype, optional
         dtype used to construct the output array. If omitted, uses the dtype
@@ -22,7 +22,7 @@ def add_indep(x, varnames, dtype=None):
     -------
     xout : ndarray
         Array containing only linearly independent columns.
-    varnames_new : list[str]
+    varnames_new : list of str
         Names of the retained columns.
 
     Notes

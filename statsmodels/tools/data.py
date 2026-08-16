@@ -71,9 +71,9 @@ def interpret_data(data, colnames=None, rownames=None):
     ----------
     data : array_like
         Data to convert.
-    colnames : sequence or None
+    colnames : sequence or None, optional
         Column names. May be part of the data structure.
-    rownames : sequence or None
+    rownames : sequence or None, optional
         Row names. May be part of the data structure.
 
     Returns

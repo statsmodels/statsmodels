@@ -21,7 +21,7 @@ def bunch_factory(attribute, columns):
     ----------
     attribute : str
         Attribute to access when splitting
-    columns : List[str]
+    columns : list of str
         List of names to use when splitting the columns of attribute
 
     Notes

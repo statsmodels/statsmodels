@@ -26,17 +26,17 @@ def array_like(
         Positional argument index to validate.
     name : str
         Argument name to use in exceptions and keyword lookup.
-    dtype : dtype
+    dtype : dtype, optional
         Required dtype.
-    ndim : int or None
+    ndim : int or None, optional
         Required number of dimensions.
-    maxdim : int or None
+    maxdim : int or None, optional
         Maximum allowed number of dimensions.
-    shape : tuple or None
+    shape : tuple or None, optional
         Required shape.
-    order : {"C", "F", None}
+    order : {"C", "F"}, optional
         Required memory order.
-    contiguous : bool
+    contiguous : bool, optional
         Whether to require contiguous memory.
 
     """
