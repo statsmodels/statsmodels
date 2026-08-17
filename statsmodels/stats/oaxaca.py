@@ -66,7 +66,7 @@ class OaxacaBlinder:
     exog : array_like
         The exogenous variable(s) or the independent variable(s) that you are
         using to explain the endogenous variable.
-    bifurcate : {int, str}
+    bifurcate : int or str
         The column of the exogenous variable(s) on which to split. This would
         generally be the group that you wish to explain the two means for.
         Int of the column for a NumPy array or int/string for the name of
@@ -85,7 +85,7 @@ class OaxacaBlinder:
         See linear_model.RegressionResults.get_robustcov_results for a
         description of the required keywords for alternative covariance
         estimators.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -562,10 +562,11 @@ class OaxacaResults:
 
     Attributes
     ----------
-    params
-        A list of all values for the fitted models.
-    std
-        A list of standard error calculations.
+    params : tuple of float
+        A tuple of all values for the fitted models.
+    std : tuple of float or None
+        A tuple of standard error calculations, or None if standard
+        errors were not requested.
     """
 
     def __init__(self, results, model_type, std_val=None):

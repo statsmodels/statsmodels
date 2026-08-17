@@ -142,7 +142,7 @@ def sign_test(samp, mu0=0):
     ----------
     samp : array_like
         1d array. The sample for which you want to perform the sign test.
-    mu0 : float
+    mu0 : float, optional
         See Notes for the definition of the sign test. mu0 is 0 by
         default, but it is common to set it to the median.
 
@@ -246,7 +246,7 @@ class Description:
         confidence interval, which has coverage 1 - alpha.
     use_t : bool, default False
         Use the Student's t distribution to construct confidence intervals.
-    percentiles : sequence[float]
+    percentiles : Sequence[float], optional
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
     ntop : int, default 5
@@ -254,11 +254,11 @@ class Description:
 
     Attributes
     ----------
-    numeric_statistics
+    numeric_statistics : tuple of str
         The list of supported statistics for numeric data
-    categorical_statistics
+    categorical_statistics : tuple of str
         The list of supported statistics for categorical data
-    default_statistics
+    default_statistics : tuple of str
         The default list of statistics
 
     See Also

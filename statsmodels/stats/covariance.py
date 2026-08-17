@@ -42,15 +42,16 @@ def _term_integrate(rho):
 
 class TransformCorrNormalResult(NamedTuple):
     """
-    Result of :func:`transform_corr_normal` when the variance is returned.
+    Result of :func:`transform_corr_normal` when a NamedTuple is returned.
 
     Parameters
     ----------
     corr : ndarray
         Correlation matrix, consistent with the correlation for a
         multivariate normal distribution.
-    var : ndarray
-        Asymptotic variance of the normalized correlation.
+    var : ndarray or None
+        Asymptotic variance of the normalized correlation. ``None`` when
+        the variance was not computed, i.e. when ``return_var=False``.
     """
 
     corr: np.ndarray
@@ -68,17 +69,18 @@ def transform_corr_normal(
     corr : array_like
         correlation matrix, either Pearson, Gaussian-rank, Spearman, Kendall
         or quadrant correlation matrix
-    method : string
+    method : str
         type of covariance matrix
         supported types are 'pearson', 'gauss_rank', 'kendal', 'spearman' and
         'quadrant'
-    return_var : bool
+    return_var : bool, optional
         If true, then the asymptotic variance of the normalized correlation
         is also returned. The variance of the spearman correlation requires
         numerical integration which is calculated with scipy's odeint.
-    possdef : not implemented yet
-        Check whether resulting correlation matrix for positive semidefinite
-        and return a positive semidefinite approximation if not.
+    possdef : bool, optional
+        Not implemented yet. Check whether resulting correlation matrix for
+        positive semidefinite and return a positive semidefinite
+        approximation if not.
     result_object : bool, optional
         Flag controlling whether a ``TransformCorrNormalResult`` NamedTuple
         is returned. When ``return_var=True`` a
@@ -280,10 +282,10 @@ def corr_quadrant(data, transform=np.sign, normalize=False):
     ----------
     data : array_like
         2-D data with observations in rows and variables in columns
-    transform : callable
+    transform : callable, optional
         Function used to transform the demeaned data before computing the
         correlation. Default is ``np.sign``.
-    normalize : bool
+    normalize : bool, optional
         If True, normalize the resulting matrix by the standard deviations
         so that it is a proper correlation matrix. Default is False.
 

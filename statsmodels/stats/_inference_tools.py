@@ -27,7 +27,7 @@ def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
         Lower and upper confidence limits for `stat1`.
     ci2 : tuple
         Lower and upper confidence limits for `stat2`.
-    contrast : {"diff", "sum", "ratio"}
+    contrast : {"diff", "sum", "ratio"}, optional
         The contrast between `stat1` and `stat2` for which the
         confidence interval is computed.
 

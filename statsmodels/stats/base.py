@@ -134,13 +134,13 @@ class AllPairsResults:
         p-values from a pairwise comparison test
     all_pairs : list of tuples
         list of indices, one pair for each comparison
-    multitest_method : str
+    multitest_method : str, optional
         method that is used by default for p-value correction. This is used
         as default by the methods like if the multiple-testing method is not
         specified as argument.
-    levels : {list[str], None}
+    levels : list[str] or None, optional
         optional names of the levels or groups
-    n_levels : None or int
+    n_levels : None or int, optional
         If None, then the number of levels or groups is inferred from the
         other arguments. It can be explicitly specified, if the inferred
         number is incorrect.

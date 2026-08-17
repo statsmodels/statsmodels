@@ -74,10 +74,10 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
     alpha : float in interval (0,1)
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    df : int or float
+    df : int or float, optional
         Degrees of freedom. By default this is None, and ``df = nobs - 1``
         is used.
-    alternative : str, 'two-sided' (default), 'larger', 'smaller'
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         Extra argument to choose whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
@@ -139,11 +139,11 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
     alpha : float in interval (0,1)
         significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         extra argument to choose whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
-    sigma : float
+    sigma : float, optional
         The standard deviation used to standardize the effect size.
 
     Returns
@@ -193,13 +193,14 @@ def normal_power_het(
     alpha : float in interval (0,1)
         significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    std_null : float
+    std_null : float, optional
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_alternative : float
+    std_alternative : float, optional
         standard deviation under the Alternative hypothesis without division
-        by sqrt(nobs)
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        by sqrt(nobs). If None, ``std_alternative`` is set to the value of
+        ``std_null``.
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         extra argument to choose whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
@@ -259,10 +260,10 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternativ
         error, that is wrong rejections if the Null Hypothesis is true.
         Note: alpha is used for one tail. Use alpha/2 for two-sided
         alternative.
-    std_null : float
+    std_null : float, optional
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_alternative : float
+    std_alternative : float, optional
         standard deviation under the Alternative hypothesis without division
         by sqrt(nobs). Defaults to None. If None, ``std_alternative`` is set
         to the value of ``std_null``.
@@ -303,7 +304,7 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     alpha : float in interval (0,1)
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    k_groups : int
+    k_groups : int, optional
         Number of groups in the one-way ANOVA. Default is 2.
     df : None
         Unused. Included for compatibility; degrees of freedom are
@@ -340,7 +341,7 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     alpha : float in interval (0,1)
         significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    ncc : int
+    ncc : int, optional
         degrees of freedom correction for non-centrality parameter.
         see Notes
 
@@ -405,7 +406,7 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
     alpha : float in interval (0,1)
         significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    ncc : int
+    ncc : int, optional
         degrees of freedom correction for non-centrality parameter.
         see Notes
 
@@ -700,26 +701,27 @@ class Power:
 
         Parameters
         ----------
-        dep_var : {'nobs', 'effect_size', 'alpha'}
+        dep_var : {'nobs', 'effect_size', 'alpha'}, optional
             This specifies which variable is used for the horizontal axis.
             If dep_var='nobs' (default), then one curve is created for each
             value of ``effect_size``. If dep_var='effect_size' or alpha, then
             one curve is created for each value of ``nobs``.
-        nobs : {scalar, array_like}
+        nobs : array_like, optional
             specifies the values of the number of observations in the plot
-        effect_size : {scalar, array_like}
+        effect_size : array_like, optional
             specifies the values of the effect_size in the plot
-        alpha : {float, array_like}
+        alpha : float or array_like, optional
             The significance level (type I error) used in the power
             calculation. Can only be more than a scalar, if ``dep_var='alpha'``
-        ax : None or axis instance
+        ax : AxesSubplot, optional
             If ax is None, than a matplotlib figure is created. If ax is a
             matplotlib axis instance, then it is reused, and the plot elements
             are created with it.
-        title : str
-            title for the axis. Use an empty string, ``''``, to avoid a title.
-        plt_kwds : {None, dict}
-            not used yet
+        title : str, optional
+            Title for the axis. Use an empty string, ``''``, to avoid a
+            title. If not given, the default title "Power of Test" is used.
+        plt_kwds : dict, optional
+            Not used yet.
         **kwds
             These remaining keyword arguments are used as arguments to the
             power function. Many power functions support ``alternative`` as
@@ -823,10 +825,10 @@ class TTestPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        df : int or float
+        df : int or float, optional
             degrees of freedom. By default this is None, and the df from the
             one sample or paired ttest is used, ``df = nobs1 - 1``
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -866,19 +868,19 @@ class TTestPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             Standardized effect size, mean divided by the standard
             deviation.
-        nobs : int or float
+        nobs : None or int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -945,15 +947,13 @@ class TTestIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float
+        ratio : float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ratio given the other
-            arguments, it has to be explicitly set to None.
-        df : int or float
+        df : int or float, optional
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -996,26 +996,26 @@ class TTestIndPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, difference between the two means divided
             by the standard deviation. `effect_size` has to be positive.
-        nobs1 : int or float
+        nobs1 : None or int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
             i.e., ``nobs2 = nobs1 * ratio``
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ratio : float
+        ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -1053,6 +1053,15 @@ class NormalIndPower(Power):
 
     currently only uses pooled variance
 
+    Parameters
+    ----------
+    ddof : int, optional
+        Degrees of freedom correction for the standard deviation used in
+        computing the effective sample size. Used, e.g., for a correlation
+        coefficient where ddof=3.
+    **kwds
+        Additional keyword arguments passed to the ``Power`` base class.
+
     """
 
     def __init__(self, ddof=0, **kwds):
@@ -1077,10 +1086,10 @@ class NormalIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float
+        ratio : float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -1125,30 +1134,30 @@ class NormalIndPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, difference between the two means divided
             by the standard deviation.
             If ratio=0, then this is the standardized mean in the one sample
             test.
-        nobs1 : int or float
+        nobs1 : None or int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
             i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ratio : float
+        ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -1250,7 +1259,7 @@ class FTestPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             degrees of freedom correction for non-centrality parameter.
             see Notes
 
@@ -1304,26 +1313,26 @@ class FTestPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             Standardized effect size. The effect size is here Cohen's ``f``,
             square root of ``f2``.
-        df_num : int or float
+        df_num : None or int or float
             Warning incorrect name
             denominator degrees of freedom,
             This corresponds to the number of constraints in Wald tests.
             Sample size is given by ``nobs = df_denom + df_num + ncc``
-        df_denom : int or float
+        df_denom : None or int or float
             Warning incorrect name
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             degrees of freedom correction for non-centrality parameter.
             see Notes
         **kwargs
@@ -1420,7 +1429,7 @@ class FTestPowerF2(Power):
         alpha : float in interval (0,1)
             Significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             Degrees of freedom correction for non-centrality parameter.
             see Notes
 
@@ -1470,23 +1479,23 @@ class FTestPowerF2(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             The effect size is here Cohen's ``f2``. This is equal to
             the noncentrality of an F-test divided by nobs.
-        df_num : int or float
+        df_num : None or int or float
             Numerator degrees of freedom,
             This corresponds to the number of constraints in Wald tests.
-        df_denom : int or float
+        df_denom : None or int or float
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             degrees of freedom correction for non-centrality parameter.
             see Notes
 
@@ -1572,19 +1581,19 @@ class FTestAnovaPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, mean divided by the standard deviation.
             effect size has to be positive.
-        nobs : int or float
+        nobs : None or int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        k_groups : int or float
+        k_groups : int or float, optional
             number of groups in the ANOVA or k-sample comparison. Default is 2.
 
         Returns
@@ -1670,7 +1679,7 @@ class GofChisquarePower(Power):
             error, that is wrong rejections if the Null Hypothesis is true.
         n_bins : int
             number of bins or cells in the distribution.
-        ddof : int
+        ddof : int, optional
             Degrees of freedom correction for the chisquare distribution.
 
         Returns
@@ -1702,19 +1711,19 @@ class GofChisquarePower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, according to Cohen's definition.
             see :func:`statsmodels.stats.gof.chisquare_effectsize`
-        nobs : int or float
+        nobs : None or int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        n_bins : int
+        n_bins : int, optional
             number of bins or cells in the distribution
 
         Returns
@@ -1756,7 +1765,7 @@ class _GofChisquareIndPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
+            standardized effect size, difference between the two means divided
             by the standard deviation. effect size has to be positive.
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
@@ -1765,12 +1774,10 @@ class _GofChisquareIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float
+        ratio : float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ratio given the other
-            arguments it has to be explicitly set to None.
-        alternative : str, 'two-sided' (default) or 'one-sided'
+        alternative : {'two-sided', 'one-sided'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -1802,35 +1809,35 @@ class _GofChisquareIndPower(Power):
         alternative="two-sided",
     ):
         """
-        Solve for any one parameter of the power of a two sample z-test
+        Solve for any one parameter of the power of a two sample chisquare-test
 
-        for z-test the keywords are:
+        for the chisquare-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
 
         exactly one needs to be ``None``, all others need numeric values
 
         Parameters
         ----------
-        effect_size : float
-            standardize effect size, difference between the two means divided
+        effect_size : None or float
+            standardized effect size, difference between the two means divided
             by the standard deviation.
-        nobs1 : int or float
+        nobs1 : None or int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
             i.e., ``nobs2 = nobs1 * ratio``
-        alpha : float in interval (0,1)
+        alpha : None or float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
+        power : None or float in interval (0,1)
             power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ratio : float
+        ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : str, 'two-sided' (default) or 'one-sided'
+        alternative : {'two-sided', 'one-sided'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
