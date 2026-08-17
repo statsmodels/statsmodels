@@ -955,7 +955,7 @@ class OLS(WLS):
     Attributes
     ----------
     weights : ndarray
-        Has an attribute weights = array(1.0) due to inheritance from WLS.
+        An array of 1s due to inheritance from WLS.
 
     See Also
     --------
@@ -2654,7 +2654,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster': clustered covariance estimator (CRV1)
 
-          ``groups`` : array_like of int, required :
+          ``groups`` : array_like of int, required
             Integer-valued index of clusters or groups.
 
           ``use_correction``: bool, optional
@@ -2681,7 +2681,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster-crv3': clustered covariance estimator (CRV3)
 
-          ``groups`` : array_like of int, required :
+          ``groups`` : array_like of int, required
             Integer-valued index of clusters or groups.
 
           ``use_correction``: bool, optional
@@ -2707,7 +2707,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster-jk': clustered covariance estimator via a cluster-jk
 
-          ``groups`` : array_like of int, required :
+          ``groups`` : array_like of int, required
             Integer-valued index of clusters or groups.
 
           ``use_correction``: bool, optional
@@ -3410,6 +3410,10 @@ class OLSResults(RegressionResults):
             - `hommel` :
             - `fdr_bh` : Benjamini/Hochberg
             - `fdr_by` : Benjamini/Yekutieli
+            - `fdr_tsbh` : two stage fdr correction (non-negative)
+            - `fdr_tsbky` : two stage fdr correction (non-negative)
+            - `fdr_gbs` : adaptive step-down (Gavrilov, Benjamini, Sarkar)
+            - `lfdr` : support line
 
             See `statsmodels.stats.multitest.multipletests` for details.
         alpha : float, optional
