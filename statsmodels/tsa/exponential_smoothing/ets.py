@@ -1352,7 +1352,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         return score
 
-    def update(params, *args, **kwargs):
+    def update(self, params, *args, **kwargs):
         # Dummy method to make methods copied from statespace.MLEModel work
         ...
 
