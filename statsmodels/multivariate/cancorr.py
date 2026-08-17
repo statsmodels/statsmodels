@@ -32,9 +32,9 @@ class CanCorr(Model):
         The endogenous (left-hand-side) variables.
     exog : array_like
         The exogenous (right-hand-side) variables.
-    tolerance : float
+    tolerance : float, optional
         Eigenvalue tolerance, values smaller than which are considered 0.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
@@ -86,7 +86,7 @@ class CanCorr(Model):
 
         Parameters
         ----------
-        tolerance : float
+        tolerance : float, optional
             Eigenvalue tolerance, values smaller than which are considered 0.
         """
         nobs, k_yvar = self.endog.shape

@@ -780,7 +780,7 @@ def initialize_generator(
 
     Parameters
     ----------
-    entropy : {None, int, array_like[int], Generator, RandomState}, optional
+    entropy : int, array_like of int, np.random.Generator, np.random.RandomState, optional
         If an initialized NumPy random Generator or an initialized RandomState,
         the object is returned unchanged. If it is an integer or array_like of
         integers, the value is used to seed a new numpy.random.default_rng. If

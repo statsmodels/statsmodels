@@ -351,14 +351,14 @@ class DiscretizedCount(rv_discrete):
             continuous distribution.
         size : int or tuple of ints, optional
             Number of random variates to generate.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Passed directly to the underlying SciPy distribution as its
             ``random_state`` argument. If `rng` is None, the global NumPy
             singleton random state is used. If `rng` is an int or array of
             ints, a new ``RandomState`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use

@@ -94,7 +94,7 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         - `asym` : An asymptotic approximation of the distribution of the test
           statistic is used to find the p-value.
 
-    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -243,7 +243,7 @@ def _empirical_pvalue(x, y, B, n, stats, rng):
         Number of observations found in each of `x` and `y`.
     stats : DistDependStat
         The result obtained from calling ``distance_statistics(x, y)``.
-    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -311,7 +311,7 @@ def _get_test_statistic_distribution(x, y, B, rng):
     B : int
         The number of iterations to perform when evaluating the null
         distribution.
-    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If

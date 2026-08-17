@@ -162,7 +162,7 @@ class SimulationSmoother(KalmanSmoother):
         simulator : SimulationSmoothResults, optional
             An existing simulator to reuse. If not specified, a new
             simulator is created using `rng`.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
@@ -198,7 +198,7 @@ class SimulationSmoother(KalmanSmoother):
         ----------
         nsimulations : int
             The number of observations to simulate.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
@@ -254,12 +254,12 @@ class SimulationSmoother(KalmanSmoother):
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available. Default is -1,
             which uses the number of observations in the model.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
             used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -350,12 +350,12 @@ class SimulationSmoothResults:
         A Statespace representation
     simulation_smoother : {{prefix}}SimulationSmoother object
         The Cython simulation smoother object with which to simulation smooth.
-    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None or an int, a new ``Generator`` is created
         (seeded with `rng` if an int is given). If `rng` is already a
         ``Generator`` or ``RandomState`` instance, that instance is
         used.
-    random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            random_state has been deprecated. In-line with SPEC-007, use
@@ -636,12 +636,12 @@ class SimulationSmoothResults:
             then it is assumed to contain draws from the standard Normal
             distribution that must be transformed using the `initial_state_cov`
             covariance matrix. Default is False.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
             used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use

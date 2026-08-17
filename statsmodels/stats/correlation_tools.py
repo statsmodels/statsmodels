@@ -695,7 +695,7 @@ def corr_nearest_factor(
     maxiter : int, optional
         Maximum number of iterations in spectral projected gradient
         optimization.
-    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -846,7 +846,7 @@ def cov_nearest_factor_homog(cov, rank, *, rng=None):
         semidefinite
     rank : int
         The rank of the fitted factor structure
-    rng : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If

@@ -2427,7 +2427,7 @@ class UECMResults(ARDLResults):
         nsim : int
             Number of simulations to run when computing exact critical values.
             Only used if ``asymptotic`` is ``False``.
-        rng : {None, int, sequence[int], RandomState, Generator}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Random number generator or seed to use when simulating critical
             values. Must be provided if reproducible critical value and
             p-values are required when ``asymptotic`` is ``False``.

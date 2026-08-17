@@ -147,9 +147,9 @@ class BaseIRAnalysis:
             'mc': Monte Carlo standard errors (use repl)
         repl : int, default 1000
             Number of replications for Monte Carlo and Sims-Zha standard errors
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed for Monte Carlo replications
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
@@ -288,9 +288,9 @@ class BaseIRAnalysis:
             'mc': Monte Carlo standard errors (use repl)
         repl : int, default 1000
             Number of replications for Monte Carlo standard errors
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed for Monte Carlo replications
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
@@ -440,9 +440,9 @@ class IRAnalysis(BaseIRAnalysis):
             Number of MC replications
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
@@ -503,9 +503,9 @@ class IRAnalysis(BaseIRAnalysis):
             Number of MC replications
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
@@ -589,9 +589,9 @@ class IRAnalysis(BaseIRAnalysis):
             Number of MC replications
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
@@ -676,9 +676,9 @@ class IRAnalysis(BaseIRAnalysis):
             Number of MC replications
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
@@ -915,9 +915,9 @@ class IRAnalysis(BaseIRAnalysis):
             Number of MC replications
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use

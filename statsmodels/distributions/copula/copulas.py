@@ -71,13 +71,13 @@ class CopulaDistribution:
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -287,13 +287,13 @@ class Copula(ABC):
         args : tuple
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -383,7 +383,7 @@ class Copula(ABC):
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -489,7 +489,7 @@ class Copula(ABC):
         ----------
         nobs : int, optional
             Number of samples to generate from the copula.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If

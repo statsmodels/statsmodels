@@ -119,7 +119,7 @@ class MixtureDistribution:
             If `rng` is None, the global (legacy) NumPy random state is
             used. If `rng` is already a ``Generator`` or ``RandomState``
             instance, that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use

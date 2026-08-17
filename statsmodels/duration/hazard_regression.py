@@ -1894,7 +1894,7 @@ class rv_discrete_float:
         ----------
         n : not used
             Present for signature compatibility.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int, a new
             ``RandomState`` instance is created, seeded with `rng`; this
@@ -1902,7 +1902,7 @@ class rv_discrete_float:
             creating a ``Generator`` in a future release. If `rng` is
             already a ``Generator`` or ``RandomState`` instance, that
             instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use

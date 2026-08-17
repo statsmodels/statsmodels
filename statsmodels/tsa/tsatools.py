@@ -327,7 +327,7 @@ def lagmat(
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : {int, list[int], array_like[int]}
+    maxlag : int or array_like of int
         The lags to be applied.
 
         * int : All lags from zero to maxlag are included.
