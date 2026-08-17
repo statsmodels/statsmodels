@@ -1740,13 +1740,13 @@ class UECM(ARDL):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    lags : int or None
+    lags : int, sequence of int or None
         The number of lags of the endogenous variable to include in the
         model. Must be at least 1.
     exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
-    order : int, dict, or None, optional
+    order : int, sequence of intdict, or None, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
         other than a DataFrame, the keys are the column index of exog
