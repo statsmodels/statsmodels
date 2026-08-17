@@ -437,11 +437,11 @@ class Bunch(dict):
 
 def _ensure_2d(x, ndarray=False):
     """
-    Ensure that an input is 2 dimensional, converting or reshaping as needed
+    Ensure that an input is 2-dimensional, converting or reshaping as needed
 
     Parameters
     ----------
-    x : ndarray, Series, DataFrame or None
+    x : ndarray, Series, or DataFrame
         Input to verify dimensions, and to transform as necessary
     ndarray : bool, optional
         Flag indicating whether to always return a NumPy array. Setting False
@@ -450,9 +450,9 @@ def _ensure_2d(x, ndarray=False):
 
     Returns
     -------
-    out : ndarray, DataFrame or None
+    out : ndarray, DataFrame
         array or DataFrame with 2 dimensions.  One dimensional arrays are
-        returned as nobs by 1. None is returned if x is None.
+        returned as nobs by 1.
     names : list of str or None
         list containing variables names when the input is a pandas datatype.
         Returns None if the input is an ndarray.
@@ -460,10 +460,7 @@ def _ensure_2d(x, ndarray=False):
     Notes
     -----
     Accepts None for simplicity
-
     """
-    if x is None:
-        return x
     is_pandas = _is_using_pandas(x, None)
     if x.ndim == 2:
         if is_pandas:

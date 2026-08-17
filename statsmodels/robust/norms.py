@@ -188,7 +188,7 @@ class LeastSquares(RobustNorm):
 
                 \rho(z) = \frac{z^2}{2}
         """
-
+        z = np.asarray(z)
         return z**2 * 0.5
 
     def psi(self, z):
@@ -1236,7 +1236,7 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        bp : float in [0.05, 0.5] or None, optional
+        bp : float in [0.05, 0.10, 0.15, ..., 0.5], optional
             Required breakdown point
             Either bp or eff has to be specified, but not both.
         eff : float or None, optional
@@ -1245,8 +1245,10 @@ class TukeyBiweight(RobustNorm):
 
         Returns
         -------
-        float
-            The tuning parameter.
+        tuple of float
+            The output depends on whether using bp or eff. If using bp, returns
+            (tuning parameter, efficiency, scale bias) where c is the tuning.
+            If using eff, (tuning parameter, breakdown point).
         """
         if ((bp is None and eff is None) or
                 (bp is not None and eff is not None)):
@@ -1836,6 +1838,7 @@ class MQuantileNorm(RobustNorm):
         rho : ndarray
             The value of the robust criterion function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.rho(z)
 
@@ -1855,6 +1858,7 @@ class MQuantileNorm(RobustNorm):
         psi : ndarray
             The value of the psi function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi(z)
 
@@ -1874,6 +1878,7 @@ class MQuantileNorm(RobustNorm):
         weights : ndarray
             The value of the weighting function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.weights(z)
 
@@ -1895,6 +1900,7 @@ class MQuantileNorm(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
 

@@ -10,6 +10,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import array_like
 
 
 def durbin_watson(resids, axis=0):
@@ -187,7 +188,7 @@ def robust_skewness(y, axis=0):
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
-
+    y = array_like(y, "y")
     if axis is None:
         y = y.ravel()
         axis = 0
@@ -361,6 +362,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
+    y = array_like(y, "y")
     if (axis is None or
             (y.squeeze().ndim == 1 and y.ndim != 1)):
         y = y.ravel()

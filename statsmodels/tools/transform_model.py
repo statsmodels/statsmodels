@@ -44,7 +44,8 @@ class StandardizeTransform:
     def __init__(self, data, ddof=1, const_idx=None, demean=True):
         data = np.asarray(data)
         self.mean = data.mean(0)
-        self.scale = data.std(0, ddof=1)
+        self.scale = data.std(0, ddof=ddof)
+        self.ddof = ddof
 
         # do not transform a constant
         if const_idx is None:
