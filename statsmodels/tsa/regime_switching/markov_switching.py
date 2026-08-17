@@ -1255,7 +1255,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             search parameter repetitions.
         search_scale : float or array, optional.
             Scale of variates for random start parameter search.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -1521,7 +1521,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Scale of variates for random start parameter search. Can be given
             as an array of length equal to the number of parameters or as a
             single scalar.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If

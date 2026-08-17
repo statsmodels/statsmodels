@@ -35,14 +35,14 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Parameters
     ----------
-    A : numpy matrix
+    A : ndarray
         non rotated factors
     method : str
         should be one of the methods listed below
-    method_args : list
+    method_args : tuple
         additional arguments that should be provided with each method
-    algorithm_kwargs : dictionary
-        algorithm : str (default gpa)
+    algorithm_kwargs : dict
+        algorithm : {'gpa', 'gpa_der_free', 'analytic'}, optional
             should be one of:
 
             * 'gpa': a numerical method
@@ -53,10 +53,10 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
         arguments. For the gpa and gpa_der_free, the following
         keyword arguments are available:
 
-        max_tries : int (default 501)
-            maximum number of iterations
+        max_tries : int, optional
+            maximum number of iterations. The default is 501.
 
-        tol : float
+        tol : float, optional
             stop criterion, algorithm stops if Frobenius norm of gradient is
             smaller then tol
 
@@ -66,9 +66,9 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
     Returns
     -------
-    L : numpy matrix
+    L : ndarray
         The rotated factors.
-    T : numpy matrix
+    T : ndarray
         The rotation matrix.
 
     Notes
@@ -112,7 +112,7 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         gamma : float
             oblimin family parameter
-        rotation_method : str
+        rotation_method : {'orthogonal', 'oblique'}
             should be one of {orthogonal, oblique}
 
     orthomax : orthogonal rotation that minimizes
@@ -131,8 +131,8 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         method_args:
 
-        gamma : float (between 0 and 1)
-            orthomax family parameter
+        gamma : float
+            orthomax family parameter, between 0 and 1
 
     CF : Crawford-Ferguson family for orthogonal and oblique rotation which
     minimizes:
@@ -154,9 +154,9 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         method_args:
 
-        kappa : float (between 0 and 1)
-            Crawford-Ferguson family parameter
-        rotation_method : str
+        kappa : float
+            Crawford-Ferguson family parameter, between 0 and 1
+        rotation_method : {'orthogonal', 'oblique'}
             should be one of {orthogonal, oblique}
 
     quartimax : orthogonal rotation method
@@ -193,15 +193,15 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         method_args:
 
-        H : numpy matrix
+        H : ndarray
             target matrix
-        rotation_method : str
+        rotation_method : {'orthogonal', 'oblique'}
             should be one of {orthogonal, oblique}
 
         For orthogonal rotations the algorithm can be set to analytic in which
         case the following keyword arguments are available:
 
-        full_rank : bool (default False)
+        full_rank : bool, optional
             if set to true full rank is assumed
 
     partial_target : orthogonal (default) or oblique rotation that partially
@@ -213,13 +213,16 @@ def rotate_factors(A, method, *method_args, **algorithm_kwargs):
 
         method_args:
 
-        H : numpy matrix
+        H : ndarray
             target matrix
-        W : numpy matrix (default matrix with equal weight one for all entries)
-            matrix with weights, entries can either be one or zero
+        W : ndarray, optional
+            matrix with weights, entries can either be one or zero. The
+            default is a matrix of ones, i.e., equal weight for all
+            entries.
 
     Examples
     --------
+    >>> import numpy as np
     >>> A = np.random.randn(8,2)
     >>> L, T = rotate_factors(A,'varimax')
     >>> np.allclose(L,A.dot(T))

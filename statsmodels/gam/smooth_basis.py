@@ -1161,7 +1161,7 @@ class PolynomialSmoother(AdditiveGamSmoother):
         Underlying explanatory variable(s) for the smooth terms. If
         2-dimensional, observations are in rows and explanatory
         variables in columns.
-    degrees : array_like[int]
+    degrees : array_like of int
         Highest power included in the polynomial basis for each
         explanatory variable in `x`.
     variable_names : {list[str], None}
@@ -1197,11 +1197,11 @@ class BSplines(AdditiveGamSmoother):
         underlying explanatory variable for smooth terms.
         If 2-dimensional, then observations should be in rows and
         explanatory variables in columns.
-    df :  {int, array_like[int]}
+    df :  int or array_like of int
         number of basis functions or degrees of freedom; should be equal
         in length to the number of columns of `x`; may be an integer if
         `x` has one column or is 1-D.
-    degree : {int, array_like[int]}
+    degree : int or array_like of int
         degree(s) of the spline; the same length and type rules apply as
         to `df`
     include_intercept : bool
@@ -1313,7 +1313,7 @@ class CubicSplines(AdditiveGamSmoother):
         underlying explanatory variable for smooth terms.
         If 2-dimensional, then observations should be in rows and
         explanatory variables in columns.
-    df :  array_like[int]
+    df :  array_like of int
         number of basis functions or degrees of freedom; should be equal
         in length to the number of columns of `x`.
     constraints : {None, str, array}

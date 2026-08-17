@@ -309,7 +309,7 @@ def beanplot(
           - 'jitter_marker_size', int.  Marker size.  Default is 4.
           - 'jitter_fc', MPL color.  Jitter marker face color.  Default is None.
           - 'bean_legend_text', str.  If given, add a legend with given text.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If

@@ -764,9 +764,9 @@ class SVARResults(SVARProcess, VARResults):
             number of impulse response periods
         signif : float (0 < signif <1)
             Significance level for error bars, defaults to 95% CI
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             np.random seed for replications
-        seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use

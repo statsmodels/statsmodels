@@ -56,7 +56,7 @@ def _mom_ate(params, endog, tind, prob, weighted=True):
         Treatment indicator, 1 for treated and 0 for untreated observations.
     prob : ndarray
         Estimated propensity score, probability of treatment.
-    weighted : bool
+    weighted : bool, optional
         If True, weights are normalized so that each of the treated and
         untreated weights average to one.
 
@@ -93,7 +93,7 @@ def _mom_atm(params, endog, tind, prob, weighted=True):
         Treatment indicator, 1 for treated and 0 for untreated observations.
     prob : ndarray
         Estimated propensity score, probability of treatment.
-    weighted : bool
+    weighted : bool, optional
         If True, weights are normalized so that each of the treated and
         untreated weights average to one.
 
@@ -129,7 +129,7 @@ def _mom_ols(params, endog, tind, prob, weighted=True):
         Treatment indicator, 1 for treated and 0 for untreated observations.
     prob : ndarray
         Estimated propensity score, probability of treatment.
-    weighted : bool
+    weighted : bool, optional
         Not used. Kept for signature compatibility with other moment
         condition functions.
 
@@ -164,7 +164,7 @@ def _mom_ols_te(tm, endog, tind, prob, weighted=True):
         Treatment indicator, 1 for treated and 0 for untreated observations.
     prob : ndarray
         Estimated propensity score, probability of treatment.
-    weighted : bool
+    weighted : bool, optional
         Not used. Kept for signature compatibility with other moment
         condition functions.
 
@@ -226,7 +226,7 @@ def ate_ipw(endog, tind, prob, weighted=True, probt=None):
         Treatment indicator, 1 for treated and 0 for untreated observations.
     prob : ndarray
         Estimated propensity score, probability of treatment.
-    weighted : bool
+    weighted : bool, optional
         If True, weights are normalized so that each of the treated and
         untreated weights average to one.
     probt : ndarray, optional
@@ -277,7 +277,7 @@ class _TEGMMGeneric1(GMM):
         Results instance of the treatment or selection model.
     mom_outcome : callable
         Function that computes the moment conditions of the outcome model.
-    exclude_tmoms : bool
+    exclude_tmoms : bool, optional
         If True, then the moment conditions of the treatment or selection
         model are not included and `params` does not contain the
         parameters of the selection model.
@@ -702,7 +702,7 @@ class TreatmentEffectResults(ContrastResults):
     results_gmm : instance of GMMResults class
         The GMM results instance used to compute the treatment effect
         parameters and their covariance.
-    method : string
+    method : str
         Method and estimator of treatment effect.
     **kwds
         Other keywords with additional information.
@@ -735,7 +735,7 @@ class TreatmentEffectResults(ContrastResults):
 doc_params_returns = """\
 Parameters
 ----------
-return_results : bool
+return_results : bool, optional
     If True, then a results instance is returned.
     If False, just ATE, POM0 and POM1 are returned.
 effect_group : {"all", 0, 1}
@@ -747,7 +747,7 @@ effect_group : {"all", 0, 1}
     returned.
     If effect_group is 0, "untreated" or "control", then effects on
     untreated, i.e., control group, are returned.
-disp : bool
+disp : bool, optional
     Indicates whether the scipy optimizer should display the
     optimization results
 
@@ -761,10 +761,10 @@ TreatmentEffectResults or tuple
 doc_params_returns2 = """\
 Parameters
 ----------
-return_results : bool
+return_results : bool, optional
     If True, then a results instance is returned.
     If False, just ATE, POM0 and POM1 are returned.
-disp : bool
+disp : bool, optional
     Indicates whether the scipy optimizer should display the
     optimization results
 
@@ -791,11 +791,11 @@ class TreatmentEffect:
     ----------
     model : instance of a model class
         The model class should contain endog and exog for the outcome model.
-    treatment : ndarray
+    treatment : array_like
         indicator array for observations with treatment (1) or without (0)
-    results_select : results instance
+    results_select : results instance, optional
         The results instance for the treatment or selection model.
-    _cov_type : "HC0"
+    _cov_type : str, optional
         Internal keyword. The keyword does not affect GMMResults which always
         corresponds to HC0 standard errors.
     **kwds
@@ -860,7 +860,7 @@ class TreatmentEffect:
         treatment : ndarray
             Indicator array for observations with treatment (1) or
             without (0).
-        model : str
+        model : str, optional
             Name of the model class to use for the outcome model.
         **kwds
             Additional keyword arguments passed to model classes.
@@ -878,7 +878,7 @@ class TreatmentEffect:
 
         Parameters
         ----------
-        return_results : bool
+        return_results : bool, optional
             If True, then a results instance is returned.
             If False, just ATE, POM0 and POM1 are returned.
         effect_group : {"all", 0, 1}
@@ -890,7 +890,7 @@ class TreatmentEffect:
             returned.
             If effect_group is 0, "untreated" or "control", then effects on
             untreated, i.e., control group, are returned.
-        disp : bool
+        disp : bool, optional
             Indicates whether the scipy optimizer should display the
             optimization results
 

@@ -1105,12 +1105,12 @@ class KalmanFilter(Representation):
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is
             False.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
             used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
