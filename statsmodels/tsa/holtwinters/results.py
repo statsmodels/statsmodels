@@ -34,9 +34,9 @@ class HoltWintersResults(Results):
         AIC with a correction for finite sample sizes.
     bic : float
         The Bayesian information criterion.
-    optimized : bool
-        Flag indicating whether the model parameters were optimized to fit
-        the data.
+    optimized : ndarray of bool
+        Flags indicating whether each parameter was optimized to fit the
+        data.
     level : ndarray
         An array of the levels values that make up the fitted values.
     trend : ndarray
@@ -58,7 +58,7 @@ class HoltWintersResults(Results):
     fcastvalues : ndarray
         An array of the forecast values forecast by the Exponential Smoothing
         model.
-    mle_retvals : {None, scipy.optimize.optimize.OptimizeResult}
+    mle_retvals : scipy.optimize.OptimizeResult or None
         Optimization results if the parameters were optimized to fit the data.
     """
 
@@ -225,7 +225,7 @@ class HoltWintersResults(Results):
 
         Parameters
         ----------
-        steps : int
+        steps : int, optional
             The number of out of sample forecasts from the end of the
             sample.
 
@@ -383,7 +383,7 @@ class HoltWintersResults(Results):
             Number of simulated paths to generate. Default is 1 simulated path.
         error : {"add", "mul", "additive", "multiplicative"}, optional
             Error model for state space formulation. Default is ``"add"``.
-        random_errors : optional
+        random_errors : ndarray, rv_continuous, rv_discrete, rv_frozen, or "bootstrap", optional
             Specifies how the random errors should be obtained. Can be one of
             the following:
 
@@ -406,7 +406,7 @@ class HoltWintersResults(Results):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int, a new
             ``RandomState`` instance is created, seeded with `rng`; this
@@ -415,7 +415,7 @@ class HoltWintersResults(Results):
             already a ``Generator`` or ``RandomState`` instance, that
             instance is used. Only used if `random_errors` is ``None`` or
             ``"bootstrap"``.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use

@@ -58,17 +58,18 @@ class ARIMA(sarimax.SARIMAX):
         negative integer, and s is an integer strictly greater than one. P and
         Q may either be integers or lists of positive integers specifying
         exactly which lag orders are included. The default is (0, 0, 0, 0).
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct', 'ctt'} or array_like, optional
         Parameter controlling the deterministic trend. Can be specified as a
-        string where 'c' indicates a constant term, 't' indicates a
-        linear trend in time, and 'ct' includes both. Can also be specified as
-        an iterable defining a polynomial, as in `numpy.poly1d`, where
-        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is 'c' for
-        models without integration, and no trend for models with integration.
-        Note that all trend terms are included in the model as exogenous
-        regressors, which differs from how trends are included in ``SARIMAX``
-        models.  See the Notes section for a precise definition of the
-        treatment of trend terms.
+        string where 'n' indicates no trend, 'c' indicates a constant term,
+        't' indicates a linear trend in time, 'ct' includes both, and 'ctt'
+        includes a constant, linear trend, and squared time trend. Can also
+        be specified as an array_like defining a polynomial, as in
+        `numpy.poly1d`, where `[1,1,0,1]` would denote :math:`a + bt + ct^3`.
+        Default is 'c' for models without integration, and no trend for
+        models with integration. Note that all trend terms are included in
+        the model as exogenous regressors, which differs from how trends are
+        included in ``SARIMAX`` models.  See the Notes section for a precise
+        definition of the treatment of trend terms.
     enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
         to a stationarity process. Default is True.
@@ -290,7 +291,7 @@ class ARIMA(sarimax.SARIMAX):
             Default is 'opg' unless memory conservation is used to avoid
             computing the loglikelihood values for each observation, in which
             case the default is 'oim'.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
 
             **opg, oim, approx, robust, robust_approx**

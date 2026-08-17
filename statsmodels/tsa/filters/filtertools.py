@@ -34,12 +34,12 @@ class CycleTrendResult(NamedTuple):
 
     Parameters
     ----------
-    cycle : array_like
+    cycle : ndarray, Series, or DataFrame
         The estimated cyclical component. See the docstring of the
         function that produced this result for the precise definition
         (e.g., :func:`hamilton_filter` leaves the first ``p + h - 1``
         values as ``NaN``).
-    trend : array_like
+    trend : ndarray, Series, or DataFrame
         The estimated trend component, matching ``cycle`` in shape.
     """
 
@@ -239,7 +239,7 @@ def recursive_filter(x, ar_coeff, init=None):
 
     Returns
     -------
-    array_like
+    ndarray or Series
         Filtered array, number of columns determined by x and ar_coeff. If x
         is a pandas object than a Series is returned.
 
@@ -372,9 +372,10 @@ def miso_lfilter(ar, ma, x, useic=False):
     ar : array_like
         The coefficients of autoregressive lag polynomial including lag zero,
         ar(L) in the expression ar(L)y_t.
-    ma : array_like, same ndim as x, currently 2d
+    ma : array_like
         The coefficient of the moving average lag polynomial, ma(L) in
-        ma(L)x_t.
+        ma(L)x_t. Must have the same number of dimensions as ``x``;
+        currently only 2d is supported.
     x : array_like
         The 2-d input data series, time in rows, variables in columns.
     useic : bool, optional

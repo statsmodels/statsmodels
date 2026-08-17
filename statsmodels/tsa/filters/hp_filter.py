@@ -16,7 +16,7 @@ def hpfilter(x, lamb=1600):
     ----------
     x : array_like
         The time series to filter, 1-d.
-    lamb : float
+    lamb : float, optional
         The Hodrick-Prescott smoothing parameter. A value of 1600 is
         suggested for quarterly data. Ravn and Uhlig suggest using a value
         of 6.25 (1600/4**4) for annual data and 129600 (1600*3**4) for monthly
@@ -27,9 +27,9 @@ def hpfilter(x, lamb=1600):
     CycleTrendResult
         A result object with fields:
 
-        cycle : ndarray
+        cycle : ndarray or Series
             The estimated cycle in the data given lamb.
-        trend : ndarray
+        trend : ndarray or Series
             The estimated trend in the data given lamb.
 
     See Also

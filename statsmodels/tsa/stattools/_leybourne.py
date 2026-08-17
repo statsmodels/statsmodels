@@ -35,7 +35,7 @@ class LeybourneMcCabeStationarity:
         ----------
         stat : float
             The Leybourne-McCabe test statistic
-        model : {'c','ct'}
+        model : {'c', 'ct'}, optional
             The model used when computing the test statistic. 'c' is default.
 
         Returns
@@ -74,7 +74,7 @@ class LeybourneMcCabeStationarity:
             data series
         arlags : int
             AR(p) order
-        model : {'c','ct'}
+        model : {'c', 'ct'}
             Constant and trend order to include in regression
             * 'c'  : constant only
             * 'ct' : constant and trend
@@ -112,6 +112,7 @@ class LeybourneMcCabeStationarity:
     def _autolag(self, x):
         """
         Empirical method for Leybourne-McCabe auto AR lag detection
+
         Set number of AR lags equal to the first PACF falling within the
         95% confidence interval. Maximum number of AR lags is limited to
         the smaller of 10 or 1/2 series length. Minimum is zero lags.
@@ -144,23 +145,23 @@ class LeybourneMcCabeStationarity:
         ----------
         x : array_like
             data series
-        arlags : {None, int}, optional
+        arlags : None or int, optional
             Number of autoregressive terms to include. If None, the number
             of lags is selected using the empirical autolag procedure.
             Default is 1.
-        regression : {'c','ct'}
+        regression : {'c', 'ct'}, optional
             Constant and trend order to include in regression
 
             * 'c'  : constant only (default)
             * 'ct' : constant and trend
 
-        method : {'mle','ols'}
+        method : {'mle', 'ols'}, optional
             Method used to estimate ARIMA(p, 1, 1) filter model
 
             * 'mle' : conditional sum of squares maximum likelihood (default)
             * 'ols' : two-stage least squares
 
-        varest : {'var94','var99'}
+        varest : {'var94', 'var99'}, optional
             Method used for residual variance estimation
 
             * 'var94' : method used in original Leybourne-McCabe paper (1994)

@@ -9,19 +9,19 @@ class PredictionResults:
 
     Parameters
     ----------
-    predicted_mean : {ndarray, Series, DataFrame}
-        The predicted mean values
-    var_pred_mean : {ndarray, Series, DataFrame}
-        The variance of the predicted mean values
-    dist : {None, "norm", "t", rv_frozen}
+    predicted_mean : ndarray, Series, or DataFrame
+        The predicted mean values.
+    var_pred_mean : ndarray, Series, or DataFrame
+        The variance of the predicted mean values.
+    dist : "norm", "t", or rv_frozen, optional
         The distribution to use when constructing prediction intervals.
-        Default is normal.
+        Default is the normal distribution.
     df : int, optional
-        The degrees of freedom parameter for the t. Not used if dist is None,
-        "norm" or a callable.
-    row_labels : {Sequence[Hashable], pd.Index}
-        Row labels to use for the summary frame. If None, attempts to read the
-        index of ``predicted_mean``
+        The degrees of freedom parameter for the t distribution. Not used
+        if dist is "norm" or an rv_frozen distribution.
+    row_labels : sequence of hashable or pandas.Index, optional
+        Row labels to use for the summary frame. If None, attempts to read
+        the index of ``predicted_mean``.
     """
 
     def __init__(
@@ -105,19 +105,19 @@ class PredictionResults:
 
         Parameters
         ----------
-        value : array_like
-            value under the null hypothesis
-        alternative : str
-            'two-sided', 'larger', 'smaller'
+        value : array_like, optional
+            Value under the null hypothesis.
+        alternative : {"two-sided", "larger", "smaller"}, optional
+            The alternative hypothesis for the test.
 
         Returns
         -------
-        stat : ndarray
-            test statistic
-        pvalue : ndarray
-            p-value of the hypothesis test, the distribution is given by
-            the attribute of the instance, specified in `__init__`. Default
-            if not specified is the normal distribution.
+        stat : ndarray or Series
+            The test statistic.
+        pvalue : ndarray or Series
+            The p-value of the hypothesis test. The distribution used is
+            given by the attribute of the instance specified in `__init__`.
+            The default, if not specified, is the normal distribution.
         """
         # assumes symmetric distribution
         stat = (self.predicted_mean - value) / self.se_mean
@@ -146,7 +146,7 @@ class PredictionResults:
 
         Returns
         -------
-        pi : {ndarray, DataFrame}
+        pi : ndarray or DataFrame
             The array has the lower and the upper limit of the prediction
             interval in the columns.
         """

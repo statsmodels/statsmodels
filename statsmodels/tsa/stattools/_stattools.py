@@ -252,10 +252,10 @@ def adfuller(
     ----------
     x : array_like, 1d
         The data series to test.
-    maxlag : {None, int}
+    maxlag : int, optional
         Maximum lag which is included in test, default value of
         12*(nobs/100)^{1/4} is used when ``None``.
-    regression : {"c","ct","ctt","n"}
+    regression : {"c","ct","ctt","n"}, optional
         Constant and trend order to include in regression.
 
         * "c" : constant only (default).
@@ -263,7 +263,7 @@ def adfuller(
         * "ctt" : constant, and linear and quadratic trend.
         * "n" : no constant, no trend.
 
-    autolag : {"AIC", "BIC", "t-stat", None}
+    autolag : {"AIC", "BIC", "t-stat", None}, optional
         Method to use when automatically determining the lag length among the
         values 0, 1, ..., maxlag.
 
@@ -273,7 +273,7 @@ def adfuller(
           lag until the t-statistic on the last lag length is significant
           using a 5%-sized test.
         * If None, then the number of included lags is set to maxlag.
-    store : bool
+    store : bool, optional
         If True, then a result instance is returned additionally to
         the adf statistic. Default is False.
     regresults : bool, optional
@@ -499,24 +499,23 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
     ----------
     x : array_like
         Time series data. Must be 1d.
-    adjusted : bool, default False
+    adjusted : bool, optional
         If True, then denominators is n-k, otherwise n.
-    demean : bool, default True
+    demean : bool, optional
         If True, then subtract the mean x from each element of x.
-    fft : bool, default True
+    fft : bool, optional
         If True, use FFT convolution.  This method should be preferred
         for long time series.
-    missing : str, default "none"
-        A string in ["none", "raise", "conservative", "drop"] specifying how
-        the NaNs are to be treated. "none" performs no checks. "raise" raises
-        an exception if NaN values are found. "drop" removes the missing
-        observations and then estimates the autocovariances treating the
-        non-missing as contiguous. "conservative" computes the autocovariance
-        using nan-ops so that nans are removed when computing the mean
-        and cross-products that are used to estimate the autocovariance.
-        When using "conservative", n is set to the number of non-missing
-        observations.
-    nlag : {int, None}, default None
+    missing : {"none", "raise", "conservative", "drop"}, optional
+        Specifies how the NaNs are to be treated. "none" performs no checks.
+        "raise" raises an exception if NaN values are found. "drop" removes
+        the missing observations and then estimates the autocovariances
+        treating the non-missing as contiguous. "conservative" computes the
+        autocovariance using nan-ops so that nans are removed when computing
+        the mean and cross-products that are used to estimate the
+        autocovariance. When using "conservative", n is set to the number of
+        non-missing observations.
+    nlag : int, optional
         Limit the number of autocovariances returned.  Size of returned
         array is nlag + 1.  Setting nlag when fft is False uses a simple,
         direct estimator of the autocovariances that only computes the first
@@ -663,7 +662,7 @@ def block_jackknife(x, statistic, n_blocks=-1):
     statistic : callable
         Function that takes an array and returns a scalar or array-valued
         estimate.
-    n_blocks : int
+    n_blocks : int, optional
         The number of blocks to use. If -1 (default), uses ``n_blocks =
         len(x)``, i.e., the classical delete-1 jackknife.
 
@@ -788,7 +787,7 @@ def q_stat(x, nobs):
     ----------
     x : array_like
         Array of autocorrelation coefficients.  Can be obtained from acf.
-    nobs : int, optional
+    nobs : int
         Number of observations in the entire sample (ie., not just the length
         of the autocorrelation function results).
 
@@ -871,23 +870,23 @@ def acf(
     ----------
     x : array_like
        The time series data.
-    adjusted : bool, default False
+    adjusted : bool, optional
        If True, then denominators for autocovariance are n-k, otherwise n.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1). The returned value
         includes lag 0 (ie., 1) so size of the acf vector is (nlags + 1,).
-    qstat : bool, default False
+    qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
-    fft : bool, default True
+    fft : bool, optional
         If True, computes the ACF via FFT.
-    alpha : scalar, default None
+    alpha : float, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
         Bartlett's formula.
-    bartlett_confint : bool, default True
+    bartlett_confint : bool, optional
         Confidence intervals for ACF values are generally placed at 2
         standard errors around r_k. The formula used for standard error
         depends upon the situation. If the autocorrelations are being used
@@ -905,16 +904,15 @@ def acf(
         model is assumed for the data and the standard errors for the
         confidence intervals should be generated using Bartlett's formula.
         For more details on Bartlett formula result, see section 7.2 in [2].
-    missing : str, default "none"
-        A string in ["none", "raise", "conservative", "drop"] specifying how
-        the NaNs are to be treated. "none" performs no checks. "raise" raises
-        an exception if NaN values are found. "drop" removes the missing
-        observations and then estimates the autocovariances treating the
-        non-missing as contiguous. "conservative" computes the autocovariance
-        using nan-ops so that nans are removed when computing the mean
-        and cross-products that are used to estimate the autocovariance.
-        When using "conservative", n is set to the number of non-missing
-        observations.
+    missing : {"none", "raise", "conservative", "drop"}, optional
+        Specifies how the NaNs are to be treated. "none" performs no checks.
+        "raise" raises an exception if NaN values are found. "drop" removes
+        the missing observations and then estimates the autocovariances
+        treating the non-missing as contiguous. "conservative" computes the
+        autocovariance using nan-ops so that nans are removed when computing
+        the mean and cross-products that are used to estimate the
+        autocovariance. When using "conservative", n is set to the number of
+        non-missing observations.
     result_object : bool, optional
         Flag indicating whether to return the results as an ``AcfResult``
         instead of a plain tuple. ``AcfResult`` always carries all four
@@ -1084,7 +1082,7 @@ def pacf_yw(
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1).
-    method : {"adjusted", "mle"}, default "adjusted"
+    method : {"adjusted", "mle"}, optional
         The method for the autocovariance calculations in yule walker.
 
     Returns
@@ -1353,7 +1351,7 @@ def pacf(
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs // 2 - 1). The returned value
         includes lag 0 (ie., 1) so size of the pacf vector is (nlags + 1,).
-    method : str, default "ywadjusted"
+    method : str, optional
         Specifies which method for the calculations to use.
 
         - "yw" or "ywadjusted" : Yule-Walker with sample-size adjustment in
@@ -1505,7 +1503,7 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
        overlapping observations at each lag k, min(m, n-k), otherwise n.
     demean : bool, optional
         Flag indicating whether to demean x and y.
-    fft : bool, default True
+    fft : bool, optional
         If True, use FFT convolution.  This method should be preferred
         for long time series.
 
@@ -1579,10 +1577,10 @@ def ccf(
     ----------
     x, y : array_like
         The time series data to use in the calculation.
-    adjusted : bool
+    adjusted : bool, optional
         If True, then denominators for cross-covariance are the number of
         overlapping observations at each lag k, min(m, n-k), otherwise n.
-    fft : bool, default True
+    fft : bool, optional
         If True, use FFT convolution.  This method should be preferred
         for long time series.
     nlags : int, optional
@@ -1827,7 +1825,7 @@ def pccf(
         Number of lags to return partial cross-correlations for.
         If not provided, uses
         min(10 * np.log10(nobs), nobs // 2 - 1).
-    method : str, default "ywm"
+    method : str, optional
         Specifies which method for the calculations to use.
 
         - "ywm", "ywmle" or "yw_mle" : Yule-Walker via the
@@ -2211,11 +2209,11 @@ def breakvar_heteroskedasticity_test(
     resid : array_like
         Residuals of a time series model.
         The shape is 1d (nobs,) or 2d (nobs, nvars).
-    subset_length : {int, float}
+    subset_length : int or float, optional
         Length of the subsets to test (h in Notes below).
         If a float in 0 < subset_length < 1, it is interpreted as fraction.
         Default is 1/3.
-    alternative : {"increasing", "decreasing", "two-sided"}
+    alternative : {"increasing", "decreasing", "two-sided"}, optional
         This specifies the alternative for the p-value calculation. Default
         is two-sided.
     use_f : bool, optional
@@ -2229,9 +2227,9 @@ def breakvar_heteroskedasticity_test(
     BreakvarHeteroskedasticityResult
         A result object with fields:
 
-        stat : {float, ndarray}
+        statistic : float or ndarray
             Test statistic(s) H(h).
-        pvalue : {float, ndarray}
+        pvalue : float or ndarray
             p-value(s) of test statistic(s).
 
     Notes
@@ -2361,10 +2359,10 @@ def grangercausalitytests(x, maxlag, addconst=True):
         The data for testing whether the time series in the second column Granger
         causes the time series in the first column. Missing values are not
         supported.
-    maxlag : {int, Iterable[int]}
-        If an integer, computes the test for all lags up to maxlag. If an
-        iterable, computes the tests only for the lags in maxlag.
-    addconst : bool
+    maxlag : int or sequence of int
+        If an integer, computes the test for all lags up to maxlag. If a
+        sequence, computes the tests only for the lags in maxlag.
+    addconst : bool, optional
         Include a constant in the model.
 
     Returns
@@ -2580,18 +2578,19 @@ def coint(
         The first element in cointegrated system. Must be 1-d.
     y1 : array_like
         The remaining elements in cointegrated system.
-    trend : str {"c", "ct"}
+    trend : {"c", "ct", "ctt", "n"}, optional
         The trend term included in regression for cointegrating equation.
 
-        * "c" : constant.
+        * "c" : constant (default).
         * "ct" : constant and linear trend.
-        * also available quadratic trend "ctt", and no constant "n".
+        * "ctt" : constant and quadratic trend.
+        * "n" : no constant.
 
-    method : {"aeg"}
+    method : {"aeg"}, optional
         Only "aeg" (augmented Engle-Granger) is available.
-    maxlag : None or int
+    maxlag : int, optional
         Argument for `adfuller`, largest or given number of lags.
-    autolag : str
+    autolag : {"AIC", "BIC", "t-stat", None}, optional
         Argument for `adfuller`, lag selection criterion.
 
         * If None, then maxlag lags are used without lag search.
@@ -2600,7 +2599,7 @@ def coint(
         * "t-stat" based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant
           using a 5%-sized test.
-    return_results : bool
+    return_results : bool, optional
         For future compatibility, currently only tuple available.
         If True, then a results instance is returned. Otherwise, a tuple
         with the test outcome is returned. Set `return_results=False` to
@@ -2764,7 +2763,7 @@ def diebold_mariano_test(
         provided. If not provided, ``max(horizon - 1, ceil(nobs ** (1/3)))``
         is used, so this also depends on ``horizon`` even when
         ``harvey_adj`` is False. See the Notes for details.
-    criterion : str or Callable[[array_like, array_like], array_like]
+    criterion : str or callable, optional
         The loss function used to score each forecast. Default is 'mse'.
         Implemented criteria are 'mse', 'mad' (equivalently 'mae') and
         'mape'; 'poly' selects a generalized power loss whose exponent is
@@ -2777,13 +2776,13 @@ def diebold_mariano_test(
         The exponent used to compute the loss when ``criterion='poly'``,
         i.e., the loss is ``|y - forecast| ** power``. Default is 2, which
         reproduces 'mse'. Ignored unless ``criterion='poly'``.
-    harvey_adj : bool
+    harvey_adj : bool, optional
         Indicates if the Harvey-Leybourne-Newbold (1997) correction for
         small samples should be applied. Default is False. When True, the
         test statistic is rescaled and the p-value is computed from a
         Student's t distribution with ``nobs - 1`` degrees of freedom
         instead of the standard normal.
-    horizon : int
+    horizon : int, optional
         The forecast horizon used to (1) form the default number of HAC
         lags and (2) compute the Harvey et al. (1997) adjustment when
         ``harvey_adj`` is True. Must be a positive integer. Default is 1.
@@ -3052,18 +3051,18 @@ def kpss(
     ----------
     x : array_like, 1d
         The data series to test.
-    regression : {"c", "ct"}
+    regression : {"c", "ct"}, optional
         The null hypothesis for the KPSS test.
 
         * "c" : The data is stationary around a constant (default).
         * "ct" : The data is stationary around a trend.
-    nlags : {str, int}, optional
+    nlags : {"auto", "legacy"} or int, optional
         Indicates the number of lags to be used. If "auto" (default), lags
         is calculated using the data-dependent method of Hobijn et al. (1998).
         See also Andrews (1991), Newey & West (1994), and Schwert (1989). If
         set to "legacy", uses int(12 * (n / 100)**(1 / 4)), as outlined in
         Schwert (1989).
-    store : bool
+    store : bool, optional
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
     result_object : bool, optional
@@ -3084,8 +3083,8 @@ def kpss(
     -------
     KPSSResult
         If ``result_object=True``, a result object with fields ``statistic``,
-        ``pvalue``, ``lags``, ``crit``, and ``resstore`` (``resstore`` is
-        ``None`` when not computed). See
+        ``pvalue``, ``lags``, ``critical_values``, and ``resstore``
+        (``resstore`` is ``None`` when not computed). See
         :class:`~statsmodels.tsa.stattools.KPSSResult`.
 
     Otherwise (the deprecated default), a plain tuple made up of:
@@ -3363,7 +3362,7 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     ----------
     x : array_like, 1d
         The data series to test.
-    store : bool
+    store : bool, optional
         If True, then a result instance is returned additionally to
         the RUR statistic (default is False).
     result_object : bool, optional
@@ -3384,8 +3383,8 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     -------
     RURResult
         If ``result_object=True``, a result object with fields
-        ``statistic``, ``pvalue``, ``crit``, and ``resstore`` (``resstore``
-        is ``None`` when not computed). See
+        ``statistic``, ``pvalue``, ``critical_values``, and ``resstore``
+        (``resstore`` is ``None`` when not computed). See
         :class:`~statsmodels.tsa.stattools.RURResult`.
 
     Otherwise (the deprecated default), a plain tuple whose length depends
@@ -3705,7 +3704,7 @@ class ZivotAndrewsUnitRoot:
         ----------
         statistic : float
             The ZA test statistic
-        model : {"c","t","ct"}
+        model : {"c","t","ct"}, optional
             The model used when computing the ZA statistic. "c" is default.
 
         Returns
@@ -3853,19 +3852,19 @@ class ZivotAndrewsUnitRoot:
         ----------
         x : array_like
             The data series to test.
-        trim : float
+        trim : float, optional
             The percentage of series at begin/end to exclude from break-period
             calculation in range [0, 0.333] (default=0.15).
-        maxlag : int
+        maxlag : int, optional
             The maximum lag which is included in test, default is
             12*(nobs/100)^{1/4} (Schwert, 1989).
-        regression : {"c","t","ct"}
+        regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
             * "c" : constant only (default).
             * "t" : trend only.
             * "ct" : constant and trend.
-        autolag : {"AIC", "BIC", "t-stat", None}
+        autolag : {"AIC", "BIC", "t-stat", None}, optional
             The method to select the lag length when using automatic selection.
 
             * if None, then maxlag lags are used,
