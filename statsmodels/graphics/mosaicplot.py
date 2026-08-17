@@ -284,7 +284,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : float or array of floats, optional
+    gap : float or array_like of float, optional
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
@@ -449,9 +449,9 @@ def _normalize_data(data, index):
 
     Parameters
     ----------
-    data : {dict, Series, ndarray, DataFrame}
+    data : dict, Series, ndarray, or DataFrame
         The contingency table to normalize.
-    index : list, optional
+    index : list or None
         The preferred order for the category ordering. If None, the
         order in which the keys were found is used.
 
@@ -539,7 +539,7 @@ def _statistical_coloring(data):
 
     Parameters
     ----------
-    data : {dict, Series, ndarray, DataFrame}
+    data : dict, Series, ndarray, or DataFrame
         The contingency table to color.
 
     Returns
@@ -724,7 +724,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     Parameters
     ----------
-    data : {dict, Series, ndarray, DataFrame}
+    data : dict, Series, ndarray, or DataFrame
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
@@ -746,7 +746,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : {float, sequence[float]}, optional
+    gap : float or sequence[float], optional
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
@@ -775,7 +775,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     axes_label : bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
-    label_rotation : {float, list[float]}, optional
+    label_rotation : float or list[float], optional
         The rotation of the axis label (if present). If a list is given
         each axis can have a different rotation
 

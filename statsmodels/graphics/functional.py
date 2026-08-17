@@ -49,12 +49,10 @@ def _inverse_transform(pca, data):
     ----------
     pca : statsmodels Principal Component Analysis instance
         The PCA object to use.
-    data : sequence of ndarrays or 2-D ndarray
-        The vectors of functions to create a functional boxplot from.  If a
-        sequence of 1-D arrays, these should all be the same size.
-        The first axis is the function index, the second axis the one along
-        which the function is defined.  So ``data[0, :]`` is the first
-        functional curve.
+    data : ndarray
+        Points in the reduced (PCA factor) space to inverse transform back
+        to the original curve space.  Reshaped internally to
+        ``(-1, ncomp)`` before being assigned to `pca.factors`.
 
     Returns
     -------
@@ -77,7 +75,7 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
 
     Parameters
     ----------
-    x : float
+    x : ndarray
         Curve in reduced space.
     idx : int
         Index value of the components to compute.
@@ -112,8 +110,8 @@ def _min_max_band(args):
 
     Parameters
     ----------
-    args : list
-        It is a list of an idx and other arguments as a tuple:
+    args : tuple
+        It is a tuple of an idx and other arguments as a tuple:
             idx : int
                 Index value of the components to compute
         The tuple contains:
@@ -129,7 +127,7 @@ def _min_max_band(args):
             use_brute : bool
                 Use the brute force optimizer instead of the default
                 differential evolution to find the curves.
-            rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+            rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
                 Value to pass to scipy.optimize.differential_evolution as
                 its `seed` argument.
 
@@ -219,7 +217,7 @@ def hdrboxplot(
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    xdata : ndarray, optional
+    xdata : array_like, optional
         The independent variable for the data. If not given, it is assumed to
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
@@ -229,21 +227,21 @@ def hdrboxplot(
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    use_brute : bool
+    use_brute : bool, optional
         Use the brute force optimizer instead of the default differential
         evolution to find the curves. Default is False.
-    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+    rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
         Value to pass to scipy.optimize.differential_evolution as its `seed`
-        argument. If an int, a new Generator seeded with that value is used
+        argument. If an int, a new RandomState seeded with that value is used
         by scipy. If a Generator or RandomState instance, that instance is
         used directly. If None, then the default RandomState provided by
         np.random is used.
-    seed : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+    seed : int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            seed has been deprecated. In-line with SPEC-007, use
            rng for passing a random number generator or seed.
-    kernel_rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+    kernel_rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         A random number generator or seed to use for the kernel density. If
         None, will use the global RandomState.
 
@@ -252,7 +250,7 @@ def hdrboxplot(
             In release 0.17.0 or after January 2028, whichever comes sooner,
             using None will initialize a new numpy.random.default_rng using
             system entropy.
-    kernel_seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+    kernel_seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            kernel_seed has been deprecated. In-line with SPEC-007, use
@@ -266,13 +264,15 @@ def hdrboxplot(
     hdr_res : HdrResults instance
         An `HdrResults` instance with the following attributes:
 
-         - 'median', array. Median curve.
-         - 'hdr_50', array. 50% quantile band. [sup, inf] curves
-         - 'hdr_90', list of array. 90% quantile band. [sup, inf]
+         - 'median', ndarray. Median curve.
+         - 'hdr_50', list of tuple of float. 50% quantile band. [sup, inf]
             curves.
-         - 'extra_quantiles', list of array. Extra quantile band.
+         - 'hdr_90', list of tuple of float. 90% quantile band. [sup, inf]
+            curves.
+         - 'extra_quantiles', list of tuple of float. Extra quantile band.
             [sup, inf] curves.
          - 'outliers', ndarray. Outlier curves.
+         - 'outliers_idx', ndarray. Indices of the outlier curves in `data`.
 
     See Also
     --------
@@ -426,12 +426,12 @@ def hdrboxplot(
         ----------
         band : array_like
             alpha values ``(max_alpha, min_alpha)`` ex: ``[0.9, 0.5]``
-        use_brute : bool
+        use_brute : bool, optional
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
             Value to pass to scipy.optimize.differential_evolution as its
-            `seed` argument. If an int, a new Generator seeded with that
+            `seed` argument. If an int, a new RandomState seeded with that
             value is used by scipy. If a Generator or RandomState instance,
             that instance is used directly. If None, then the default
             RandomState provided by numpy.random is used.
@@ -566,7 +566,7 @@ def fboxplot(
         The first axis is the function index, the second axis the one along
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
-    xdata : ndarray, optional
+    xdata : array_like, optional
         The independent variable for the data.  If not given, it is assumed to
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
@@ -767,7 +767,7 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
         The first axis is the function index, the second axis the one along
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
-    xdata : ndarray, optional
+    xdata : array_like, optional
         The independent variable for the data.  If not given, it is assumed to
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.

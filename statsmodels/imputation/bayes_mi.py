@@ -20,21 +20,21 @@ class BayesGaussMI:
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         The array of data to be imputed.  Values in the array equal to
         NaN are imputed.
-    mean_prior : ndarray, optional
+    mean_prior : array_like, optional
         The covariance matrix of the Gaussian prior distribution for
         the mean vector.  If not provided, the identity matrix is
         used.
-    cov_prior : ndarray, optional
+    cov_prior : array_like, optional
         The center matrix for the inverse Wishart prior distribution
         for the covariance matrix.  If not provided, the identity
         matrix is used.
     cov_prior_df : positive float, optional
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
-    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -203,29 +203,31 @@ class MI:
         An imputer class, such as BayesGaussMI.
     model : model class
         Any statsmodels model class.
-    model_args_fn : function
+    model_args_fn : callable, optional
         A function taking an imputed dataset as input and returning
         endog, exog.  If the model is fit using a formula, returns
         a DataFrame used to build the model.  Optional when a formula
         is used.
-    model_kwds_fn : function, optional
+    model_kwds_fn : callable, optional
         A function taking an imputed dataset as input and returning
         a dictionary of model keyword arguments.
     formula : str, optional
         If provided, the model is constructed using the `from_formula`
         class method, otherwise the `__init__` method is used.
-    fit_args : list-like, optional
-        List of arguments to be passed to the fit method
-    fit_kwds : dict-like, optional
-        Keyword arguments to be passed to the fit method
-    xfunc : function mapping ndarray to ndarray
+    fit_args : callable, optional
+        A function taking an imputed dataset as input and returning a
+        list of arguments to be passed to the fit method.
+    fit_kwds : callable, optional
+        A function taking an imputed dataset as input and returning a
+        dictionary of keyword arguments to be passed to the fit method.
+    xfunc : callable, optional
         A function that is applied to the complete data matrix
         prior to fitting the model
-    burn : int
+    burn : int, optional
         Number of burn-in iterations
-    nrep : int
+    nrep : int, optional
         Number of imputed data sets to use in the analysis
-    skip : int
+    skip : int, optional
         Number of Gibbs iterations to skip between successive
         multiple imputation fits.
 
@@ -311,7 +313,7 @@ class MI:
 
         Parameters
         ----------
-        results_cb : function, optional
+        results_cb : callable, optional
             If provided, each results instance r is passed through `results_cb`,
             then appended to the `results` attribute of the MIResults object.
             To save complete results, use `results_cb=lambda x: x`.  The default
@@ -402,7 +404,7 @@ class MIResults(LikelihoodModelResults):
         and data values are not used.
     params : array_like
         The overall multiple imputation parameter estimates.
-    normalized_cov_params : array_like (2d)
+    normalized_cov_params : ndarray
         The overall variance covariance matrix of the estimates.
     """
 
