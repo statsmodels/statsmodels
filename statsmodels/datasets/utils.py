@@ -21,9 +21,9 @@ def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
     ----------
     data : str
         Name of dataset to fetch.
-    baseurl : str
+    baseurl : str, optional
         The base URL to the stata datasets.
-    as_df : bool
+    as_df : bool, optional
         Deprecated. Always returns a DataFrame
 
     Returns
@@ -45,6 +45,24 @@ def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
 
 
 class Dataset(dict):
+    """
+    Container for a statsmodels dataset.
+
+    A dict subclass whose keys are also exposed as attributes. Instances
+    are constructed by dataset loading functions such as `process_pandas`
+    and `get_rdataset`, which determine which keys/attributes are set.
+    Datasets returned by ``load_pandas`` functions typically define
+    ``data``, ``endog``, ``exog``, ``names``, ``endog_name`` and
+    ``exog_name``; datasets returned by `get_rdataset` additionally
+    define ``title``, ``package`` and ``from_cache``.
+
+    Parameters
+    ----------
+    **kw
+        Keyword arguments used to populate the dataset's keys and
+        attributes.
+    """
+
     def __init__(self, **kw):
         # define some default attributes, so pylint can find them
         self.endog = None
@@ -67,6 +85,28 @@ class Dataset(dict):
 
 
 def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
+    """
+    Split a DataFrame into a Dataset with endog and exog components.
+
+    Parameters
+    ----------
+    data : DataFrame
+        The full dataset, with variables as columns.
+    endog_idx : int or array_like, optional
+        The column index (or indices) of the endogenous variable(s).
+    exog_idx : int or array_like, optional
+        The column index (or indices) of the exogenous variable(s). If
+        None, all columns other than `endog_idx` are used.
+    index_idx : int, optional
+        The column index to use as the index of `data`, `endog` and
+        `exog`. If None, the existing index is preserved.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``,
+        ``exog``, ``endog_name`` and ``exog_name`` attributes.
+    """
     names = data.columns
 
     if isinstance(endog_idx, int):
@@ -228,10 +268,10 @@ def get_rdataset(dataname, package="datasets", cache=False):
     ----------
     dataname : str
         The name of the dataset you want to download
-    package : str
+    package : str, optional
         The package in which the dataset is found. The default is the core
         'datasets' package.
-    cache : bool or str
+    cache : bool or str, optional
         If True, will download this data into the STATSMODELS_DATA folder.
         The default location is a folder called statsmodels_data in the
         user home folder. Otherwise, you can specify a path to a folder to
@@ -393,9 +433,9 @@ def load_csv(base_file, csv_name, sep=",", convert_float=False):
         The CSV file is assumed to live in the same directory.
     csv_name : str
         The name of the CSV file to load.
-    sep : str
+    sep : str, optional
         The delimiter used to separate fields in the CSV file.
-    convert_float : bool
+    convert_float : bool, optional
         If True, convert all columns to float.
 
     Returns

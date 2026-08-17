@@ -36,6 +36,10 @@ def load_pandas():
     -------
     Dataset
         See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
     """
     raw_data = du.load_csv(__file__, "china_smoking.csv")
     data = raw_data.set_index("Location")
@@ -52,5 +56,9 @@ def load():
     -------
     Dataset
         See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
     """
     return load_pandas()

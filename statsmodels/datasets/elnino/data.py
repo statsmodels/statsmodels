@@ -36,6 +36,18 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the El Nino data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    The elnino Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     dataset = du.Dataset(data=data, names=list(data.columns))
     return dataset

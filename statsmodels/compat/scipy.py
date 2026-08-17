@@ -96,8 +96,6 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
         It does not need to be scalar; it needs however to be broadcastable with
         `cond` and `args`.
         Mutually exclusive with `f2`. You must provide one or the other.
-    xp : array_namespace, optional
-        The standard-compatible namespace for `cond` and `args`. Default: infer.
 
     Returns
     -------

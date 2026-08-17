@@ -151,7 +151,7 @@ def rands_array(generator=None, nchars=10, size=10, dtype="O"):
 
     Parameters
     ----------
-    generator : Generator, optional
+    generator : numpy.random.Generator, optional
         A NumPy random generator. If None, ``np.random.default_rng()`` is
         used.
     nchars : int, optional
@@ -189,7 +189,7 @@ def make_dataframe(generator=None):
 
     Parameters
     ----------
-    generator : Generator, optional
+    generator : numpy.random.Generator, optional
         A NumPy random generator. If None, ``np.random.default_rng()`` is
         used.
 

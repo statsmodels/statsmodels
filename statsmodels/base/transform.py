@@ -18,10 +18,10 @@ class BoxCox:
         ----------
         x : array_like
             The data to transform.
-        lmbda : float
+        lmbda : float or None, optional
             The lambda parameter for the Box-Cox transform. If None, a value
             will be estimated by means of the specified method.
-        method : {'guerrero', 'loglik'}
+        method : {'guerrero', 'loglik'}, optional
             The method to estimate the lambda parameter. Will only be used if
             lmbda is None, and defaults to 'guerrero', detailed in Guerrero
             (1993). 'loglik' maximizes the profile likelihood.
@@ -34,7 +34,7 @@ class BoxCox:
 
         Returns
         -------
-        y : array_like
+        y : ndarray
             The transformed series.
         lmbda : float
             The lmbda parameter used to transform the series.
@@ -79,7 +79,7 @@ class BoxCox:
             The transformed series.
         lmbda : float
             The lambda parameter that was used to transform the series.
-        method : {'naive'}
+        method : {'naive'}, optional
             Indicates the method to be used in the untransformation. Defaults
             to 'naive', which reverses the transformation.
 
@@ -88,7 +88,7 @@ class BoxCox:
 
         Returns
         -------
-        y : array_like
+        y : ndarray
             The untransformed series.
         """
         method = method.lower()
@@ -113,10 +113,10 @@ class BoxCox:
         ----------
         x : array_like
             The untransformed data.
-        bounds : tuple
+        bounds : tuple, optional
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter. Default (-1, 2).
-        method : {'guerrero', 'loglik'}
+        method : {'guerrero', 'loglik'}, optional
             The method by which to estimate lambda. Defaults to 'guerrero', but
             the profile likelihood ('loglik') is also available.
         **kwargs
@@ -163,14 +163,14 @@ class BoxCox:
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
-        window_length : int
+        window_length : int, optional
             Seasonality/grouping parameter. Default 4, as per Guerrero and
             Perera (2004). NOTE: this indicates the length of the individual
             groups, not the total number of groups!
-        scale : {'sd', 'mad'}
+        scale : {'sd', 'mad'}, optional
             The dispersion measure to be used. 'sd' indicates the sample
             standard deviation, but the more robust 'mad' is also available.
-        options : dict
+        options : dict, optional
             The options (as a dict) to be passed to the optimizer.
 
         Returns
@@ -216,7 +216,7 @@ class BoxCox:
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
-        options : dict
+        options : dict, optional
             The options (as a dict) to be passed to the optimizer.
 
         Returns

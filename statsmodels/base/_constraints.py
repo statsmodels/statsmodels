@@ -24,7 +24,7 @@ class LinearConstraints:
         parameters. Each row defines one constraint.
     constraint_values : ndarray
         1-dim array of constant values.
-    variable_names : list of strings
+    variable_names : list of str
         Parameter names, used only for display.
     kwds : keyword arguments
         Keywords are attached to the instance.
@@ -105,7 +105,7 @@ class TransformRestriction:
     ----------
     R : array_like
         Linear restriction matrix.
-    q : arraylike or None
+    q : array_like or None, optional
         Values of the linear restrictions.
 
     Notes
@@ -177,7 +177,7 @@ class TransformRestriction:
 
         Returns
         -------
-        params : array_like
+        params : ndarray
             Parameters in the original space.
 
         Notes
@@ -201,7 +201,7 @@ class TransformRestriction:
 
         Returns
         -------
-        params_reduced : array_like
+        params_reduced : ndarray
             Parameters in the transformed space.
         """
         params = np.asarray(params)
@@ -268,12 +268,7 @@ def fit_constrained(model, constraint_matrix, constraint_values,
         in exog.
     constraint_values : array_like
         This is `q` in the linear equality constraint `R params = q`.
-        If it is a tuple, then the constraint needs to be given by two
-        arrays (constraint_matrix, constraint_value), i.e., (R, q).
-        Otherwise, the constraints can be given as strings or list of
-        strings.
-        See t_test for details.
-    start_params : None or array_like
+    start_params : array_like or None, optional
         Starting values for the optimization. `start_params` needs to be
         given in the original parameter space and are internally
         transformed.
@@ -359,7 +354,7 @@ def fit_constrained_wrap(model, constraints, start_params=None, **fit_kwds):
         Constraints as accepted by
         ``FormulaManager.get_linear_constraints``, e.g., a string, a
         sequence of strings, or a tuple (R, q).
-    start_params : None or array_like
+    start_params : array_like or None, optional
         Starting values for the optimization, in the original parameter
         space.
     **fit_kwds : keyword arguments

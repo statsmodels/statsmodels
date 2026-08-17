@@ -42,6 +42,14 @@ def load():
 
 
 def load_pandas():
+    """
+    Load the data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        See DATASET_PROPOSAL.txt for more information.
+    """
     data = _get_data()
     dataset = du.process_pandas(data, endog_idx=0, exog_idx=None)
     dataset.censors = dataset.exog.iloc[:, 0]

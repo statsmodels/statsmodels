@@ -88,7 +88,7 @@ def _est_regularized_naive(mod, pnum, partitions, fit_kwds=None):
         Index of current partition
     partitions : scalar
         Total number of partitions
-    fit_kwds : dict-like or None
+    fit_kwds : dict-like or None, optional
         Keyword arguments to be given to fit_regularized
 
     Returns
@@ -117,7 +117,7 @@ def _est_unregularized_naive(mod, pnum, partitions, fit_kwds=None):
         Index of current partition
     partitions : scalar
         Total number of partitions
-    fit_kwds : dict-like or None
+    fit_kwds : dict-like or None, optional
         Keyword arguments to be given to fit
 
     Returns
@@ -143,7 +143,7 @@ def _join_naive(params_l, threshold=0):
     ----------
     params_l : list
         A list of arrays of coefficients.
-    threshold : scalar
+    threshold : scalar, optional
         The threshold at which the coefficients will be cut.
 
     Returns
@@ -189,7 +189,7 @@ def _calc_grad(mod, params, alpha, L1_wt, score_kwds):
 
     Returns
     -------
-    array_like
+    ndarray
         An array-like object of the same dimension as params.
 
     Notes
@@ -226,7 +226,7 @@ def _calc_wdesign_mat(mod, params, hess_kwds):
 
     Returns
     -------
-    array_like
+    ndarray
         An array-like object, updated design matrix, same dimension
         as mod.exog.
     """
@@ -250,11 +250,11 @@ def _est_regularized_debiased(
         Index of current partition.
     partitions : scalar
         Total number of partitions.
-    fit_kwds : dict-like or None
+    fit_kwds : dict-like or None, optional
         Keyword arguments to be given to fit_regularized
-    score_kwds : dict-like or None
+    score_kwds : dict-like, optional
         Keyword arguments for the score function.
-    hess_kwds : dict-like or None
+    hess_kwds : dict-like, optional
         Keyword arguments for the Hessian function.
 
     Returns
@@ -313,7 +313,7 @@ def _join_debiased(results_l, threshold=0):
     results_l : list
         A list of tuples each one containing the params, grad,
         nodewise_row and nodewise_weight values for each partition.
-    threshold : scalar
+    threshold : scalar, optional
         The threshold at which the coefficients will be cut.
 
     Returns
@@ -373,7 +373,7 @@ def _helper_fit_partition(self, pnum, endog, exog, fit_kwds, init_kwds_e=None):
         exogenous data for current partition.
     fit_kwds : dict-like
         Keywords needed for the model fitting.
-    init_kwds_e : dict-like
+    init_kwds_e : dict-like, optional
         Additional init_kwds to add for each partition.
 
     Returns
@@ -401,26 +401,26 @@ class DistributedModel:
     ----------
     partitions : scalar
         The number of partitions that the data will be split into.
-    model_class : statsmodels model class
+    model_class : statsmodels model class, optional
         The model class which will be used for estimation. If None
         this defaults to OLS.
-    init_kwds : dict-like or None
+    init_kwds : dict-like, optional
         Keywords needed for initializing the model, in addition to
         endog and exog.
-    estimation_method : function or None
+    estimation_method : callable, optional
         The method that performs the estimation for each partition.
         If None this defaults to _est_regularized_debiased.
-    estimation_kwds : dict-like or None
+    estimation_kwds : dict-like, optional
         Keywords to be passed to estimation_method.
-    join_method : function or None
+    join_method : callable, optional
         The method used to recombine the results from each partition.
         If None this defaults to _join_debiased.
-    join_kwds : dict-like or None
+    join_kwds : dict-like, optional
         Keywords to be passed to join_method.
-    results_class : results class or None
+    results_class : results class, optional
         The class of results that should be returned.  If None this
         defaults to RegularizedResults.
-    results_kwds : dict-like or None
+    results_kwds : dict-like, optional
         Keywords to be passed to results class.
 
     Attributes
@@ -431,11 +431,11 @@ class DistributedModel:
         See Parameters.
     init_kwds : dict-like
         See Parameters.
-    estimation_method : function
+    estimation_method : callable
         See Parameters.
     estimation_kwds : dict-like
         See Parameters.
-    join_method : function
+    join_method : callable
         See Parameters.
     join_kwds : dict-like
         See Parameters.
@@ -523,15 +523,15 @@ class DistributedModel:
             A generator that produces a sequence of tuples where the first
             element in the tuple corresponds to an endog array and the
             element corresponds to an exog array.
-        fit_kwds : dict-like or None
+        fit_kwds : dict-like, optional
             Keywords needed for the model fitting.
-        parallel_method : str
-            type of distributed estimation to be used, currently
-            "sequential", "joblib" and "dask" are supported.
-        parallel_backend : None or joblib parallel_backend object
+        parallel_method : {"sequential", "joblib"}, optional
+            Type of distributed estimation to be used, currently
+            "sequential" and "joblib" are supported.
+        parallel_backend : None or joblib parallel_backend object, optional
             used to allow support for more complicated backends,
             ex: dask.distributed
-        init_kwds_generator : generator or None
+        init_kwds_generator : generator or None, optional
             Additional keyword generator that produces model init_kwds
             that may vary based on data partition.  The current usecase
             is for WLS and GLS
@@ -585,7 +585,7 @@ class DistributedModel:
             element corresponds to an exog array.
         fit_kwds : dict-like
             Keywords needed for the model fitting.
-        init_kwds_generator : generator or None
+        init_kwds_generator : generator or None, optional
             Additional keyword generator that produces model init_kwds
             that may vary based on data partition.  The current usecase
             is for WLS and GLS
@@ -636,7 +636,7 @@ class DistributedModel:
         parallel_backend : None or joblib parallel_backend object
             used to allow support for more complicated backends,
             ex: dask.distributed
-        init_kwds_generator : generator or None
+        init_kwds_generator : generator or None, optional
             Additional keyword generator that produces model init_kwds
             that may vary based on data partition.  The current usecase
             is for WLS and GLS
@@ -709,7 +709,7 @@ class DistributedResults(LikelihoodModelResults):
 
         Parameters
         ----------
-        exog : array_like NOT optional
+        exog : array_like
             The values for which we want to predict, unlike standard
             predict this is NOT optional since the data in self.model
             is fake.
