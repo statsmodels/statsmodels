@@ -23,8 +23,28 @@ from statsmodels.tsa.statespace.tools import _safe_cond
 
 class StateSpaceMLEModel(tsbase.TimeSeriesModel):
     """
-    This is a temporary base model from ETS; here I just copy everything I need
-    from statespace.mlemodel.MLEModel
+    Temporary base model for use with the exponential smoothing models; copies
+    the functionality needed from statespace.mlemodel.MLEModel
+
+    Parameters
+    ----------
+    endog : array_like
+        The observed time-series process :math:`y`.
+    exog : array_like, optional
+        Array of exogenous regressors.
+    dates : array_like, optional
+        An array-like object of datetime objects. If a pandas object is given
+        for endog or exog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    **kwargs
+        Keyword arguments used to construct the state space representation
+        of the model and stored so that the model can be recreated.
     """
 
     def __init__(
@@ -69,6 +89,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def k_params(self):
+        """The number of parameters in the model"""
         return len(self.param_names)
 
     @contextlib.contextmanager
@@ -168,7 +189,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def start_params(self):
-        """(array) Starting parameters for maximum likelihood estimation"""
+        """Starting parameters for maximum likelihood estimation"""
         if hasattr(self, "_start_params"):
             return self._start_params
         else:
@@ -176,7 +197,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def param_names(self):
-        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
+        """List of human readable parameter names (for parameters actually included in the model)"""
         if hasattr(self, "_param_names"):
             return self._param_names
         else:
@@ -298,7 +319,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     Parameters
     ----------
-    model : MLEModel instance
+    model : Model instance
         The fitted model instance
     params : ndarray
         Fitted parameters
@@ -346,60 +367,62 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def nobs_effective(self):
+        """The number of observations used to fit the model, after adjustments"""
         raise NotImplementedError
 
     @cache_readonly
     def df_resid(self):
+        """The residual degrees of freedom"""
         return self.nobs_effective - self.df_model
 
     @cache_readonly
     def aic(self):
-        """(float) Akaike Information Criterion"""
+        """The Akaike Information Criterion"""
         return aic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def aicc(self):
-        """(float) Akaike Information Criterion with small sample correction"""
+        """The Akaike Information Criterion with small sample correction"""
         return aicc(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def bic(self):
-        """(float) Bayes Information Criterion"""
+        """The Bayes Information Criterion"""
         return bic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def fittedvalues(self):
+        """The predicted values of the model"""
         # TODO
         raise NotImplementedError
 
     @cache_readonly
     def hqic(self):
-        """(float) Hannan-Quinn Information Criterion"""
+        """The Hannan-Quinn Information Criterion"""
         # return (-2 * self.llf +
         #         2 * np.log(np.log(self.nobs_effective)) * self.df_model)
         return hqic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def llf(self):
-        """(float) The value of the log-likelihood function evaluated at `params`"""
+        """The value of the log-likelihood function evaluated at `params`"""
         raise NotImplementedError
 
     @cache_readonly
     def mae(self):
-        """(float) Mean absolute error"""
+        """The mean absolute error"""
         return np.mean(np.abs(self.resid))
 
     @cache_readonly
     def mse(self):
-        """(float) Mean squared error"""
+        """The mean squared error"""
         return self.sse / self.nobs
 
     @cache_readonly
     def pvalues(self):
         """
-        (array) The p-values associated with the z-statistics of the
-        coefficients. Note that the coefficients are assumed to have a Normal
-        distribution.
+        The p-values associated with the z-statistics of the coefficients.
+        Note that the coefficients are assumed to have a Normal distribution.
         """
         pvalues = np.zeros_like(self.zvalues) * np.nan
         mask = np.ones_like(pvalues, dtype=bool)
@@ -410,16 +433,17 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def resid(self):
+        """The model residuals"""
         raise NotImplementedError
 
     @cache_readonly
     def sse(self):
-        """(float) Sum of squared errors"""
+        """The sum of squared errors"""
         return np.sum(self.resid ** 2)
 
     @cache_readonly
     def zvalues(self):
-        """(array) The z-statistics for the coefficients"""
+        """The z-statistics for the coefficients"""
         return self.params / self.bse
 
     def _get_prediction_start_index(self, anchor):
@@ -473,7 +497,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def cov_params_approx(self):
         """
-        (array) The variance / covariance matrix. Computed using the numerical
+        The variance / covariance matrix, computed using the numerical
         Hessian approximated by complex step or finite differences methods.
         """
         return self._cov_params_approx(
@@ -491,7 +515,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
-        lags : None, int or array_like
+        lags : int, array_like of int, or None, optional
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
             length.
@@ -587,7 +611,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             The statistical test for heteroskedasticity. Must be 'breakvar'
             for test of a break in the variance. If None, an attempt is
             made to select an appropriate test.
-        alternative : str, 'increasing', 'decreasing' or 'two-sided'
+        alternative : {'increasing', 'decreasing', 'two-sided'}, optional
             This specifies the alternative for the p-value calculation. Default
             is two-sided.
         use_f : bool, optional
@@ -766,6 +790,12 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             Jarque-Bera normality test. If None, an attempt is made to select
             an appropriate test.
 
+        Returns
+        -------
+        output : ndarray
+            An array with `(Jarque-Bera, p-value, skew, kurtosis)` for each
+            endogenous variable, sized `(k_endog, 4)`.
+
         See Also
         --------
         statsmodels.stats.stattools.jarque_bera
@@ -828,7 +858,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             Integer of the start observation. Default is 0.
         title : str, optional
             The title used for the summary table.
-        model_name : str
+        model_name : str, optional
             The name of the model used. Default is to use model class name.
         display_params : bool, optional
             Whether or not to display the parameters table. Default is True.

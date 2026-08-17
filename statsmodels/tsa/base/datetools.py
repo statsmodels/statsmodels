@@ -124,8 +124,8 @@ def date_range_str(start, end=None, length=None):
 
     Returns
     -------
-    date_range : list
-        List of strings
+    date_range : list of str
+        List of abbreviated date strings.
     """
     flags = re.IGNORECASE | re.VERBOSE
 
@@ -175,14 +175,14 @@ def dates_from_str(dates):
 
     Parameters
     ----------
-    dates : array_like
+    dates : sequence of str
         A sequence of abbreviated dates as string. For instance,
         '1996m1' or '1996Q1'. The datetime dates are at the end of the
         period.
 
     Returns
     -------
-    date_list : list
+    date_list : list of datetime.datetime
         A list of datetime types.
     """
     return lmap(date_parser, dates)
@@ -203,7 +203,7 @@ def dates_from_range(start, end=None, length=None):
 
     Returns
     -------
-    date_list : list
+    date_list : list of datetime.datetime
         A list of datetime types.
 
     Examples

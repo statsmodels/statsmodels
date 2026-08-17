@@ -40,11 +40,11 @@ def hamilton_filter(x, h=8, p=4):
     CycleTrendResult
         A result object with fields:
 
-        cycle : ndarray or Series
+        cycle : ndarray, Series, or DataFrame
             Estimated cyclical component.  The first ``p + h - 1`` values
             are ``NaN`` because no regression can be formed for those
             periods.
-        trend : ndarray or Series
+        trend : ndarray, Series, or DataFrame
             Estimated trend component.  The first ``p + h - 1`` values are
             likewise ``NaN``.
 

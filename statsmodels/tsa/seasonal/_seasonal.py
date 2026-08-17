@@ -266,15 +266,15 @@ class DecomposeResult:
 
     Parameters
     ----------
-    observed : array_like
+    observed : ndarray, Series, or DataFrame
         The data series that has been decomposed.
-    seasonal : array_like
+    seasonal : ndarray, Series, or DataFrame
         The seasonal component of the data series.
-    trend : array_like
+    trend : ndarray, Series, or DataFrame
         The trend component of the data series.
-    resid : array_like
+    resid : ndarray, Series, or DataFrame
         The residual component of the data series.
-    weights : array_like, optional
+    weights : ndarray, Series, or DataFrame, optional
         The weights used to reduce outlier influence.
     """
 
@@ -332,15 +332,15 @@ class DecomposeResult:
 
         Parameters
         ----------
-        observed : bool
+        observed : bool, optional
             Include the observed series in the plot
-        seasonal : bool
+        seasonal : bool, optional
             Include the seasonal component in the plot
-        trend : bool
+        trend : bool, optional
             Include the trend component in the plot
-        resid : bool
+        resid : bool, optional
             Include the residual in the plot
-        weights : bool
+        weights : bool, optional
             Include the weights in the plot (if any)
 
         Returns
