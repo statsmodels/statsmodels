@@ -274,7 +274,8 @@ class Group:
 
     def __init__(self, group, name=""):
 
-        # self.group = np.asarray(group)  # TODO: use checks in combine_indices
+        # TODO: use checks in combine_indices
+        self.group = np.asarray(group)
         self.name = name
         uni, uni_idx, uni_inv = combine_indices(group)
 
@@ -672,7 +673,7 @@ class Grouping:
         if hasattr(self.index, "levels"):
             return self.index.levels
         else:
-            return pd.Categorical(self.index).levels
+            return pd.Categorical(self.index).categories
 
     @property
     def labels(self):

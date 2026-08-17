@@ -428,8 +428,6 @@ class RLMResults(base.LikelihoodModelResults):
         See RLM.normalized_cov_params
     params : ndarray
         The coefficients of the fitted model
-    pinv_wexog : ndarray
-        See RLM.pinv_wexog
     pvalues : ndarray
         The p values associated with `tvalues`. Note that `tvalues` are assumed
         to be distributed standard normal rather than Student's t.
