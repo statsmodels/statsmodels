@@ -4784,7 +4784,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        data_contributions : pd.DataFrame
+        data_contributions : DataFrame
             Contributions of observations to the decomposed object. If the
             smoothed state is being decomposed, then `data_contributions` is
             shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
@@ -4794,7 +4794,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `variable_from x date_from`.
-        obs_intercept_contributions : pd.DataFrame
+        obs_intercept_contributions : DataFrame
             Contributions of the observation intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `obs_intercept_contributions` is
@@ -4806,7 +4806,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `obs_intercept_from x date_from`.
-        state_intercept_contributions : pd.DataFrame
+        state_intercept_contributions : DataFrame
             Contributions of the state intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `state_intercept_contributions` is
@@ -4818,7 +4818,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `state_intercept_from x date_from`.
-        prior_contributions : pd.DataFrame
+        prior_contributions : DataFrame
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` is
             shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`

@@ -45,79 +45,79 @@ class NewsResults:
 
     Attributes
     ----------
-    total_impacts : pd.DataFrame
+    total_impacts : DataFrame
         Updates to forecasts of impacted variables from both news and data
         revisions, E[y^i | post] - E[y^i | previous].
-    update_impacts : pd.DataFrame
+    update_impacts : DataFrame
         Updates to forecasts of impacted variables from the news,
         E[y^i | post] - E[y^i | revisions] where y^i are the impacted variables
         of interest.
-    revision_impacts : pd.DataFrame
+    revision_impacts : DataFrame
         Updates to forecasts of impacted variables from all data revisions,
         E[y^i | revisions] - E[y^i | previous].
-    news : pd.DataFrame
+    news : DataFrame
         The unexpected component of the updated data,
         E[y^u | post] - E[y^u | revisions] where y^u are the updated variables.
-    weights : pd.DataFrame
+    weights : DataFrame
         Weights describing the effect of news on variables of interest.
-    revisions : pd.DataFrame
+    revisions : DataFrame
         The revisions between the current and previously observed data, for
         revisions for which detailed impacts were computed.
-    revisions_all : pd.DataFrame
+    revisions_all : DataFrame
         The revisions between the current and previously observed data,
         y^r_{revised} - y^r_{previous} where y^r are the revised variables.
-    revision_weights : pd.DataFrame
+    revision_weights : DataFrame
         Weights describing the effect of revisions on variables of interest,
         for revisions for which detailed impacts were computed.
-    revision_weights_all : pd.DataFrame
+    revision_weights_all : DataFrame
         Weights describing the effect of revisions on variables of interest,
         with a new entry that includes NaNs for the revisions for which
         detailed impacts were not computed.
-    update_forecasts : pd.DataFrame
+    update_forecasts : DataFrame
         Forecasts based on the previous dataset of the variables that were
         updated, E[y^u | previous].
-    update_realized : pd.DataFrame
+    update_realized : DataFrame
         Actual observed data associated with the variables that were
         updated, y^u
     revisions_details_start : int
         Integer index of first period in which detailed revision impacts were
         computed.
-    revision_detailed_impacts : pd.DataFrame
+    revision_detailed_impacts : DataFrame
         Updates to forecasts of impacted variables from data revisions with
         detailed impacts, E[y^i | revisions] - E[y^i | grouped revisions].
-    revision_grouped_impacts : pd.DataFrame
+    revision_grouped_impacts : DataFrame
         Updates to forecasts of impacted variables from data revisions that
         were grouped together, E[y^i | grouped revisions] - E[y^i | previous].
-    revised_prev : pd.DataFrame
+    revised_prev : DataFrame
         Previously observed data associated with the variables that were
         revised, for revisions for which detailed impacts were computed.
-    revised_prev_all : pd.DataFrame
+    revised_prev_all : DataFrame
         Previously observed data associated with the variables that were
         revised, y^r_{previous}
-    revised : pd.DataFrame
+    revised : DataFrame
         Currently observed data associated with the variables that were
         revised, for revisions for which detailed impacts were computed.
-    revised_all : pd.DataFrame
+    revised_all : DataFrame
         Currently observed data associated with the variables that were
         revised, y^r_{revised}
-    prev_impacted_forecasts : pd.DataFrame
+    prev_impacted_forecasts : DataFrame
         Previous forecast of the variables of interest, E[y^i | previous].
-    post_impacted_forecasts : pd.DataFrame
+    post_impacted_forecasts : DataFrame
         Forecast of the variables of interest after taking into account both
         revisions and updates, E[y^i | post].
-    revisions_iloc : pd.DataFrame
+    revisions_iloc : DataFrame
         The integer locations of the data revisions in the dataset.
-    revisions_ix : pd.DataFrame
+    revisions_ix : DataFrame
         The label-based locations of the data revisions in the dataset.
-    revisions_iloc_detailed : pd.DataFrame
+    revisions_iloc_detailed : DataFrame
         The integer locations of the data revisions in the dataset for which
         detailed impacts were computed.
-    revisions_ix_detailed : pd.DataFrame
+    revisions_ix_detailed : DataFrame
         The label-based locations of the data revisions in the dataset for
         which detailed impacts were computed.
-    updates_iloc : pd.DataFrame
+    updates_iloc : DataFrame
         The integer locations of the updated data points.
-    updates_ix : pd.DataFrame
+    updates_ix : DataFrame
         The label-based locations of updated data points.
     state_index : array_like
         Index of state variables used to compute impacts.
@@ -356,7 +356,7 @@ class NewsResults:
 
         Returns
         -------
-        data_revisions : pd.DataFrame
+        data_revisions : DataFrame
             Index is as MultiIndex consisting of `revision date` and
             `revised variable`. The columns are:
 
@@ -387,7 +387,7 @@ class NewsResults:
 
         Returns
         -------
-        data_updates : pd.DataFrame
+        data_updates : DataFrame
             Index is as MultiIndex consisting of `update date` and
             `updated variable`. The columns are:
 
@@ -415,7 +415,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `impact date`: the date of the impact on the variable of interest
@@ -509,7 +509,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `impact date`: the date of the impact on the variable of interest
@@ -596,7 +596,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `update date`: the date of the data update, that results in
@@ -680,7 +680,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `revision date`: the date of the data revision, that results in
@@ -772,7 +772,7 @@ class NewsResults:
 
         Returns
         -------
-        impacts : pd.DataFrame
+        impacts : DataFrame
             Index is as MultiIndex consisting of:
 
             - `impact date`: the date of the impact on the variable of interest
@@ -1574,7 +1574,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Combination of the `details_by_impact` and
             `revision_details_by_impact` tables, with columns renamed so
             that both sets of details can be concatenated together. The
@@ -1627,7 +1627,7 @@ class NewsResults:
 
         Returns
         -------
-        impacts : pd.DataFrame
+        impacts : DataFrame
             Impacts on variables of interest, indexed by (grouped) update /
             revision date and columns given by the impact date / impacted
             variable.

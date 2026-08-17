@@ -333,7 +333,7 @@ def concat(series, axis=0, allow_mix=False):
 
     Returns
     -------
-    concatenated : array or pd.DataFrame
+    concatenated : array or DataFrame
         The concatenated array. Will be a DataFrame if series are pandas
         objects.
     """

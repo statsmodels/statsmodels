@@ -552,9 +552,9 @@ class SVARProcess(VARProcess):
     intercept : ndarray (length k)
     sigma_u : ndarray (k x k)
     A_solve : ndarray
-        neqs x neqs np.ndarray with unknown parameters marked with 'E'
+        neqs x neqs ndarray with unknown parameters marked with 'E'
     B_solve : ndarray
-        neqs x neqs np.ndarray with unknown parameters marked with 'E'
+        neqs x neqs ndarray with unknown parameters marked with 'E'
     names : sequence (length k)
     """
 
@@ -610,8 +610,8 @@ class SVARResults(SVARProcess, VARResults):
     params : ndarray
     sigma_u : ndarray
     lag_order : int
-    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
-    B : neqs x neqs np.ndarray with unknown parameters marked with 'E'
+    A : neqs x neqs ndarray with unknown parameters marked with 'E'
+    B : neqs x neqs ndarray with unknown parameters marked with 'E'
     A_mask : neqs x neqs mask array with known parameters masked
     B_mask : neqs x neqs mask array with known parameters masked
     model : VAR model instance

@@ -733,7 +733,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         of the keys will be the same as the one of insertion.
         If a dict of a Series (or any other dict like object)
         is used, it will take the keys as labels.  If a
-        np.ndarray is provided, it will generate a simple
+        ndarray is provided, it will generate a simple
         numerical labels.
     index : list, optional
         Gives the preferred order for the category ordering. If not specified

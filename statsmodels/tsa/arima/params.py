@@ -371,7 +371,7 @@ class SARIMAXParams:
 
         Returns
         -------
-        series : pd.Series
+        series : Series
             Pandas series with index set to the parameter names.
         """
         return pd.Series(self.params, index=self.param_names)

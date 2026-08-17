@@ -186,7 +186,7 @@ class PandasWrapper:
 
     Parameters
     ----------
-    pandas_obj : pd.Series or pd.DataFrame
+    pandas_obj : Series or DataFrame
         Object to extract the index from for wrapping
 
     Notes

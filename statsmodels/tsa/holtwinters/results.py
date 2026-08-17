@@ -43,7 +43,7 @@ class HoltWintersResults(Results):
         An array of the trend values that make up the fitted values.
     season : ndarray
         An array of the seasonal values that make up the fitted values.
-    params_formatted : pd.DataFrame
+    params_formatted : DataFrame
         DataFrame containing all parameters, their short names and a flag
         indicating whether the parameter's value was optimized to fit the data.
     resid : ndarray
@@ -402,7 +402,7 @@ class HoltWintersResults(Results):
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function. The method ``rvs`` is called on the distribution function
               to draw the random errors.
-            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+            * A ndarray with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
@@ -423,15 +423,14 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        sim : pd.Series, pd.DataFrame or np.ndarray
-            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
-            values.
-            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
-            will be a ``pd.Series`` if `repetitions` is 1, and a
-            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
-            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
+        sim : Series, DataFrame or ndarray
+            An ndarray, Series, or DataFrame of simulated values.
+            If the original data was a Series or DataFrame, `sim`
+            will be a Series if `repetitions` is 1, and a
+            DataFrame of shape (`nsimulations`, `repetitions`) else.
+            Otherwise, if `repetitions` is 1, a ndarray of shape
             (`nsimulations`,) is returned, and if `repetitions` is not 1 a
-            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
+            ndarray of shape (`nsimulations`, `repetitions`) is
             returned.
 
         Notes

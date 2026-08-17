@@ -150,7 +150,7 @@ def _single_hamilton_filter(x: np.ndarray, h: int, p: int):
 
     Parameters
     ----------
-    x : np.ndarray
+    x : array
         1-d array of time series values
     h : int
         Number of leads to use
@@ -159,9 +159,9 @@ def _single_hamilton_filter(x: np.ndarray, h: int, p: int):
 
     Returns
     -------
-    cycle : np.ndarray
+    cycle : ndarray
         The extracted cycle (nobs, ).
-    trend : np.ndarray
+    trend : ndarray
         The extracted trend (nobs, ).
     """
     t = x.shape[0]
