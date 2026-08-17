@@ -56,7 +56,7 @@ class FactorBlock(dict):
         in the state vector).
     factor_order : int
         Order of the vector autoregression governing the factor block dynamics.
-    endog_factor_map : pd.DataFrame
+    endog_factor_map : DataFrame
         Mapping from endog variable names to factor names.
     state_offset : int
         Offset of this factor block in the state vector.
@@ -262,7 +262,7 @@ class DynamicFactorMQStates(dict):
         Note that factor multiplicities will have already been expanded.
     max_factor_order : int
         Maximum autoregression order across all factor blocks.
-    factor_block_orders : pd.Series
+    factor_block_orders : Series
         Series containing lag orders, with the factor block (a tuple of factor
         names) as the index.
     factor_multiplicities : dict
@@ -276,7 +276,7 @@ class DynamicFactorMQStates(dict):
 
         - keys : endog name
         - values : list of factor names
-    loading_counts : pd.Series
+    loading_counts : Series
         Series containing number of endogenous variables loading on each
         factor, with the factor name as the index.
     block_loading_counts : dict
@@ -563,7 +563,7 @@ class DynamicFactorMQStates(dict):
 
         Returns
         -------
-        endog_factor_map : pd.DataFrame
+        endog_factor_map : DataFrame
             Boolean dataframe with `endog_names` as the index and the factor
             names (computed from the `factors` input) as the columns. Each cell
             is True if the associated factor is allowed to load on the
@@ -3454,7 +3454,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        rsquared : pd.DataFrame or pd.Series
+        rsquared : DataFrame or Series
             The R-squared values from regressions of observed variables on
             one or more of the factors. If method='individual' or
             method='cumulative', this will be a Pandas DataFrame with observed
@@ -3935,7 +3935,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        data_contributions : pd.DataFrame
+        data_contributions : DataFrame
             Contributions of observations to the decomposed object. If the
             smoothed state is being decomposed, then `data_contributions` is
             shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
@@ -3945,7 +3945,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `variable_from x date_from`.
-        obs_intercept_contributions : pd.DataFrame
+        obs_intercept_contributions : DataFrame
             Contributions of the observation intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `obs_intercept_contributions` is
@@ -3957,7 +3957,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `obs_intercept_from x date_from`.
-        state_intercept_contributions : pd.DataFrame
+        state_intercept_contributions : DataFrame
             Contributions of the state intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `state_intercept_contributions` is
@@ -3969,7 +3969,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `state_intercept_from x date_from`.
-        prior_contributions : pd.DataFrame
+        prior_contributions : DataFrame
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` is
             shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`

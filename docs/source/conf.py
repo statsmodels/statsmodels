@@ -428,6 +428,8 @@ numpydoc_xref_aliases.update(
         "AxesSubplot": "matplotlib.axes.Axes",
         "DataFrame": "pandas.DataFrame",
         "Series": "pandas.Series",
+        "pd.DataFrame": "pandas.DataFrame",
+        "pd.Series": "pandas.Series",
         "MLEResults": "statsmodels.tsa.statespace.mlemodel.MLEResults",
         "RandomState": "numpy.random.RandomState",
         "Generator": "numpy.random.Generator",

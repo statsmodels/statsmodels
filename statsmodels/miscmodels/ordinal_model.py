@@ -69,13 +69,13 @@ class OrderedModel(GenericLikelihoodModel):
         Endogenous or dependent ordered categorical variable with k levels.
         Labels or values of endog will internally transformed to consecutive
         integers, 0, 1, 2, ...
-        pd.Series with ordered Categorical as dtype should be preferred as it
+        Series with ordered Categorical as dtype should be preferred as it
         gives the order relation between the levels.
         If endog is not a pandas Categorical, then categories are
         sorted in lexicographic order (by numpy.unique).
     exog : array_like
         Exogenous, explanatory variables. This should not include an intercept.
-        pd.DataFrame are also accepted.
+        A DataFrame is  also accepted.
         see Notes about constant when using formulas
     offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.

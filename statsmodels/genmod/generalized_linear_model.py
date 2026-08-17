@@ -1753,7 +1753,7 @@ class GLM(base.LikelihoodModel):
     @property
     def offset_name(self):
         """
-        Name of the offset variable if available. If offset is not a pd.Series,
+        Name of the offset variable if available. If offset is not a Series,
         defaults to 'offset'.
         """
         return self._offset_name
@@ -1761,7 +1761,7 @@ class GLM(base.LikelihoodModel):
     @property
     def exposure_name(self):
         """
-        Name of the exposure variable if available. If exposure is not a pd.Series,
+        Name of the exposure variable if available. If exposure is not a Series,
         defaults to 'exposure'.
         """
         return self._exposure_name
@@ -1770,14 +1770,14 @@ class GLM(base.LikelihoodModel):
     def freq_weights_name(self):
         """
         Name of the freq weights variable if available. If freq_weights is not a
-        pd.Series, defaults to 'freq_weights'.
+        Series, defaults to 'freq_weights'.
         """
         return self._freq_weights_name
 
     @property
     def var_weights_name(self):
         """
-        Name of var weights variable if available. If var_weights is not a pd.Series,
+        Name of var weights variable if available. If var_weights is not a Series,
         defaults to 'var_weights'.
 
         """

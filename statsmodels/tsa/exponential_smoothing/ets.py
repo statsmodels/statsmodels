@@ -1078,20 +1078,20 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : np.ndarray of np.float
+        params : array of np.float
             Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m]). If there are no fixed values this must
             be in the format of internal parameters. Otherwise the fixed values
             are skipped.
-        yhat : np.ndarray
+        yhat : array
             Array of size (n,) where fitted values will be written to.
-        xhat : np.ndarray
+        xhat : array
             Array of size (n, _k_states_internal) where fitted states will be
             written to.
-        is_fixed : np.ndarray or None
+        is_fixed : array, optional
             Boolean array indicating values which are fixed during fitting.
             This must have the full length of internal parameters.
-        fixed_values : np.ndarray or None
+        fixed_values : array, optional
             Array of fixed values (arbitrary values for non-fixed parameters)
             This must have the full length of internal parameters.
         use_beta_star : boolean
@@ -1148,7 +1148,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : np.ndarray of np.float
+        params : narray of float
             Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m])
         **kwargs
@@ -1204,13 +1204,13 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Returns
         -------
-        yhat : pd.Series or np.ndarray
+        yhat : Series or ndarray
             Predicted values from exponential smoothing. If original data was a
-            ``pd.Series``, returns a ``pd.Series``, else a ``np.ndarray``.
-        states : pd.DataFrame or np.ndarray
+            Series, returns a Series, else a ndarray.
+        states : DataFrame or ndarray
             States (level, trend, and/or seasonal) of exponential smoothing.
-            If original data was a ``pd.Series``, returns a ``pd.DataFrame``,
-            else a ``np.ndarray``.
+            If original data was a Series, returns a DataFrame,
+            else a ndarray.
         """
         internal_params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
@@ -1600,7 +1600,7 @@ class ETSResults(base.StateSpaceMLEResults):
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function.
-            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+            * A ndarray with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
@@ -1615,16 +1615,14 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        sim : pd.Series, pd.DataFrame or np.ndarray
-            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
-            values.
-            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
-            will be a ``pd.Series`` if `repetitions` is 1, and a
-            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
-            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
-            (`nsimulations`,) is returned, and if `repetitions` is not 1 a
-            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
-            returned.
+        sim : Series, DataFrame or ndarray
+            An ndarray, Series, or DataFrame of simulated values. If the
+            original data was a Series or DataFrame, `sim` will be a
+            Series if `repetitions` is 1, and a DataFrame of shape
+            (`nsimulations`, `repetitions`) else. Otherwise, if `repetitions`
+            is 1, a ndarray of shape (`nsimulations`,) is returned, and
+            if `repetitions` is not 1 a ndarray of shape
+            (`nsimulations`, `repetitions`) is returned.
 
         Notes
         -----
@@ -1974,10 +1972,10 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        forecast : array_like or pd.Series.
+        forecast : ndarray or Series.
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict,) array. If original data was a pd.Series
-            or DataFrame, a pd.Series is returned.
+            forecasts. An (npredict,) array. If original data was a Series
+            or DataFrame, a Series is returned.
         """
 
         (
