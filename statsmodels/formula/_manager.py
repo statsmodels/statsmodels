@@ -90,7 +90,7 @@ def _check_data(data):
 
     Parameters
     ----------
-    data : {dict, list, recarray, DataFrame}
+    data : dict, list, recarray, or DataFrame
         The data used to create a formula.
 
     Notes
@@ -122,6 +122,16 @@ def _maybe_convert_data(data):
 
 
 class _FormulaOption:
+    """
+    Container for the global formula-related options.
+
+    Parameters
+    ----------
+    default_engine : {"patsy", "formulaic"}, optional
+        The initial formula engine to use. If None, the best available
+        engine is selected automatically.
+    """
+
     def __init__(self, default_engine: Literal["patsy", "formulaic"] | None = None):
         if default_engine is None:
             default_engine = DEFAULT_FORMULA_ENGINE
@@ -137,11 +147,11 @@ class _FormulaOption:
     @property
     def formula_engine(self) -> Literal["patsy", "formulaic"]:
         """
-        Get or set the formula engine
+        Get or set the formula engine.
 
         Returns
         -------
-        str: {"patsy", "formulaic"}
+        {"patsy", "formulaic"}
             The name of the formula engine.
         """
         return self._formula_engine
@@ -199,6 +209,19 @@ _NoDefault = _Default("<no default value>")
 
 
 class LinearConstraintValues(NamedTuple):
+    """
+    Container for the result of parsing a linear constraint.
+
+    Attributes
+    ----------
+    constraint_matrix : ndarray
+        The constraint coefficient matrix.
+    constraint_values : ndarray
+        The constraint constant values.
+    variable_names : list[str]
+        The names of the variables in the constraint matrix.
+    """
+
     constraint_matrix: np.ndarray
     constraint_values: np.ndarray
     variable_names: list[str]
@@ -212,14 +235,16 @@ class FormulaManager:
 
     Parameters
     ----------
-    engine : {"patsy", "formulaic"} or None
+    engine : {"patsy", "formulaic"}, optional
         The formula engine to use. If None, the default engine, which appears
-        in the attribute statsmodels.formula.formula_options.engine, is used.
+        in the attribute statsmodels.formula.options.formula_engine, is used.
 
     Raises
     ------
     ValueError
-        If the selected engine is not available.
+        If the selected engine is not "patsy" or "formulaic".
+    ImportError
+        If the selected engine is not installed.
     """
 
     def __init__(self, engine: Literal["patsy", "formulaic"] | None = None):
@@ -237,19 +262,21 @@ class FormulaManager:
 
         Parameters
         ----------
-        engine : {"patsy", "formulaic"} or None
+        engine : {"patsy", "formulaic"}, optional
             The formula engine to use. If None, the default engine, which appears
-            in the attribute statsmodels.formula.formula_options.engine, is used.
+            in the attribute statsmodels.formula.options.formula_engine, is used.
 
         Returns
         -------
         engine : {"patsy", "formulaic"}
-            The selected engine
+            The selected engine.
 
         Raises
         ------
         ValueError
-            If the selected engine is not available.
+            If the selected engine is not "patsy" or "formulaic".
+        ImportError
+            If the selected engine is not installed.
         """
         _engine: Literal["patsy", "formulaic"]
 
@@ -283,7 +310,7 @@ class FormulaManager:
     @property
     def spec(self):
         """
-        Get the model specification. Only available after calling get_arrays.
+        Get the model specification. Only available after calling get_matrices.
         """
         return self._spec
 
@@ -314,8 +341,9 @@ class FormulaManager:
 
         Returns
         -------
-        ndarray
-            A boolean array indicating if data are missing. True if missing.
+        ndarray, Series, or None
+            A boolean array or Series indicating if data are missing, True
+            if missing, or None if get_matrices has not yet been called.
         """
         return self._missing_mask
 
@@ -346,9 +374,9 @@ class FormulaManager:
 
         Returns
         -------
-        {type[ModelSpect], type[DesignInto]}
-            The model specification type of formulaic is ModelSpec.
-            patsy uses DesignInfo.
+        type[ModelSpec] or type[DesignInfo]
+            The model specification type. For formulaic this is ModelSpec;
+            for patsy it is DesignInfo.
         """
         if self._using_patsy:
             return patsy.design_info.DesignInfo
@@ -456,13 +484,13 @@ class FormulaManager:
             The formula to use.
         data : DataFrame, dict, list, recarray
             The data to use when evaluating the formula.
-        eval_env : {int, dict}
+        eval_env : int or dict, optional
             Additional context to use when evaluating the formula.
-        pandas : bool
+        pandas : bool, optional
             Return a DataFrame if true, otherwise return a numpy array.
-        na_action : {NAAction, str}
+        na_action : NAAction or str, optional
             The action to take on missing values.
-        prediction : bool
+        prediction : bool, optional
             True if using the formula for prediction. In this case, only the
             rhs is evaluated using data.
 
@@ -681,7 +709,7 @@ class FormulaManager:
 
         Returns
         -------
-        {EvalEnvironment, dict}
+        EvalEnvironment or dict
             A formula-engine-dependent empty evaluation environment.
         """
         if self._using_patsy:
@@ -716,7 +744,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec : {ModelSpec, DesignInfo}
+        spec : ModelSpec or DesignInfo
             The model specification to check for an intercept term.
 
         Returns
@@ -733,7 +761,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec : {ModelSpec, DesignInfo}
+        spec : ModelSpec or DesignInfo
             The model specification whose terms are searched for the intercept.
 
         Returns
@@ -752,15 +780,15 @@ class FormulaManager:
 
         Parameters
         ----------
-        action : str
+        action : str, optional
             The action to take on missing values, e.g., "drop" or "raise".
-        types : Sequence[Any]
+        types : Sequence[Any], optional
             The types of missing values to consider, e.g., "None" or "NaN".
             Only used when using patsy.
 
         Returns
         -------
-        NAAction | str
+        NAAction or str
             The formula-engine-specific NA action.
 
         Notes
@@ -784,7 +812,7 @@ class FormulaManager:
 
         Returns
         -------
-        {ModelDesc, Formula}
+        ModelDesc or Formula
             The engine-specific model specification.
         """
         if self._using_patsy:
@@ -809,7 +837,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
             The DataFrame with a model specification attached, or the model
             specification itself.
 
@@ -830,7 +858,9 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
+            The DataFrame with a model specification attached, or the model
+            specification itself.
 
         Returns
         -------
@@ -846,7 +876,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
             The DataFrame with a model specification attached or the model
             specification.
 
@@ -869,13 +899,14 @@ class FormulaManager:
         ----------
         frame : DataFrame
             The frame to get the model specification from.
-        optional : bool
+        optional : bool, optional
             Whether to return None if the frame does not have a model specification.
 
         Returns
         -------
-        {ModelSpec, DesignInfo}
-            The engine-specific model specification
+        ModelSpec, DesignInfo, or None
+            The engine-specific model specification, or None if optional is
+            True and frame has no attached model specification.
         """
         if self._using_patsy:
             if optional and not hasattr(frame, "design_info"):
@@ -892,7 +923,7 @@ class FormulaManager:
 
         Parameters
         ----------
-        model_spec : {ModelSpec, DesignInfo}
+        model_spec : ModelSpec or DesignInfo
             The model specification.
         term : Term
             The model term.
@@ -909,11 +940,12 @@ class FormulaManager:
 
     def get_term_name(self, term):
         """
-        Gets the string name of a term
+        Gets the string name of a term.
 
         Parameters
         ----------
         term : Term
+            The term to get the name for.
 
         Returns
         -------
@@ -931,7 +963,9 @@ class FormulaManager:
 
         Parameters
         ----------
-        spec_or_frame : {DataFrame, ModelSpec, DesignInfo}
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
+            The DataFrame with a model specification attached, or the model
+            specification itself.
 
         Returns
         -------
@@ -950,9 +984,9 @@ class FormulaManager:
 
         Parameters
         ----------
-        factor : {EvalFactor, Factor}
+        factor : EvalFactor or Factor
             The factor to get the categories for.
-        model_spec : {ModelSpec, DesignInfo}
+        model_spec : ModelSpec or DesignInfo
             The model specification.
 
         Returns
@@ -974,14 +1008,14 @@ class FormulaManager:
         term : Term
             Either a formulaic Term or a patsy Term.
         factor : EvalFactor or Factor
-            Either a formulaic Factor or a patsy EvalFactor
-        model_spec : engine-specific model specification
+            Either a formulaic Factor or a patsy EvalFactor.
+        model_spec : ModelSpec or DesignInfo
             Either a formulaic ModelSpec or a patsy DesignInfo.
 
         Returns
         -------
         ndarray
-            The contract matrix to use for hypothesis testing.
+            The contrast matrix to use for hypothesis testing.
         """
         if self._using_patsy:
             return model_spec.term_codings[term][0].contrast_matrices[factor].matrix

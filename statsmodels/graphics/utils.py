@@ -150,7 +150,7 @@ def maybe_name_or_idx(idx, model):
 
     Parameters
     ----------
-    idx : {None, int, str, list, tuple}
+    idx : int, str, list, tuple, or None
         The column(s) to look up in `model`.  If None, all columns of
         ``model.exog`` are used.  If an int, it is treated as an integer
         location.  If a str, it is treated as a column name.  If a list or
@@ -162,9 +162,9 @@ def maybe_name_or_idx(idx, model):
 
     Returns
     -------
-    exog_name : {str, list[str]}
+    exog_name : str or list[str]
         The name(s) of the column(s) corresponding to `idx`.
-    exog_idx : {int, list[int]}
+    exog_idx : int or list[int]
         The integer location(s) of the column(s) corresponding to `idx`.
     """
     if idx is None:
@@ -193,13 +193,13 @@ def get_data_names(series_or_dataframe):
 
     Parameters
     ----------
-    series_or_dataframe : {array_like, Series, DataFrame}
+    series_or_dataframe : array_like, Series, or DataFrame
         Input can be an array or pandas-like.  Will handle 1d array-like but
         not 2d.
 
     Returns
     -------
-    {str, list[str]}
+    str or list[str]
         A str for 1d data or a list of strings for 2d data.
     """
     names = getattr(series_or_dataframe, "name", None)

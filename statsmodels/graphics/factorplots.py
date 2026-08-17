@@ -44,7 +44,7 @@ def interaction_plot(
     func : str or callable, optional
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
-    ax : axes, optional
+    ax : AxesSubplot, optional
         Matplotlib axes instance
     plottype : {'b', 'both', 'l', 'line', 's', 'scatter'}, optional
         The type of plot to return. Can be 'l', 's', or 'b'
@@ -60,9 +60,9 @@ def interaction_plot(
         If given, must have length == number of levels in trace
     linestyles : list, optional
         If given, must have length == number of levels in trace.
-    legendloc : {None, str, int}, optional
+    legendloc : str or int, optional
         Location passed to the legend command.
-    legendtitle : {None, str}, optional
+    legendtitle : str, optional
         Title of the legend.
     **kwargs
         These will be passed to the plot command used either plot or scatter.
@@ -198,9 +198,10 @@ def _recode(x, levels):
 
     Parameters
     ----------
-    x : array_like
-        Array-like object of categorically coded data, supporting numpy
-        array methods.
+    x : ndarray or Series
+        Categorically coded data.  If a `Series`, its values are extracted
+        before recoding; otherwise `x` must already be an `ndarray` (it is
+        accessed via ``x.dtype``).
     levels : dict
         Mapping of labels to integer codings.
 

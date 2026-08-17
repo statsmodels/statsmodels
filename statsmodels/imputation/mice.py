@@ -146,19 +146,19 @@ class MICEData:
 
     Parameters
     ----------
-    data : Pandas data frame
+    data : DataFrame
         The data set, which is copied internally.
     perturbation_method : str, optional
         The default perturbation method
     k_pmm : int, optional
         The number of nearest neighbors to use during predictive mean
-        matching.  Can also be specified in `fit`.
-    history_callback : function, optional
+        matching.  Can also be specified in `set_imputer`.
+    history_callback : callable, optional
         A function that is called after each complete imputation
         cycle.  The return value is appended to `history`.  The
         MICEData object is passed as the sole argument to
         `history_callback`.
-    rng : int, array_like or int, numpy.random.Generator, numpy.random.RandomState, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -272,7 +272,7 @@ class MICEData:
 
         Returns
         -------
-        data : array_like
+        data : DataFrame
             An imputed dataset from the MICE chain.
 
         Notes
@@ -350,7 +350,7 @@ class MICEData:
             Determines number of neighboring observations from which
             to randomly sample when using predictive mean matching.
         perturbation_method : str, optional
-            Either 'gaussian' or 'bootstrap'. Determines the method
+            Either 'gaussian' or 'boot'. Determines the method
             for perturbing parameters in the imputation model.  If
             None, uses the default specified at class initialization.
         regularized : bool, optional
@@ -447,20 +447,20 @@ class MICEData:
 
         Returns
         -------
-        endog_obs : DataFrame
+        endog_obs : ndarray
             Observed values of the variable to be imputed.
-        exog_obs : DataFrame
+        exog_obs : ndarray
             Current values of the predictors where the variable to be
             imputed is observed.
-        exog_miss : DataFrame
+        exog_miss : ndarray
             Current values of the predictors where the variable to be
             imputed is missing.
-        init_kwds : dict-like
-            The init keyword arguments for `vname`, processed through Patsy
-            as required.
-        fit_kwds : dict-like
-            The fit keyword arguments for `vname`, processed through Patsy
-            as required.
+        predict_obs_kwds : dict-like
+            The predict keyword arguments for `vname` associated with
+            the observed cases, processed through Patsy as required.
+        predict_miss_kwds : dict-like
+            The predict keyword arguments for `vname` associated with
+            the missing cases, processed through Patsy as required.
         """
 
         formula = self.conditional_formula[vname]
@@ -519,9 +519,9 @@ class MICEData:
 
         Returns
         -------
-        endog : DataFrame
+        endog : ndarray
             Observed values of `vname`.
-        exog : DataFrame
+        exog : ndarray
             Regression design matrix for imputing `vname`.
         init_kwds : dict-like
             The init keyword arguments for `vname`, processed through Patsy
@@ -673,7 +673,7 @@ class MICEData:
             The variable to be plotted on the horizontal axis.
         col2_name : str
             The variable to be plotted on the vertical axis.
-        lowess_args : dictionary, optional
+        lowess_args : dict, optional
             A dictionary of dictionaries, keys are 'ii', 'io', 'oi'
             and 'oo', where 'o' denotes 'observed' and 'i' denotes
             imputed.  See Notes for details.
@@ -1028,6 +1028,18 @@ class MICEData:
         self.params[vname] = self.rng.multivariate_normal(mean=mu, cov=cov)
 
     def perturb_params(self, vname):
+        """
+        Perturb the parameters of the imputation model for one variable
+
+        The parameters are set using the perturbation method (either
+        'gaussian' or 'boot') assigned to `vname`.
+
+        Parameters
+        ----------
+        vname : str
+            The name of the variable whose imputation model
+            parameters are to be perturbed.
+        """
 
         if self.perturbation_method[vname] == "gaussian":
             self._perturb_gaussian(vname)
@@ -1037,6 +1049,14 @@ class MICEData:
             raise ValueError("unknown perturbation method")
 
     def impute(self, vname):
+        """
+        Impute missing values for a single variable
+
+        Parameters
+        ----------
+        vname : str
+            The name of the variable to be imputed.
+        """
         # Wrap this in case we later add additional imputation
         # methods.
         self.impute_pmm(vname)
@@ -1072,6 +1092,11 @@ class MICEData:
     def impute_pmm(self, vname):
         """
         Use predictive mean matching to impute missing values
+
+        Parameters
+        ----------
+        vname : str
+            The name of the variable to be imputed.
 
         Notes
         -----
@@ -1344,6 +1369,43 @@ class MICE:
 
 
 class MICEResults(LikelihoodModelResults):
+    """
+    Results of a MICE analysis
+
+    Holds the parameter estimates and covariance matrix obtained by
+    pooling the results of an analysis model fit to each of a
+    sequence of multiply imputed data sets, along with the fraction
+    of missing information for each parameter.  Instances are
+    returned by `MICE.fit` and `MICE.combine`.
+
+    Attributes
+    ----------
+    params : ndarray
+        The pooled parameter estimates, averaged across the analysis
+        models fit to the imputed data sets.
+    normalized_cov_params : ndarray
+        The pooled covariance matrix of the parameter estimates,
+        normalized by `scale`.
+    scale : float
+        The average scale parameter across the analysis models fit
+        to the imputed data sets.
+    frac_miss_info : ndarray
+        The fraction of missing information for each parameter.
+    exog_names : list of str
+        The names of the explanatory variables in the analysis
+        model.
+    endog_names : list of str
+        The names of the dependent variable(s) in the analysis
+        model.
+    model_class : statsmodels model
+        The model class used to fit the analysis model to each
+        imputed data set.
+
+    See Also
+    --------
+    MICE.fit
+    MICE.combine
+    """
 
     def __init__(self, model, params, normalized_cov_params):
 
@@ -1358,12 +1420,12 @@ class MICEResults(LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals
 
         Returns
         -------
-        smry : Summary instance
+        Summary
             This holds the summary tables and text, which can be
             printed or converted to various output formats.
         """
