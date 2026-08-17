@@ -744,7 +744,7 @@ class VarmaPoly:
             _a = self.ma[1:]
         if _a.shape[0] == 0:
             # no ma lags
-            self.maeigenvalues = np.array([], np.complex)
+            self.maeigenvalues = np.array([], dtype=complex)
             return True
 
         amat = self.stacksquare(_a)
