@@ -28,7 +28,7 @@ class ScoreTestResult(LimitedIterationMixin[float]):
         p-value(s) of the test, based on `distribution`.
     distribution : {"chi2", "norm"}
         Name of the reference distribution used for `pvalue`.
-    k_constraint : int or None
+    k_constraint : int or None, optional
         Number of constraints tested, equal to the degrees of freedom of
         the chi-square distribution. Only set for the joint hypothesis
         test (``distribution="chi2"``), otherwise None.
@@ -162,41 +162,44 @@ def score_test(
 
     Parameters
     ----------
-    exog_extra : None or array_like
+    exog_extra : array_like, tuple of array_like, or None, optional
         Explanatory variables that are jointly tested for inclusion in the
-        model, i.e., omitted variables.
-    params_constrained : array_like
+        model, i.e., omitted variables. A 2-tuple of array_like can be
+        given to jointly test the addition of exogenous regressors to
+        both the mean and a second (e.g., precision or scale) model
+        component.
+    params_constrained : array_like, optional
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
         variables.
-    hypothesis : str, 'joint' (default) or 'separate'
+    hypothesis : {'joint', 'separate'}, optional
         If hypothesis is 'joint', then the chisquare test results for the
         joint hypothesis that all constraints hold is returned.
-        If hypothesis is 'joint', then z-test results for each constraint
+        If hypothesis is 'separate', then z-test results for each constraint
         is returned.
         This is currently only implemented for cov_type="nonrobust".
-    cov_type : str
+    cov_type : str, optional
         Warning: only partially implemented so far, currently only "nonrobust"
         and "HC0" are supported.
         If cov_type is None, then the cov_type specified in fit for the Wald
         tests is used.
         If the cov_type argument is not None, then it will be used instead of
         the Wald cov_type given in fit.
-    cov_kwds : dict or None
+    cov_kwds : dict, optional
         Keyword arguments for the specified `cov_type`.
-    k_constraints : int or None
+    k_constraints : int or None, optional
         Number of constraints that were used in the estimation of params
         restricted relative to the number of exog in the model.
         This must be provided if no exog_extra are given. If exog_extra is
         not None, then k_constraints is assumed to be zero if it is None.
-    r_matrix : array_like or None
+    r_matrix : array_like or None, optional
         Restriction matrix for the constraints. If not provided, it is
         constructed from `self.constraints` or from `exog_extra`.
-    scale : float or None
+    scale : float or None, optional
         Optional scale to use in the score and Hessian calculation, for
         example for the results of a fit_constrained estimation with fixed
         scale.
-    observed : bool
+    observed : bool, optional
         If True, then the observed Hessian is used in calculating the
         covariance matrix of the score. If false then the expected
         information matrix is used. This currently only applies to GLM where
@@ -225,7 +228,7 @@ def score_test(
     Notes
     -----
     Status: experimental, several options are not implemented yet or are not
-    verified yet. Currently available ptions might also still change.
+    verified yet. Currently available options might also still change.
 
     cov_type is 'nonrobust':
 

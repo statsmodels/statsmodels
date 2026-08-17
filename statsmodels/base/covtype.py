@@ -72,9 +72,9 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
     Parameters
     ----------
-    cov_type : str
+    cov_type : str, optional
         The type of robust sandwich estimator to use. See Notes below.
-    use_t : bool
+    use_t : bool, optional
         If true, then the t distribution is used for inference.
         If false, then the normal distribution is used.
     kwds : depends on cov_type
@@ -112,11 +112,11 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
     - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-      ``maxlags`` :  integer, required
+      ``maxlags`` : int, required
         number of lags to use
 
-      ``kernel`` : {callable, str}, optional
-        kernels currently available kernels are ['bartlett', 'uniform'],
+      ``kernel`` : callable or str, optional
+        currently available kernels are ['bartlett', 'uniform'],
         default is Bartlett
 
       ``use_correction``: bool, optional
@@ -124,7 +124,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
     - 'cluster': clustered covariance estimator (CRV1)
 
-      ``groups`` : array_like[int], required :
+      ``groups`` : array_like of int, required
         Integer-valued index of clusters or groups.
 
       ``use_correction``: bool, optional
@@ -150,7 +150,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
     - 'cluster-crv3': clustered covariance estimator (CRV3)
 
-      ``groups`` : array_like[int], required :
+      ``groups`` : array_like of int, required
         Integer-valued index of clusters or groups.
 
       ``use_correction``: bool, optional
@@ -180,7 +180,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
     - 'cluster-jk': clustered covariance estimator via the cluster-jk
 
-      ``groups`` : array_like[int], required :
+      ``groups`` : array_like of int, required
         Integer-valued index of clusters or groups.
 
       ``use_correction``: bool, optional
@@ -214,9 +214,9 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
       ``time`` : array_like, required
         index of time periods
-      ``maxlags`` : integer, required
+      ``maxlags`` : int, required
         number of lags to use
-      ``kernel`` : {callable, str}, optional
+      ``kernel`` : callable or str, optional
         The available kernels are ['bartlett', 'uniform']. The default is
         Bartlett.
       ``use_correction`` : {False, 'hac', 'cluster'}, optional
@@ -234,13 +234,13 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
       specified by group indicators or by increasing time periods. One of
       ``groups`` or ``time`` is required. # TODO: we need more options here
 
-      ``groups`` : array_like[int]
+      ``groups`` : array_like of int
         indicator for groups
-      ``time`` : array_like[int]
+      ``time`` : array_like
         index of time periods
       ``maxlags`` : int, required
         number of lags to use
-      ``kernel`` : {callable, str}, optional
+      ``kernel`` : callable or str, optional
         Available kernels are ['bartlett', 'uniform'], default
         is Bartlett
       ``use_correction`` : {False, 'hac', 'cluster'}, optional

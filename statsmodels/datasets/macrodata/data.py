@@ -56,6 +56,18 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the US macro data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        See DATASET_PROPOSAL.txt for more information.
+
+    Notes
+    -----
+    The macrodata Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     return du.Dataset(data=data, names=list(data.columns))
 

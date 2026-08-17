@@ -48,20 +48,20 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
         The fraction of the penalty given to the L1 penalty term.
     alpha : array_like
         The penalty weight for each coefficient.
-    loglike_kwds : dict-like
+    loglike_kwds : dict
         Keyword arguments for the log-likelihood function.
-    score_kwds : dict-like
+    score_kwds : dict
         Keyword arguments for the score function.
-    hess_kwds : dict-like
+    hess_kwds : dict
         Keyword arguments for the Hessian function.
 
     Returns
     -------
-    nploglike : function
+    nploglike : callable
         The negative penalized log-likelihood function.
-    npscore : function
+    npscore : callable
         The derivative of `nploglike`.
-    nphess : function
+    nphess : callable
         The Hessian of `nploglike`.
     """
 
@@ -237,68 +237,68 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     model : model object
         A statsmodels object implementing ``loglike``, ``score``, and
         ``hessian``.
-    method : {'coord_descent', 'elastic_net', 'l1_slsqp'}
+    method : {'coord_descent', 'elastic_net', 'l1_slsqp'}, optional
         The algorithm used to fit the model.  'coord_descent' and
         'elastic_net' are synonyms and use coordinate descent, which
         supports the full elastic net penalty.  'l1_slsqp' solves a
         smooth constrained reformulation of the L1 problem with slsqp,
         an interior point style method, and only supports the lasso
         penalty (``L1_wt`` must be 1).
-    maxiter : int
+    maxiter : int, optional
         The maximum number of iteration cycles (an iteration cycle
         involves running coordinate descent on all variables).
-    alpha : scalar or array_like
+    alpha : scalar or array_like, optional
         The penalty weight.  If a scalar, the same penalty weight
         applies to all variables in the model.  If a vector, it
         must have the same length as `params`, and contains a
         penalty weight for each coefficient.
-    L1_wt : scalar
+    L1_wt : scalar, optional
         The fraction of the penalty given to the L1 penalty term.
         Must be between 0 and 1 (inclusive).  If 0, the fit is
         a ridge fit, if 1 it is a lasso fit.
-    start_params : array_like
+    start_params : array_like, optional
         Starting values for `params`.
-    cnvrg_tol : scalar
+    cnvrg_tol : scalar, optional
         If `params` changes by less than this amount (in sup-norm)
         in one iteration cycle, the algorithm terminates with
         convergence.
-    zero_tol : scalar
+    zero_tol : scalar, optional
         Any estimated coefficient smaller than this value is
         replaced with zero.
-    refit : bool
+    refit : bool, optional
         If True, the model is refit using only the variables that have
         non-zero coefficients in the regularized fit.  The refitted
         model is not regularized.
-    check_step : bool
+    check_step : bool, optional
         If True, confirm that the first step is an improvement and search
         further if it is not.
-    loglike_kwds : dict-like or None
+    loglike_kwds : dict, optional
         Keyword arguments for the log-likelihood function.
-    score_kwds : dict-like or None
+    score_kwds : dict, optional
         Keyword arguments for the score function.
-    hess_kwds : dict-like or None
+    hess_kwds : dict, optional
         Keyword arguments for the Hessian function.
-    trim_mode : {'auto', 'size', 'off'}
+    trim_mode : {'auto', 'size', 'off'}, optional
         (for method='l1_slsqp')
         If not 'off', trim (set to zero) parameters that would have
         been zero if the solver reached the theoretical minimum.  If
         'auto', trim params using the theoretical optimality
         conditions.  If 'size', trim params if they have very small
         absolute value.
-    auto_trim_tol : float
+    auto_trim_tol : float, optional
         (for method='l1_slsqp')
         Tolerance used when trim_mode is 'auto'.
-    size_trim_tol : float
+    size_trim_tol : float, optional
         (for method='l1_slsqp')
         Tolerance used when trim_mode is 'size'.
-    qc_tol : float
+    qc_tol : float, optional
         (for method='l1_slsqp')
         Print warning and do not allow auto trim when the optimality
         conditions are violated by this much.
-    qc_verbose : bool
+    qc_verbose : bool, optional
         (for method='l1_slsqp')
         If True, print out a full QC report upon failure.
-    acc : float
+    acc : float, optional
         (for method='l1_slsqp')
         Requested accuracy for slsqp.
 
@@ -421,22 +421,22 @@ def _opt_1d(func, grad, hess, model, start, L1_wt, tol,
 
     Parameters
     ----------
-    func : function
+    func : callable
         A smooth function of a single variable to be optimized
         with L1 penalty.
-    grad : function
+    grad : callable
         The gradient of `func`.
-    hess : function
+    hess : callable
         The Hessian of `func`.
     model : statsmodels model
         The model being fit.
-    start : real
+    start : float
         A starting value for the function argument
-    L1_wt : non-negative real
-        The weight for the L1 penalty function.
-    tol : non-negative real
-        A convergence threshold.
-    check_step : bool
+    L1_wt : float
+        The weight for the L1 penalty function.  Must be non-negative.
+    tol : float
+        A convergence threshold.  Must be non-negative.
+    check_step : bool, optional
         If True, check that the first step is an improvement and
         use bisection if it is not.  If False, return after the
         first step regardless.

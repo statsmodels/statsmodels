@@ -19,9 +19,9 @@ class PenalizedMixin:
     ----------
     *args
         Positional arguments for the model super class.
-    penal : None or instance of Penalized function class
+    penal : None or instance of Penalized function class, optional
         If penal is None, then NonePenalty is used.
-    pen_weight : float or None
+    pen_weight : float or None, optional
         Factor for weighting the penalization term.
         If None, then pen_weight is set to nobs.
     **kwds
@@ -168,9 +168,9 @@ class PenalizedMixin:
 
         Parameters
         ----------
-        method : None or str
+        method : str, optional
             Method specifies the scipy optimizer as in nonlinear MLE models.
-        trim : {bool, float}
+        trim : bool or float, optional
             Default is False or None, which uses no trimming.
             If trim is True or a float, then small parameters are set to zero.
             If True, then a default threshold is used. If trim is a float, then

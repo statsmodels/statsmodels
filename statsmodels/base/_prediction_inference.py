@@ -57,9 +57,9 @@ class PredictionResultsBase:
 
         Parameters
         ----------
-        value : array_like
+        value : array_like, optional
             Value under the null hypothesis.
-        alternative : str
+        alternative : str, optional
             'two-sided', 'larger', 'smaller'.
 
         Returns
@@ -204,7 +204,7 @@ class PredictionResultsMonotonic(PredictionResultsBase):
 
         Parameters
         ----------
-        method : {"endpoint", "delta"}
+        method : {"endpoint", "delta"}, optional
             Method for confidence interval.
             If method is "endpoint", then the confidence interval of the
             linear predictor is transformed by the prediction function.
@@ -311,7 +311,7 @@ class PredictionResultsMean(PredictionResultsBase):
 
         Parameters
         ----------
-        method : {"endpoint", "delta"}
+        method : {"endpoint", "delta"}, optional
             Method for confidence interval.
             If method is "endpoint", then the confidence interval of the
             linear predictor is transformed by the prediction function.
@@ -392,7 +392,7 @@ def _get_exog_predict(self, exog=None, transform=True, row_labels=None):
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
 
@@ -400,7 +400,7 @@ def _get_exog_predict(self, exog=None, transform=True, row_labels=None):
     -------
     exog : ndarray
         Prediction exog
-    row_labels : list of str
+    row_labels : list of str or None
         Labels or pandas index for rows of prediction
     """
 
@@ -456,22 +456,22 @@ def get_prediction_glm(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
-    linpred : linear prediction instance
+    linpred : linear prediction instance, optional
         Instance of linear prediction results used for confidence intervals
         based on endpoint transformation.
-    link : instance of link function
+    link : instance of link function, optional
         If no link function is provided, then the `model.family.link` is used.
-    pred_kwds : dict
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models. See the predict method of the
         model for the details.
 
     Returns
     -------
-    prediction_results : generalized_linear_model.PredictionResults
+    prediction_results : PredictionResultsMean
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
@@ -531,20 +531,20 @@ def get_prediction_linear(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
     pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
-    index : slice or array-index
+    index : slice or array-index, optional
         Is used to select rows and columns of cov_params, if the prediction
         function only depends on a subset of parameters.
 
     Returns
     -------
-    prediction_results : PredictionResults
+    prediction_results : PredictionResultsBase
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction.
@@ -604,23 +604,23 @@ def get_prediction_monotonic(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
-    link : instance of link function
+    link : instance of link function, optional
         If no link function is provided, then the `model.family.link` is
         used.
     pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
-    index : slice or array-index
+    index : slice or array-index, optional
         Is used to select rows and columns of cov_params, if the prediction
         function only depends on a subset of parameters.
 
     Returns
     -------
-    prediction_results : PredictionResults
+    prediction_results : PredictionResultsMonotonic
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction.
@@ -685,10 +685,10 @@ def get_prediction_delta(
     ----------
     exog : array_like, optional
         The values for which you want to predict.
-    which : str
+    which : str, optional
         The statistic that is prediction. Which statistics are available
         depends on the model.predict method.
-    average : bool
+    average : bool, optional
         If average is True, then the mean prediction is computed, that is,
         predictions are computed for individual exog and then them mean over
         observation is used.
@@ -704,7 +704,7 @@ def get_prediction_delta(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
     pred_kwds : dict, optional
@@ -714,7 +714,7 @@ def get_prediction_delta(
 
     Returns
     -------
-    prediction_results : generalized_linear_model.PredictionResults
+    prediction_results : PredictionResultsDelta
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
@@ -768,14 +768,14 @@ def get_prediction(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    which : str
+    which : str, optional
         Which statistic is to be predicted. Default is "mean".
         The available statistics and options depend on the model.
         See the model.predict docstring.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
-    average : bool
+    average : bool, optional
         If average is True, then the mean prediction is computed, that is,
         predictions are computed for individual exog and then the average
         over observation is used.
@@ -792,7 +792,7 @@ def get_prediction(
 
     Returns
     -------
-    prediction_results : PredictionResults
+    prediction_results : PredictionResultsBase
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and
         summary dataframe for the prediction.
@@ -882,7 +882,7 @@ def params_transform_univariate(
         link nor transform are provided, the log link is used.
     transform : instance of link function, optional
         Alias for `link`. Not used if `link` is provided.
-    row_labels : list of str or None
+    row_labels : list of str, optional
         If row_labels are provided, then they will replace the generated
         labels.
 
