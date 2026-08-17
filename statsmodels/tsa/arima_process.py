@@ -486,7 +486,7 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
         arma0 = start
     res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)
     arma_app = np.atleast_1d(res[0])
-    ar_app = (np.r_[1, arma_app[: p - 1]],)
+    ar_app = np.r_[1, arma_app[: p - 1]]
     ma_app = np.r_[1, arma_app[p - 1 :]]
     return ar_app, ma_app, res
 
