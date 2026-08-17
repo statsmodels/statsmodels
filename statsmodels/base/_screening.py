@@ -54,7 +54,7 @@ class ScreeningResults:
         Two-dimensional array with batch index in the first column and variable
         index within batch in the second column. They can be used jointly as
         index for the data in the exog_iterator.
-    exog_final_names : list[str]
+    exog_final_names : list of str
         'var<bidx>_<idx>' where `bidx` is the batch index and `idx` is the
         index of the selected column within batch `bidx`.
     history_batches : dict of lists

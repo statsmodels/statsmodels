@@ -903,7 +903,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
-    extra_params_names : list[str], optional
+    extra_params_names : list of str, optional
         Names for additional parameters that are not part of exog, appended
         to `exog_names`.
     **kwds
@@ -2171,7 +2171,7 @@ class LikelihoodModelResults(Results):
             constraint_matrix) tuples in the same form as the automatically
             generated term constraints. Note that this input has not been
             tested.
-        combine_terms : list[str], optional
+        combine_terms : list of str, optional
             Each string in this list is matched to the name of the terms or
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
@@ -2311,12 +2311,12 @@ class LikelihoodModelResults(Results):
             The name of the term for which pairwise comparisons are computed.
             Term names for categorical effects are created by patsy and
             correspond to the main part of the exog names.
-        method : str or list[str], optional
+        method : str or list of str, optional
             The multiple testing p-value correction to apply. The default is
             'hs'. See stats.multipletesting.
         alpha : float, optional
             The significance level for multiple testing reject decision.
-        factor_labels : list[str], optional
+        factor_labels : list of str, optional
             Labels for the factor levels used for pairwise labels. If not
             provided, then the labels from the formula's model_spec are used.
 
@@ -3087,7 +3087,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is "var_xx".
             Must match the number of parameters in the model
         title : str, optional
