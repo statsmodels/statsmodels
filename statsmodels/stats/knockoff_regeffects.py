@@ -60,10 +60,10 @@ class ForwardEffects(RegressionEffects):
     pursuit : bool
         If True, 'basis pursuit' is used, which amounts to performing
         a full regression at each selection step to adjust the working
-        residual vector.  If False (the default), the residual is
-        adjusted by regressing out each selected variable marginally.
-        Setting pursuit=True will be considerably slower, but may give
-        better results when exog is not orthogonal.
+        residual vector.  If False, the residual is adjusted by
+        regressing out each selected variable marginally. Setting
+        pursuit=True will be considerably slower, but may give better
+        results when exog is not orthogonal.
 
     Notes
     -----
@@ -139,11 +139,11 @@ class RegModelEffects(RegressionEffects):
     model_cls : class
         Any model with appropriate fit or fit_regularized
         functions.
-    regularized : bool
+    regularized : bool, optional
         If True, use fit_regularized to fit the model.
-    model_kws : dict
+    model_kws : dict, optional
         Keywords passed to model initializer.
-    fit_kws : dict
+    fit_kws : dict, optional
         Dictionary of keyword arguments for fit or fit_regularized.
     """
 

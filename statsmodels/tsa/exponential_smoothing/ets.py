@@ -1604,7 +1604,7 @@ class ETSResults(base.StateSpaceMLEResults):
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int, a new
             ``RandomState`` instance is created, seeded with `rng`; this

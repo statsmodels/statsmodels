@@ -44,7 +44,8 @@ class RLM(base.LikelihoodModel):
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
-        TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
+        TrimmedMean, Hampel, TukeyBiweight, TukeyQuartic, StudentT, and
+        MQuantileNorm.  The default is HuberT().
         See statsmodels.robust.norms for more information.
     {base._missing_param_doc}
 
@@ -199,7 +200,7 @@ class RLM(base.LikelihoodModel):
         ----------
         resid : ndarray
             The residuals used to estimate the scale.
-        scale_est : str or HuberScale()
+        scale_est : {"mad"} or callable
             The scale estimator requested in the call to `fit`.
 
         Returns
@@ -239,29 +240,29 @@ class RLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        conv : str
+        conv : {"coefs", "dev", "sresid", "weights"}, optional
             Indicates the convergence criteria.
             Available options are "coefs" (the coefficients), "weights" (the
             weights in the iteration), "sresid" (the standardized residuals),
             and "dev" (the un-normalized log-likelihood for the M
             estimator).  The default is "dev".
-        cov : str, optional
-            'H1', 'H2', or 'H3'
+        cov : {"H1", "H2", "H3"}, optional
             Indicates how the covariance matrix is estimated.  Default is 'H1'.
             See rlm.RLMResults for more information.
-        maxiter : int
+        maxiter : int, optional
             The maximum number of iterations to try. Default is 50.
-        scale_est : str or HuberScale()
-            'mad' or HuberScale()
+        scale_est : {"mad"} or callable, optional
             Indicates the estimate to use for scaling the weights in the IRLS.
-            The default is 'mad' (median absolute deviation.  Other options are
-            'HuberScale' for Huber's proposal 2. Huber's proposal 2 has
-            optional keyword arguments d, tol, and maxiter for specifying the
-            tuning constant, the convergence tolerance, and the maximum number
-            of iterations. See statsmodels.robust.scale for more information.
-        tol : float
+            The default is 'mad' (median absolute deviation).  Other options
+            are a `HuberScale` instance for Huber's proposal 2, or any other
+            callable that takes the residuals and returns a scale estimate.
+            Huber's proposal 2 has optional keyword arguments d, tol, and
+            maxiter for specifying the tuning constant, the convergence
+            tolerance, and the maximum number of iterations. See
+            statsmodels.robust.scale for more information.
+        tol : float, optional
             The convergence tolerance of the estimate.  Default is 1e-8.
-        update_scale : Bool
+        update_scale : bool, optional
             If `update_scale` is False then the scale estimate for the
             weights is held constant over the iteration.  Otherwise, it
             is updated for each fit in the iteration.  Default is True.
@@ -565,9 +566,9 @@ class RLMResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals
-        return_fmt : str
+        return_fmt : str, optional
             Unused
 
         Returns
@@ -643,9 +644,9 @@ class RLMResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals
-        float_format : str
+        float_format : str, optional
             Print format for floats in parameters summary
 
         Returns

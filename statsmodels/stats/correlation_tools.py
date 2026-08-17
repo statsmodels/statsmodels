@@ -42,16 +42,16 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     ----------
     corr : ndarray, (k, k)
         initial correlation matrix
-    threshold : float
+    threshold : float, optional
         clipping threshold for smallest eigenvalue, see Notes
-    n_fact : int or float
+    n_fact : int or float, optional
         factor to determine the maximum number of iterations. The maximum
         number of iterations is the integer part of the number of columns in
         the correlation matrix times n_fact.
 
     Returns
     -------
-    corr_new : ndarray, (optional)
+    corr_new : ndarray
         corrected correlation matrix
 
     See Also
@@ -112,12 +112,12 @@ def corr_clipped(corr, threshold=1e-15):
     ----------
     corr : ndarray, (k, k)
         initial correlation matrix
-    threshold : float
+    threshold : float, optional
         clipping threshold for smallest eigenvalue, see Notes
 
     Returns
     -------
-    corr_new : ndarray, (optional)
+    corr_new : ndarray
         corrected correlation matrix
 
     See Also
@@ -187,21 +187,21 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
 
     Parameters
     ----------
-    cov : ndarray, (k,k)
+    cov : array_like, (k,k)
         initial covariance matrix
-    method : str
+    method : {"clipped", "nearest"}, optional
         if "clipped", then the faster but less accurate ``corr_clipped`` is
         used. If "nearest", then ``corr_nearest`` is used
-    threshold : float
+    threshold : float, optional
         clipping threshold for smallest eigen value, see Notes
-    n_fact : int or float
+    n_fact : int or float, optional
         factor to determine the maximum number of iterations in
         ``corr_nearest``. See its doc string
-    return_all : bool
+    return_all : bool, optional
         if False (default), then only the covariance matrix is returned.
         If True, then correlation matrix and standard deviation are
         additionally returned.
-    min_diag : None or float
+    min_diag : None or float, optional
         If None (default), the diagonal of ``cov`` is left unchanged. This
         function converts the covariance matrix to a correlation matrix, which
         is not defined if a diagonal element (variance) is zero or negative and
@@ -315,16 +315,16 @@ def _nmono_linesearch(
         The search direction
     obj_hist : array_like
         Objective function history (must contain at least one value)
-    M : positive int
+    M : positive int, optional
         Number of previous function points to consider (see references
         for details).
-    sig1 : real
+    sig1 : real, optional
         Tuning parameter, see references for details.
-    sig2 : real
+    sig2 : real, optional
         Tuning parameter, see references for details.
-    gam : real
+    gam : real, optional
         Tuning parameter, see references for details.
-    maxiter : int
+    maxiter : int, optional
         The maximum number of iterations; returns None for all outputs
         if convergence does not occur by this point
 
@@ -409,7 +409,7 @@ def _spg_optim(
         The gradient of the objective function
     start : array_like
         The starting point
-    project : function
+    project : callable
         In-place projection of the argument to the domain
         of func.
     maxiter : scalar, optional
@@ -677,25 +677,25 @@ def corr_nearest_factor(
 
     Parameters
     ----------
-    corr : square array
+    corr : ndarray or sparse matrix
         The target matrix (to which the nearest correlation matrix is
         sought).  Must be square, but need not be positive
         semidefinite.
     rank : int
         The rank of the factor structure of the solution, i.e., the
         number of linearly independent columns of X.
-    ctol : positive real
+    ctol : positive real, optional
         Convergence criterion.
-    lam_min : float
+    lam_min : float, optional
         Tuning parameter for spectral projected gradient optimization
         (smallest allowed step in the search direction).
-    lam_max : float
+    lam_max : float, optional
         Tuning parameter for spectral projected gradient optimization
         (largest allowed step in the search direction).
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations in spectral projected gradient
         optimization.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -841,12 +841,12 @@ def cov_nearest_factor_homog(cov, rank, *, rng=None):
 
     Parameters
     ----------
-    cov : array_like
+    cov : ndarray or sparse matrix
         The input array, must be square but need not be positive
         semidefinite
     rank : int
         The rank of the fitted factor structure
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -929,10 +929,10 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Parameters
     ----------
-    data : array_like
+    data : ndarray
         The data from which the row-wise thresholded correlation
         matrix is to be computed.
-    minabs : non-negative real
+    minabs : non-negative real, optional
         The threshold value; correlation coefficients smaller in
         magnitude than minabs are set to zero.  If None, defaults
         to 1 / sqrt(n), see Notes for more information.
@@ -1117,7 +1117,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     kernel : MultivariateKernel instance, optional
         An instance of MultivariateKernel, defaults to
         GaussianMultivariateKernel.
-    bw : array_like or scalar
+    bw : array_like or scalar, optional
         A bandwidth vector, or bandwidth multiplier.  If a 1d array, it
         contains kernel bandwidths for each component of the process, and
         must have length equal to the number of columns of exog.  If a scalar,

@@ -27,6 +27,27 @@ from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 
 
 class DistDependStat(NamedTuple):
+    """
+    Result of :func:`distance_statistics`.
+
+    Parameters
+    ----------
+    test_statistic : float
+        The "basic" test statistic (i.e., the one used when the `emp`
+        method is chosen when calling ``distance_covariance_test()``).
+    distance_correlation : float
+        The distance correlation between `x` and `y`.
+    distance_covariance : float
+        The distance covariance of `x` and `y`.
+    dvar_x : float
+        The distance variance of `x`.
+    dvar_y : float
+        The distance variance of `y`.
+    S : float
+        The mean of the euclidean distances in `x` multiplied by those
+        of `y`. Mostly used internally.
+    """
+
     test_statistic: float
     distance_correlation: float
     distance_covariance: float
@@ -57,13 +78,13 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         `x`. If `y` is 2-D note that the number of columns of `y` (i.e., the
         number of components in the random vector) does not need to match
         the number of columns in `x`.
-    B : int, optional, default=`None`
+    B : int, optional
         The number of iterations to perform when evaluating the null
         distribution of the test statistic when the `emp` method is
         applied (see below). if `B` is `None` than as in [1]_ we set
         `B` to be ``B = 200 + 5000/n``, where `n` is the number of
         observations.
-    method : {'auto', 'emp', 'asym'}, optional, default=auto
+    method : {'auto', 'emp', 'asym'}, optional
         The method by which to obtain the p-value for the test.
 
         - `auto` : Default method. The number of observations will be used to
@@ -73,7 +94,7 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         - `asym` : An asymptotic approximation of the distribution of the test
           statistic is used to find the p-value.
 
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -175,8 +196,8 @@ def _validate_and_tranform_x_and_y(x, y):
 
     Returns
     -------
-    x : array_like, 1-D or 2-D
-    y : array_like, 1-D or 2-D
+    x : ndarray, 2-D
+    y : ndarray, 2-D
 
     Raises
     ------
@@ -220,9 +241,9 @@ def _empirical_pvalue(x, y, B, n, stats, rng):
         The number of iterations when evaluating the null distribution.
     n : int
         Number of observations found in each of `x` and `y`.
-    stats : namedtuple
+    stats : DistDependStat
         The result obtained from calling ``distance_statistics(x, y)``.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -253,7 +274,7 @@ def _asymptotic_pvalue(stats):
 
     Parameters
     ----------
-    stats : namedtuple
+    stats : DistDependStat
         The result obtained from calling ``distance_statistics(x, y)``.
 
     Returns
@@ -290,7 +311,7 @@ def _get_test_statistic_distribution(x, y, B, rng):
     B : int
         The number of iterations to perform when evaluating the null
         distribution.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -299,7 +320,7 @@ def _get_test_statistic_distribution(x, y, B, rng):
 
     Returns
     -------
-    emp_dist : array_like
+    emp_dist : ndarray
         The empirical distribution of the test statistic.
 
     """
@@ -341,21 +362,9 @@ def distance_statistics(x, y, x_dist=None, y_dist=None):
 
     Returns
     -------
-    namedtuple
-        A named tuple of distance dependence statistics (DistDependStat) with
-        the following values:
-
-        - test_statistic : float - The "basic" test statistic (i.e., the one
-          used when the `emp` method is chosen when calling
-          ``distance_covariance_test()``
-        - distance_correlation : float - The distance correlation
-          between `x` and `y`.
-        - distance_covariance : float - The distance covariance of
-          `x` and `y`.
-        - dvar_x : float - The distance variance of `x`.
-        - dvar_y : float - The distance variance of `y`.
-        - S : float - The mean of the euclidean distances in `x` multiplied
-          by those of `y`. Mostly used internally.
+    DistDependStat
+        A named tuple of distance dependence statistics. See
+        :class:`DistDependStat` for the full list of fields.
 
     References
     ----------

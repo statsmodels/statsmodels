@@ -2346,15 +2346,15 @@ def qsturng(p, r, v):
 
     Parameters
     ----------
-    p : (scalar, array_like)
+    p : scalar or array_like
         The cumulative probability value
         p >= .1 and p <=.999
         (values under .5 are not recommended)
-    r : (scalar, array_like)
+    r : scalar or array_like
         The number of samples
         r >= 2 and r <= 200
         (values over 200 are permitted but not recommended)
-    v : (scalar, array_like)
+    v : scalar or array_like
         The sample degrees of freedom
         if p >= .9:
             v >=1 and v <= inf
@@ -2363,7 +2363,7 @@ def qsturng(p, r, v):
 
     Returns
     -------
-    q : (scalar, array_like)
+    q : float or ndarray
         approximation of the Studentized Range
     """
 
@@ -2437,14 +2437,14 @@ def psturng(q, r, v):
 
     Parameters
     ----------
-    q : (scalar, array_like)
+    q : scalar or array_like
         quantile value of Studentized Range
         q >= 0.
-    r : (scalar, array_like)
+    r : scalar or array_like
         The number of samples
         r >= 2 and r <= 200
         (values over 200 are permitted but not recommended)
-    v : (scalar, array_like)
+    v : scalar or array_like
         The sample degrees of freedom
         if the corresponding probability is >= .9:
             v >=1 and v <= inf
@@ -2453,7 +2453,7 @@ def psturng(q, r, v):
 
     Returns
     -------
-    p : (scalar, array_like)
+    p : float or ndarray
         1. - area from zero to q under the Studentized Range
         distribution. When v == 1, p is bound between .001
         and .1, when v > 1, p is bound between .001 and .9.

@@ -44,22 +44,22 @@ class Mediation:
         and the second integer is the position of the exposure variable
         in the mediator model.  If a string is given, it must be the name
         of the exposure variable in both regression models.
-    mediator : {str, int}
+    mediator : {None, str, int}, optional
         The name or column position of the mediator variable in the
         outcome regression model.  If None, infer the name from the
         mediator model formula (if present).
-    moderators : dict
+    moderators : dict, optional
         Map from variable names or index positions to values of
         moderator variables that are held fixed when calculating
         mediation effects.  If the keys are index position they must
         be tuples `(i, j)` where `i` is the index in the outcome model
         and `j` is the index in the mediator model.  Otherwise the
         keys must be variable names.
-    outcome_fit_kwargs : dict-like
+    outcome_fit_kwargs : dict-like, optional
         Keyword arguments to use when fitting the outcome model.
-    mediator_fit_kwargs : dict-like
+    mediator_fit_kwargs : dict-like, optional
         Keyword arguments to use when fitting the mediator model.
-    outcome_predict_kwargs : dict-like
+    outcome_predict_kwargs : dict-like, optional
         Keyword arguments to use when calling predict on the outcome
         model.
 
@@ -326,11 +326,11 @@ class Mediation:
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             Either 'parametric' or 'bootstrap'.
-        n_rep : int
+        n_rep : int, optional
             The number of simulation replications.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -474,7 +474,7 @@ class MediationResults:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals in the
             summary table. The default produces (1 - alpha) confidence
             intervals.

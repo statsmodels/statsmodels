@@ -129,7 +129,7 @@ def _min_max_band(args):
             use_brute : bool
                 Use the brute force optimizer instead of the default
                 differential evolution to find the curves.
-            rng : {None, int, numpy.random.Generator, numpy.random.RandomState}
+            rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
                 Value to pass to scipy.optimize.differential_evolution as
                 its `seed` argument.
 
@@ -232,7 +232,7 @@ def hdrboxplot(
     use_brute : bool
         Use the brute force optimizer instead of the default differential
         evolution to find the curves. Default is False.
-    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         Value to pass to scipy.optimize.differential_evolution as its `seed`
         argument. If an int, a new Generator seeded with that value is used
         by scipy. If a Generator or RandomState instance, that instance is
@@ -243,7 +243,7 @@ def hdrboxplot(
 
            seed has been deprecated. In-line with SPEC-007, use
            rng for passing a random number generator or seed.
-    kernel_rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    kernel_rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         A random number generator or seed to use for the kernel density. If
         None, will use the global RandomState.
 
@@ -252,7 +252,7 @@ def hdrboxplot(
             In release 0.17.0 or after January 2028, whichever comes sooner,
             using None will initialize a new numpy.random.default_rng using
             system entropy.
-    kernel_seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    kernel_seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            kernel_seed has been deprecated. In-line with SPEC-007, use
@@ -429,7 +429,7 @@ def hdrboxplot(
         use_brute : bool
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Value to pass to scipy.optimize.differential_evolution as its
             `seed` argument. If an int, a new Generator seeded with that
             value is used by scipy. If a Generator or RandomState instance,

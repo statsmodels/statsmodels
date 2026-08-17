@@ -31,7 +31,7 @@ hypotheses : list[tuple]
     matrix M (for transforming dependent variables), and right-hand side
     constant matrix constant_C, respectively.
 
-    contrast_L : 2D array or an array of strings
+    contrast_L : ndarray or sequence of str
         Left-hand side contrast matrix for hypotheses testing.
         If 2D array, each row is a hypothesis and each column is an
         independent variable. At least 1 row
@@ -39,14 +39,14 @@ hypotheses : list[tuple]
         If an array of strings, it will be passed to
         patsy.DesignInfo().linear_constraint based on exog_names.
 
-    transform_M : 2D array or an array of strings or None, optional
+    transform_M : ndarray or sequence of str or None, optional
         Left hand side transform matrix.
         If `None` or left out, it is set to a k_endog by k_endog
         identity matrix (i.e., do not transform y matrix).
         If an array of strings, it will be passed to
         patsy.DesignInfo().linear_constraint based on endog_names.
 
-    constant_C : 2D array or None, optional
+    constant_C : ndarray or None, optional
         Right-hand side constant matrix.
         If `None` or left out it is set to a matrix of zeros.
         Must have the same number of rows as contrast_L and the same
@@ -67,9 +67,9 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
 
     Parameters
     ----------
-    endog : array_like
+    endog : ndarray
         Each column is a dependent variable.
-    exog : array_like
+    exog : ndarray
         Each column is an independent variable.
     method : {"svd", "pinv"}, optional
         The fitting method. "svd" uses the singular value decomposition and
@@ -148,7 +148,7 @@ def multivariate_stats(eigenvals,
         Rank of T matrix.
     df_resid : int
         Residual degree of freedom (n_samples minus n_variables of X).
-    tolerance : float
+    tolerance : float, optional
         Eigenvalues smaller than tolerance are considered 0.
 
     Returns
@@ -313,9 +313,11 @@ def _multivariate_test(hypotheses, exog_names, endog_names, fn):
 
     Notes
     -----
-    T = L*inv(X'X)*L'
-    H = M'B'L'*inv(T)*LBM
-    E = M'(Y'Y - B'X'XB)M
+    ::
+
+        T = L*inv(X'X)*L'
+        H = M'B'L'*inv(T)*LBM
+        E = M'(Y'Y - B'X'XB)M
 
     where H and E correspond to the numerator and denominator of a
     univariate F-test. Then find the eigenvalues of inv(H + E)*H from which
@@ -460,7 +462,7 @@ class _MultivariateOLSResults(LikelihoodModelResults):
         Parameters
         ----------
         %(hypotheses_doc)s
-        skip_intercept_test : bool
+        skip_intercept_test : bool, optional
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
@@ -623,7 +625,7 @@ class MultivariateLSResults(LikelihoodModelResults):
         Parameters
         ----------
         %(hypotheses_doc)s
-        skip_intercept_test : bool
+        skip_intercept_test : bool, optional
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
@@ -703,7 +705,7 @@ class MultivariateLSResults(LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             The significance level for the confidence intervals.
         yname_list : list[str], optional
             Restricted list of endogenous variable names to include when
@@ -849,12 +851,18 @@ class MultivariateTestResults:
 
         Parameters
         ----------
-        show_contrast_L : bool
+        show_contrast_L : bool, optional
             Whether to show contrast_L matrix
-        show_transform_M : bool
+        show_transform_M : bool, optional
             Whether to show transform_M matrix
-        show_constant_C : bool
+        show_constant_C : bool, optional
             Whether to show the constant_C
+
+        Returns
+        -------
+        statsmodels.iolib.summary2.Summary
+            Summary instance containing the tables of test statistics for
+            each hypothesis.
         """
         summ = summary2.Summary()
         summ.add_title("Multivariate linear model")

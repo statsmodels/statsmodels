@@ -29,7 +29,8 @@ def partial_project(endog, exog):
 
     Returns
     -------
-    res : instance of Bunch with
+    res : Bunch
+        Instance of ``Bunch`` with
 
         - params : OLS parameter estimates from projection of endog on exog
         - fittedvalues : predicted values of endog given exog
@@ -58,7 +59,7 @@ def cancorr(x1, x2, demean=True, standardize=False):
 
     Parameters
     ----------
-    x1, x2 : ndarrays, 2_D
+    x1, x2 : ndarray, 2-D
         Two 2-dimensional data arrays, observations in rows, variables in
         columns.
     demean : bool, optional
@@ -70,7 +71,7 @@ def cancorr(x1, x2, demean=True, standardize=False):
 
     Returns
     -------
-    ccorr : ndarray, 1d
+    ccorr : ndarray, 1-D
         Canonical correlation coefficients, sorted from largest to smallest.
         Note, that these are the square root of the eigenvalues.
 
@@ -122,7 +123,7 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
 
     Parameters
     ----------
-    x1, x2 : ndarrays, 2_D
+    x1, x2 : ndarray, 2-D
         Two 2-dimensional data arrays, observations in rows, variables in
         columns.
     demean : bool, optional
@@ -134,17 +135,22 @@ def cc_ranktest(x1, x2, demean=True, fullrank=False):
 
     Returns
     -------
-    value : float
-        Value of the test statistic.
-    p-value : float
-        P-value for the null hypothesis that the smallest canonical
-        correlation coefficient is zero, based on the chi-square
-        distribution.
-    df : int
+    value : float or ndarray
+        Value of the LM (Anderson canonical correlations) test statistic.
+    p-value : float or ndarray
+        P-value for the LM test statistic, for the null hypothesis that
+        the smallest canonical correlation coefficient is zero, based on
+        the chi-square distribution.
+    df : int or ndarray
         Degrees of freedom for the chi-square distribution in the
         hypothesis test.
-    ccorr : ndarray, 1d
+    ccorr : ndarray, 1-D
         All canonical correlation coefficients sorted from largest to smallest.
+    wald_value : float or ndarray
+        Value of the Wald (Cragg-Donald) test statistic.
+    wald_pvalue : float or ndarray
+        P-value for the Wald test statistic, based on the chi-square
+        distribution.
 
     Notes
     -----
@@ -188,7 +194,7 @@ def cc_stats(x1, x2, demean=True):
 
     Parameters
     ----------
-    x1, x2 : ndarrays, 2_D
+    x1, x2 : ndarray, 2-D
         Two 2-dimensional data arrays, observations in rows, variables in
         columns.
     demean : bool, optional

@@ -122,16 +122,16 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         Required asymptotic relative efficiency compared to least squares
         at the normal reference distribution. For example, ``eff=0.95`` for
         95% efficiency.
-    kwd : str
+    kwd : str, optional
         Name of keyword for tuning parameter.
-    kwargs : dict or None
+    kwargs : dict or None, optional
         Dict for other keyword parameters.
-    use_jump : bool
+    use_jump : bool, optional
         If False (default), then use computation that require continuous
         psi function.
         If True, then use computation then the psi function can have jump
         discontinuities.
-    bracket : None or tuple
+    bracket : tuple, optional
         Bracket with lower and upper bounds to use for scipy.optimize.brentq.
         If None, than a default bracket, currently [0.1, 10], is used.
 
@@ -197,7 +197,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     Parameters
     ----------
     norm : instance of RobustNorm subclass
-    breakdown : float or iterable of float in (0, 0.5]
+    breakdown : float or iterable of float in (0, 0.5], optional
         Desired breakdown point between 0 and 0.5.
         Default if breakdown is None is a list of breakdown points.
 
@@ -308,7 +308,8 @@ def scale_bias_cov(norm, k_vars):
 
     Returns
     -------
-    scale_bias: float
+    scale_bias : float
+        Scale bias correction term.
     breakdown_point : float
         Breakdown point computed as scale bias divided by max rho.
     """
@@ -471,15 +472,15 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     norm : instance of norm class
     k_vars : int
         Number of variables in multivariate random variable, i.e., dimension.
-    efficiency : float < 1
+    efficiency : float < 1, optional
         Desired asymptotic relative efficiency of mean estimator.
         Default is 0.95.
-    eff_mean : bool
+    eff_mean : bool, optional
         If eff_mean is true (default), then tuning parameter is to achieve
         efficiency of mean estimate.
         If eff_mean is false, then tuning parameter is to achieve efficiency
         of shape estimate.
-    limits : tuple
+    limits : tuple, optional
         Limits for rootfinding with scipy.optimize.brentq.
         In some cases the interval limits for rootfinding can be too small
         and not cover the root. Current default limits are (0.5, 30).
@@ -595,7 +596,7 @@ def tukeybiweight_mvmean_eff(k, eff, eff_mean=True):
         Number of variables in multivariate random variable, i.e., dimension.
     eff : float
         Desired asymptotic relative efficiency of mean estimator.
-    eff_mean : bool
+    eff_mean : bool, optional
         If eff_mean is true (default), then tuning parameter is to achieve
         efficiency of mean estimate.
         If eff_mean is false, then tuning parameter is to achieve efficiency

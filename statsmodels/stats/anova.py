@@ -37,11 +37,11 @@ def anova_single(model, **kwargs):
     model : fitted linear model results instance
         A fitted linear model
     **kwargs
-        typ : int or str {1,2,3} or {"I","II","III"}
+        typ : {1, 2, 3, "I", "II", "III"}, optional
             Type of sum of squares to use.
-        test : str {"F", "Chisq", "Cp"} or None
+        test : {"F", "Chisq", "Cp", None}, optional
             Test statistics to provide. Default is "F".
-        robust : {None, "hc0", "hc1", "hc2", "hc3"}
+        robust : {None, "hc0", "hc1", "hc2", "hc3"}, optional
             Use heteroscedasticity-corrected coefficient covariance matrix.
             If robust covariance is desired, it is recommended to use `hc3`.
 
@@ -121,7 +121,7 @@ def anova1_lm_single(
         Preallocated DataFrame to be filled in with the Anova results.
     n_rows : int
         Number of rows, including the residual row, in `table`.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}
         Test statistic to provide.
     pr_test : str
         Name of the column holding the p-value for `test`, e.g., "PR(>F)".
@@ -194,7 +194,7 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         The model specification describing the terms of `model`.
     n_rows : int
         Number of rows, including the residual row, in the returned table.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}
         Test statistic to provide.
     pr_test : str
         Name of the column holding the p-value for `test`, e.g., "PR(>F)".
@@ -354,14 +354,14 @@ def anova_lm(*args, **kwargs):
     ----------
     *args : fitted linear model results instance
         One or more fitted linear models
-    scale : float
+    scale : float or None, optional
         Estimate of variance, If None, will be estimated from the largest
         model. Default is None.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}, optional
         Test statistics to provide. Default is "F".
-    typ : str or int {"I","II","III"} or {1,2,3},
+    typ : {1, 2, 3, "I", "II", "III"}, optional
         The type of Anova test to perform. Default is I, more see notes.
-    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}, optional
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
 
@@ -544,7 +544,7 @@ class AnovaRM:
         The within-subject factors
     between : list[str]
         The between-subject factors, this is not yet implemented
-    aggregate_func : {None, 'mean', callable}
+    aggregate_func : {None, 'mean', callable}, optional
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will

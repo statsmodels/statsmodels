@@ -147,10 +147,10 @@ def compare_cox(
 
     Parameters
     ----------
-    results_x : Result instance
-        result instance of first model
-    results_z : Result instance
-        result instance of second model
+    results_x : RegressionResults
+        The result instance of first model.
+    results_z : RegressionResults
+        The result instance of second model.
     store : bool, default False
         If true, then the intermediate results are returned.
     result_object : bool, optional
@@ -376,7 +376,7 @@ def pesaran_timmermann(actual, predicted, alternative="two-sided"):
     predicted : array_like
         Forecasted or predicted values. The direction is classified by
         ``predicted > 0``.
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, default "two-sided"
         Alternative hypothesis for the directional accuracy statistic.
 
     Returns
@@ -511,10 +511,10 @@ def compare_encompassing(results_x, results_z, cov_type="nonrobust", cov_kwds=No
 
     Parameters
     ----------
-    results_x : Result instance
-        result instance of first model
-    results_z : Result instance
-        result instance of second model
+    results_x : RegressionResults
+        The result instance of first model.
+    results_z : RegressionResults
+        The result instance of second model.
     cov_type : str, default "nonrobust"
         Covariance type. The default is "nonrobust" which uses the classic
         OLS covariance estimator. Specify one of "HC0", "HC1", "HC2", "HC3"
@@ -1007,7 +1007,7 @@ def acorr_breusch_godfrey(
 
     Parameters
     ----------
-    res : RegressionResults
+    res : Results instance
         Estimation results for which the residuals are tested for serial
         correlation.
     nlags : int, optional
@@ -1155,10 +1155,8 @@ def het_breuschpagan(resid, exog_het, robust=True):
     Parameters
     ----------
     resid : array_like
-        For the Breusch-Pagan test, this should be the residual of a
-        regression. If an array is given in exog, then the residuals are
-        calculated by the an OLS regression or resid on exog. In this case
-        resid should contain the dependent variable. Exog can be the same as x.
+        For the Breusch-Pagan test, this should be an array of residuals
+        from a fitted regression model.
     exog_het : array_like
         This contains variables suspected of being related to
         heteroscedasticity in resid.
@@ -1196,7 +1194,7 @@ def het_breuschpagan(resid, exog_het, robust=True):
 
     This is calculated using the generic formula for LM test using $R^2$
     (Greene, section 17.6) and not with the explicit formula
-    (Greene, section 11.4.3), unless `robust` is set to False.
+    (Greene, section 11.4.3), unless ``robust`` is set to False.
     The degrees of freedom for the p-value assume x is full rank.
 
     References
@@ -1325,9 +1323,8 @@ def het_goldfeldquandt(
         split+drop, where split and drop are the indices (given by rounding
         if specified as fraction). The first sample is [0:split], the
         second sample is [split+drop:]
-    alternative : {"increasing", "decreasing", "two-sided"}
-        The default is increasing. This specifies the alternative for the
-        p-value calculation.
+    alternative : {"increasing", "decreasing", "two-sided"}, default "increasing"
+        This specifies the alternative for the p-value calculation.
     store : bool, default False
         Flag indicating to return the regression results
     result_object : bool, optional
@@ -1458,7 +1455,7 @@ def linear_reset(
     ----------
     res : RegressionResults
         A results instance from a linear regression.
-    power : {int, List[int]}, default 3
+    power : {int, list[int]}, default 3
         The maximum power to include in the model, if an integer. Includes
         powers 2, 3, ..., power. If an list of integers, includes all powers
         in the list.
@@ -1770,9 +1767,9 @@ def linear_lm(resid, exog, func=None):
 
     Parameters
     ----------
-    resid : ndarray
+    resid : array_like
         residuals of a regression
-    exog : ndarray
+    exog : array_like
         exogenous variables for which linearity is tested
     func : callable, default None
         If func is None, then squares are used. func needs to take an array
@@ -2100,9 +2097,9 @@ def breaks_cusumolsresid(resid, ddof=0):
 
     Parameters
     ----------
-    resid : ndarray
+    resid : array_like
         An array of residuals from an OLS estimation.
-    ddof : int
+    ddof : int, default 0
         The number of parameters in the OLS estimation, used as degrees
         of freedom correction for error variance.
 
@@ -2115,7 +2112,7 @@ def breaks_cusumolsresid(resid, ddof=0):
         Probability of observing the data under the null hypothesis of no
         structural change, based on asymptotic distribution which is a Brownian
         Bridge
-    crit: list
+    crit : list
         The tabulated critical values, for alpha = 1%, 5% and 10%.
 
     Notes

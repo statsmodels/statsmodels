@@ -43,14 +43,14 @@ def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
         which is approximately 0.6745.
     axis : int, optional
         The default is 0. Can also be None.
-    center : callable or float
+    center : callable or float, optional
         If a callable is provided, such as the default `np.median` then it
         is expected to be called center(a). The axis argument will be applied
         via np.apply_over_axes. Otherwise, provide a float.
 
     Returns
     -------
-    mad : float
+    float or ndarray
         `mad` = median(abs(`a` - center))/`c`
     """
     a = array_like(a, "a", mindim=None)
@@ -231,7 +231,7 @@ class Huber:
 
         Parameters
         ----------
-        a : ndarray
+        a : array_like
             1d array
         mu : float or None, optional
             If the location mu is supplied then it is not reestimated.
@@ -487,16 +487,16 @@ class MScale:
 
         Parameters
         ----------
-        data : array-like
+        data : array_like
             Data, currently assumed to be 1-dimensional.
-        start_scale : string or float
+        start_scale : str or float, optional
             Starting value of scale or method to compute the starting value.
             Default is using 'mad', no other string options are available.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
-        rtol : float
+        rtol : float, optional
             Relative convergence tolerance.
-        atol : float
+        atol : float, optional
             Absolute convergence tolerance.
 
         Returns
@@ -576,21 +576,21 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
         observations are trimmed, and the same number of the largest
         observations are trimmed. scale estimate is base on a fraction
         (1 - 2 * alpha) of observations.
-    center : 'median', 'mean', 'tmean' or number
-        `center` defines how the trimmed sample is centered. 'median' and
-        'mean' are calculated on the full sample. `tmean` is the trimmed
-        mean, calculated with the trimmed sample. If `center` is array_like
-        then it needs to be scalar or correspond to the shape of the data
-        reduced by axis.
-    axis : int, default is 0
-        axis along which scale is estimated.
-    distr : None, 'raw' or a distribution instance
+    center : {"median", "med", "mean", "tmean"} or array_like, optional
+        `center` defines how the trimmed sample is centered. 'median' (or
+        the alias 'med') and 'mean' are calculated on the full sample.
+        `tmean` is the trimmed mean, calculated with the trimmed sample.
+        If `center` is array_like then it needs to be scalar or correspond
+        to the shape of the data reduced by axis. Default is 'median'.
+    axis : int, optional
+        Axis along which scale is estimated. The default is 0.
+    distr : None, "raw" or distribution instance, optional
         Default if distr is None is the normal distribution `scipy.stats.norm`.
         This is the reference distribution to normalize the scale.
         Note: This cannot be a frozen instance, since it does not have an
         `expect` method.
         If distr is 'raw', then the scale is not normalized.
-    distargs : tuple, optional
+    distargs : tuple or None, optional
         Arguments for the distribution.
 
     Returns
@@ -683,7 +683,7 @@ def _weight_mean(x, c):
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
         Data
     c : float
         Parameter for bisquare weights
@@ -736,27 +736,27 @@ def scale_tau(
     data : array_like, 1-D or 2-D
         If data is 2d, then the location and scale estimates
         are calculated for each column
-    cm : float
+    cm : float, optional
         constant used in call to weight_mean
-    cs : float
+    cs : float, optional
         constant used in call to weight_scale
-    weight_mean : callable
+    weight_mean : callable, optional
         function to calculate weights for weighted mean
-    weight_scale : callable
+    weight_scale : callable, optional
         function to calculate scale, "rho" function
-    normalize : bool
+    normalize : bool, optional
         rescale the scale estimate so it is consistent when the data is
         normally distributed. The computation assumes winsorized (truncated)
         variance.
-    ddof : int
+    ddof : int, optional
         Degrees of freedom used in the denominator of the variance
         computation. Default is 0.
 
     Returns
     -------
-    mean : ndarray
+    mean : float or ndarray
         robust mean
-    std : ndarray
+    std : float or ndarray
         robust estimate of scale (standard deviation)
 
     Notes
@@ -809,25 +809,25 @@ def _scale_iter(
     ----------
     data : array_like
         Data, currently assumed to be 1-dimensional.
-    scale0 : {"mad", float}
+    scale0 : {"mad", float}, optional
         Starting value of scale or method to compute the starting value.
         Default is using 'mad', no other string options are available.
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations.
-    rtol : float
+    rtol : float, optional
         Relative convergence tolerance.
-    atol : float
+    atol : float, optional
         Absolute convergence tolerance.
-    meef_scale : callable
+    meef_scale : callable, optional
         Function that computes the moment condition (rho or weight
         function) used for estimating scale.
-    scale_bias : float
+    scale_bias : float, optional
         Factor in moment condition to obtain fisher consistency of the
         scale estimate at the normal distribution.
-    iter_method : {"rho", "weights"}
+    iter_method : {"rho", "weights"}, optional
         Method used in the iteration. "rho" uses the rho function
         directly, otherwise a weighted sum of squares is used.
-    ddof : int
+    ddof : int, optional
         Degrees of freedom used in the denominator of the variance
         computation. Default is 0.
 

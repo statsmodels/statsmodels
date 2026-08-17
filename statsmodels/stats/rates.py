@@ -99,16 +99,16 @@ def test_poisson(
     nobs : array_like
         Currently this is total exposure time of the count variable.
         This will likely change.
-    value : float, array_like
+    value : float or array_like
         This is the value of poisson rate under the null hypothesis.
-    method : str
-        Method to use for confidence interval.
+    method : str, optional
+        Method to use for the hypothesis test.
         This is required, there is currently no default method.
         See Notes for available methods.
-    alternative : {'two-sided', 'smaller', 'larger'}
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         Alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
-    dispersion : float
+    dispersion : float, optional
         Dispersion scale coefficient for Poisson QMLE. Default is that the
         data follows a Poisson distribution. Dispersion different from 1
         corresponds to excess-dispersion in Poisson quasi-likelihood (GLM).
@@ -137,6 +137,7 @@ def test_poisson(
       this uses numerical inversion of the test function. not vectorized.
     - "sqrt" : based on square root transformed counts
     - "sqrt-a" based on Anscombe square root transformation of counts + 3/8.
+    - "sqrt-v" based on Vandenbroucke square root transformation of counts.
 
     See Also
     --------
@@ -248,13 +249,13 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     exposure : array_like
         Currently this is total exposure time of the count variable.
         This will likely change.
-    method : str
+    method : str, optional
         Method to use for confidence interval.
         This is required, there is currently no default method.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         Default: "two-sided".
         Specifies whether to calculate a two-sided or one-sided confidence
         interval.
@@ -455,21 +456,21 @@ def tolerance_int_poisson(
         Observed count, number of events.
     exposure : array_like
         Currently this is total exposure time of the count variable.
-    prob : float in (0, 1)
+    prob : float in (0, 1), optional
         Probability of poisson interval, often called "content".
         With known parameters, each tail would have at most probability
         ``1 - prob / 2`` in the two-sided interval.
-    exposure_new : float
+    exposure_new : float, optional
         Exposure of the new or predicted observation.
-    method : str
+    method : str, optional
         Method to used for confidence interval of the estimate of the
         poisson rate, used in `confint_poisson`.
         This is required, there is currently no default method.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         The tolerance interval can be two-sided or one-sided.
         Alternative "larger" provides the upper bound of the confidence
         interval, larger counts are outside the interval.
@@ -546,17 +547,17 @@ def confint_quantile_poisson(
     prob : float in (0, 1)
         Probability for the quantile, e.g., 0.95 to get the upper 95% quantile.
         With known mean mu, the quantile would be poisson.ppf(prob, mu).
-    exposure_new : float
+    exposure_new : float, optional
         Exposure of the new or predicted observation.
-    method : str
+    method : str, optional
         Method to used for confidence interval of the estimate of the
         poisson rate, used in `confint_poisson`.
         This is required, there is currently no default method.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         The tolerance interval can be two-sided or one-sided.
         Alternative "larger" provides the upper bound of the confidence
         interval, larger counts are outside the interval.
@@ -614,12 +615,12 @@ def _invert_test_confint(
         Observed count, number of events.
     nobs : array_like
         Total exposure time of the count variable.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
-    method : str
+    method : str, optional
         Method to use for the p-value in the inverted hypothesis test.
-    method_start : str
+    method_start : str, optional
         Method used to compute the starting confidence interval for the
         numerical inversion.
 
@@ -663,15 +664,15 @@ def _invert_test_confint_2indep(
         Number of events in second sample, control group.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
-    method : str
+    method : str, optional
         Method to use for the p-value in the inverted hypothesis test.
-    compare : {'diff', 'ratio'}
+    compare : {'diff', 'ratio'}, optional
         Whether the confidence interval is for the difference or the ratio
         of the two rates.
-    method_start : str
+    method_start : str, optional
         Method used to compute the starting confidence interval for the
         numerical inversion.
 
@@ -830,10 +831,10 @@ def test_poisson_2indep(
         Number of events in second sample, control group.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    value : float
+    value : float, optional
         Value of the ratio or difference of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e., 1 for ratio and 0 for diff.
-    method : string
+    method : str, optional
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
 
@@ -857,22 +858,22 @@ def test_poisson_2indep(
         - 'wald',
         - 'waldccv'
         - 'score'
-        - 'etest-score' or 'etest: etest with score test statistic
+        - 'etest-score' or 'etest': etest with score test statistic
         - 'etest-wald': etest with wald test statistic
 
-    compare : {'diff', 'ratio'}
+    compare : {'diff', 'ratio'}, optional
         Default is "ratio".
         If compare is `ratio`, then the hypothesis test is for the
         rate ratio defined by ratio = rate1 / rate2.
         If compare is `diff`, then the hypothesis test is for
         diff = rate1 - rate2.
-    alternative : {"two-sided" (default), "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         The alternative hypothesis, H1, has to be one of the following
 
         - 'two-sided': H1: ratio, or diff, of rates is not equal to value
         - 'larger' :   H1: ratio, or diff, of rates is larger than value
         - 'smaller' :  H1: ratio, or diff, of rates is smaller than value
-    etest_kwds : dictionary
+    etest_kwds : dict, optional
         Additional optional parameters to be passed to the etest_poisson_2indep
         function, namely y_grid.
 
@@ -1093,9 +1094,9 @@ def _score_diff(y1, n1, y2, n2, value=0, return_cmle=False):
         Number of events in second sample.
     n2 : array_like
         Total exposure in second sample.
-    value : float
+    value : float, optional
         Value of the difference of the two rates under the null hypothesis.
-    return_cmle : bool
+    return_cmle : bool, optional
         If True, also return the constrained maximum likelihood estimates of
         the two rates.
 
@@ -1168,25 +1169,25 @@ def etest_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    value : float
+    value : float, optional
         Value of the ratio or diff of 2 independent rates under the null
         hypothesis. Default is equal rates, i.e., 1 for ratio and 0 for diff.
-    method : {"score", "wald"}
+    method : {"score", "wald"}, optional
         Method for the test statistic that defines the rejection region.
-    compare : {'diff', 'ratio'}
+    compare : {'diff', 'ratio'}, optional
         Default is "ratio".
         If compare is `ratio`, then the hypothesis test is for the
         rate ratio defined by ratio = rate1 / rate2.
         If compare is `diff`, then the hypothesis test is for
         diff = rate1 - rate2.
-    alternative : string
+    alternative : {"two-sided", "larger", "smaller"}, optional
         The alternative hypothesis, H1, has to be one of the following
 
         - 'two-sided': H1: ratio of rates is not equal to value (default)
         - 'larger' :   H1: ratio of rates is larger than value
         - 'smaller' :  H1: ratio of rates is smaller than value
 
-    y_grid : None or 1-D ndarray
+    y_grid : array_like, optional
         Grid values for counts of the Poisson distribution used for computing
         the pvalue. By default truncation is based on an upper tail Poisson
         quantiles.
@@ -1388,7 +1389,7 @@ def tost_poisson_2indep(
         Total exposure (time * subjects) in second sample.
     low, upp : float
         Equivalence margin for the ratio or difference of Poisson rates.
-    method : string
+    method : str, optional
         TOST uses ``test_poisson_2indep`` and has the same methods.
 
         ratio:
@@ -1414,7 +1415,7 @@ def tost_poisson_2indep(
         - 'etest-score' or 'etest': etest with score test statistic
         - 'etest-wald': etest with wald test statistic
 
-    compare : {'diff', 'ratio'}
+    compare : {'diff', 'ratio'}, optional
         Default is "ratio".
         If compare is `ratio`, then the equivalence test is for the
         rate ratio defined by ratio = rate1 / rate2.
@@ -1550,9 +1551,9 @@ def nonequivalence_poisson_2indep(
         Total exposure (time * subjects) in second sample.
     low, upp : float
         Equivalence margin for the ratio or difference of Poisson rates.
-    method : string
+    method : str, optional
         TOST uses ``test_poisson_2indep`` and has the same methods.
-    compare : {'diff', 'ratio'}
+    compare : {'diff', 'ratio'}, optional
         Default is "ratio".
         If compare is `ratio`, then the test is for the rate ratio defined
         by ratio = rate1 / rate2.
@@ -1650,7 +1651,7 @@ def confint_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    method : string
+    method : str, optional
         Method for the test statistic and the p-value. Defaults to `'score'`.
         see Notes.
 
@@ -1679,16 +1680,16 @@ def confint_poisson_2indep(
         - 'score'
         - 'mover'
 
-    compare : {'diff', 'ratio'}
+    compare : {'diff', 'ratio'}, optional
         Default is "ratio".
         If compare is `diff`, then the hypothesis test is for
         diff = rate1 - rate2.
         If compare is `ratio`, then the hypothesis test is for the
         rate ratio defined by ratio = rate1 / rate2.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
-    method_mover : str
+    method_mover : str, optional
         Method to used for the score confidence interval of the individual
         rates in the 'mover' method.
 
@@ -1932,29 +1933,29 @@ def power_poisson_ratio_2indep(
         alternative hypothesis.
     nobs1 : float or int
         Number of observations in sample 1.
-    nobs_ratio : float
+    nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    exposure : float
+    exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    value : float
+    value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    alpha : float in interval (0,1)
+    alpha : float in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float
+    dispersion : float, optional
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
-    alternative : {'smaller', 'two-sided', 'larger'}
+    alternative : {'smaller', 'two-sided', 'larger'}, optional
         Alternative hypothesis whether the power is calculated for a
         one-sided or two-sided test. Default is 'smaller'.
-    method_var : {"score", "alt"}
+    method_var : {"score", "alt"}, optional
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative can be either equal to the rates under the
         alternative ``method_var="alt"``, or estimated under the constrained
         of the null hypothesis, ``method_var="score"``.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
 
@@ -2103,24 +2104,24 @@ def power_equivalence_poisson_2indep(
         Lower equivalence margin for the rate ratio, rate1 / rate2.
     upp : float
         Upper equivalence margin for the rate ratio, rate1 / rate2.
-    nobs_ratio : float
+    nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    exposure : float
+    exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    alpha : float in interval (0,1)
+    alpha : float in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float
+    dispersion : float, optional
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
-    method_var : {"score", "alt"}
+    method_var : {"score", "alt"}, optional
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative, can be either equal to the rates under
         the alternative ``method_var="alt"``, or estimated under the
         constrained of the null hypothesis, ``method_var="score"``.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
 
@@ -2213,13 +2214,13 @@ def _power_equivalence_het_v0(
         Effect size relative to the upper equivalence margin.
     nobs : float or int
         Number of observations.
-    alpha : float in interval (0, 1)
+    alpha : float in interval (0, 1), optional
         Significance level of the test.
-    std_null_low : float
+    std_null_low : float, optional
         Standard deviation under the null hypothesis at the lower margin.
-    std_null_upp : float
+    std_null_upp : float, optional
         Standard deviation under the null hypothesis at the upper margin.
-    std_alternative : float
+    std_alternative : float, optional
         Standard deviation under the alternative hypothesis.
 
     Returns
@@ -2261,13 +2262,13 @@ def _power_equivalence_het(
         Effect size relative to the upper equivalence margin.
     nobs : float or int
         Number of observations.
-    alpha : float in interval (0, 1)
+    alpha : float in interval (0, 1), optional
         Significance level of the test.
-    std_null_low : float
+    std_null_low : float, optional
         Standard deviation under the null hypothesis at the lower margin.
-    std_null_upp : float
+    std_null_upp : float, optional
         Standard deviation under the null hypothesis at the upper margin.
-    std_alternative : float
+    std_alternative : float, optional
         Standard deviation under the alternative hypothesis.
 
     Returns
@@ -2384,23 +2385,23 @@ def power_poisson_diff_2indep(
         alternative hypothesis.
     nobs1 : float or int
         Number of observations in sample 1.
-    nobs_ratio : float
+    nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    alpha : float in interval (0,1)
+    alpha : float in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    value : float
+    value : float, optional
         Difference between rates 1 and 2 under the null hypothesis.
-    method_var : {"score", "alt"}
+    method_var : {"score", "alt"}, optional
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative, can be either equal to the rates under
         the alternative ``method_var="alt"``, or estimated under the
         constrained of the null hypothesis, ``method_var="score"``.
-    alternative : {'two-sided', 'larger', 'smaller'}
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
 
@@ -2478,11 +2479,11 @@ def _var_cmle_negbin(rate1, rate2, nobs_ratio, exposure=1, value=1, dispersion=0
         Poisson or negative binomial rate for the second sample.
     nobs_ratio : float
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    exposure : float
+    exposure : float, optional
         Exposure for each observation.
-    value : float
+    value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    dispersion : float
+    dispersion : float, optional
         Dispersion parameter for the Negative Binomial distribution.
 
     Returns
@@ -2584,30 +2585,30 @@ def power_negbin_ratio_2indep(
         alternative hypothesis.
     nobs1 : float or int
         Number of observations in sample 1.
-    nobs_ratio : float
+    nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    exposure : float
+    exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    value : float
+    value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    alpha : float in interval (0,1)
+    alpha : float in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float >= 0.
+    dispersion : float >= 0., optional
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
-    alternative : {'two-sided', 'larger', 'smaller'}
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
-    method_var : {"score", "alt", "ftotal"}
+    method_var : {"score", "alt", "ftotal"}, optional
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative, can be either equal to the rates under the
         alternative ``method_var="alt"``, or estimated under the constrained
         of the null hypothesis, ``method_var="score"``, or based on a moment
         constrained estimate, ``method_var="ftotal"``. see references.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
 
@@ -2718,24 +2719,24 @@ def power_equivalence_neginb_2indep(
         Lower equivalence margin for the rate ratio, rate1 / rate2.
     upp : float
         Upper equivalence margin for the rate ratio, rate1 / rate2.
-    nobs_ratio : float
+    nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    exposure : float
+    exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    alpha : float in interval (0,1)
+    alpha : float in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float >= 0.
+    dispersion : float >= 0., optional
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
-    method_var : {"score", "alt", "ftotal"}
+    method_var : {"score", "alt", "ftotal"}, optional
         The variance of the test statistic for the null hypothesis given the
         rates under the alternative, can be either equal to the rates under the
         alternative ``method_var="alt"``, or estimated under the constrained
         of the null hypothesis, ``method_var="score"``, or based on a moment
         constrained estimate, ``method_var="ftotal"``. see references.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
 

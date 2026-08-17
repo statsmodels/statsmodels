@@ -76,12 +76,12 @@ class BetaModel(GenericLikelihoodModel):
         is the number of regressors. An intercept is not included by default
         and should be added by the user (models specified using a formula
         include an intercept by default). See `statsmodels.tools.add_constant`.
-    exog_precision : array_like
+    exog_precision : array_like, optional
         2d array of variables for the precision.
-    link : link
+    link : a link instance, optional
         Any link in sm.families.links for mean, should have range in
         interval [0, 1]. Default is logit-link.
-    link_precision : link
+    link_precision : a link instance, optional
         Any link in sm.families.links for precision, should have
         range in positive line. Default is log-link.
     **kwds : extra keywords
@@ -199,11 +199,11 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : array_like
             The model parameters.
-        exog : array_like
+        exog : array_like, optional
             Array of predictor variables for mean.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision parameter.
-        which : str
+        which : str, optional
             Statistic to predict. Default is "mean".
 
             - "mean" : mean, conditional expectation E(endog | exog)
@@ -265,7 +265,7 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : array_like
             The model parameters.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision.
 
         Returns
@@ -291,9 +291,9 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : array_like
             The model parameters.
-        exog : array_like
+        exog : array_like, optional
             Array of predictor variables for mean.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision.
 
         Returns
@@ -484,10 +484,10 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : ndarray
             Parameter at which score is evaluated.
-        return_hessian : bool
+        return_hessian : bool, optional
             If False, then only score_factors are returned
             If True, the both score and hessian factors are returned
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is returned (default).
             If False, then the expected information matrix is returned.
 
@@ -594,7 +594,7 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : ndarray
             Parameter at which Hessian is evaluated.
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is returned (default).
             If False, then the expected information matrix is returned.
 
@@ -627,7 +627,7 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : ndarray
             Parameter at which Hessian is evaluated.
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is returned (default).
             If False, then the expected information matrix is returned.
 
@@ -648,9 +648,9 @@ class BetaModel(GenericLikelihoodModel):
 
         Parameters
         ----------
-        niter : int
+        niter : int, optional
             Number of iterations of WLS approximation
-        return_intermediate : bool
+        return_intermediate : bool, optional
             If False (default), then only the preliminary parameter estimate
             will be returned.
             If True, then also the two results instances of the WLS estimate
@@ -661,10 +661,12 @@ class BetaModel(GenericLikelihoodModel):
         -------
         sp : ndarray
             start parameters for the optimization
-        res_m2 : results instance (optional)
+        res_m2 : results instance, optional
             Results instance for the WLS regression of the mean function.
-        res_p2 : results instance (optional)
-            Results instance for the WLS regression of the precision function.
+            Only returned if `return_intermediate` is True.
+        res_p2 : results instance, optional
+            Results instance for the WLS regression of the precision
+            function. Only returned if `return_intermediate` is True.
 
         Notes
         -----
@@ -713,14 +715,14 @@ class BetaModel(GenericLikelihoodModel):
 
         Parameters
         ----------
-        start_params : array-like
+        start_params : array_like, optional
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
-        maxiter : integer
+        maxiter : int, optional
             The maximum number of iterations
-        disp : bool
+        disp : bool, optional
             Show convergence stats.
-        method : str
+        method : str, optional
             The optimization method to use.
         kwds :
             Keyword arguments for the optimizer.
@@ -788,7 +790,7 @@ class BetaModel(GenericLikelihoodModel):
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray, 2d
             The derivative of the score_obs with respect to endog.
         """
         from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
@@ -814,9 +816,9 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : array_like
             The model parameters.
-        exog : array_like
+        exog : array_like, optional
             Array of predictor variables for mean.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision.
 
         Returns
@@ -839,9 +841,9 @@ class BetaModel(GenericLikelihoodModel):
         ----------
         params : array_like
             The model parameters.
-        exog : array_like
+        exog : array_like, optional
             Array of predictor variables for mean.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision.
 
         Returns
@@ -918,11 +920,11 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
 
         Parameters
         ----------
-        exog : array_like
+        exog : array_like, optional
             Array of predictor variables for mean.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision.
-        transform : bool
+        transform : bool, optional
             If transform is True and formulas have been used, then predictor
             ``exog`` is passed through the formula processing. Default is True.
 
@@ -944,11 +946,11 @@ class BetaResults(GenericLikelihoodModelResults, _LLRMixin):
 
         Parameters
         ----------
-        exog : array_like
+        exog : array_like, optional
             Array of predictor variables for mean.
-        exog_precision : array_like
+        exog_precision : array_like, optional
             Array of predictor variables for precision.
-        transform : bool
+        transform : bool, optional
             If transform is True and formulas have been used, then predictor
             ``exog`` is passed through the formula processing. Default is True.
 

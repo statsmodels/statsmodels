@@ -103,7 +103,7 @@ def coef_normalize_cov_truncated(frac, k_vars):
     ----------
     frac : float in (0, 1)
         Fraction (probability) of observations that are not trimmed.
-    k_vars : integer
+    k_vars : int
         Number of variables, i.e., dimension of multivariate random variable.
 
     Returns
@@ -174,10 +174,10 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
         Location, mean or center of the data.
     cov : ndarray
         Covariance for computing Mahalanobis distance.
-    trim_frac : float in (0, 1)
+    trim_frac : float in (0, 1), optional
         This is the coverage, (1 - trim_frac) is tail probability for chi2
         distribution. (todo: change name)
-    ddof : int or float
+    ddof : int or float, optional
         Delta degrees of freedom used for trimmed Pearson covariance
         computed with `np.cov`.
 
@@ -222,13 +222,13 @@ def _rescale(x, loc, cov, prob=0.5):
 
     Parameters
     ----------
-    x : array-like
+    x : array_like
         Sample data, 2-dim with observation in rows.
     loc : ndarray
         Mean or center of data.
     cov : ndarray
         Covariance estimate.
-    prob : float
+    prob : float, optional
         Probability used to match the median of the Mahalanobis distance
         with the corresponding chi-square quantile. Currently only
         prob=0.5 is supported.
@@ -265,15 +265,15 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
     ----------
     d : array_like, 1-D
         Array of squared standardized residuals or Mahalanobis distance.
-    distr : None or distribution instance
+    distr : distribution instance, optional
         Reference distribution of d, needs cdf and ppf methods.
         If None, then chisquare with k_endog degrees of freedom is
         used. Otherwise, it should be a callable that provides the
         cdf function.
-    k_endog : int or float
+    k_endog : int or float, optional
         Used only if distr is None. In that case, it provides the degrees
         of freedom for the chisquare distribution.
-    trim_prob : float in (0.5, 1)
+    trim_prob : float in (0.5, 1), optional
         Threshold for the tail probability at which the search for
         trimming or outlier fraction starts.
 
@@ -346,16 +346,16 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data with observation in rows. Data is assumed to be
         already centered.
-    cov : None or ndarray
+    cov : ndarray, optional
         Covariance matrix used in computing distance.
         This is only used if cov_inv is None.
-    cov_inv : None or ndarray
+    cov_inv : ndarray, optional
         Inverse covariance matrix used in computing distance.
         One of cov and cov_inv needs to be provided.
-    sqrt : bool
+    sqrt : bool, optional
         If False, then the squared distance is returned.
         If True, then the square root is returned.
 
@@ -390,7 +390,7 @@ def cov_gk1(x, y, scale_func=mad):
         Data array.
     y : ndarray
         Data array.
-    scale_func : callable
+    scale_func : callable, optional
         Scale function used in computing covariance.
         Default is median absolute deviation, MAD.
 
@@ -410,9 +410,9 @@ def cov_gk(data, scale_func=mad):
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         Multivariate data array with observations in rows.
-    scale_func : callable
+    scale_func : callable, optional
         Scale function used in computing covariance.
         Default is median absolute deviation, MAD.
 
@@ -505,34 +505,34 @@ def cov_ogk(
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    maxiter : int
+    maxiter : int, optional
         Number of iteration steps. According to Maronna and Zamar the
         estimate doesn't improve much after the second iteration and the
         iterations do not converge.
-    scale_func : callable
+    scale_func : callable, optional
         Scale function over axis=0 used in computing covariance.
         Default is median absolute deviation, MAD.
-    cov_func : callable
+    cov_func : callable, optional
         Bivariate covariance function. Default is GK.
-    loc_func : callable
+    loc_func : callable, optional
         Function to compute mean or center over axis=0.
-    reweight : float in (0, 1) or None
+    reweight : float in (0, 1) or None, optional
         API for this will change.
         If reweight is None, then the reweighting step is skipped.
         Otherwise, reweight is the chisquare probability beta for the
         trimming based on estimated robust distances.
         Hard-rejection is currently the only weight function.
-    rescale : bool
+    rescale : bool, optional
         If rescale is true, then reweighted covariance is rescaled to be
         consistent at normal distribution.
         This only applies if reweight is not None.
-    rescale_raw : bool
+    rescale_raw : bool, optional
         If rescale_raw is true, then the raw, non-reweighted covariance is
         rescaled to be consistent at normal distribution.
-    ddof : int
+    ddof : int, optional
         Degrees of freedom correction for the reweighted sample
         covariance.
 
@@ -668,15 +668,15 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Data array with observations in rows and variables in columns.
-    start_cov : None or ndarray
+    start_cov : ndarray, optional
         Starting covariance for iterative solution.
-    normalize : False or string
+    normalize : {False, "trace", "det", "normal", "weights"}, optional
         If normalize is False (default), then the unscaled tyler scatter matrix
         is returned.
 
-        Three types of normalization, i.e., rescaling are available by defining
+        Four types of normalization, i.e., rescaling are available by defining
         string option:
 
         - "trace" :
@@ -692,9 +692,9 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
           The scatter matrix is rescaled by the sum of weights.
           See Ollila et al 2023.
 
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations to find the solution.
-    eps : float
+    eps : float, optional
         Convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
@@ -800,20 +800,20 @@ def cov_tyler_regularized(
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         Data array with observations in rows and variables in columns.
-    start_cov : None or ndarray
+    start_cov : ndarray, optional
         Starting covariance for iterative solution.
-    normalize : bool
+    normalize : bool, optional
         If True, then the scatter matrix is normalized to have trace equal
         to the number of columns in the data.
-    shrinkage_factor : None or float in [0, 1]
+    shrinkage_factor : float in [0, 1], optional
         Shrinkage for the scatter estimate. If it is zero, then no shrinkage
         is performed. If it is None, then the shrinkage factor will be
         determined by a plugin estimator.
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations to find the solution.
-    eps : float
+    eps : float, optional
         Convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
@@ -916,24 +916,24 @@ def cov_tyler_pairs_regularized(
     ----------
     data_iterator : restartable iterator
         Needs to provide two elements xi and xj per iteration.
-    start_cov : None or ndarray
+    start_cov : ndarray, optional
         Starting covariance for iterative solution.
-    normalize : bool
+    normalize : bool, optional
         If True, then the scatter matrix is normalized to have trace equal
         to the number of columns in the data.
-    shrinkage_factor : None or float in [0, 1]
+    shrinkage_factor : float in [0, 1], optional
         Shrinkage for the scatter estimate. If it is zero, then no shrinkage
         is performed. If it is None, then the shrinkage factor will be
         determined by a plugin estimator.
-    nobs : int
+    nobs : int, optional
         Number of observations, needed because data_iterator does not
         provide its length.
-    k_vars : int
+    k_vars : int, optional
         Number of variables, needed because data_iterator does not provide
         the dimension of the data.
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations to find the solution.
-    eps : float
+    eps : float, optional
         Convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
@@ -1040,13 +1040,13 @@ def cov_weighted(
         No missing value handling.
     weights : ndarray, 1-D
         Weights array with length equal to the number of observations.
-    center : None or ndarray (optional)
+    center : ndarray, optional
         If None, then the weighted mean is subtracted from the data.
         If center is provided, then it is used instead of the
         weighted mean.
-    weights_cov : None, ndarray or "det" (optional)
+    weights_cov : None, ndarray or "det", optional
         If None, then the same weights as for the mean are used.
-    weights_cov_denom : None, float or "det" (optional)
+    weights_cov_denom : float or "det", optional
         Specifies the denominator for the weighted covariance.
         If None, then the sum of weights - ddof are used and the covariance is
         an average cross product.
@@ -1056,7 +1056,7 @@ def cov_weighted(
         without averaging or scaling (sum of squares).
         Otherwise it is used directly as denominator after subtracting
         ddof.
-    ddof : int or float
+    ddof : int or float, optional
         Covariance degrees of freedom correction, only used if
         weights_cov_denom is None or a float.
 
@@ -1161,9 +1161,9 @@ def weights_quantile(distance, frac=0.5, rescale=True):
     ----------
     distance : ndarray
         Mahalanobis distance or other measure of outlyingness.
-    frac : float in (0, 1)
+    frac : float in (0, 1), optional
         Quantile of distance used as the cutoff for the indicator weights.
-    rescale : bool
+    rescale : bool, optional
         This option is not supported.
 
     Returns
@@ -1240,22 +1240,23 @@ def _cov_iter(
         Multivariate data with observations in rows.
     weights_func : callable
         Function to calculate weights from the distances and weights_args.
-    weights_args : tuple
+    weights_args : tuple, optional
         Extra arguments for the weights_func.
-    cov_init : ndarray, square 2-D
-        Initial covariance matrix.
-    rescale : "med" or "none"
+    cov_init : ndarray, square 2-D, optional
+        Initial covariance matrix. If None, then the sample covariance of
+        `data` is used.
+    rescale : {"med", "none"}, optional
         If "med" then the resulting covariance matrix is normalized so it is
         approximately consistent with the normal distribution. Rescaling is
         based on the median of the distances and of the chisquare distribution.
         Other options are not yet available.
         If rescale is the string "none", then no rescaling is performed.
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations.
-    atol : float
+    atol : float, optional
         Absolute convergence tolerance for `numpy.allclose` comparison of
         the covariance in successive iterations.
-    rtol : float
+    rtol : float, optional
         Relative convergence tolerance for `numpy.allclose` comparison of
         the covariance in successive iterations.
 
@@ -1358,16 +1359,16 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data with observations in rows (axis=0).
-    standardize : bool
+    standardize : bool, optional
         If False, then the data is only centered (by median).
         If True, then the data is standardized using median and mad-scale.
         This scaling is only intermediate, the returned covariance compensates
         for the initial scaling.
-    quantile : float in [0.5, 1]
+    quantile : float in [0.5, 1], optional
         Parameter used for `_cov_iter` estimation.
-    retransform : bool
+    retransform : bool, optional
         If standardize and retransform are both True, then the returned
         covariances are transformed back to compensate for the initial
         standardization, and the result is a list of ndarrays instead of a
@@ -1571,15 +1572,15 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
 
     Parameters
     ----------
-    z : array-like
+    z : array_like
         Multivariate data with observations in rows.
     h : int
         Size of the subsets used for the starting index sets.
-    options_start : None or dict
+    options_start : dict, optional
         Options for the location and scale function used to standardize
         the data before computing the starting sets. Supported keys are
         "loc_func" and "scale_func". Default is median and mad.
-    methods_cov : "all"
+    methods_cov : {"all"}, optional
         Currently unused, only the default of using all available starting
         covariance methods is implemented.
 
@@ -1689,20 +1690,18 @@ class CovM:
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    norm_mean : norm instance
+    norm_mean : norm instance, optional
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
-    norm_scatter : None or norm instance
+    norm_scatter : norm instance, optional
         If norm_scatter is None, then the norm_mean will be used.
-    breakdown_point : float in (0, 0.5]
-        Breakdown point for first stage S-estimator.
-    scale_bias : None or float
+    scale_bias : float, optional
         Must currently be provided if norm_mean is not None.
-    method : str
+    method : str, optional
         Currently only S-estimator has automatic selection of scale function.
     """
 
@@ -1783,11 +1782,11 @@ class CovM:
         ----------
         maha : ndarray
             Mahalanobis distances used to estimate the scale.
-        start_scale : None or float
+        start_scale : float, optional
             Starting scale. If it is None, the mad of maha is used.
-        maxiter : int
+        maxiter : int, optional
             Maximum iterations to compute M-scale.
-        rtol, atol : float
+        rtol, atol : float, optional
             Relative and absolute convergence criteria for scale used with
             allclose.
 
@@ -1825,18 +1824,18 @@ class CovM:
 
         Parameters
         ----------
-        start_mean : None or ndarray
+        start_mean : ndarray, optional
             Starting value for mean, center.
             If None, then median is used.
-        start_shape : None or 2-dim ndarray
+        start_shape : 2-dim ndarray, optional
             Starting value of shape matrix, i.e., scatter matrix normalized
             to det(scatter) = 1.
             If None, then scaled covariance matrix of data is used.
-        start_scale : None or float
+        start_scale : float, optional
             Starting value of scale.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
-        update_scale : bool
+        update_scale : bool, optional
             If update_scale is False, then the scale is fixed at start_scale
             and only mean and shape are updated in each iteration.
 
@@ -1971,7 +1970,7 @@ class CovDetMCD:
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
 
@@ -1989,11 +1988,11 @@ class CovDetMCD:
 
     References
     ----------
-    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+    .. [1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
        Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
-    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+    .. [2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
        Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
@@ -2022,9 +2021,9 @@ class CovDetMCD:
             covariance at each step. This corresponds to percentile
             h / nobs; using `np.argpartition` avoids the need for an
             explicit percentile.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of c-steps.
-        tol : float
+        tol : float, optional
             Convergence tolerance for the change in covariance between
             steps.
 
@@ -2068,11 +2067,11 @@ class CovDetMCD:
             Indices or mask of observation in starting set, used as ``x[idx]``.
         h : int
             Number of observations in evaluation set for cov.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of c-steps.
-        mean : None or ndarray
+        mean : ndarray, optional
             Starting value for mean. If None, the mean of ``x[idx]`` is used.
-        cov : None or ndarray
+        cov : ndarray, optional
             Starting value for covariance. If None, the covariance of
             ``x[idx]`` is used.
 
@@ -2129,27 +2128,27 @@ class CovDetMCD:
         h : int
             Number of observations in evaluation set for minimizing
             determinant.
-        h_start : int
+        h_start : int, optional
             Number of observations used in starting mean and covariance.
-        mean_func, scale_func : callable or None
+        mean_func, scale_func : callable or None, optional
             Mean and scale function for initial standardization.
             Current defaults, if they are None, are median and mad, but
             default scale_func will likely change.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations for the c-step of the best
             candidate solution.
-        options_start : None or dict
+        options_start : dict, optional
             Options for the starting estimators.
             Currently not used.
             TODO: which options? e.g., for OGK
-        reweight : bool
+        reweight : bool, optional
             If reweight is true, then a reweighted estimator is returned. The
             reweighting is based on a chisquare trimming of Mahalanobis
             distances. The raw results are in the ``results_raw`` attribute.
-        trim_frac : float in (0, 1)
+        trim_frac : float in (0, 1), optional
             Trim fraction used if reweight is true. Used to compute quantile
             of chisquare distribution with tail probability 1 - trim_frac.
-        maxiter_step : int
+        maxiter_step : int, optional
             Number of iteration in the c-step.
             In the current implementation a small maxiter in the c-step does
             not find the optimal solution.
@@ -2240,14 +2239,14 @@ class CovDetS:
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    norm : norm instance
+    norm : norm instance, optional
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
-    breakdown_point : float in (0, 0.5]
+    breakdown_point : float in (0, 0.5], optional
         Breakdown point for first stage S-estimator.
 
     Notes
@@ -2261,11 +2260,11 @@ class CovDetS:
 
     References
     ----------
-    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+    .. [1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
        Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
-    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+    .. [2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
        Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
@@ -2333,18 +2332,21 @@ class CovDetS:
 
         Parameters
         ----------
-        mean : None or ndarray
+        mean : ndarray, optional
             Starting value for mean.
-        shape : None or ndarray
+        shape : ndarray, optional
             Starting value for shape matrix.
-        scale : None or float
+        scale : float, optional
             Starting value for scale.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
 
         Returns
         -------
-        results instance with mean, shape, scale, cov and other attributes.
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov`, `converged`,
+            `n_iter`, and `mahalanobis`. See :class:`CovMResult` for
+            details.
 
         Notes
         -----
@@ -2377,21 +2379,21 @@ class CovDetS:
 
         Parameters
         ----------
-        h_start : int
+        h_start : int, optional
             Number of observations used in starting mean and covariance.
-        mean_func, scale_func : callable or None
+        mean_func, scale_func : callable or None, optional
             Mean and scale function for initial standardization.
             Current defaults, if they are None, are median and mad, but
             default scale_func will likely change.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations for the c-step of the best
             candidate solution.
-        options_start : None or dict
-           Options for the starting estimators.
-           TODO: which options? e.g., for OGK
-        maxiter_step : int
-           Number of iterations used for each starting candidate before
-           selecting the best one for further iteration.
+        options_start : dict, optional
+            Options for the starting estimators.
+            TODO: which options? e.g., for OGK
+        maxiter_step : int, optional
+            Number of iterations used for each starting candidate before
+            selecting the best one for further iteration.
 
         Returns
         -------
@@ -2471,19 +2473,19 @@ class CovDetMM:
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    norm : norm instance
+    norm : norm instance, optional
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
         If ``norm`` is an instance of TukeyBiweight, then it will be used in
         the second stage M-estimation. The ``efficiency`` argument is ignored
         and the tuning parameter of the user provided instance is not changed.
-    breakdown_point : float in (0, 0.5]
+    breakdown_point : float in (0, 0.5], optional
         Breakdown point for first stage S-estimator.
-    efficiency : float
+    efficiency : float, optional
         Asymptotic efficiency of second stage M estimator.
 
     Notes
@@ -2499,22 +2501,22 @@ class CovDetMM:
 
     References
     ----------
-    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+    .. [1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
        Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
-    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+    .. [2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
        Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
-    ..[3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
+    .. [3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
        M-Estimators of Multivariate Location and Covariance.” The Annals of
        Statistics 17 (4): 1662-83.
-    ..[4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
+    .. [4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
        “Principal Components Analysis Based on Multivariate MM Estimators with
        Fast and Robust Bootstrap.” Journal of the American Statistical
        Association 101 (475): 1198-1211.
-    ..[5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
+    .. [5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
        S-Functionals and M-Functionals under Nonelliptical Distributions.” The
        Annals of Statistics 28 (4): 1219-43.
     """
@@ -2548,12 +2550,15 @@ class CovDetMM:
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations in the second stage M-estimation.
 
         Returns
         -------
-        Instance of a results or holder class.
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov`, `converged`,
+            `n_iter`, and `mahalanobis`. See :class:`CovMResult` for
+            details.
 
         Notes
         -----

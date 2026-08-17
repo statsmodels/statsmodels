@@ -15,13 +15,13 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05, use_var="equal"):
 
     Parameters
     ----------
-    endog : ndarray, float, 1d
+    endog : array_like, 1d
         response variable
-    groups : ndarray, 1d
+    groups : array_like, 1d
         array with groups, can be string or integers
-    alpha : float
+    alpha : float, optional
         significance level for the test
-    use_var : {"unequal", "equal"}
+    use_var : {"unequal", "equal"}, optional
         If ``use_var`` is "equal", then the Tukey-hsd pvalues are returned.
         Tukey-hsd assumes that (within) variances are the same across groups.
         If ``use_var`` is "unequal", then the Games-Howell pvalues are

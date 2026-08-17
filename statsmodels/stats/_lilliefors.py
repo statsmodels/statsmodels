@@ -94,7 +94,7 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     alternative : {'two_sided', 'less', 'greater'}, optional
         Defines the alternative hypothesis (see explanation). Default is
         'two_sided'.
-    args : tuple, sequence
+    args : tuple, optional
         Distribution parameters for call to cdf.
 
     Returns

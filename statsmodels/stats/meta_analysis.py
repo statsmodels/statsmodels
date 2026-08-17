@@ -87,20 +87,20 @@ class CombineResults:
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
             If use_t is false, then confidence intervals are based on the
             normal distribution. If it is true, then the t-distribution is
             used.
-        nobs : None or float
+        nobs : None or float, optional
             Number of observations used for degrees of freedom computation.
             Only used if use_t is true.
-        ci_func : None or callable
+        ci_func : None or callable, optional
             User provided function to compute confidence intervals.
             This is not used yet and will allow using non-standard confidence
             intervals.
@@ -165,10 +165,10 @@ class CombineResults:
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
@@ -178,20 +178,21 @@ class CombineResults:
 
         Returns
         -------
-        ci_eff_fe : tuple of floats
-            Confidence interval for mean effects size based on fixed effects
-            model with scale=1.
-        ci_eff_re : tuple of floats
-            Confidence interval for mean effects size based on random effects
-            model with scale=1
-        ci_eff_fe_wls : tuple of floats
-            Confidence interval for mean effects size based on fixed effects
-            model with estimated scale corresponding to WLS, ie. HKSJ.
-        ci_eff_re_wls : tuple of floats
-            Confidence interval for mean effects size based on random effects
-            model with estimated scale corresponding to WLS, ie. HKSJ.
-            If random effects method is fully iterated, i.e., Paule-Mandel, then
-            the estimated scale is 1.
+        ci_eff_fe : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            fixed effects model with scale=1.
+        ci_eff_re : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            random effects model with scale=1
+        ci_eff_fe_wls : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            fixed effects model with estimated scale corresponding to WLS,
+            ie. HKSJ.
+        ci_eff_re_wls : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            random effects model with estimated scale corresponding to WLS,
+            ie. HKSJ. If random effects method is fully iterated, i.e.,
+            Paule-Mandel, then the estimated scale is 1.
         """
         if use_t is None:
             use_t = self.use_t
@@ -237,10 +238,10 @@ class CombineResults:
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
@@ -294,10 +295,10 @@ class CombineResults:
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
@@ -331,17 +332,17 @@ class CombineResults:
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
             If use_t is false, then confidence intervals are based on the
             normal distribution. If it is true, then the t-distribution is
             used.
-        use_exp : bool
+        use_exp : bool, optional
             If `use_exp` is True, then the effect size and confidence limits
             will be exponentiated. This transform log-odds-ration into
             odds-ratio, and similarly for risk-ratio.
@@ -354,7 +355,8 @@ class CombineResults:
 
         Returns
         -------
-        fig : Matplotlib figure instance
+        fig : Figure
+            The forest plot.
 
         See Also
         --------
@@ -395,13 +397,13 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
 
     Parameters
     ----------
-    mean1 : array
+    mean1 : array_like
         Mean of first sample, treatment groups.
-    sd1 : array
+    sd1 : array_like
         Standard deviation of residuals in treatment groups, within.
-    nobs1 : array
+    nobs1 : array_like
         Number of observations in treatment groups.
-    mean2, sd2, nobs2 : arrays
+    mean2, sd2, nobs2 : array_like
         Mean, standard deviation and number of observations of control
         groups.
 
@@ -452,10 +454,10 @@ def effectsize_2proportions(
     ----------
     count1, nobs1, count2, nobs2 : array_like
         Data for two samples.
-    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsine"}
+    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsine"}, optional
         Statistic for the comparison of two proportions.
         Effect sizes for "odds-ratio" and "risk-ratio" are in logarithm.
-    zero_correction : {None, float, "tac", "clip"}
+    zero_correction : {None, float, "tac", "clip"}, optional
         Some statistics are not finite when zero counts are in the data.
         The options to remove zeros are:
 
@@ -466,7 +468,7 @@ def effectsize_2proportions(
         * "clip" : clip proportions without adding a value to all cells
           The clip bounds can be set with zero_kwds["clip_bounds"]
 
-    zero_kwds : dict
+    zero_kwds : dict, optional
         Additional options to handle zero counts.
         "clip_bounds" tuple, default (1e-6, 1 - 1e-6) if zero_correction="clip"
         other options not yet implemented.
@@ -573,11 +575,11 @@ def combine_effects(
 
     Parameters
     ----------
-    effect : array
+    effect : array_like
         Mean of effect size measure for all samples.
-    variance : array
+    variance : array_like
         Variance of mean or effect size measure for all samples.
-    method_re : {"iterated", "chi2"}
+    method_re : {"iterated", "chi2"}, optional
         Method that is used to compute the between random effects variance.
         "iterated" or "pm" uses Paule and Mandel method to iteratively
         estimate the random effects variance. Options for the iteration can
@@ -586,12 +588,12 @@ def combine_effects(
     row_names : list of str, optional
         Names for samples or studies, will be included in results summary and
         table.
-    use_t : bool
+    use_t : bool, optional
         If use_t is False, then confidence intervals and hypothesis tests are
         based on the normal distribution. If use_t is True, then the results
         instance stores this choice as its `use_t` attribute and it is used
         when computing confidence intervals with the t-distribution.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level, default is 0.05, for the confidence intervals.
     **kwds
         Additional keyword arguments passed to the function that estimates
@@ -705,11 +707,12 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
         Effect sizes.
     var_eff : ndarray
         Variance of effect sizes.
-    tau2_start : float
+    tau2_start : float, optional
         Starting value for iteration.
-    atol : float, default: 1e-5
+    atol : float, optional
         Convergence tolerance for absolute value of estimating equation.
-    maxiter : int
+        Default is 1e-5.
+    maxiter : int, optional
         Maximum number of iterations.
 
     Returns
@@ -790,11 +793,12 @@ def _fit_tau_iter_mm(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
         Effect sizes.
     var_eff : ndarray
         Variance of effect sizes.
-    tau2_start : float
+    tau2_start : float, optional
         Starting value for iteration.
-    atol : float, default: 1e-5
+    atol : float, optional
         Convergence tolerance for change in tau2 estimate between iterations.
-    maxiter : int
+        Default is 1e-5.
+    maxiter : int, optional
         Maximum number of iterations.
 
     Returns
