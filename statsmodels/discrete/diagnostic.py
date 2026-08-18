@@ -31,8 +31,9 @@ class CountDiagnostic:
 
     Parameters
     ----------
-    results : Results instance of a count model.
-    y_max : int
+    results : Results instance
+        Results instance of a fitted count model.
+    y_max : int, optional
         Largest count to include when computing predicted probabilities for
         counts. Default is the largest observed count.
 
@@ -56,12 +57,12 @@ class CountDiagnostic:
 
         Parameters
         ----------
-        bin_edges : array_like or None
+        bin_edges : array_like, optional
             This defines which counts are included in the test on frequencies
             and how counts are combined in bins.
             The default if bin_edges is None will change in future.
             See Notes and Example sections below.
-        method : str
+        method : str, optional
             Currently only `method = "opg"` is available.
             If method is None, the OPG will be used, but the default might
             change in future versions.
@@ -69,7 +70,9 @@ class CountDiagnostic:
 
         Returns
         -------
-        test result
+        ChisquareProbResult
+            See :class:`~statsmodels.discrete._diagnostics_count.ChisquareProbResult`
+            for a description of the attributes.
 
         Notes
         -----
@@ -112,7 +115,26 @@ class CountDiagnostic:
         return res
 
     def plot_probs(self, label="predicted", upp_xlim=None, fig=None):
-        """Plot observed versus predicted frequencies for entire sample"""
+        """
+        Plot observed versus predicted frequencies for entire sample
+
+        Parameters
+        ----------
+        label : str, optional
+            Label used for the predicted frequencies in the plot legend.
+        upp_xlim : int, optional
+            If provided, the xlim of the first two subplots is set to
+            (0, upp_xlim), otherwise the matplotlib default is used.
+        fig : matplotlib.figure.Figure, optional
+            If provided, then the axes will be added to it in a (3, 1)
+            subplot grid, otherwise a matplotlib figure instance is created.
+
+        Returns
+        -------
+        Figure
+            The figure contains 3 subplots with probabilities, cumulative
+            probabilities and a PP-plot.
+        """
         probs_predicted = self.probs_predicted.sum(0)
         k_probs = len(probs_predicted)
         freq = np.bincount(self.results.model.endog.astype(int), minlength=k_probs)[
@@ -143,7 +165,9 @@ class PoissonDiagnostic(CountDiagnostic):
 
         Returns
         -------
-        dispersion results
+        DispersionResults
+            See :class:`~statsmodels.discrete._diagnostics_count.DispersionResults`
+            for a description of the attributes.
         """
         res = test_poisson_dispersion(self.results)
         return res
@@ -154,20 +178,26 @@ class PoissonDiagnostic(CountDiagnostic):
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             Three methods are available for the test:
 
              - "prob" : moment test for the probability of zeros
              - "broek" : score test against zero inflation with or without
                 explanatory variables for inflation
 
-        exog_infl : array_like or None
+        exog_infl : array_like, optional
             Optional explanatory variables under the alternative of zero
             inflation, or deflation. Only used if method is "broek".
 
         Returns
         -------
-        results
+        ZeroModificationTestResult or ZeroinflationJHResult
+            The test result. A
+            :class:`~statsmodels.discrete._diagnostics_count.ZeroModificationTestResult`
+            is returned if `method` is "prob", or if `method` is "broek" and
+            `exog_infl` is not provided. Otherwise, a
+            :class:`~statsmodels.discrete._diagnostics_count.ZeroinflationJHResult`
+            is returned.
 
         Notes
         -----
@@ -228,6 +258,38 @@ class PoissonDiagnostic(CountDiagnostic):
         The observations are split into approximately equal sized groups
         of observations sorted according to ``sort_var``.
 
+        Parameters
+        ----------
+        sort_var : array_like, optional
+            1-dimensional array used for sorting observations into bins.
+            If None, the linear predictor, ``results.predict(which="lin")``,
+            is used.
+        bins : int, optional
+            Number of bins used for the Hosmer-Lemeshow type grouping.
+        k_max : int, optional
+            Largest count included before the upper tail is truncated into
+            a single bin. If None, it is chosen so that approximately
+            `frac_upp` of the observations fall in the truncated upper bin.
+        df : int, optional
+            Degrees of freedom of the chi-square distribution used for the
+            test. If None, it is computed from the number of bins and
+            counts.
+        sort_method : str, optional
+            Sorting method used by :func:`numpy.argsort` when binning by
+            `sort_var`.
+        frac_upp : float, optional
+            Fraction of observations used to determine the truncation point
+            of the upper tail when `k_max` is None.
+        alpha_nc : float, optional
+            Significance level used in the computation of the noncentrality
+            parameter confidence interval.
+
+        Returns
+        -------
+        ChisquareBinningResult
+            See
+            :class:`~statsmodels.stats.diagnostic_gen.ChisquareBinningResult`
+            for a description of the attributes.
         """
 
         if sort_var is None:

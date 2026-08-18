@@ -27,14 +27,14 @@ def _combine_bins(edge_index, x):
 
     Parameters
     ----------
-    edge_index : array_like
+    edge_index : sequence of int
          This defines the (zero-based) indices for the columns that are to be
          combined. Each index in `edge_index` except the last is the starting
          index for a bin. The largest index in a bin is the next
          ``edge_index - 1``.
-    x : 1d or 2d array
-        Array for which columns are combined. If x is 1-dimensional, then it
-        will be treated as a 2-d row vector.
+    x : array_like
+        1-d or 2-d array for which columns are combined. If x is
+        1-dimensional, then it will be treated as a 2-d row vector.
 
     Returns
     -------
@@ -85,19 +85,19 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
 
     Parameters
     ----------
-    freq, probs_predicted : ndarrays
+    freq, probs_predicted : array_like
         Two arrays of probabilities, this can be any probabilities for
         the same events, default is designed for comparing predicted
         and observed probabilities.
-    label : str or tuple
+    label : str or tuple, optional
         If string, then it will be used as the label for probs_predicted and
         "freq" is used for the other probabilities.
         If label is a tuple of strings, then its two elements are used as
         labels for both probabilities.
-    upp_xlim : None or int
+    upp_xlim : int, optional
         If it is not None, then the xlim of the first two plots are set to
         (0, upp_xlim), otherwise the matplotlib default is used.
-    fig : None or matplotlib figure instance
+    fig : matplotlib.figure.Figure, optional
         If fig is provided, then the axes will be added to it in a (3,1)
         subplot grid, otherwise a matplotlib figure instance is created.
 
@@ -190,7 +190,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     probs : ndarray
         Array of predicted probabilities with observations
         in rows and event counts in columns
-    bin_edges : None or array
+    bin_edges : array_like, optional
         intervals to combine several counts into cells
         see _combine_bins
 
@@ -331,15 +331,15 @@ def test_poisson_dispersion(results, method="all"):
     results : Poisson results instance
         This can be a results instance for either a discrete Poisson or a GLM
         with family Poisson.
-    method : str
+    method : str, optional
         Not used yet. Currently results for all methods are returned.
 
     Returns
     -------
-    res : instance
-        The instance of DispersionResults has the hypothesis test results,
-        statistic, pvalue, method, alternative, as main attributes and a
-        summary_frame method that returns the results as pandas DataFrame.
+    DispersionResults
+        See :class:`DispersionResults` for a description of the attributes.
+        The instance also has a `summary_frame` method that returns the
+        results as a pandas DataFrame.
 
     """
 
@@ -444,20 +444,20 @@ def _test_poisson_dispersion_generic(
         Additional control variables that are added to the variance
         function together with `exog_new_test`, but whose coefficients
         are not tested.
-    include_score : bool
+    include_score : bool, optional
         If True, then the score of the mean model is added as an
         additional control variable.
-    use_endog : bool
+    use_endog : bool, optional
         If True, then the variance function is specified in terms of the
         squared residuals based on `endog`. If False, then it is based on
         the fitted mean instead of `endog`.
-    cov_type : str
+    cov_type : str, optional
         Covariance type for the auxiliary OLS regression used in the
         test. Default is "HC3".
     cov_kwds : dict, optional
         Keywords for the specified covariance type of the auxiliary OLS
         regression.
-    use_t : bool
+    use_t : bool, optional
         If True, then the t-distribution is used for the auxiliary OLS
         regression.
 
@@ -568,7 +568,7 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     results_poisson : results instance
         The test is only valid if the results instance is a Poisson
         model.
-    exog_infl : ndarray
+    exog_infl : ndarray, optional
         Explanatory variables for the zero-inflated or zero-modified
         alternative. If exog_infl is None, then the inflation
         probability is assumed to be constant.
