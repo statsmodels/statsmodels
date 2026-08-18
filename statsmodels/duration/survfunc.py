@@ -294,8 +294,16 @@ class CumIncidenceRight:
     https://arxiv.org/pdf/math/0409180.pdf
     """
 
-    def __init__(self, time, status, title=None, freq_weights=None,
-                 exog=None, bw_factor=1., dimred=True):
+    def __init__(
+            self,
+            time,
+            status,
+            title=None,
+            freq_weights=None,
+            exog=None,
+            bw_factor=1.,
+            dimred=True
+    ):
 
         _checkargs(time, status, None, freq_weights, None)
         time = self.time = np.asarray(time)

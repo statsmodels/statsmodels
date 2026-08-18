@@ -17,6 +17,7 @@ from statsmodels.discrete.discrete_model import (
 )
 from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning
 
 
@@ -673,7 +674,7 @@ class ConditionalMNLogit(_ConditionalModel):
         callback=None,
         retall=False,
         skip_hessian=False,
-        generator=None,
+        rng=None,
         **kwargs,
     ):
         """
@@ -723,9 +724,20 @@ class ConditionalMNLogit(_ConditionalModel):
         if start_params is None:
             q = self.exog.shape[1]
             c = self.k_cat - 1
-            if isinstance(generator, (np.random.RandomState, np.random.Generator)):
+            if rng is not None:
+                generator = check_random_state(rng)
                 start_params = generator.normal(size=q * c)
             else:
+                warnings.warn(
+                    "When start_params is not specified, random values are "
+                    "used. After statsmodels 0.15 is released, the default method "
+                    "for producing random values will be a new instance of a "
+                    "numpy.random.Generator. To control the generation of "
+                    "start_param using random values, pass a Generator or "
+                    "RandomState using the ``generator`` keyword argument. ",
+                    FutureWarning,
+                    stacklevel=2,
+                )
                 start_params = np.random.normal(size=q * c)
 
         # Do not call super(...).fit because it cannot handle the 2d-params.
