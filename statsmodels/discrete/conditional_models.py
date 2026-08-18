@@ -708,10 +708,19 @@ class ConditionalMNLogit(_ConditionalModel):
             numerical Hessian after the optimization.  If True, the
             Hessian is not calculated and the returned results have
             no covariance matrix.
-        generator : numpy.random.Generator or numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             Used to draw random starting values for `start_params` when
             `start_params` is None.  If not provided, the global
             ``numpy.random`` state is used.
+
+            .. deprecated:: 0.15
+
+               After statsmodels 0.15 is released, the default method for
+               producing random start_params will be a new instance of a
+               ``numpy.random.Generator``. To control the generation of
+               start_params using random values, pass a ``Generator`` or
+               ``RandomState`` using the ``rng`` keyword argument.
+
         **kwargs
             Additional keyword arguments used by the solver.
 
