@@ -38,16 +38,16 @@ class ELOriginRegress:
 
     Parameters
     ----------
-    endog : nx1 array
+    endog : array_like
         Array of response variables.
-    exog : nxk array
+    exog : array_like
         Array of exogenous variables.  Assumes no array of ones
 
     Attributes
     ----------
-    endog : nx1 array
+    endog : array_like
         Array of response variables
-    exog : nxk array
+    exog : array_like
         Array of exogenous variables.  Assumes no array of ones.
     nobs : int
         Number of observations.
@@ -92,7 +92,7 @@ class ELOriginRegress:
         params : ndarray
             Parameters, including the (fixed at 0) intercept term,
             as returned by `fit`.
-        exog : ndarray, optional
+        exog : array_like, optional
             Exogenous variables to use for the prediction.  If None,
             the exog attached to the model is used.
 
@@ -112,7 +112,7 @@ class OriginResults(RegressionResults):
 
     Parameters
     ----------
-    model : class
+    model : OLS
         An OLS model with an intercept.
     params : 1darray
         Fitted parameters.
@@ -125,7 +125,7 @@ class OriginResults(RegressionResults):
 
     Attributes
     ----------
-    model : class
+    model : OLS
         An OLS model with an intercept.
     params : 1darray
         Fitted parameter.
@@ -194,17 +194,17 @@ class OriginResults(RegressionResults):
             Which parameters to test.  Note this uses python
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
-        method : str
+        method : str, optional
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'.
-        stochastic_exog : bool
-            When TRUE, the exogenous variables are assumed to be stochastic.
+        stochastic_exog : bool, optional
+            When True, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
-            regressors.  Default is TRUE.
-        return_weights : bool
+            regressors.  Default is True.
+        return_weights : bool, optional
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False.
         result_object : bool, optional

@@ -95,7 +95,7 @@ class TLinearModel(GenericLikelihoodModel):
         start_params : array_like, optional
             Starting values to use directly. If None, starting values are
             constructed from an OLS fit of `endog` on `exog`.
-        use_kurtosis : bool
+        use_kurtosis : bool, optional
             If True and `start_params` is None and `df` is not fixed, use
             the kurtosis of the OLS residuals to construct a starting
             value for the degrees of freedom parameter. Otherwise a

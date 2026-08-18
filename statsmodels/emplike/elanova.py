@@ -90,9 +90,18 @@ class ANOVA(_ANOVAOpt):
 
     Parameters
     ----------
-    endog : list of arrays
+    endog : list of array_like
         endog should be a list containing 1 dimensional arrays.  Each array
         is the data collected from a certain group.
+
+    Attributes
+    ----------
+    endog : list of array_like
+        The data passed by the caller.
+    num_groups : int
+        The number of groups.
+    nobs : int
+        The total number of observations across all groups.
     """
 
     def __init__(self, endog):
@@ -111,17 +120,17 @@ class ANOVA(_ANOVAOpt):
 
         Parameters
         ----------
-        mu : float
+        mu : float, optional
             If a mu is specified, ANOVA is conducted with mu as the
             common mean.  Otherwise, the common mean is the maximum
             empirical likelihood estimate of the common mean.
             Default is None.
-        mu_start : float
+        mu_start : float, optional
             Starting value for common mean if specific mu is not specified.
-            Default = 0.
-        return_weights : bool
-            if TRUE, returns the weights on observations that maximize the
-            likelihood.  Default is FALSE.
+            Default is 0.
+        return_weights : bool, optional
+            if True, returns the weights on observations that maximize the
+            likelihood.  Default is False.
         result_object : bool, optional
             Flag indicating whether to return the results as an
             ``ANOVAResult`` NamedTuple instead of a plain tuple. When

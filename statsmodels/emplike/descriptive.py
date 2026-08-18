@@ -76,12 +76,12 @@ def DescStat(endog):
 
     Parameters
     ----------
-    endog : ndarray
-         Array of data
+    endog : array_like
+        Array of data
 
     Returns
     -------
-    DescStat
+    DescStatUV or DescStatMV
         If k=1, the function returns a univariate instance, DescStatUV.
         If k>1, the function returns a multivariate instance, DescStatMV.
     """
@@ -131,13 +131,13 @@ class _OptFuncts:
 
         Parameters
         ----------
-        eta : float
-            Lagrange multiplier
+        eta : ndarray, (1,m)
+            Lagrange multiplier in the profile likelihood maximization
 
         est_vect : ndarray (n,k)
             Estimating equations vector
 
-        weights : nx1 array
+        weights : 1darray
             Observation weights
 
         nobs : int
@@ -333,7 +333,7 @@ class _OptFuncts:
         nuisance_mu : float
             Value of a nuisance mean parameter
 
-        pval : bool
+        pval : bool, optional
             If True, return the p-value for the likelihood ratio instead
             of the -2 x log-likelihood ratio.  Used for contour plotting.
             Default is False.
@@ -389,7 +389,7 @@ class _OptFuncts:
         Parameters
         ----------
         nuis_params : 1darray
-            An array with a  nuisance mean and variance parameter
+            An array with a nuisance mean and variance parameter
 
         Returns
         -------
@@ -604,7 +604,7 @@ class DescStatUV(_OptFuncts):
     endog : 1darray
         Data to be analyzed
 
-    nobs : float
+    nobs : int
         Number of observations
     """
 
@@ -622,7 +622,7 @@ class DescStatUV(_OptFuncts):
         mu0 : float
             Mean value to be tested
 
-        return_weights : bool
+        return_weights : bool, optional
             If return_weights is True the function returns
             the weights of the observations under the null hypothesis.
             Default is False
@@ -682,10 +682,10 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        sig : float
+        sig : float, optional
             Significance level. Default is .05
 
-        method : str
+        method : str, optional
             Root finding method,  Can be 'nested-brent' or
             'gamma'.  Default is 'gamma'
 
@@ -700,17 +700,17 @@ class DescStatUV(_OptFuncts):
             converge, try expanding the gamma_high and gamma_low
             variables.
 
-        gamma_low : float
+        gamma_low : float, optional
             Lower bound for gamma when finding lower limit.
             If function returns f(a) and f(b) must have different signs,
             consider lowering gamma_low.
 
-        gamma_high : float
+        gamma_high : float, optional
             Upper bound for gamma when finding upper limit.
             If function returns f(a) and f(b) must have different signs,
             consider raising gamma_high.
 
-        epsilon : float
+        epsilon : float, optional
             When using 'nested-brent', amount to decrease (increase)
             from the maximum (minimum) of the data when
             starting the search.  This is to protect against the
@@ -725,7 +725,7 @@ class DescStatUV(_OptFuncts):
 
         Returns
         -------
-        Interval : tuple
+        Interval : tuple of float
             Confidence interval for the mean
         """
         endog = self.endog
@@ -767,7 +767,7 @@ class DescStatUV(_OptFuncts):
         sig2_0 : float
             Hypothesized variance to be tested
 
-        return_weights : bool
+        return_weights : bool, optional
             If True, returns the weights that maximize the
             likelihood of observing sig2_0. Default is False
         result_object : bool, optional
@@ -823,24 +823,24 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        lower_bound : float
+        lower_bound : float, optional
             The minimum value the lower confidence interval can
             take. The p-value from test_var(lower_bound) must be lower
             than 1 - significance level. Default is .99 confidence
             limit assuming normality
 
-        upper_bound : float
+        upper_bound : float, optional
             The maximum value the upper confidence interval
             can take. The p-value from test_var(upper_bound) must be lower
             than 1 - significance level.  Default is .99 confidence
             limit assuming normality
 
-        sig : float
+        sig : float, optional
             The significance level. Default is .05
 
         Returns
         -------
-        Interval : tuple
+        Interval : tuple of float
             Confidence interval for the variance
 
         Examples
@@ -908,9 +908,9 @@ class DescStatUV(_OptFuncts):
         var_step : float
             Increments to evaluate the mean
 
-        levs : list
+        levs : sequence of float, optional
             Which values of significance the contour lines will be drawn.
-            Default is [.2, .1, .05, .01, .001]
+            Default is (.2, .1, .05, .01, .001)
 
         Returns
         -------
@@ -941,7 +941,7 @@ class DescStatUV(_OptFuncts):
         skew0 : float
             Skewness value to be tested
 
-        return_weights : bool
+        return_weights : bool, optional
             If True, function also returns the weights that
             maximize the likelihood ratio. Default is False.
         result_object : bool, optional
@@ -995,7 +995,7 @@ class DescStatUV(_OptFuncts):
         kurt0 : float
             Kurtosis value to be tested
 
-        return_weights : bool
+        return_weights : bool, optional
             If True, function also returns the weights that
             maximize the likelihood ratio. Default is False.
         result_object : bool, optional
@@ -1053,7 +1053,7 @@ class DescStatUV(_OptFuncts):
         kurt0 : float
             Kurtosis value to be tested
 
-        return_weights : bool
+        return_weights : bool, optional
             If True, function also returns the weights that
             maximize the likelihood ratio. Default is False.
         result_object : bool, optional
@@ -1104,20 +1104,20 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        sig : float
+        sig : float, optional
             The significance level.  Default is .05
 
-        upper_bound : float
+        upper_bound : float, optional
             Maximum value of skewness the upper limit can be.
             Default is .99 confidence limit assuming normality.
 
-        lower_bound : float
+        lower_bound : float, optional
             Minimum value of skewness the lower limit can be.
             Default is .99 confidence level assuming normality.
 
         Returns
         -------
-        Interval : tuple
+        Interval : tuple of float
             Confidence interval for the skewness
 
         Notes
@@ -1158,20 +1158,20 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        sig : float
+        sig : float, optional
             The significance level.  Default is .05
 
-        upper_bound : float
+        upper_bound : float, optional
             Maximum value of kurtosis the upper limit can be.
             Default is .99 confidence limit assuming normality.
 
-        lower_bound : float
+        lower_bound : float, optional
             Minimum value of kurtosis the lower limit can be.
             Default is .99 confidence limit assuming normality.
 
         Returns
         -------
-        Interval : tuple
+        Interval : tuple of float
             Lower and upper confidence limit
 
         Notes
@@ -1231,7 +1231,7 @@ class DescStatMV(_OptFuncts):
     endog : ndarray
         Data to be analyzed
 
-    nobs : float
+    nobs : int
         Number of observations
     """
 
@@ -1250,7 +1250,7 @@ class DescStatMV(_OptFuncts):
             Hypothesized values for the mean.  Must have same number of
             elements as columns in endog
 
-        return_weights : bool
+        return_weights : bool, optional
             If True, returns the weights that maximize the
             likelihood of mu_array. Default is False.
         result_object : bool, optional
@@ -1336,15 +1336,15 @@ class DescStatMV(_OptFuncts):
             Increment of evaluations for variable 1
         step2 : float
             Increment of evaluations for variable 2
-        levs : list
+        levs : sequence of float, optional
             Levels to be drawn on the contour plot.
             Default =  (.001, .01, .05, .1, .2)
-        plot_dta : bool
+        plot_dta : bool, optional
             If True, makes a scatter plot of the data on
             top of the contour plot. Default is False.
-        var1_name : str
+        var1_name : str, optional
             Name of variable 1 to be plotted on the x-axis
-        var2_name : str
+        var2_name : str, optional
             Name of variable 2 to be plotted on the y-axis
 
         Notes
@@ -1398,8 +1398,8 @@ class DescStatMV(_OptFuncts):
         corr0 : float
             Hypothesized value to be tested
 
-        return_weights : bool
-            If true, returns the weights that maximize
+        return_weights : bool, optional
+            If True, returns the weights that maximize
             the log-likelihood at the hypothesized value
         result_object : bool, optional
             Flag indicating whether to return the results as an
@@ -1461,20 +1461,20 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        sig : float
+        sig : float, optional
             The significance level.  Default is .05
 
-        upper_bound : float
+        upper_bound : float, optional
             Maximum value the upper confidence limit can be.
             Default is  99% confidence limit assuming normality.
 
-        lower_bound : float
+        lower_bound : float, optional
             Minimum value the lower confidence limit can be.
             Default is 99% confidence limit assuming normality.
 
         Returns
         -------
-        interval : tuple
+        Interval : tuple of float
             Confidence interval for the correlation
         """
         endog = self.endog

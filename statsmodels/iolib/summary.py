@@ -26,7 +26,7 @@ def forg(x, prec=3):
     x : array_like
         The value to format. Must be a scalar or an array that squeezes
         to a scalar.
-    prec : int
+    prec : int, optional
         The precision to use, either 3 or 4.
 
     Returns
@@ -62,7 +62,7 @@ def d_or_f(x, width=6):
     ----------
     x : int or float
         The value to format.
-    width : int
+    width : int, optional
         Only used if x is nan.
 
     Returns
@@ -91,7 +91,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
         instance.
     yname : str, optional
         Default is `Y`.
-    xname : list[str], optional
+    xname : list of str, optional
         Default is `X.#` for # in p the number of regressors.
     title : str or int, optional
         Title for the summary. If 0 (the default), the title is derived
@@ -279,7 +279,7 @@ def _getnames(self, yname=None, xname=None):
     yname : str, optional
         Name for the endogenous variable. If None, taken from the model
         or defaults to "y".
-    xname : list[str], optional
+    xname : list of str, optional
         Names for the exogenous variables. If None, taken from the model
         or defaults to "var_%d".
 
@@ -287,7 +287,7 @@ def _getnames(self, yname=None, xname=None):
     -------
     yname : str
         Name for the endogenous variable.
-    xname : list[str]
+    xname : list of str
         Names for the exogenous variables.
     """
     if yname is None:
@@ -317,14 +317,14 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
     title : str, optional
         Title for the table(s). If None, a default title is constructed
         from the model class name.
-    gleft : list[tuple], optional
+    gleft : list of tuple, optional
         Elements for the left table, tuples are (name, value) pairs. If
         None, a default table is created.
-    gright : list[tuple], optional
+    gright : list of tuple, optional
         Elements for the right table, tuples are (name, value) pairs.
     yname : str, optional
         Name for the endogenous variable, default is "y".
-    xname : list[str], optional
+    xname : list of str, optional
         Names for the exogenous variables, default is "var_xx".
 
     Returns
@@ -456,16 +456,16 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         instance. May also be a tuple of
         (results, params, std_err, tvalues, pvalues, conf_int) for
         multivariate endog.
-    yname : {str, None}
-        optional name for the endogenous variable, default is "y"
-    xname : {list[str], None}
-        optional names for the exogenous variables, default is "var_xx"
-    alpha : float
-        significance level for the confidence intervals
-    use_t : bool
-        indicator whether the p-values are based on the Student-t
-        distribution (if True) or on the normal distribution (if False)
-    skip_header : bool
+    yname : str, optional
+        Name for the endogenous variable, default is "y".
+    xname : list of str, optional
+        Names for the exogenous variables, default is "var_xx".
+    alpha : float, optional
+        Significance level for the confidence intervals.
+    use_t : bool, optional
+        Indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False).
+    skip_header : bool, optional
         If false (default), then the header row is added. If true, then no
         header row is added.
     title : str, optional
@@ -547,15 +547,15 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
         instance. May also be a tuple of
         (results, params, std_err, tvalues, pvalues, conf_int) for
         multivariate endog.
-    yname : {str, None}
-        optional name for the endogenous variable, default is "y"
-    xname : {list[str], None}
-        optional names for the exogenous variables, default is "var_xx"
-    alpha : float
-        significance level for the confidence intervals
-    use_t : bool
-        indicator whether the p-values are based on the Student-t
-        distribution (if True) or on the normal distribution (if False)
+    yname : str, optional
+        Name for the endogenous variable, default is "y".
+    xname : list of str, optional
+        Names for the exogenous variables, default is "var_xx".
+    alpha : float, optional
+        Significance level for the confidence intervals.
+    use_t : bool, optional
+        Indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False).
 
     Returns
     -------
@@ -609,14 +609,15 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
     ----------
     result : result instance
         the result instance with params and attributes in extras
-    extras : list[str]
-        additional attributes to add below a parameter row, e.g., bse or tvalues
-    endog_names : {list[str], None}
-        names for rows of the parameter array (multivariate endog)
-    exog_names : {list[str], None}
-        names for columns of the parameter array (exog)
-    title : None or str
-        title for the table
+    extras : list of str, optional
+        Additional attributes to add below a parameter row, e.g., bse or
+        tvalues.
+    endog_names : list of str, optional
+        Names for rows of the parameter array (multivariate endog).
+    exog_names : list of str, optional
+        Names for columns of the parameter array (exog).
+    title : str, optional
+        Title for the table.
 
     Returns
     -------
@@ -664,19 +665,19 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
     ----------
     result : result instance
         the result instance with params, bse, tvalues and conf_int
-    endog_names : {list[str], None}
-        names for rows of the parameter array (multivariate endog)
-    exog_names : {list[str], None}
-        names for columns of the parameter array (exog)
-    alpha : float
-        level for confidence intervals, default 0.05
-    use_t : bool
-        indicator whether the p-values are based on the Student-t
-        distribution (if True) or on the normal distribution (if False)
-    keep_headers : bool
+    endog_names : list of str, optional
+        Names for rows of the parameter array (multivariate endog).
+    exog_names : list of str, optional
+        Names for columns of the parameter array (exog).
+    alpha : float, optional
+        Level for confidence intervals, default 0.05.
+    use_t : bool, optional
+        Indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False).
+    keep_headers : bool, optional
         If true (default), then sub-tables keep their headers. If false, then
-        only the first headers are kept, the other headers are blanked out
-    endog_cols : bool
+        only the first headers are kept, the other headers are blanked out.
+    endog_cols : bool, optional
         If false (default) then params and other result statistics have
         equations by rows. If true, then equations are assumed to be in columns.
         Not implemented yet.
@@ -742,7 +743,7 @@ def table_extend(tables, keep_headers=True):
     ----------
     tables : list of SimpleTable instances
         The tables to merge.
-    keep_headers : bool
+    keep_headers : bool, optional
         If true, then all headers are kept. If false, then the headers of
         subtables are blanked out.
 
@@ -785,7 +786,7 @@ def summary_return(tables, return_fmt="text"):
     ----------
     tables : list of SimpleTable
         The tables to join.
-    return_fmt : str
+    return_fmt : str, optional
         One of "text", "tables", "csv", "latex" or "html".
 
     Returns
@@ -864,14 +865,14 @@ class Summary:
             instance
         title : str, optional
             if None, then a default title is used.
-        gleft : list[tuple], optional
+        gleft : list of tuple, optional
             elements for the left table, tuples are (name, value) pairs
             If gleft is None, then a default table is created
-        gright : list[tuple], optional
+        gright : list of tuple, optional
             elements for the right table, tuples are (name, value) pairs
         yname : str, optional
             optional name for the endogenous variable, default is "y"
-        xname : list[str], optional
+        xname : list of str, optional
             optional names for the exogenous variables, default is "var_xx".
             Must match the number of parameters in the model.
         """
@@ -890,13 +891,13 @@ class Summary:
         res : results instance
             some required information is directly taken from the result
             instance
-        yname : {str, None}
+        yname : str, optional
             optional name for the endogenous variable, default is "y"
-        xname : {list[str], None}
+        xname : list of str, optional
             optional names for the exogenous variables, default is "var_xx"
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
-        use_t : bool
+        use_t : bool, optional
             indicator whether the p-values are based on the Student-t
             distribution (if True) or on the normal distribution (if False)
 
@@ -922,7 +923,7 @@ class Summary:
 
         Parameters
         ----------
-        etext : list[str]
+        etext : list of str
             string with lines that are added to the text output.
         """
         self.extra_txt = "\n".join(etext)

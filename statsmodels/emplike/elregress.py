@@ -50,24 +50,24 @@ class _ELRegOpts(_OptFuncts):
         ----------
         nuisance_params : 1darray
             Parameters to be optimized over.
-        param_nums : 1darray
+        param_nums : 1darray, optional
             The index locations of the parameters of interest in
             `params`.
-        endog : ndarray
+        endog : ndarray, optional
             The endogenous (response) variable.
-        exog : ndarray
+        exog : ndarray, optional
             The exogenous (regressor) variables.
-        nobs : int
+        nobs : int, optional
             The number of observations.
-        nvar : int
+        nvar : int, optional
             The number of exogenous regressors.
-        params : ndarray
+        params : ndarray, optional
             The full parameter vector, with the parameters of
             interest set to their hypothesized values and the
             remaining entries filled in with `nuisance_params`.
-        b0_vals : 1darray
+        b0_vals : 1darray, optional
             The hypothesized values for the parameters of interest.
-        stochastic_exog : bool
+        stochastic_exog : bool, optional
             If True, the exogenous variables are assumed to be
             stochastic and moment conditions are not placed on them.
 

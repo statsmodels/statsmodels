@@ -94,7 +94,7 @@ class NonlinearLS(Model):  # or subclass a model
     sigma : array_like, optional
         1-d array of standard deviations used to construct `weights` as
         ``1 / sigma``. Correlated errors (2-d `sigma`) are not supported.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. Currently not
         used in `__init__`.
 
@@ -340,7 +340,7 @@ class NonlinearLS(Model):  # or subclass a model
 
         Parameters
         ----------
-        ntries : int
+        ntries : int, optional
             Number of random starting values to try.
         rvs_generator : callable, optional
             Function to generate random starting values given a `size`

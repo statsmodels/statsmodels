@@ -15,10 +15,12 @@ def _make_index(prob, size, rng=None):
         Probability of sampling from each distribution in dist.
     size : int
         The length of the returned sample.
-    rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
-        If `rng` is None, the global (legacy) NumPy random state is
-        used. If `rng` is already a ``Generator`` or ``RandomState``
-        instance, that instance is used.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -48,10 +50,17 @@ def mixture_rvs(prob, size, dist, kwargs=None, rng=None):
         A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
         args to be passed to the respective distribution in dist.  If not
         provided, the distribution defaults are used.
-    rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, the global (legacy) NumPy random state is
-        used. If `rng` is already a ``Generator`` or ``RandomState``
-        instance, that instance is used.
+        used. If `rng` is an int or array of ints, a new ``RandomState``
+        instance is created, seeded with `rng`. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
+
+    Returns
+    -------
+    ndarray
+        Sample from the mixture distribution, with length `size`.
 
     Examples
     --------
@@ -115,11 +124,13 @@ class MixtureDistribution:
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
             args to be passed to the respective distribution in dist.  If not
             provided, the distribution defaults are used.
-        rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, the global (legacy) NumPy random state is
-            used. If `rng` is already a ``Generator`` or ``RandomState``
-            instance, that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+            used. If `rng` is an int or array of ints, a new
+            ``RandomState`` instance is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -148,6 +159,11 @@ class MixtureDistribution:
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
             args to be passed to the respective distribution in dist.  If not
             provided, the distribution defaults are used.
+
+        Returns
+        -------
+        ndarray
+            Pdf of the mixture distribution evaluated at `x`.
 
         Examples
         --------
@@ -199,6 +215,11 @@ class MixtureDistribution:
             args to be passed to the respective distribution in dist.  If not
             provided, the distribution defaults are used.
 
+        Returns
+        -------
+        ndarray
+            Cdf of the mixture distribution evaluated at `x`.
+
         Examples
         --------
         Say we want 5000 random variables from mixture of normals with two
@@ -247,12 +268,20 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
         An iterable of distributions instances with callable method rvs.
     nvars : int
         dimension of the multivariate distribution, could be inferred instead
-    rng : {None, numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, the global (legacy) NumPy random state is
-        used. If `rng` is already a ``Generator`` or ``RandomState``
-        instance, that instance is used.
-    kwargs : tuple of dicts, optional
-        ignored
+        used. If `rng` is an int or array of ints, a new ``RandomState``
+        instance is created, seeded with `rng`. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
+    **kwargs
+        Ignored.
+
+    Returns
+    -------
+    ndarray
+        Sample from the mixture of multivariate distributions, with shape
+        (`size`, `nvars`).
 
     Examples
     --------
