@@ -104,7 +104,7 @@ def mvn_loglike_chol(x, sigma):
         The log likelihood.
     logdetsigma : float
         The log of the determinant of `sigma`.
-    float
+    logdet_cholsigmainv : float
         Twice the sum of the log of the diagonal of the Cholesky factor
         of the inverse of `sigma`.
     """

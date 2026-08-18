@@ -126,9 +126,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
     exog : array_like, optional
         A nobs x k array where `nobs` is the number of observations and
         `k` is the number of regressors.
-    offset : array_like, optional
+    offset : ndarray, optional
         Offset added to the linear predictor before computing the mean.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
         nan checking is done. If 'drop', any observations with nans are
         dropped. If 'raise', an error is raised. Default is 'none'.
@@ -199,9 +199,9 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         A nobs x k array where `nobs` is the number of observations and
         `k` is the number of regressors. If None, a column of ones is
         used.
-    offset : array_like, optional
+    offset : ndarray, optional
         Offset added to the linear predictor before computing the mean.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
         nan checking is done. If 'drop', any observations with nans are
         dropped. If 'raise', an error is raised. Default is 'none'.

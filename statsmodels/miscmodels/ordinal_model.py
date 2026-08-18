@@ -75,11 +75,11 @@ class OrderedModel(GenericLikelihoodModel):
         sorted in lexicographic order (by numpy.unique).
     exog : array_like
         Exogenous, explanatory variables. This should not include an intercept.
-        A DataFrame is  also accepted.
-        see Notes about constant when using formulas
+        A DataFrame is also accepted.
+        See Notes about constant when using formulas.
     offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    distr : string 'probit' or 'logit', or a distribution instance
+    distr : {"probit", "logit"} or distribution instance, optional
         The default is currently 'probit' which uses the normal distribution
         and corresponds to an ordered Probit model. The distribution is
         assumed to have the main methods of scipy.stats distributions, mainly
@@ -237,7 +237,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         Parameters
         ----------
-        labels : array_like
+        labels : sequence
             The category labels of the ordered endogenous variable.
         k_levels : int, optional
             The number of levels/categories. If None, it is inferred from
@@ -415,7 +415,7 @@ class OrderedModel(GenericLikelihoodModel):
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
-        which : {"prob", "linpred", "cum", "cumprob"}
+        which : {"prob", "linpred", "cum", "cumprob"}, optional
             Determines which statistic is predicted.
 
             - prob : predicted probabilities to be in each choice. 2-dim.

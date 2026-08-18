@@ -261,12 +261,12 @@ class DiscretizedCount(rv_discrete):
     Parameters
     ----------
     distr : distribution instance
-    d_offset : float
+    d_offset : float, optional
         Offset for integer interval, default is zero.
         The discrete random variable is ``y = floor(x + offset)`` where x is
         the continuous random variable.
         Warning: not verified for all methods.
-    add_scale : bool
+    add_scale : bool, optional
         If True (default), then the scale of the base distribution is added
         as parameter for the discrete distribution. The scale parameter is in
         the last position.
@@ -351,14 +351,14 @@ class DiscretizedCount(rv_discrete):
             continuous distribution.
         size : int or tuple of ints, optional
             Number of random variates to generate.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             Passed directly to the underlying SciPy distribution as its
             ``random_state`` argument. If `rng` is None, the global NumPy
             singleton random state is used. If `rng` is an int or array of
             ints, a new ``RandomState`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -450,7 +450,7 @@ class DiscretizedModel(GenericLikelihoodModel):
     --------
     >>> from scipy import stats
     >>> from statsmodels.distributions.discrete import (
-            DiscretizedCount, DiscretizedModel)
+    ...     DiscretizedCount, DiscretizedModel)
 
     >>> dd = DiscretizedCount(stats.gamma)
     >>> mod = DiscretizedModel(y, distr=dd)
@@ -473,7 +473,20 @@ class DiscretizedModel(GenericLikelihoodModel):
         self.start_params = 0.5 * np.ones(self.nparams)
 
     def loglike(self, params):
+        """
+        Log-likelihood of the discretized distribution.
 
+        Parameters
+        ----------
+        params : array_like
+            Shape (and scale) parameters of the underlying continuous
+            distribution.
+
+        Returns
+        -------
+        float
+            Sum of the log-probabilities of `endog` given `params`.
+        """
         # this does not allow exog yet,
         # model `params` are also distribution `args`
         # For regression model this needs to be replaced by a conversion method
@@ -482,7 +495,32 @@ class DiscretizedModel(GenericLikelihoodModel):
         return ll.sum()
 
     def predict(self, params, exog=None, which=None, k_max=20):
+        """
+        Predict values for the discretized distribution.
 
+        Parameters
+        ----------
+        params : array_like
+            Shape (and scale) parameters of the underlying continuous
+            distribution.
+        exog : None
+            Explanatory variables are not supported. The ``exog`` argument
+            is only included for consistency in the signature across
+            models.
+        which : str, optional
+            Statistic to predict. The only currently implemented value is
+            "probs", which returns the probability mass function evaluated
+            at ``0, 1, ..., k_max - 1``. Any other value, including the
+            default of None, raises a ``ValueError``.
+        k_max : int, optional
+            Number of support points, starting at zero, for which
+            probabilities are returned.
+
+        Returns
+        -------
+        ndarray
+            Probability mass function evaluated at ``0, 1, ..., k_max - 1``.
+        """
         if exog is not None:
             raise ValueError("exog is not supported")
 
@@ -494,7 +532,21 @@ class DiscretizedModel(GenericLikelihoodModel):
             raise ValueError('only which="probs" is currently implemented')
 
     def get_distr(self, params):
-        """frozen distribution instance of the discrete distribution."""
+        """
+        Frozen distribution instance of the discrete distribution.
+
+        Parameters
+        ----------
+        params : array_like
+            Shape (and scale) parameters of the underlying continuous
+            distribution.
+
+        Returns
+        -------
+        rv_discrete_frozen
+            Frozen distribution instance of the discretized distribution
+            with `params` substituted for the shape parameters.
+        """
         args = params
         distr = self.distr(*args)
         return distr
