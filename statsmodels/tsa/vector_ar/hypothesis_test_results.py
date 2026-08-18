@@ -139,18 +139,22 @@ class CausalityTestResults(HypothesisTestResults):
     caused : list of str
         This list contains the potentially caused variables.
     test_statistic : float
+        The test's test statistic.
     crit_value : float
+        The test's critical value.
     pvalue : float
+        The test's p-value. Must be between 0 and 1.
     df : int
         Degrees of freedom.
     signif : float
         Significance level.
-    test : str {``"granger"``, ``"inst"``}, default: ``"granger"``
-        If ``"granger"``, Granger-causality has been tested. If ``"inst"``,
+    test : {"granger", "inst"}, optional
+        If "granger", Granger-causality has been tested. If "inst",
         instantaneous causality has been tested.
-    method : str {``"f"``, ``"wald"``}
-        The kind of test. ``"f"`` indicates an F-test, ``"wald"`` indicates a
-        Wald-test.
+    method : {"f", "wald"}, optional
+        The kind of test. "f" indicates an F-test, "wald" indicates a
+        Wald-test. Must be specified explicitly; a ValueError is raised
+        if left as None.
     """
     def __init__(self, causing, caused, test_statistic, crit_value, pvalue, df,
                  signif, test="granger", method=None):

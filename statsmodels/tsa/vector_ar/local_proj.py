@@ -1,8 +1,8 @@
 """
 Local Projections (LP) estimator for impulse response functions.
 
-Reference
----------
+References
+----------
 Jordà, Ò. (2005). Estimation and Inference of Impulse Responses by Local
 Projections. *American Economic Review*, 95(1), 161-182.
 """
@@ -21,7 +21,24 @@ __all__ = ["LocalProjections"]
 
 
 def _hac_bandwidth(h, nw_lags=None):
-    """Return Newey-West bandwidth for an h-step-ahead LP regression."""
+    """
+    Return the Newey-West bandwidth for an h-step-ahead LP regression.
+
+    Parameters
+    ----------
+    h : int
+        The regression horizon.
+    nw_lags : int or None, optional
+        Override the automatic bandwidth. If None (default), the bandwidth
+        is set to at least `h` lags, since at horizon `h` the LP residual
+        is an MA(h) process by construction.
+
+    Returns
+    -------
+    int
+        The number of lags to use in the Newey-West HAC covariance
+        estimator.
+    """
     if nw_lags is not None:
         return nw_lags
     # At horizon h the LP residual is an MA(h) by construction; use at
@@ -30,17 +47,22 @@ def _hac_bandwidth(h, nw_lags=None):
 
 
 def _nw_cov(X, resid, nlags):
-    """Newey-West HAC sandwich covariance (X'X)^{-1} S (X'X)^{-1} / T.
+    """
+    Newey-West HAC sandwich covariance (X'X)^{-1} S (X'X)^{-1} / T.
 
     Parameters
     ----------
-    X : ndarray, shape (T, k)
-    resid : ndarray, shape (T,)
+    X : ndarray
+        Regressor design matrix, of shape (T, k).
+    resid : ndarray
+        OLS residuals, of shape (T,).
     nlags : int
+        Number of lags to include in the Bartlett-kernel weighted sum.
 
     Returns
     -------
-    V : ndarray, shape (k, k)
+    ndarray
+        HAC sandwich covariance matrix, of shape (k, k).
     """
     T, k = X.shape
     scores = X * resid[:, None]           # (T, k)  score contributions
@@ -78,6 +100,7 @@ class LocalProjectionsResults:
 
     @property
     def horizons(self):
+        """The maximum IRF horizon H."""
         return self.model.horizons
 
     def conf_int(self, alpha=0.05):
@@ -85,7 +108,7 @@ class LocalProjectionsResults:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Significance level (default 0.05 gives 95 % intervals).
 
         Returns
@@ -114,15 +137,17 @@ class LocalProjectionsResults:
 
         Parameters
         ----------
-        impulse : int or str or None
+        impulse : int or str or None, optional
             Index or name of the shock variable.  Plots all shocks if None.
-        response : int or str or None
+        response : int or str or None, optional
             Index or name of the response variable.  Plots all responses
             if None.
-        alpha : float
+        alpha : float, optional
             Significance level for confidence bands.
-        figsize : tuple or None
-        n_cols : int or None
+        figsize : tuple or None, optional
+            Figure size passed to :func:`matplotlib.pyplot.subplots`.
+        n_cols : int or None, optional
+            Number of subplot columns.  If None, chosen automatically.
 
         Returns
         -------
@@ -207,7 +232,7 @@ class LocalProjections:
     ----------
     endog : array_like, shape (T, n) or (T,)
         Endogenous variables.  A 1-D input is treated as a single variable.
-    shock_idx : int or list[int], optional
+    shock_idx : int or sequence of int, optional
         Column index/indices within *endog* whose contemporaneous value
         enters as the shock.  Defaults to ``0`` (the first variable).
     lags : int, optional
@@ -216,13 +241,13 @@ class LocalProjections:
     horizons : int, optional
         Maximum IRF horizon :math:`H`.  Regressions are run for
         :math:`h = 0, 1, \ldots, H`.  Defaults to ``12``.
-    exog : array_like, shape (T, k) or None, optional
+    exog : array_like or None, optional
         Additional exogenous controls (e.g. time dummies, external
-        instruments).  Do **not** include a constant; it is added
-        automatically.
+        instruments), of shape (T, k).  Do **not** include a constant; it
+        is added automatically.
     trend : {"n", "c", "ct"}, optional
-        Deterministic trend: ``"n"`` none, ``"c"`` constant (default),
-        ``"ct"`` constant plus linear trend.
+        Deterministic trend: 'n' adds no trend, 'c' adds a constant
+        (default), and 'ct' adds a constant plus linear trend.
     nw_lags : int or None, optional
         Override the automatic Newey-West bandwidth.  When *None* (default)
         the bandwidth at horizon :math:`h` is
@@ -345,18 +370,27 @@ class LocalProjections:
     # ------------------------------------------------------------------
 
     def _build_regressors(self, t_start, t_end):
-        """Construct the RHS design matrix for t = t_start ... t_end-1.
+        """
+        Construct the RHS design matrix for t = t_start, ..., t_end - 1.
 
-        Column order
-        ------------
-        [shock_0, ..., shock_s | lag1_y0, ..., lag1_yn, lag2_y0, ... |
-         exog | trend terms]
+        Parameters
+        ----------
+        t_start : int
+            First row index (inclusive) of the estimation sample.
+        t_end : int
+            Last row index (exclusive) of the estimation sample.
 
         Returns
         -------
-        X : ndarray, shape (n_obs, k)
+        X : ndarray
+            The design matrix, of shape (n_obs, k).
         shock_cols : list of int
             Column indices of the shock variables.
+
+        Notes
+        -----
+        Column order is [shock_0, ..., shock_s | lag1_y0, ..., lag1_yn,
+        lag2_y0, ... | exog | trend terms].
         """
         endog = self.endog
         parts = []

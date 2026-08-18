@@ -12,7 +12,7 @@ from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
 from statsmodels.tools.rng_qrng import check_random_state
-from ..tools.validation import array_like
+from statsmodels.tools.validation import array_like
 
 try:
     import joblib
