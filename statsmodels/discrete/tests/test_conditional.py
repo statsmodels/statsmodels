@@ -327,7 +327,7 @@ def test_conditional_mnlogit_2d():
 
     df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    result = model.fit(generator=rs)
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -348,7 +348,7 @@ def test_conditional_mnlogit_3d():
     df, rs = gen_mnlogit(90)
     df["x3"] = rs.normal(size=df.shape[0])
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3", groups="g", data=df)
-    result = model.fit(generator=rs)
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -406,7 +406,7 @@ def _fit_conditional_poisson_for_summary():
 def _fit_conditional_mnlogit_for_summary():
     df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    return model.fit(generator=rs)
+    return model.fit(rng=rs)
 
 
 @pytest.mark.parametrize(

@@ -810,13 +810,13 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
         basis = self._splines_x()[:, :-1]
         # demean except for constant, does not affect derivatives
-        if not self.constraints == "none":
+        if self.constraints is not None:
             self.transf_mean = basis[:, 1:].mean(0)
             basis[:, 1:] -= self.transf_mean
         else:
             self.transf_mean = np.zeros(basis.shape[1])
         s = self._splines_s()[:-1, :-1]
-        if not self.constraints == "none":
+        if self.constraints is not None:
             ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
         else:
             ctransf = np.eye(basis.shape[1])

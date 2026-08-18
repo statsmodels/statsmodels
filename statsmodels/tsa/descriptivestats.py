@@ -102,10 +102,10 @@ class TsaDescriptive:
         Results
             The results instance from fitting the model.
         """
-        from .arima_model import ARMA
-        self.mod = ARMA(self.data)
-        self.res = self.mod.fit(order=order, **kwds)
-        # self.estimated_process =
+        from statsmodels.tsa.arima.model import ARIMA
+        self.mod = ARIMA(self.data, order=order)
+        self.res = self.mod.fit(**kwds)
+
         return self.res
 
     def acf(self, nlags=40):

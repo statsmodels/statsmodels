@@ -744,7 +744,7 @@ class VarmaPoly:
             _a = self.ma[1:]
         if _a.shape[0] == 0:
             # no ma lags
-            self.maeigenvalues = np.array([], np.complex)
+            self.maeigenvalues = np.array([], dtype=complex)
             return True
 
         amat = self.stacksquare(_a)
@@ -773,14 +773,14 @@ class VarmaPoly:
             raise ValueError("apoly needs to be 3d")
         nlags, nvarsex, nvars = apoly.shape
 
-        a = np.empty_like(apoly)
         try:
-            a0inv = np.linalg.inv(a[0, :nvars, :])
+            a0inv = np.linalg.inv(apoly[0, :nvars, :])
         except np.linalg.LinAlgError as la_err:
             raise ValueError(
                 "matrix not invertible, ask for implementation of pinv"
             ) from la_err
 
+        a = np.empty_like(apoly)
         for lag in range(nlags):
             a[lag] = np.dot(a0inv, apoly[lag])
 

@@ -153,11 +153,10 @@ class PoissonDiagnostic(CountDiagnostic):
     Parameters
     ----------
     results : PoissonResults instance
-
     """
 
-    def _init__(self, results):
-        self.results = results
+    def __init__(self, results, y_max=None):
+        super().__init__(results, y_max=y_max)
 
     def test_dispersion(self):
         """
