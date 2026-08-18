@@ -20,7 +20,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         The endogenous variable.
     k_regimes : int
         The number of regimes.
-    trend : {'n', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct'}, optional
         Whether or not to include a trend. To include an intercept, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
         set `trend='n'`. Default is an intercept.
@@ -35,15 +35,15 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
-    switching_trend : bool or iterable, optional
+    switching_trend : bool or sequence of bool, optional
         If a boolean, sets whether or not all trend coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to the number of trend variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_exog : bool or iterable, optional
+    switching_exog : bool or sequence of bool, optional
         If a boolean, sets whether or not all regression coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to the number of exogenous variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
@@ -57,7 +57,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
@@ -161,7 +161,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         Returns
         -------
-        predict : array_like
+        predict : ndarray
             Array of predictions conditional on current, and possibly past,
             regimes
         """
@@ -367,7 +367,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
@@ -398,7 +398,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
         # Inherited parameters
@@ -428,7 +428,7 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : str
+    cov_type : str, optional
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 

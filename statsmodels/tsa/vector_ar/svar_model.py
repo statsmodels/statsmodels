@@ -38,20 +38,20 @@ class SVAR(tsbase.TimeSeriesModel):
     ----------
     endog : array_like
         2-d endogenous response variable. The independent variable.
-    svar_type : str
+    svar_type : {"A", "B", "AB"}
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
         "AB" - estimate structural parameters indicated in both A and B matrix
-    dates : array_like
+    dates : array_like, optional
         must match number of rows of endog
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
-    A : array_like
+    A : ndarray, optional
         neqs x neqs with unknown parameters marked with 'E' for estimate
-    B : array_like
+    B : ndarray, optional
         neqs x neqs with unknown parameters marked with 'E' for estimate
-    missing : str
+    missing : {"none", "drop", "raise"}, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
@@ -144,36 +144,36 @@ class SVAR(tsbase.TimeSeriesModel):
         B_guess : array_like, optional
             A vector of starting values for all parameters to be estimated
             in B.
-        maxlags : int
+        maxlags : int, optional
             Maximum number of lags to check for order selection, defaults to
             12 * (nobs/100.)**(1./4), see select_order function
-        method : {'ols'}
+        method : {'ols'}, optional
             Estimation method to use
-        ic : {'aic', 'fpe', 'hqic', 'bic', None}
+        ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
             fpe : Final prediction error
             hqic : Hannan-Quinn
             bic : Bayesian a.k.a. Schwarz
-        verbose : bool, default False
+        verbose : bool, optional
             Print order selection output to the screen
-        trend : str {"c", "ct", "ctt", "n"}
+        trend : {"c", "ct", "ctt", "n"}, optional
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
             "n" - no constant, no trend
             Note that these are prepended to the columns of the dataset.
-        s_method : {'mle'}
+        s_method : {'mle'}, optional
             Estimation method for structural parameters
-        solver : {'nm', 'newton', 'bfgs', 'cg', 'ncg', 'powell'}
+        solver : {'nm', 'newton', 'bfgs', 'cg', 'ncg', 'powell'}, optional
             Solution method
             See statsmodels.base for details
-        override : bool, default False
+        override : bool, optional
             If True, returns estimates of A and B without checking
             order or rank condition
-        maxiter : int, default 500
+        maxiter : int, optional
             Number of iterations to perform in solution method
-        maxfun : int
+        maxfun : int, optional
             Number of function evaluations to perform
 
         Returns
@@ -263,11 +263,11 @@ class SVAR(tsbase.TimeSeriesModel):
             Number of iterations to perform in solution method.
         maxfun : int
             Number of function evaluations to perform.
-        trend : {str, None}
+        trend : {"n", "c", "ct", "ctt"}, optional
             As per above
-        solver : str
+        solver : str, optional
             Solution method
-        override : bool, default False
+        override : bool, optional
             If True, returns estimates of A and B without checking
             order or rank condition
         """
@@ -376,7 +376,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        AB_mask : array_like
+        AB_mask : ndarray
             Concatenated unknown values of the A and B matrices.
 
         Notes
@@ -399,7 +399,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        AB_mask : array_like
+        AB_mask : ndarray
             Concatenated unknown values of the A and B matrices.
         """
         loglike = self.loglike
@@ -415,14 +415,14 @@ class SVAR(tsbase.TimeSeriesModel):
         ----------
         start_params : array_like
             Starting values for the parameters to be estimated.
-        maxiter : int, optional
-            The maximum number of iterations. Default is 500.
-        override : bool, default False
+        maxiter : int
+            The maximum number of iterations.
+        override : bool, optional
             If True, returns estimates of A and B without checking
             order or rank condition
-        solver : str or None, optional
-            Solver to be used. The default is 'nm' (Nelder-Mead). Other
-            choices are 'bfgs', 'newton' (Newton-Raphson), 'cg'
+        solver : str, optional
+            Solver to be used. The default is 'bfgs'. Other
+            choices are 'nm' (Nelder-Mead), 'newton' (Newton-Raphson), 'cg'
             conjugate, 'ncg' (non-conjugate gradient), and 'powell'.
 
         Returns
@@ -552,10 +552,13 @@ class SVARProcess(VARProcess):
     intercept : ndarray (length k)
     sigma_u : ndarray (k x k)
     A_solve : ndarray
-        neqs x neqs ndarray with unknown parameters marked with 'E'
+        neqs x neqs array of estimated structural parameters for the A
+        matrix.
     B_solve : ndarray
-        neqs x neqs ndarray with unknown parameters marked with 'E'
-    names : sequence (length k)
+        neqs x neqs array of estimated structural parameters for the B
+        matrix.
+    names : sequence of str, optional
+        length k
     """
 
     def __init__(self, coefs, intercept, sigma_u, A_solve, B_solve, names=None):
@@ -610,55 +613,64 @@ class SVARResults(SVARProcess, VARResults):
     params : ndarray
     sigma_u : ndarray
     lag_order : int
-    A : neqs x neqs ndarray with unknown parameters marked with 'E'
-    B : neqs x neqs ndarray with unknown parameters marked with 'E'
-    A_mask : neqs x neqs mask array with known parameters masked
-    B_mask : neqs x neqs mask array with known parameters masked
-    model : VAR model instance
-    trend : str {'n', 'c', 'ct'}
-    names : array_like
+    A : ndarray, optional
+        neqs x neqs array of estimated structural parameters for the A
+        matrix.
+    B : ndarray, optional
+        neqs x neqs array of estimated structural parameters for the B
+        matrix.
+    A_mask : ndarray of bool, optional
+        neqs x neqs array, True where the corresponding entry of `A` is an
+        estimated (unknown) parameter.
+    B_mask : ndarray of bool, optional
+        neqs x neqs array, True where the corresponding entry of `B` is an
+        estimated (unknown) parameter.
+    model : SVAR, optional
+        The SVAR model instance used to produce the results.
+    trend : {"n", "c", "ct", "ctt"}, optional
+    names : sequence of str, optional
         List of names of the endogenous variables in order of appearance in `endog`.
-    dates
+    dates : array_like, optional
 
     Attributes
     ----------
-    aic
-    bic
-    bse
+    aic : float
+    bic : float
+    bse : ndarray
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
     cov_params
-    dates
-    detomega
+    dates : array_like
+    detomega : float
     df_model : int
     df_resid : int
-    endog
-    endog_lagged
-    fittedvalues
-    fpe
-    intercept
-    info_criteria
+    endog : ndarray
+    endog_lagged : ndarray
+    fittedvalues : ndarray
+    fpe : float
+    intercept : ndarray
+    info_criteria : dict of str to float
     k_ar : int
         Order of VAR process
     k_trend : int
-    llf
-    model
-    names : list
-        variables names
+    llf : float
+    model : SVAR
+    names : list of str
+        variable names
     neqs : int
         Number of variables (equations)
     nobs : int
     n_totobs : int
-    params : ndarray (Kp + 1) x K
+    params : ndarray ((Kp + 1) x K)
         A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    pvalues
-    resid
+    pvalues : ndarray
+    resid : ndarray
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
-    sigma_u_mle
-    stderr
-    trendorder
-    tvalues
+    sigma_u_mle : ndarray
+    stderr : ndarray
+    trendorder : int or None
+    tvalues : ndarray
     """
 
     _model_type = "SVAR"
@@ -725,8 +737,8 @@ class SVARResults(SVARProcess, VARResults):
 
         Parameters
         ----------
-        periods : int
-        var_order : sequence
+        periods : int, optional
+        var_order : sequence, optional
             Alternate variable order for Cholesky decomposition
 
         Returns
@@ -756,24 +768,25 @@ class SVARResults(SVARProcess, VARResults):
 
         Parameters
         ----------
-        orth : bool, default False
+        orth : bool, optional
             Compute orthogonalized impulse response error bands
-        repl : int
+        repl : int, optional
             number of Monte Carlo replications to perform
-        steps : int, default 10
+        steps : int, optional
             number of impulse response periods
-        signif : float (0 < signif <1)
-            Significance level for error bars, defaults to 95% CI
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        signif : float, optional
+            Significance level for error bars (0 < signif < 1), defaults to
+            95% CI
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             np.random seed for replications
-        seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                seed has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
-        burn : int
+        burn : int, optional
             number of initial observations to discard for simulation
-        cum : bool, default False
+        cum : bool, optional
             produce cumulative irf error bands
 
         Returns
