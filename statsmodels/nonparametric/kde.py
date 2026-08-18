@@ -109,7 +109,7 @@ class KDEUnivariate:
 
         Parameters
         ----------
-        kernel : str
+        kernel : str, optional
             The Kernel to be used. Choices are:
 
             - "biw" for biweight
@@ -120,7 +120,7 @@ class KDEUnivariate:
             - "triw" for triweight
             - "uni" for uniform
 
-        bw : str, float, callable
+        bw : str, float, or callable, optional
             The bandwidth to use. Choices are:
 
             - "scott" - 1.059 * A * nobs ** (-1/5.), where A is
@@ -138,22 +138,22 @@ class KDEUnivariate:
               * x - the clipped input data
               * kern - the kernel instance used
 
-        fft : bool
+        fft : bool, optional
             Whether or not to use FFT. FFT implementation is more
             computationally efficient. However, only the Gaussian kernel
             is implemented. If FFT is False, then a 'nobs' x 'gridsize'
             intermediate array is created.
         weights : array_like, optional
             Optional weights. Only used if `fft` is False.
-        gridsize : int
+        gridsize : int, optional
             If gridsize is None, max(len(x), 50) is used.
-        adjust : float
+        adjust : float, optional
             An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-        cut : float
+        cut : float, optional
             Defines the length of the grid past the lowest and highest values
             of x so that the kernel goes to zero. The end points are
             ``min(x) - cut * adjust * bw`` and ``max(x) + cut * adjust * bw``.
-        clip : tuple
+        clip : tuple of float, optional
             Observations in `endog` that are outside of the range given by
             clip are dropped. The number of observations in the `endog`
             array used in the fit is then shortened.
@@ -304,8 +304,13 @@ class KDEUnivariate:
 
         Parameters
         ----------
-        point : {float, ndarray}
+        point : float or array_like
             Point(s) at which to evaluate the density.
+
+        Returns
+        -------
+        float or ndarray
+            The estimated density at `point`.
         """
         _checkisfit(self)
         return self.kernel.density(self.endog, point)
@@ -352,7 +357,7 @@ def kdensity(
     ----------
     x : array_like
         The variable for which the density estimate is desired.
-    kernel : str
+    kernel : str, optional
         The Kernel to be used. Choices are
         - "biw" for biweight
         - "cos" for cosine
@@ -361,7 +366,7 @@ def kdensity(
         - "tri" for triangular
         - "triw" for triweight
         - "uni" for uniform
-    bw : str, float, callable
+    bw : str, float, or callable, optional
         The bandwidth to use. Choices are:
 
         - "scott" - 1.059 * A * nobs ** (-1/5.), where A is
@@ -379,21 +384,21 @@ def kdensity(
           * x - the clipped input data
           * kern - the kernel instance used
 
-    weights : array or None
-        Optional  weights. If the x value is clipped, then this weight is
+    weights : array_like, optional
+        Optional weights. If the x value is clipped, then this weight is
         also dropped.
-    gridsize : int
+    gridsize : int, optional
         If gridsize is None, max(len(x), 50) is used.
-    adjust : float
+    adjust : float, optional
         An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-    clip : tuple
+    clip : tuple of float, optional
         Observations in x that are outside of the range given by clip are
         dropped. The number of observations in x is then shortened.
-    cut : float
+    cut : float, optional
         Defines the length of the grid past the lowest and highest values of x
         so that the kernel goes to zero. The end points are
         -/+ cut*bw*{min(x) or max(x)}
-    retgrid : bool
+    retgrid : bool, optional
         Whether or not to return the grid over which the density is estimated.
     result_object : bool, optional
         Flag controlling whether a ``KDEResult`` NamedTuple is returned.
@@ -541,7 +546,7 @@ def kdensityfft(
     ----------
     x : array_like
         The variable for which the density estimate is desired.
-    kernel : str
+    kernel : str, optional
         ONLY GAUSSIAN IS CURRENTLY IMPLEMENTED.
         "bi" for biweight
         "cos" for cosine
@@ -551,7 +556,7 @@ def kdensityfft(
         "par" for Parzen
         "rect" for rectangular
         "tri" for triangular
-    bw : str, float, callable
+    bw : str, float, or callable, optional
         The bandwidth to use. Choices are:
 
         - "scott" - 1.059 * A * nobs ** (-1/5.), where A is
@@ -569,23 +574,23 @@ def kdensityfft(
           * x - the clipped input data
           * kern - the kernel instance used
 
-    weights : array or None
+    weights : array_like, optional
         WEIGHTS ARE NOT CURRENTLY IMPLEMENTED.
-        Optional  weights. If the x value is clipped, then this weight is
+        Optional weights. If the x value is clipped, then this weight is
         also dropped.
-    gridsize : int
+    gridsize : int, optional
         If gridsize is None, min(len(x), 512) is used. Note that the provided
         number is rounded up to the next highest power of 2.
-    adjust : float
+    adjust : float, optional
         An adjustment factor for the bw. Bandwidth becomes bw * adjust.
-    clip : tuple
+    clip : tuple of float, optional
         Observations in x that are outside of the range given by clip are
         dropped. The number of observations in x is then shortened.
-    cut : float
+    cut : float, optional
         Defines the length of the grid past the lowest and highest values of x
         so that the kernel goes to zero. The end points are
         -/+ cut*bw*{x.min() or x.max()}
-    retgrid : bool
+    retgrid : bool, optional
         Whether or not to return the grid over which the density is estimated.
     result_object : bool, optional
         Flag controlling whether a ``KDEResult`` NamedTuple is returned.

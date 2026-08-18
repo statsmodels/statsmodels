@@ -22,21 +22,21 @@ def lowess(endog, exog, frac=2.0 / 3, it=3):
 
     Parameters
     ----------
-    endog : 1-D numpy array
-        The y-values of the observed points
-    exog : 1-D numpy array
-        The x-values of the observed points
-    frac : float
+    endog : ndarray
+        The 1-D y-values of the observed points
+    exog : ndarray
+        The 1-D x-values of the observed points
+    frac : float, optional
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
-    it : int
+    it : int, optional
         The number of residual-based reweightings
         to perform.
 
     Returns
     -------
-    out: numpy array
-        A numpy array with two columns. The first column
+    out : ndarray
+        An array with two columns. The first column
         is the sorted x values and the second column the
         associated estimated y-values.
 
@@ -194,7 +194,8 @@ def _lowess_wt_standardize(weights, new_entries, x_copy_i, width):
 
     Returns
     -------
-    Nothing. The modifications are made to weight in place.
+    None
+        The modifications are made to `weights` in place.
     """
     weights[:] = new_entries
     weights -= x_copy_i
@@ -228,7 +229,8 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
 
     Returns
     -------
-    Nothing. The fitted values are modified in place.
+    None
+        The modifications are made to `fitted` in place.
     """
     nn_indices = [0, k]
     X = np.ones((k, 2))
@@ -265,10 +267,10 @@ def _lowess_update_nn(x, cur_nn, i):
 
     Parameters
     ----------
-    x : iterable
+    x : ndarray
         The sorted points of x-values
-    cur_nn : list of length 2
-        The two current indices between which are the
+    cur_nn : list of int
+        Two-element list giving the current indices between which are the
         k closest points to x[i]. (The actual value of
         k is irrelevant for the algorithm.)
     i : int
@@ -277,7 +279,8 @@ def _lowess_update_nn(x, cur_nn, i):
 
     Returns
     -------
-    Nothing. It modifies cur_nn in place.
+    None
+        The modifications are made to `cur_nn` in place.
     """
     while True:
         if cur_nn[1] < x.size:
@@ -306,7 +309,8 @@ def _lowess_tricube(t):
 
     Returns
     -------
-    Nothing
+    None
+        The modifications are made to `t` in place.
     """
     # t = (1-np.abs(t)**3)**3
     t[:] = np.absolute(t)  # , out=t) # numpy version?
@@ -327,7 +331,8 @@ def _lowess_mycube(t):
 
     Returns
     -------
-    Nothing
+    None
+        The modifications are made to `t` in place.
     """
     # t **= 3
     t2 = t * t
@@ -347,7 +352,8 @@ def _lowess_bisquare(t):
 
     Returns
     -------
-    Nothing
+    None
+        The modifications are made to `t` in place.
     """
     # t = (1-t**2)**2
     t *= t

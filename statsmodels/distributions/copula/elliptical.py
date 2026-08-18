@@ -424,7 +424,7 @@ class StudentTCopula(EllipticalCopula):
             corr = corr[0, 1]
 
         df = self.df
-        t = -np.sqrt((df + 1) * (1 - corr) / 1 + corr)
+        t = -np.sqrt((df + 1) * (1 - corr) / (1 + corr))
         # Note self.distr_uv is frozen, df cannot change, use stats.t instead
         lam = 2 * stats.t.cdf(t, df + 1)
         return lam, lam

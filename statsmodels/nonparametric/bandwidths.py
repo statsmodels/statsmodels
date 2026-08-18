@@ -10,13 +10,27 @@ def _select_sigma(x, percentile=25):
     """
     Returns the smaller of std(X, ddof=1) or normalized IQR(X) over axis 0
 
+    Parameters
+    ----------
+    x : array_like
+        Array for which to get the dispersion estimate.
+    percentile : int, optional
+        Unused.
+
+    Returns
+    -------
+    float
+        The smaller of the sample standard deviation and the normalized
+        interquartile range.
+
     References
     ----------
     Silverman (1986) p.47
     """
     # normalize = norm.ppf(.75) - norm.ppf(.25)
+    # TODO: Make percentile work for other values than 75/25
     normalize = 1.349
-    IQR = (scoreatpercentile(x, 75) - scoreatpercentile(x, 25)) / normalize
+    IQR = (scoreatpercentile(x, 100 - percentile) - scoreatpercentile(x, percentile)) / normalize
     std_dev = np.std(x, axis=0, ddof=1)
     if IQR > 0:
         return np.minimum(std_dev, IQR)
@@ -33,7 +47,7 @@ def bw_scott(x, kernel=None):
     ----------
     x : array_like
         Array for which to get the bandwidth
-    kernel : CustomKernel object
+    kernel : CustomKernel instance, optional
         Unused
 
     Returns
@@ -67,7 +81,7 @@ def bw_silverman(x, kernel=None):
     ----------
     x : array_like
         Array for which to get the bandwidth
-    kernel : CustomKernel object
+    kernel : CustomKernel instance, optional
         Unused
 
     Returns
@@ -104,7 +118,7 @@ def bw_normal_reference(x, kernel=None):
     ----------
     x : array_like
         Array for which to get the bandwidth
-    kernel : CustomKernel object
+    kernel : CustomKernel instance, optional
         Used to calculate the constant for the plug-in bandwidth.
         The default is a Gaussian kernel.
 
@@ -165,8 +179,9 @@ def select_bandwidth(x, bw, kernel):
     bw : str
         Name of the bandwidth selection rule, currently supported are:
         %s
-    kernel : object
-        Not used yet.
+    kernel : CustomKernel instance
+        Passed through to the selected bandwidth rule. Used only by the
+        'normal_reference' rule; ignored by 'scott' and 'silverman'.
 
     Returns
     -------
