@@ -12,6 +12,7 @@ from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
 from statsmodels.tools.rng_qrng import check_random_state
+from ..tools.validation import array_like
 
 try:
     import joblib
@@ -310,11 +311,11 @@ class GenericKDE:
 
         if bw is None:
             self._bw_method = "normal_reference"
-        if isinstance(bw, str):
+        elif isinstance(bw, str):
             self._bw_method = bw
         else:
             self._bw_method = "user-specified"
-            return bw
+            return array_like(bw, "bw")
 
         nobs = self.nobs
         n_sub = self.n_sub

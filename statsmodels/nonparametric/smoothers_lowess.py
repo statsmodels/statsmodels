@@ -31,32 +31,32 @@ def lowess(
 
     Parameters
     ----------
-    endog : 1-D numpy array
-        The y-values of the observed points
-    exog : 1-D numpy array
-        The x-values of the observed points
-    frac : float
+    endog : array_like
+        The 1-D y-values of the observed points.
+    exog : array_like
+        The 1-D x-values of the observed points.
+    frac : float, optional
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.
-    it : int
+    it : int, optional
         The number of residual-based reweightings
         to perform.
-    delta : float
+    delta : float, optional
         Distance within which to use linear-interpolation
         instead of weighted regression.
-    xvals : 1-D numpy array
+    xvals : array_like, optional
         Values of the exogenous variable at which to evaluate the regression.
         If supplied, cannot use delta.
-    is_sorted : bool
+    is_sorted : bool, optional
         If False (default), then the data will be sorted by exog before
         calculating lowess. If True, then it is assumed that the data is
         already sorted by exog. If xvals is specified, then it too must be
         sorted if is_sorted is True.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'drop'.
-    return_sorted : bool
+    return_sorted : bool, optional
         If True (default), then the returned array is sorted by exog and has
         missing (nan or infinite) observations removed.
         If False, then the returned array is in the same length and the same
@@ -64,7 +64,7 @@ def lowess(
 
     Returns
     -------
-    out : {ndarray, float}
+    out : ndarray
         The returned array is two-dimensional if return_sorted is True, and
         one dimensional if return_sorted is False.
         If return_sorted is True, then a numpy array with two columns. The
@@ -113,7 +113,7 @@ def lowess(
     at points of `exog`.
 
     Some experimentation is likely required to find a good
-    choice of `frac` and `iter` for a particular dataset.
+    choice of `frac` and `it` for a particular dataset.
 
     References
     ----------

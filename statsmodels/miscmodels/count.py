@@ -33,6 +33,7 @@ from scipy import stats
 from scipy.special import factorial
 
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.validation import array_like
 
 
 def maxabs(arr1, arr2):
@@ -138,6 +139,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
     def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
+        offset = array_like(offset, "offset", optional=True)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column

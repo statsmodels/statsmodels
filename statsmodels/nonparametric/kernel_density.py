@@ -153,7 +153,7 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The value for the bandwidth parameter(s).
         func : callable, optional
             Function to transform the likelihood values (before summing); for
@@ -198,7 +198,7 @@ class KDEMultivariate(GenericKDE):
 
         Returns
         -------
-        pdf_est : array_like
+        pdf_est : ndarray
             Probability density function evaluated at `data_predict`.
 
         Notes
@@ -240,7 +240,7 @@ class KDEMultivariate(GenericKDE):
 
         Returns
         -------
-        cdf_est : array_like
+        cdf_est : ndarray
             The estimate of the cdf.
 
         Notes
@@ -289,7 +289,7 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The bandwidth parameter(s).
 
         Returns
@@ -415,7 +415,7 @@ class KDEMultivariateConditional(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    rng : {int, Generator, RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         A seed to use. If None, will use the global RandomState.
 
         .. deprecated:: 0.15.0
@@ -492,7 +492,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The bandwidth parameter(s).
         func : callable, optional
             Function to transform the likelihood values (before summing); for
@@ -544,7 +544,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Returns
         -------
-        pdf : array_like
+        pdf : ndarray
             The value of the probability density at `endog_predict` and `exog_predict`.
 
         Notes
@@ -603,7 +603,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Returns
         -------
-        cdf_est : array_like
+        cdf_est : ndarray
             The estimate of the cdf.
 
         Notes
@@ -680,7 +680,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The bandwidth parameter(s).
 
         Returns
