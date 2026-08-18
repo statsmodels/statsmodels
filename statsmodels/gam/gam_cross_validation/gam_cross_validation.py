@@ -181,7 +181,7 @@ class MultivariateGAMCV(BaseCV):
         penalty weights, one for each smooth term
     gam : model class
         model class for creating a model with the training data
-    cost : function
+    cost : callable
         cost function used to compute the prediction error
     endog : ndarray
         dependent (response) variable of the model
@@ -192,7 +192,7 @@ class MultivariateGAMCV(BaseCV):
 
     Attributes
     ----------
-    cost : function
+    cost : callable
         cost function used to compute the prediction error
     gam : model class
         model class for creating a model with the training data
@@ -323,12 +323,12 @@ class MultivariateGAMCVPath:
     ----------
     smoother : additive smoother instance
         smoother providing the basis for the smooth terms of the model
-    alphas : list of iterables
+    alphas : list of iterable
         list of alpha for smooths. The product space will be used as alpha
         grid for cross-validation
     gam : model class
         model class for creating a model with k-fold training data
-    cost : function
+    cost : callable
         cost function for the prediction error
     endog : ndarray
         dependent (response) variable of the model
@@ -339,15 +339,15 @@ class MultivariateGAMCVPath:
 
     Attributes
     ----------
-    cost : function
+    cost : callable
         cost function for the prediction error
     smoother : additive smoother instance
         smoother providing the basis for the smooth terms of the model
     gam : model class
         model class for creating a model with k-fold training data
-    alphas : list of iterables
+    alphas : list of iterable
         list of alpha for smooths
-    alphas_grid : list of tuples
+    alphas_grid : list of tuple
         product space of ``alphas`` searched during cross-validation
     endog : ndarray
         dependent (response) variable of the model

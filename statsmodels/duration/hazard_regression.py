@@ -33,26 +33,26 @@ _predict_docstring = """
 
     Parameters
     ----------%(params_doc)s
-    exog : array_like
+    exog : array_like, optional
         Data to use as `exog` in forming predictions.  If not
         provided, the `exog` values from the model used to fit the
         data are used.%(cov_params_doc)s
-    endog : array_like
+    endog : array_like, optional
         Duration (time) values at which the predictions are made.
         Only used if pred_type is either 'cumhaz' or 'surv'.  If
         using model `exog`, defaults to model `endog` (time), but
         may be provided explicitly to make predictions at
         alternative times.
-    strata : array_like
+    strata : array_like, optional
         A vector of stratum values used to form the predictions.
         Not used (may be 'None') if pred_type is 'lhr' or 'hr'.
         If `exog` is None, the model stratum values are used.  If
         `exog` is not None and pred_type is 'surv' or 'cumhaz',
         stratum values must be provided (unless there is only one
         stratum).
-    offset : array_like
+    offset : array_like, optional
         Offset values used to create the predicted values.
-    pred_type : str
+    pred_type : {'lhr', 'hr', 'surv', 'cumhaz'}, optional
         If 'lhr', returns log hazard ratios, if 'hr' returns
         hazard ratios, if 'surv' returns the survival function, if
         'cumhaz' returns the cumulative hazard function.%(extra_params_doc)s
@@ -77,19 +77,19 @@ _predict_params_doc = """
         The proportional hazards model parameters."""
 
 _predict_cov_params_docstring = """
-    cov_params : array_like
+    cov_params : array_like, optional
         The covariance matrix of the estimated `params` vector,
         used to obtain prediction errors if pred_type='lhr',
         otherwise optional."""
 
 _predict_pred_only_docstring = """
-    pred_only : bool
+    pred_only : bool, optional
         If True, returns only an array of predicted values.  Otherwise
         returns a bunch containing the predicted values and standard
         errors."""
 
 _predict_transform_docstring = """
-    transform : bool
+    transform : bool, optional
         If the model was fit via a formula, whether to pass `exog`
         through the formula before forming the prediction."""
 
@@ -103,26 +103,26 @@ class PHSurvivalTime:
 
         Parameters
         ----------
-        time : array_like
+        time : ndarray
             The times at which either the event (failure) occurs or
             the observation is censored.
-        status : array_like
+        status : ndarray
             Indicates whether the event (failure) occurs at `time`
             (`status` is 1), or if `time` is a censoring time (`status`
             is 0).
-        exog : array_like
+        exog : 2D ndarray
             The exogeneous (covariate) data matrix, cases are rows and
             variables are columns.
-        strata : array_like
+        strata : array_like, optional
             Grouping variable defining the strata.  If None, all
             observations are in a single stratum.
-        entry : array_like
+        entry : ndarray, optional
             Entry (left truncation) times.  The observation is not
             part of the risk set for times before the entry time.  If
             None, the entry time is treated as being zero, which
             gives no left truncation.  The entry time must be less
             than or equal to `time`.
-        offset : array_like
+        offset : ndarray, optional
             An optional array of offsets
         """
 
@@ -290,22 +290,21 @@ class PHReg(model.LikelihoodModel):
         The observed times (event or censoring)
     exog : 2D array_like
         The covariates or exogeneous variables
-    status : array_like
+    status : array_like, optional
         The censoring status values; status=1 indicates that an
         event occurred (e.g., failure or death), status=0 indicates
         that the observation was right censored. If None, defaults
         to status=1 for all cases.
-    entry : array_like
+    entry : array_like, optional
         The entry times, if left truncation occurs
-    strata : array_like
+    strata : array_like, optional
         Stratum labels.  If None, all observations are taken to be
         in a single stratum.
-    ties : str
-        The method used to handle tied times, must be either 'breslow'
-        or 'efron'.
-    offset : array_like
+    ties : {'breslow', 'efron'}, optional
+        The method used to handle tied times.
+    offset : array_like, optional
         Array of offset values
-    missing : str
+    missing : str, optional
         The method used to handle missing data
 
     Notes
@@ -400,26 +399,25 @@ class PHReg(model.LikelihoodModel):
             The formula specifying the model
         data : array_like
             The data for the model. See Notes.
-        status : array_like
+        status : array_like, optional
             The censoring status values; status=1 indicates that an
             event occurred (e.g., failure or death), status=0 indicates
             that the observation was right censored. If None, defaults
             to status=1 for all cases.
-        entry : array_like
+        entry : array_like, optional
             The entry times, if left truncation occurs
-        strata : array_like
+        strata : array_like, optional
             Stratum labels.  If None, all observations are taken to be
             in a single stratum.
-        offset : array_like
+        offset : array_like, optional
             Array of offset values
-        subset : array_like
+        subset : array_like, optional
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
-        ties : str
-            The method used to handle tied times, must be either 'breslow'
-            or 'efron'.
-        missing : str
+        ties : {'breslow', 'efron'}, optional
+            The method used to handle tied times.
+        missing : str, optional
             The method used to handle missing data
         args : extra arguments
             These are passed to the model
@@ -434,6 +432,12 @@ class PHReg(model.LikelihoodModel):
         Returns
         -------
         model : PHReg model instance
+
+        Notes
+        -----
+        data must define __getitem__ with the keys in the formula terms
+        args and kwargs are passed on to the model instantiation. E.g.,
+        a numpy structured or rec array, a dictionary, or a pandas DataFrame.
         """
 
         # Allow array arguments to be passed by column name.
@@ -483,7 +487,7 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        groups : array_like
+        groups : array_like, optional
             Labels indicating groups of observations that may be
             dependent.  If present, the standard errors account for
             this dependence. Does not affect fitted values.
@@ -525,16 +529,16 @@ class PHReg(model.LikelihoodModel):
 
         Parameters
         ----------
-        method : {'elastic_net'}
+        method : {'elastic_net'}, optional
             Only the `elastic_net` approach is currently implemented.
-        alpha : scalar or array_like
+        alpha : scalar or array_like, optional
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        start_params : array_like
+        start_params : array_like, optional
             Starting values for `params`.
-        refit : bool
+        refit : bool, optional
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
@@ -1188,7 +1192,7 @@ class PHReg(model.LikelihoodModel):
 
         Returns
         -------
-        averages : list of ndarrays
+        averages : list of ndarray
             averages[stx][i,:] is a row vector containing the weighted
             average values (for all the covariates) of at-risk
             subjects at the i^th largest observed failure time in
@@ -1454,9 +1458,9 @@ class PHReg(model.LikelihoodModel):
         ----------
         params : array_like
             The proportional hazards model parameters.
-        scale : float
+        scale : float, optional
             Present for compatibility, not used.
-        exog : array_like
+        exog : ndarray, optional
             A design matrix, defaults to model.exog.
 
         Returns
@@ -1761,14 +1765,14 @@ class PHRegResults(base.LikelihoodModelResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is `x#` for # in
             the number of regressors. Must match the number of parameters
             in the model
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
 
         Returns
@@ -1854,10 +1858,10 @@ class rv_discrete_float:
 
     Parameters
     ----------
-    xk : 2d array_like
+    xk : 2D ndarray
         The support points, should be non-decreasing within each
         row.
-    pk : 2d array_like
+    pk : 2D ndarray
         The probabilities, should sum to one within each row.
 
     Notes
@@ -1894,7 +1898,7 @@ class rv_discrete_float:
         ----------
         n : not used
             Present for signature compatibility.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int, a new
             ``RandomState`` instance is created, seeded with `rng`; this
@@ -1902,7 +1906,7 @@ class rv_discrete_float:
             creating a ``Generator`` in a future release. If `rng` is
             already a ``Generator`` or ``RandomState`` instance, that
             instance is used.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
