@@ -35,7 +35,7 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``title`` attributes.
 
     Notes
     -----
@@ -55,7 +55,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``title`` attributes.
 
     Notes
     -----

@@ -54,7 +54,9 @@ class Dataset(dict):
     Datasets returned by ``load_pandas`` functions typically define
     ``data``, ``endog``, ``exog``, ``names``, ``endog_name`` and
     ``exog_name``; datasets returned by `get_rdataset` additionally
-    define ``title``, ``package`` and ``from_cache``.
+    define ``title``, ``package`` and ``from_cache``. When ``data`` can
+    be cast to float, a ``raw_data`` attribute holding that numeric
+    version is set automatically.
 
     Parameters
     ----------
