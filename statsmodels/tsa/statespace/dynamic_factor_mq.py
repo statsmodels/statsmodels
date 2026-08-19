@@ -152,9 +152,9 @@ class DynamicFactorMQStates(dict):
         Number of monthly (or non-time-specific, if k_endog_Q=0) variables.
     k_endog_Q : int
         Number of quarterly variables.
-    endog_names : list
+    endog_names : list of str
         Names of the endogenous variables.
-    factors : int, list, or dict
+    factors : int, list of str, or dict
         Integer giving the number of (global) factors, a list with the names of
         (global) factors, or a dictionary with:
 
@@ -728,7 +728,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         the columns with quarterly variables should come afterwards. See the
         "Notes" section for details on how to set up a model with
         monthly/quarterly mixed frequency data.
-    factors : int, list, or dict, optional
+    factors : int, list of str, or dict, optional
         Integer giving the number of (global) factors, a list with the names of
         (global) factors, or a dictionary with:
 
@@ -2317,7 +2317,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
             Default is 'none', since computing this matrix can be very slow
             when there are a large number of parameters.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
 
             **opg, oim, approx, robust, robust_approx**
@@ -2488,7 +2488,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
             Default is 'none', since computing this matrix can be very slow
             when there are a large number of parameters.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
 
             **opg, oim, approx, robust, robust_approx**
@@ -3079,7 +3079,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object. Default is None.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
         results_class : type, optional
@@ -3126,7 +3126,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object. Default is 'none'.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
         results_class : type, optional
@@ -3293,10 +3293,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int or array_like
+        impulse : int or array_like, optional
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. Alternatively, a custom impulse vector may be
-            provided; must be shaped `k_posdef x 1`.
+            provided; must be shaped `k_posdef x 1`. Default is 0.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -3447,7 +3447,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             "cumulative" plots the successive R-squared values as each
             additional factor is added to the regression, for each variable.
             Default is 'individual'.
-        which: {None, 'filtered', 'smoothed'}, optional
+        which : {None, 'filtered', 'smoothed'}, optional
             Whether to compute R-squared values based on filtered or smoothed
             estimates of the factors. Default is 'smoothed' if smoothed results
             are available and 'filtered' otherwise.
@@ -3563,7 +3563,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             "cumulative" plots the successive R-squared values as each
             additional factor is added to the regression, for each variable.
             Default is 'individual'.
-        which: {None, 'filtered', 'smoothed'}, optional
+        which : {None, 'filtered', 'smoothed'}, optional
             Whether to compute R-squared values based on filtered or smoothed
             estimates of the factors. Default is 'smoothed' if smoothed results
             are available and 'filtered' otherwise.
@@ -3772,7 +3772,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.
-        comparison_type : {None, 'previous', 'updated'}
+        comparison_type : {None, 'previous', 'updated'}, optional
             This denotes whether the `comparison` argument represents a
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
@@ -3913,7 +3913,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Parameters
         ----------
-        decomposition_of : {"smoothed_state", "smoothed_signal"}
+        decomposition_of : {"smoothed_state", "smoothed_signal"}, optional
             The object to perform a decomposition of. If it is set to
             "smoothed_state", then the elements of the smoothed state vector
             are decomposed into the contributions of each observation. If it

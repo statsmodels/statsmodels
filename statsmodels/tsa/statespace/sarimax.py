@@ -63,7 +63,7 @@ class SARIMAX(MLEModel):
         integer giving the periodicity (number of periods in season), often it
         is 4 for quarterly data or 12 for monthly data. Default is no seasonal
         effect.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
@@ -167,7 +167,7 @@ class SARIMAX(MLEModel):
         component of the model.
     hamilton_representation : bool
         Whether or not to use the Hamilton representation of an ARMA process.
-    trend : str{'n','c','t','ct'} or iterable
+    trend : {'n', 'c', 't', 'ct'} or iterable
         Parameter controlling the deterministic
         trend polynomial :math:`A(t)`. See the class
         parameter documentation for more information.

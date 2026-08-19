@@ -115,7 +115,7 @@ class QuarterlyAR1(mlemodel.MLEModel):
             The `cov_type` keyword governs the method for calculating the
             covariance matrix of parameter estimates. Default is 'none', in
             which case no covariance matrix is estimated.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
         maxiter : int, optional
             The maximum number of EM iterations to perform. Default is 500.
