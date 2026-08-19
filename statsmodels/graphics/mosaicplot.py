@@ -318,7 +318,8 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
 
     if len(gap) < L:
         last = gap[-1]
-        gap = list(*gap) + [last / 1.5**idx for idx in range(L)]
+        n_extra = L - len(gap)
+        gap = list(gap) + [last / 1.5**idx for idx in range(1, n_extra + 1)]
     # trim if it's too long
 
     gap = gap[:L]
