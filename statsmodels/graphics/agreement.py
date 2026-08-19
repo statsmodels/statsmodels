@@ -52,10 +52,12 @@ def mean_diff_plot(
         matplotlib Axes.scatter plotting method.
     mean_line_kwds : dict, optional
         Options to style the mean difference line. Accepts any keywords for
-        the matplotlib Axes.axhline plotting method.
+        the matplotlib Axes.axhline plotting method. Keys that are not
+        supplied default to a gray dashed line of width 1.
     limit_lines_kwds : dict, optional
         Options to style the limit-of-agreement lines. Accepts any keywords
-        for the matplotlib Axes.axhline plotting method.
+        for the matplotlib Axes.axhline plotting method. Keys that are not
+        supplied default to gray dotted lines of width 1.
 
     Returns
     -------
@@ -112,9 +114,9 @@ def mean_diff_plot(
         if "linewidth" not in kwds:
             kwds["linewidth"] = 1
     if "linestyle" not in mean_line_kwds:
-        kwds["linestyle"] = "--"
+        mean_line_kwds["linestyle"] = "--"
     if "linestyle" not in limit_lines_kwds:
-        kwds["linestyle"] = ":"
+        limit_lines_kwds["linestyle"] = ":"
     ax.scatter(means, diffs, **scatter_kwds)  # Plot the means against the diffs.
     ax.axhline(mean_diff, **mean_line_kwds)  # draw mean line.
 
