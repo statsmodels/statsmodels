@@ -313,6 +313,24 @@ def test_recursive_split():
     res[("f", "o")] = (0.5, 2 / 3, 0.5, 1 / 3)
 
 
+def test_recursive_split_short_gap_sequence():
+    # a gap sequence shorter than the number of levels is extended with
+    # exponentially decreasing gaps rather than raising
+    keys = list(product("mf", "yao"))
+    data = dict(zip(keys, [1] * len(keys), strict=True))
+
+    res = _hierarchical_split(data, gap=[0.05])
+    assert_(list(res.keys()) == keys)
+
+    # extending continues the decay of the last supplied gap, which makes
+    # the one-element sequence equivalent to the equivalent scalar
+    assert_(res == _hierarchical_split(data, gap=[0.05, 0.05 / 1.5]))
+    assert_(res == _hierarchical_split(data, gap=0.05))
+
+    # a gap sequence longer than the number of levels is still trimmed
+    assert_(res == _hierarchical_split(data, gap=[0.05, 0.05 / 1.5, 1.0]))
+
+
 def test__reduce_dict():
     data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8, strict=True))
     eq(_reduce_dict(data, ("m",)), 4)
