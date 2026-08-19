@@ -18,6 +18,9 @@ import scipy.stats
 from statsmodels.iolib.summary import Summary
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_simple,
+)
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
 
 # This contains tests for the exponential smoothing implementation in
@@ -541,6 +544,28 @@ def test_initialization_known(austourists):
     assert initial_level == internal_params[4]
     assert initial_trend == internal_params[5]
     assert internal_params[6] == 0
+
+
+@pytest.mark.parametrize("trend", [False, None])
+def test_initialization_simple_seasonal_no_trend(trend):
+    # `False` is the no-trend sentinel used by ExponentialSmoothing, so a
+    # seasonal model without a trend must not get an initial trend value
+    y = np.arange(1.0, 25.0) + np.tile([1.0, 2.0, 3.0, 0.0], 6)
+    level, initial_trend, seasonal = _initialization_simple(
+        y, trend=trend, seasonal="add", seasonal_periods=4
+    )
+    assert initial_trend is None
+    assert level is not None
+    assert seasonal is not None
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+def test_initialization_simple_seasonal_with_trend(trend):
+    y = np.arange(1.0, 25.0) + np.tile([1.0, 2.0, 3.0, 0.0], 6)
+    _, initial_trend, _ = _initialization_simple(
+        y, trend=trend, seasonal="add", seasonal_periods=4
+    )
+    assert_allclose(initial_trend, 1.0)
 
 
 def test_initialization_heuristic(oildata):
