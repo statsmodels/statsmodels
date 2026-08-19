@@ -739,12 +739,23 @@ class SVARResults(SVARProcess, VARResults):
         ----------
         periods : int, optional
         var_order : sequence, optional
-            Alternate variable order for Cholesky decomposition
+            Alternate variable order for the structural impulse matrix. Not
+            implemented, and so must be None.
 
         Returns
         -------
         irf : IRAnalysis
+
+        Raises
+        ------
+        NotImplementedError
+            If `var_order` is not None.
         """
+        if var_order is not None:
+            raise NotImplementedError(
+                "alternate variable order not implemented (yet)"
+            )
+
         A = self.A
         B = self.B
         P = np.dot(npl.inv(A), B)
