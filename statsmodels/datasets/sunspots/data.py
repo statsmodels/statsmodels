@@ -48,7 +48,7 @@ def load_pandas():
     # TODO: time series
     endog = data.set_index(data.YEAR).SUNACTIVITY
     dataset = du.Dataset(data=data, names=list(data.columns),
-                         endog=endog, endog_name="volume")
+                         endog=endog, endog_name="SUNACTIVITY")
     return dataset
 
 

@@ -277,8 +277,6 @@ class PCA:
         # Workaround to avoid instance methods in __dict__
         if self._method not in ("eig", "svd", "nipals"):
             raise ValueError(f"method {method} is not known.")
-        if self._method == "svd":
-            self._svd_full_matrices = True
 
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)
