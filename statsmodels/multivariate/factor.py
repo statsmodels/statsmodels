@@ -35,13 +35,28 @@ def _check_args_1(endog, n_factor, corr, nobs):
         Directly specified correlation matrix.
     nobs : int or None
         The number of observations.
+
+    Raises
+    ------
+    ValueError
+        If neither `endog` nor `corr` is provided, or if `n_factor` is not
+        positive.
+
+    Warns
+    -----
+    SpecificationWarning
+        If both `endog` and `corr` are provided, since `corr` is then
+        ignored.
+    UserWarning
+        If `nobs` is provided together with `endog`, since `nobs` is then
+        taken from `endog`.
     """
-    msg = "Either endog or corr must be provided."
-    if endog is not None and corr is not None:
-        raise ValueError(msg)
     if endog is None and corr is None:
+        raise ValueError("Either endog or corr must be provided.")
+    if endog is not None and corr is not None:
         warnings.warn(
-            "Both endog and corr are provided, corr will be used for factor analysis.",
+            "Both endog and corr are provided, endog will be used for factor "
+            "analysis.",
             SpecificationWarning,
             stacklevel=2,
         )
@@ -99,8 +114,10 @@ class Factor(Model):
         The number of factors to extract
     corr : array_like, optional
         Directly specify the correlation matrix instead of estimating
-        it from `endog`.  If provided, `endog` is not used for the
-        factor analysis, it may be used in post-estimation.
+        it from `endog`.  Exactly one of `endog` and `corr` is required.
+        If both are provided a ``SpecificationWarning`` is raised and
+        `corr` is ignored in favor of the correlation matrix computed
+        from `endog`.
     method : {'pa', 'ml'}, optional
         The method to extract factors, currently must be either 'pa'
         for principal axis factor analysis or 'ml' for maximum
