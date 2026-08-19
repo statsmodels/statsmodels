@@ -74,7 +74,7 @@ def _initialization_simple(endog, trend=False, seasonal=False,
         initial_level = np.mean(endog[:seasonal_periods])
         m = seasonal_periods
 
-        if trend is not None:
+        if trend in ("add", "mul"):
             initial_trend = (pd.Series(endog).diff(m)[m:2 * m] / m).mean()
 
         if seasonal == "add":
