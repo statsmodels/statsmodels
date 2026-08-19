@@ -40,7 +40,7 @@ class NewsResults:
     tolerance : float, optional
         The numerical threshold for determining zero impact. Default is that
         any impact less than 1e-10 is assumed to be zero.
-    row_labels : iterable
+    row_labels : array_like, optional
         Row labels (often dates) for the impacts of the revisions and news.
 
     Attributes
@@ -55,15 +55,15 @@ class NewsResults:
     revision_impacts : DataFrame
         Updates to forecasts of impacted variables from all data revisions,
         E[y^i | revisions] - E[y^i | previous].
-    news : DataFrame
+    news : Series
         The unexpected component of the updated data,
         E[y^u | post] - E[y^u | revisions] where y^u are the updated variables.
     weights : DataFrame
         Weights describing the effect of news on variables of interest.
-    revisions : DataFrame
+    revisions : Series
         The revisions between the current and previously observed data, for
         revisions for which detailed impacts were computed.
-    revisions_all : DataFrame
+    revisions_all : Series
         The revisions between the current and previously observed data,
         y^r_{revised} - y^r_{previous} where y^r are the revised variables.
     revision_weights : DataFrame
@@ -73,10 +73,10 @@ class NewsResults:
         Weights describing the effect of revisions on variables of interest,
         with a new entry that includes NaNs for the revisions for which
         detailed impacts were not computed.
-    update_forecasts : DataFrame
+    update_forecasts : Series
         Forecasts based on the previous dataset of the variables that were
         updated, E[y^u | previous].
-    update_realized : DataFrame
+    update_realized : Series
         Actual observed data associated with the variables that were
         updated, y^u
     revisions_details_start : int
@@ -88,16 +88,16 @@ class NewsResults:
     revision_grouped_impacts : DataFrame
         Updates to forecasts of impacted variables from data revisions that
         were grouped together, E[y^i | grouped revisions] - E[y^i | previous].
-    revised_prev : DataFrame
+    revised_prev : Series
         Previously observed data associated with the variables that were
         revised, for revisions for which detailed impacts were computed.
-    revised_prev_all : DataFrame
+    revised_prev_all : Series
         Previously observed data associated with the variables that were
         revised, y^r_{previous}
-    revised : DataFrame
+    revised : Series
         Currently observed data associated with the variables that were
         revised, for revisions for which detailed impacts were computed.
-    revised_all : DataFrame
+    revised_all : Series
         Currently observed data associated with the variables that were
         revised, y^r_{revised}
     prev_impacted_forecasts : DataFrame
@@ -119,7 +119,7 @@ class NewsResults:
         The integer locations of the updated data points.
     updates_ix : DataFrame
         The label-based locations of updated data points.
-    state_index : array_like
+    state_index : ndarray or None
         Index of state variables used to compute impacts.
 
     References
@@ -855,7 +855,7 @@ class NewsResults:
             the variables that were *affected* by the news. If you do not know
             the labels for the variables, check the `endog_names` attribute of
             the model instance.
-        groupby : {impact date, impacted variable}
+        groupby : {"impact date", "impacted variable"}, optional
             The primary variable for grouping results in the impacts table. The
             default is to group by impact date.
         show_revisions_columns : bool, optional
@@ -863,9 +863,9 @@ class NewsResults:
             data revisions or the total impacts. Default is to show the
             revisions and totals columns if any revisions were made and
             otherwise to hide them.
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
         float_format : str, optional
             Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
@@ -978,7 +978,7 @@ class NewsResults:
 
         Parameters
         ----------
-        source : {news, revisions}
+        source : {"news", "revisions"}, optional
             The source of impacts to summarize. Default is "news".
         impact_date : int, str, datetime, list, array, or slice, optional
             Observation index label or slice of labels specifying particular
@@ -1007,12 +1007,13 @@ class NewsResults:
             variables that were *affected* by the news. If you do not know the
             labels for the variables, check the `endog_names` attribute of the
             model instance.
-        groupby : {update date, updated variable, impact date, impacted variable}
+        groupby : {"update date", "updated variable", "impact date",
+            "impacted variable"}, optional
             The primary variable for grouping results in the details table. The
             default is to group by update date.
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
         float_format : str, optional
             Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
@@ -1245,9 +1246,9 @@ class NewsResults:
 
         Parameters
         ----------
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
 
         Returns
         -------
@@ -1303,9 +1304,9 @@ class NewsResults:
 
         Parameters
         ----------
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
 
         Returns
         -------
@@ -1407,22 +1408,22 @@ class NewsResults:
             variables that were *revised*. If you do not know the labels for
             the variables, check the `endog_names` attribute of the model
             instance.
-        impacts_groupby : {impact date, impacted variable}
+        impacts_groupby : {"impact date", "impacted variable"}, optional
             The primary variable for grouping results in the impacts table. The
             default is to group by impact date.
-        details_groupby : str
-            One of "update date", "updated variable", "impact date", or
-            "impacted variable". The primary variable for grouping results in
-            the details table. Only used if the details tables are included.
-            The default is to group by update date.
+        details_groupby : {"update date", "updated variable", "impact date",
+            "impacted variable"}, optional
+            The primary variable for grouping results in the details table.
+            Only used if the details tables are included. The default is to
+            group by update date.
         show_revisions_columns : bool, optional
             If set to False, the impacts table will not show the impacts from
             data revisions or the total impacts. Default is to show the
             revisions and totals columns if any revisions were made and
             otherwise to hide them.
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
         include_details_tables : bool, optional
             If set to True, the summary will show tables describing the details
             of how news from specific updates translate into specific impacts.
@@ -1614,7 +1615,7 @@ class NewsResults:
 
         Parameters
         ----------
-        groupby : str, list of str, or function, optional
+        groupby : str, list of str, or callable, optional
             Argument passed to the `groupby` method of the combined details
             table (see `get_details`) to group impacts by, e.g., by the
             update date. If not specified, no grouping is performed.

@@ -67,14 +67,14 @@ class ExponentialSmoothing(MLEModel):
         or length `seasonal - 1` (in which case the last initial value
         is computed to make the average effect zero). Only used if
         initialization is 'known'.
-    bounds : iterable[tuple], optional
+    bounds : iterable of tuple, optional
         An iterable containing bounds for the parameters. Must contain four
         elements, where each element is a tuple of the form (lower, upper).
         Default is (0.0001, 0.9999) for the level, trend, and seasonal
         smoothing parameters and (0.8, 0.98) for the trend damping parameter.
     concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
-        out of the likelihood.
+        out of the likelihood. Default is True.
     dates : array_like of datetime, optional
         An array-like object of datetime objects. If a Pandas object is given
         for endog, it is assumed to have a DateIndex.

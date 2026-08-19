@@ -52,7 +52,7 @@ class DynamicFactor(MLEModel):
         is "diagonal".
     error_order : int, optional
         The order of the vector autoregression followed by the observation
-        error component. Default is None, corresponding to white noise errors.
+        error component. Default is 0, corresponding to white noise errors.
     error_var : bool, optional
         Whether or not to model the errors jointly via a vector autoregression,
         rather than as individual autoregressions. Has no effect unless

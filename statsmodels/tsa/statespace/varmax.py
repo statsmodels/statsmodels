@@ -46,7 +46,7 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
@@ -82,7 +82,7 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : str{'n','c','t','ct'} or iterable
+    trend : {'n', 'c', 't', 'ct'} or iterable
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a

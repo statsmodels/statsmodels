@@ -584,7 +584,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             Default is 'opg' unless memory conservation is used to avoid
             computing the loglikelihood values for each observation, in which
             case the default is 'approx'.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
 
             **opg, oim, approx, robust, robust_approx**
@@ -877,13 +877,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         complex_step : bool, optional
             Whether or not to compute the filtered output using complex step
             differentiation. Default is False.
-        return_ssm : bool,optional
+        return_ssm : bool, optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
         results_class : type, optional
@@ -963,13 +963,13 @@ class MLEModel(tsbase.TimeSeriesModel):
         complex_step : bool, optional
             Whether or not to compute the smoothed output using complex step
             differentiation. Default is False.
-        return_ssm : bool,optional
+        return_ssm : bool, optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             See `MLEResults.get_robustcov_results` for a description required
             keywords for alternative covariance estimators
         results_class : type, optional
@@ -1292,7 +1292,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : array_like, optional
+        params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
         transformed : bool, optional
@@ -1416,7 +1416,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : array_like, optional
+        params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
         transformed : bool, optional
@@ -1494,7 +1494,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : array_like, optional
+        params : array_like
             Array of parameters at which to evaluate the loglikelihood
             function.
         approx_complex_step : bool, optional
@@ -1989,7 +1989,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
 
@@ -2013,7 +2013,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
 
         Notes
@@ -2082,7 +2082,7 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        params : array_like
+        params : ndarray
             Array of parameters.
 
         Notes
@@ -2317,12 +2317,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
             used.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -2483,12 +2483,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int, str or array_like
+        impulse : int, str, or array_like, optional
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. If a str, it indicates which column of df
             the unit (1) impulse is given.
             Alternatively, a custom impulse vector may be provided; must be
-            shaped `k_posdef x 1`.
+            shaped `k_posdef x 1`. Default is 0.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custom `impulse` vectors. Default
@@ -2700,7 +2700,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         description of available options. Default is None, in which case the
         `cov_type` is chosen based on whether or not `memory_no_likelihood`
         is set on `results`.
-    cov_kwds : dict or None, optional
+    cov_kwds : dict, optional
         A dictionary of arguments affecting covariance matrix computation.
         See `MLEModel.fit` for details. Default is None.
     **kwargs
@@ -2969,11 +2969,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        cov_type : str
+        cov_type : str, optional
             the type of covariance matrix estimator to use. See Notes below
-        kwargs : depends on cov_type
-            Required or optional arguments for covariance calculation.
-            See Notes below.
+        **kwargs
+            Required or optional arguments for covariance calculation,
+            depending on `cov_type`. See Notes below.
 
         Returns
         -------
@@ -3321,7 +3321,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ----------
         criteria : {'aic', 'bic', 'hqic'}
             The information criteria to compute.
-        method : {'standard', 'lutkepohl'}
+        method : {'standard', 'lutkepohl'}, optional
             The method for information criteria computation. Default is
             'standard' method; 'lutkepohl' computes the information criteria
             as in Lütkepohl (2007). See Notes for formulas.
@@ -3580,7 +3580,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             The statistical test for heteroskedasticity. Must be 'breakvar'
             for test of a break in the variance. If None, an attempt is
             made to select an appropriate test.
-        alternative : str, 'increasing', 'decreasing' or 'two-sided'
+        alternative : {'increasing', 'decreasing', 'two-sided'}, optional
             This specifies the alternative for the p-value calculation. Default
             is two-sided.
         use_f : bool, optional
@@ -3680,7 +3680,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
-        lags : None, int or array_like
+        lags : int, array_like, or None, optional
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
             length.
@@ -3972,18 +3972,18 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        start : {int, str,datetime}, optional
+        start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
-        end : {int, str,datetime}, optional
+        end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
             the sample.
-        dynamic : {bool, int, str,datetime}, optional
+        dynamic : bool, int, str, or datetime, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -4016,7 +4016,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        predictions : array_like
+        predictions : ndarray, Series, or DataFrame
             In-sample predictions / Out-of-sample forecasts. (Numpy array or
             Pandas Series or DataFrame, depending on input and dimensions).
             Dimensions are `(npredict x k_endog)`.
@@ -4068,7 +4068,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Returns
         -------
-        forecast : array_like
+        forecast : ndarray, Series, or DataFrame
             Out-of-sample forecasts (Numpy array or Pandas Series or DataFrame,
             depending on input and dimensions).
             Dimensions are `(steps x k_endog)`.
@@ -4174,7 +4174,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             assumed to contain draws from the standard Normal distribution that
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
-        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None or an int, a new ``Generator`` is created
             (seeded with `rng` if an int is given). If `rng` is already a
             ``Generator`` or ``RandomState`` instance, that instance is
@@ -4265,12 +4265,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int, str or array_like
+        impulse : int, str, or array_like, optional
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. If a str, it indicates which column of df
             the unit (1) impulse is given.
             Alternatively, a custom impulse vector may be provided; must be
-            shaped `k_posdef x 1`.
+            shaped `k_posdef x 1`. Default is 0.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custom `impulse` vectors. Default
@@ -4594,7 +4594,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.
-        comparison_type : {None, 'previous', 'updated'}
+        comparison_type : {None, 'previous', 'updated'}, optional
             This denotes whether the `comparison` argument represents a
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
@@ -4766,7 +4766,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        decomposition_of : {"smoothed_state", "smoothed_signal"}
+        decomposition_of : {"smoothed_state", "smoothed_signal"}, optional
             The object to perform a decomposition of. If it is set to
             "smoothed_state", then the elements of the smoothed state vector
             are decomposed into the contributions of each observation. If it
@@ -5273,9 +5273,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         Parameters
         ----------
-        variable : int, optional
-            Index of the endogenous variable for which the diagnostic plots
-            should be created. Default is 0.
+        variable : int or str, optional
+            Index or name of the endogenous variable for which the diagnostic
+            plots should be created. Default is 0.
         lags : int, optional
             Number of lags to include in the correlogram. Default is 10.
         fig : Figure, optional
@@ -5290,7 +5290,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             endogenous variable when used in plot titles. Default is 24.
         auto_ylims : bool, optional
             If True, adjusts automatically the y-axis limits to ACF values.
-        bartlett_confint : bool, default False
+        bartlett_confint : bool, optional
             Confidence intervals for ACF values are generally placed at 2
             standard errors around r_k. The formula used for standard error
             depends upon the situation. If the autocorrelations are being used
@@ -5446,7 +5446,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         title : str, optional
             The title used for the summary table. Default is "Statespace
             Model Results".
-        model_name : str
+        model_name : str or list of str, optional
             The name of the model used. Default is to use model class name.
         display_params : bool, optional
             Whether or not to display the table of estimated parameters.
@@ -5704,11 +5704,11 @@ class PredictionResults(pred.PredictionResults):
     prediction_results : kalman_filter.PredictionResults instance
         Results object from prediction after fitting or filtering a state space
         model.
-    row_labels : iterable
+    row_labels : iterable, optional
         Row labels for the predicted data.
-    information_set : str
+    information_set : {"predicted", "filtered", "smoothed"}, optional
         Name of information set
-    signal_only : bool
+    signal_only : bool, optional
         Whether the prediction is for the signal only
 
     Attributes

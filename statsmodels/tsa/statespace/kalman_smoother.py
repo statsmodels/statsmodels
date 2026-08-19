@@ -41,7 +41,7 @@ class KalmanSmoother(KalmanFilter):
 
     Parameters
     ----------
-    k_endog : {array_like, int}
+    k_endog : ndarray or int
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -50,7 +50,7 @@ class KalmanSmoother(KalmanFilter):
         The dimension of a guaranteed positive definite covariance matrix
         describing the shocks in the measurement equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
-    results_class : class, optional
+    results_class : type, optional
         Default results class to use to save filtering output. Default is
         `SmootherResults`. If specified, class must extend from
         `SmootherResults`.
@@ -384,8 +384,8 @@ class KalmanSmoother(KalmanFilter):
             Determines which Kalman smoothing approach to use. Default is
             the smoother method specified by `smooth_method` in the current
             state space model.
-        results : class or object, optional
-            If a class, then that class is instantiated and returned with the
+        results : type or object, optional
+            If a type, then that type is instantiated and returned with the
             result of both filtering and smoothing.
             If an object, then that object is updated with the smoothing data.
             If None, then a SmootherResults object is returned with both
@@ -467,7 +467,7 @@ class SmootherResults(FilterResults):
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
-    shapes : dictionary of name:tuple
+    shapes : dict of str to tuple
         A dictionary recording the shapes of each of the representation
         matrices as tuples.
     endog : ndarray
@@ -486,20 +486,20 @@ class SmootherResults(FilterResults):
         The selection matrix, :math:`R`.
     state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
-    missing : array of bool
+    missing : ndarray of bool
         An array of the same size as `endog`, filled with boolean values that
         are True if the corresponding entry in `endog` is NaN and False
         otherwise.
-    nmissing : array of int
+    nmissing : ndarray of int
         An array of size `nobs`, where the ith entry is the number (between 0
         and k_endog) of NaNs in the ith row of the `endog` array.
     time_invariant : bool
         Whether or not the representation matrices are time-invariant
     initialization : str
         Kalman filter initialization method.
-    initial_state : array_like
+    initial_state : ndarray
         The state vector used to initialize the Kalman filter.
-    initial_state_cov : array_like
+    initial_state_cov : ndarray
         The state covariance matrix used to initialize the Kalman filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
@@ -1111,7 +1111,7 @@ class SmootherResults(FilterResults):
             revisions are grouped together. Default is True. Note that for
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
-        design : array, optional
+        design : ndarray, optional
             Design matrix for the period `t` in time-varying models. If this
             model has a time-varying design matrix, and the argument `t` is out
             of this model's sample, then a new design matrix for period `t`
@@ -1614,7 +1614,7 @@ class SmootherResults(FilterResults):
 
         Parameters
         ----------
-        updates_ix : list
+        updates_ix : list of tuple
             List of indices `(t, i)`, where `t` denotes a zero-indexed time
             location and `i` denotes a zero-indexed endog variable.
         t : int, optional
@@ -1809,7 +1809,7 @@ class SmootherResults(FilterResults):
 
         Returns
         -------
-        data_contributions : array
+        data_contributions : ndarray
             Contributions of observations to the decomposed object. If the
             smoothed state is being decomposed, then `data_contributions` are
             shaped `(nobs, k_states, nobs, k_endog)`, where the
@@ -1820,7 +1820,7 @@ class SmootherResults(FilterResults):
             `(t, k, j, p)`-th element is the contribution of the `p`-th
             observation at time `j` to the smoothed prediction of the `k`-th
             observation at time `t`.
-        obs_intercept_contributions : array
+        obs_intercept_contributions : ndarray
             Contributions of the observation intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `obs_intercept_contributions` are shaped
@@ -1831,7 +1831,7 @@ class SmootherResults(FilterResults):
             `(nobs, k_endog, nobs, k_endog)`, where the `(t, k, j, p)`-th
             element is the contribution of the `p`-th observation at time `j`
             to the smoothed prediction of the `k`-th observation at time `t`.
-        state_intercept_contributions : array
+        state_intercept_contributions : ndarray
             Contributions of the state intercept to the decomposed object. If
             the smoothed state is being decomposed, then
             `state_intercept_contributions` are shaped
@@ -1843,7 +1843,7 @@ class SmootherResults(FilterResults):
             `(t, k, j, l)`-th element is the contribution of the `l`-th
             state intercept at time `j` to the smoothed prediction of the
             `k`-th observation at time `t`.
-        prior_contributions : array
+        prior_contributions : ndarray
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` are
             shaped `(nobs, k_states, k_states)`, where the `(t, m, l)`-th

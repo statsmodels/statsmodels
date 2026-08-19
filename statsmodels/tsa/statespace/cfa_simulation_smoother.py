@@ -165,11 +165,11 @@ class CFASimulationSmoother:
 
         Parameters
         ----------
-        variates : array_like, optional
+        variates : ndarray, optional
             Random variates, distributed standard Normal. Usually only
             specified if results are to be replicated (e.g., to enforce a seed)
             or for testing. If not specified, random variates are drawn. Must
-            be shaped (nobs, k_states).
+            be shaped (k_states, nobs).
         update_posterior : bool, optional
             Whether to update the posterior mean and covariance matrix (held
             in the `posterior_mean` and `posterior_cov_inv_chol_sparse`
