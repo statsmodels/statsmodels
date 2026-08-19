@@ -415,7 +415,13 @@ epub_copyright = (
 # Numpydoc options
 # numpydoc_attributes_as_param_list = True
 # numpydoc_show_class_members = False
-# numpydoc_show_inherited_class_members = True
+
+# Dataset is a dict subclass; showing its inherited dict methods (keys,
+# items, pop, ...) on its docs page is just noise, so hide them there
+# while leaving the default (True) in place for every other class.
+numpydoc_show_inherited_class_members = {
+    "statsmodels.datasets.utils.Dataset": False,
+}
 
 # Create xrefs
 numpydoc_xref_param_type = True
@@ -430,6 +436,7 @@ numpydoc_xref_aliases.update(
         "Series": "pandas.Series",
         "pd.DataFrame": "pandas.DataFrame",
         "pd.Series": "pandas.Series",
+        "Dataset": "statsmodels.datasets.utils.Dataset",
         "MLEResults": "statsmodels.tsa.statespace.mlemodel.MLEResults",
         "RandomState": "numpy.random.RandomState",
         "Generator": "numpy.random.Generator",
