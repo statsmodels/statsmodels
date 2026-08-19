@@ -595,18 +595,19 @@ class BetaModel(GenericLikelihoodModel):
         params : ndarray
             Parameter at which Hessian is evaluated.
         observed : bool, optional
-            If True, then the observed Hessian is returned (default).
+            If True, then the observed Hessian is returned.
             If False, then the expected information matrix is returned.
+            If None, the default, then the choice is made by the model's
+            ``hess_type`` attribute, which is "oim", i.e. observed, unless
+            ``fit`` was called with ``cov_type="eim"``.
 
         Returns
         -------
         hessian : ndarray
             Hessian, i.e., observed information, or expected information matrix.
         """
-        if self.hess_type == "eim":
-            observed = False
-        else:
-            observed = True
+        if observed is None:
+            observed = self.hess_type != "eim"
         _, hf = self.score_hessian_factor(
             params, return_hessian=True, observed=observed
         )

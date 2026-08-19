@@ -416,6 +416,31 @@ class TestBetaIncome:
         assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)
 
 
+def test_hessian_observed_argument():
+    # `observed` must be honored when supplied, and only fall back to
+    # hess_type when it is None
+    formula = "methylation ~ gender + CpG"
+    mod = BetaModel.from_formula(formula, methylation,
+                                 exog_precision_formula="~ age",
+                                 link_precision=links.Log())
+    res = mod.fit()
+    params = res.params
+
+    hess_obs = mod.hessian(params, observed=True)
+    hess_eim = mod.hessian(params, observed=False)
+    assert not np.allclose(hess_obs, hess_eim)
+
+    # the default follows hess_type, which fit sets to "oim"
+    assert mod.hess_type == "oim"
+    assert_allclose(mod.hessian(params), hess_obs, rtol=1e-13)
+
+    mod.hess_type = "eim"
+    assert_allclose(mod.hessian(params), hess_eim, rtol=1e-13)
+
+    # an explicit argument still wins over hess_type
+    assert_allclose(mod.hessian(params, observed=True), hess_obs, rtol=1e-13)
+
+
 def test_summary_after_remove_data():
     # summary() must still work after remove_data() has been called
     model = "I(food/income) ~ income + persons"
