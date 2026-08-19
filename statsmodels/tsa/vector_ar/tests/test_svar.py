@@ -82,6 +82,12 @@ class TestSVAR:
         assert_allclose(errband1.lower, errband2.lower, rtol=1e-8, atol=atol)
         assert_allclose(errband1.upper, errband2.upper, rtol=1e-8, atol=atol)
 
+    def test_irf_var_order_not_implemented(self):
+        # var_order is not supported and must not be silently ignored,
+        # matching VARResults.irf
+        with pytest.raises(NotImplementedError, match="variable order"):
+            self.res1.irf(var_order=[2, 0, 1])
+
 
 def test_oneparam():
     # regression test, one parameter in A, B, issue #9302
