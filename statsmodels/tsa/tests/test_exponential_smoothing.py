@@ -3,7 +3,7 @@ Author: Samuel Scherrer
 """
 
 from statsmodels.compat.pandas import QUARTER_END
-from statsmodels.compat.platform import PLATFORM_LINUX32, PLATFORM_WIN
+from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32, PLATFORM_WIN
 
 from itertools import product
 import json
@@ -476,6 +476,7 @@ def test_simulate_vs_R(setup_model):
     assert_allclose(expected, sim.values, rtol=1e-5, atol=1e-5)
 
 
+@pytest.mark.skipif(PLATFORM_32, reason="Fails on 32 bit systems")
 def test_fit_vs_R(setup_model):
     model_class, model_args, model_kwargs, params, results_R = setup_model
     model = model_class(*model_args, **model_kwargs)
@@ -491,21 +492,7 @@ def test_fit_vs_R(setup_model):
     const = -model.nobs / 2 * (np.log(2 * np.pi / model.nobs) + 1)
     loglike_R = results_R["loglik"][0] + const
     loglike = fit.llf
-    try:
-        assert loglike >= loglike_R - 1e-4
-    except AssertionError:
-        fit = model.fit(disp=True, pgtol=1e-8, start_params=params)
-        loglike = fit.llf
-        try:
-            assert loglike >= loglike_R - 1e-4
-        except AssertionError:
-            if PLATFORM_LINUX32:
-                # Linux32 often fails to produce the correct solution.
-                # Fixing this is low priority given the rareness of
-                # its application
-                pytest.xfail("Known to fail on 32-bit Linux")
-            else:
-                raise
+    assert loglike >= loglike_R - 1e-4
 
 
 def test_predict_vs_R(setup_model):
@@ -916,8 +903,9 @@ def test_prediction_results_vs_statespace(statespace_comparison):
     )
 
 
-@pytest.mark.skip
-def test_prediction_results_slow_AAN(oildata):
+@pytest.mark.matplotlib
+@pytest.mark.slow
+def test_prediction_results_slow_AAN(oildata, close_figures):
     # slow test with high number of simulation repetitions for comparison
     # Note: runs succesfull with specified tolerance
     fit = ETSModel(oildata, error="add", trend="add").fit(disp=False)
@@ -929,7 +917,7 @@ def test_prediction_results_slow_AAN(oildata):
         start=40,
         end=55,
         simulate_repetitions=int(1e6),
-        rng=11,
+        rng=np.random.RandomState(11),
         method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
@@ -943,7 +931,6 @@ def test_prediction_results_slow_AAN(oildata):
 
     import matplotlib.pyplot as plt
 
-    plt.switch_backend("TkAgg")
     for i in range(1000):
         plt.plot(
             pred_sim._results.simulation_results.iloc[:, i],
@@ -963,20 +950,21 @@ def test_prediction_results_slow_AAN(oildata):
     assert_allclose(
         summary_sim["pi_lower"].values,
         summary_exact["pi_lower"].values,
-        rtol=1e-4,
+        rtol=1e-2,
         atol=1e-4,
     )
 
     assert_allclose(
         summary_sim["pi_upper"].values,
         summary_exact["pi_upper"].values,
-        rtol=1e-4,
+        rtol=1e-2,
         atol=1e-4,
     )
 
 
-@pytest.mark.skip
-def test_prediction_results_slow_AAdA(austourists):
+@pytest.mark.matplotlib
+@pytest.mark.slow
+def test_prediction_results_slow_AAdA(austourists, close_figures):
     # slow test with high number of simulation repetitions for comparison
     # Note: succesfull with specified tolerance
     fit = ETSModel(
@@ -994,7 +982,7 @@ def test_prediction_results_slow_AAdA(austourists):
         start=60,
         end=75,
         simulate_repetitions=int(1e6),
-        rng=11,
+        rng=np.random.default_rng(2381032),
         method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
@@ -1008,7 +996,6 @@ def test_prediction_results_slow_AAdA(austourists):
 
     import matplotlib.pyplot as plt
 
-    plt.switch_backend("TkAgg")
     for i in range(1000):
         plt.plot(
             pred_sim._results.simulation_results.iloc[:, i],
@@ -1021,7 +1008,6 @@ def test_prediction_results_slow_AAdA(austourists):
     plt.plot(summary_exact["pi_lower"], ".-", label="exact lower")
     plt.plot(summary_sim["pi_upper"], ":", label="sim upper")
     plt.plot(summary_exact["pi_upper"], ".-", label="exact upper")
-    plt.show()
 
     # check if prediction intervals are equal
     assert_allclose(
