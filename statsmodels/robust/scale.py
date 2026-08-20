@@ -622,10 +622,10 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
 
     if distr is None:
         distr = stats.norm
-        if distargs is None:
-            distargs = ()
+    if distargs is None:
+        distargs = ()
 
-    x = np.array(data)  # make copy for inplace sort
+    x = np.array(data, copy=True)  # make copy for inplace sort
     if axis is None:
         x = x.ravel()
         axis = 0
