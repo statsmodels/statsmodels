@@ -724,10 +724,10 @@ class MixedLM(base.LikelihoodModel):
     Pandas Series with compatible indexing with ``exog_re``, and
     ``exog_re`` has two columns.
 
-    >>> g = pd.groupby(groups, by=groups).groups
+    >>> g = groups.groupby(groups).groups
     >>> vc = {}
-    >>> vc['1'] = {k : exog_re.loc[g[k], 0] for k in g}
-    >>> vc['2'] = {k : exog_re.loc[g[k], 1] for k in g}
+    >>> vc['1'] = {k : exog_re.loc[g[k], [0]].to_numpy() for k in g}
+    >>> vc['2'] = {k : exog_re.loc[g[k], [1]].to_numpy() for k in g}
     >>> model = sm.MixedLM(endog, exog, groups, exog_vc=vc)
     >>> result = model.fit()
 
