@@ -227,7 +227,7 @@ def cc_stats(x1, x2, demean=True):
     m = 0.5 * (df_model - k1)
 
     pt_value = cc2.sum()    # Pillai's trace
-    wl_value = np.product(1 / (1 + lam))   # Wilk's Lambda
+    wl_value = np.prod(1 / (1 + lam))   # Wilk's Lambda
     ht_value = lam.sum()    # Hotelling's Trace
     rm_value = lam.max()    # Roy's largest root
     # from scipy import stats

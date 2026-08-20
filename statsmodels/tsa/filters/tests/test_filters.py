@@ -23,6 +23,8 @@ from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.filtertools import (
     CycleTrendResult,
     convolution_filter,
+    fftconvolve3,
+    fftconvolveinv,
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter
@@ -1110,3 +1112,50 @@ def test_pandas_freq_decorator():
     expected = x.rename(columns=dict(zip("ABCD", "EFGH", strict=True)))
     func = pandas_wrapper(dummy_func_array, names=list("EFGH"))
     assert_frame_equal(func(x), expected)
+
+
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+def test_fftconvolve3_modes(mode):
+    # GH: fftconvolve3 raised AttributeError on numpy >= 1.24 (np.complex)
+    # and numpy >= 2.0 (np.product), so no mode was reachable.
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    ar = array([1.0, -0.5])
+    ma = array([1.0, 0.4])
+    res = fftconvolve3(x, ma, ar, mode=mode)
+    assert np.all(np.isfinite(res))
+    assert res.ndim == 1
+
+
+def test_fftconvolve3_matches_lfilter():
+    # fftconvolve3(x, ma, ar) applies the ARMA filter ma(L) / ar(L) to x
+    from scipy import signal
+
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    ar = array([1.0, -0.5])
+    ma = array([1.0, 0.4])
+    res = fftconvolve3(x, ma, ar, mode="full")[: x.shape[0]]
+    expected = signal.lfilter(ma, ar, x)
+    assert_allclose(res, expected, atol=1e-12)
+
+
+def test_fftconvolve3_complex_dtype():
+    # the complex/real branch is selected via np.issubdtype(..., complexfloating)
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(64)
+    ar = array([1.0, -0.5])
+    ma = array([1.0, 0.4])
+    assert not np.iscomplexobj(fftconvolve3(x, ma, ar, mode="full"))
+    xc = x + 1j * rs.standard_normal(64)
+    assert np.iscomplexobj(fftconvolve3(xc, ma, ar, mode="full"))
+
+
+def test_fftconvolveinv_roundtrip():
+    # fftconvolveinv deconvolves, so it inverts np.convolve
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    filt = array([1.0, 0.5, 0.25])
+    convolved = np.convolve(x, filt)
+    res = fftconvolveinv(convolved, filt, mode="full")[: x.shape[0]]
+    assert_allclose(res, x, atol=1e-8)

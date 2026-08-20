@@ -111,12 +111,12 @@ def fftconvolveinv(in1, in2, mode="full"):
     """
     s1 = np.array(in1.shape)
     s2 = np.array(in2.shape)
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
+    complex_result = (np.issubdtype(in1.dtype, np.complexfloating) or
+                      np.issubdtype(in2.dtype, np.complexfloating))
     size = s1+s2-1
 
     # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
+    fsize = (2 ** np.ceil(np.log2(size))).astype(int)
     IN1 = fft.fftn(in1, fsize)
     # IN1 *= fftn(in2,fsize) # JP: this looks like the only change I made
     IN1 /= fft.fftn(in2, fsize)  # use inverse filter
@@ -130,7 +130,7 @@ def fftconvolveinv(in1, in2, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1, axis=0) > np.product(s2, axis=0):
+        if np.prod(s1, axis=0) > np.prod(s2, axis=0):
             osize = s1
         else:
             osize = s2
@@ -189,12 +189,12 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         s2 = max(s2, s3)  # try this looks reasonable for ARMA
         # s2 = s3
 
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
+    complex_result = (np.issubdtype(in1.dtype, np.complexfloating) or
+                      np.issubdtype(in2.dtype, np.complexfloating))
     size = s1+s2-1
 
     # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
+    fsize = (2 ** np.ceil(np.log2(size))).astype(int)
     # convolve shorter ones first, not sure if it matters
     IN1 = in1.copy()  # TODO: Is this correct?
     if in2 is not None:
@@ -212,7 +212,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1, axis=0) > np.product(s2, axis=0):
+        if np.prod(s1, axis=0) > np.prod(s2, axis=0):
             osize = s1
         else:
             osize = s2
