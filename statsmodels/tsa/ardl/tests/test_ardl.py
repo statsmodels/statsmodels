@@ -636,6 +636,32 @@ def test_append_matches_apply():
     )
 
 
+def test_apply_refit_reestimates_params():
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c").fit()
+
+    y_apply, x_apply = y.iloc[:50], x.iloc[:50]
+    applied_fixed = res.apply(endog=y_apply, exog=x_apply, refit=False)
+    applied_refit = res.apply(endog=y_apply, exog=x_apply, refit=True)
+
+    # refit=False just carries the original params over unchanged
+    assert_allclose(applied_fixed.params, res.params)
+    # refit=True re-estimates on the new data, matching a fresh fit
+    fresh = ARDL(y_apply, 3, x_apply, order=res.model._order, trend="c").fit()
+    assert_allclose(applied_refit.params, fresh.params)
+    assert not np.allclose(applied_refit.params, res.params)
+
+
+def test_apply_unexpected_exog_raises():
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res_no_exog = ARDL(y.iloc[:45], 3, trend="c").fit()
+
+    with pytest.raises(ValueError, match="exog must be None"):
+        res_no_exog.apply(endog=y.iloc[:50], exog=x.iloc[:50])
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke

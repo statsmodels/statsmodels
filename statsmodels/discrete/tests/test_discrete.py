@@ -3873,3 +3873,21 @@ def test_binary_results_info_criteria():
 
     with pytest.raises(ValueError, match="not recognized"):
         res.info_criteria("not-a-real-criterion")
+
+
+def test_im_ratio_nonrobust_and_robust():
+    rng = np.random.RandomState(74125)
+    n = 200
+    exog = sm.add_constant(rng.standard_normal((n, 2)))
+    endog = rng.poisson(np.exp(exog @ [0.2, 0.3, -0.1]))
+
+    res = sm.Poisson(endog, exog).fit(disp=0)
+    hess = res.model.hessian(res.params)
+    score_obs = res.model.score_obs(res.params)
+    cov_score = score_obs.T @ score_obs
+    expected = np.linalg.inv(-hess) @ cov_score
+    assert_allclose(res.im_ratio, expected, rtol=1e-10)
+
+    res_robust = sm.Poisson(endog, exog).fit(disp=0, cov_type="HC0")
+    expected_robust = res_robust.cov_params() @ (-hess)
+    assert_allclose(res_robust.im_ratio, expected_robust, rtol=1e-10)
