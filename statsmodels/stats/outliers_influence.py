@@ -1155,23 +1155,17 @@ class OLSInfluence(_BaseInfluenceMixin):
         This needs more thought, memory versus speed.
         Not yet used in any other parts, not sufficiently tested.
         """
-        # reverse the structure, access store, if fail calculate ?
-        # this creates keys in store even if store = false ! bug
         if endog_idx == "endog":
             stored = self.aux_regression_endog
-            if hasattr(stored, drop_idx):
+            if drop_idx in stored:
                 return stored[drop_idx]
             x_i = self.results.model.endog
 
         else:
-            # nested dictionary
-            try:
-                self.aux_regression_exog[endog_idx][drop_idx]
-            except KeyError:
-                pass
-
-            stored = self.aux_regression_exog[endog_idx]
-            stored = {}
+            # nested dictionary, one per endog_idx
+            stored = self.aux_regression_exog.setdefault(endog_idx, {})
+            if drop_idx in stored:
+                return stored[drop_idx]
 
             x_i = self.exog[:, endog_idx]
 
