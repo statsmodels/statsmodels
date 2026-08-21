@@ -477,7 +477,7 @@ markers = [
 [tool.coverage.run]
 source = ["statsmodels"]
 branch = true
-# plugins = ["Cython.Coverage"]
+plugins = ["Cython.Coverage"]
 omit = [
     # print_version is untestable
     "*/print_version.py",
@@ -500,6 +500,7 @@ omit = [
     "*/tests/r*",
     "*/tests/s*",
     "*/_version.py",
+    "*/_pss_critical_values/*",
 ]
 
 [tool.coverage.report]
