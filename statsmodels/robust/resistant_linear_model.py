@@ -248,8 +248,10 @@ class RLMDetSMM(RLMDetS):
         Parameters
         ----------
         h : int or None, optional
-            The size of the initial sets for the S-estimator.
-            Default is ... (todo).
+            The size of the initial sets for the S-estimator. If None
+            (default), ``max(nobs // 2 + 1, k_params + 1)`` is used, the
+            same rule as :meth:`CovDetS.fit`'s ``h_start`` default.
+            Unused if `start` is provided.
         scale_binding : bool, optional
             If true, then the scale is fixed in the second stage M-estimation,
             i.e., this is the MM-estimator.
@@ -282,6 +284,9 @@ class RLMDetSMM(RLMDetS):
         """
         norm_m = self.norm_mean
         if start is None:
+            if h is None:
+                nobs, k_params = self.exog.shape
+                h = max(nobs // 2 + 1, k_params + 1)
             res_s = super().fit(h)
             start_params = np.asarray(res_s.params)
             start_scale = res_s.scale
