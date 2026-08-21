@@ -498,7 +498,12 @@ class Factor(Model):
             Keyword arguments passed to the optimizer.
         rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Random number generator used to draw starting values when
-            `start` is None.
+            `start` is None. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int or array of ints, a new ``Generator`` is
+            created, seeded with `rng`. If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
 
         Returns
         -------
@@ -558,7 +563,11 @@ class Factor(Model):
             The number of EM iterations to perform.
         rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Random number generator used to draw starting values for the
-            loadings.
+            loadings. If `rng` is None, a new ``Generator`` is created
+            using fresh entropy from the operating system. If `rng` is
+            an int or array of ints, a new ``Generator`` is created,
+            seeded with `rng`. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
 
         Returns
         -------

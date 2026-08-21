@@ -13,6 +13,7 @@ import numpy.linalg as npl
 from numpy.linalg import slogdet
 
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.rng_qrng import check_random_state
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
@@ -789,7 +790,14 @@ class SVARResults(SVARProcess, VARResults):
             Significance level for error bars (0 < signif < 1), defaults to
             95% CI
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed for replications
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -832,6 +840,12 @@ class SVARResults(SVARProcess, VARResults):
             if cum:
                 return impulses.cumsum(axis=0)
             return impulses
+
+        # Normalize once so that the same generator instance is advanced
+        # across replications instead of being re-seeded from the same
+        # raw seed on every iteration, which would otherwise make every
+        # replication identical.
+        rng = check_random_state(rng, deprecated=True)
 
         opt_A = A[A_mask]
         opt_B = B[B_mask]

@@ -163,10 +163,12 @@ class SimulationSmoother(KalmanSmoother):
             An existing simulator to reuse. If not specified, a new
             simulator is created using `rng`.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used. Only used if `simulator` is not provided.
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used. Only used if `simulator` is
+            not provided.
         return_simulator : bool, optional
             Whether or not to also return the underlying simulator instance.
             Default is False.
@@ -199,10 +201,11 @@ class SimulationSmoother(KalmanSmoother):
         nsimulations : int
             The number of observations to simulate.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
 
         Returns
         -------
@@ -255,10 +258,11 @@ class SimulationSmoother(KalmanSmoother):
             and `generated_state` attributes will be available. Default is -1,
             which uses the number of observations in the model.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -351,10 +355,11 @@ class SimulationSmoothResults:
     simulation_smoother : {{prefix}}SimulationSmoother object
         The Cython simulation smoother object with which to simulation smooth.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        If `rng` is None or an int, a new ``Generator`` is created
-        (seeded with `rng` if an int is given). If `rng` is already a
-        ``Generator`` or ``RandomState`` instance, that instance is
-        used.
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
@@ -637,10 +642,11 @@ class SimulationSmoothResults:
             distribution that must be transformed using the `initial_state_cov`
             covariance matrix. Default is False.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 

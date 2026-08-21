@@ -49,8 +49,14 @@ class PanelSample:
     scale : float
         scale of noise, standard deviation of normal distribution
     rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
-        If `rng` is given, then this is used to create the random numbers for
-        the sample.
+        Used to create the random numbers for the sample. If `rng` is
+        None, a new ``Generator`` is created using fresh entropy from
+        the operating system. If `rng` is an int, a new ``RandomState``
+        instance is created, seeded with `rng`; this integer-seeding
+        behavior is deprecated and will change to creating a
+        ``Generator`` in a future release. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
     seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
@@ -114,9 +120,6 @@ class PanelSample:
         # initialize
         self.y_true = None
         self.beta = None
-
-        if rng is None:
-            rng = np.random.default_rng().integers(0, 999999)
 
         self.seed = rng
         self.rng = rng

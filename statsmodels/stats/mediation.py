@@ -343,9 +343,10 @@ class Mediation:
             Results of the mediation analysis.
         """
 
+        rng = check_random_state(rng)
+
         if method.startswith("para"):
             # Initial fit to unperturbed data.
-            rng = check_random_state(rng)
             outcome_result = self._fit_model(
                 self.outcome_model, self._outcome_fit_kwargs, rng
             )
@@ -361,13 +362,12 @@ class Mediation:
         for _ in range(n_rep):
 
             if method == "parametric":
-                rng = check_random_state(rng)
                 # Realization of outcome model parameters from sampling distribution
                 outcome_params = self._simulate_params(outcome_result, rng)
 
                 # Realization of mediation model parameters from sampling distribution
                 mediation_params = self._simulate_params(mediator_result, rng)
-            else:
+            else:  # method == "bootstrap"
                 outcome_result = self._fit_model(
                     self.outcome_model, self._outcome_fit_kwargs, rng, boot=True
                 )

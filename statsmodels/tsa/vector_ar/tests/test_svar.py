@@ -4,6 +4,8 @@ Test SVAR estimation
 
 from statsmodels.compat.platform import PLATFORM_WIN
 
+from contextlib import nullcontext
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
@@ -67,15 +69,23 @@ class TestSVAR:
         # mostly SMOKE, API test
         # this only checks that the methods work and produce the same result
         res1 = self.res1
-        errband1 = res1.sirf_errband_mc(
-            orth=False, repl=50, steps=10, signif=0.05, rng=987123, burn=100, cum=False
-        )
+        with pytest.warns(FutureWarning):
+            errband1 = res1.sirf_errband_mc(
+                orth=False,
+                repl=50,
+                steps=10,
+                signif=0.05,
+                rng=987123,
+                burn=100,
+                cum=False,
+            )
         assert isinstance(errband1, ErrorBand)
 
         irf = res1.irf()
-        errband2 = irf.errband_mc(
-            orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
-        )
+        with pytest.warns(FutureWarning):
+            errband2 = irf.errband_mc(
+                orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
+            )
         assert isinstance(errband2, ErrorBand)
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8
@@ -87,6 +97,37 @@ class TestSVAR:
         # matching VARResults.irf
         with pytest.raises(NotImplementedError, match="variable order"):
             self.res1.irf(var_order=[2, 0, 1])
+
+    @pytest.mark.parametrize(
+        "rng",
+        [0, np.random.RandomState(0), np.random.default_rng(0)],
+        ids=["int", "randomstate", "generator"],
+    )
+    def test_sirf_errband_mc_replications_differ(self, rng):
+        # GH: sirf_errband_mc's internal irf_resim-equivalent loop
+        # re-derived a fresh generator from the raw seed on every Monte
+        # Carlo iteration, so every replication was identical for an int
+        # seed (or a freshly-instantiated RandomState/Generator). With
+        # degenerate (identical) replications the resulting error band
+        # collapses to lower == upper.
+        warn_cm = pytest.warns(FutureWarning) if isinstance(rng, int) else nullcontext()
+        with warn_cm:
+            errband = self.res1.sirf_errband_mc(
+                orth=False, repl=5, steps=3, signif=0.5, rng=rng, burn=10, cum=False
+            )
+        assert not np.allclose(errband.lower, errband.upper)
+
+    def test_sirf_errband_mc_reproducible_with_int_seed(self):
+        with pytest.warns(FutureWarning):
+            errband1 = self.res1.sirf_errband_mc(
+                orth=False, repl=5, steps=3, signif=0.5, rng=0, burn=10, cum=False
+            )
+        with pytest.warns(FutureWarning):
+            errband2 = self.res1.sirf_errband_mc(
+                orth=False, repl=5, steps=3, signif=0.5, rng=0, burn=10, cum=False
+            )
+        assert_allclose(errband1.lower, errband2.lower)
+        assert_allclose(errband1.upper, errband2.upper)
 
 
 def test_oneparam():

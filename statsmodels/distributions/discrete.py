@@ -6,6 +6,7 @@ from scipy.special import gammaln
 from scipy.stats import nbinom, poisson, rv_discrete
 
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class genpoisson_p_gen(rv_discrete):
@@ -352,13 +353,12 @@ class DiscretizedCount(rv_discrete):
         size : int or tuple of ints, optional
             Number of random variates to generate.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            Passed directly to the underlying SciPy distribution as its
-            ``random_state`` argument. If `rng` is None, the global NumPy
-            singleton random state is used. If `rng` is an int or array of
-            ints, a new ``RandomState`` is created, seeded with `rng`. If
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -372,6 +372,7 @@ class DiscretizedCount(rv_discrete):
         args, scale = self._unpack_args(args)
         if size is None:
             size = getattr(self, "_size", 1)
+        rng = check_random_state(rng)
         rv = np.trunc(
             self.distr.rvs(*args, scale=scale, size=size, random_state=rng)
             + self.d_offset

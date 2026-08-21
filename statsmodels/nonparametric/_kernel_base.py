@@ -785,11 +785,14 @@ def initialize_generator(
     Parameters
     ----------
     entropy : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        If an initialized NumPy random Generator or an initialized RandomState,
-        the object is returned unchanged. If it is an integer or array_like of
-        integers, the value is used to seed a new numpy.random.default_rng. If
-        None, the functions will continue to use the legacy singleton
-        RandomState.
+        If `entropy` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `entropy` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `entropy`. If `entropy`
+        is already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 

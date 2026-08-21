@@ -96,7 +96,14 @@ class KernelReg(GenericKDE):
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        A seed to use. If None, will use the global RandomState.
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -598,7 +605,14 @@ class KernelCensoredReg(KernelReg):
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        A seed to use. If None, will use the global RandomState.
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -873,7 +887,14 @@ class TestRegCoefC:
         have more desirable properties
         (See references). Default is False.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        A seed to use. If None, will use the global RandomState.
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -1068,7 +1089,14 @@ class TestRegCoefD(TestRegCoefC):
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        A seed to use. If None, will use the global RandomState.
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 

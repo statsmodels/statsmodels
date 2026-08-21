@@ -710,16 +710,24 @@ class ConditionalMNLogit(_ConditionalModel):
             no covariance matrix.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             Used to draw random starting values for `start_params` when
-            `start_params` is None.  If not provided, the global
-            ``numpy.random`` state is used.
+            `start_params` is None. If `rng` is None, the legacy global
+            (singleton) ``RandomState`` provided by ``numpy.random`` is
+            used; this behavior is deprecated and will change to
+            creating a new ``Generator`` using fresh entropy from the
+            operating system in a future release. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
 
             .. deprecated:: 0.15
 
-               After statsmodels 0.15 is released, the default method for
-               producing random start_params will be a new instance of a
-               ``numpy.random.Generator``. To control the generation of
-               start_params using random values, pass a ``Generator`` or
-               ``RandomState`` using the ``rng`` keyword argument.
+               After statsmodels 0.15 is released, the default
+               (``rng=None``) method for producing random start_params
+               will change to a new instance of a
+               ``numpy.random.Generator``. To obtain deterministic
+               starting values today, either pass a ``Generator`` or
+               ``RandomState`` explicitly using `rng`, or call
+               ``numpy.random.seed()`` beforehand.
 
         **kwargs
             Additional keyword arguments used by the solver.
