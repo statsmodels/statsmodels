@@ -3197,10 +3197,11 @@ def kpss(
     kpss_stat = eta / s_hat
     p_value = np.interp(kpss_stat, crit, pvals)
 
-    warn_msg = """\
-The test statistic is outside of the range of p-values available in the
-look-up table. The actual p-value is {direction} than the p-value returned.
-"""
+    warn_msg = (
+        "The test statistic is outside of the range of p-values available in the "
+        "look-up table. The actual p-value is {direction} than the p-value returned."
+    )
+
     if p_value == pvals[-1]:
         warnings.warn(
             warn_msg.format(direction="smaller"),

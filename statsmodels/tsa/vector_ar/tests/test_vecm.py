@@ -1601,6 +1601,31 @@ def test_select_coint_rank():  # This is only a smoke test.
         assert (test_stats[rank] < crit_vals[rank])
 
 
+def test_coint_rank_results_summary():
+    # CointRankResults.summary is exported (as the return type of
+    # select_coint_rank) but had no direct test coverage: it renders a
+    # SimpleTable from the same rank/test_stats/crit_vals data already
+    # validated numerically in test_select_coint_rank above.
+    endog = data[datasets[0]]
+
+    trace_result = select_coint_rank(endog, 0, 3, method="trace", signif=0.05)
+    table = trace_result.summary()
+    text = str(table)
+    assert "trace" in text.lower()
+    assert "5%" in text
+    num_tests = min(trace_result.rank, trace_result.neqs - 1)
+    assert len(table.data) == num_tests + 2  # header row + one per test
+    for i in range(num_tests + 1):
+        assert f"{trace_result.test_stats[i]:#0.4g}" in text
+
+    maxeig_result = select_coint_rank(
+        endog, 0, 3, method="maxeig", signif=0.1
+    )
+    text_maxeig = str(maxeig_result.summary())
+    assert "maximum eigenvalue" in text_maxeig.lower()
+    assert "10%" in text_maxeig
+
+
 def test_VECM_seasonal_forecast():
     # timing of seasonal dummies, VAR forecast horizon
     rs = np.random.RandomState(964255)

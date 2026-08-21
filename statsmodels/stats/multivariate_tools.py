@@ -219,6 +219,8 @@ def cc_stats(x1, x2, demean=True):
     nobs2, k2 = x2.shape
     cc = cancorr(x1, x2, demean=demean)
     cc2 = cc**2
+    if np.issubdtype(cc2.dtype, np.complexfloating):
+        cc2 = np.real(cc2)
     lam = (cc2 / (1 - cc2))  # what if max cc2 is 1 ?
     # Problem: ccr might not care if x1 or x2 are reduced rank,
     #          but df will depend on rank

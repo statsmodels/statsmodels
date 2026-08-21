@@ -3844,3 +3844,32 @@ def test_summary_after_remove_data(fit_func):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_binary_results_info_criteria():
+    # BinaryResults.info_criteria is exported but had no direct test
+    # coverage. With dk_params=0 it must reproduce the aic/bic attributes
+    # exactly, and dk_params must shift the parameter count by exactly that
+    # amount.
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    exog = sm.add_constant(x)
+    p = 1 / (1 + np.exp(-(exog @ [0.2, 0.8, -0.5])))
+    endog = rng.binomial(1, p)
+
+    res = Logit(endog, exog).fit(disp=0)
+
+    assert_allclose(res.info_criteria("aic"), res.aic)
+    assert_allclose(res.info_criteria("bic"), res.bic)
+    assert_allclose(res.info_criteria("AIC"), res.aic)
+
+    assert_allclose(res.info_criteria("aic", dk_params=2), res.aic + 4)
+
+    nobs = res.df_model + res.df_resid + 1
+    k_params = res.df_model + 1 + 2
+    expected_bic = -2 * res.llf + k_params * np.log(nobs)
+    assert_allclose(res.info_criteria("bic", dk_params=2), expected_bic)
+
+    with pytest.raises(ValueError, match="not recognized"):
+        res.info_criteria("not-a-real-criterion")

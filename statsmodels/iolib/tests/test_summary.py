@@ -53,3 +53,25 @@ class TestSummaryLatex:
         actual = reg.summary().tables[1]._repr_latex_()
         actual = f"\n{actual}\n"
         assert_equal(actual, desired)
+
+
+def test_summary_as_csv_and_as_html():
+    # as_csv()/as_html() are exported as part of iolib.summary.Summary but,
+    # unlike as_text() and as_latex() above, had no test coverage at all.
+    rs = np.random.RandomState(0)
+    y = rs.standard_normal(50)
+    x = add_constant(rs.standard_normal((50, 2)))
+    res = OLS(y, x).fit()
+    summary = res.summary()
+
+    csv = summary.as_csv()
+    assert "OLS Regression Results" in csv
+    assert "R-squared" in csv
+    # csv formatting replaces the fixed-width padding with comma separators
+    assert csv.count(",") > summary.as_text().count(",")
+
+    html = summary.as_html()
+    assert html.startswith('<table class="simpletable">')
+    assert "OLS Regression Results" in html
+    assert "R-squared" in html
+    assert html.count("<table") == len(summary.tables)

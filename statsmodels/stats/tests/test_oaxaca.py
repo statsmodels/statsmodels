@@ -284,3 +284,39 @@ class TestPooledModel:
 
         np.testing.assert_almost_equal(unexp_std, pool_std_stata_results[0], 3)
         np.testing.assert_almost_equal(exp_std, pool_std_stata_results[1], 3)
+
+
+def test_oaxaca_results_summary(capsys):
+    # OaxacaResults.summary() prints a formatted table but had no test
+    # coverage. Check its output against the same Stata-verified values
+    # test_oaxaca_results checks the underlying params/std against above.
+    rs = np.random.RandomState(0)
+    model = OaxacaBlinder(endog, exog, 3, rng=rs)
+
+    three_fold = model.three_fold()
+    three_fold.summary()
+    out = capsys.readouterr().out
+    assert "Oaxaca-Blinder Three-fold Effects" in out
+    endow, coef, inter, gap = three_fold.params
+    assert f"Endowment Effect: {endow:.5f}" in out
+    assert f"Coefficient Effect: {coef:.5f}" in out
+    assert f"Interaction Effect: {inter:.5f}" in out
+    assert f"Gap: {gap:.5f}" in out
+    assert "Standard Error" not in out
+
+    three_fold_std = model.three_fold(True)
+    three_fold_std.summary()
+    out_std = capsys.readouterr().out
+    endow_var, coef_var, inter_var = three_fold_std.std
+    assert f"Endowment Standard Error: {endow_var:.5f}" in out_std
+    assert f"Coefficient Standard Error: {coef_var:.5f}" in out_std
+    assert f"Interaction Standard Error: {inter_var:.5f}" in out_std
+
+    two_fold = model.two_fold()
+    two_fold.summary()
+    out_two = capsys.readouterr().out
+    assert "Oaxaca-Blinder Two-fold Effects" in out_two
+    unexp, exp, gap2 = two_fold.params
+    assert f"Unexplained Effect: {unexp:.5f}" in out_two
+    assert f"Explained Effect: {exp:.5f}" in out_two
+    assert f"Gap: {gap2:.5f}" in out_two
