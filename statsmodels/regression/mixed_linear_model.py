@@ -3206,7 +3206,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
     tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
-    ii = pd.notna(data).all(1)
+    ii = pd.notna(data).all(axis=1)
     if type(groups) is not str:
         ii &= pd.notna(groups)
 
