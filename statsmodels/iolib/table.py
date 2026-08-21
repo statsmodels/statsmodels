@@ -113,26 +113,34 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
     rows = list()
     with Path(csvfile).open(encoding="utf-8") as fh:
         reader = csv.reader(fh)
+        use_stubs = stubs is True
         if headers is True:
-            headers = next(reader)
+            _headers = next(reader)
+            if use_stubs:
+                # The first column of the header row labels the stub
+                # column, which has no corresponding entry once the stub
+                # values are split off from each data row below.
+                _headers = _headers[1:]
         elif headers is False:
-            headers = ()
-        if stubs is True:
-            stubs = list()
+            _headers = ()
+        else:
+            _headers = tuple(str(val) for val in headers)
+        if use_stubs:
+            _stubs = list()
             for row in reader:
                 if row:
-                    stubs.append(row[0])
+                    _stubs.append(row[0])
                     rows.append(row[1:])
         else:  # no stubs, or stubs provided
             for row in reader:
                 if row:
                     rows.append(row)
         if stubs is False:
-            stubs = ()
+            _stubs = ()
     ncols = len(rows[0])
     if any(len(row) != ncols for row in rows):
         raise OSError("All rows of CSV file must have same length.")
-    return SimpleTable(data=rows, headers=headers, stubs=stubs)
+    return SimpleTable(data=rows, headers=_headers, stubs=_stubs, title=title)
 
 
 class SimpleTable(list):

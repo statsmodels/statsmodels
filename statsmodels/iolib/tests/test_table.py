@@ -1,8 +1,10 @@
 from numpy.testing import assert_equal
 import pandas as pd
+import pytest
 
 from statsmodels.iolib.table import (
     SimpleTable,
+    csv2st,
     default_html_fmt,
     default_latex_fmt,
     default_txt_fmt,
@@ -266,3 +268,33 @@ stub2 1.95038     2.6
                           txt_fmt=default_txt_fmt)
         actual = f"\n{tbl._repr_latex_()}\n"
         assert_equal(actual, desired)
+
+
+def test_csv2st_roundtrip(tmp_path):
+    # csv2st is exported from statsmodels.iolib.api but had no test coverage.
+    csv_path = tmp_path / "table.csv"
+    csv_path.write_text(
+        "name,value,weight\nfirst,1.5,10\nsecond,2.5,20\nthird,3.5,30\n",
+        encoding="utf-8",
+    )
+
+    tbl = csv2st(str(csv_path), headers=True)
+    text = str(tbl)
+    for token in ["name", "value", "weight", "first", "2.5", "third", "30"]:
+        assert token in text
+
+    tbl_stubs = csv2st(str(csv_path), headers=True, stubs=True)
+    stubbed = str(tbl_stubs)
+    # with stubs=True the first column becomes row labels rather than data
+    assert "first" in stubbed
+    assert "second" in stubbed
+
+    tbl_with_title = csv2st(str(csv_path), headers=True, title="My Table")
+    assert "My Table" in str(tbl_with_title)
+
+
+def test_csv2st_mismatched_row_lengths_raises(tmp_path):
+    csv_path = tmp_path / "bad.csv"
+    csv_path.write_text("a,b\n1,2\n3\n", encoding="utf-8")
+    with pytest.raises(OSError, match="All rows"):
+        csv2st(str(csv_path))

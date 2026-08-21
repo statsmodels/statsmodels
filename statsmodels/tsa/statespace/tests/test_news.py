@@ -1304,3 +1304,82 @@ def test_mixed_revisions(revisions_details_start):
         news.impacts["impact of revisions"],
         revision_details.groupby(level=[2, 3]).sum()["impact"]
     )
+
+
+def test_news_summary_methods():
+    # Regression test: summary_revisions() used a block `.iloc[:, 2:-1] =`
+    # assignment to write formatted strings back into a float-dtype slice,
+    # which pandas >= 2.2 rejects as a lossy set. It had no test coverage at
+    # all (unlike summary_news, which already used the safe per-column
+    # assignment pattern this was fixed to match), so the break went
+    # unnoticed. This test exercises every summary/detail method on
+    # NewsResults and checks their content against independently computable
+    # values, not just that they run without raising.
+    y = np.log(dta[["realgdp", "realcons",
+                    "realinv", "cpi"]]).diff().iloc[1:] * 100
+    y.iloc[-1, 0] = np.nan
+
+    y_revised = y.copy()
+    revisions = {
+        ("2009Q2", "realgdp"): 1.1,
+        ("2009Q3", "realcons"): 0.5,
+        ("2009Q2", "realinv"): -0.3,
+        ("2009Q2", "cpi"): 0.2,
+        ("2009Q3", "cpi"): 0.2,
+    }
+    for key, diff in revisions.items():
+        y_revised.loc[key] += diff
+
+    mod = varmax.VARMAX(y, trend="n")
+    ar_coeff = {"realgdp": 0.9, "realcons": 0.8, "realinv": 0.7, "cpi": 0.6}
+    params = np.r_[np.diag(list(ar_coeff.values())).flatten(),
+                   [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]]
+    res = mod.smooth(params)
+    res_revised = res.apply(y_revised)
+    news = res_revised.news(res, comparison_type="previous", tolerance=-1)
+
+    # get_impacts (no grouping) must sum to the same total as total_impacts,
+    # which is independently verified elsewhere in this module.
+    assert_allclose(
+        news.get_impacts().to_numpy().sum(),
+        news.total_impacts.to_numpy().sum(),
+    )
+
+    # get_details combines news + revision details; row count is exactly
+    # the sum of the two source tables it concatenates.
+    details = news.get_details()
+    assert_equal(
+        len(details),
+        len(news.data_updates) + len(news.revision_details_by_impact),
+    )
+
+    # summary_revisions: check the rendered table reproduces the known
+    # revision amounts and previous values, not just that it doesn't raise.
+    revisions_table = news.summary_revisions()
+    rendered = str(revisions_table)
+    for (date, variable), diff in revisions.items():
+        assert_(f"{diff:.2f}" in rendered)
+        prev_value = y.loc[date, variable]
+        assert_(f"{prev_value:.2f}" in rendered)
+
+    # The remaining summary/detail methods: assert they run and produce
+    # non-trivial, differently-shaped output for a dataset with both
+    # updates and revisions present.
+    assert_(str(news.summary_impacts()).strip() != "")
+    assert_(str(news.summary_details()).strip() != "")
+    assert_(str(news.summary_news()).strip() != "")
+    assert_(str(news.summary()).strip() != "")
+
+    # revision_details_by_impact aggregates by (impact date, impacted
+    # variable): the two cpi revisions (2009Q2 and 2009Q3) both land on the
+    # same impact date/variable and are combined into one "all prior
+    # revisions" row, so there are 4 rows (one per impacted variable) rather
+    # than 5 (one per raw revision). Since there are no updates in this
+    # comparison, summing by impacted variable must reproduce total_impacts
+    # exactly.
+    rev_by_impact = news.revision_details_by_impact
+    assert_equal(len(rev_by_impact), 4)
+    by_var = rev_by_impact.reset_index().groupby("impacted variable")["impact"].sum()
+    assert_allclose(
+        by_var.sort_index(), news.total_impacts.loc["2009Q3"].sort_index()
+    )

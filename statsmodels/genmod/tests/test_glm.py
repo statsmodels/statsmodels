@@ -3425,3 +3425,38 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_glm_get_margeff():
+    # GLMResults.get_margeff is exported but had no direct test coverage
+    # (only GEEResults.get_margeff, a different implementation, was
+    # exercised). With the identity link, dy/dx reduces exactly to the
+    # coefficient, giving a closed-form check.
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    exog = add_constant(x)
+    beta = np.array([0.5, 1.2, -0.7])
+    endog = exog @ beta + rng.normal(size=n) * 0.1
+
+    res = GLM(endog, exog, family=sm.families.Gaussian()).fit()
+
+    # dy/dx for the identity link is exactly the fitted coefficient, not
+    # merely close to the true data-generating beta.
+    me = res.get_margeff()
+    assert_allclose(me.margeff, res.params[1:], rtol=1e-10)
+
+    me_mean = res.get_margeff(at="mean")
+    assert_allclose(me_mean.margeff, res.params[1:], rtol=1e-10)
+
+    # With a log link, dy/dx = mu * beta at each observation; the "overall"
+    # (average) effect must match the mean of that closed-form expression.
+    endog_pos = np.exp(endog * 0.05)
+    res_log = GLM(
+        endog_pos, exog, family=sm.families.Gaussian(sm.families.links.Log())
+    ).fit()
+    me_log = res_log.get_margeff()
+    manual = np.mean(
+        res_log.fittedvalues[:, None] * res_log.params[1:], axis=0
+    )
+    assert_allclose(me_log.margeff, manual, rtol=1e-10)

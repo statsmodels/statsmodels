@@ -326,3 +326,24 @@ class TestMultivariateLS(CheckMVConsistent):
         mod = MultivariateLS.from_formula(formula2, data=data_mvreg)
         cls.res = mod.fit()
         # ttn = cls.res.mv_test()
+
+
+def test_multivariate_ls_results_summary():
+    # MultivariateLSResults.summary is exported via the multivariate api
+    # but had no direct test coverage: existing tests call mv_test()
+    # rather than summary() on the fit result itself.
+    mod = MultivariateLS.from_formula(
+        "Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted",
+        data,
+    )
+    res = mod.fit(method="svd")
+    smry = res.summary()
+    text = str(smry)
+
+    assert "MultivariateLS Regression Results" in text
+    for name in ["Histamine0", "Histamine1", "Histamine3", "Histamine5"]:
+        assert name in text
+    assert str(res.model.endog.shape[0]) in text  # No. Observations
+
+    custom = res.summary(title="Custom Title")
+    assert "Custom Title" in str(custom)

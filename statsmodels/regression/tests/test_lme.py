@@ -1463,3 +1463,40 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_mixedlm_t_test():
+    # MixedLMResults.t_test overrides the base implementation to restrict
+    # t-tests to fixed-effects parameters (padding the random-effects
+    # covariance parameters with zero restrictions internally), but this
+    # override had no test coverage.
+    rs = np.random.RandomState(12345)
+    n_groups, group_size = 30, 10
+    n = n_groups * group_size
+    groups = np.repeat(np.arange(n_groups), group_size)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    res = MixedLM(endog, exog, groups).fit()
+
+    # An identity r_matrix over the fixed effects reproduces fe_params and
+    # bse_fe exactly.
+    tt = res.t_test(np.eye(res.k_fe))
+    assert_allclose(tt.effect, res.fe_params)
+    assert_allclose(tt.sd, res.bse_fe)
+    assert_allclose(tt.tvalue, res.fe_params / res.bse_fe)
+
+    # A contrast that is a linear combination of fixed effects should match
+    # a manual computation.
+    contrast = np.array([[1.0, -1.0, 0.0]])
+    tt_contrast = res.t_test(contrast)
+    expected_effect = res.fe_params[0] - res.fe_params[1]
+    assert_allclose(tt_contrast.effect, [expected_effect])
+
+    # r_matrix must have exactly k_fe columns.
+    with pytest.raises(ValueError, match=f"should have {res.k_fe:d} columns"):
+        res.t_test(np.eye(res.k_fe + 1))

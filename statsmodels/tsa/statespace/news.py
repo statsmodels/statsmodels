@@ -1274,8 +1274,12 @@ class NewsResults:
         try:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].map(str))
-            data.iloc[:, 2:-1] = data.iloc[:, 2:-1].map(
-                lambda num: "" if pd.isna(num) else f"{num:.2f}")
+            # Assign column-by-column (rather than as a single .iloc block)
+            # since pandas >= 2.2 raises when a block assignment would
+            # lossily cast a float column to hold the formatted strings.
+            for col in data.columns[2:-1]:
+                data[col] = data[col].map(
+                    lambda num: "" if pd.isna(num) else f"{num:.2f}")
         except AttributeError:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].applymap(str))

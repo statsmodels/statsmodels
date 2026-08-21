@@ -1060,3 +1060,38 @@ def test_forecast_wrong_shape_params():
     results = mod.fit(maxlags=1, ic="aic", trend="c")
     with pytest.raises(ValueError):
         forecast(y, results.params, results.params, steps=5)
+
+
+def test_var_model_predict_matches_forecast_and_fittedvalues():
+    # VAR.predict(params, start, end, lags, trend) is the model-level
+    # prediction method exported alongside VARResults.forecast, but every
+    # existing test exercises forecast() instead, leaving predict()
+    # completely uncovered. start/end are locations in the full `endog`
+    # array (length n_totobs), not in the post-lag-adjustment `nobs`, and
+    # a valid `start` must be in-sample (<= n_totobs - 1) even when
+    # requesting out-of-sample values via `end`.
+    dta = macrodata.load_pandas().data
+    data = dta[["realgdp", "realcons", "realinv"]].pct_change().dropna().to_numpy()
+
+    mod = VAR(data)
+    res = mod.fit(maxlags=2, trend="c")
+    lags = res.k_ar
+    n_totobs = mod.n_totobs
+
+    # In-sample predictions must reproduce the fitted values exactly.
+    in_sample = mod.predict(
+        res.params, start=lags, end=n_totobs - 1, lags=lags, trend="c"
+    )
+    assert_allclose(in_sample, res.fittedvalues, atol=1e-12)
+
+    # Out-of-sample predictions must reproduce VARResults.forecast(): the
+    # last `steps` rows of predict() with a fully in-sample `start` should
+    # equal a `steps`-ahead forecast from the end of the sample.
+    steps = 5
+    mixed = mod.predict(
+        res.params, start=n_totobs - 1, end=n_totobs - 1 + steps,
+        lags=lags, trend="c",
+    )
+    assert mixed.shape == (steps + 1, 3)
+    assert_allclose(mixed[0], res.fittedvalues[-1], atol=1e-12)
+    assert_allclose(mixed[1:], res.forecast(data[-lags:], steps), atol=1e-10)
