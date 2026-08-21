@@ -646,6 +646,20 @@ Status: experimental, API might change, added in 0.12
    test_cov_spherical
    CovTestResult
 
+.. module:: statsmodels.stats.multivariate_tools
+   :synopsis: Tools for multivariate analysis
+
+.. currentmodule:: statsmodels.stats.multivariate_tools
+
+.. autosummary::
+   :toctree: generated
+
+   cancorr
+   cc_ranktest
+   CCRankTestResult
+   cc_stats
+   CCStatsResult
+
 
 .. _oneway_stats:
 
