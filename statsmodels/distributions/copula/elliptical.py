@@ -13,6 +13,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.distributions.copula.copulas import Copula
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class EllipticalCopula(Copula):
@@ -54,13 +55,12 @@ class EllipticalCopula(Copula):
             Arguments for copula parameters. Not used by elliptical copulas,
             which take their parameters as attributes.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            Passed directly to the underlying SciPy distribution as its
-            ``random_state`` argument. If `rng` is None, the global NumPy
-            singleton random state is used. If `rng` is an int or array of
-            ints, a new ``RandomState`` is created, seeded with `rng`. If
-            `rng` is already a ``Generator`` or ``RandomState`` instance,
-            that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, fresh, unpredictable entropy is pulled from
+            the OS and a new ``numpy.random.Generator`` is used. If `rng`
+            is an int or array_like[ints], a new ``Generator`` is used,
+            seeded with `rng`. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -72,6 +72,7 @@ class EllipticalCopula(Copula):
             Sample from the copula.
         """
         self._handle_args(args)
+        rng = check_random_state(rng)
         x = self.distr_mv.rvs(size=nobs, random_state=rng)
         return self.distr_uv.cdf(x)
 
@@ -111,13 +112,14 @@ class EllipticalCopula(Copula):
             Arguments for copula parameters. Not used by elliptical copulas,
             which take their parameters as attributes.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            Passed directly to the underlying SciPy distribution as its
-            ``random_state``/``rng`` argument, if supported. If `rng` is
-            None, the global NumPy singleton random state is used. If `rng`
-            is an int or array of ints, a new ``RandomState`` is created,
-            seeded with `rng`. If `rng` is already a ``Generator`` or
-            ``RandomState`` instance, that instance is used.
-        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Passed to the underlying SciPy distribution's ``rng`` argument,
+            if supported by the installed SciPy version. If `rng` is None,
+            fresh, unpredictable entropy is pulled from the OS and a new
+            ``numpy.random.Generator`` is used. If `rng` is an int or
+            array_like[ints], a new ``Generator`` is used, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -130,6 +132,7 @@ class EllipticalCopula(Copula):
         """
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
+        rng = check_random_state(rng)
         try:
             # Modern SciPy supports this and is needed to avoid global random state
             return self.distr_mv.cdf(ppf, rng=rng)

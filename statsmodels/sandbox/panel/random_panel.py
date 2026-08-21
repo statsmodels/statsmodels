@@ -115,9 +115,6 @@ class PanelSample:
         self.y_true = None
         self.beta = None
 
-        if rng is None:
-            rng = np.random.default_rng().integers(0, 999999)
-
         self.seed = rng
         self.rng = rng
         self.random_state = check_random_state(rng, deprecated=True, warn=False)

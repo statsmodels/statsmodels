@@ -8,6 +8,7 @@ from statsmodels.compat.pandas import (
 )
 from statsmodels.compat.python import lrange
 
+from contextlib import nullcontext
 from io import BytesIO
 from pathlib import Path
 import warnings
@@ -750,7 +751,7 @@ class TestVARExtras:
         mean_lr = res0.mean()
         assert_allclose(mean_lr, fc20[-1], rtol=5e-4)
 
-        ysim = res0.simulate_var(rng=987128)
+        ysim = res0.simulate_var(rng=np.random.RandomState(987128))
         assert_allclose(ysim.mean(0), mean_lr, rtol=0.1)
         # initialization does not use long run intercept, see #4542
         assert_allclose(ysim[0], res0.intercept, rtol=1e-10)
@@ -758,17 +759,17 @@ class TestVARExtras:
 
         data = self.data
         resl1 = self.resl1
-        y_sim_init = res0.simulate_var(rng=987128, initial_values=data[-k_ar:])
-        y_sim_init_2 = res0.simulate_var(rng=987128, initial_values=data[-1])
+        y_sim_init = res0.simulate_var(rng=np.random.RandomState(987128), initial_values=data[-k_ar:])
+        y_sim_init_2 = res0.simulate_var(rng=np.random.RandomState(987128), initial_values=data[-1])
         assert_allclose(y_sim_init[:k_ar], data[-k_ar:])
         assert_allclose(y_sim_init_2[0], data[-1])
         assert_allclose(y_sim_init_2[k_ar - 1], data[-1])
 
-        y_sim_init_3 = resl1.simulate_var(rng=987128, initial_values=data[-1])
+        y_sim_init_3 = resl1.simulate_var(rng=np.random.RandomState(987128), initial_values=data[-1])
         assert_allclose(y_sim_init_3[0], data[-1])
 
         n_sim = 900
-        ysimz = res0.simulate_var(steps=n_sim, offset=np.zeros((n_sim, 3)), rng=987128)
+        ysimz = res0.simulate_var(steps=n_sim, offset=np.zeros((n_sim, 3)), rng=np.random.RandomState(987128))
         zero3 = np.zeros(3)
         assert_allclose(ysimz.mean(0), zero3, atol=0.4)
         # initialization does not use long run intercept, see #4542
@@ -783,6 +784,19 @@ class TestVARExtras:
 
         # Smoke test
         res0.irf()
+
+    def test_simulate_var_int_seed_warns_consistently(self):
+        # GH: simulate_var relied on varsim's internal warn=False, so an
+        # int/array seed silently used the legacy RandomState behavior
+        # with no FutureWarning, unlike every other simulate()-style
+        # method in the library (e.g. MLEResults.simulate).
+        res0 = self.res0
+        with pytest.warns(FutureWarning):
+            res0.simulate_var(rng=987128)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res0.simulate_var(rng=np.random.RandomState(987128))
+            res0.simulate_var(rng=np.random.default_rng(987128))
 
     @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
@@ -807,7 +821,9 @@ class TestVARExtras:
         assert_allclose(fc20[:, 2], fcp, rtol=1e-13)
 
         fig_asym = irf.plot(rng=rs)
-        fig_mc = irf.plot(stderr_type="mc", repl=1000, rng=987128)
+        fig_mc = irf.plot(
+            stderr_type="mc", repl=1000, rng=np.random.RandomState(987128)
+        )
 
         for k in range(3):
             a = fig_asym.axes[1].get_children()[k].get_ydata()
@@ -862,9 +878,9 @@ class TestVARExtras:
         assert_allclose(res_lin_trend.params, res_lin_trend2.params, rtol=5e-3)
         assert_allclose(res_lin_trend1.params, res_lin_trend2.params, rtol=1e-10)
 
-        y1 = res_lin_trend.simulate_var(rng=987128)
-        y2 = res_lin_trend1.simulate_var(rng=987128)
-        y3 = res_lin_trend2.simulate_var(rng=987128)
+        y1 = res_lin_trend.simulate_var(rng=np.random.RandomState(987128))
+        y2 = res_lin_trend1.simulate_var(rng=np.random.RandomState(987128))
+        y3 = res_lin_trend2.simulate_var(rng=np.random.RandomState(987128))
         assert_allclose(y2.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y1.mean(0), rtol=1e-12)
         assert_allclose(y3.mean(0), y2.mean(0), rtol=1e-12)
@@ -908,13 +924,13 @@ class TestVARExtras:
         neqs = res0.neqs
         init = self.data[-k_ar:]
 
-        sim1 = res0.simulate_var(rng=987128, steps=10)
-        sim2 = res0.simulate_var(rng=987128, steps=10, nsimulations=2)
+        sim1 = res0.simulate_var(rng=np.random.RandomState(987128), steps=10)
+        sim2 = res0.simulate_var(rng=np.random.RandomState(987128), steps=10, nsimulations=2)
         assert_equal(sim2.shape, (2, 10, neqs))
         assert_allclose(sim1, sim2[0])
 
         sim2_init = res0.simulate_var(
-            rng=987128, steps=10, initial_values=init, nsimulations=2
+            rng=np.random.RandomState(987128), steps=10, initial_values=init, nsimulations=2
         )
         assert_allclose(sim2_init[0, :k_ar], init)
         assert_allclose(sim2_init[1, :k_ar], init)
@@ -997,8 +1013,46 @@ def test_correct_nobs():
     # make a VAR model
     model = VAR(endog=data, exog=data_exog)
     results = model.fit(maxlags=1)
-    irf = results.irf_resim(orth=False, repl=100, steps=10, rng=1, burn=100, cum=False)
+    irf = results.irf_resim(
+        orth=False,
+        repl=100,
+        steps=10,
+        rng=np.random.RandomState(1),
+        burn=100,
+        cum=False,
+    )
     assert irf.shape == (100, 11, 3, 3)
+
+
+@pytest.mark.parametrize(
+    "rng",
+    [0, np.random.RandomState(0), np.random.default_rng(0)],
+    ids=["int", "randomstate", "generator"],
+)
+def test_irf_resim_replications_differ(rng):
+    # GH: irf_resim re-derived a fresh generator from the raw seed on
+    # every Monte Carlo iteration instead of advancing a single
+    # generator, so every replication was identical when an int seed
+    # (or any freshly-instantiated RandomState/Generator) was used.
+    rs = np.random.RandomState(3489)
+    y = rs.standard_normal((60, 2)).cumsum(axis=0)
+    res = VAR(y).fit(maxlags=1)
+    warn_cm = pytest.warns(FutureWarning) if isinstance(rng, int) else nullcontext()
+    with warn_cm:
+        sim = res.irf_resim(repl=5, steps=3, rng=rng, burn=10)
+    assert not np.allclose(sim[0], sim[1])
+    assert not np.allclose(sim[1], sim[2])
+
+
+def test_irf_resim_reproducible_with_int_seed():
+    rs = np.random.RandomState(3489)
+    y = rs.standard_normal((60, 2)).cumsum(axis=0)
+    res = VAR(y).fit(maxlags=1)
+    with pytest.warns(FutureWarning):
+        sim1 = res.irf_resim(repl=5, steps=3, rng=0, burn=10)
+    with pytest.warns(FutureWarning):
+        sim2 = res.irf_resim(repl=5, steps=3, rng=0, burn=10)
+    assert_allclose(sim1, sim2)
 
 
 @pytest.mark.slow

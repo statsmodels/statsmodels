@@ -12,6 +12,7 @@ from scipy.special import comb
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
+from statsmodels.tools.rng_qrng import check_random_state
 
 from . import utils
 
@@ -232,10 +233,11 @@ def hdrboxplot(
         evolution to find the curves. Default is False.
     rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
         Value to pass to scipy.optimize.differential_evolution as its `seed`
-        argument. If an int, a new RandomState seeded with that value is used
-        by scipy. If a Generator or RandomState instance, that instance is
-        used directly. If None, then the default RandomState provided by
-        np.random is used.
+        argument. If `rng` is None, fresh, unpredictable entropy is pulled
+        from the OS and a new ``numpy.random.Generator`` is used. If `rng`
+        is an int or array_like[ints], a new ``Generator`` is used, seeded
+        with `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+        instance, that instance is used.
     seed : int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
@@ -355,6 +357,8 @@ def hdrboxplot(
     .. plot:: plots/graphics_functional_hdrboxplot.py
     """
     fig, ax = utils.create_mpl_ax(ax)
+
+    rng = check_random_state(rng)
 
     if labels is None:
         # For use with pandas, get the labels

@@ -371,6 +371,45 @@ def test_conditional_mnlogit_3d():
     result.summary()
 
 
+@pytest.mark.parametrize(
+    "rng",
+    [0, np.random.RandomState(0), np.random.default_rng(0)],
+    ids=["int", "randomstate", "generator"],
+)
+def test_conditional_mnlogit_fit_rng_types(recwarn, rng):
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    model.fit(rng=rng, disp=False)
+    future_warnings = [w for w in recwarn.list if issubclass(w.category, FutureWarning)]
+    assert not future_warnings, [str(w.message) for w in future_warnings]
+
+
+@pytest.mark.singleton_randomstate
+def test_conditional_mnlogit_fit_warn():
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    with pytest.warns(FutureWarning, match="When start_params is not specified,"):
+        model.fit(rng=None, disp=False)
+
+
+def test_conditional_mnlogit_fit_rng_reproducible():
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    res1 = model.fit(rng=0, disp=False)
+    res2 = model.fit(rng=0, disp=False)
+    assert_allclose(res1.params, res2.params)
+
+
 def test_skip_hessian():
     y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
     g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]

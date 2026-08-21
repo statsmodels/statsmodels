@@ -719,7 +719,10 @@ class ConditionalMNLogit(_ConditionalModel):
                producing random start_params will be a new instance of a
                ``numpy.random.Generator``. To control the generation of
                start_params using random values, pass a ``Generator`` or
-               ``RandomState`` using the ``rng`` keyword argument.
+               ``RandomState`` using the ``rng`` keyword argument. The
+               current and deprecated approach uses the singleton
+               RandomState provided by ``numpy.random``, and so deterministic
+               starting values requires setting ``numpy.random.seed()``
 
         **kwargs
             Additional keyword arguments used by the solver.

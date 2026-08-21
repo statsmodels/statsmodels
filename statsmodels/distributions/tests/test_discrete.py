@@ -467,6 +467,43 @@ class TestDiscretizedGammaEx:
         assert_allclose(res.bse, res_boots[1], rtol=0.05)
 
 
+@pytest.mark.singleton_randomstate
+@pytest.mark.parametrize(
+    "rng",
+    [None, 0, np.random.RandomState(0), np.random.default_rng(0)],
+    ids=["none", "int", "randomstate", "generator"],
+)
+def test_discretized_count_rvs_rng_types(rng):
+    # GH: _rvs used to forward the raw rng value straight to the
+    # underlying SciPy distribution's ``random_state`` kwarg without
+    # normalizing it with check_random_state first, so int/array seeds
+    # were not handled consistently with the rest of statsmodels.
+    #
+    # SciPy's public rv_frozen.rvs() only recognizes ``random_state``
+    # (it calls the private ``_rvs`` hook that way), so exercising this
+    # through the public API always goes through the deprecated name.
+    # For rng=None, SciPy's own dispatcher resolves the value to its
+    # process-global singleton RandomState *before* our ``_rvs`` ever
+    # sees it, so that specific case is exempted from the
+    # no-global-state-mutation check (``singleton_randomstate`` marker)
+    # -- this is inherent SciPy behavior, not something check_random_state
+    # can intercept from inside ``_rvs``.
+    dp = DiscretizedCount(stats.gamma)(3.5, 0.4)
+    with pytest.warns(FutureWarning, match="random_state"):
+        rvs = dp.rvs(size=50, random_state=rng)
+    assert rvs.shape == (50,)
+    assert np.all(rvs >= 0)
+
+
+def test_discretized_count_rvs_reproducible():
+    dp = DiscretizedCount(stats.gamma)(3.5, 0.4)
+    with pytest.warns(FutureWarning, match="random_state"):
+        rvs1 = dp.rvs(size=50, random_state=0)
+    with pytest.warns(FutureWarning, match="random_state"):
+        rvs2 = dp.rvs(size=50, random_state=0)
+    assert_allclose(rvs1, rvs2)
+
+
 class TestGeometric:
 
     def test_all(self):

@@ -2725,8 +2725,8 @@ class ResultMixin:
             If true, then parameter estimates for all bootstrap iterations
             are attached in self.bootstrap_results.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None, a new ``Generator`` is created using fresh
-            entropy from the operating system. If `rng` is an int or array
+            If ``rng`` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If ``rng`` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
