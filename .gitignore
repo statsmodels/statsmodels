@@ -118,3 +118,6 @@ statsmodels/datasets/tests/*.zip
 
 # Pytest data
 test-data.xml
+
+# coverage report artefacts
+coverage.json
