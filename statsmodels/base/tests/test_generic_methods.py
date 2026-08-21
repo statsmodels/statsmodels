@@ -921,7 +921,9 @@ class TestWaldAnovaRankDeficient:
             "tech0": tech0,
         })
         mod = ols("y ~ C(fertilizer) * C(tech0)", data)
-        self.res = mod._fit_collinear()
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            # Intentionally singular, _fit_collinear doesn't even work
+            self.res = mod._fit_collinear()
 
     def test_df_rank_adjusted(self):
         # The interaction term has 4 columns but only 1 is non-redundant

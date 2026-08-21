@@ -256,9 +256,9 @@ def test_gam_discrete():
 def multivariate_sample_data(seed=1):
     n = 1000
     x1 = np.linspace(-1, 1, n)
-    x2 = np.linspace(-10, 10, n)
-    x = np.vstack([x1, x2]).T
     rs = np.random.RandomState(seed)
+    x2 = 1 + np.sort(rs.standard_normal(n))
+    x = np.vstack([x1, x2]).T
     y = x1 * x1 * x1 + x2 + rs.normal(0, 0.01, n)
     degree1 = 4
     degree2 = 3
@@ -678,6 +678,8 @@ def test_zero_penalty():
     gam_gs_res = gam_gs.fit()
     y_est_gam = gam_gs_res.predict()
 
+    # Poly basis has linearly related columns, so we need to remove
+    # two columns to avoid singular matrix warning
     glm = GLM(y, poly.basis).fit()
     y_est = glm.predict()
 

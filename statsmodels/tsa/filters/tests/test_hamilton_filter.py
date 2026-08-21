@@ -29,7 +29,8 @@ _QUARTERLY = RNG.standard_normal(200)  # 200 quarters
 
 
 def test_output_shapes_default():
-    x = np.ones(50)
+    rs = np.random.default_rng(238091)
+    x = rs.standard_normal(50)
     res = hamilton_filter(x)
     cycle, trend = res.cycle, res.trend
     assert cycle.shape == (50,)
@@ -37,7 +38,8 @@ def test_output_shapes_default():
 
 
 def test_returns_cycletrendresult():
-    x = np.ones(50)
+    rs = np.random.default_rng(238091)
+    x = rs.standard_normal(50)
     res = hamilton_filter(x)
     assert isinstance(res, CycleTrendResult)
     assert res[0] is res.cycle
