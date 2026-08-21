@@ -1690,3 +1690,41 @@ def test_VECM_seasonal_forecast():
         assert_array_equal(dips, dips_true)
 
     # res2.plot_forecast(steps=18, alpha=0.1, n_last_obs=4*seasons)
+
+
+def test_plot_forecast_and_plot_data(close_figures):
+    rs = np.random.RandomState(20260821)
+    n = 100
+    common_trend = np.cumsum(rs.standard_normal(n))
+    endog = np.column_stack([
+        common_trend + rs.standard_normal(n) * 0.3,
+        common_trend + rs.standard_normal(n) * 0.3,
+        common_trend + rs.standard_normal(n) * 0.3,
+    ])
+
+    res = VECM(endog, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
+
+    fig = res.plot_forecast(steps=10)
+    assert len(fig.axes) == endog.shape[1]
+
+    fig_short = res.plot_forecast(steps=10, plot_conf_int=False, n_last_obs=20)
+    assert len(fig_short.axes) == endog.shape[1]
+
+    fig_data = res.plot_data()
+    assert len(fig_data.axes) == endog.shape[1]
+    for ax in fig_data.axes:
+        assert len(ax.get_lines()) >= 1
+        assert len(ax.get_lines()[0].get_ydata()) == n - res.k_ar
+
+    fig_full = res.plot_data(with_presample=True)
+    for ax in fig_full.axes:
+        assert len(ax.get_lines()[0].get_ydata()) == n
+
+    # plot_data must also work when the model was fit with a date index
+    # (previously crashed: self.dates[self.k_ar:] on a None self.dates
+    # was only reached through the *array* path above)
+    import pandas as pd
+    dated = pd.DataFrame(endog, index=pd.date_range("2000-01-01", periods=n, freq="D"))
+    res_dated = VECM(dated, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
+    fig_dated = res_dated.plot_data()
+    assert len(fig_dated.axes) == endog.shape[1]

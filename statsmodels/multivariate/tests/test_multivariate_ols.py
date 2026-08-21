@@ -347,3 +347,29 @@ def test_multivariate_ls_results_summary():
 
     custom = res.summary(title="Custom Title")
     assert "Custom Title" in str(custom)
+
+
+def test_resid_distance_and_hat_matrix_diag():
+    rs = np.random.RandomState(20260821)
+    n, k_endog, k_exog = 40, 3, 2
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, k_exog))])
+    beta = rs.standard_normal((k_exog + 1, k_endog))
+    endog = exog @ beta + rs.standard_normal((n, k_endog))
+
+    mod = MultivariateLS(endog, exog)
+    res = mod.fit(method="svd")
+
+    resid = res.resid
+    cov = res.cov_resid
+    expected_dist = (resid * np.linalg.solve(cov, resid.T).T).sum(1)
+    assert_allclose(res.resid_distance, expected_dist)
+    assert np.all(res.resid_distance >= 0)
+
+    pinv_exog = np.linalg.pinv(exog)
+    expected_hd = (exog * pinv_exog.T).sum(1)
+    assert_allclose(res._hat_matrix_diag, expected_hd)
+    # OLS leverage: diagonal of a projection matrix, sums to the rank
+    assert_allclose(res._hat_matrix_diag.sum(), np.linalg.matrix_rank(exog),
+                    atol=1e-8)
+    assert np.all(res._hat_matrix_diag > -1e-10)
+    assert np.all(res._hat_matrix_diag < 1 + 1e-10)

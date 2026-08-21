@@ -601,3 +601,47 @@ def test_summary_after_remove_data(fit_func):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_truncated_poisson_dispersion_factor():
+    rs = np.random.RandomState(462)
+    n = 300
+    exog = np.column_stack([np.ones(n), rs.standard_normal(n)])
+    lam = np.exp(exog @ [0.5, 0.3])
+    endog = rs.poisson(lam)
+    endog[endog == 0] = 1  # zero-truncated sample
+
+    mod = TruncatedLFPoisson(endog, exog, truncation=0)
+    res = mod.fit(disp=0)
+
+    mu = np.exp(res.predict(which="linear"))
+    expected = 1 - mu / (np.exp(mu) - 1)
+    assert_allclose(res._dispersion_factor, expected)
+
+    # the NotImplementedError guard is checked before any computation, so
+    # a single non-converged iteration is enough to exercise it
+    mod_trunc5 = TruncatedLFPoisson(endog, exog, truncation=5)
+    res_trunc5 = mod_trunc5.fit(disp=0, start_params=res.params, maxiter=1,
+                                skip_hessian=True)
+    with pytest.raises(NotImplementedError, match="zero-truncation"):
+        res_trunc5._dispersion_factor
+
+
+def test_truncated_negative_binomial_dispersion_factor():
+    rs = np.random.RandomState(463)
+    n = 300
+    exog = np.column_stack([np.ones(n), rs.standard_normal(n)])
+    mu = np.exp(exog @ [0.5, 0.3])
+    alpha = 0.3
+    endog = rs.negative_binomial(1 / alpha, 1 / (1 + alpha * mu))
+    endog[endog == 0] = 1
+
+    mod = TruncatedLFNegativeBinomialP(endog, exog, truncation=0, p=2)
+    res = mod.fit(disp=0)
+
+    alpha_hat = res.params[-1]
+    p = mod.model_main.parameterization
+    mu_hat = np.exp(res.predict(which="linear"))
+    expected = 1 - alpha_hat * mu_hat ** (p - 1) / (
+        np.exp(mu_hat ** (p - 1)) - 1)
+    assert_allclose(res._dispersion_factor, expected)
