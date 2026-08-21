@@ -3675,3 +3675,35 @@ def test_exog_tvtp():
     assert_allclose(
         res2.smoothed_joint_probabilities, res1.smoothed_joint_probabilities
     )
+
+
+def test_results_fittedvalues_resid_joint_likelihoods_cov_params_robust():
+    rs = np.random.RandomState(20260821)
+    n = 200
+    regime = (np.arange(n) // 40) % 2
+    endog = np.where(regime == 0, 1.0, -1.0) + rs.standard_normal(n) * 0.5
+
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    res = mod.fit()
+
+    assert_allclose(res.fittedvalues, mod.predict(res.params))
+    assert_allclose(res.resid, mod.endog - res.fittedvalues)
+    assert_allclose(res.joint_likelihoods, np.exp(res.joint_loglikelihoods))
+    assert np.all(res.joint_likelihoods >= 0)
+
+    cov_robust = res.cov_params_robust
+    k = len(res.params)
+    assert cov_robust.shape == (k, k)
+    assert np.all(np.isfinite(cov_robust))
+    assert_allclose(cov_robust, cov_robust.T, atol=1e-10)
+    # sandwich covariance must itself be positive semi-definite
+    eigvals = np.linalg.eigvalsh(cov_robust)
+    assert np.all(eigvals > -1e-8 * np.max(np.abs(eigvals)))
+
+    # reproduce the documented formula directly from its public building
+    # blocks, independent of how the property computes it internally
+    from statsmodels.tools.tools import pinv_extended
+    cov_opg = res.cov_params_opg
+    hess = mod.hessian(res.params, transformed=True)
+    expected, _ = pinv_extended(hess.dot(cov_opg).dot(hess))
+    assert_allclose(cov_robust, expected, rtol=1e-8)

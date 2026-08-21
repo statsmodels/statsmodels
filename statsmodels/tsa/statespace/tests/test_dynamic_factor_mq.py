@@ -2883,3 +2883,25 @@ def test_standardized_MQ(idiosyncratic_ar1):
             assert_series_equal(w, x)
         else:
             assert_frame_equal(w, x)
+
+
+def test_filter_reproduces_model_loglike():
+    # filter() is not called by fit() (which drives the EM algorithm
+    # directly), so it is only exercised by calling it explicitly. Its
+    # llf must agree with the model's own standalone loglike() at the
+    # same params (res.llf is not a safe comparator here: it reflects
+    # the EM bound, which need not equal a plain Kalman-filter pass when
+    # EM has not fully converged).
+    rs = np.random.RandomState(20260821)
+    index = pd.period_range(start="2000", periods=60, freq="M")
+    endog = pd.DataFrame(rs.standard_normal((60, 3)).cumsum(axis=0),
+                         index=index, columns=["y1", "y2", "y3"])
+
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, factor_orders=1, idiosyncratic_ar1=False)
+    res = mod.fit(maxiter=5, disp=False)
+
+    filt = mod.filter(res.params)
+    assert_allclose(filt.llf, mod.loglike(res.params), rtol=1e-8)
+    assert_allclose(filt.params, res.params)
+    assert np.isfinite(filt.llf)
