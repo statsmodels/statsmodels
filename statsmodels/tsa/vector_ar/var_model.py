@@ -1004,8 +1004,14 @@ class VARProcess:
             This should have the same number of rows as steps, and the same
             number of columns as endogenous variables (neqs).
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            Source of random numbers used for simulation. If an int ot array of integers,
-            this value is passed to ``numpy.random.default_rng()``.
+            Source of random numbers used for the simulation. If `rng` is
+            None, a new ``Generator`` is created using fresh entropy from
+            the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -1842,7 +1848,14 @@ class VARResults(VARProcess):
             Significance level for error bars, must be between 0 and 1,
             defaults to 95% CI (0.05).
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed for replications
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -1894,7 +1907,14 @@ class VARResults(VARProcess):
         steps : int, optional
             number of impulse response periods. The default is 10.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed for replications
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 

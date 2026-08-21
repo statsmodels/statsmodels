@@ -159,7 +159,14 @@ class BaseIRAnalysis:
             Number of replications for Monte Carlo and Sims-Zha standard
             errors. The default is 1000.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed for Monte Carlo replications
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -311,7 +318,14 @@ class BaseIRAnalysis:
             Number of replications for Monte Carlo standard errors. The
             default is 1000.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed for Monte Carlo replications
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -467,7 +481,14 @@ class IRAnalysis(BaseIRAnalysis):
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -531,7 +552,14 @@ class IRAnalysis(BaseIRAnalysis):
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -620,7 +648,14 @@ class IRAnalysis(BaseIRAnalysis):
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -710,7 +745,14 @@ class IRAnalysis(BaseIRAnalysis):
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -952,7 +994,14 @@ class IRAnalysis(BaseIRAnalysis):
             Significance level for the confidence interval, between 0 and
             1. The default is 0.05, giving a 95% confidence interval.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            np.random seed
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 

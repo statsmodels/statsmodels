@@ -353,11 +353,11 @@ class DiscretizedCount(rv_discrete):
         size : int or tuple of ints, optional
             Number of random variates to generate.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None, fresh, unpredictable entropy is pulled from
-            the OS and a new ``numpy.random.Generator`` is used. If `rng`
-            is an int or array_like[ints], a new ``Generator`` is used,
-            seeded with `rng`. If `rng` is already a ``Generator`` or
-            ``RandomState`` instance, that instance is used.
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 

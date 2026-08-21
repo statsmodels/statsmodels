@@ -790,8 +790,14 @@ class SVARResults(SVARProcess, VARResults):
             Significance level for error bars (0 < signif < 1), defaults to
             95% CI
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            Source of random numbers used for simulation. If an int ot array of integers,
-            this value is passed to ``numpy.random.default_rng()``.
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 

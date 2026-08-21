@@ -2438,7 +2438,12 @@ class UECMResults(ARDLResults):
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             Random number generator or seed to use when simulating critical
             values. Must be provided if reproducible critical value and
-            p-values are required when ``asymptotic`` is ``False``.
+            p-values are required when ``asymptotic`` is ``False``. If
+            `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
         seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 

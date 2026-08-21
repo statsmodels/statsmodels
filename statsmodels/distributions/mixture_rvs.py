@@ -51,11 +51,14 @@ def mixture_rvs(prob, size, dist, kwargs=None, rng=None):
         args to be passed to the respective distribution in dist.  If not
         provided, the distribution defaults are used.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        If `rng` is None, the global (legacy) NumPy random state is
-        used. If `rng` is an int or array of ints, a new ``RandomState``
-        instance is created, seeded with `rng`. If `rng` is already a
-        ``Generator`` or ``RandomState`` instance, that instance is
-        used.
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``RandomState`` instance is created, seeded with `rng`. If `rng`
+        is already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
     Returns
     -------
@@ -125,8 +128,11 @@ class MixtureDistribution:
             args to be passed to the respective distribution in dist.  If not
             provided, the distribution defaults are used.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None, the global (legacy) NumPy random state is
-            used. If `rng` is an int or array of ints, a new
+            If `rng` is None, the legacy global (singleton) ``RandomState``
+            provided by ``numpy.random`` is used; this behavior is
+            deprecated and will change to creating a new ``Generator``
+            using fresh entropy from the operating system in a future
+            release. If `rng` is an int or array of ints, a new
             ``RandomState`` instance is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
@@ -269,11 +275,14 @@ def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
     nvars : int
         dimension of the multivariate distribution, could be inferred instead
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        If `rng` is None, the global (legacy) NumPy random state is
-        used. If `rng` is an int or array of ints, a new ``RandomState``
-        instance is created, seeded with `rng`. If `rng` is already a
-        ``Generator`` or ``RandomState`` instance, that instance is
-        used.
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``RandomState`` instance is created, seeded with `rng`. If `rng`
+        is already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
     **kwargs
         Ignored.
 

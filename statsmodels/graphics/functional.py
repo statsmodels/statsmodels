@@ -233,19 +233,25 @@ def hdrboxplot(
         evolution to find the curves. Default is False.
     rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
         Value to pass to scipy.optimize.differential_evolution as its `seed`
-        argument. If `rng` is None, fresh, unpredictable entropy is pulled
-        from the OS and a new ``numpy.random.Generator`` is used. If `rng`
-        is an int or array_like[ints], a new ``Generator`` is used, seeded
-        with `rng`. If `rng` is already a ``Generator`` or ``RandomState``
-        instance, that instance is used.
+        argument. If `rng` is None, a new ``Generator`` is created using
+        fresh entropy from the operating system. If `rng` is an int or
+        array of ints, a new ``Generator`` is created, seeded with `rng`.
+        If `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
     seed : int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            seed has been deprecated. In-line with SPEC-007, use
            rng for passing a random number generator or seed.
     kernel_rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-        A random number generator or seed to use for the kernel density. If
-        None, will use the global RandomState.
+        A random number generator or seed to use for the kernel density
+        estimate. If `rng` is None, the legacy global (singleton)
+        ``RandomState`` provided by ``numpy.random`` is used; this
+        behavior is deprecated and will change to creating a new
+        ``Generator`` using fresh entropy from the operating system in a
+        future release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -433,12 +439,11 @@ def hdrboxplot(
         use_brute : bool, optional
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
-            Value to pass to scipy.optimize.differential_evolution as its
-            `seed` argument. If an int, a new RandomState seeded with that
-            value is used by scipy. If a Generator or RandomState instance,
-            that instance is used directly. If None, then the default
-            RandomState provided by numpy.random is used.
+        rng : numpy.random.Generator or numpy.random.RandomState, optional
+            Already-normalized generator, passed to
+            scipy.optimize.differential_evolution as its `seed` argument.
+            Defaults to the `rng` resolved by the enclosing `hdrboxplot`
+            call.
 
         Returns
         -------

@@ -55,11 +55,11 @@ class EllipticalCopula(Copula):
             Arguments for copula parameters. Not used by elliptical copulas,
             which take their parameters as attributes.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
-            If `rng` is None, fresh, unpredictable entropy is pulled from
-            the OS and a new ``numpy.random.Generator`` is used. If `rng`
-            is an int or array_like[ints], a new ``Generator`` is used,
-            seeded with `rng`. If `rng` is already a ``Generator`` or
-            ``RandomState`` instance, that instance is used.
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -113,12 +113,13 @@ class EllipticalCopula(Copula):
             which take their parameters as attributes.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             Passed to the underlying SciPy distribution's ``rng`` argument,
-            if supported by the installed SciPy version. If `rng` is None,
-            fresh, unpredictable entropy is pulled from the OS and a new
-            ``numpy.random.Generator`` is used. If `rng` is an int or
-            array_like[ints], a new ``Generator`` is used, seeded with
-            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
-            instance, that instance is used.
+            if supported by the installed SciPy version, to control the
+            quasi-Monte Carlo integration used to evaluate the cdf. If
+            `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
         random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
