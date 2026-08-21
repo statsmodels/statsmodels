@@ -34,6 +34,7 @@ from statsmodels.regression.linear_model import (
     burg,
     yule_walker,
 )
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -806,6 +807,21 @@ class TestWLS_CornerCases:
         mod = WLS(self.endog, self.exog, weights=1)
         with pytest.raises(ValueError):
             mod.whiten(np.ones((2, 2, 2)))
+
+    def test_rank_deficient_warning(self):
+        x = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, 6.0],
+            ]
+        )
+        y = np.array([1.0, 2.0, 3.0])
+
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            result = WLS(y, x).fit()
+
+        assert_allclose(result.fittedvalues, y)
 
 
 class TestWLSExogWeights(CheckRegressionResults):

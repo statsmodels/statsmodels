@@ -388,6 +388,14 @@ class RegressionModel(base.LikelihoodModel):
             self.wexog_singular_values = singular_values
             self.rank = np.linalg.matrix_rank(np.diag(singular_values))
 
+            if self.rank < self.wexog.shape[1]:
+                warnings.warn(
+                    "The design matrix is rank-deficient. "
+                    "The model parameters are not uniquely determined.",
+                    SingularMatrixWarning,
+                    stacklevel=2,
+                )
+
             beta = np.dot(self.pinv_wexog, self.wendog)
 
         elif method == "qr":
