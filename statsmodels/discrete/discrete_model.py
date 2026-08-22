@@ -56,6 +56,7 @@ from statsmodels.tools.sm_exceptions import (
     PerfectSeparationWarning,
     SpecificationWarning,
 )
+from statsmodels.tools.validation import string_like
 
 try:
     import cvxopt  # noqa:F401
@@ -179,11 +180,7 @@ def _validate_l1_method(method):
     ------
     ValueError
     """
-    if method not in ["l1", "l1_cvxopt_cp"]:
-        raise ValueError(
-            f"`method` = {method} is not supported, use either "
-            '"l1" or "l1_cvxopt_cp"'
-        )
+    string_like(method, "method", options=("l1", "l1_cvxopt_cp"), lower=False)
 
 
 # Private Model Classes
@@ -5094,7 +5091,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         .. [BurnhamAnderson2002] Burnham KP, Anderson KR (2002). Model Selection
            and Multimodel Inference; Springer New York.
         """
-        crit = crit.lower()
+        crit = string_like(crit, "crit", options=("aic", "bic", "tic", "gbic"))
         k_extra = getattr(self.model, "k_extra", 0)
         k_params = self.df_model + 1 + k_extra + dk_params
 
@@ -5108,8 +5105,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             return pinfer.tic(self)
         elif crit == "gbic":
             return pinfer.gbic(self)
-        else:
-            raise ValueError("Name of information criterion not recognized.")
 
     def score_test(
         self,

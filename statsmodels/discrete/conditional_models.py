@@ -18,6 +18,7 @@ from statsmodels.discrete.discrete_model import (
 from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 from statsmodels.tools.sm_exceptions import ModelWarning
 
 
@@ -235,8 +236,7 @@ class _ConditionalModel(base.LikelihoodModel):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
+        method = string_like(method, "method", options=("elastic_net",), lower=False)
 
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10, "zero_tol": 1e-10}
         defaults.update(kwargs)
