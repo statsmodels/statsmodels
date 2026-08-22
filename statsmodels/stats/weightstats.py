@@ -1637,7 +1637,7 @@ def zconfint(
     # usevar is not used, always pooled
     # mostly duplicate code from ztest
 
-    usevar = string_like(usevar, "usevar", options=("pooled",), lower=False)
+    _ = string_like(usevar, "usevar", options=("pooled",), lower=False)
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
     x1_mean = x1.mean(0)

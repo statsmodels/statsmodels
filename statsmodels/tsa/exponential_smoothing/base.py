@@ -679,7 +679,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "breakvar"
-        method = string_like(method, "method", options=("breakvar",))
+        _ = string_like(method, "method", options=("breakvar",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
