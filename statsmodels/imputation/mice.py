@@ -484,7 +484,7 @@ class MICEData:
         predict_miss_kwds = {}
         if vname in self.predict_kwds:
             kwds = self.predict_kwds[vname]
-            predict_miss_kwds = self._process_kwds(kwds, ixo)
+            predict_miss_kwds = self._process_kwds(kwds, ixm)
 
         return (endog_obs, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds)
 
