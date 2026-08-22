@@ -106,7 +106,7 @@ def seasonal_decompose(
         Time series. If 2d, individual series are in columns. x must contain 2
         complete cycles.
     model : {"additive", "multiplicative"}, optional
-        Type of seasonal component. Abbreviations are accepted.
+        Type of seasonal component. The abbreviations "add" and "mul" are accepted.
     filt : array_like, optional
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by
@@ -182,7 +182,9 @@ def seasonal_decompose(
 
     if not np.all(np.isfinite(x)):
         raise ValueError("This function does not handle missing values")
-    if model.startswith("m"):
+    model = string_like(model, "model", options=("additive", "multiplicative", "add", "mul"), lower=True)
+    model = "additive" if model in ("additive", "add") else "multiplicative"
+    if model == "multiplicative":
         if np.any(x <= 0):
             raise ValueError(
                 "Multiplicative seasonality is not appropriate "
@@ -236,21 +238,21 @@ def seasonal_decompose(
     if extrapolate_trend > 0:
         trend = _extrapolate_trend(trend, extrapolate_trend + 1)
 
-    if model.startswith("m"):
+    if model == "multiplicative":
         detrended = x / trend
     else:
         detrended = x - trend
 
     period_averages = seasonal_mean(detrended, period)
 
-    if model.startswith("m"):
+    if model == "multiplicative":
         period_averages /= np.mean(period_averages, axis=0)
     else:
         period_averages -= np.mean(period_averages, axis=0)
 
     seasonal = np.tile(period_averages.T, nobs // period + 1).T[:nobs]
 
-    if model.startswith("m"):
+    if model == "multiplicative":
         resid = x / seasonal / trend
     else:
         resid = detrended - seasonal
