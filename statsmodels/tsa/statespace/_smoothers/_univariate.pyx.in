@@ -463,6 +463,7 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
         blas_int inc = 1
         blas_int kf_k_posdef = kfilter.k_posdef
         blas_int kf_k_states = kfilter.k_states
+        blas_int m_k_endog = model._k_endog
         blas_int m_k_posdef = model._k_posdef
         blas_int m_k_posdef2 = model._k_posdef2
         blas_int m_k_states = model._k_states
@@ -494,6 +495,12 @@ cdef int {{prefix}}smoothed_disturbances_univariate({{prefix}}KalmanSmoother smo
                     kfilter._forecast_error_cov[i + i*kfilter.k_endog] * smoother._smoothed_measurement_disturbance[i]
                 )
             )
+
+        if model._diagonal_obs_cov == 0 and model._k_endog > 1:
+            # Undo the diagonalization: $\hat \varepsilon_t = C_t \hat \varepsilon_t^*$
+            blas.{{prefix}}trmv("L", "N", "U", &m_k_endog,
+                      &model.transform_cholesky[0, 0], &m_k_endog,
+                      smoother._smoothed_measurement_disturbance, &inc)
 
         # Smoothed state disturbance
         # $\hat \eta_t = \\#_0' r_t$
