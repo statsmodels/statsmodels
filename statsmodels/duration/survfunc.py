@@ -576,7 +576,7 @@ class SurvfuncRight:
 
             def gprime(x):
                 return 1 / (x * (1 - x))
-        elif method == "asinsqrt":
+        else:  # method == "asinsqrt"
 
             def g(x):
                 return np.arcsin(np.sqrt(x))
@@ -666,7 +666,7 @@ class SurvfuncRight:
             theta = np.exp(theta)
             lcb = self.surv_prob**(1/theta)
             ucb = self.surv_prob**theta
-        elif transform == "arcsin":
+        else:  # transform == "arcsin"
             k = 1.3581
             k *= (1 + nn * s2) / (2 * np.sqrt(nn))
             k *= np.sqrt(self.surv_prob / (1 - self.surv_prob))

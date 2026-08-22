@@ -202,7 +202,7 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
         envelope_l, envelope_r = (-violin + pos, violin + pos)
     elif side == "right":
         envelope_l, envelope_r = (pos, violin + pos)
-    elif side == "left":
+    else:  # side == "left"
         envelope_l, envelope_r = (-violin + pos, pos)
 
     # Draw the violin.
@@ -446,7 +446,7 @@ def _jitter_envelope(pos_data, xvals, violin, side, rng):
         low, high = (-1.0, 1.0)
     elif side == "right":
         low, high = (0, 1.0)
-    elif side == "left":
+    else:  # side == "left"
         low, high = (-1.0, 0)
 
     jitter_envelope = np.interp(pos_data, xvals, violin)

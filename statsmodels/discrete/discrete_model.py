@@ -5103,7 +5103,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             return bic
         elif crit == "tic":
             return pinfer.tic(self)
-        elif crit == "gbic":
+        else:  # crit == "gbic"
             return pinfer.gbic(self)
 
     def score_test(

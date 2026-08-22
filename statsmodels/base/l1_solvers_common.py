@@ -154,7 +154,7 @@ def do_trim_params(
                 if (alpha[i] - abs(fprime[i])) / alpha[i] > auto_trim_tol:
                     params[i] = 0.0
                     trimmed[i] = True
-    elif trim_mode == "size":
+    else:  # trim_mode == "size"
         for i in range(k_params):
             if alpha[i] != 0:
                 if abs(params[i]) < size_trim_tol:

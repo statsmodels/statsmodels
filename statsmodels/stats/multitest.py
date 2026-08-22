@@ -414,7 +414,7 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     )
     if method in ["i", "indep", "p", "poscorr"]:
         ecdffactor = _ecdf(pvals_sorted)
-    elif method in ["n", "negcorr"]:
+    else:  # method in ("n", "negcorr")
         cm = np.sum(1.0 / np.arange(1, len(pvals_sorted) + 1))  # corrected this
         ecdffactor = _ecdf(pvals_sorted) / cm
     #    elif method in ['n', 'negcorr']:
@@ -699,7 +699,7 @@ def fdrcorrection_twostage(
     if method == "bky":
         fact = 1.0 + alpha
         alpha_prime = alpha / fact
-    elif method == "bh":
+    else:  # method == "bh"
         fact = 1.0
         alpha_prime = alpha
 

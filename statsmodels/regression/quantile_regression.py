@@ -161,7 +161,7 @@ class QuantReg(RegressionModel):
             bandwidth = hall_sheather
         elif bandwidth == "bofinger":
             bandwidth = bofinger
-        elif bandwidth == "chamberlain":
+        else:  # bandwidth == "chamberlain"
             bandwidth = chamberlain
 
         endog = self.endog
@@ -243,7 +243,7 @@ class QuantReg(RegressionModel):
             xtxi = pinv(np.dot(exog.T, exog))
             xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
             vcov = xtxi @ xtdx @ xtxi
-        elif vcov == "iid":
+        else:  # vcov == "iid"
             vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)

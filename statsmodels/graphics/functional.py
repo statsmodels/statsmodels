@@ -942,7 +942,7 @@ def banddepth(data, method="MBD"):
     method = string_like(method, "method", options=("MBD", "BD2"), lower=False)
     if method == "BD2":
         depth = _fbd2()
-    elif method == "MBD":
+    else:  # method == "MBD"
         depth = _fmbd()
 
     return depth

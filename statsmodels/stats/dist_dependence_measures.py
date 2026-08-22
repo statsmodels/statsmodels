@@ -160,7 +160,7 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         rng = check_random_state(rng)
         test_statistic, pval = _empirical_pvalue(x, y, B, n, stats, rng)
 
-    elif (method == "auto" and n > 500) or method == "asym":
+    else:  # method == "asym", or method == "auto" and n > 500
         chosen_method = "asym"
         test_statistic, pval = _asymptotic_pvalue(stats)
 

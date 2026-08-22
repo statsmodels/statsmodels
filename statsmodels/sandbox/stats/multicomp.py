@@ -1189,7 +1189,7 @@ class MultiComparison:
         gnobs = self.groupstats.groupnobs
         if use_var == "unequal":
             var_ = self.groupstats.groupvarwithin()
-        elif use_var == "equal":
+        else:  # use_var == "equal"
             var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
 
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,

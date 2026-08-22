@@ -922,7 +922,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
         m, b = np.std(y), np.mean(y)
         ref_line = x * m + b
         ax.plot(x, ref_line, **lineoptions)
-    elif line == "q":
+    else:  # line == "q"
         _check_for(dist, "ppf")
         q25 = stats.scoreatpercentile(y, 25)
         q75 = stats.scoreatpercentile(y, 75)

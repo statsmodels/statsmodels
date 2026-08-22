@@ -3090,7 +3090,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             low = (cov_re[0, 0] - dist_low) / self.scale
             high = (cov_re[0, 0] + dist_high) / self.scale
 
-        elif vtype == "vc":
+        else:  # vtype == "vc"
             re_ix = self.model.exog_vc.names.index(re_ix)
             params = self.params_object.copy()
             vcomp = self.vcomp

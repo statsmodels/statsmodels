@@ -72,7 +72,7 @@ def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
         upp_half = np.sqrt((stat1 - ci1[1])**2 + (stat2 - ci2[1])**2)
         ci = (stat - low_half, stat + upp_half)
 
-    elif contrast == "ratio":
+    else:  # contrast == "ratio"
         # stat = stat1 / stat2
         prod = stat1 * stat2
         term1 = stat2**2 - (ci2[1] - stat2)**2

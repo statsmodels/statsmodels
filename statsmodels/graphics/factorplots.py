@@ -175,7 +175,7 @@ def interaction_plot(
                 linestyle=linestyles[i],
                 **kwargs,
             )
-    elif plottype == "scatter" or plottype == "s":
+    else:  # plottype == "scatter" or plottype == "s"
         for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])

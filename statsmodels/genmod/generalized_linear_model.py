@@ -948,7 +948,7 @@ class GLM(base.LikelihoodModel):
             scaletype = string_like(self.scaletype, "scaletype", options=("x2", "dev"))
             if scaletype == "x2":
                 return self._estimate_x2_scale(mu)
-            elif scaletype == "dev":
+            else:  # scaletype == "dev"
                 return self.family.deviance(
                     self.endog, mu, self.var_weights, self.freq_weights, 1.0
                 ) / (self.df_resid)
@@ -1078,7 +1078,7 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(linpred)
         elif which == "linear":
             return linpred
-        elif which == "var_unscaled":
+        else:  # which == "var_unscaled"
             mean = self.family.fitted(linpred)
             var_ = self.family.variance(mean)
             return var_

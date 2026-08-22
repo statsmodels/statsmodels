@@ -453,7 +453,7 @@ class OrderedModel(GenericLikelihoodModel):
         if which == "prob":
             prob = self.prob(low, upp)
             return prob
-        elif which in ["cum", "cumprob"]:
+        else:  # which in ("cum", "cumprob")
             cumprob = self.cdf(upp)
             return cumprob
 

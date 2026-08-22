@@ -143,7 +143,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         a = 1
     elif lambd == "modified_loglikeratio":
         a = -1
-    elif lambd == "cressie_read":
+    else:  # lambd == "cressie_read"
         a = 2/3.0
 
     n = np.sum(o, axis=axis)

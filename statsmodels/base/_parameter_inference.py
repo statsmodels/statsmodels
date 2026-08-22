@@ -363,7 +363,7 @@ def score_test(
             k_constraint=k_constraints,
             distribution="chi2",
         )
-    elif hypothesis == "separate":
+    else:  # hypothesis == "separate"
         diff = score
         bse = np.sqrt(np.diag(cov_score_test))
         stat = diff / bse

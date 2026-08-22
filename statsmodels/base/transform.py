@@ -139,7 +139,7 @@ class BoxCox:
 
         if method == "guerrero":
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
-        elif method == "loglik":
+        else:  # method == "loglik"
             lmbda = self._loglik_boxcox(x, bounds=bounds, **kwargs)
 
         return lmbda
@@ -188,7 +188,7 @@ class BoxCox:
         scale = string_like(scale, "scale", options=("sd", "mad"))
         if scale == "sd":
             dispersion = np.std(grouped_data, 1, ddof=1)
-        elif scale == "mad":
+        else:  # scale == "mad"
             dispersion = mad(grouped_data, axis=1)
 
         def optim(lmbda):

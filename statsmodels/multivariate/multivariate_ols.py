@@ -120,7 +120,7 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         t = x.dot(params)
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
-    elif method == "svd":
+    else:  # method == "svd"
         u, s, v = svd(x, 0)
         if (s > tolerance).sum() < len(s):
             raise ValueError("Covariance of x singular!")

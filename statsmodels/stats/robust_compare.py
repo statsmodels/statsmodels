@@ -236,7 +236,7 @@ class TrimmedMean:
         if transform == "trimmed":
             mean_ = self.mean_trimmed
             std_ = self.std_mean_trimmed
-        elif transform == "winsorized":
+        else:  # transform == "winsorized"
             mean_ = self.mean_winsorized
             std_ = self.std_mean_winsorized
 

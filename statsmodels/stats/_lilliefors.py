@@ -295,7 +295,7 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     if dist == "norm":
         z = (x - x.mean()) / x.std(ddof=1)
         test_d = stats.norm.cdf
-    elif dist == "exp":
+    else:  # dist == "exp"
         z = x / x.mean()
         test_d = stats.expon.cdf
         pvalmethod = "table"

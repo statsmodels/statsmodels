@@ -559,7 +559,7 @@ class DistributedModel:
                 data_generator, fit_kwds, init_kwds_generator
             )
 
-        elif parallel_method == "joblib":
+        else:  # parallel_method == "joblib"
             results_l = self.fit_joblib(
                 data_generator, fit_kwds, parallel_backend, init_kwds_generator
             )

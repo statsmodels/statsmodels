@@ -1306,7 +1306,7 @@ def _cov_iter(
     rescale = string_like(rescale, "rescale", options=("med", "none"), lower=False)
     if rescale == "none":
         s = 1
-    elif rescale == "med":
+    else:  # rescale == "med"
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
 

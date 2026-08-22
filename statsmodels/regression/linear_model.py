@@ -399,7 +399,7 @@ class RegressionModel(base.LikelihoodModel):
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
-        elif method == "qr":
+        else:  # method == "qr"
             Q, R = np.linalg.qr(self.wexog)
             self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
             self.wexog_singular_values = np.linalg.svd(R, 0, 0)
@@ -2152,7 +2152,7 @@ class RegressionResults(base.LikelihoodModelResults):
             from statsmodels.tools.eval_measures import aicc
 
             return aicc(self.llf, self.nobs, k_params)
-        elif crit == "hqic":
+        else:  # crit == "hqic"
             from statsmodels.tools.eval_measures import hqic
 
             return hqic(self.llf, self.nobs, k_params)

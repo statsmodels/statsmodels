@@ -153,7 +153,7 @@ def average_grid(values, coords=None, _method="slicing"):
 
             p = (p[sl1] + p[sl2]) / 2
 
-    elif _method == "convolve":
+    else:  # _method == "convolve"
         from scipy import signal
 
         p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim), mode="valid")
@@ -415,7 +415,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
     elif method == "bpoly":
         bpb = interpolate.BPoly(fvals[:, None], [0.0, 1])
         bp_values = bpb(x)
-    elif method == "beta":
+    else:  # method == "beta"
         # Divide by 0 RuntimeWarning here
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)

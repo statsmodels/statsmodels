@@ -352,7 +352,7 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
         params, itr, converged = _coord_descent(
             model, alpha, L1_wt, start_params, maxiter, cnvrg_tol,
             zero_tol, check_step, loglike_kwds, score_kwds, hess_kwds)
-    elif method == "l1_slsqp":
+    else:  # method == "l1_slsqp"
         if L1_wt != 1.:
             raise ValueError("L1_wt must be 1 when method is 'l1_slsqp'")
         params, itr, converged = _l1_slsqp(

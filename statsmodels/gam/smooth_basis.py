@@ -311,7 +311,7 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
             # Need to compute inner knots
             knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = _R_compat_quantile(x, knot_quantiles)
-        elif spacing == "equal":
+        else:  # spacing == "equal"
             # Need to compute inner knots
             grid = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = x_min + grid * (x_max - x_min)
