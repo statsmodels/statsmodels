@@ -840,7 +840,17 @@ def cov_cluster_2groups(
 
     verified against Peterson's table, (4 decimal print precision)
     """
-    crv_type = string_like(crv_type, "crv_type", options=("cluster",), lower=False)
+    if crv_type != "cluster":
+        raise NotImplementedError(
+            "Two-way clustering is only supported for crv_type='cluster' "
+            f"(CRV1); got crv_type={crv_type!r}. The additive two-way "
+            "combination cov0 + cov1 - cov01 (Cameron, Gelbach and Miller, "
+            "2011) is only valid for the CRV1 sandwich estimator -- "
+            "applying it to the CRV3/cluster-jackknife estimator does not "
+            "generally produce a positive semi-definite covariance matrix. "
+            "Use one-way clustering (a single `groups` array) with "
+            "crv_type='cluster-crv3' or 'cluster-jk'."
+        )
     if group2 is None:
         if group.ndim != 2 or group.shape[1] != 2:
             raise ValueError(

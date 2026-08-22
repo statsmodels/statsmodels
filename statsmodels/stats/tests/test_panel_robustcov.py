@@ -84,8 +84,8 @@ def test_cov_cluster_invalid_crv_type_raises():
 
     with pytest.raises(ValueError, match="crv_type"):
         sw.cov_cluster(res, group, crv_type="not-a-crv-type")
-    with pytest.raises(ValueError, match="crv_type"):
+    with pytest.raises(NotImplementedError, match="Two-way clustering"):
         sw.cov_cluster_2groups(res, group, group2=group, crv_type="not-a-crv-type")
     # cov_cluster_2groups only supports "cluster", not "cluster-crv3"/"cluster-jk"
-    with pytest.raises(ValueError, match="crv_type"):
+    with pytest.raises(NotImplementedError, match="Two-way clustering"):
         sw.cov_cluster_2groups(res, group, group2=group, crv_type="cluster-crv3")
