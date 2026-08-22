@@ -276,6 +276,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
         TimeTrend
             The TimeTrend instance.
         """
+        trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
         constant = trend.startswith("c")
         order = 0
         if "tt" in trend:
@@ -983,6 +984,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         CalendarTimeTrend
             The CalendarTimeTrend instance.
         """
+        trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
         constant = trend.startswith("c")
         order = 0
         if "tt" in trend:
