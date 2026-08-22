@@ -161,7 +161,11 @@ def _num_det_vars(det_string, seasons=0):
         terms.
     """
     num = 0
-    det_string = string_like(det_string, "det_string")
+    det_string = string_like(
+        det_string,
+        "det_string",
+        options=("n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"),
+    )
     if "ci" in det_string or "co" in det_string:
         num += 1
     if "li" in det_string or "lo" in det_string:
@@ -169,6 +173,7 @@ def _num_det_vars(det_string, seasons=0):
     if seasons > 0:
         num += seasons - 1
     return num
+
 
 
 def _deterministic_to_exog(
