@@ -283,3 +283,49 @@ def test_predict_remove_data():
 
     series = model.get_prediction(pd.Series([1])).predicted_mean
     assert_allclose(scalar, series)
+
+
+def test_prediction_results_t_test():
+    from scipy import stats as sp_stats
+
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rs = np.random.RandomState(918273)
+    n = 40
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
+    # GLM.get_prediction returns PredictionResultsMean, the class that
+    # actually implements t_test; OLS's get_prediction is a different,
+    # unrelated PredictionResults class of the same name.
+    res = GLM(endog, exog).fit()
+    pred = res.get_prediction()
+
+    stat, pvalue = pred.t_test(value=0, alternative="two-sided")
+    expected_stat = pred.predicted / pred.se
+    assert_allclose(stat, expected_stat)
+    assert_allclose(pvalue, pred.dist.sf(np.abs(expected_stat), *pred.dist_args) * 2)
+
+    stat_l, pvalue_l = pred.t_test(value=1.0, alternative="larger")
+    expected_stat_l = (pred.predicted - 1.0) / pred.se
+    assert_allclose(stat_l, expected_stat_l)
+    assert_allclose(pvalue_l, pred.dist.sf(expected_stat_l, *pred.dist_args))
+
+    stat_s, pvalue_s = pred.t_test(value=1.0, alternative="smaller")
+    assert_allclose(stat_s, expected_stat_l)
+    assert_allclose(pvalue_s, pred.dist.cdf(expected_stat_l, *pred.dist_args))
+
+    # smaller-side p-value is 1 minus the larger-side p-value for the same
+    # statistic, by definition
+    assert_allclose(pvalue_s, 1 - pvalue_l, atol=1e-10)
+
+    with pytest.raises(ValueError, match="invalid alternative"):
+        pred.t_test(alternative="not-a-real-option")
+
+    # GLM defaults to use_t=False -> normal reference distribution
+    assert pred.dist is sp_stats.norm
+    assert pred.dist_args == ()
+
+    res_t = GLM(endog, exog).fit(use_t=True)
+    pred_t = res_t.get_prediction()
+    assert pred_t.dist is sp_stats.t
+    assert pred_t.dist_args == (pred_t.df,)

@@ -426,3 +426,47 @@ class TestMetaBinOR:
         assert fig_out is fig
         with pytest.raises(TypeError, match="unexpected keyword"):
             res1.plot_forest(junk=5, use_t=False)
+
+
+def test_conf_int_samples():
+    from scipy import stats as sp_stats
+
+    from statsmodels.tools.sm_exceptions import InvalidTestWarning
+
+    rs = np.random.RandomState(918273)
+    k = 8
+    eff = rs.standard_normal(k)
+    var_eff = rs.uniform(0.5, 1.5, k)
+    res = combine_effects(eff, var_eff, method_re="dl")
+
+    ci_low, ci_upp = res.conf_int_samples(alpha=0.05, use_t=False)
+    crit = sp_stats.norm.isf(0.025)
+    assert_allclose(ci_low, res.eff - crit * res.sd_eff)
+    assert_allclose(ci_upp, res.eff + crit * res.sd_eff)
+    assert res.ci_sample_distr == "normal"
+
+    # cached: a second call with the same (alpha, use_t) returns the
+    # exact cached arrays rather than recomputing
+    ci_low2, ci_upp2 = res.conf_int_samples(alpha=0.05, use_t=False)
+    assert ci_low2 is ci_low
+    assert ci_upp2 is ci_upp
+
+    # use_t=True with nobs given uses the t distribution
+    nobs = 12
+    ci_low_t, ci_upp_t = res.conf_int_samples(alpha=0.05, use_t=True, nobs=nobs)
+    crit_t = sp_stats.t.isf(0.025, nobs - 1)
+    assert_allclose(ci_low_t, res.eff - crit_t * res.sd_eff)
+    assert res.ci_sample_distr == "t"
+
+    # use_t=True without nobs or ci_func falls back to normal with a warning
+    with pytest.warns(InvalidTestWarning, match="requires `nobs`"):
+        ci_low_fb, _ = res.conf_int_samples(alpha=0.1, use_t=True)
+    crit_fb = sp_stats.norm.isf(0.05)
+    assert_allclose(ci_low_fb, res.eff - crit_fb * res.sd_eff)
+    assert res.ci_sample_distr == "normal"
+
+    # a user-provided ci_func is used directly
+    sentinel = (np.zeros(k), np.ones(k))
+    ci_custom = res.conf_int_samples(alpha=0.2, ci_func=lambda alpha, **kw: sentinel)
+    assert ci_custom is sentinel
+    assert res.ci_sample_distr == "ci_func"
