@@ -49,7 +49,7 @@ from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     PerfectSeparationWarning,
 )
-from statsmodels.tools.validation import float_like
+from statsmodels.tools.validation import float_like, string_like
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
@@ -945,16 +945,13 @@ class GLM(base.LikelihoodModel):
             return np.array(self.scaletype)
 
         if isinstance(self.scaletype, str):
-            if self.scaletype.lower() == "x2":
+            scaletype = string_like(self.scaletype, "scaletype", options=("x2", "dev"))
+            if scaletype == "x2":
                 return self._estimate_x2_scale(mu)
-            elif self.scaletype.lower() == "dev":
+            elif scaletype == "dev":
                 return self.family.deviance(
                     self.endog, mu, self.var_weights, self.freq_weights, 1.0
                 ) / (self.df_resid)
-            else:
-                raise ValueError(
-                    f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
-                )
         else:
             raise ValueError(
                 f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
@@ -1069,6 +1066,9 @@ class GLM(base.LikelihoodModel):
         else:
             exposure = np.log(np.asarray(exposure))
 
+        which = string_like(
+            which, "which", options=("mean", "linear", "var_unscaled")
+        )
         if exog is None:
             exog = self.exog
 
@@ -1082,8 +1082,6 @@ class GLM(base.LikelihoodModel):
             mean = self.family.fitted(linpred)
             var_ = self.family.variance(mean)
             return var_
-        else:
-            raise ValueError(f'The which value "{which}" is not recognized')
 
     def get_distribution(
         self,
@@ -1254,9 +1252,7 @@ class GLM(base.LikelihoodModel):
         as `results_wls` attribute.
         """
         if isinstance(scale, str):
-            scale = scale.lower()
-            if scale not in ("x2", "dev"):
-                raise ValueError("scale must be either X2 or dev when a string.")
+            scale = string_like(scale, "scale", options=("x2", "dev"))
         elif scale is not None:
             # GH-6627
             try:
@@ -1600,10 +1596,9 @@ class GLM(base.LikelihoodModel):
             Requested accuracy as used by slsqp (default 1e-10).
         """
 
-        if method not in ("elastic_net", "l1_slsqp"):
-            raise ValueError(
-                "method for fit_regularized must be elastic_net or l1_slsqp"
-            )
+        method = string_like(
+            method, "method", options=("elastic_net", "l1_slsqp"), lower=False
+        )
 
         if method == "elastic_net" and kwargs.get("L1_wt", 1) == 0:
             return self._fit_ridge(alpha, start_params, opt_method)
