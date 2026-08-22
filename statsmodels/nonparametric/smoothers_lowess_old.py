@@ -9,6 +9,8 @@ Cleveland, W.S. (1979) "Robust Locally Weighted Regression and Smoothing Scatter
 """
 from statsmodels.compat.numpy import inplace_reshape
 
+import warnings
+
 import numpy as np
 from numpy.linalg import lstsq
 
@@ -93,6 +95,18 @@ def lowess(endog, exog, frac=2.0 / 3, it=3):
     >>> z = lowess(y, x, frac= 1./3, it=0)
     >>> w = lowess(y, x, frac=1./3)
     """
+    warnings.warn(
+        "statsmodels.nonparametric.smoothers_lowess_old.lowess is "
+        "deprecated and is not exported from any public statsmodels API; "
+        "it has had no test coverage and has been superseded by the "
+        "actively maintained statsmodels.nonparametric.lowess (used in "
+        "this very function's own docstring examples). It will be "
+        "removed after statsmodels 0.16 is released. If you rely on this "
+        "function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     x = exog
 
     if exog.ndim != 1:

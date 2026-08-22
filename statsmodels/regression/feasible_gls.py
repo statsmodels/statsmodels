@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+import warnings
+
 import numpy as np
 
 from statsmodels.regression.linear_model import GLS, OLS, WLS
@@ -33,6 +35,15 @@ class GLSHet2(GLS):
     """
 
     def __init__(self, endog, exog, exog_var, sigma=None):
+        warnings.warn(
+            "GLSHet2 is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.exog_var = atleast_2dcols(exog_var)
         super(self.__class__, self).__init__(endog, exog, sigma=sigma)
 
@@ -136,6 +147,15 @@ class GLSHet(WLS):
     """
 
     def __init__(self, endog, exog, exog_var=None, weights=None, link=None):
+        warnings.warn(
+            "GLSHet is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.exog_var = atleast_2dcols(exog_var)
         if weights is None:
             weights = np.ones(endog.shape)
