@@ -28,6 +28,7 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.validation import string_like
 
 
 class OrderedModel(GenericLikelihoodModel):
@@ -437,6 +438,10 @@ class OrderedModel(GenericLikelihoodModel):
             one-dimensional.
         """
         # note, exog and offset handling is in linpred
+        which = string_like(
+            which, "which", options=("prob", "linpred", "cum", "cumprob"),
+            lower=False,
+        )
 
         thresh = self.transform_threshold_params(params)
         xb = self._linpred(params, exog=exog, offset=offset)
@@ -451,8 +456,6 @@ class OrderedModel(GenericLikelihoodModel):
         elif which in ["cum", "cumprob"]:
             cumprob = self.cdf(upp)
             return cumprob
-        else:
-            raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
         """

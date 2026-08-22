@@ -109,6 +109,15 @@ def test_glm_dogs_example(model):
 
 
 @pytest.mark.parametrize("model", models)
+def test_invalid_fit_method_raises(model):
+    mod = model.from_formula(
+        "Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted", data
+    )
+    with pytest.raises(ValueError, match="method"):
+        mod.fit(method="not-a-method")
+
+
+@pytest.mark.parametrize("model", models)
 def test_specify_L_M_by_string(model):
     mod = model.from_formula(
         "Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted", data

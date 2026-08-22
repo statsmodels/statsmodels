@@ -23,6 +23,8 @@ Psychometrika, 67, 7-19.
 
 import numpy as np
 
+from statsmodels.tools.validation import string_like
+
 
 def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         rotation_method="orthogonal", tol=1e-5):
@@ -75,9 +77,12 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         step size for each iteration, used for monitoring convergence
     """
     # pre processing
-    if rotation_method not in ["orthogonal", "oblique"]:
-        raise ValueError("rotation_method should be one of "
-                         "{orthogonal, oblique}")
+    rotation_method = string_like(
+        rotation_method,
+        "rotation_method",
+        options=("orthogonal", "oblique"),
+        lower=False,
+    )
     if vgQ is None:
         if ff is None:
             raise ValueError("ff should be provided if vgQ is not")
