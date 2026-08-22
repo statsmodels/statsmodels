@@ -2817,17 +2817,17 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         has_missing = np.any(res.nmissing)
         if mstep_method is None:
             mstep_method = "missing" if has_missing else "nonmissing"
-        mstep_method = mstep_method.lower()
+        mstep_method = string_like(
+            mstep_method, "mstep_method", options=("missing", "nonmissing")
+        )
         if mstep_method == "nonmissing" and has_missing:
             raise ValueError('Cannot use EM algorithm option'
                              ' `mstep_method="nonmissing"` with missing data.')
 
         if mstep_method == "nonmissing":
             func = self._em_maximization_obs_nonmissing
-        elif mstep_method == "missing":
+        else:  # mstep_method == "missing"
             func = self._em_maximization_obs_missing
-        else:
-            raise ValueError(f'Invalid maximization step method: "{mstep_method}".')
         # TODO: compute H is pretty slow
         Lambda, H = func(res, Eaa, a, compute_H=(not self.idiosyncratic_ar1))
 
@@ -3473,6 +3473,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                                         "cumulative"])
         if which is None:
             which = "filtered" if self.smoothed_state is None else "smoothed"
+        which = string_like(which, "which", options=("filtered", "smoothed"))
 
         k_endog = self.model.k_endog
         k_factors = self.model.k_factors
