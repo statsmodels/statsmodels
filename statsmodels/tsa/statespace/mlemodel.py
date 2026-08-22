@@ -30,6 +30,7 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning, PrecisionWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.prediction as pred
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
@@ -1635,6 +1636,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # will just be called 'method'
         if "method" in kwargs:
             method = kwargs.pop("method")
+        method = string_like(method, "method", options=("harvey", "approx"))
 
         if approx_complex_step is None:
             approx_complex_step = not self.ssm._complex_endog
@@ -1663,13 +1665,11 @@ class MLEModel(tsbase.TimeSeriesModel):
         elif method == "approx" and approx_complex_step:
             kwargs["includes_fixed"] = True
             score = self._score_complex_step(params, **kwargs)
-        elif method == "approx":
+        else:  # method == "approx"
             kwargs["includes_fixed"] = True
             score = self._score_finite_difference(
                 params, approx_centered=approx_centered, **kwargs
             )
-        else:
-            raise NotImplementedError("Invalid score method.")
 
         if not transformed:
             score = np.dot(transform_score, score)
@@ -1725,6 +1725,8 @@ class MLEModel(tsbase.TimeSeriesModel):
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglikeobs` method.
         """
+        method = string_like(method, "method", options=("approx", "harvey"))
+
         if not transformed and approx_complex_step:
             raise ValueError(
                 "Cannot use complex-step approximations to"
@@ -1757,12 +1759,10 @@ class MLEModel(tsbase.TimeSeriesModel):
             score = approx_fprime_cs(
                 params, self.loglikeobs, epsilon=epsilon, kwargs=kwargs
             )
-        elif method == "approx":
+        else:  # method == "approx"
             score = approx_fprime(
                 params, self.loglikeobs, kwargs=kwargs, centered=approx_centered
             )
-        else:
-            raise NotImplementedError("Invalid scoreobs method.")
 
         return score
 
@@ -1814,6 +1814,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         # the method will just be called 'method'
         if "method" in kwargs:
             method = kwargs.pop("method")
+        method = string_like(method, "method", options=("oim", "opg", "approx"))
 
         if not transformed and approx_complex_step:
             raise ValueError(
@@ -1850,15 +1851,13 @@ class MLEModel(tsbase.TimeSeriesModel):
             hessian = self._hessian_complex_step(
                 params, transformed=transformed, **kwargs
             )
-        elif method == "approx":
+        else:  # method == "approx"
             hessian = self._hessian_finite_difference(
                 params,
                 transformed=transformed,
                 approx_centered=approx_centered,
                 **kwargs,
             )
-        else:
-            raise NotImplementedError("Invalid Hessian calculation method.")
         return hessian
 
     def _hessian_oim(self, params, **kwargs):
@@ -3362,12 +3361,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         .. [Lütkepohl2007] Lütkepohl, Helmut. 2005. New Introduction to Multiple Time
            Series Analysis. Berlin: Springer.
         """
-        criteria = criteria.lower()
-        method = method.lower()
+        criteria = string_like(criteria, "criteria", options=("aic", "bic", "hqic"))
+        method = string_like(method, "method", options=("standard", "lutkepohl"))
 
         if method == "standard":
             out = getattr(self, criteria)
-        elif method == "lutkepohl":
+        else:  # method == "lutkepohl"
             if self.filter_results.state_cov.shape[-1] > 1:
                 raise ValueError(
                     "Cannot compute Lütkepohl statistics for"
@@ -3385,7 +3384,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     np.linalg.slogdet(cov)[1]
                     + self.df_model * np.log(self.nobs_effective) / self.nobs_effective
                 )
-            elif criteria == "hqic":
+            else:  # criteria == "hqic"
                 out = np.squeeze(
                     np.linalg.slogdet(cov)[1]
                     + 2
@@ -3393,11 +3392,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     * np.log(np.log(self.nobs_effective))
                     / self.nobs_effective
                 )
-            else:
-                raise ValueError("Invalid information criteria")
-
-        else:
-            raise ValueError("Invalid information criteria computation method")
 
         return out
 
@@ -3545,6 +3539,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "jarquebera"
+        method = string_like(method, "method", options=("jarquebera",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError(
@@ -3552,17 +3547,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 " forecast errors have not been computed."
             )
 
-        if method == "jarquebera":
-            from statsmodels.stats.stattools import jarque_bera
+        from statsmodels.stats.stattools import jarque_bera
 
-            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-            output = []
-            for i in range(self.model.k_endog):
-                resid = self.filter_results.standardized_forecasts_error[i, d:]
-                mask = ~np.isnan(resid)
-                output.append(jarque_bera(resid[mask]))
-        else:
-            raise NotImplementedError("Invalid normality test method.")
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        output = []
+        for i in range(self.model.k_endog):
+            resid = self.filter_results.standardized_forecasts_error[i, d:]
+            mask = ~np.isnan(resid)
+            output.append(jarque_bera(resid[mask]))
 
         return np.array(output)
 
@@ -3638,6 +3630,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "breakvar"
+        method = string_like(method, "method", options=("breakvar",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError(
@@ -3645,29 +3638,25 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 " forecast errors have not been computed."
             )
 
-        if method == "breakvar":
-            # Store some values
-            resid = self.filter_results.standardized_forecasts_error
-            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-            # This differs from self.nobs_effective because here we want to
-            # exclude exact diffuse periods, whereas self.nobs_effective only
-            # excludes explicitly burned (usually approximate diffuse) periods.
-            nobs_effective = self.nobs - d
-            h = int(np.round(nobs_effective / 3))
+        # Store some values
+        resid = self.filter_results.standardized_forecasts_error
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        # This differs from self.nobs_effective because here we want to
+        # exclude exact diffuse periods, whereas self.nobs_effective only
+        # excludes explicitly burned (usually approximate diffuse) periods.
+        nobs_effective = self.nobs - d
+        h = int(np.round(nobs_effective / 3))
 
-            test_statistics = []
-            p_values = []
-            for i in range(self.model.k_endog):
-                _het_result = breakvar_heteroskedasticity_test(
-                    resid[i, d:], subset_length=h, alternative=alternative, use_f=use_f
-                )
-                test_statistics.append(_het_result.statistic)
-                p_values.append(_het_result.pvalue)
+        test_statistics = []
+        p_values = []
+        for i in range(self.model.k_endog):
+            _het_result = breakvar_heteroskedasticity_test(
+                resid[i, d:], subset_length=h, alternative=alternative, use_f=use_f
+            )
+            test_statistics.append(_het_result.statistic)
+            p_values.append(_het_result.pvalue)
 
-            output = np.c_[test_statistics, p_values]
-        else:
-            raise NotImplementedError("Invalid heteroskedasticity test method.")
-
+        output = np.c_[test_statistics, p_values]
         return output
 
     def test_serial_correlation(self, method, df_adjust=False, lags=None):
@@ -3724,6 +3713,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "ljungbox"
+        method = string_like(
+            method, "method", options=("ljungbox", "boxpierce")
+        )
 
         if self.standardized_forecasts_error is None:
             raise ValueError(
@@ -3731,42 +3723,39 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                 " forecast errors have not been computed."
             )
 
-        if method == "ljungbox" or method == "boxpierce":
-            from statsmodels.stats.diagnostic import acorr_ljungbox
+        from statsmodels.stats.diagnostic import acorr_ljungbox
 
-            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-            # This differs from self.nobs_effective because here we want to
-            # exclude exact diffuse periods, whereas self.nobs_effective only
-            # excludes explicitly burned (usually approximate diffuse) periods.
-            nobs_effective = self.nobs - d
-            output = []
+        d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+        # This differs from self.nobs_effective because here we want to
+        # exclude exact diffuse periods, whereas self.nobs_effective only
+        # excludes explicitly burned (usually approximate diffuse) periods.
+        nobs_effective = self.nobs - d
+        output = []
 
-            # Default lags for acorr_ljungbox is 40, but may not always have
-            # that many observations
-            if lags is None:
-                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-                if seasonal_periods:
-                    lags = min(2 * seasonal_periods, nobs_effective // 5)
-                else:
-                    lags = min(10, nobs_effective // 5)
+        # Default lags for acorr_ljungbox is 40, but may not always have
+        # that many observations
+        if lags is None:
+            seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+            if seasonal_periods:
+                lags = min(2 * seasonal_periods, nobs_effective // 5)
+            else:
+                lags = min(10, nobs_effective // 5)
 
-            model_df = 0
-            if df_adjust:
-                model_df = max(0, self.df_model - self.k_diffuse_states - 1)
+        model_df = 0
+        if df_adjust:
+            model_df = max(0, self.df_model - self.k_diffuse_states - 1)
 
-            cols = [2, 3] if method == "boxpierce" else [0, 1]
-            for i in range(self.model.k_endog):
-                results = acorr_ljungbox(
-                    self.filter_results.standardized_forecasts_error[i][d:],
-                    lags=lags,
-                    boxpierce=(method == "boxpierce"),
-                    model_df=model_df,
-                )
-                output.append(np.asarray(results)[:, cols].T)
+        cols = [2, 3] if method == "boxpierce" else [0, 1]
+        for i in range(self.model.k_endog):
+            results = acorr_ljungbox(
+                self.filter_results.standardized_forecasts_error[i][d:],
+                lags=lags,
+                boxpierce=(method == "boxpierce"),
+                model_df=model_df,
+            )
+            output.append(np.asarray(results)[:, cols].T)
 
-            output = np.c_[output]
-        else:
-            raise NotImplementedError("Invalid serial correlation test method.")
+        output = np.c_[output]
         return output
 
     def get_prediction(
@@ -4389,6 +4378,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _get_previous_updated(
         self, comparison, exog=None, comparison_type=None, **kwargs
     ):
+        comparison_type = string_like(
+            comparison_type,
+            "comparison_type",
+            options=("previous", "updated"),
+            optional=True,
+            lower=False,
+        )
         # If we were given data, create a new results object
         comparison_dataset = not isinstance(comparison, (MLEResults, MLEResultsWrapper))
         if comparison_dataset:
@@ -5745,7 +5741,13 @@ class PredictionResults(pred.PredictionResults):
         )
         self.prediction_results = prediction_results
 
-        self.information_set = information_set
+        self.information_set = string_like(
+            information_set,
+            "information_set",
+            options=("predicted", "filtered", "smoothed"),
+            lower=False,
+        )
+        information_set = self.information_set
         self.signal_only = signal_only
 
         # Get required values
