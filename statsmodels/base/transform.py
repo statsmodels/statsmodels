@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 
 from statsmodels.robust import mad
+from statsmodels.tools.validation import string_like
 
 
 class BoxCox:
@@ -91,7 +92,7 @@ class BoxCox:
         y : ndarray
             The untransformed series.
         """
-        method = method.lower()
+        method = string_like(method, "method", options=("naive",))
         x = np.asarray(x)
 
         if method == "naive":
@@ -99,8 +100,6 @@ class BoxCox:
                 y = np.exp(x)
             else:
                 y = np.power(lmbda * x + 1, 1.0 / lmbda)
-        else:
-            raise ValueError(f"Method '{method}' not understood.")
 
         return y
 
@@ -131,7 +130,7 @@ class BoxCox:
         lmbda : float
             The lambda parameter.
         """
-        method = method.lower()
+        method = string_like(method, "method", options=("guerrero", "loglik"))
 
         if len(bounds) != 2:
             raise ValueError(f"Bounds of length {len(bounds)} not understood.")
@@ -142,8 +141,6 @@ class BoxCox:
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
         elif method == "loglik":
             lmbda = self._loglik_boxcox(x, bounds=bounds, **kwargs)
-        else:
-            raise ValueError(f"Method '{method}' not understood.")
 
         return lmbda
 
@@ -188,13 +185,11 @@ class BoxCox:
         )
         mean = np.mean(grouped_data, 1)
 
-        scale = scale.lower()
+        scale = string_like(scale, "scale", options=("sd", "mad"))
         if scale == "sd":
             dispersion = np.std(grouped_data, 1, ddof=1)
         elif scale == "mad":
             dispersion = mad(grouped_data, axis=1)
-        else:
-            raise ValueError(f"Scale '{scale}' not understood.")
 
         def optim(lmbda):
             rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq 6, p 40

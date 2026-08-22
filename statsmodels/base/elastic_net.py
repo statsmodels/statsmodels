@@ -4,6 +4,7 @@ from statsmodels.base.l1_slsqp import fit_l1_slsqp
 from statsmodels.base.model import Results
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 
 """
 Elastic net regularization.
@@ -341,6 +342,12 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     if np.isscalar(alpha):
         alpha = alpha * np.ones(k_exog)
 
+    method = string_like(
+        method,
+        "method",
+        options=("coord_descent", "elastic_net", "l1_slsqp"),
+        lower=False,
+    )
     if method in ("coord_descent", "elastic_net"):
         params, itr, converged = _coord_descent(
             model, alpha, L1_wt, start_params, maxiter, cnvrg_tol,
@@ -353,9 +360,6 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
             trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
             size_trim_tol=size_trim_tol, qc_tol=qc_tol,
             qc_verbose=qc_verbose, acc=acc)
-    else:
-        raise ValueError(
-            "method must be 'coord_descent' or 'l1_slsqp'")
 
     if not refit:
         results = RegularizedResults(model, params)

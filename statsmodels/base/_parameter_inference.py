@@ -11,6 +11,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.stats.base import LimitedIterationMixin
+from statsmodels.tools.validation import string_like
 
 
 @dataclass(frozen=True, slots=True)
@@ -241,6 +242,9 @@ def score_test(
     The covariance matrix of the score is the simple empirical covariance of
     score_obs without degrees of freedom correction.
     """
+    hypothesis = string_like(
+        hypothesis, "hypothesis", options=("joint", "separate"), lower=False
+    )
     # TODO: we are computing unnecessary things for cov_type nonrobust
     if hasattr(self, "_results"):
         # use numpy if we have wrapper, not relevant if method
@@ -369,8 +373,6 @@ def score_test(
             pvalue=pval,
             distribution="norm",
         )
-    else:
-        raise NotImplementedError('only hypothesis "joint" is available')
 
 
 def _scorehess_extra(

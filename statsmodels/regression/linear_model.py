@@ -1191,9 +1191,9 @@ class OLS(WLS):
     ):
 
         # In the future we could add support for other penalties, e.g., SCAD.
-        if method not in ("elastic_net", "sqrt_lasso"):
-            msg = f"Unknown method '{method}' for fit_regularized"
-            raise ValueError(msg)
+        method = string_like(
+            method, "method", options=("elastic_net", "sqrt_lasso"), lower=False
+        )
 
         # Set default parameters.
         defaults = {"maxiter": 50, "cnvrg_tol": 1e-10, "zero_tol": 1e-8}
