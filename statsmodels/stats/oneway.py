@@ -19,6 +19,7 @@ from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -137,7 +138,9 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
 
     """
     # the code here is largely a copy of onway_generic with adjustments
-
+    use_var = string_like(
+        use_var, "use_var", options=("unequal", "equal", "bf"), lower=True
+    )
     means = np.asarray(means)
     n_groups = means.shape[0]
 
@@ -669,6 +672,9 @@ def anova_generic(
         This includes `statistic` and `pvalue`.
 
     """
+    use_var = string_like(
+        use_var, "use_var", options=("unequal", "equal", "bf"), lower=True
+    )
     options = {"use_var": use_var, "welch_correction": welch_correction}
     if means.ndim != 1:
         raise ValueError("data (means, ...) has to be one-dimensional")

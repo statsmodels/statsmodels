@@ -161,7 +161,6 @@ def _num_det_vars(det_string, seasons=0):
         terms.
     """
     num = 0
-    det_string = string_like(det_string, "det_string")
     if "ci" in det_string or "co" in det_string:
         num += 1
     if "li" in det_string or "lo" in det_string:
@@ -951,6 +950,13 @@ class VECM(tsbase.TimeSeriesModel):
         self.k_ar = k_ar_diff + 1
         self.k_ar_diff = k_ar_diff
         self.coint_rank = coint_rank
+        deterministic = string_like(
+            deterministic,
+            "deterministic",
+            options=("", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"),
+        )
+        deterministic = "n" if deterministic == "nc" else deterministic
+
         self.deterministic = deterministic
         self.seasons = seasons
         self.first_season = first_season

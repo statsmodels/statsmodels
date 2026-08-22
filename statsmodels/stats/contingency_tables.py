@@ -35,6 +35,7 @@ from scipy import stats
 from statsmodels import iolib
 from statsmodels.tools import sm_exceptions
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 
 
 def _make_df_square(table):
@@ -492,7 +493,7 @@ class SquareTable(Table):
 
         Parameters
         ----------
-        method : str, optional
+        method : {"bowker"}, optional
             The method for testing symmetry. Currently must be 'bowker'
             for Bowker's test.
 
@@ -552,7 +553,7 @@ class SquareTable(Table):
 
         Parameters
         ----------
-        method : str, optional
+        method : {"stuart_maxwell", "bhapkar"}, optional
             Either 'stuart_maxwell' or 'bhapkar', leading to two different
             estimates of the covariance matrix for the estimated
             difference between the row margins and the column margins.
@@ -578,7 +579,9 @@ class SquareTable(Table):
         meaningful, the two factors must have the same sample space
         (i.e., the same categories).
         """
-
+        method = string_like(
+            method, "method", options=("stuart_maxwell", "bhapkar"), lower=True
+        )
         if self.table.shape[0] < 1:
             raise ValueError("table is empty")
         elif self.table.shape[0] == 1:
@@ -587,10 +590,6 @@ class SquareTable(Table):
             b.pvalue = 1
             b.df = 0
             return b
-
-        method = method.lower()
-        if method not in ["bhapkar", "stuart_maxwell"]:
-            raise ValueError(f"method '{method}' for homogeneity not known")
 
         n_obs = self.table.sum()
         pr = self.table.astype(np.float64) / n_obs
@@ -785,11 +784,11 @@ class Table2x2(SquareTable):
         alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
-
+        _ = string_like(method, "method", options=("normal",))
         f = -stats.norm.ppf(alpha / 2)
         lor = self.log_oddsratio
         se = self.log_oddsratio_se
@@ -806,10 +805,11 @@ class Table2x2(SquareTable):
         alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
         lcb, ucb = self.log_oddsratio_confint(alpha, method=method)
         return np.exp(lcb), np.exp(ucb)
 
@@ -874,10 +874,11 @@ class Table2x2(SquareTable):
         alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
         f = -stats.norm.ppf(alpha / 2)
         lrr = self.log_riskratio
         se = self.log_riskratio_se
@@ -894,10 +895,11 @@ class Table2x2(SquareTable):
         alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
         lcb, ucb = self.log_riskratio_confint(alpha, method=method)
         return np.exp(lcb), np.exp(ucb)
 
@@ -912,10 +914,11 @@ class Table2x2(SquareTable):
             intervals.
         float_format : str, optional
             Used to format the numeric values in the table.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
 
         def fmt(x):
             if isinstance(x, str):
@@ -1173,7 +1176,7 @@ class StratifiedTable:
         alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1184,7 +1187,7 @@ class StratifiedTable:
         ucb : float
             The upper confidence limit.
         """
-
+        _ = string_like(method, "method", options=("normal",))
         lor = np.log(self.oddsratio_pooled)
         lor_se = self.logodds_pooled_se
 
@@ -1204,7 +1207,7 @@ class StratifiedTable:
         alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1215,7 +1218,7 @@ class StratifiedTable:
         ucb : float
             The upper confidence limit.
         """
-
+        _ = string_like(method, "method", options=("normal",))
         lcb, ucb = self.logodds_pooled_confint(alpha, method=method)
         lcb = np.exp(lcb)
         ucb = np.exp(ucb)
@@ -1291,10 +1294,11 @@ class StratifiedTable:
             confidence intervals.
         float_format : str, optional
             Used for formatting numeric values in the summary.
-        method : str, optional
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
 
         def fmt(x):
             if isinstance(x, str):
