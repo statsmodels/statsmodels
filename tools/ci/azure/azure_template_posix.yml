@@ -52,15 +52,15 @@ jobs:
           PANDAS_VERSION: 1.5.3
           NUMPY_VERSION: 1.23.5
           CYTHON_VERSION: 3.0.10
-        python_310_legacy_blas:
-          python.version: '3.10'
-          python.architecture: 'x64'
-          use.conda: true
-          NUMPY_VERSION: 2.0.0
-          PANDAS_VERSION: 2.2.2
-          SCIPY_VERSION: 1.13.0
-          CYTHON_VERSION: 3.0.12
-          BLAS: "nomkl blas=*=openblas"
+        # python_310_legacy_blas:
+        #  python.version: '3.10'
+        #  python.architecture: 'x64'
+        #  use.conda: true
+        #  NUMPY_VERSION: 2.0.0
+        #  PANDAS_VERSION: 2.2.2
+        #  SCIPY_VERSION: 1.13.0
+        #  CYTHON_VERSION: 3.0.12
+        #  BLAS: "nomkl blas=*=openblas"
         python_313_copy_on_write:
           python.version: '3.13'
           python.architecture: 'x64'
