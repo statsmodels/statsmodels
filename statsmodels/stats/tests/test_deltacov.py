@@ -89,6 +89,39 @@ class TestDeltacovOLS:
         assert_allclose(nl.predicted(), res.params[0], rtol=1e-12)
         assert_allclose(nl.se_vectorized(), res.bse[0], rtol=1e-12)
 
+    def test_wald_test(self):
+        # fun = identity: predicted() = params, cov() = cov_params exactly,
+        # so wald_test(value) must reduce to the ordinary multivariate Wald
+        # statistic for H0: params = value, cross-checked against the
+        # already-tested Results.wald_test on an identity restriction.
+        res = self.res
+        k = len(res.params)
+
+        def fun(params):
+            return params
+
+        nl = NonlinearDeltaCov(fun, res.params, res.cov_params(), deriv=lambda p: np.eye(k))
+        value = res.params + 0.1
+
+        stat, pvalue = nl.wald_test(value)
+
+        diff = res.params - value
+        expected_stat = diff @ np.linalg.inv(res.cov_params()) @ diff
+        assert_allclose(stat, expected_stat, rtol=1e-10)
+
+        # NonlinearDeltaCov.wald_test always reports a raw chi2 statistic;
+        # Results.wald_test defaults to an F-statistic (chi2 / df_constraints)
+        # when the model uses t-distributed inference, so force use_f=False
+        # for a like-for-like comparison.
+        wt = res.wald_test((np.eye(k), value), use_f=False, scalar=True)
+        assert_allclose(stat, wt.statistic, rtol=1e-8)
+        assert_allclose(pvalue, wt.pvalue, rtol=1e-8)
+
+        # H0 exactly true at value=params: statistic must be ~0
+        stat0, pvalue0 = nl.wald_test(res.params)
+        assert_allclose(stat0, 0, atol=1e-8)
+        assert_allclose(pvalue0, 1, atol=1e-6)
+
 
 def test_deltacov_margeff():
     # compare with discrete margins

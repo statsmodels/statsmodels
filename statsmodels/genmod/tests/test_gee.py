@@ -98,6 +98,17 @@ class TestGEE:
         # smoke test
         marg.summary()
 
+        # summary_frame: its columns must reproduce the marginal-effects
+        # arrays exactly, in the documented column order
+        frame = marg.summary_frame()
+        assert_allclose(frame.iloc[:, 0].values, marg.margeff)
+        assert_allclose(frame.iloc[:, 1].values, marg.margeff_se)
+        assert_allclose(frame.iloc[:, 2].values, marg.tvalues)
+        assert_allclose(frame.iloc[:, 3].values, marg.pvalues)
+        assert_allclose(frame.iloc[:, 4:6].values, marg.conf_int())
+        # only non-constant exog columns are included
+        assert list(frame.index) == ["x1", "x2"]
+
     def test_summary_after_remove_data(self):
         # summary() must still work after remove_data() has been called
         n = 40
