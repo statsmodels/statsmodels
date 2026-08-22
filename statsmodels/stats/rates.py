@@ -1996,14 +1996,15 @@ def power_poisson_ratio_2indep(
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt"), lower=False
+    )
     if method_var == "alt":
         v0 = v1
-    elif method_var == "score":
+    else:  # method_var == "score"
         # nobs_ratio = 1 / nobs_ratio
         v0 = dispersion / exposure * (1 + value / nobs_ratio) ** 2
         v0 /= value / nobs_ratio * (rate1 + (nobs_ratio * rate2))
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     std_null = np.sqrt(v0)
     std_alt = np.sqrt(v1)
@@ -2161,15 +2162,16 @@ def power_equivalence_poisson_2indep(
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
 
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt"), lower=False
+    )
     if method_var == "alt":
         v0_low = v0_upp = v1
-    elif method_var == "score":
+    else:  # method_var == "score"
         v0_low = dispersion / exposure * (1 + low * nobs_ratio) ** 2
         v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
         v0_upp = dispersion / exposure * (1 + upp * nobs_ratio) ** 2
         v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     es_low = np.log(rate1 / rate2) - np.log(low)
     es_upp = np.log(rate1 / rate2) - np.log(upp)
@@ -2652,6 +2654,9 @@ def power_negbin_ratio_2indep(
     v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt", "ftotal"), lower=False
+    )
     if method_var == "alt":
         v0 = v1
     elif method_var == "ftotal":
@@ -2659,7 +2664,7 @@ def power_negbin_ratio_2indep(
             exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2)
         )
         v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
-    elif method_var == "score":
+    else:  # method_var == "score"
         v0 = _var_cmle_negbin(
             rate1,
             rate2,
@@ -2668,8 +2673,6 @@ def power_negbin_ratio_2indep(
             value=value,
             dispersion=dispersion,
         )[0]
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     std_null = np.sqrt(v0)
     std_alt = np.sqrt(v1)
@@ -2778,6 +2781,9 @@ def power_equivalence_neginb_2indep(
     v1 = (1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt", "ftotal"), lower=False
+    )
     if method_var == "alt":
         v0_low = v0_upp = v1
     elif method_var == "ftotal":
@@ -2789,7 +2795,7 @@ def power_equivalence_neginb_2indep(
             exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2)
         )
         v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion
-    elif method_var == "score":
+    else:  # method_var == "score"
         v0_low = _var_cmle_negbin(
             rate1,
             rate2,
@@ -2806,8 +2812,6 @@ def power_equivalence_neginb_2indep(
             value=upp,
             dispersion=dispersion,
         )[0]
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     es_low = np.log(rate1 / rate2) - np.log(low)
     es_upp = np.log(rate1 / rate2) - np.log(upp)

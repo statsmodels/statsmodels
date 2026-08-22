@@ -1487,3 +1487,24 @@ def test_poisson_2indep_invalid_compare_raises():
         etest_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
     with pytest.raises(ValueError, match="compare"):
         confint_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
+
+
+def test_power_2indep_invalid_method_var_raises():
+    with pytest.raises(ValueError, match="method_var"):
+        power_poisson_ratio_2indep(
+            rate1=2, rate2=1, nobs1=20, method_var="not-a-method-var"
+        )
+    with pytest.raises(ValueError, match="method_var"):
+        power_equivalence_poisson_2indep(
+            rate1=2, rate2=1, nobs1=20, low=0.5, upp=2,
+            method_var="not-a-method-var",
+        )
+    with pytest.raises(ValueError, match="method_var"):
+        power_negbin_ratio_2indep(
+            rate1=2, rate2=1, nobs1=20, method_var="not-a-method-var"
+        )
+    with pytest.raises(ValueError, match="method_var"):
+        power_equivalence_neginb_2indep(
+            rate1=2, rate2=1, nobs1=20, low=0.5, upp=2,
+            method_var="not-a-method-var",
+        )
