@@ -44,14 +44,14 @@ def test_allpairsresults_summary_pval_table():
 
     table = res.pval_table()
     assert table.shape == (3, 3)
-    for (i, j), p in zip(all_pairs, expected_corrected):
+    for (i, j), p in zip(all_pairs, expected_corrected, strict=True):
         assert_equal(table[i, j], p)
     # entries with no corresponding pair stay at the default fill value
     assert table[1, 0] == 0
 
     text = res.summary()
     assert str(res) == text
-    for name, p in zip(res.all_pairs_names, expected_corrected):
+    for name, p in zip(res.all_pairs_names, expected_corrected, strict=True):
         assert name in text
         assert f"{p:6.4g}" in text
     assert res.all_pairs_names == ["a-b", "a-c", "b-c"]

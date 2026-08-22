@@ -2445,12 +2445,12 @@ def test_gee_results_resid_split():
 
     split = res.resid_split
     assert len(split) == n_groups
-    for v, part in zip(mod.group_labels, split):
+    for v, part in zip(mod.group_labels, split, strict=True):
         assert_allclose(part, res.resid[mod.group_indices[v]])
 
     centered_split = res.resid_centered_split
     assert len(centered_split) == n_groups
-    for v, part in zip(mod.group_labels, centered_split):
+    for v, part in zip(mod.group_labels, centered_split, strict=True):
         assert_allclose(part, res.centered_resid[mod.group_indices[v]])
         assert_allclose(part.mean(), 0, atol=1e-10)
 

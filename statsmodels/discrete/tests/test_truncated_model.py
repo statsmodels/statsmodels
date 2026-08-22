@@ -624,7 +624,7 @@ def test_truncated_poisson_dispersion_factor():
     res_trunc5 = mod_trunc5.fit(disp=0, start_params=res.params, maxiter=1,
                                 skip_hessian=True)
     with pytest.raises(NotImplementedError, match="zero-truncation"):
-        res_trunc5._dispersion_factor
+        _ = res_trunc5._dispersion_factor
 
 
 def test_truncated_negative_binomial_dispersion_factor():

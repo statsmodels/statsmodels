@@ -378,9 +378,18 @@ def test_ols_criteria_are_nan_not_ols_values():
     y = X @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
     res = QuantReg(y, X).fit(0.5)
 
-    for name in ("bic", "aic", "llf", "rsquared", "rsquared_adj",
-                "mse", "mse_model", "mse_total", "centered_tss",
-                "uncentered_tss"):
+    for name in (
+            "bic",
+            "aic",
+            "llf",
+            "rsquared",
+            "rsquared_adj",
+            "mse",
+            "mse_model",
+            "mse_total",
+            "centered_tss",
+            "uncentered_tss"
+    ):
         assert np.isnan(getattr(res, name)), name
 
 
