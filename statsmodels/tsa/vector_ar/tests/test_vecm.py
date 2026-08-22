@@ -1502,9 +1502,8 @@ def test_exceptions():
 
     # exceptions in VECM class
     # # choose only one of the two: "co" and "ci"
-    model = VECM(endog, k_ar_diff=1, deterministic="cico")
-    with pytest.raises(ValueError):
-        model.fit()
+    with pytest.raises(ValueError, match="deterministic must be one "):
+        model = VECM(endog, k_ar_diff=1, deterministic="cico")
     # # we analyze multiple time series
     univariate_data = endog[0]
     with pytest.raises(ValueError):
