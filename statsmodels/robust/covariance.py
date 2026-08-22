@@ -1591,7 +1591,7 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
         a string label identifying the method used to obtain it.
     """
 
-    methods_cov = string_like(
+    _ = string_like(
         methods_cov, "methods_cov", options=("all",), lower=False
     )
 

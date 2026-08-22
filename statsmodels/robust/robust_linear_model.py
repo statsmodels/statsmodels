@@ -210,7 +210,7 @@ class RLM(base.LikelihoodModel):
             The estimated scale.
         """
         if isinstance(scale_est, str):
-            scale_est = string_like(scale_est, "scale_est", options=("mad",))
+            _ = string_like(scale_est, "scale_est", options=("mad",))
             return scale.mad(resid, center=0)
         elif isinstance(scale_est, scale.HuberScale):
             return scale_est(self.df_resid, self.nobs, resid)

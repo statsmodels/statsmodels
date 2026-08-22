@@ -732,7 +732,7 @@ def conditional_moment_test_generic(
     Wooldridge ???
     Pagan and Vella 1989
     """
-    cov_type = string_like(cov_type, "cov_type", options=("OPG",), lower=False)
+    _ = string_like(cov_type, "cov_type", options=("OPG",), lower=False)
 
     k_constraints = mom_test.shape[1]
 

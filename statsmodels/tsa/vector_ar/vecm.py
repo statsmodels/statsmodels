@@ -975,7 +975,7 @@ class VECM(tsbase.TimeSeriesModel):
         ----------
         .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        method = string_like(method, "method", options=("ml",), lower=False)
+        _ = string_like(method, "method", options=("ml",), lower=False)
         return self._estimate_vecm_ml()
 
     def _estimate_vecm_ml(self):

@@ -810,7 +810,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "jarquebera"
-        method = string_like(method, "method", options=("jarquebera",))
+        _ = string_like(method, "method", options=("jarquebera",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"

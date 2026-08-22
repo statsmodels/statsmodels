@@ -3539,7 +3539,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "jarquebera"
-        method = string_like(method, "method", options=("jarquebera",))
+        _ = string_like(method, "method", options=("jarquebera",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError(
@@ -3628,9 +3628,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
                *Models and the Kalman Filter.* Cambridge University Press.
         """
-        if method is None:
-            method = "breakvar"
-        method = string_like(method, "method", options=("breakvar",))
+        method = "breakvar" if method is None else method
+        _ = string_like(method, "method", options=("breakvar",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError(

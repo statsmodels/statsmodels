@@ -652,7 +652,7 @@ class SurvfuncRight:
             in `surv_times`.
         """
 
-        method = string_like(method, "method", options=("hw",))
+        _ = string_like(method, "method", options=("hw",))
 
         if alpha != 0.05:
             raise ValueError("alpha must be set to 0.05")

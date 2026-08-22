@@ -154,7 +154,7 @@ class VARMAX(MLEModel):
         self.k_ma = int(order[1])
 
         # Check for valid model
-        self.error_cov_type = error_cov_type = string_like(
+        self.error_cov_type = string_like(
             error_cov_type,
             "error_cov_type",
             options=("diagonal", "unstructured"),

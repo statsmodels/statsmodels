@@ -693,7 +693,7 @@ def _constraints_factor(
 
     import statsmodels.sandbox.stats.multicomp as mc
 
-    comparison = string_like(
+    _ = string_like(
         comparison, "comparison", options=("pairwise", "pw", "pairs"), lower=False
     )
     c_all = -mc.contrast_allpairs(k_level)
