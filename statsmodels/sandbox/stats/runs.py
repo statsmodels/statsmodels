@@ -25,7 +25,7 @@ import numpy as np
 from scipy import stats
 from scipy.special import comb
 
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, string_like
 
 
 class Runs:
@@ -138,6 +138,8 @@ def runstest_1samp(x, cutoff="mean", correction=True):
     """
 
     x = array_like(x, "x")
+    if isinstance(cutoff, str):
+        cutoff = string_like(cutoff, "cutoff", options=("mean", "median"), lower=False)
     if cutoff == "mean":
         cutoff = np.mean(x)
     elif cutoff == "median":
