@@ -25,7 +25,12 @@ __all__ = [
     "multipletests",
 ]
 
-from statsmodels.tools.validation import array_like, bool_like, float_like
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    string_like,
+)
 
 # ==============================================
 #
@@ -401,6 +406,12 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     else:
         pvals_sorted = pvals  # alias
 
+    method = string_like(
+        method,
+        "method",
+        options=("i", "indep", "p", "poscorr", "n", "negcorr"),
+        lower=False,
+    )
     if method in ["i", "indep", "p", "poscorr"]:
         ecdffactor = _ecdf(pvals_sorted)
     elif method in ["n", "negcorr"]:
@@ -409,8 +420,6 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     #    elif method in ['n', 'negcorr']:
     #        cm = np.sum(np.arange(len(pvals)))
     #        ecdffactor = ecdf(pvals_sorted)/cm
-    else:
-        raise ValueError("only indep and negcorr implemented")
     reject = pvals_sorted <= ecdffactor * alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
@@ -685,6 +694,7 @@ def fdrcorrection_twostage(
         pvals_sortind = np.argsort(pvals)
         pvals = np.take(pvals, pvals_sortind)
 
+    method = string_like(method, "method", options=("bky", "bh"), lower=False)
     ntests = len(pvals)
     if method == "bky":
         fact = 1.0 + alpha
@@ -692,8 +702,6 @@ def fdrcorrection_twostage(
     elif method == "bh":
         fact = 1.0
         alpha_prime = alpha
-    else:
-        raise ValueError("only 'bky' and 'bh' are available as method")
 
     alpha_stages = [alpha_prime]
     rej, pvalscorr = fdrcorrection(
