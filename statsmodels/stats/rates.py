@@ -951,6 +951,7 @@ def test_poisson_2indep(
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
 
+    compare = string_like(compare, "compare", options=("diff", "ratio"), lower=False)
     if compare == "ratio":
         if method is None:
             # default method
@@ -1018,7 +1019,7 @@ def test_poisson_2indep(
         else:
             raise ValueError(f'method "{method}" not recognized')
 
-    elif compare == "diff":
+    else:  # compare == "diff"
         if value is None:
             value = 0
         if method == "wald":
@@ -1066,8 +1067,6 @@ def test_poisson_2indep(
             dist = "poisson"
         else:
             raise ValueError(f'method "{method}" not recognized')
-    else:
-        raise NotImplementedError('"compare" needs to be ratio or diff')
 
     if dist == "normal":
         stat, pvalue = _zstat_generic2(stat, 1, alternative)
@@ -1228,6 +1227,7 @@ def etest_poisson_2indep(
 
     eps = 1e-20  # avoid zero division in stat_func
 
+    compare = string_like(compare, "compare", options=("diff", "ratio"), lower=False)
     if compare == "ratio":
         if value is None:
             # default value
@@ -1260,7 +1260,7 @@ def etest_poisson_2indep(
         else:
             raise ValueError("method not recognized")
 
-    elif compare == "diff":
+    else:  # compare == "diff"
         if value is None:
             value = 0
         tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
@@ -1720,6 +1720,7 @@ def confint_poisson_2indep(
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
+    compare = string_like(compare, "compare", options=("diff", "ratio"), lower=False)
     if compare == "ratio":
 
         if method == "score":
@@ -1787,7 +1788,7 @@ def confint_poisson_2indep(
 
         ci = (np.maximum(ci[0], 0), ci[1])
 
-    elif compare == "diff":
+    else:  # compare == "diff"
 
         if method == "wald":
             crit = stats.norm.isf(alpha)
@@ -1823,8 +1824,6 @@ def confint_poisson_2indep(
             ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="diff")
         else:
             raise ValueError(f'method "{method}" not recognized')
-    else:
-        raise NotImplementedError('"compare" needs to be ratio or diff')
 
     return ci
 

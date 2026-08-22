@@ -1478,3 +1478,12 @@ def test_poisson_invalid_alternative_raises():
         confint_quantile_poisson(
             5, 10, prob=0.9, method="wald", alternative="not-a-real-alternative"
         )
+
+
+def test_poisson_2indep_invalid_compare_raises():
+    with pytest.raises(ValueError, match="compare"):
+        smr.test_poisson_2indep(5, 10, 8, 10, method="wald", compare="not-a-compare")
+    with pytest.raises(ValueError, match="compare"):
+        etest_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
+    with pytest.raises(ValueError, match="compare"):
+        confint_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
