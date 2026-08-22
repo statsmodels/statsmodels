@@ -35,6 +35,14 @@ methods = [
     ("ipw_ra", res_st.results_ipwra),
     ]
 
+method_labels = [
+    ("ra", "RA"),
+    ("ipw", "IPW"),
+    ("aipw", "AIPW"),
+    ("aipw_wls", "AIPW-WLS"),
+    ("ipw_ra", "IPW-RA"),
+    ]
+
 
 class TestTEffects:
 
@@ -48,6 +56,13 @@ class TestTEffects:
     def test_aux(self):
         prob = res_probit.predict()
         assert prob.shape == (4642,)
+
+    @pytest.mark.parametrize("case", method_labels)
+    def test_method_label(self, case):
+        # each estimator must label its own results, not report "IPW"
+        meth, label = case
+        res = getattr(self.teff, meth)(return_results=True)
+        assert res.method == label
 
     @pytest.mark.parametrize("case", methods)
     def test_effects(self, case):

@@ -702,8 +702,9 @@ class TreatmentEffectResults(ContrastResults):
     results_gmm : instance of GMMResults class
         The GMM results instance used to compute the treatment effect
         parameters and their covariance.
-    method : str
-        Method and estimator of treatment effect.
+    method : {"IPW", "RA", "AIPW", "AIPW-WLS", "IPW-RA"}
+        Method and estimator of treatment effect, corresponding to the
+        ``TreatmentEffect`` method that produced the results.
     **kwds
         Other keywords with additional information.
 
@@ -999,7 +1000,7 @@ class TreatmentEffect:
                               optim_args={"maxiter": 5000, "disp": disp},
                               maxiter=1,
                               )
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "RA",
                                      start_params=start_params,
                                      effect_group=effect_group,
                                      )
@@ -1041,7 +1042,7 @@ class TreatmentEffect:
             optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
 
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "AIPW",
                                      start_params=start_params,
                                      effect_group="all",
                                      )
@@ -1108,7 +1109,7 @@ class TreatmentEffect:
             optim_method="nm",
             optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "AIPW-WLS",
                                      start_params=start_params,
                                      effect_group="all",
                                      )
@@ -1180,7 +1181,7 @@ class TreatmentEffect:
             maxiter=1
             )
 
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "IPW-RA",
                                      start_params=start_params,
                                      effect_group=effect_group,
                                      )
