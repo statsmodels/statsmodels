@@ -17,6 +17,7 @@ from statsmodels.tools.numdiff import (
 )
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.statespace.tools import _safe_cond
 
@@ -551,48 +552,47 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "ljungbox"
+        method = string_like(
+            method, "method", options=("ljungbox", "boxpierce")
+        )
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
-        if method == "ljungbox" or method == "boxpierce":
-            from statsmodels.stats.diagnostic import acorr_ljungbox
-            if hasattr(self, "loglikelihood_burn"):
-                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-                # This differs from self.nobs_effective because here we want to
-                # exclude exact diffuse periods, whereas self.nobs_effective
-                # only excludes explicitly burned (usually approximate diffuse)
-                # periods.
-                nobs_effective = self.nobs - d
-            else:
-                nobs_effective = self.nobs_effective
-            output = []
-
-            # Default lags for acorr_ljungbox is 40, but may not always have
-            # that many observations
-            if lags is None:
-                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-                if seasonal_periods:
-                    lags = min(2 * seasonal_periods, nobs_effective // 5)
-                else:
-                    lags = min(10, nobs_effective // 5)
-
-            cols = [2, 3] if method == "boxpierce" else [0, 1]
-            for i in range(self.model.k_endog):
-                if hasattr(self, "filter_results"):
-                    x = self.filter_results.standardized_forecasts_error[i][d:]
-                else:
-                    x = self.standardized_forecasts_error
-                results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == "boxpierce")
-                )
-                output.append(np.asarray(results)[:, cols].T)
-
-            output = np.c_[output]
+        from statsmodels.stats.diagnostic import acorr_ljungbox
+        if hasattr(self, "loglikelihood_burn"):
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            # This differs from self.nobs_effective because here we want to
+            # exclude exact diffuse periods, whereas self.nobs_effective
+            # only excludes explicitly burned (usually approximate diffuse)
+            # periods.
+            nobs_effective = self.nobs - d
         else:
-            raise NotImplementedError("Invalid serial correlation test"
-                                      " method.")
+            nobs_effective = self.nobs_effective
+        output = []
+
+        # Default lags for acorr_ljungbox is 40, but may not always have
+        # that many observations
+        if lags is None:
+            seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+            if seasonal_periods:
+                lags = min(2 * seasonal_periods, nobs_effective // 5)
+            else:
+                lags = min(10, nobs_effective // 5)
+
+        cols = [2, 3] if method == "boxpierce" else [0, 1]
+        for i in range(self.model.k_endog):
+            if hasattr(self, "filter_results"):
+                x = self.filter_results.standardized_forecasts_error[i][d:]
+            else:
+                x = self.standardized_forecasts_error
+            results = acorr_ljungbox(
+                x, lags=lags, boxpierce=(method == "boxpierce")
+            )
+            output.append(np.asarray(results)[:, cols].T)
+
+        output = np.c_[output]
         return output
 
     def test_heteroskedasticity(self, method, alternative="two-sided",
@@ -679,101 +679,98 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "breakvar"
+        method = string_like(method, "method", options=("breakvar",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
-        if method == "breakvar":
-            # Store some values
-            if hasattr(self, "filter_results"):
-                squared_resid = (
-                    self.filter_results.standardized_forecasts_error**2
-                )
-                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-                # This differs from self.nobs_effective because here we want to
-                # exclude exact diffuse periods, whereas self.nobs_effective
-                # only excludes explicitly burned (usually approximate diffuse)
-                # periods.
-                nobs_effective = self.nobs - d
-            else:
-                squared_resid = self.standardized_forecasts_error**2
-                if squared_resid.ndim == 1:
-                    squared_resid = np.asarray(squared_resid)
-                    squared_resid = squared_resid[np.newaxis, :]
-                nobs_effective = self.nobs_effective
-                d = 0
-            squared_resid = np.asarray(squared_resid)
-
-            test_statistics = []
-            p_values = []
-            for i in range(self.model.k_endog):
-                h = int(np.round(nobs_effective / 3))
-                numer_resid = squared_resid[i, -h:]
-                numer_resid = numer_resid[~np.isnan(numer_resid)]
-                numer_dof = len(numer_resid)
-
-                denom_resid = squared_resid[i, d:d + h]
-                denom_resid = denom_resid[~np.isnan(denom_resid)]
-                denom_dof = len(denom_resid)
-
-                if numer_dof < 2:
-                    warnings.warn(f"Early subset of data for variable {i:d}"
-                                  "  has too few non-missing observations to"
-                                  " calculate test statistic.",
-                                  stacklevel=2,
-                                  )
-                    numer_resid = np.nan
-                if denom_dof < 2:
-                    warnings.warn(f"Later subset of data for variable {i:d}"
-                                  "  has too few non-missing observations to"
-                                  " calculate test statistic.",
-                                  stacklevel=2,
-                                  )
-                    denom_resid = np.nan
-
-                test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
-
-                # Setup functions to calculate the p-values
-                if use_f:
-                    from scipy.stats import f
-
-                    def pval_lower(test_statistics, numer_dof, denom_dof):
-                        return f.cdf(test_statistics, numer_dof, denom_dof)
-
-                    def pval_upper(test_statistics, numer_dof, denom_dof):
-                        return f.sf(test_statistics, numer_dof, denom_dof)
-
-                else:
-                    from scipy.stats import chi2
-
-                    def pval_lower(test_statistics, numer_dof, denom_dof):
-                        return chi2.cdf(numer_dof * test_statistics, denom_dof)
-
-                    def pval_upper(test_statistics, numer_dof, denom_dof):
-                        return chi2.sf(numer_dof * test_statistics, denom_dof)
-                # Calculate the one- or two-sided p-values
-                alternative = alternative.lower()
-                if alternative in ["i", "inc", "increasing"]:
-                    p_value = pval_upper(test_statistic)
-                elif alternative in ["d", "dec", "decreasing"]:
-                    test_statistic = 1. / test_statistic
-                    p_value = pval_upper(test_statistic)
-                elif alternative in ["2", "2-sided", "two-sided"]:
-                    p_value = 2 * np.minimum(
-                        pval_lower(test_statistic, numer_dof, denom_dof),
-                        pval_upper(test_statistic, numer_dof, denom_dof)
-                    )
-                else:
-                    raise ValueError("Invalid alternative.")
-
-                test_statistics.append(test_statistic)
-                p_values.append(p_value)
-
-            output = np.c_[test_statistics, p_values]
+        # Store some values
+        if hasattr(self, "filter_results"):
+            squared_resid = (
+                self.filter_results.standardized_forecasts_error**2
+            )
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            # This differs from self.nobs_effective because here we want to
+            # exclude exact diffuse periods, whereas self.nobs_effective
+            # only excludes explicitly burned (usually approximate diffuse)
+            # periods.
+            nobs_effective = self.nobs - d
         else:
-            raise NotImplementedError("Invalid heteroskedasticity test"
-                                      " method.")
+            squared_resid = self.standardized_forecasts_error**2
+            if squared_resid.ndim == 1:
+                squared_resid = np.asarray(squared_resid)
+                squared_resid = squared_resid[np.newaxis, :]
+            nobs_effective = self.nobs_effective
+            d = 0
+        squared_resid = np.asarray(squared_resid)
+
+        test_statistics = []
+        p_values = []
+        for i in range(self.model.k_endog):
+            h = int(np.round(nobs_effective / 3))
+            numer_resid = squared_resid[i, -h:]
+            numer_resid = numer_resid[~np.isnan(numer_resid)]
+            numer_dof = len(numer_resid)
+
+            denom_resid = squared_resid[i, d:d + h]
+            denom_resid = denom_resid[~np.isnan(denom_resid)]
+            denom_dof = len(denom_resid)
+
+            if numer_dof < 2:
+                warnings.warn(f"Early subset of data for variable {i:d}"
+                              "  has too few non-missing observations to"
+                              " calculate test statistic.",
+                              stacklevel=2,
+                              )
+                numer_resid = np.nan
+            if denom_dof < 2:
+                warnings.warn(f"Later subset of data for variable {i:d}"
+                              "  has too few non-missing observations to"
+                              " calculate test statistic.",
+                              stacklevel=2,
+                              )
+                denom_resid = np.nan
+
+            test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
+
+            # Setup functions to calculate the p-values
+            if use_f:
+                from scipy.stats import f
+
+                def pval_lower(test_statistics, numer_dof, denom_dof):
+                    return f.cdf(test_statistics, numer_dof, denom_dof)
+
+                def pval_upper(test_statistics, numer_dof, denom_dof):
+                    return f.sf(test_statistics, numer_dof, denom_dof)
+
+            else:
+                from scipy.stats import chi2
+
+                def pval_lower(test_statistics, numer_dof, denom_dof):
+                    return chi2.cdf(numer_dof * test_statistics, denom_dof)
+
+                def pval_upper(test_statistics, numer_dof, denom_dof):
+                    return chi2.sf(numer_dof * test_statistics, denom_dof)
+            # Calculate the one- or two-sided p-values
+            alternative = alternative.lower()
+            if alternative in ["i", "inc", "increasing"]:
+                p_value = pval_upper(test_statistic)
+            elif alternative in ["d", "dec", "decreasing"]:
+                test_statistic = 1. / test_statistic
+                p_value = pval_upper(test_statistic)
+            elif alternative in ["2", "2-sided", "two-sided"]:
+                p_value = 2 * np.minimum(
+                    pval_lower(test_statistic, numer_dof, denom_dof),
+                    pval_upper(test_statistic, numer_dof, denom_dof)
+                )
+            else:
+                raise ValueError("Invalid alternative.")
+
+            test_statistics.append(test_statistic)
+            p_values.append(p_value)
+
+        output = np.c_[test_statistics, p_values]
 
         return output
 
@@ -813,29 +810,27 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "jarquebera"
+        method = string_like(method, "method", options=("jarquebera",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
-        if method == "jarquebera":
-            from statsmodels.stats.stattools import jarque_bera
-            if hasattr(self, "loglikelihood_burn"):
-                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-            else:
-                d = 0
-            output = []
-            for i in range(self.model.k_endog):
-                if hasattr(self, "filter_results"):
-                    resid = self.filter_results.standardized_forecasts_error[
-                        i, d:
-                    ]
-                else:
-                    resid = self.standardized_forecasts_error
-                mask = ~np.isnan(resid)
-                output.append(jarque_bera(resid[mask]))
+        from statsmodels.stats.stattools import jarque_bera
+        if hasattr(self, "loglikelihood_burn"):
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
         else:
-            raise NotImplementedError("Invalid normality test method.")
+            d = 0
+        output = []
+        for i in range(self.model.k_endog):
+            if hasattr(self, "filter_results"):
+                resid = self.filter_results.standardized_forecasts_error[
+                    i, d:
+                ]
+            else:
+                resid = self.standardized_forecasts_error
+            mask = ~np.isnan(resid)
+            output.append(jarque_bera(resid[mask]))
 
         return np.array(output)
 
