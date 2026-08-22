@@ -18,8 +18,8 @@ from statsmodels.discrete.discrete_model import (
 from statsmodels.formula.formulatools import advance_eval_env
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import string_like
 from statsmodels.tools.sm_exceptions import ModelWarning
+from statsmodels.tools.validation import string_like
 
 
 class _ConditionalModel(base.LikelihoodModel):

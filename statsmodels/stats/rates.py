@@ -1788,7 +1788,7 @@ def confint_poisson_2indep(
 
         ci = (np.maximum(ci[0], 0), ci[1])
 
-    else:  # compare == "diff"
+    else:  # noqa: PLR5501, compare == "diff" path
 
         if method == "wald":
             crit = stats.norm.isf(alpha)
