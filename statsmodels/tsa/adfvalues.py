@@ -1,6 +1,8 @@
 from numpy import array, asarray, inf, polyval
 from scipy.stats import norm
 
+from statsmodels.tools.validation import string_like
+
 __all__ = ["mackinnoncrit", "mackinnonp"]
 
 # These are the cut-off values for the left-tail vs. the rest of the
@@ -255,6 +257,9 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
         for Unit-Root and Cointegration Tests." Journal of Business & Economics
         Statistics, 12.2, 167-76.
     """
+    regression = string_like(
+        regression, "regression", options=("c", "n", "ct", "ctt"), lower=False
+    )
     maxstat = _tau_maxs[regression]
     minstat = _tau_mins[regression]
     starstat = _tau_stars[regression]
@@ -446,9 +451,9 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
         Queen's University, Dept of Economics Working Papers 1227.
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-    reg = regression
-    if reg not in ["c", "ct", "n", "ctt"]:
-        raise ValueError(f"regression keyword {reg} not understood")
+    reg = string_like(
+        regression, "regression", options=("c", "ct", "n", "ctt"), lower=False
+    )
     tau = tau_2010s[reg]
     if nobs is inf:
         return tau[N-1, :, 0]
