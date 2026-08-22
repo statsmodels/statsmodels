@@ -379,6 +379,7 @@ class RegressionModel(base.LikelihoodModel):
         # cached based on whether they already exist) so that the model's
         # state after fit() depends only on the current data, never on
         # which `method` a previous fit() call happened to use.
+        method = string_like(method, "method", options=("pinv", "qr"), lower=False)
         if method == "pinv":
             pinv_wexog, singular_values = pinv_extended(self.wexog)
             self.pinv_wexog = pinv_wexog
@@ -408,8 +409,6 @@ class RegressionModel(base.LikelihoodModel):
             # used in ANOVA
             self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
-        else:
-            raise ValueError('method has to be "pinv" or "qr"')
 
         if self._df_model is None:
             self._df_model = float(self.rank - self.k_constant)
@@ -2141,7 +2140,7 @@ class RegressionResults(base.LikelihoodModelResults):
         .. [BurnhamAnderson2002] Burnham KP, Anderson KR (2002). Model Selection
            and Multimodel Inference; Springer New York.
         """
-        crit = crit.lower()
+        crit = string_like(crit, "crit", options=("aic", "bic", "aicc", "hqic"))
         k_params = self.df_model + self.k_constant + dk_params
 
         if crit == "aic":

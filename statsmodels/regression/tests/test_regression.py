@@ -172,6 +172,11 @@ class CheckRegressionResults:
         hqic1 = self.res1.info_criteria("hqic")
         hqic2 = (self.res1.aic - 2 * k) + 2 * np.log(np.log(nobs)) * k
         assert_allclose(hqic1, hqic2, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("aic"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("AIC"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("bic"), self.res1.bic, rtol=1e-10)
+        with pytest.raises(ValueError, match="crit"):
+            self.res1.info_criteria("not-a-real-criterion")
 
     decimal_bic = DECIMAL_4
 
@@ -1519,6 +1524,14 @@ def test_fvalue_only_constant():
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
     res.summary()
+
+
+def test_fit_invalid_method_raises():
+    rs = np.random.RandomState(89432)
+    exog = add_constant(rs.normal(size=(50, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.normal(size=50)
+    with pytest.raises(ValueError, match="method"):
+        OLS(endog, exog).fit(method="not-a-method")
 
 
 def test_ridge():
