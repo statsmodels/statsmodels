@@ -844,7 +844,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
         the number of trials or observations.
     alpha : float, optional
         Significance level of the test, default 0.05.
-    alternative : str in ['two-sided', 'smaller', 'larger'], optional
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -853,15 +853,21 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
     x_low, x_upp : int
         lower and upper bound of rejection region
     """
-    if alternative in ["2s", "two-sided"]:
-        alternative = "2s"  # normalize alternative name
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided"},
+    )
+    if alternative == "two-sided":
         alpha = alpha / 2
 
-    if alternative in ["2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         x_low = stats.binom.ppf(alpha, nobs, value) - 1
     else:
         x_low = 0
-    if alternative in ["2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         x_upp = stats.binom.isf(alpha, nobs, value) + 1
     else:
         x_upp = nobs
@@ -886,7 +892,7 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
     prop : float, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
-    alternative : str in ['two-sided', 'smaller', 'larger'], optional
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -902,16 +908,19 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
 
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
-    if alternative in ["2s", "two-sided"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided", "l": "larger", "s": "smaller"},
+    )
+    if alternative == "two-sided":
         pval = stats.binomtest(count, n=nobs, p=prop).pvalue
-    elif alternative in ["l", "larger"]:
+    elif alternative == "larger":
         pval = stats.binom.sf(count - 1, nobs, prop)
-    elif alternative in ["s", "smaller"]:
+    elif alternative == "smaller":
         pval = stats.binom.cdf(count, nobs, prop)
-    else:
-        raise ValueError(
-            "alternative not recognized\nshould be two-sided, larger or smaller"
-        )
     return pval
 
 
@@ -1102,7 +1111,7 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
         null hypothesis is that prop[0] - prop[1] = value, where prop is the
         proportion in the two samples. If not provided value = 0 and the null
         is prop[0] = prop[1]
-    alternative : str in ['two-sided', 'smaller', 'larger'], optional
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
         ``prop < value`` and larger means ``prop > value``. In the two sample
@@ -1366,7 +1375,7 @@ def proportions_chisquare_pairscontrol(
         that is used as default in the results.
         It can be any method that is available in  ``multipletesting``.
         The default is Holm-Sidak 'hs'.
-    alternative : str in ['two-sided', 'smaller', 'larger'], optional
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -1383,7 +1392,14 @@ def proportions_chisquare_pairscontrol(
 
     ``value`` and ``alternative`` options are not yet implemented.
     """
-    if (value is not None) or (alternative not in ["two-sided", "2s"]):
+    _ = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided",),
+        lower=False,
+        deprecated={"2s": "two-sided"},
+    )
+    if value is not None:
         raise NotImplementedError
     # all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
     all_pairs = [(0, k) for k in range(1, len(count))]
@@ -1683,7 +1699,7 @@ class ScoreTestProportionsResult(LimitedIterationMixin[float]):
         Method used to compute the test, always ``"score"``.
     variance : float
         Estimated variance of the test statistic under the null hypothesis.
-    alternative : str
+    alternative : {'two-sided', 'smaller', 'larger'}
         The alternative hypothesis used for the test.
     prop1_null : float
         Constrained estimate of the first proportion under the null
@@ -1897,7 +1913,7 @@ class Proportions2indepTestResult(LimitedIterationMixin[float]):
         Observed odds ratio.
     variance : float
         Estimated variance of the test statistic under the null hypothesis.
-    alternative : str
+    alternative : {'two-sided', 'smaller', 'larger'}
         The alternative hypothesis used for the test.
     value : float
         Value of the difference, risk ratio or odds ratio under the null
@@ -2619,7 +2635,14 @@ def samplesize_proportions_2indep_onetail(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_sample_size_one_tail
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided"},
+    )
+    if alternative == "two-sided":
         alpha = alpha / 2
 
     _, std_null, std_alt = _std_2prop_power(

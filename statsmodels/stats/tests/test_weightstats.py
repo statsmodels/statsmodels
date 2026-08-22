@@ -876,3 +876,32 @@ def test_invalid_usevar_raises():
     # zconfint only implements "pooled", unlike the other five
     with pytest.raises(ValueError, match="usevar"):
         zconfint(x1, x2, usevar="unequal")
+
+
+@pytest.mark.parametrize(
+    "alias,canonical",
+    [("2-sided", "two-sided"), ("2s", "two-sided"), ("l", "larger"), ("s", "smaller")],
+)
+def test_alternative_deprecated_alias(alias, canonical):
+    # undocumented short forms accepted by the shared _*stat_generic /
+    # _*confint_generic helpers still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    x1 = [1, 2, 3, 4, 5, 6, 2, 4, 6, 8]
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        stat_alias, pval_alias = ztest(x1, value=3, alternative=alias)
+    stat, pval = ztest(x1, value=3, alternative=canonical)
+    assert stat_alias == stat
+    assert pval_alias == pval
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        low_alias, upp_alias = zconfint(x1, alternative=alias)
+    low, upp = zconfint(x1, alternative=canonical)
+    assert low_alias == low
+    assert upp_alias == upp
+
+
+def test_alternative_invalid():
+    x1 = [1, 2, 3, 4, 5, 6, 2, 4, 6, 8]
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        ztest(x1, value=3, alternative="bogus")

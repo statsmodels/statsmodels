@@ -83,5 +83,19 @@ def test_t_test(data, alternative):
 
 def test_t_test_invalid_alternative(data):
     pred = PredictionResults(data[0], data[1])
-    with pytest.raises(ValueError, match="invalid alternative"):
+    with pytest.raises(ValueError, match="alternative must be one of"):
         pred.t_test(alternative="not-a-real-alternative")
+
+
+@pytest.mark.parametrize(
+    "alias,canonical",
+    [("2-sided", "two-sided"), ("2s", "two-sided"), ("l", "larger"), ("s", "smaller")],
+)
+def test_t_test_alternative_deprecated_alias(data, alias, canonical):
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    pred = PredictionResults(data[0], data[1])
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        alias_result = pred.t_test(value=1.0, alternative=alias)
+    canonical_result = pred.t_test(value=1.0, alternative=canonical)
+    np.testing.assert_allclose(alias_result, canonical_result)

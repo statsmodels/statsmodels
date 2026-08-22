@@ -827,3 +827,19 @@ def test_simulate_equivalence():
     ]
     # regression test numbers
     assert_allclose(pow_, [0.147749, 0.173358, 0.177412], atol=0.007)
+
+
+def test_confint_noncentrality_alternative():
+    f_stat, df = 5.0, (2, 30)
+    # undocumented "2s"/"ts" aliases still work but warn
+    for alias in ("2s", "ts"):
+        with pytest.warns(FutureWarning, match="is a deprecated alias"):
+            ci_alias = confint_noncentrality(f_stat, df, alternative=alias)
+        ci = confint_noncentrality(f_stat, df, alternative="two-sided")
+        assert_allclose(ci_alias, ci)
+
+    # only "two-sided" is implemented; "larger"/"smaller" must still raise,
+    # now as a ValueError from the shared alternative validation rather
+    # than a NotImplementedError
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        confint_noncentrality(f_stat, df, alternative="larger")

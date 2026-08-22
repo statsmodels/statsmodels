@@ -459,11 +459,15 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
     """
 
     df1, df2 = df
-    if alternative in ["two-sided", "2s", "ts"]:
-        alpha1s = alpha / 2
-        ci = ncfdtrinc(df1, df2, [1 - alpha1s, alpha1s], f_stat)
-    else:
-        raise NotImplementedError
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided",),
+        lower=False,
+        deprecated={"2s": "two-sided", "ts": "two-sided"},
+    )
+    alpha1s = alpha / 2
+    ci = ncfdtrinc(df1, df2, [1 - alpha1s, alpha1s], f_stat)
 
     return ci
 

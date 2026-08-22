@@ -2270,6 +2270,20 @@ def breakvar_heteroskedasticity_test(
     .. [1] Harvey, Andrew C. 1990. *Forecasting, Structural Time Series*
             *Models and the Kalman Filter.* Cambridge University Press.
     """
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("increasing", "decreasing", "two-sided"),
+        lower=True,
+        deprecated={
+            "i": "increasing",
+            "inc": "increasing",
+            "d": "decreasing",
+            "dec": "decreasing",
+            "2": "two-sided",
+            "2-sided": "two-sided",
+        },
+    )
     squared_resid = np.asarray(resid, dtype=float) ** 2
     if squared_resid.ndim == 1:
         squared_resid = squared_resid.reshape(-1, 1)
@@ -2328,16 +2342,13 @@ def breakvar_heteroskedasticity_test(
             return chi2.sf(numer_dof * test_statistics, denom_dof)
 
     # Calculate the one- or two-sided p-values
-    alternative = alternative.lower()
-    if alternative in ["i", "inc", "increasing"]:
+    if alternative == "increasing":
         p_value = pval_upper(test_statistic)
-    elif alternative in ["d", "dec", "decreasing"]:
+    elif alternative == "decreasing":
         test_statistic = 1.0 / test_statistic
         p_value = pval_upper(test_statistic)
-    elif alternative in ["2", "2-sided", "two-sided"]:
+    elif alternative == "two-sided":
         p_value = 2 * np.minimum(pval_lower(test_statistic), pval_upper(test_statistic))
-    else:
-        raise ValueError("Invalid alternative.")
 
     if len(test_statistic) == 1:
         return BreakvarHeteroskedasticityResult(test_statistic[0], p_value[0])

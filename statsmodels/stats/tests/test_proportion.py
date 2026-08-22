@@ -1417,3 +1417,59 @@ def test_proportion_confint_binom_test(count, nobs, alpha, alternative, expected
         count, nobs, alpha=alpha, method="binom_test", alternative=alternative
     )
     assert_allclose(np.array([ci_low, ci_upp]), np.array(expected), rtol=rtol)
+
+
+def test_binom_test_alternative_deprecated_alias():
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        pval_alias = smprop.binom_test(5, 10, prop=0.3, alternative="2s")
+    pval = smprop.binom_test(5, 10, prop=0.3, alternative="two-sided")
+    assert pval_alias == pval
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        pval_alias = smprop.binom_test(5, 10, prop=0.3, alternative="l")
+    pval = smprop.binom_test(5, 10, prop=0.3, alternative="larger")
+    assert pval_alias == pval
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smprop.binom_test(5, 10, prop=0.3, alternative="bogus")
+
+
+def test_binom_test_reject_interval_alternative():
+    # undocumented "2s" alias still works but warns
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        alias_interval = smprop.binom_test_reject_interval(0.3, 10, alternative="2s")
+    interval = smprop.binom_test_reject_interval(0.3, 10, alternative="two-sided")
+    assert alias_interval == interval
+
+    # previously a garbage value silently behaved like an unbounded,
+    # always-reject interval instead of raising
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smprop.binom_test_reject_interval(0.3, 10, alternative="bogus")
+
+
+def test_samplesize_proportions_2indep_onetail_alternative():
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        nobs_alias = samplesize_proportions_2indep_onetail(
+            0.1, 0.3, 0.8, alternative="2s"
+        )
+    nobs = samplesize_proportions_2indep_onetail(0.1, 0.3, 0.8, alternative="two-sided")
+    assert nobs_alias == nobs
+
+    # previously a garbage value was silently treated as one-sided instead
+    # of raising
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        samplesize_proportions_2indep_onetail(0.1, 0.3, 0.8, alternative="bogus")
+
+
+def test_proportions_chisquare_pairscontrol_alternative():
+    count = np.array([20, 18, 15, 12])
+    nobs = np.array([50, 50, 50, 50])
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="2s")
+
+    # "larger"/"smaller" are not implemented for this function and must
+    # continue to raise, now via the shared alternative validation
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")

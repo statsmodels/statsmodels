@@ -873,6 +873,20 @@ def test_results_vs_statespace(statespace_comparison):
         assert_allclose(ets_het[0], statespace_het[0], rtol=0.2)
         assert_allclose(ets_het[1], statespace_het[1], rtol=0.7)
 
+    # the undocumented "d" alias for "decreasing" still works but warns,
+    # and is equivalent to spelling out "decreasing"
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        ets_het_alias = ets_results.test_heteroskedasticity(
+            method="breakvar", alternative="d"
+        )
+    ets_het_canonical = ets_results.test_heteroskedasticity(
+        method="breakvar", alternative="decreasing"
+    )
+    assert_allclose(ets_het_alias, ets_het_canonical)
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        ets_results.test_heteroskedasticity(method="breakvar", alternative="bogus")
+
 
 def test_prediction_results_vs_statespace(statespace_comparison):
     ets_results, statespace_results = statespace_comparison

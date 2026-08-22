@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
+from scipy import stats
 
 from statsmodels.base.data import PandasData
 from statsmodels.tools._decorators import cache_readonly
@@ -429,7 +429,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         mask = np.ones_like(pvalues, dtype=bool)
         mask[self._free_params_index] = True
         mask &= ~np.isnan(self.zvalues)
-        pvalues[mask] = norm.sf(np.abs(self.zvalues[mask])) * 2
+        pvalues[mask] = stats.norm.sf(np.abs(self.zvalues[mask])) * 2
         return pvalues
 
     @cache_readonly
@@ -681,6 +681,21 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             method = "breakvar"
         _ = string_like(method, "method", options=("breakvar",))
 
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("increasing", "decreasing", "two-sided"),
+            lower=True,
+            deprecated={
+                "i": "increasing",
+                "inc": "increasing",
+                "d": "decreasing",
+                "dec": "decreasing",
+                "2": "two-sided",
+                "2-sided": "two-sided",
+            },
+        )
+
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
@@ -736,36 +751,30 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
             # Setup functions to calculate the p-values
             if use_f:
-                from scipy.stats import f
-
                 def pval_lower(test_statistics, numer_dof, denom_dof):
-                    return f.cdf(test_statistics, numer_dof, denom_dof)
+                    return stats.f.cdf(test_statistics, numer_dof, denom_dof)
 
                 def pval_upper(test_statistics, numer_dof, denom_dof):
-                    return f.sf(test_statistics, numer_dof, denom_dof)
+                    return stats.f.sf(test_statistics, numer_dof, denom_dof)
 
             else:
-                from scipy.stats import chi2
-
                 def pval_lower(test_statistics, numer_dof, denom_dof):
-                    return chi2.cdf(numer_dof * test_statistics, denom_dof)
+                    return stats.chi2.cdf(numer_dof * test_statistics, denom_dof)
 
                 def pval_upper(test_statistics, numer_dof, denom_dof):
-                    return chi2.sf(numer_dof * test_statistics, denom_dof)
+                    return stats.chi2.sf(numer_dof * test_statistics, denom_dof)
             # Calculate the one- or two-sided p-values
             alternative = alternative.lower()
-            if alternative in ["i", "inc", "increasing"]:
-                p_value = pval_upper(test_statistic)
-            elif alternative in ["d", "dec", "decreasing"]:
+            if alternative == "increasing":
+                p_value = pval_upper(test_statistic, numer_dof, denom_dof)
+            elif alternative == "decreasing":
                 test_statistic = 1. / test_statistic
-                p_value = pval_upper(test_statistic)
-            elif alternative in ["2", "2-sided", "two-sided"]:
+                p_value = pval_upper(test_statistic, numer_dof, denom_dof)
+            else:  # alternative == "two-sided"
                 p_value = 2 * np.minimum(
                     pval_lower(test_statistic, numer_dof, denom_dof),
                     pval_upper(test_statistic, numer_dof, denom_dof)
                 )
-            else:
-                raise ValueError("Invalid alternative.")
 
             test_statistics.append(test_statistic)
             p_values.append(p_value)

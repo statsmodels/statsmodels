@@ -318,8 +318,16 @@ def test_prediction_results_t_test():
     # statistic, by definition
     assert_allclose(pvalue_s, 1 - pvalue_l, atol=1e-10)
 
-    with pytest.raises(ValueError, match="invalid alternative"):
+    with pytest.raises(ValueError, match="alternative must be one of"):
         pred.t_test(alternative="not-a-real-option")
+
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    for alias, canonical in [("2s", "two-sided"), ("l", "larger"), ("s", "smaller")]:
+        with pytest.warns(FutureWarning, match="is a deprecated alias"):
+            alias_result = pred.t_test(value=1.0, alternative=alias)
+        canonical_result = pred.t_test(value=1.0, alternative=canonical)
+        assert_allclose(alias_result, canonical_result)
 
     # GLM defaults to use_t=False -> normal reference distribution
     assert pred.dist is sp_stats.norm

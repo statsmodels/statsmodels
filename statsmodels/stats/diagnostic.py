@@ -1394,23 +1394,35 @@ def het_goldfeldquandt(
         y = y[xsortind]
         x = x[xsortind, :]
 
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("increasing", "decreasing", "two-sided"),
+        lower=True,
+        deprecated={
+            "i": "increasing",
+            "inc": "increasing",
+            "d": "decreasing",
+            "dec": "decreasing",
+            "2": "two-sided",
+            "2-sided": "two-sided",
+        },
+    )
     resols1 = OLS(y[:split], x[:split]).fit()
     resols2 = OLS(y[start2:], x[start2:]).fit()
     fval = resols2.mse_resid / resols1.mse_resid
     # if fval>1:
-    if alternative.lower() in ["i", "inc", "increasing"]:
+    if alternative == "increasing":
         fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
         ordering = "increasing"
-    elif alternative.lower() in ["d", "dec", "decreasing"]:
+    elif alternative == "decreasing":
         fpval = stats.f.sf(1.0 / fval, resols2.df_resid, resols1.df_resid)
         ordering = "decreasing"
-    elif alternative.lower() in ["2", "2-sided", "two-sided"]:
+    elif alternative == "two-sided":
         fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
         fpval_la = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         fpval = 2 * min(fpval_sm, fpval_la)
         ordering = "two-sided"
-    else:
-        raise ValueError("invalid alternative")
 
     if store:
         res = ResultsStore()

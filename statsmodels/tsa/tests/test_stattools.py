@@ -1157,6 +1157,26 @@ class TestBreakvarHeteroskedasticityTest:
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
+    @pytest.mark.parametrize(
+        "alias,canonical",
+        [("2", "two-sided"), ("d", "decreasing"), ("i", "increasing")],
+    )
+    def test_alternative_deprecated_alias(self, alias, canonical):
+        # undocumented short forms still work but warn, and are equivalent
+        # to spelling out the documented alternative (case-insensitively)
+        input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+        with pytest.warns(FutureWarning, match="is a deprecated alias"):
+            alias_result = breakvar_heteroskedasticity_test(
+                input_residuals, alternative=alias.upper()
+            )
+        canonical_result = breakvar_heteroskedasticity_test(
+            input_residuals, alternative=canonical
+        )
+        assert alias_result == canonical_result
+
+        with pytest.raises(ValueError, match="alternative must be one of"):
+            breakvar_heteroskedasticity_test(input_residuals, alternative="bogus")
+
     def test_use_chi2(self):
 
         input_residuals = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]

@@ -2286,3 +2286,30 @@ def test_het_goldfeldquandt_result_object(diagnostic_namedtuple_data):
         result = smsdia.het_goldfeldquandt(y, x, store=True, result_object=True)
     assert isinstance(result, smsdia.GoldfeldQuandtResult)
     assert isinstance(result.res_store, smsdia.ResultsStore)
+
+
+@pytest.mark.parametrize(
+    "alias,canonical", [("i", "increasing"), ("d", "decreasing"), ("2", "two-sided")]
+)
+def test_het_goldfeldquandt_alternative_deprecated_alias(
+    diagnostic_namedtuple_data, alias, canonical
+):
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    res = diagnostic_namedtuple_data.res
+    y = res.model.endog
+    x = res.model.exog
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        alias_result = smsdia.het_goldfeldquandt(
+            y, x, alternative=alias, result_object=True
+        )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        canonical_result = smsdia.het_goldfeldquandt(
+            y, x, alternative=canonical, result_object=True
+        )
+    assert alias_result == canonical_result
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smsdia.het_goldfeldquandt(y, x, alternative="bogus", result_object=True)

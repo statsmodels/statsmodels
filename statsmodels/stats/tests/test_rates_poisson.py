@@ -1508,3 +1508,20 @@ def test_power_2indep_invalid_method_var_raises():
             rate1=2, rate2=1, nobs1=20, low=0.5, upp=2,
             method_var="not-a-method-var",
         )
+
+
+@pytest.mark.parametrize(
+    "alias,canonical", [("2s", "two-sided"), ("l", "larger"), ("s", "smaller")]
+)
+def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        alias_result = etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative=alias)
+    canonical_result = etest_poisson_2indep(
+        60, 51477.5, 30, 54308.7, alternative=canonical
+    )
+    assert alias_result == canonical_result
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")
