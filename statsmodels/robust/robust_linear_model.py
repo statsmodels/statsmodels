@@ -24,6 +24,7 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.robust import norms, scale
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import string_like
 
 __all__ = ["RLM"]
 
@@ -209,12 +210,8 @@ class RLM(base.LikelihoodModel):
             The estimated scale.
         """
         if isinstance(scale_est, str):
-            if scale_est.lower() == "mad":
-                return scale.mad(resid, center=0)
-            else:
-                raise ValueError(
-                    f"Option {scale_est} for scale_est not understood"
-                )
+            scale_est = string_like(scale_est, "scale_est", options=("mad",))
+            return scale.mad(resid, center=0)
         elif isinstance(scale_est, scale.HuberScale):
             return scale_est(self.df_resid, self.nobs, resid)
         else:
@@ -280,12 +277,10 @@ class RLM(base.LikelihoodModel):
         results : statsmodels.robust.robust_linear_model.RLMResults
             Results instance
         """
-        if cov.upper() not in ["H1", "H2", "H3"]:
-            raise ValueError(f"Covariance matrix {cov} not understood")
-        cov = cov.upper()
-        conv = conv.lower()
-        if conv not in ["weights", "coefs", "dev", "sresid"]:
-            raise ValueError(f"Convergence argument {conv} not understood")
+        # options are upper-cased for display/storage, unlike most other
+        # string options in this codebase which are lower-cased
+        cov = string_like(cov, "cov", options=("h1", "h2", "h3")).upper()
+        conv = string_like(conv, "conv", options=("weights", "coefs", "dev", "sresid"))
 
         if start_params is None:
             wls_results = lm.WLS(self.endog, self.exog).fit()

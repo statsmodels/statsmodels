@@ -386,7 +386,7 @@ def test_bad_criterion():
     data.endog = np.asarray(data.endog)
     data.exog = sm.add_constant(data.exog, prepend=False)
     mod = RLM(data.endog, data.exog, M=norms.HuberT())
-    with pytest.raises(ValueError, match="Convergence argument unknown"):
+    with pytest.raises(ValueError, match="conv"):
         mod.fit(conv="unknown")
 
 
@@ -444,3 +444,27 @@ def test_summary_title():
     smry = res.summary(title=custom_title)
     assert custom_title in str(smry)
     assert default_title not in str(smry)
+
+
+def test_fit_invalid_options_raise():
+    data = load_stackloss()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    mod = RLM(data.endog, data.exog, M=norms.HuberT())
+
+    with pytest.raises(ValueError, match="cov"):
+        mod.fit(cov="not-a-cov")
+    with pytest.raises(ValueError, match="conv"):
+        mod.fit(conv="not-a-conv")
+    with pytest.raises(ValueError, match="scale_est"):
+        mod.fit(scale_est="not-a-scale-est")
+
+    # cov is upper-cased regardless of input case, unlike most other
+    # string options in this codebase, which are lower-cased
+    res_lower = mod.fit(cov="h2")
+    res_upper = mod.fit(cov="H2")
+    assert res_lower.cov == res_upper.cov == "H2"
+
+    # scale_est="mad" (string form) matches the HuberScale-free default
+    res_mad = mod.fit(scale_est="mad")
+    res_default = mod.fit()
+    assert_allclose(res_mad.params, res_default.params)

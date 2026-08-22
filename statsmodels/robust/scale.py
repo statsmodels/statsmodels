@@ -19,7 +19,7 @@ from scipy import stats
 from scipy.stats import norm as Gaussian
 
 from statsmodels.tools import tools
-from statsmodels.tools.validation import array_like, float_like
+from statsmodels.tools.validation import array_like, float_like, string_like
 
 from . import norms
 from ._qn import _qn
@@ -648,6 +648,13 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
     x_trimmed = x[tuple(sl)]
 
     center_type = center
+    if isinstance(center, str):
+        center = string_like(
+            center,
+            "center",
+            options=("med", "median", "mean", "tmean"),
+            lower=False,
+        )
     if center in ["med", "median"]:
         center = np.median(x, axis=axis)
     elif center == "mean":

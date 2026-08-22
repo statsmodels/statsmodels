@@ -35,6 +35,7 @@ import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
 from statsmodels.stats.covariance import corr_normal_scores, corr_rank
+from statsmodels.tools.validation import string_like
 
 from .scale import mad
 
@@ -1302,13 +1303,12 @@ def _cov_iter(
     # recompute maha distance at final estimate
     dist = mahalanobis(data, cov=cov)
 
+    rescale = string_like(rescale, "rescale", options=("med", "none"), lower=False)
     if rescale == "none":
         s = 1
     elif rescale == "med":
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
-    else:
-        raise NotImplementedError('only rescale="med" is currently available')
 
     res = CovIterResult(
         cov=cov,
@@ -1590,6 +1590,10 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
         Each tuple contains an array of indices for a starting subset and
         a string label identifying the method used to obtain it.
     """
+
+    methods_cov = string_like(
+        methods_cov, "methods_cov", options=("all",), lower=False
+    )
 
     if options_start is None:
         options_start = {}
