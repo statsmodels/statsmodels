@@ -816,6 +816,23 @@ class TestDecompose:
         trend = seasonal_decompose(x, period=period, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
+    def test_extrapolate_trend_freq_deprecated(self):
+        x = np.arange(12)
+        period = 4
+        with pytest.warns(FutureWarning, match="extrapolate_trend='freq'"):
+            trend_freq = seasonal_decompose(
+                x, period=period, extrapolate_trend="freq"
+            ).trend
+        trend_period = seasonal_decompose(
+            x, period=period, extrapolate_trend="period"
+        ).trend
+        assert_almost_equal(trend_freq, trend_period)
+
+    def test_extrapolate_trend_invalid_string_raises(self):
+        x = np.arange(12)
+        with pytest.raises(ValueError, match="extrapolate_trend"):
+            seasonal_decompose(x, period=4, extrapolate_trend="not-a-value")
+
     def test_raises(self):
         with pytest.raises(ValueError):
             seasonal_decompose(self.data.values)
