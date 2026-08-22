@@ -79,6 +79,33 @@ class TestEffectsizeBinom:
         assert_allclose(var_eff, res2.v_as, rtol=1e-13)
 
 
+def test_effectsize_2proportions_clip_default_zero_kwds():
+    # zero_correction="clip" must use the documented default clip bounds
+    # when zero_kwds is not provided
+    count1 = np.array([0, 5, 10])
+    nobs1 = np.array([20, 20, 20])
+    count2 = np.array([3, 20, 8])
+    nobs2 = np.array([20, 20, 20])
+
+    eff, var_eff = effectsize_2proportions(
+        count1, nobs1, count2, nobs2, statistic="or", zero_correction="clip"
+    )
+    assert np.all(np.isfinite(eff))
+    assert np.all(np.isfinite(var_eff))
+
+    eff2, var_eff2 = effectsize_2proportions(
+        count1,
+        nobs1,
+        count2,
+        nobs2,
+        statistic="or",
+        zero_correction="clip",
+        zero_kwds={"clip_bounds": (1e-6, 1 - 1e-6)},
+    )
+    assert_allclose(eff, eff2, rtol=1e-13)
+    assert_allclose(var_eff, var_eff2, rtol=1e-13)
+
+
 class TestEffSmdMeta:
 
     @classmethod
