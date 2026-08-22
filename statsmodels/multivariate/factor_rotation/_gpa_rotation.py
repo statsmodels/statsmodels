@@ -217,13 +217,16 @@ def rotateA(A, T, rotation_method="orthogonal"):
     ndarray
         The rotated factors :math:`L`.
     """
+    rotation_method = string_like(
+        rotation_method,
+        "rotation_method",
+        options=("orthogonal", "oblique"),
+        lower=False,
+    )
     if rotation_method == "orthogonal":
         L = A.dot(T)
-    elif rotation_method == "oblique":
+    else:  # rotation_method == "oblique"
         L = A.dot(np.linalg.inv(T.T))
-    else:  # i.e., if rotation_method == 'oblique':
-        raise ValueError("rotation_method should be one of "
-                         "{orthogonal, oblique}")
     return L
 
 

@@ -1465,3 +1465,16 @@ def test_confint_poisson_alternative(count, exposure, method, alpha, alternative
     elif alternative == "smaller":
         two_sided_ci = (two_sided_ci[0], np.inf)
         assert_allclose(one_sided_ci, two_sided_ci, rtol=1e-12)
+
+
+def test_poisson_invalid_alternative_raises():
+    with pytest.raises(ValueError, match="alternative"):
+        confint_poisson(5, 10, method="wald", alternative="not-a-real-alternative")
+    with pytest.raises(ValueError, match="alternative"):
+        tolerance_int_poisson(
+            5, 10, method="wald", alternative="not-a-real-alternative"
+        )
+    with pytest.raises(ValueError, match="alternative"):
+        confint_quantile_poisson(
+            5, 10, prob=0.9, method="wald", alternative="not-a-real-alternative"
+        )

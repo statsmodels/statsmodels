@@ -15,6 +15,7 @@ from scipy import optimize, stats
 from statsmodels.stats._inference_tools import _mover_confint
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
+from statsmodels.tools.validation import string_like
 
 # shorthand
 norm = stats.norm
@@ -324,10 +325,12 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     n = exposure  # short hand
     rate = count / exposure
 
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     if alternative == "two-sided":
         alpha = alpha / 2
-    elif alternative not in ["larger", "smaller"]:
-        raise NotImplementedError(f"alternative {alternative} is not available")
 
     if method is None:
         msg = "method needs to be specified, currently no default method"
@@ -500,6 +503,10 @@ def tolerance_int_poisson(
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
        100-110. https://doi.org/10.1080/00224065.1981.11980998.
     """
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     prob_tail = 1 - prob
     alpha_ = alpha
     if alternative != "two-sided":
@@ -517,7 +524,7 @@ def tolerance_int_poisson(
     elif alternative == "larger":
         low_pred = 0
         upp_pred = stats.poisson.ppf(1 - prob_tail, upp)
-    elif alternative == "smaller":
+    else:  # alternative == "smaller"
         low_pred = stats.poisson.ppf(prob_tail, low)
         upp_pred = np.inf
 
@@ -579,6 +586,10 @@ def confint_quantile_poisson(
     Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
     for Practitioners.
     """
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     alpha_ = alpha
     if alternative != "two-sided":
         # confint_poisson does not have one-sided alternatives
@@ -594,7 +605,7 @@ def confint_quantile_poisson(
     elif alternative == "larger":
         low_pred = 0
         upp_pred = stats.poisson.ppf(prob, upp)
-    elif alternative == "smaller":
+    else:  # alternative == "smaller"
         low_pred = stats.poisson.ppf(prob, low)
         upp_pred = np.inf
 

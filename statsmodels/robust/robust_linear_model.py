@@ -316,7 +316,7 @@ class RLM(base.LikelihoodModel):
         elif conv == "sresid":
             history.update(dict(sresid=[np.inf]))
             criterion = history["sresid"]
-        elif conv == "weights":
+        else:  # conv == "weights"
             history.update(dict(weights=[np.inf]))
             criterion = history["weights"]
 
@@ -455,7 +455,9 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
-        self.cov = cov
+        # cov is a public constructor argument (not only reachable through
+        # the already-validated RLM.fit), so it needs its own validation
+        self.cov = string_like(cov, "cov", options=("h1", "h2", "h3")).upper()
         # Snapshot the final IRLS weights now, rather than deferring to
         # model.weights, so this result is unaffected by any later fit()
         # call on the same model instance.
@@ -519,7 +521,7 @@ class RLMResults(base.LikelihoodModelResults):
                     / ((1 / self.nobs) * np.sum(model.M.psi_deriv(self.sresid)))
                     * W_inv
                 )
-            elif self.cov == "H3":
+            else:  # self.cov == "H3"
                 return (
                     k**-1
                     * 1

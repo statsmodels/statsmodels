@@ -468,3 +468,24 @@ def test_fit_invalid_options_raise():
     res_mad = mod.fit(scale_est="mad")
     res_default = mod.fit()
     assert_allclose(res_mad.params, res_default.params)
+
+
+def test_rlm_results_direct_construction_validates_cov():
+    # RLMResults.cov is a public constructor argument, independently
+    # reachable without going through RLM.fit's validation
+    from statsmodels.robust.robust_linear_model import RLMResults
+
+    data = load_stackloss()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    mod = RLM(data.endog, data.exog, M=norms.HuberT())
+    res = mod.fit()
+
+    # lower-case input is accepted and stored upper-cased, same as fit()
+    direct = RLMResults(
+        mod, res.params, res.normalized_cov_params, res.scale, cov="h2"
+    )
+    assert direct.cov == "H2"
+    assert_allclose(direct.bcov_scaled, mod.fit(cov="H2").bcov_scaled)
+
+    with pytest.raises(ValueError, match="cov"):
+        RLMResults(mod, res.params, res.normalized_cov_params, res.scale, cov="H4")
