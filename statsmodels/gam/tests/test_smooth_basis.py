@@ -14,7 +14,30 @@ from statsmodels.gam.smooth_basis import (
     CubicSplines,
     PolynomialSmoother,
     UnivariatePolynomialSmoother,
+    get_knots_bsplines,
 )
+
+
+def test_get_knots_bsplines_spacing():
+    rs = np.random.RandomState(0)
+    x = rs.uniform(size=100)
+
+    # df=8, degree=3 -> n_inner_knots=4, avoiding the pre-existing,
+    # unrelated IndexError that spacing="equal" hits when there is only
+    # 1 inner knot (e.g. df=5, degree=3)
+    knots_q = get_knots_bsplines(x, df=8, degree=3, spacing="quantile")
+    knots_e = get_knots_bsplines(x, df=8, degree=3, spacing="equal")
+    assert knots_q.ndim == 1
+    assert knots_e.ndim == 1
+
+    with pytest.raises(ValueError, match="spacing"):
+        get_knots_bsplines(x, df=8, degree=3, spacing="not-a-spacing")
+
+    # previously silent: an invalid `spacing` was never checked at all when
+    # `knots` was given directly instead of `df`, so this used to succeed
+    # (identically to spacing="quantile") instead of raising.
+    with pytest.raises(ValueError, match="spacing"):
+        get_knots_bsplines(x, knots=[0.25, 0.5, 0.75], degree=3, spacing="bogus")
 
 
 def test_univariate_polynomial_smoother():

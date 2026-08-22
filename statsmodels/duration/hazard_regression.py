@@ -26,6 +26,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.validation import string_like
 
 _predict_docstring = """
     Returns predicted values from the proportional hazards
@@ -368,9 +369,7 @@ class PHReg(model.LikelihoodModel):
         self.df_resid = float(self.exog.shape[0] - np.linalg.matrix_rank(self.exog))
         self.df_model = float(np.linalg.matrix_rank(self.exog))
 
-        ties = ties.lower()
-        if ties not in ("efron", "breslow"):
-            raise ValueError("`ties` must be either `efron` or " + "`breslow`")
+        ties = string_like(ties, "ties", options=("efron", "breslow"))
 
         self.ties = ties
 
@@ -581,8 +580,7 @@ class PHReg(model.LikelihoodModel):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
+        method = string_like(method, "method", options=("elastic_net",), lower=False)
 
         defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10, "zero_tol": 1e-10}
         defaults.update(kwargs)
