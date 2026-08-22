@@ -108,6 +108,7 @@ import numpy as np
 
 from statsmodels.stats.moment_helpers import se_cov
 from statsmodels.tools.grouputils import combine_indices, group_sums
+from statsmodels.tools.validation import string_like
 
 __all__ = [
     "cov_cluster",
@@ -750,11 +751,12 @@ def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
     same result as Stata in UCLA example and same as Peterson
 
     """
-    if crv_type not in ("cluster", "cluster-crv3", "cluster-jk"):
-        raise ValueError(
-            "crv_type must be one of 'cluster', 'cluster-crv3' or "
-            f"'cluster-jk', got {crv_type!r}"
-        )
+    crv_type = string_like(
+        crv_type,
+        "crv_type",
+        options=("cluster", "cluster-crv3", "cluster-jk"),
+        lower=False,
+    )
     # TODO: currently used version of groupsums requires 2d resid
 
     xu, hessian_inv = _get_sandwich_arrays(results, cov_type="clu")
@@ -816,7 +818,7 @@ def cov_cluster_2groups(
     crv_type : {"cluster"}, optional
        Only 'cluster' (default), computing the additive two-way CRV1
        combination ``cov0 + cov1 - cov01``, is supported here. Passing
-       'cluster-crv3' or 'cluster-jk' raises ``NotImplementedError``; use
+       'cluster-crv3' or 'cluster-jk' raises ``ValueError``; use
        :func:`cov_cluster` directly with one-way clustering for those
        options.
 
@@ -838,17 +840,7 @@ def cov_cluster_2groups(
 
     verified against Peterson's table, (4 decimal print precision)
     """
-    if crv_type != "cluster":
-        raise NotImplementedError(
-            "Two-way clustering is only supported for crv_type='cluster' "
-            f"(CRV1); got crv_type={crv_type!r}. The additive two-way "
-            "combination cov0 + cov1 - cov01 (Cameron, Gelbach and Miller, "
-            "2011) is only valid for the CRV1 sandwich estimator -- "
-            "applying it to the CRV3/cluster-jackknife estimator does not "
-            "generally produce a positive semi-definite covariance matrix. "
-            "Use one-way clustering (a single `groups` array) with "
-            "crv_type='cluster-crv3' or 'cluster-jk'."
-        )
+    crv_type = string_like(crv_type, "crv_type", options=("cluster",), lower=False)
     if group2 is None:
         if group.ndim != 2 or group.shape[1] != 2:
             raise ValueError(
