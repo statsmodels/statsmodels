@@ -488,3 +488,11 @@ def test_all(close_figures):
     leg.draw_frame(False)
     ax.set_title("Dotplot with different numbers of points per line")
     plt.close(fig)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_invalid_show_names_raises(close_figures):
+    points = range(5)
+    with pytest.raises(ValueError, match="show_names"):
+        dot_plot(points, show_names="not-a-side")

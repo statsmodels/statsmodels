@@ -13,6 +13,7 @@ from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 from . import utils
 
@@ -686,8 +687,9 @@ def fboxplot(
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ["MBD", "BD2"]:
-            raise ValueError("Unknown value for parameter `method`.")
+        method = string_like(
+            method, "method", options=("MBD", "BD2"), lower=False
+        )
 
         depth = banddepth(data, method=method)
     elif depth.size != data.shape[0]:
@@ -845,8 +847,9 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ["MBD", "BD2"]:
-            raise ValueError("Unknown value for parameter `method`.")
+        method = string_like(
+            method, "method", options=("MBD", "BD2"), lower=False
+        )
 
         depth = banddepth(data, method=method)
     elif depth.size != data.shape[0]:
@@ -936,11 +939,10 @@ def banddepth(data, method="MBD"):
         up = n - rmat
         return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
 
+    method = string_like(method, "method", options=("MBD", "BD2"), lower=False)
     if method == "BD2":
         depth = _fbd2()
     elif method == "MBD":
         depth = _fmbd()
-    else:
-        raise ValueError("Unknown input value for parameter `method`.")
 
     return depth

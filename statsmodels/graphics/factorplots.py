@@ -8,6 +8,7 @@ import numpy as np
 
 from statsmodels.graphics import utils
 from statsmodels.graphics.plottools import rainbow
+from statsmodels.tools.validation import string_like
 
 
 def interaction_plot(
@@ -108,6 +109,9 @@ def interaction_plot(
 
     from pandas import DataFrame
 
+    plottype = string_like(
+        plottype, "plottype", options=("b", "both", "l", "line", "s", "scatter")
+    )
     fig, ax = utils.create_mpl_ax(ax)
 
     response_name = ylabel or getattr(response, "name", "response")
@@ -181,8 +185,6 @@ def interaction_plot(
                 **kwargs,
             )
 
-    else:
-        raise ValueError(f"Plot type {plottype} not understood")
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(0.1)
 

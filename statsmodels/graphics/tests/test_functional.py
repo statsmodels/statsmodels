@@ -474,6 +474,22 @@ def test_banddepth_MBD(close_figures):
     assert_almost_equal(depth, expected_depth, decimal=4)
 
 
+def test_banddepth_invalid_method_raises():
+    data = np.asarray([np.arange(10), np.arange(10) + 1.0])
+    with pytest.raises(ValueError, match="method"):
+        banddepth(data, method="not-a-method")
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_fboxplot_rainbowplot_invalid_method_raises(close_figures):
+    data = np.asarray([np.arange(10), np.arange(10) + 1.0, np.arange(10) - 1.0])
+    with pytest.raises(ValueError, match="method"):
+        fboxplot(data, method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        rainbowplot(data, method="not-a-method")
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_fboxplot_rainbowplot(close_figures):
