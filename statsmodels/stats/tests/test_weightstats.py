@@ -18,6 +18,7 @@ License: BSD (3-clause)
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pandas as pd
+import pytest
 from scipy import stats
 
 from statsmodels.stats.weightstats import (
@@ -852,3 +853,26 @@ def test_weightstats_2d_w2():
     w1 = [[1]]
     d1 = DescrStatsW(x1, w1)
     assert (d1.quantile([0, 0.5, 1.0]) == 1).all().all()
+
+
+def test_invalid_usevar_raises():
+    rs = np.random.RandomState(90210)
+    x1 = rs.standard_normal(20)
+    x2 = rs.standard_normal(20) + 0.5
+    cm = CompareMeans(DescrStatsW(x1), DescrStatsW(x2))
+
+    with pytest.raises(ValueError, match="usevar"):
+        cm.ttest_ind(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        cm.ztest_ind(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        cm.tconfint_diff(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        cm.zconfint_diff(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        ttest_ind(x1, x2, usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        ztest(x1, x2, usevar="not-a-usevar")
+    # zconfint only implements "pooled", unlike the other five
+    with pytest.raises(ValueError, match="usevar"):
+        zconfint(x1, x2, usevar="unequal")
