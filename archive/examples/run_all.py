@@ -8,38 +8,80 @@ uncomment plt.show() to show all plot windows
 
 """
 
-from statsmodels.compat.python import input
+from statsmodels.compat.python import input, lzip
+
+import matplotlib.pyplot as plt  # matplotlib is required for many examples
 
 stop_on_error = True
 
 
 filelist = [
-    "example_pca.py",
-    "example_sysreg.py",
-    "example_mle.py",
-    #            'example_gam.py', # exclude, currently we are not working on it
-    "example_pca_regression.py",
+    "example_glsar.py",
+    "example_wls.py",
+    "example_gls.py",
+    "example_glm.py",
+    "example_ols_tftest.py",  # 'example_rpy.py',
+    "example_ols.py",
+    "example_ols_minimal.py",
+    "example_rlm.py",
+    "example_discrete.py",
+    "example_predict.py",
+    "example_ols_table.py",
+    "tut_ols.py",
+    "tut_ols_rlm.py",
+    "tut_ols_wls.py",
 ]
+
+use_glob = True
+if use_glob:
+    import glob
+
+    filelist = glob.glob("*.py")
+
+print(lzip(range(len(filelist)), filelist))
+
+for fname in ["run_all.py", "example_rpy.py"]:
+    filelist.remove(fname)
+
+# filelist = filelist[15:]
+
+
+# temporarily disable show
+plt_show = plt.show
+
+
+def noop(*args):
+    pass
+
+
+plt.show = noop
 
 cont = input(
     """Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
 (y/n) >>> """
 )
+has_errors = []
 if "y" in cont.lower():
     for run_all_f in filelist:
         try:
-            print("Executing example file", run_all_f)
+            print("\n\nExecuting example file", run_all_f)
             print("-----------------------" + "-" * len(run_all_f))
             with open(run_all_f, encoding="utf-8") as f:
                 exec(f.read())  # noqa: S102
-        except Exception as exc:
+        except Exception:
             # f might be overwritten in the executed file
-            print("*********************")
+            print("**********************" + "*" * len(run_all_f))
             print("ERROR in example file", run_all_f)
             print("**********************" + "*" * len(run_all_f))
+            has_errors.append(run_all_f)
             if stop_on_error:
-                raise exc
-# plt.show()
-# plt.close('all')
-# close does not work because I never get here without closing plots manually
+                raise
+
+print("\nModules that raised exception:")
+print(has_errors)
+
+# reenable show after closing windows
+plt.close("all")
+plt.show = plt_show
+plt.show()
