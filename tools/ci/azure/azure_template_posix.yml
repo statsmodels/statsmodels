@@ -59,7 +59,7 @@ jobs:
           NUMPY_VERSION: 2.0.0
           PANDAS_VERSION: 2.2.2
           SCIPY_VERSION: 1.13.0
-          CYTHON_VERSION: 3.1.8
+          CYTHON_VERSION: 3.0.12
           BLAS: "nomkl blas=*=openblas"
         python_313_copy_on_write:
           python.version: '3.13'
