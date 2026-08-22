@@ -101,6 +101,31 @@ class TestMICEData:
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
 
+    def test_split_data_predict_kwds_use_missing_rows(self):
+        # predict_miss_kwds must be subset to the rows where the variable
+        # being imputed is missing, not to the observed rows.
+        rs = np.random.RandomState(3927)
+        df = gendat()
+        imp_data = mice.MICEData(df, rng=rs)
+        imp_data.set_imputer(
+            "x3",
+            formula="x1 + x2 + x4 + x5 + y",
+            predict_kwds={"offset": mice.PatsyFormula("x5")},
+        )
+
+        ixo = imp_data.ix_obs["x3"]
+        ixm = imp_data.ix_miss["x3"]
+        x5 = np.asarray(imp_data.data["x5"])
+
+        _, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds = (
+            imp_data.get_split_data("x3")
+        )
+
+        assert_equal(predict_obs_kwds["offset"].shape[0], exog_obs.shape[0])
+        assert_equal(predict_miss_kwds["offset"].shape[0], exog_miss.shape[0])
+        assert_allclose(predict_obs_kwds["offset"], x5[ixo])
+        assert_allclose(predict_miss_kwds["offset"], x5[ixm])
+
     def test_settingwithcopywarning(self):
         "Test that MICEData does not throw a SettingWithCopyWarning when imputing (https://github.com/statsmodels/statsmodels/issues/5430)"
         rs = np.random.RandomState(8214223)
