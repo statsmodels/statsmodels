@@ -288,7 +288,9 @@ class TestOLS(CheckRegressionResults):
         with warnings.catch_warnings(record=True):
             x = rs.randn(5)
             y = rs.randn(5, 6)
-            results = OLS(x, y).fit()
+            with pytest.warns(SingularMatrixWarning, match="The design matrix is rank"):
+                # Intentional to get a nan rsquared_adj
+                results = OLS(x, y).fit()
             rsquared_adj = results.rsquared_adj
             assert_equal(rsquared_adj, np.nan)
 

@@ -1749,12 +1749,12 @@ def test_outlier_test():
 
     data = pd.DataFrame(
         np.column_stack((endog, exog)),
-        columns="y const var1 var2".split(),
+        columns=["y", "const", "var1", "var2"],
         index=labels,
     )
 
     # check `order` with pandas bug in #3971
-    res_pd = OLS.from_formula("y ~ const + var1 + var2 - 0", data).fit()
+    res_pd = OLS.from_formula("y ~ 0 + const + var1 + var2", data).fit()
 
     res_outl2 = oi.outlier_test(res_pd, method="b", order=True)
     assert_almost_equal(res_outl2.values, res2, 7)

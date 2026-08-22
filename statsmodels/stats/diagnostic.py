@@ -1080,7 +1080,8 @@ def acorr_breusch_godfrey(
 
     xdall = lagmat(x[:, None], nlags, trim="both")
     nobs = xdall.shape[0]
-    xdall = np.c_[np.ones((nobs, 1)), xdall]
+    if not bool(res.k_constant):
+        xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = x[-nobs:]
     if exog_old is None:
         exog = xdall

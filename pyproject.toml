@@ -448,6 +448,7 @@ filterwarnings = [
     "error:the 'center' keyword is deprecated:FutureWarning:",
     "error:Unpacking:FutureWarning:",
     "error:The test statistic is outside:statsmodels.tools.sm_exceptions.InterpolationWarning:",
+    "error:The design matrix is:statsmodels.tools.sm_exceptions.SingularMatrixWarning:",
     "error:Fast medcouple algorithm:UserWarning:",
     "error:medcouple is undefined:UserWarning:",
     "error:Provided `endog` series:UserWarning:",

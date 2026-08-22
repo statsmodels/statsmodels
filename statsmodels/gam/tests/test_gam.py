@@ -7,6 +7,7 @@ Author: Luca Puggini
 Created on 08/07/2015
 """
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -39,6 +40,7 @@ from statsmodels.genmod.families.family import Gaussian
 from statsmodels.genmod.generalized_linear_model import GLM, lm
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.linalg import matrix_sqrt
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 
@@ -256,9 +258,9 @@ def test_gam_discrete():
 def multivariate_sample_data(seed=1):
     n = 1000
     x1 = np.linspace(-1, 1, n)
-    x2 = np.linspace(-10, 10, n)
-    x = np.vstack([x1, x2]).T
     rs = np.random.RandomState(seed)
+    x2 = 1 + np.sort(rs.standard_normal(n))
+    x = np.vstack([x1, x2]).T
     y = x1 * x1 * x1 + x2 + rs.normal(0, 0.01, n)
     degree1 = 4
     degree2 = 3
@@ -558,7 +560,10 @@ def test_cyclic_cubic_splines():
     # TODO: if alpha changes in pirls this should be updated
 
     gam = GLMGam(y, smoother=ccs, alpha=alpha)
-    gam_res = gam.fit(method="pirls")
+    with warnings.catch_warnings():
+        # Warns of singular matrix on OSX only
+        warnings.simplefilter("ignore", category=SingularMatrixWarning)
+        gam_res = gam.fit(method="pirls")
 
     s0 = np.dot(ccs.basis[:, ccs.mask[0]], gam_res.params[ccs.mask[0]])
     # TODO: Mean has to be removed
@@ -678,6 +683,8 @@ def test_zero_penalty():
     gam_gs_res = gam_gs.fit()
     y_est_gam = gam_gs_res.predict()
 
+    # Poly basis has linearly related columns, so we need to remove
+    # two columns to avoid singular matrix warning
     glm = GLM(y, poly.basis).fit()
     y_est = glm.predict()
 

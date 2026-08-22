@@ -1,3 +1,4 @@
+import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
 import pytest
@@ -203,9 +204,10 @@ stub R2 C2  40.95038  40.65765
         test_ltx_special_chars(self)
 
     def test_regression_with_tuples(self):
-        i = pd.Series([1, 2, 3, 4] * 10, name="i")
-        y = pd.Series([1, 2, 3, 4, 5] * 8, name="y")
-        x = pd.Series([1, 2, 3, 4, 5, 6, 7, 8] * 5, name="x")
+        rs = np.random.default_rng(312323)
+        i = pd.Series(np.arange(20).tolist() * 10, name="i")
+        y = pd.Series(rs.standard_normal(200), name="y")
+        x = pd.Series(rs.standard_normal(200), name="x")
 
         df = pd.DataFrame(index=i.index)
         df = df.join(i)
@@ -226,8 +228,8 @@ stub R2 C2  40.95038  40.65765
                     interesting_lines.append(line[:38])
 
         desired = ["Dep. Variable:                  x_sum ",
-                   "y_sum          1.4595      0.209      ",
-                   "y_max          0.2432      0.035      "]
+                   "y_sum          0.6380      0.225      ",
+                   "y_max          0.7972      0.367      "]
 
         assert_equal(sorted(desired), sorted(interesting_lines))
 
