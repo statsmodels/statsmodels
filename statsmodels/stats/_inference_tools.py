@@ -8,6 +8,8 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose
 
+from statsmodels.tools.validation import string_like
+
 
 def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
     """
@@ -54,6 +56,9 @@ def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
        about Effect Measures: A General Approach.” Statistics in Medicine 27
        (10): 1693-1702. https://doi.org/10.1002/sim.3095.
     """
+    contrast = string_like(
+        contrast, "contrast", options=("diff", "sum", "ratio"), lower=False
+    )
 
     if contrast == "diff":
         stat = stat1 - stat2

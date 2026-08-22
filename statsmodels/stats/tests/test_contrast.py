@@ -78,6 +78,15 @@ def test_constraints():
     c1 = smc._contrast_pairs(6, 4, 1)  # k_params, k_level, idx_start
     assert_equal(c1, cpairs2)
 
+    # "pw" and "pairs" are documented aliases for "pairwise"
+    assert_equal(smc._constraints_factor(cm_, comparison="pw"), cpairs)
+    assert_equal(smc._constraints_factor(cm_, comparison="pairs"), cpairs)
+
+    import pytest
+
+    with pytest.raises(ValueError, match="comparison"):
+        smc._constraints_factor(cm_, comparison="not-a-comparison")
+
 
 def test_contrast_results_str_repr():
     import statsmodels.api as sm

@@ -7,6 +7,7 @@ from scipy.stats import f as fdist, t as student_t
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import clean0, fullrank
+from statsmodels.tools.validation import string_like
 
 
 # TODO: should this be public if it's just a container?
@@ -692,10 +693,10 @@ def _constraints_factor(
 
     import statsmodels.sandbox.stats.multicomp as mc
 
-    if comparison in ["pairwise", "pw", "pairs"]:
-        c_all = -mc.contrast_allpairs(k_level)
-    else:
-        raise NotImplementedError("currentlyonly pairwise comparison")
+    comparison = string_like(
+        comparison, "comparison", options=("pairwise", "pw", "pairs"), lower=False
+    )
+    c_all = -mc.contrast_allpairs(k_level)
 
     contrasts = c_all.dot(cm)
     if k_params is not None:

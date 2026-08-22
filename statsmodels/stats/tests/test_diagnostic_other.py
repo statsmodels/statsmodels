@@ -9,6 +9,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats._diagnostic_other as diao
@@ -290,3 +291,12 @@ class TestCMTOLS(CheckCMT):
         res_all.append(("score reparam QMLE", tres))
 
         return res_all
+
+
+def test_conditional_moment_test_generic_invalid_cov_type_raises():
+    mom_test = np.eye(2)
+    mom_test_deriv = np.eye(2)
+    with pytest.raises(ValueError, match="cov_type"):
+        diao.conditional_moment_test_generic(
+            mom_test, mom_test_deriv, None, None, cov_type="not-a-cov-type"
+        )
