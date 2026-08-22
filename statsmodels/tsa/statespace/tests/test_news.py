@@ -1362,13 +1362,50 @@ def test_news_summary_methods():
         prev_value = y.loc[date, variable]
         assert_(f"{prev_value:.2f}" in rendered)
 
-    # The remaining summary/detail methods: assert they run and produce
-    # non-trivial, differently-shaped output for a dataset with both
-    # updates and revisions present.
-    assert_(str(news.summary_impacts()).strip() != "")
-    assert_(str(news.summary_details()).strip() != "")
+    # summary_news: unchanged from before (already covered), no updates in
+    # this fixture so nothing further to check content-wise here
     assert_(str(news.summary_news()).strip() != "")
-    assert_(str(news.summary()).strip() != "")
+    assert_equal(len(news.data_updates), 0)
+
+    # summary_impacts: for every impacted variable, "estimate (new)" must
+    # equal "estimate (prev)" + "total impact" -- and "total impact" must
+    # match total_impacts, already independently verified above via
+    # get_impacts()/total_impacts.
+    impacts_text = str(news.summary_impacts())
+    for variable in news.total_impacts.columns:
+        total_impact = news.total_impacts.loc["2009Q3", variable]
+        prev = news.prev_impacted_forecasts.loc["2009Q3", variable]
+        new = news.post_impacted_forecasts.loc["2009Q3", variable]
+        assert_allclose(new - prev, total_impact, atol=1e-10)
+        assert_(f"{total_impact:.2f}" in impacts_text)
+        assert_(f"{prev:.2f}" in impacts_text)
+        assert_(f"{new:.2f}" in impacts_text)
+
+    # impacted_variable= must narrow the table to just that variable's row
+    cpi_text = str(news.summary_impacts(impacted_variable="cpi"))
+    assert_(f'{news.total_impacts.loc["2009Q3", "cpi"]:.2f}' in cpi_text)
+    for variable in ("realgdp", "realcons", "realinv"):
+        assert_(variable not in cpi_text)
+
+    # summary_details(source="revisions"): grouping by impacted variable
+    # must reproduce the same total-impact values as summary_impacts,
+    # since this dataset has revisions only (no updates)
+    details_text = str(news.summary_details(source="revisions"))
+    for variable in news.total_impacts.columns:
+        total_impact = news.total_impacts.loc["2009Q3", variable]
+        assert_(f"{total_impact:.2f}" in details_text)
+
+    # summary(): combines the header metadata with the same impacts table
+    full_text = str(news.summary())
+    assert_("# of revisions" in full_text)
+    assert_("# of new datapoints" in full_text)
+    # 5 raw revisions, 0 new datapoints, matching this fixture's setup
+    header = full_text.split("Impacts", maxsplit=1)[0]
+    assert_(str(len(revisions)) in header)
+    assert_(str(len(news.data_updates)) in header)
+    for variable in news.total_impacts.columns:
+        total_impact = news.total_impacts.loc["2009Q3", variable]
+        assert_(f"{total_impact:.2f}" in full_text)
 
     # revision_details_by_impact aggregates by (impact date, impacted
     # variable): the two cpi revisions (2009Q2 and 2009Q3) both land on the
