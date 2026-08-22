@@ -14,6 +14,7 @@ from numpy.linalg import slogdet
 
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
@@ -71,9 +72,9 @@ class SVAR(tsbase.TimeSeriesModel):
 
         self.neqs = self.endog.shape[1]
 
-        types = ["A", "B", "AB"]
-        if svar_type not in types:
-            raise ValueError("SVAR type not recognized, must be in " + str(types))
+        svar_type = string_like(
+            svar_type, "svar_type", options=("A", "B", "AB"), lower=False
+        )
         self.svar_type = svar_type
 
         svar_ckerr(svar_type, A, B)

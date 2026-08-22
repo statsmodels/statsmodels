@@ -129,6 +129,11 @@ def test_simultaneous_cb():
     assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378, 0.45595321, 0.43341115])
     assert_allclose(ucb2[ix], np.r_[0.96465636, 0.92745068, 0.90885428, 0.88796708])
 
+    with pytest.raises(ValueError, match="method"):
+        sf.simultaneous_cb(method="not-a-method")
+    with pytest.raises(ValueError, match="transform"):
+        sf.simultaneous_cb(transform="not-a-transform")
+
 
 def test_bmt():
     # All tests against SAS
@@ -160,6 +165,9 @@ def test_bmt():
     for method in "linear", "cloglog", "log", "logit", "asinsqrt":
         lcb, ucb = sf.quantile_ci(0.25, method=method)
         assert_allclose(cb[method], np.r_[lcb, ucb])
+
+    with pytest.raises(ValueError, match="method"):
+        sf.quantile_ci(0.25, method="not-a-method")
 
 
 def test_survdiff():

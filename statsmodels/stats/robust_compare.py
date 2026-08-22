@@ -10,6 +10,8 @@ import numbers
 
 import numpy as np
 
+from statsmodels.tools.validation import string_like
+
 # the trimboth and trim_mean are taken from scipy.stats.stats
 # and enhanced by axis
 
@@ -228,14 +230,15 @@ class TrimmedMean:
         import statsmodels.stats.weightstats as smws
 
         df = self.nobs_reduced - 1
+        transform = string_like(
+            transform, "transform", options=("trimmed", "winsorized"), lower=False
+        )
         if transform == "trimmed":
             mean_ = self.mean_trimmed
             std_ = self.std_mean_trimmed
-        elif transform == "winsorized":
+        else:  # transform == "winsorized"
             mean_ = self.mean_winsorized
             std_ = self.std_mean_winsorized
-        else:
-            raise ValueError("transform can only be 'trimmed' or 'winsorized'")
 
         res = smws._tstat_generic(
             mean_, 0, std_, df, alternative=alternative, diff=value
@@ -292,6 +295,11 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=
     """
     x = np.asarray(data)  # x is shorthand from earlier code
 
+    if isinstance(transform, str):
+        transform = string_like(
+            transform, "transform", options=("abs", "square", "identity"),
+            lower=False,
+        )
     if transform == "abs":
         tfunc = np.abs
     elif transform == "square":
@@ -309,6 +317,10 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=
     else:
         raise ValueError("transform should be abs, square or exp")
 
+    if isinstance(center, str):
+        center = string_like(
+            center, "center", options=("median", "mean", "trimmed"), lower=False
+        )
     if center == "median":
         res = tfunc(x - np.expand_dims(np.median(x, axis=axis), axis))
     elif center == "mean":

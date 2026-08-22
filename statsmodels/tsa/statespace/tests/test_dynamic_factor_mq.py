@@ -1746,6 +1746,12 @@ def test_coefficient_of_determination(close_figures):
                 desired.iloc[i, j] = res_ols.rsquared
     assert_allclose(actual, desired)
 
+    # Invalid method / which raise clear errors
+    with pytest.raises(ValueError, match="method"):
+        res.get_coefficients_of_determination(method="invalid")
+    with pytest.raises(ValueError, match="which"):
+        res.get_coefficients_of_determination(which="invalid")
+
     # Optional smoke test for plot_coefficient_of_determination
     try:
         import matplotlib.pyplot as plt
@@ -1763,6 +1769,15 @@ def test_coefficient_of_determination(close_figures):
         res.plot_coefficients_of_determination(which="filtered", fig=fig4)
     except ImportError:
         pass
+
+
+def test_em_invalid_mstep_method():
+    endog, _, _, _, _, _ = gen_dfm_data(k_endog=2, nobs=100)
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, standardize=False, idiosyncratic_ar1=False
+    )
+    with pytest.raises(ValueError, match="mstep_method"):
+        mod.fit_em(maxiter=1, mstep_method="invalid")
 
 
 @pytest.mark.filterwarnings("ignore:Log-likelihood decreased")

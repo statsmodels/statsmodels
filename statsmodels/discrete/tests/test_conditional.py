@@ -288,6 +288,18 @@ def test_lasso_poisson():
     assert_allclose(result2.params, result3.params)
 
 
+def test_fit_regularized_invalid_method():
+    rs = np.random.RandomState(3423948)
+    n = 200
+    groups = np.kron(np.arange(10), np.ones(n // 10))
+    x = rs.normal(size=(n, 2))
+    y = (rs.uniform(size=n) < 0.5).astype(int)
+
+    model = ConditionalLogit(y, x, groups=groups)
+    with pytest.raises(ValueError, match="method"):
+        model.fit_regularized(method="not-a-method")
+
+
 def gen_mnlogit(n):
 
     rs = np.random.RandomState(235)

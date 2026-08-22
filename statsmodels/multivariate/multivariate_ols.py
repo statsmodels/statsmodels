@@ -15,6 +15,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib import summary2
 from statsmodels.regression.linear_model import RegressionResultsWrapper
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 
 __docformat__ = "restructuredtext en"
 
@@ -100,6 +101,8 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         raise ValueError(f"x(n={nobs1:d}) and y(n={nobs:d}) should have the same number of "
                          "rows!")
 
+    method = string_like(method, "method", options=("svd", "pinv"), lower=False)
+
     # Calculate the matrices necessary for hypotheses testing
     df_resid = nobs - k_exog
     if method == "pinv":
@@ -117,7 +120,7 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         t = x.dot(params)
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
-    elif method == "svd":
+    else:  # method == "svd"
         u, s, v = svd(x, 0)
         if (s > tolerance).sum() < len(s):
             raise ValueError("Covariance of x singular!")
@@ -128,8 +131,6 @@ def _multivariate_ols_fit(endog, exog, method="svd", tolerance=1e-8):
         t = np.diag(s).dot(v).dot(params)
         sscpr = np.subtract(y.T.dot(y), t.T.dot(t))
         return (params, df_resid, inv_cov, sscpr)
-    else:
-        raise ValueError(f"{method} is not a supported method!")
 
 
 def multivariate_stats(eigenvals,

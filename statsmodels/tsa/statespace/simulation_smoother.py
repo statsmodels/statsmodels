@@ -9,6 +9,7 @@ from statsmodels.compat.pandas import deprecate_kwarg
 import numpy as np
 
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 from . import tools
 from .cfa_simulation_smoother import CFASimulationSmoother
@@ -277,7 +278,7 @@ class SimulationSmoother(KalmanSmoother):
         SimulationSmoothResults
             Object holding the output of the simulation smoother.
         """
-        method = method.lower()
+        method = string_like(method, "method", options=("kfs", "cfa"))
 
         # Short-circuit for CFA
         if method == "cfa":
@@ -287,11 +288,6 @@ class SimulationSmoother(KalmanSmoother):
                     " vector using the CFA simulation smoother."
                 )
             return CFASimulationSmoother(self)
-        elif method != "kfs":
-            raise ValueError(
-                f'Invalid simulation smoother method "{method}". Valid'
-                ' methods are "kfs" or "cfa".'
-            )
 
         # Set the class to be the default results class, if None provided
         if results_class is None:

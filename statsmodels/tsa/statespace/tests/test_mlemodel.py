@@ -318,6 +318,40 @@ def test_score_misc():
     mod.score(res.params)
 
 
+def test_score_hessian_invalid_method_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="method"):
+        mod.score(res.params, method="invalid")
+    with pytest.raises(ValueError, match="method"):
+        mod.score_obs(res.params, method="invalid")
+    with pytest.raises(ValueError, match="method"):
+        mod.hessian(res.params, method="invalid")
+
+
+def test_info_criteria_invalid_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="criteria"):
+        res.info_criteria("invalid")
+    with pytest.raises(ValueError, match="method"):
+        res.info_criteria("aic", method="invalid")
+
+
+def test_get_prediction_invalid_information_set_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="information_set"):
+        res.get_prediction(information_set="invalid")
+
+
+def test_get_smoothed_decomposition_invalid_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="decomposition_of"):
+        res.get_smoothed_decomposition(decomposition_of="invalid")
+
+
 def test_from_formula():
     with pytest.raises(NotImplementedError):
         MLEModel.from_formula(1, 2, 3)
@@ -927,7 +961,7 @@ def test_diagnostics():
     desired = res.test_normality(method="jarquebera")
     assert_allclose(actual, desired)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="method"):
         res.test_normality(method="invalid")
 
     actual = res.test_heteroskedasticity(method=None)
@@ -936,14 +970,14 @@ def test_diagnostics():
 
     with pytest.raises(ValueError):
         res.test_heteroskedasticity(method=None, alternative="invalid")
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="method"):
         res.test_heteroskedasticity(method="invalid")
 
     actual = res.test_serial_correlation(method=None)
     desired = res.test_serial_correlation(method="ljungbox")
     assert_allclose(actual, desired)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="method"):
         res.test_serial_correlation(method="invalid")
 
     # Smoke tests for other options

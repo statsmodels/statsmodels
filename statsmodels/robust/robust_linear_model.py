@@ -24,6 +24,7 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.robust import norms, scale
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import string_like
 
 __all__ = ["RLM"]
 
@@ -209,12 +210,8 @@ class RLM(base.LikelihoodModel):
             The estimated scale.
         """
         if isinstance(scale_est, str):
-            if scale_est.lower() == "mad":
-                return scale.mad(resid, center=0)
-            else:
-                raise ValueError(
-                    f"Option {scale_est} for scale_est not understood"
-                )
+            _ = string_like(scale_est, "scale_est", options=("mad",))
+            return scale.mad(resid, center=0)
         elif isinstance(scale_est, scale.HuberScale):
             return scale_est(self.df_resid, self.nobs, resid)
         else:
@@ -280,12 +277,10 @@ class RLM(base.LikelihoodModel):
         results : statsmodels.robust.robust_linear_model.RLMResults
             Results instance
         """
-        if cov.upper() not in ["H1", "H2", "H3"]:
-            raise ValueError(f"Covariance matrix {cov} not understood")
-        cov = cov.upper()
-        conv = conv.lower()
-        if conv not in ["weights", "coefs", "dev", "sresid"]:
-            raise ValueError(f"Convergence argument {conv} not understood")
+        # options are upper-cased for display/storage, unlike most other
+        # string options in this codebase which are lower-cased
+        cov = string_like(cov, "cov", options=("h1", "h2", "h3")).upper()
+        conv = string_like(conv, "conv", options=("weights", "coefs", "dev", "sresid"))
 
         if start_params is None:
             wls_results = lm.WLS(self.endog, self.exog).fit()
@@ -321,7 +316,7 @@ class RLM(base.LikelihoodModel):
         elif conv == "sresid":
             history.update(dict(sresid=[np.inf]))
             criterion = history["sresid"]
-        elif conv == "weights":
+        else:  # conv == "weights"
             history.update(dict(weights=[np.inf]))
             criterion = history["weights"]
 
@@ -460,7 +455,9 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
-        self.cov = cov
+        # cov is a public constructor argument (not only reachable through
+        # the already-validated RLM.fit), so it needs its own validation
+        self.cov = string_like(cov, "cov", options=("h1", "h2", "h3")).upper()
         # Snapshot the final IRLS weights now, rather than deferring to
         # model.weights, so this result is unaffected by any later fit()
         # call on the same model instance.
@@ -524,7 +521,7 @@ class RLMResults(base.LikelihoodModelResults):
                     / ((1 / self.nobs) * np.sum(model.M.psi_deriv(self.sresid)))
                     * W_inv
                 )
-            elif self.cov == "H3":
+            else:  # self.cov == "H3"
                 return (
                     k**-1
                     * 1

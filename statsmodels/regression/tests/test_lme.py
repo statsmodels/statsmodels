@@ -237,6 +237,8 @@ class TestMixedLM:
         rslt.profile_re(
             "b", vtype="vc", dist_low=0.5, num_low=3, dist_high=0.5, num_high=3
         )
+        with pytest.raises(ValueError, match="vtype"):
+            rslt.profile_re(0, vtype="not-a-vtype")
 
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and

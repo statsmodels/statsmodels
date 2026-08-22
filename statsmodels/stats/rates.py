@@ -15,6 +15,7 @@ from scipy import optimize, stats
 from statsmodels.stats._inference_tools import _mover_confint
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
+from statsmodels.tools.validation import string_like
 
 # shorthand
 norm = stats.norm
@@ -324,10 +325,12 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     n = exposure  # short hand
     rate = count / exposure
 
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     if alternative == "two-sided":
         alpha = alpha / 2
-    elif alternative not in ["larger", "smaller"]:
-        raise NotImplementedError(f"alternative {alternative} is not available")
 
     if method is None:
         msg = "method needs to be specified, currently no default method"
@@ -500,6 +503,10 @@ def tolerance_int_poisson(
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
        100-110. https://doi.org/10.1080/00224065.1981.11980998.
     """
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     prob_tail = 1 - prob
     alpha_ = alpha
     if alternative != "two-sided":
@@ -517,7 +524,7 @@ def tolerance_int_poisson(
     elif alternative == "larger":
         low_pred = 0
         upp_pred = stats.poisson.ppf(1 - prob_tail, upp)
-    elif alternative == "smaller":
+    else:  # alternative == "smaller"
         low_pred = stats.poisson.ppf(prob_tail, low)
         upp_pred = np.inf
 
@@ -579,6 +586,10 @@ def confint_quantile_poisson(
     Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
     for Practitioners.
     """
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     alpha_ = alpha
     if alternative != "two-sided":
         # confint_poisson does not have one-sided alternatives
@@ -594,7 +605,7 @@ def confint_quantile_poisson(
     elif alternative == "larger":
         low_pred = 0
         upp_pred = stats.poisson.ppf(prob, upp)
-    elif alternative == "smaller":
+    else:  # alternative == "smaller"
         low_pred = stats.poisson.ppf(prob, low)
         upp_pred = np.inf
 
@@ -940,6 +951,7 @@ def test_poisson_2indep(
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
 
+    compare = string_like(compare, "compare", options=("diff", "ratio"), lower=False)
     if compare == "ratio":
         if method is None:
             # default method
@@ -1007,7 +1019,7 @@ def test_poisson_2indep(
         else:
             raise ValueError(f'method "{method}" not recognized')
 
-    elif compare == "diff":
+    else:  # compare == "diff"
         if value is None:
             value = 0
         if method == "wald":
@@ -1055,8 +1067,6 @@ def test_poisson_2indep(
             dist = "poisson"
         else:
             raise ValueError(f'method "{method}" not recognized')
-    else:
-        raise NotImplementedError('"compare" needs to be ratio or diff')
 
     if dist == "normal":
         stat, pvalue = _zstat_generic2(stat, 1, alternative)
@@ -1217,6 +1227,7 @@ def etest_poisson_2indep(
 
     eps = 1e-20  # avoid zero division in stat_func
 
+    compare = string_like(compare, "compare", options=("diff", "ratio"), lower=False)
     if compare == "ratio":
         if value is None:
             # default value
@@ -1249,7 +1260,7 @@ def etest_poisson_2indep(
         else:
             raise ValueError("method not recognized")
 
-    elif compare == "diff":
+    else:  # compare == "diff"
         if value is None:
             value = 0
         tmp = _score_diff(y1, n1, y2, n2, value=value, return_cmle=True)
@@ -1709,6 +1720,7 @@ def confint_poisson_2indep(
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
+    compare = string_like(compare, "compare", options=("diff", "ratio"), lower=False)
     if compare == "ratio":
 
         if method == "score":
@@ -1776,7 +1788,7 @@ def confint_poisson_2indep(
 
         ci = (np.maximum(ci[0], 0), ci[1])
 
-    elif compare == "diff":
+    else:  # noqa: PLR5501, compare == "diff" path
 
         if method == "wald":
             crit = stats.norm.isf(alpha)
@@ -1812,8 +1824,6 @@ def confint_poisson_2indep(
             ci = _mover_confint(rate1, rate2, ci1, ci2, contrast="diff")
         else:
             raise ValueError(f'method "{method}" not recognized')
-    else:
-        raise NotImplementedError('"compare" needs to be ratio or diff')
 
     return ci
 
@@ -1986,14 +1996,15 @@ def power_poisson_ratio_2indep(
 
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt"), lower=False
+    )
     if method_var == "alt":
         v0 = v1
-    elif method_var == "score":
+    else:  # method_var == "score"
         # nobs_ratio = 1 / nobs_ratio
         v0 = dispersion / exposure * (1 + value / nobs_ratio) ** 2
         v0 /= value / nobs_ratio * (rate1 + (nobs_ratio * rate2))
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     std_null = np.sqrt(v0)
     std_alt = np.sqrt(v1)
@@ -2151,15 +2162,16 @@ def power_equivalence_poisson_2indep(
     nobs2 = nobs_ratio * nobs1
     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
 
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt"), lower=False
+    )
     if method_var == "alt":
         v0_low = v0_upp = v1
-    elif method_var == "score":
+    else:  # method_var == "score"
         v0_low = dispersion / exposure * (1 + low * nobs_ratio) ** 2
         v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
         v0_upp = dispersion / exposure * (1 + upp * nobs_ratio) ** 2
         v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     es_low = np.log(rate1 / rate2) - np.log(low)
     es_upp = np.log(rate1 / rate2) - np.log(upp)
@@ -2642,6 +2654,9 @@ def power_negbin_ratio_2indep(
     v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt", "ftotal"), lower=False
+    )
     if method_var == "alt":
         v0 = v1
     elif method_var == "ftotal":
@@ -2649,7 +2664,7 @@ def power_negbin_ratio_2indep(
             exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2)
         )
         v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
-    elif method_var == "score":
+    else:  # method_var == "score"
         v0 = _var_cmle_negbin(
             rate1,
             rate2,
@@ -2658,8 +2673,6 @@ def power_negbin_ratio_2indep(
             value=value,
             dispersion=dispersion,
         )[0]
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     std_null = np.sqrt(v0)
     std_alt = np.sqrt(v1)
@@ -2768,6 +2781,9 @@ def power_equivalence_neginb_2indep(
     v1 = (1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
+    method_var = string_like(
+        method_var, "method_var", options=("score", "alt", "ftotal"), lower=False
+    )
     if method_var == "alt":
         v0_low = v0_upp = v1
     elif method_var == "ftotal":
@@ -2779,7 +2795,7 @@ def power_equivalence_neginb_2indep(
             exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2)
         )
         v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion
-    elif method_var == "score":
+    else:  # method_var == "score"
         v0_low = _var_cmle_negbin(
             rate1,
             rate2,
@@ -2796,8 +2812,6 @@ def power_equivalence_neginb_2indep(
             value=upp,
             dispersion=dispersion,
         )[0]
-    else:
-        raise NotImplementedError(f"method_var {method_var} not recognized")
 
     es_low = np.log(rate1 / rate2) - np.log(low)
     es_upp = np.log(rate1 / rate2) - np.log(upp)

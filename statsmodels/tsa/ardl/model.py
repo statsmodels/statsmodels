@@ -28,6 +28,7 @@ from statsmodels.tools.validation import (
     bool_like,
     float_like,
     int_like,
+    string_like,
 )
 from statsmodels.tsa.ar_model import (
     AROrderSelectionResults,
@@ -1562,6 +1563,7 @@ def ardl_select_order(
         of information criteria for all models fit.
     """
     orig_hold_back = int_like(hold_back, "hold_back", optional=True)
+    ic = string_like(ic, "ic", options=("aic", "bic", "hqic"))
 
     def compute_ics(y, x, df):
         if x.shape[1]:

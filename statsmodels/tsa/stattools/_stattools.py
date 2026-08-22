@@ -142,8 +142,8 @@ def _autolag(
     # TODO: This could be changed to laggedRHS and exog keyword arguments if
     #    this will be more general.
 
+    method = string_like(method, "method", options=("aic", "bic", "t-stat"))
     results = {}
-    method = method.lower()
     for lag in range(startlag, startlag + maxlag + 1):
         mod_instance = mod(endog, exog[:, :lag], *modargs)
         results[lag] = mod_instance.fit()
@@ -152,7 +152,7 @@ def _autolag(
         icbest, bestlag = min((v.aic, k) for k, v in results.items())
     elif method == "bic":
         icbest, bestlag = min((v.bic, k) for k, v in results.items())
-    elif method == "t-stat":
+    else:  # method == "t-stat"
         # stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
         # Default values to ensure that always set
@@ -164,8 +164,6 @@ def _autolag(
             if np.abs(icbest) >= stop:
                 # Break for first lag with a significant t-stat
                 break
-    else:
-        raise ValueError(f"Information Criterion {method} not understood.")
 
     if not regresults:
         return icbest, bestlag
@@ -367,10 +365,6 @@ def adfuller(
     if regresults:
         store = True
 
-    trenddict = {None: "n", 0: "c", 1: "ct", 2: "ctt"}
-    if regression is None or isinstance(regression, int):
-        regression = trenddict[regression]
-    regression = regression.lower()
     nobs = x.shape[0]
 
     ntrend = len(regression) if regression != "n" else 0
@@ -543,7 +537,6 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
 
     x = array_like(x, "x", ndim=1)
 
-    missing = missing.lower()
     if missing == "none":
         deal_with_masked = False
     else:
@@ -3172,6 +3165,8 @@ def kpss(
             "None is not a valid value for nlags. nlags must be an integer, 'auto' "
             "or 'legacy'."
         )
+    if isinstance(nlags, str):
+        nlags = string_like(nlags, "nlags", options=("auto", "legacy"))
     if nlags == "legacy":
         nlags = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
         nlags = min(nlags, nobs - 1)
@@ -3179,8 +3174,6 @@ def kpss(
         # autolag method of Hobijn et al. (1998)
         nlags = _kpss_autolag(resids, nobs)
         nlags = min(nlags, nobs - 1)
-    elif isinstance(nlags, str):
-        raise ValueError("nvals must be 'auto' or 'legacy' when not an int")
     else:
         nlags = int_like(nlags, "nlags", optional=False)
 

@@ -749,6 +749,13 @@ def test_ar_order_select():
     assert res.period is None
 
 
+def test_ar_select_order_invalid_ic_raises():
+    rs = np.random.RandomState(12345)
+    y = arma_generate_sample([1, -0.75, 0.3], [1], 100, distrvs=rs.standard_normal)
+    with pytest.raises(ValueError, match="ic"):
+        ar_select_order(y, maxlag=4, ic="not-a-real-ic")
+
+
 def test_autoreg_constant_column_trend():
     sample = np.array(
         [

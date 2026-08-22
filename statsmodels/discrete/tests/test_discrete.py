@@ -156,7 +156,7 @@ class CheckModelMixin:
         # GH#5224 check we get ValueError when passing invalid "method" arg
         model = self.res1.model
 
-        with pytest.raises(ValueError, match=r"is not supported, use either"):
+        with pytest.raises(ValueError, match=r"method"):
             model.fit_regularized(method="foo")
 
 
@@ -3871,7 +3871,7 @@ def test_binary_results_info_criteria():
     expected_bic = -2 * res.llf + k_params * np.log(nobs)
     assert_allclose(res.info_criteria("bic", dk_params=2), expected_bic)
 
-    with pytest.raises(ValueError, match="not recognized"):
+    with pytest.raises(ValueError, match="crit"):
         res.info_criteria("not-a-real-criterion")
 
 

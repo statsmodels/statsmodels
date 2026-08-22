@@ -555,10 +555,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
         A :class:`CointRankResults` object containing the cointegration rank suggested
         by the test and allowing a summary to be printed.
     """
-    if method not in ["trace", "maxeig"]:
-        raise ValueError(
-            "The method argument has to be either 'trace' or'maximum eigenvalue'."
-        )
+    method = string_like(method, "method", options=("trace", "maxeig"), lower=False)
 
     if det_order not in [-1, 0, 1]:
         if type(det_order) is int and det_order > 1:
@@ -978,10 +975,8 @@ class VECM(tsbase.TimeSeriesModel):
         ----------
         .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
         """
-        if method == "ml":
-            return self._estimate_vecm_ml()
-        else:
-            raise ValueError("{} not recognized, must be among {}".format(method, "ml"))
+        _ = string_like(method, "method", options=("ml",), lower=False)
+        return self._estimate_vecm_ml()
 
     def _estimate_vecm_ml(self):
         y_1_T, delta_y_1_T, y_lag1, delta_x = _endog_matrices(

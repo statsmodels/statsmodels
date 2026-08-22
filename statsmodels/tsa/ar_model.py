@@ -2125,6 +2125,7 @@ def ar_select_order(
     >>> mod.ar_lags
     array([1, 2, 9])
     """
+    ic = string_like(ic, "ic", options=("aic", "hqic", "bic"))
     full_mod = AutoReg(
         endog,
         maxlag,

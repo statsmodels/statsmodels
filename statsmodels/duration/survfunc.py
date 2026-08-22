@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats.distributions import chi2, norm
 
 from statsmodels.graphics import utils
+from statsmodels.tools.validation import string_like
 
 
 def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
@@ -544,7 +545,11 @@ class SurvfuncRight:
 
         tr = norm.ppf(1 - alpha / 2)
 
-        method = method.lower()
+        method = string_like(
+            method,
+            "method",
+            options=("cloglog", "linear", "log", "logit", "asinsqrt"),
+        )
         if method == "cloglog":
 
             def g(x):
@@ -571,15 +576,13 @@ class SurvfuncRight:
 
             def gprime(x):
                 return 1 / (x * (1 - x))
-        elif method == "asinsqrt":
+        else:  # method == "asinsqrt"
 
             def g(x):
                 return np.arcsin(np.sqrt(x))
 
             def gprime(x):
                 return 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
-        else:
-            raise ValueError("unknown method")
 
         r = g(self.surv_prob) - g(1 - p)
         r /= (gprime(self.surv_prob) * self.surv_prob_se)
@@ -649,15 +652,12 @@ class SurvfuncRight:
             in `surv_times`.
         """
 
-        method = method.lower()
-        if method != "hw":
-            msg = "only the Hall-Wellner (hw) method is implemented"
-            raise ValueError(msg)
+        _ = string_like(method, "method", options=("hw",))
 
         if alpha != 0.05:
             raise ValueError("alpha must be set to 0.05")
 
-        transform = transform.lower()
+        transform = string_like(transform, "transform", options=("log", "arcsin"))
         s2 = self.surv_prob_se**2 / self.surv_prob**2
         nn = self.n_risk
         if transform == "log":
@@ -666,7 +666,7 @@ class SurvfuncRight:
             theta = np.exp(theta)
             lcb = self.surv_prob**(1/theta)
             ucb = self.surv_prob**theta
-        elif transform == "arcsin":
+        else:  # transform == "arcsin"
             k = 1.3581
             k *= (1 + nn * s2) / (2 * np.sqrt(nn))
             k *= np.sqrt(self.surv_prob / (1 - self.surv_prob))
@@ -675,8 +675,6 @@ class SurvfuncRight:
             lcb = np.sin(v)**2
             v = np.clip(f + k, -np.inf, np.pi/2)
             ucb = np.sin(v)**2
-        else:
-            raise ValueError("Unknown transform")
 
         return lcb, ucb
 

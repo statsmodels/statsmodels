@@ -14,6 +14,7 @@ from statsmodels.base.wrapper import (
     union_dicts,
 )
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 
 class HoltWintersResults(Results):
@@ -541,10 +542,10 @@ class HoltWintersResults(Results):
         """
 
         # check inputs
-        if error in ["additive", "multiplicative"]:
-            error = {"additive": "add", "multiplicative": "mul"}[error]
-        if error not in ["add", "mul"]:
-            raise ValueError("error must be 'add' or 'mul'!")
+        error = string_like(
+            error, "error", options=("add", "mul", "additive", "multiplicative")
+        )
+        error = {"additive": "add", "multiplicative": "mul"}.get(error, error)
 
         # Get the starting location
         if anchor is None or anchor == "end":
@@ -651,6 +652,10 @@ class HoltWintersResults(Results):
             eps = random_errors
         else:
             rng = check_random_state(rng, deprecated=True)
+            if isinstance(random_errors, str):
+                random_errors = string_like(
+                    random_errors, "random_errors", options=("bootstrap",)
+                )
             if random_errors == "bootstrap":
                 eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
             elif random_errors is None:

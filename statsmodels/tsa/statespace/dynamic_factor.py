@@ -14,6 +14,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tsa.vector_ar.var_model import VAR
@@ -201,9 +202,12 @@ class DynamicFactor(MLEModel):
                              " of endogenous variables.")
 
         # Test for invalid error_cov_type
-        if self.error_cov_type not in ["scalar", "diagonal", "unstructured"]:
-            raise ValueError("Invalid error covariance matrix type"
-                             " specification.")
+        self.error_cov_type = string_like(
+            self.error_cov_type,
+            "error_cov_type",
+            options=("scalar", "diagonal", "unstructured"),
+            lower=False,
+        )
 
         # By default, initialize as stationary
         kwargs.setdefault("initialization", "stationary")

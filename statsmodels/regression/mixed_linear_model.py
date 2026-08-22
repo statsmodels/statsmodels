@@ -166,6 +166,7 @@ from statsmodels.tools.sm_exceptions import (
     SingularMatrixWarning,
     ValueWarning,
 )
+from statsmodels.tools.validation import string_like
 
 _warn_cov_sing = "The random effects covariance matrix is singular."
 
@@ -3060,6 +3061,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Only variance parameters can be profiled.
 
         """
+        vtype = string_like(vtype, "vtype", options=("re", "vc"), lower=False)
         pmodel = self.model
         k_fe = pmodel.k_fe
         k_re = pmodel.k_re
@@ -3088,7 +3090,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             low = (cov_re[0, 0] - dist_low) / self.scale
             high = (cov_re[0, 0] + dist_high) / self.scale
 
-        elif vtype == "vc":
+        else:  # vtype == "vc"
             re_ix = self.model.exog_vc.names.index(re_ix)
             params = self.params_object.copy()
             vcomp = self.vcomp

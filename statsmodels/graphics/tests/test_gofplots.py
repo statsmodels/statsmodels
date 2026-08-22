@@ -526,6 +526,15 @@ class TestQQLine:
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
+    def test_badline_with_x_y(self, close_figures):
+        # Previously, an unrecognized `line` with valid x/y silently did
+        # nothing instead of raising (test_badline above only happened to
+        # raise because x and y were both left as None).
+        with pytest.raises(ValueError, match="line"):
+            qqline(self.ax, "junk", x=self.x, y=self.y)
+
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
+    @pytest.mark.matplotlib
     def test_non45_no_x(self, close_figures):
         with pytest.raises(ValueError):
             qqline(self.ax, "s", y=self.y)

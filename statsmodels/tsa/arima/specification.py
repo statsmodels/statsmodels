@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.arima.tools import standardize_lag_order, validate_basic
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.statespace.tools import (
@@ -684,8 +685,22 @@ class SARIMAXSpecification:
         >>> spec.validate_estimator('statespace')       # returns None
 
         >>> spec.validate_estimator('not_an_estimator')
-        ValueError: "not_an_estimator" is not a valid estimator.
+        ValueError: estimator must be one of: 'yule_walker', 'burg', \
+'innovations', 'hannan_rissanen', 'innovations_mle', 'statespace'
         """
+        estimator = string_like(
+            estimator,
+            "estimator",
+            options=(
+                "yule_walker",
+                "burg",
+                "innovations",
+                "hannan_rissanen",
+                "innovations_mle",
+                "statespace",
+            ),
+            lower=False,
+        )
         has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
         has_missing = self._has_missing
@@ -752,11 +767,9 @@ class SARIMAXSpecification:
                 raise ValueError("Innovations MLE estimator does not support"
                                  " concentrating the scale out of the"
                                  " log-likelihood function")
-        elif estimator == "statespace":
+        else:  # estimator == "statespace"
             # State space form supports all variations of SARIMAX.
             pass
-        else:
-            raise ValueError(f'"{estimator}" is not a valid estimator.')
 
     def split_params(self, params, allow_infnan=False):
         """

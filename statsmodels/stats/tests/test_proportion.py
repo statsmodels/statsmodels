@@ -1389,6 +1389,11 @@ def test_proportion_confint(count, nobs, method, alpha, alternative, expected):
     assert_allclose(np.array([ci_low, ci_upp]), np.array(expected))
 
 
+def test_proportion_confint_invalid_alternative_raises():
+    with pytest.raises(ValueError, match="alternative"):
+        proportion_confint(50, 100, alternative="not-a-real-alternative")
+
+
 @pytest.mark.parametrize("count", [100])
 @pytest.mark.parametrize("nobs", [200])
 @pytest.mark.parametrize(

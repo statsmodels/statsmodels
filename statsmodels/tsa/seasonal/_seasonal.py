@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
 
-from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tools.validation import PandasWrapper, array_like, string_like
 from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -212,6 +212,14 @@ def seasonal_decompose(
 
     nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
+
+    if isinstance(extrapolate_trend, str):
+        extrapolate_trend = string_like(
+            extrapolate_trend,
+            "extrapolate_trend",
+            options=("period", "freq"),
+            lower=False,
+        )
 
     if extrapolate_trend == "freq":
         warnings.warn(

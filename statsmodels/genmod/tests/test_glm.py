@@ -2985,7 +2985,7 @@ class TestRegularized:
         endog, exog = self._load_enet_data("binomial")
 
         model = GLM(endog, exog, family=sm.families.Binomial())
-        with pytest.raises(ValueError, match="method for fit_regularized"):
+        with pytest.raises(ValueError, match="method"):
             model.fit_regularized(method="l1", alpha=0.1)
         with pytest.raises(ValueError, match="L1_wt must be 1"):
             model.fit_regularized(method="l1_slsqp", L1_wt=0.5, alpha=0.1)
@@ -2993,7 +2993,7 @@ class TestRegularized:
         # An invalid method must be rejected even when L1_wt == 0, i.e.
         # the method must be validated before the L1_wt == 0 shortcut to
         # ridge regression is taken.
-        with pytest.raises(ValueError, match="method for fit_regularized"):
+        with pytest.raises(ValueError, match="method"):
             model.fit_regularized(method="l1", L1_wt=0, alpha=0.1)
 
         # l1_slsqp only supports the lasso penalty, so L1_wt=0 must not
@@ -3220,6 +3220,36 @@ def test_int_scale():
     res = mod.fit(scale=1)
     assert isinstance(res.params, pd.Series)
     assert res.scale.dtype == np.float64
+
+
+def test_invalid_scale_string_raises():
+    # scale may be a float/int, None, or one of the strings "X2"/"dev"
+    # (case-insensitively); anything else must be rejected. Numeric scale
+    # is unaffected, see test_int_scale above.
+    data = longley.load()
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    with pytest.raises(ValueError, match="scale"):
+        mod.fit(scale="not-a-scale")
+
+
+def test_predict_invalid_which_raises():
+    data = longley.load()
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    res = mod.fit()
+    with pytest.raises(ValueError, match="which"):
+        res.predict(which="not-a-real-option")
+
+
+def test_estimate_scale_invalid_scaletype_raises():
+    # scaletype is a public, documented attribute that can be set directly
+    # (not only through fit's validated `scale` argument), so
+    # estimate_scale must independently validate it.
+    data = longley.load()
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    res = mod.fit()
+    mod.scaletype = "not-a-scale"
+    with pytest.raises(ValueError, match="scaletype"):
+        mod.estimate_scale(res.fittedvalues)
 
 
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])

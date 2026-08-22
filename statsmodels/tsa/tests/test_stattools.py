@@ -1432,6 +1432,10 @@ class TestKPSS:
         with pytest.raises(ValueError):
             kpss(x)
 
+    def test_fail_invalid_nlags_string(self):
+        with pytest.raises(ValueError, match="nlags"):
+            kpss(self.x, nlags="invalid", result_object=False)
+
     def test_fail_unclear_hypothesis(self):
         # these should be fine,
         with pytest.warns(InterpolationWarning):

@@ -2,6 +2,7 @@ import numpy as np
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa._leybourne
 from statsmodels.tsa.stattools._stattools import lagmat, pacf
 
@@ -218,12 +219,13 @@ class LeybourneMcCabeStationarity:
         Schwert, G W. (1987). Effects of model specification on tests for unit
         roots in macroeconomic data. Journal of Monetary Economics, 20: 73-103.
         """
-        if regression not in ["c", "ct"]:
-            raise ValueError(f"LM: regression option '{regression}' not understood")
-        if method not in ["mle", "ols"]:
-            raise ValueError(f"LM: method option '{method}' not understood")
-        if varest not in ["var94", "var99"]:
-            raise ValueError(f"LM: varest option '{varest}' not understood")
+        regression = string_like(
+            regression, "regression", options=("c", "ct"), lower=False
+        )
+        method = string_like(method, "method", options=("mle", "ols"), lower=False)
+        varest = string_like(
+            varest, "varest", options=("var94", "var99"), lower=False
+        )
         x = np.asarray(x)
         if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
             raise ValueError(

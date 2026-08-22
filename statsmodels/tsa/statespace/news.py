@@ -12,6 +12,7 @@ import pandas as pd
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.validation import string_like
 
 
 class NewsResults:
@@ -1086,6 +1087,7 @@ class NewsResults:
             s[3] = np.s_[updated_variable]
         s = tuple(s)
 
+        source = string_like(source, "source", options=("news", "revisions"))
         if source == "news":
             details = self.details_by_impact.loc[s, :]
             columns = {
@@ -1095,7 +1097,7 @@ class NewsResults:
                 "updated variable": "updated variable",
                 "news": "news",
             }
-        elif source == "revisions":
+        else:  # source == "revisions"
             details = self.revision_details_by_impact.loc[s, :]
             columns = {
                 "current": "revised",
@@ -1104,9 +1106,6 @@ class NewsResults:
                 "updated variable": "revised variable",
                 "news": "revision",
             }
-        else:
-            raise ValueError(f'Invalid `source`: {source}. Must be "news" or'
-                             ' "revisions".')
 
         # Make the first index level the groupby level
         groupby = groupby.lower().replace("_", " ")

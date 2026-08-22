@@ -25,6 +25,8 @@ from typing import NamedTuple
 import numpy as np
 from scipy import stats
 
+from statsmodels.tools.validation import string_like
+
 
 # copied from regression/stats.utils
 def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
@@ -120,6 +122,17 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
+    if isinstance(lambd, str):
+        lambd = string_like(
+            lambd,
+            "lambd",
+            options=(
+                "loglikeratio", "freeman_tukey", "pearson",
+                "modified_loglikeratio", "cressie_read",
+            ),
+            lower=False,
+        )
+
     if not isinstance(lambd, str):
         a = lambd
     elif lambd == "loglikeratio":
@@ -130,12 +143,8 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         a = 1
     elif lambd == "modified_loglikeratio":
         a = -1
-    elif lambd == "cressie_read":
+    else:  # lambd == "cressie_read"
         a = 2/3.0
-    else:
-        raise ValueError("lambd has to be a number or one of "
-                         "loglikeratio, freeman_tukey, pearson, "
-                         "modified_loglikeratio or cressie_read")
 
     n = np.sum(o, axis=axis)
     nt = n

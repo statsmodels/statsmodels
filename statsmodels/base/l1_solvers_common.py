@@ -5,6 +5,7 @@ Holds common functions for l1 solvers.
 import numpy as np
 
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import string_like
 
 
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
@@ -129,6 +130,9 @@ def do_trim_params(
     trimmed : ndarray of bool
         trimmed[i] == True if the ith parameter was trimmed.
     """
+    trim_mode = string_like(
+        trim_mode, "trim_mode", options=("auto", "size", "off"), lower=False
+    )
     # Trim the small params
     trimmed = [False] * k_params
 
@@ -150,13 +154,11 @@ def do_trim_params(
                 if (alpha[i] - abs(fprime[i])) / alpha[i] > auto_trim_tol:
                     params[i] = 0.0
                     trimmed[i] = True
-    elif trim_mode == "size":
+    else:  # trim_mode == "size"
         for i in range(k_params):
             if alpha[i] != 0:
                 if abs(params[i]) < size_trim_tol:
                     params[i] = 0.0
                     trimmed[i] = True
-    else:
-        raise ValueError(f"trim_mode == {trim_mode}, which is not recognized")
 
     return params, np.asarray(trimmed)

@@ -738,6 +738,18 @@ def test_hessian(austourists_model_fit):
     )
 
 
+def test_diagnostics_invalid_method_raises(austourists_model_fit):
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+
+    with pytest.raises(ValueError, match="method"):
+        fit.test_serial_correlation(method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        fit.test_heteroskedasticity(method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        fit.test_normality(method="not-a-method")
+
+
 def test_prediction_results(austourists_model_fit):
     # simple test case starting at 0
     model_class, model_args, model_kwargs = austourists_model_fit

@@ -74,6 +74,7 @@ from scipy import interpolate, stats
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import string_like
 
 try:
     # Studentized Range in SciPy 1.7+
@@ -1181,14 +1182,15 @@ class MultiComparison:
             np.column_stack([self.data, self.groupintlab]), useranks=False
         )
 
+        use_var = string_like(
+            use_var, "use_var", options=("unequal", "equal"), lower=False
+        )
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
         if use_var == "unequal":
             var_ = self.groupstats.groupvarwithin()
-        elif use_var == "equal":
+        else:  # use_var == "equal"
             var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
-        else:
-            raise ValueError('use_var should be "unequal" or "equal"')
 
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals

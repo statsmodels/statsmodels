@@ -159,6 +159,13 @@ def test_oneparam():
     assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
 
 
+def test_invalid_svar_type_raises():
+    rs = np.random.RandomState(0)
+    y = rs.randn(50, 2)
+    with pytest.raises(ValueError, match="svar_type"):
+        SVAR(y, svar_type="invalid")
+
+
 def test_summary_no_user_exog():
     rs = np.random.RandomState(0)
     data = rs.randn(200, 3)
