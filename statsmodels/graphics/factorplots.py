@@ -110,7 +110,10 @@ def interaction_plot(
     from pandas import DataFrame
 
     plottype = string_like(
-        plottype, "plottype", options=("b", "both", "l", "line", "s", "scatter")
+        plottype,
+        "plottype",
+        options=("b", "both", "l", "line", "s", "scatter"),
+        lower=False,
     )
     fig, ax = utils.create_mpl_ax(ax)
 

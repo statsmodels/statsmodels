@@ -279,7 +279,9 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     if all_knots is not None:
         return all_knots
 
-    spacing = string_like(spacing, "spacing", options=("quantile", "equal"))
+    spacing = string_like(
+        spacing, "spacing", options=("quantile", "equal"), lower=False
+    )
 
     x_min = x.min()
     x_max = x.max()

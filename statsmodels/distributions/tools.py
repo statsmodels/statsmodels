@@ -135,7 +135,9 @@ def average_grid(values, coords=None, _method="slicing"):
     ndarray
         Grid with averaged cell values.
     """
-    _method = string_like(_method, "_method", options=("slicing", "convolve"))
+    _method = string_like(
+        _method, "_method", options=("slicing", "convolve"), lower=False
+    )
     k_dim = values.ndim
     if _method == "slicing":
         p = values.copy()

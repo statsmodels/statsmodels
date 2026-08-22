@@ -1067,7 +1067,7 @@ class GLM(base.LikelihoodModel):
             exposure = np.log(np.asarray(exposure))
 
         which = string_like(
-            which, "which", options=("mean", "linear", "var_unscaled")
+            which, "which", options=("mean", "linear", "var_unscaled"), lower=False
         )
         if exog is None:
             exog = self.exog

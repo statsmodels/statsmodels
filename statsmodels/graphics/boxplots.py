@@ -133,7 +133,7 @@ def violinplot(
 
     .. plot:: plots/graphics_boxplot_violinplot.py
     """
-    side = string_like(side, "side", options=("both", "left", "right"))
+    side = string_like(side, "side", options=("both", "left", "right"), lower=False)
     plot_opts = {} if plot_opts is None else plot_opts
     if max([np.size(arr) for arr in data]) == 0:
         msg = "No Data to make Violin: Try again!"
@@ -359,7 +359,7 @@ def beanplot(
 
     .. plot:: plots/graphics_boxplot_beanplot.py
     """
-    side = string_like(side, "side", options=("both", "left", "right"))
+    side = string_like(side, "side", options=("both", "left", "right"), lower=False)
     plot_opts = {} if plot_opts is None else plot_opts
     fig, ax = utils.create_mpl_ax(ax)
 
