@@ -378,7 +378,13 @@ class QuantRegResults(RegressionResults):
     def HC3_se(self):
         raise NotImplementedError
 
-    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
+    def summary(
+            self,
+            yname=None,
+            xname=None,
+            title=None,
+            alpha=0.05
+    ):
         """
         Summarize the Regression Results
 

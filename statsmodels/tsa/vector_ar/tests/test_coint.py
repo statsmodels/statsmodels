@@ -475,3 +475,17 @@ def test_coint_johansen_0lag():
     data = pd.concat([x, y], axis=1)
     result = coint_johansen(data, det_order=-1, k_ar_diff=0)
     assert result.eig.shape == (2,)
+
+
+def test_johansen_result_aliases_and_rkt_meth():
+    # trace_stat/max_eig_stat/*_crit_vals are documented aliases for
+    # lr1/lr2/cvt/cvm; rkt and meth have no alias and were never touched
+    # by any existing test.
+    res = coint_johansen(dta, 1, 2)
+
+    assert res.trace_stat is res.lr1
+    assert res.max_eig_stat is res.lr2
+    assert res.trace_stat_crit_vals is res.cvt
+    assert res.max_eig_stat_crit_vals is res.cvm
+    assert res.meth == "johansen"
+    assert res.rkt.shape == res.r0t.shape

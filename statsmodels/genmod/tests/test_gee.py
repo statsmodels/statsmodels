@@ -2442,6 +2442,30 @@ def test_ex_covsolve():
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
 
 
+def test_gee_results_resid_split():
+    rs = np.random.RandomState(872341)
+    n_groups, n_per_group = 15, 6
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack([np.ones(n), rs.standard_normal(n)])
+    endog = exog @ [0.5, 1.0] + rs.standard_normal(n)
+
+    mod = gee.GEE(endog, exog, groups=groups,
+                  cov_struct=cov_struct.Independence())
+    res = mod.fit()
+
+    split = res.resid_split
+    assert len(split) == n_groups
+    for v, part in zip(mod.group_labels, split, strict=True):
+        assert_allclose(part, res.resid[mod.group_indices[v]])
+
+    centered_split = res.resid_centered_split
+    assert len(centered_split) == n_groups
+    for v, part in zip(mod.group_labels, centered_split, strict=True):
+        assert_allclose(part, res.centered_resid[mod.group_indices[v]])
+        assert_allclose(part.mean(), 0, atol=1e-10)
+
+
 def test_stationary_covsolve():
 
     rs = np.random.RandomState(123)

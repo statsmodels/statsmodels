@@ -1500,3 +1500,32 @@ def test_mixedlm_t_test():
     # r_matrix must have exactly k_fe columns.
     with pytest.raises(ValueError, match=f"should have {res.k_fe:d} columns"):
         res.t_test(np.eye(res.k_fe + 1))
+
+
+def test_predict_reflects_only_fixed_effects():
+    rs = np.random.RandomState(2024)
+    n_groups, n_per_group = 8, 12
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    mod = MixedLM(endog, exog, groups)
+    res = mod.fit()
+
+    # predict() is documented to reflect only the fixed-effects mean
+    # structure: exog @ fe_params, closed form.
+    assert_allclose(mod.predict(res.params), exog @ res.fe_params)
+    assert_allclose(mod.predict(res.params), mod.predict(res.params_object))
+
+    # a MixedLMParams instance and custom exog are both accepted
+    new_exog = rs.standard_normal((5, 3))
+    assert_allclose(mod.predict(res.params_object, exog=new_exog),
+                    new_exog @ res.fe_params)
+
+    packed = np.concatenate([res.fe_params, [999.0]])
+    assert_allclose(mod.predict(packed), exog @ res.fe_params)

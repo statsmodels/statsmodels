@@ -161,3 +161,31 @@ def test_auto():
     res3 = tm.fit()
 
     assert not np.allclose(res.params, res3.params)
+
+
+def test_plot_predict(close_figures):
+    rs = np.random.RandomState([3290328901, 323293105, 121029109])
+    y = np.cumsum(0.01 + 0.01 * rs.standard_normal(300))
+    index = pd.date_range("2000-01-01", periods=300)
+    y = pd.Series(np.exp(y), index=index, name="y")
+
+    res = ThetaModel(y, period=7).fit()
+
+    fig = res.plot_predict(steps=12)
+    ax = fig.axes[0]
+    # forecast line covers the requested horizon
+    forecast_lines = [ln for ln in ax.get_lines() if len(ln.get_ydata()) == 12]
+    assert len(forecast_lines) >= 1
+    fc = res.forecast(steps=12)
+    np.testing.assert_allclose(forecast_lines[0].get_ydata(), fc.values)
+
+    # alpha=None must omit the confidence interval fill
+    fig_noci = res.plot_predict(steps=12, alpha=None)
+    assert len(fig_noci.axes[0].collections) == 0
+    fig_ci = res.plot_predict(steps=12, alpha=0.05)
+    assert len(fig_ci.axes[0].collections) >= 1
+
+    fig_hist = res.plot_predict(steps=12, in_sample=True)
+    in_sample_lines = [ln for ln in fig_hist.axes[0].get_lines()
+                       if len(ln.get_ydata()) == len(y)]
+    assert len(in_sample_lines) >= 1

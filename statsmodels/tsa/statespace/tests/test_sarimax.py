@@ -3069,3 +3069,31 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_model_latex_names_matches_model_names_structure():
+    rs = np.random.RandomState(19)
+    endog = rs.standard_normal(60).cumsum()
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1), trend="ct")
+
+    names = mod.model_names
+    latex_names = mod.model_latex_names
+
+    assert set(names.keys()) == set(latex_names.keys())
+    for key in names:
+        if names[key] is None:
+            assert latex_names[key] is None
+        else:
+            assert len(names[key]) == len(latex_names[key])
+            assert len(set(latex_names[key])) == len(latex_names[key])
+
+    # ar/ma coefficients get a distinct latex (greek) rendering; the
+    # "intercept"/"drift" trend labels are shared verbatim between the two
+    assert names["trend"] == ["intercept", "drift"]
+    assert latex_names["trend"] == ["intercept", "drift"]
+    assert names["ar"] == ["ar.L1"]
+    assert latex_names["ar"] == [r"$\phi_1$"]
+    assert names["ma"] == ["ma.L1"]
+    assert latex_names["ma"] == [r"$\theta_1$"]
+    assert names["variance"] == ["sigma2"]
+    assert latex_names["variance"] == [r"$\sigma_\zeta^2$"]

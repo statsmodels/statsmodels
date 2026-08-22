@@ -211,7 +211,8 @@ class AllPairsResults:
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we do not assume we have all pairs
-        pvals_mat[list(zip(*self.all_pairs, strict=True))] = self.pval_corrected()
+        rows, cols = zip(*self.all_pairs, strict=True)
+        pvals_mat[rows, cols] = self.pval_corrected()
         return pvals_mat
 
     def summary(self):

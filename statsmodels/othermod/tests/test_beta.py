@@ -451,6 +451,26 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
 
 
+def test_hessian_factor_reassembles_hessian():
+    # hessian() calls score_hessian_factor() directly rather than going
+    # through hessian_factor(), so the latter is only exercised by
+    # explicitly reassembling the Hessian from its output and checking it
+    # against hessian()'s own result.
+    model = "I(food/income) ~ income + persons"
+    mod = BetaModel.from_formula(model, income)
+    res = mod.fit()
+    params = np.asarray(res.params)
+
+    for observed in (True, False):
+        hf11, hf12, hf22 = mod.hessian_factor(params, observed=observed)
+        d11 = (mod.exog.T * hf11).dot(mod.exog)
+        d12 = (mod.exog.T * hf12).dot(mod.exog_precision)
+        d22 = (mod.exog_precision.T * hf22).dot(mod.exog_precision)
+        reassembled = np.block([[d11, d12], [d12.T, d22]])
+        assert_allclose(reassembled, mod.hessian(params, observed=observed),
+                        rtol=1e-12)
+
+
 def test_llrmixin_set_null_options():
     # BetaResults is the only class in the codebase that mixes in
     # _LLRMixin without overriding set_null_options (discrete_model.py's

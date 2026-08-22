@@ -1933,12 +1933,17 @@ class VECMResults:
         n_last_obs : int or None, optional
             If int, restrict plotted history to n_last_obs observations.
             If None, include the whole history in the plot.
+
+        Returns
+        -------
+        Figure
+            The figure that contains the plot.
         """
         mid, lower, upper = self.predict(steps, alpha=alpha)
 
         y = self.y_all.T
         y = y[self.k_ar :] if n_last_obs is None else y[-n_last_obs:]
-        plot.plot_var_forc(
+        fig = plot.plot_var_forc(
             y,
             mid,
             lower,
@@ -1947,6 +1952,7 @@ class VECMResults:
             plot_stderr=plot_conf_int,
             legend_options={"loc": "lower left"},
         )
+        return fig
 
     def test_granger_causality(self, caused, causing=None, signif=0.05):
         r"""
@@ -2279,11 +2285,20 @@ class VECMResults:
         with_presample : bool, optional
             If `False`, the pre-sample data (the first `k_ar` values) will
             not be plotted.
+
+        Returns
+        -------
+        Figure
+            The figure that contains the plot.
         """
         y = self.y_all if with_presample else self.y_all[:, self.k_ar :]
         names = self.names
-        dates = self.dates if with_presample else self.dates[self.k_ar :]
-        plot.plot_mts(y.T, names=names, index=dates)
+        if self.dates is None:
+            dates = None
+        else:
+            dates = self.dates if with_presample else self.dates[self.k_ar :]
+        fig = plot.plot_mts(y.T, names=names, index=dates)
+        return fig
 
     def summary(self, alpha=0.05):
         """

@@ -3891,3 +3891,60 @@ def test_im_ratio_nonrobust_and_robust():
     res_robust = sm.Poisson(endog, exog).fit(disp=0, cov_type="HC0")
     expected_robust = res_robust.cov_params() @ (-hess)
     assert_allclose(res_robust.im_ratio, expected_robust, rtol=1e-10)
+
+
+def test_generalized_poisson_score_p_var_prob_nonzero():
+    rng = np.random.RandomState(74123)
+    n = 300
+    exog = sm.add_constant(rng.standard_normal((n, 2)))
+    lin = exog @ [0.5, 0.2, -0.1]
+    endog = rng.poisson(np.exp(lin))
+
+    mod = GeneralizedPoisson(endog, exog, p=2)
+    res = mod.fit(disp=0)
+
+    # _score_p is d(loglike)/dp holding the fitted params fixed, where
+    # "p" here is the parameterization exponent (mod.parameterization =
+    # p_ctor - 1), not one of the fitted params. Check it against a
+    # central finite difference over models built with perturbed p.
+    eps = 1e-6
+    mod_hi = GeneralizedPoisson(endog, exog, p=2 + eps)
+    mod_lo = GeneralizedPoisson(endog, exog, p=2 - eps)
+    numeric = (mod_hi.loglike(res.params) - mod_lo.loglike(res.params)) / (2 * eps)
+    assert_allclose(mod._score_p(res.params), numeric, rtol=1e-4)
+
+    # _var and _prob_nonzero: GP2 closed forms (p=2 -> pm1 = 1 in the
+    # variance formula), cross-checked against direct evaluation.
+    mu = mod.predict(res.params)
+    alpha = res.params[-1]
+    expected_var = mu * (1 + alpha * mu) ** 2
+    assert_allclose(mod._var(mu, res.params), expected_var, rtol=1e-12)
+
+    expected_prob_nz = 1 - np.exp(-mu / (1 + alpha * mu))
+    assert_allclose(mod._prob_nonzero(mu, res.params), expected_prob_nz,
+                    rtol=1e-12)
+    # a genuine probability
+    assert np.all(mod._prob_nonzero(mu, res.params) > 0)
+    assert np.all(mod._prob_nonzero(mu, res.params) < 1)
+
+
+def test_poisson_cdf_pdf_match_scipy():
+    rng = np.random.RandomState(999)
+    n = 50
+    endog = rng.poisson(4, size=n)
+    exog = sm.add_constant(rng.standard_normal((n, 1)))
+    mod = sm.Poisson(endog, exog)
+
+    X = rng.standard_normal(n)
+    lam = np.exp(X)
+    assert_allclose(mod.cdf(X), stats.poisson.cdf(endog, lam), rtol=1e-12)
+    assert_allclose(mod.pdf(X), stats.poisson.pmf(endog, lam), rtol=1e-12)
+
+
+def test_logit_family_is_binomial():
+    rng = np.random.RandomState(998)
+    n = 50
+    exog = sm.add_constant(rng.standard_normal((n, 1)))
+    endog = rng.binomial(1, 0.5, n)
+    mod = Logit(endog, exog)
+    assert isinstance(mod.family, sm.families.Binomial)

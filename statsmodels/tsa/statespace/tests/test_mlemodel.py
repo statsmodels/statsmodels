@@ -1373,3 +1373,24 @@ def test_invalid_kwargs():
     # (Note: once deprectation is completed in v0.15, switch to checking for
     # a TypeError, as below)
     # with pytest.raises(TypeError, sarimax.SARIMAX, endog, invalid_kwarg=True)
+
+
+def test_set_inversion_method_and_initialization_property():
+    rs = np.random.RandomState(2026)
+    endog = rs.standard_normal(80).cumsum()
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+
+    mod.set_inversion_method(invert_lu=True)
+    assert mod.ssm.invert_lu is True
+
+    mod.set_inversion_method(inversion_method=mod.ssm.inversion_method | 0)
+    assert isinstance(mod.ssm.inversion_method, int)
+
+    # initialization is a passthrough property to ssm.initialization
+    assert mod.initialization is mod.ssm.initialization
+
+    from statsmodels.tsa.statespace.initialization import Initialization
+    new_init = Initialization(mod.k_states, "diffuse")
+    mod.initialization = new_init
+    assert mod.ssm.initialization is new_init
+    assert mod.initialization is new_init

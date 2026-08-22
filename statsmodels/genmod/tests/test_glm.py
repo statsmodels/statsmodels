@@ -3460,3 +3460,50 @@ def test_glm_get_margeff():
         res_log.fittedvalues[:, None] * res_log.params[1:], axis=0
     )
     assert_allclose(me_log.margeff, manual, rtol=1e-10)
+
+
+def test_loglike_mu_matches_loglike():
+    # loglike_mu(mu, scale) must equal loglike(params, scale) when mu is
+    # the model's own predicted mean at those params: same likelihood,
+    # computed two different ways.
+    rs = np.random.RandomState(987456)
+    n = 200
+    exog = sm.add_constant(rs.standard_normal((n, 2)))
+    lin = exog @ [0.2, 0.5, -0.3]
+    endog = rs.poisson(np.exp(lin))
+    mod = GLM(endog, exog, family=sm.families.Poisson())
+    res = mod.fit()
+
+    mu = mod.predict(res.params)
+    assert_allclose(mod.loglike_mu(mu, scale=1.0),
+                    mod.loglike(res.params, scale=1.0), rtol=1e-12)
+
+
+def test_information_is_expected_hessian():
+    rs = np.random.RandomState(1)
+    n = 150
+    exog = sm.add_constant(rs.standard_normal((n, 2)))
+    endog = rs.poisson(np.exp(exog @ [0.1, 0.3, -0.2]))
+    mod = GLM(endog, exog, family=sm.families.Poisson())
+    res = mod.fit()
+    assert_allclose(mod.information(res.params),
+                    mod.hessian(res.params, observed=False), rtol=1e-12)
+
+
+def test_derivative_predict_matches_numerical_derivative():
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rs = np.random.RandomState(2468)
+    n = 300
+    exog = sm.add_constant(rs.standard_normal((n, 2)))
+    lin = exog @ [0.1, 0.4, -0.25]
+    endog = rs.binomial(1, 1 / (1 + np.exp(-lin)))
+    mod = GLM(endog, exog, family=sm.families.Binomial())
+    res = mod.fit()
+
+    analytic = mod._derivative_predict(res.params)
+    numeric = approx_fprime(res.params, mod.predict, centered=True)
+    assert_allclose(analytic, numeric, rtol=1e-4, atol=1e-6)
+    # exog=None must default to the estimation exog and agree with the
+    # lower-level helper margins/score computations use internally
+    assert_allclose(analytic, mod._deriv_mean_dparams(res.params), rtol=1e-12)
