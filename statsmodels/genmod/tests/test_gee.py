@@ -98,6 +98,17 @@ class TestGEE:
         # smoke test
         marg.summary()
 
+        # summary_frame: its columns must reproduce the marginal-effects
+        # arrays exactly, in the documented column order
+        frame = marg.summary_frame()
+        assert_allclose(frame.iloc[:, 0].values, marg.margeff)
+        assert_allclose(frame.iloc[:, 1].values, marg.margeff_se)
+        assert_allclose(frame.iloc[:, 2].values, marg.tvalues)
+        assert_allclose(frame.iloc[:, 3].values, marg.pvalues)
+        assert_allclose(frame.iloc[:, 4:6].values, marg.conf_int())
+        # only non-constant exog columns are included
+        assert list(frame.index) == ["x1", "x2"]
+
     def test_summary_after_remove_data(self):
         # summary() must still work after remove_data() has been called
         n = 40
@@ -2482,3 +2493,34 @@ def test_stationary_covsolve():
             )
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
+
+
+def test_autoregressive_covariance_matrix_and_summary():
+    rs = np.random.RandomState(20260821)
+    c = cov_struct.Autoregressive(grid=False)
+    c.dep_params = 0.6
+    d = 5
+    index = np.arange(d, dtype=int)
+
+    cmat, is_cor = c.covariance_matrix(np.zeros(d), index)
+    assert is_cor is True
+    expected = 0.6 ** np.abs(np.subtract.outer(index, index))
+    assert_allclose(cmat, expected)
+
+    # covariance_matrix agrees with the already-tested fast tridiagonal
+    # solve: applying the explicit matrix inverse must give the same
+    # answer as covariance_matrix_solve for the same (dep_params, stdev)
+    sd = rs.uniform(0.5, 2, d)
+    z = rs.normal(size=d)
+    scaled_cov = np.diag(sd) @ cmat @ np.diag(sd)
+    z1 = np.linalg.solve(scaled_cov, z)
+    z2 = c.covariance_matrix_solve(np.zeros(d), index, sd, [z])
+    assert_allclose(z1, z2[0], rtol=1e-8)
+
+    # dep_params == 0 special-cases to the identity
+    c0 = cov_struct.Autoregressive(grid=False)
+    c0.dep_params = 0
+    cmat0, _ = c0.covariance_matrix(np.zeros(d), index)
+    assert_allclose(cmat0, np.eye(d))
+
+    assert c.summary() == "Autoregressive(1) dependence parameter: 0.600\n"

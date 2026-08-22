@@ -7,6 +7,8 @@ Author: josef-pktd
 License: BSD(3clause)
 """
 
+import warnings
+
 from statsmodels.graphics.utils import _import_mpl
 
 from . import stattools as stt
@@ -42,6 +44,15 @@ class TsaDescriptive:
     """
 
     def __init__(self, data, label=None, name=""):
+        warnings.warn(
+            "TsaDescriptive is deprecated. Although documented, it has had "
+            "no test coverage and no internal callers, and its behavior is "
+            "not guaranteed. It will be removed after statsmodels 0.16 is "
+            "released. If you rely on this class, please open an issue at "
+            "https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.data = data
         self.label = label
         self.name = name

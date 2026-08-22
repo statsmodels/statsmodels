@@ -29,6 +29,8 @@ see also VAR section in Notes.txt
 
 """
 
+import warnings
+
 import numpy as np
 from scipy import signal
 
@@ -409,6 +411,16 @@ class _Var:
     """
 
     def __init__(self, y):
+        warnings.warn(
+            "_Var is deprecated (its own docstring already called it "
+            "\"Obsolete\" -- use tsa.VAR instead). It has had no test "
+            "coverage and its behavior is not guaranteed. It will be "
+            "removed after statsmodels 0.16 is released. If you rely on "
+            "this class, please open an issue at "
+            "https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.y = y
         self.nobs, self.nvars = y.shape
 
