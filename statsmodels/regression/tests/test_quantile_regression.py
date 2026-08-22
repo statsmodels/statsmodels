@@ -2,6 +2,7 @@
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pytest
 import scipy.stats
 
 import statsmodels.api as sm
@@ -409,3 +410,21 @@ def test_prsquared_improves_with_informative_regressors():
     res_full = QuantReg(y, exog_full).fit(0.5)
     assert 0 < res_full.prsquared <= 1
     assert res_full.prsquared > res_null.prsquared
+
+
+def test_fit_invalid_options_raise():
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+    mod = QuantReg(y, X)
+
+    with pytest.raises(ValueError, match="kernel"):
+        mod.fit(0.5, kernel="not-a-kernel")
+    with pytest.raises(ValueError, match="bandwidth"):
+        mod.fit(0.5, bandwidth="not-a-bandwidth")
+    with pytest.raises(ValueError, match="vcov"):
+        mod.fit(0.5, vcov="not-a-vcov")
+
+    # case is not folded: this file's existing validation never was, and
+    # string_like(..., lower=False) preserves that
+    with pytest.raises(ValueError, match="vcov"):
+        mod.fit(0.5, vcov="ROBUST")
