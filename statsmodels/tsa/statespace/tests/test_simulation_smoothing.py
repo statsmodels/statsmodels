@@ -695,6 +695,16 @@ def test_misc():
     assert_equal(sim.simulation_output, 0)
 
 
+def test_simulation_smoother_invalid_method_raises():
+    dta = datasets.macrodata.load_pandas().data
+    dta.index = pd.date_range(start="1959-01-01", end="2009-7-01", freq="QS")
+    obs = np.log(dta[["realgdp"]]).diff().iloc[1:]
+
+    mod = sarimax.SARIMAX(obs["realgdp"], order=(1, 0, 0))
+    with pytest.raises(ValueError, match="method"):
+        mod.simulation_smoother(method="invalid")
+
+
 def test_simulation_smoothing_obs_intercept():
     nobs = 10
     intercept = 100
