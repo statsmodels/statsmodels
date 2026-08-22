@@ -1688,10 +1688,11 @@ def test_VECM_seasonal_forecast():
         forecast = res.predict(steps=3 * seasons)
         dips = np.sort(np.argsort(forecast, axis=0)[:3], axis=0)
         assert_array_equal(dips, dips_true)
-
     # res2.plot_forecast(steps=18, alpha=0.1, n_last_obs=4*seasons)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
 def test_plot_forecast_and_plot_data(close_figures):
     rs = np.random.RandomState(20260821)
     n = 100

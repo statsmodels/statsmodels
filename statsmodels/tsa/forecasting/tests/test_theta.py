@@ -163,6 +163,8 @@ def test_auto():
     assert not np.allclose(res.params, res3.params)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
 def test_plot_predict(close_figures):
     rs = np.random.RandomState([3290328901, 323293105, 121029109])
     y = np.cumsum(0.01 + 0.01 * rs.standard_normal(300))
