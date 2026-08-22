@@ -1111,6 +1111,14 @@ def test_irf_plot_err_bands_kwarg(close_figures):
     assert fig2 is not None
 
 
+def test_irf_invalid_stderr_type_raises(bivariate_var_result):
+    irf = bivariate_var_result.irf()
+    with pytest.raises(ValueError, match="stderr_type"):
+        irf.plot(stderr_type="invalid")
+    with pytest.raises(ValueError, match="stderr_type"):
+        irf.plot_cum_effects(stderr_type="invalid")
+
+
 def test_0_lag():
     # GH 9412
     rs = np.random.RandomState(20260112)

@@ -7,6 +7,7 @@ import numpy.linalg as la
 import scipy.linalg as L
 
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.tsatools as tsa
 from statsmodels.tsa.vector_ar import plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
@@ -197,10 +198,12 @@ class BaseIRAnalysis:
         else:
             title = "Impulse responses"
 
-        if stderr_type not in ["asym", "mc", "sz1", "sz2", "sz3"]:
-            raise ValueError(
-                "Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'"
-            )
+        stderr_type = string_like(
+            stderr_type,
+            "stderr_type",
+            options=("asym", "mc", "sz1", "sz2", "sz3"),
+            lower=False,
+        )
 
         if plot_stderr is False:
             stderr = None
@@ -359,15 +362,17 @@ class BaseIRAnalysis:
                     f"{expected_shape} (2, periods+1, neqs, neqs)."
                 )
             stderr = err_bands
-        elif stderr_type not in ["asym", "mc"]:
-            raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
-        elif stderr_type == "asym":
-            stderr = self.cum_effect_cov(orth=orth)
-        else:  # stderr_type == "mc"
-            _err_band = self.cum_errband_mc(
-                orth=orth, repl=repl, signif=signif, rng=rng
+        else:
+            stderr_type = string_like(
+                stderr_type, "stderr_type", options=("asym", "mc"), lower=False
             )
-            stderr = (_err_band.lower, _err_band.upper)
+            if stderr_type == "asym":
+                stderr = self.cum_effect_cov(orth=orth)
+            else:  # stderr_type == "mc"
+                _err_band = self.cum_errband_mc(
+                    orth=orth, repl=repl, signif=signif, rng=rng
+                )
+                stderr = (_err_band.lower, _err_band.upper)
 
         fig = plotting.irf_grid_plot(
             cum_effects,
