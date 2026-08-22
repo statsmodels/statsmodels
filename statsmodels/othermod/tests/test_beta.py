@@ -449,3 +449,30 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_llrmixin_set_null_options():
+    # BetaResults is the only class in the codebase that mixes in
+    # _LLRMixin without overriding set_null_options (discrete_model.py's
+    # DiscreteResults defines its own, shadowing the mixin's version for
+    # every discrete model) -- so this is the only place its actual body
+    # can be exercised at all.
+    model = "I(food/income) ~ income + persons"
+    res = BetaModel.from_formula(model, income).fit()
+
+    llnull0 = res.llnull
+    assert not hasattr(res, "res_null")
+
+    res.set_null_options(attach_results=True)
+    lln = res.llnull
+    assert_allclose(lln, llnull0)
+    assert hasattr(res, "res_null")
+    assert_allclose(res.res_null.llf, lln)
+
+    # llr/llr_pvalue/pseudo_rsquared derive from llnull and must move
+    # together with it when the cache is reset via a direct override
+    res.set_null_options(llnull=res.llf - 5)
+    assert "prsquared" not in res._cache
+    assert_allclose(res._cache["llnull"], res.llf - 5)
+    assert_allclose(res.llr, -2 * (res.llnull - res.llf))
+    assert_allclose(res.pseudo_rsquared(), 1 - res.llf / res.llnull)
