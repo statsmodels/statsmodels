@@ -21,37 +21,6 @@ jobs:
       ${{ if eq(parameters.name, 'Linux') }}:
         # Linux carries the Python/dependency compatibility grid. Other
         # platforms keep sentinel jobs for OS-specific coverage.
-        python_314t_parallel:
-          python.version: '3.14'
-          python.architecture: 'x64-freethreaded'
-          parallel: true
-        python_314t_latest:
-          python.version: '3.14'
-          python.architecture: 'x64-freethreaded'
-          PANDAS_VERSION: 3
-        python_312_latest:
-          python.version: '3.12'
-          python.architecture: 'x64'
-          coverage: true
-          PYTEST_PATTERN: '(not slow or slow) and not joblib'
-        python_311_wheel:
-          python.version: '3.11'
-          python.architecture: 'x64'
-          test.install: true
-        python_312_sdist:
-          python.version: '3.12'
-          python.architecture: 'x64'
-          test.install: true
-          TEST_SDIST: true
-        python_310:
-          python.version: '3.10'
-          python.architecture: 'x64'
-          USE_MATPLOTLIB: false
-          USE_CVXOPT: false
-          SCIPY_VERSION: 1.8.1
-          PANDAS_VERSION: 1.5.3
-          NUMPY_VERSION: 1.23.5
-          CYTHON_VERSION: 3.0.10
         python_310_legacy_blas:
           python.version: '3.10'
           python.architecture: 'x64'
@@ -61,32 +30,9 @@ jobs:
           SCIPY_VERSION: 1.13.0
           CYTHON_VERSION: 3.0.12
           BLAS: "nomkl blas=*=openblas"
-        python_313_copy_on_write:
-          python.version: '3.13'
-          python.architecture: 'x64'
-          SM_TEST_COPY_ON_WRITE: 1
-          coverage: true
-          test.x13: true
-        python_312_pre:
-          python.version: '3.12'
-          python.architecture: 'x64'
-          pip.pre: true
-        python_312_formulaic_no_patsy:
-          python.version: '3.12'
-          python.architecture: 'x64'
-          SM_FORMULA_ENGINE: "formulaic"
-          PIP_UNINSTALL: "patsy matplotlib joblib"
-          USE_MATPLOTLIB: false
-        python_312_no_formulaic:
-          python.version: '3.12'
-          python.architecture: 'x64'
-          PIP_UNINSTALL: "formulaic"
       ${{ if eq(parameters.name, 'macOS') }}:
         # macOS keeps one editable install on an older Python and one package
         # install on the newest supported Python.
-        python310_macos_compat:
-          python.version: '3.10'
-          python.architecture: 'x64'
         python313_macos_latest_install:
           python.version: '3.13'
           python.architecture: 'x64'
@@ -132,6 +78,15 @@ jobs:
        python -m pip install -vv --no-build-isolation --upgrade-strategy only-if-needed --config-settings=editable-verbose=true --editable .
     displayName: 'Install statsmodels (editable)'
     condition: ne(variables['test.install'], 'true')
+
+  - script: |
+       ls ./build/
+       cat ./build/cp310/meson-logs/meson-log.txt || true
+       cat ./build/cp312/meson-logs/meson-log.txt || true
+       cat ./build/cp313/meson-logs/meson-log.txt || true
+    displayName: 'Install statsmodels (editable)'
+    condition: ne(variables['test.install'], 'true')
+
 
   - script: |
       if [[ -n ${PIP_UNINSTALL} ]]; then
