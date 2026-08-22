@@ -512,6 +512,7 @@ def effectsize_2proportions(
         cc1 = nobs2 / nobs_t
         cc2 = nobs1 / nobs_t
     elif zero_correction == "clip":
+        zero_kwds = {} if zero_kwds is None else zero_kwds
         clip_bounds = zero_kwds.get("clip_bounds", (1e-6, 1 - 1e-6))
         cc1 = cc2 = 0
     else:
