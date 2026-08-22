@@ -16,6 +16,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import OutputWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.filters.hp_filter import hpfilter
 from statsmodels.tsa.tsatools import lagmat
 
@@ -1704,6 +1705,7 @@ class UnobservedComponentsResults(MLEResults):
         # Determine which results we have
         if which is None:
             which = "filtered" if self.smoothed_state is None else "smoothed"
+        which = string_like(which, "which", options=("filtered", "smoothed"))
 
         # Determine which plots we have
         spec = self.specification
@@ -1798,10 +1800,6 @@ class UnobservedComponentsResults(MLEResults):
                     title = component_bunch.pretty_name
                 else:
                     raise
-
-            # Check for a valid estimation type
-            if which not in component_bunch:
-                raise ValueError("Invalid type of state estimate.")
 
             # Get the predicted values
             value = component_bunch[which]

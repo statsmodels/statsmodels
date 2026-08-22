@@ -297,6 +297,11 @@ def test_ardl_select_order(
     assert res.ar_lags is None or isinstance(res.ar_lags, list)
 
 
+def test_ardl_select_order_invalid_ic_raises(data):
+    with pytest.raises(ValueError, match="ic"):
+        ardl_select_order(data.y, 2, data.x, 2, ic="not-a-real-ic")
+
+
 def test_ardl_no_regressors(data):
     res = ARDL(
         data.y,

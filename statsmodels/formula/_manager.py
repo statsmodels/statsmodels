@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tools.data import _to_pandas
+from statsmodels.tools.validation import string_like
 
 HAVE_PATSY = False
 HAVE_FORMULAIC = False
@@ -288,10 +289,9 @@ class FormulaManager:
             _engine = statsmodels.formula.options.formula_engine
 
         assert _engine is not None
-        if _engine not in ("patsy", "formulaic"):
-            raise ValueError(
-                f"Unknown engine: {_engine}. Only patsy and formulaic are supported."
-            )
+        _engine = string_like(
+            _engine, "engine", options=("patsy", "formulaic"), lower=False
+        )
         # Ensure selected engine is available
         msg = f"{_engine} is not available. Please install {_engine}."
         if (

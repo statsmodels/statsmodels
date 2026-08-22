@@ -15,6 +15,7 @@ from statsmodels.tools.sm_exceptions import (
     EstimationWarning,
     SpecificationWarning,
 )
+from statsmodels.tools.validation import string_like
 
 from .factor_rotation import promax, rotate_factors
 
@@ -1026,9 +1027,9 @@ class FactorResults:
             index=self.endog_names,
         )
 
-        if style not in ["raw", "display", "strings"]:
-            msg = "style has to be one of 'raw', 'display', 'strings'"
-            raise ValueError(msg)
+        style = string_like(
+            style, "style", options=("raw", "display", "strings"), lower=False
+        )
 
         if style == "raw":
             return loadings_df

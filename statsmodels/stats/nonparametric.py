@@ -23,6 +23,7 @@ from statsmodels.stats.weightstats import (
     _zconfint_generic,
     _zstat_generic,
 )
+from statsmodels.tools.validation import string_like
 
 
 def rankdata_2samp(x1, x2):
@@ -862,10 +863,12 @@ def jonckheere_terpstra(samples, alternative="larger"):
     samples = list(samples)
     if len(samples) < 2:
         raise ValueError("`samples` must contain at least two ordered samples.")
-    if alternative not in ("two-sided", "larger", "smaller"):
-        raise ValueError(
-            "alternative must be one of 'two-sided', 'larger', or 'smaller'."
-        )
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
 
     arrays = []
     for idx, sample in enumerate(samples):
@@ -1308,10 +1311,12 @@ def samplesize_rank_compare_onetail(
             "Ratio of reference group to treatment group must be"
             " strictly positive."
         )
-    if alternative not in ("two-sided", "larger", "smaller"):
-        raise ValueError(
-            "Alternative must be one of `two-sided`, `larger`, or `smaller`."
-        )
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
 
     # Group 1 is the treatment group, Group 2 is the reference group
     rank_place = _compute_rank_placements(

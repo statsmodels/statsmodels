@@ -8,6 +8,7 @@ from statsmodels.stats.regularized_covariance import (
     _calc_nodewise_row,
     _calc_nodewise_weight,
 )
+from statsmodels.tools.validation import string_like
 
 """
 Distributed estimation routines. Currently, we support several
@@ -547,19 +548,20 @@ class DistributedModel:
         if fit_kwds is None:
             fit_kwds = {}
 
+        parallel_method = string_like(
+            parallel_method,
+            "parallel_method",
+            options=("sequential", "joblib"),
+            lower=False,
+        )
         if parallel_method == "sequential":
             results_l = self.fit_sequential(
                 data_generator, fit_kwds, init_kwds_generator
             )
 
-        elif parallel_method == "joblib":
+        else:  # parallel_method == "joblib"
             results_l = self.fit_joblib(
                 data_generator, fit_kwds, parallel_backend, init_kwds_generator
-            )
-
-        else:
-            raise ValueError(
-                f"parallel_method: {parallel_method} is currently not supported"
             )
 
         params = self.join_method(results_l, **self.join_kwds)

@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.validation import string_like
+
 from . import utils
 
 
@@ -136,6 +138,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     lines = asarray_or_none(lines)
     sections = asarray_or_none(sections)
     styles = asarray_or_none(styles)
+
+    show_names = string_like(show_names, "show_names", options=("both", "left", "right"))
 
     # Total number of points
     npoint = len(points)
@@ -380,7 +384,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             jrow += 1
 
             # Draw the left margin label
-            if show_names.lower() in ("left", "both"):
+            if show_names in ("left", "both"):
                 if horizontal:
                     ax.text(-0.1/awidth, pos, left_label,
                             horizontalalignment="right",
@@ -395,7 +399,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
                             family="monospace")
 
             # Draw the right margin label
-            if show_names.lower() in ("right", "both"):
+            if show_names in ("right", "both"):
                 if right_label is not None:
                     if horizontal:
                         ax.text(1 + 0.1/awidth, pos, right_label,

@@ -329,3 +329,19 @@ def test_prediction_results_t_test():
     pred_t = res_t.get_prediction()
     assert pred_t.dist is sp_stats.t
     assert pred_t.dist_args == (pred_t.df,)
+
+
+def test_prediction_results_mean_conf_int_invalid_method():
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rs = np.random.RandomState(918273)
+    n = 40
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
+    res = GLM(endog, exog).fit()
+    pred = res.get_prediction()
+
+    assert pred.conf_int(method="endpoint") is not None
+    assert pred.conf_int(method="delta") is not None
+    with pytest.raises(ValueError, match="method"):
+        pred.conf_int(method="not-a-method")

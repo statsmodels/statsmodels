@@ -704,6 +704,21 @@ def test_var_trend():
         model.fit(4, trend="t")
 
 
+@pytest.mark.parametrize(
+    "trend,k_trend", [("c", 1), ("ct", 2), ("ctt", 3), ("n", 0)]
+)
+def test_var_fit_valid_trend(trend, k_trend):
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    results = VAR(data).fit(2, trend=trend)
+    assert results.k_trend == k_trend
+
+
+def test_var_fit_invalid_trend_raises():
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    with pytest.raises(ValueError, match="trend"):
+        VAR(data).fit(2, trend="not-a-trend")
+
+
 def test_irf_trend():
     # test for irf with different trend see #1636
     # this is a rough comparison by adding trend or subtracting mean to data
@@ -1094,6 +1109,14 @@ def test_irf_plot_err_bands_kwarg(close_figures):
     cum_err_bands = irf.cum_errband_mc(repl=10)
     fig2 = irf.plot_cum_effects(err_bands=cum_err_bands, stderr_type="mc")
     assert fig2 is not None
+
+
+def test_irf_invalid_stderr_type_raises(bivariate_var_result):
+    irf = bivariate_var_result.irf()
+    with pytest.raises(ValueError, match="stderr_type"):
+        irf.plot(stderr_type="invalid")
+    with pytest.raises(ValueError, match="stderr_type"):
+        irf.plot_cum_effects(stderr_type="invalid")
 
 
 def test_0_lag():

@@ -291,15 +291,14 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
 
     nobs = len(x)
 
+    dist = string_like(dist, "dist", options=("norm", "exp"), lower=False)
     if dist == "norm":
         z = (x - x.mean()) / x.std(ddof=1)
         test_d = stats.norm.cdf
-    elif dist == "exp":
+    else:  # dist == "exp"
         z = x / x.mean()
         test_d = stats.expon.cdf
         pvalmethod = "table"
-    else:
-        raise ValueError("Invalid dist parameter, must be 'norm' or 'exp'")
     # deferred/cached: only builds (and imports) the critical-value table
     # for the distribution actually requested
     lilliefors_table = get_lilliefors_table(dist=dist)

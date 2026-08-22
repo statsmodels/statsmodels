@@ -297,6 +297,16 @@ def test_fit_sequential():
     )
 
 
+def test_fit_invalid_parallel_method_raises():
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
+    y = rs.randint(0, 2, size=50)
+
+    mod = DistributedModel(1, model_class=OLS)
+    with pytest.raises(ValueError, match="parallel_method"):
+        mod.fit(_data_gen(y, X, 1), parallel_method="not-a-method")
+
+
 @pytest.mark.joblib
 @pytest.mark.slow
 @pytest.mark.thread_unsafe(reason="Uses joblib")

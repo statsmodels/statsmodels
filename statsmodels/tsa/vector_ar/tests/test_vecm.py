@@ -1482,6 +1482,10 @@ def test_exceptions():
     with pytest.raises(ValueError):
         select_coint_rank(endog, 0, 3, "trace", 0.025)
 
+    # VECM.fit: method argument cannot be anything other than "ml"
+    with pytest.raises(ValueError, match="method"):
+        VECM(endog).fit(method="not-ml")
+
     # Granger_causality:
     # # 0<signif<1
     # this means signif=0

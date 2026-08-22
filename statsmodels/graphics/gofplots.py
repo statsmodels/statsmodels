@@ -7,6 +7,7 @@ from statsmodels.distributions import ECDF
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.validation import string_like
 
 from . import utils
 
@@ -859,6 +860,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
 
     .. plot:: plots/graphics_gofplots_qqplot_qqline.py
     """
+    line = string_like(line, "line", options=("45", "r", "s", "q"), lower=False)
     lineoptions = lineoptions.copy()
     for ls in ("-", "--", "-.", ":"):
         if ls in fmt:
@@ -920,7 +922,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
         m, b = np.std(y), np.mean(y)
         ref_line = x * m + b
         ax.plot(x, ref_line, **lineoptions)
-    elif line == "q":
+    else:  # line == "q"
         _check_for(dist, "ppf")
         q25 = stats.scoreatpercentile(y, 25)
         q75 = stats.scoreatpercentile(y, 75)

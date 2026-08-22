@@ -932,7 +932,7 @@ def test_invalid():
     ):
         ExponentialSmoothing(aust, seasonal=True)
 
-    with pytest.raises(ValueError, match=r'Invalid initialization method "invalid".'):
+    with pytest.raises(ValueError, match="initialization_method"):
         ExponentialSmoothing(aust, initialization_method="invalid")
 
     with pytest.raises(

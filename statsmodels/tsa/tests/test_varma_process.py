@@ -41,6 +41,22 @@ def test_vstack_hstack_are_reshapes_of_the_source_array():
     assert_array_equal(vp.vstack(), ar23.reshape(-1, 2))
     assert_array_equal(vp.hstack(name="ma"), ma22.transpose(1, 0, 2).reshape(2, -1))
 
+    # An explicit `a` is used as-is; `name` is only consulted when `a` is
+    # None, so an invalid `name` alongside an explicit `a` must not raise.
+    assert_array_equal(vp.vstack(a=ma22, name="invalid"), ma22.reshape(-1, 2))
+
+
+def test_vstack_hstack_stacksquare_invalid_name_raises():
+    import pytest
+
+    vp = VarmaPoly(ar23, ma22)
+    with pytest.raises(ValueError, match="name"):
+        vp.vstack(name="invalid")
+    with pytest.raises(ValueError, match="name"):
+        vp.hstack(name="invalid")
+    with pytest.raises(ValueError, match="name"):
+        vp.stacksquare(name="invalid")
+
 
 def test_stacksquare_is_companion_form():
     # stacksquare builds a companion matrix: the first `nvars` columns hold

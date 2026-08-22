@@ -25,7 +25,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, string_like
 from statsmodels.tsa.base.tsa_model import (
     TimeSeriesModel,
     TimeSeriesResultsWrapper,
@@ -723,8 +723,9 @@ class VAR(TimeSeriesModel):
         See Lütkepohl pp. 146-153 for implementation details.
         """
         lags = maxlags
-        if trend not in ["c", "ct", "ctt", "n"]:
-            raise ValueError(f"trend '{trend}' not supported for VAR")
+        trend = string_like(
+            trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
+        )
 
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)

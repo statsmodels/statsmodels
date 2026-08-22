@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.statespace import initialization, tools
 from statsmodels.tsa.statespace.kalman_filter import FilterResults, KalmanFilter
 from statsmodels.tsa.statespace.representation import OptionWrapper
@@ -1860,9 +1861,12 @@ class SmootherResults(FilterResults):
         the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
         design matrix operative at time :math:`t`.
         """
-        if decomposition_of not in ["smoothed_state", "smoothed_signal"]:
-            raise ValueError('Invalid value for `decomposition_of`. Must be'
-                             ' one of "smoothed_state" or "smoothed_signal".')
+        decomposition_of = string_like(
+            decomposition_of,
+            "decomposition_of",
+            options=("smoothed_state", "smoothed_signal"),
+            lower=False,
+        )
 
         weights, state_intercept_weights, prior_weights = (
             tools._compute_smoothed_state_weights(

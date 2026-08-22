@@ -6,6 +6,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -13,6 +14,13 @@ from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 import statsmodels.stats._diagnostic_other as diao
+
+
+def test_score_test_invalid_hypothesis_raises():
+    # hypothesis is validated before any use of `self`/`model`, so this
+    # is cheap to check without a fitted model.
+    with pytest.raises(ValueError, match="hypothesis"):
+        score_test(None, hypothesis="not-a-hypothesis")
 
 
 class CheckScoreTest:

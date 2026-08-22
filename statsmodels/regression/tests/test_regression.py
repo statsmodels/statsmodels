@@ -172,6 +172,11 @@ class CheckRegressionResults:
         hqic1 = self.res1.info_criteria("hqic")
         hqic2 = (self.res1.aic - 2 * k) + 2 * np.log(np.log(nobs)) * k
         assert_allclose(hqic1, hqic2, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("aic"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("AIC"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("bic"), self.res1.bic, rtol=1e-10)
+        with pytest.raises(ValueError, match="crit"):
+            self.res1.info_criteria("not-a-real-criterion")
 
     decimal_bic = DECIMAL_4
 
@@ -1297,6 +1302,28 @@ Notes: \\newline
 
 class TestRegularizedFit:
 
+    def test_invalid_method_raises(self):
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        rs = np.random.RandomState(742)
+        n = 100
+        endog = rs.normal(size=n)
+        exog = rs.normal(size=(n, 3))
+        model = OLS(endog, exog)
+
+        # OLS.fit_regularized only exposes "elastic_net"/"sqrt_lasso"
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
+
+        # fit_elasticnet itself also accepts "coord_descent"/"l1_slsqp"
+        with pytest.raises(ValueError, match="method"):
+            fit_elasticnet(model, method="not-a-method")
+
+        with pytest.raises(ValueError, match="trim_mode"):
+            fit_elasticnet(
+                model, method="l1_slsqp", L1_wt=1.0, trim_mode="not-a-trim-mode"
+            )
+
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
 
@@ -1497,6 +1524,14 @@ def test_fvalue_only_constant():
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
     res.summary()
+
+
+def test_fit_invalid_method_raises():
+    rs = np.random.RandomState(89432)
+    exog = add_constant(rs.normal(size=(50, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.normal(size=50)
+    with pytest.raises(ValueError, match="method"):
+        OLS(endog, exog).fit(method="not-a-method")
 
 
 def test_ridge():

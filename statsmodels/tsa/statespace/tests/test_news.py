@@ -824,6 +824,14 @@ def test_comparison_types():
     assert_allclose(news.total_impacts, 0)
 
 
+def test_invalid_comparison_type():
+    endog = dta["infl"].copy()
+    mod = sarimax.SARIMAX(endog)
+    res = mod.smooth([0.5, 1.0])
+    with pytest.raises(ValueError, match="comparison_type"):
+        res.news(endog, comparison_type="not-a-comparison-type")
+
+
 @pytest.mark.parametrize("use_periods", [True, False])
 def test_start_end_dates(use_periods):
     endog = dta["infl"].copy()
@@ -1406,6 +1414,12 @@ def test_news_summary_methods():
     for variable in news.total_impacts.columns:
         total_impact = news.total_impacts.loc["2009Q3", variable]
         assert_(f"{total_impact:.2f}" in full_text)
+
+    # summary_details' source parameter: "news" is the default (already
+    # exercised above); "revisions" is a separate code path.
+    assert_(str(news.summary_details(source="revisions")).strip() != "")
+    with pytest.raises(ValueError, match="source"):
+        news.summary_details(source="invalid")
 
     # revision_details_by_impact aggregates by (impact date, impacted
     # variable): the two cpi revisions (2009Q2 and 2009Q3) both land on the

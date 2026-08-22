@@ -164,7 +164,9 @@ class ExponentialSmoothing(MLEModel):
         self.seasonal_periods = int_like(seasonal, "seasonal", optional=True)
         self.seasonal = self.seasonal_periods is not None
         self.initialization_method = string_like(
-            initialization_method, "initialization_method").lower()
+            initialization_method, "initialization_method",
+            options=("concentrated", "estimated", "simple", "heuristic", "known"),
+        )
         self.concentrate_scale = bool_like(concentrate_scale,
                                            "concentrate_scale")
 
@@ -182,10 +184,6 @@ class ExponentialSmoothing(MLEModel):
         if self.seasonal and self.seasonal_periods is None:
             raise NotImplementedError("Unable to detect season automatically;"
                                       " please specify `seasonal_periods`.")
-
-        if self.initialization_method not in ["concentrated", "estimated",
-                                              "simple", "heuristic", "known"]:
-            raise ValueError(f'Invalid initialization method "{initialization_method}".')
 
         if self.initialization_method == "known":
             if initial_level is None:

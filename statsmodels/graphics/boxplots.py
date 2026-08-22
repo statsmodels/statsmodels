@@ -7,6 +7,7 @@ import numpy as np
 from scipy.stats import gaussian_kde
 
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 from . import utils
 
@@ -132,6 +133,7 @@ def violinplot(
 
     .. plot:: plots/graphics_boxplot_violinplot.py
     """
+    side = string_like(side, "side", options=("both", "left", "right"), lower=False)
     plot_opts = {} if plot_opts is None else plot_opts
     if max([np.size(arr) for arr in data]) == 0:
         msg = "No Data to make Violin: Try again!"
@@ -200,11 +202,8 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
         envelope_l, envelope_r = (-violin + pos, violin + pos)
     elif side == "right":
         envelope_l, envelope_r = (pos, violin + pos)
-    elif side == "left":
+    else:  # side == "left"
         envelope_l, envelope_r = (-violin + pos, pos)
-    else:
-        msg = "`side` parameter should be one of {'left', 'right', 'both'}."
-        raise ValueError(msg)
 
     # Draw the violin.
     ax.fill_betweenx(
@@ -360,6 +359,7 @@ def beanplot(
 
     .. plot:: plots/graphics_boxplot_beanplot.py
     """
+    side = string_like(side, "side", options=("both", "left", "right"), lower=False)
     plot_opts = {} if plot_opts is None else plot_opts
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -446,10 +446,8 @@ def _jitter_envelope(pos_data, xvals, violin, side, rng):
         low, high = (-1.0, 1.0)
     elif side == "right":
         low, high = (0, 1.0)
-    elif side == "left":
+    else:  # side == "left"
         low, high = (-1.0, 0)
-    else:
-        raise ValueError(f"`side` input incorrect: {side}")
 
     jitter_envelope = np.interp(pos_data, xvals, violin)
     jitter_coord = jitter_envelope * rng.uniform(low=low, high=high, size=pos_data.size)

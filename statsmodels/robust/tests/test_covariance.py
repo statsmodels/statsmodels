@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+import pytest
 from scipy import linalg
 
 from statsmodels import robust
@@ -418,3 +419,19 @@ def test_robcov_SMOKE():
             assert_allclose(c1, cov, rtol=0.4)
             assert_allclose(c1, cov_clean, rtol=1e-8)  # oracle, w/o outliers
             assert_allclose(m1, mean, rtol=0.5, atol=0.2)
+
+
+def test_cov_iter_invalid_rescale_raises():
+    rs = np.random.RandomState(28345)
+    x = rs.standard_normal((50, 3))
+    with pytest.raises(ValueError, match="rescale"):
+        robcov._cov_iter(
+            x, robcov.weights_quantile, weights_args=(0.50,), rescale="not-a-rescale"
+        )
+
+
+def test_get_detcov_startidx_invalid_methods_cov_raises():
+    rs = np.random.RandomState(28346)
+    z = rs.standard_normal((50, 3))
+    with pytest.raises(ValueError, match="methods_cov"):
+        robcov._get_detcov_startidx(z, 30, methods_cov="not-all")

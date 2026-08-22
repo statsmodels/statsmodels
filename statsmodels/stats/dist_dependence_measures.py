@@ -24,6 +24,7 @@ from scipy.stats import norm
 
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.validation import string_like
 
 
 class DistDependStat(NamedTuple):
@@ -147,6 +148,10 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
     """
     x, y = _validate_and_tranform_x_and_y(x, y)
 
+    method = string_like(
+        method, "method", options=("auto", "emp", "asym"), lower=False
+    )
+
     n = x.shape[0]
     stats = distance_statistics(x, y)
 
@@ -155,12 +160,9 @@ def distance_covariance_test(x, y, B=None, method="auto", rng=None):
         rng = check_random_state(rng)
         test_statistic, pval = _empirical_pvalue(x, y, B, n, stats, rng)
 
-    elif (method == "auto" and n > 500) or method == "asym":
+    else:  # method == "asym", or method == "auto" and n > 500
         chosen_method = "asym"
         test_statistic, pval = _asymptotic_pvalue(stats)
-
-    else:
-        raise ValueError(f"Unknown 'method' parameter: {method}")
 
     # In case we got an extreme p-value (0 or 1) when using the empirical
     # distribution of the test statistic under the null, we fall back

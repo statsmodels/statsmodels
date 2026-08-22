@@ -166,6 +166,26 @@ def test_scale_transform(center):
     assert_allclose(xt0, xtt[0, :], rtol=1e-13)
 
 
+@pytest.mark.parametrize("transform", ["abs", "square", "identity"])
+def test_scale_transform_transform_options(transform):
+    rs = np.random.RandomState(32832188)
+    x = rs.randn(20)
+    xt = scale_transform(x, center="median", transform=transform)
+    assert xt.shape == x.shape
+
+    # center may be a plain number, transform may be a callable
+    xt_num = scale_transform(x, center=0.0, transform=transform)
+    assert xt_num.shape == x.shape
+
+    xt_callable = scale_transform(x, center="median", transform=np.abs)
+    assert_allclose(xt_callable, scale_transform(x, center="median", transform="abs"))
+
+    with pytest.raises(ValueError, match="transform"):
+        scale_transform(x, center="median", transform="not-a-transform")
+    with pytest.raises(ValueError, match="center"):
+        scale_transform(x, center="not-a-center", transform="abs")
+
+
 class TestOnewayEquivalenc:
 
     @classmethod

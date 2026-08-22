@@ -19,6 +19,7 @@ import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
+from statsmodels.tools.validation import string_like
 
 # Obtain b splines from patsy
 
@@ -278,6 +279,10 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     if all_knots is not None:
         return all_knots
 
+    spacing = string_like(
+        spacing, "spacing", options=("quantile", "equal"), lower=False
+    )
+
     x_min = x.min()
     x_max = x.max()
 
@@ -306,13 +311,11 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
             # Need to compute inner knots
             knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = _R_compat_quantile(x, knot_quantiles)
-        elif spacing == "equal":
+        else:  # spacing == "equal"
             # Need to compute inner knots
             grid = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = x_min + grid * (x_max - x_min)
             diff_knots = inner_knots[1] - inner_knots[0]
-        else:
-            raise ValueError("incorrect option for spacing")
     if knots is not None:
         inner_knots = knots
     if lower_bound is None:

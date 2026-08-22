@@ -20,7 +20,7 @@ from scipy import optimize, stats
 from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, string_like
 
 FLOAT_INFO = np.finfo(float)
 
@@ -201,11 +201,13 @@ def proportion_confint(
 
     q_ = count_a / nobs_a
 
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     if alternative == "two-sided":
         if method != "binom_test":
             alpha = alpha / 2.0
-    elif alternative not in ["larger", "smaller"]:
-        raise NotImplementedError(f"alternative {alternative} is not available")
 
     if method == "normal":
         std_ = np.sqrt(q_ * (1 - q_) / nobs_a)

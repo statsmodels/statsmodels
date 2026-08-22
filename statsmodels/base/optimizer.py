@@ -13,6 +13,8 @@ import warnings
 import numpy as np
 from scipy import optimize
 
+from statsmodels.tools.validation import string_like
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -29,12 +31,6 @@ def check_kwargs(kwargs: dict[str, Any], allowed: Sequence[str], method: str):
             FutureWarning,
             stacklevel=2,
         )
-
-
-def _check_method(method, methods):
-    if method not in methods:
-        message = f"Unknown fit method {method}"
-        raise ValueError(message)
 
 
 class Optimizer:
@@ -245,8 +241,7 @@ class Optimizer:
             "minimize",
         ]
         methods += extra_fit_funcs.keys()
-        method = method.lower()
-        _check_method(method, methods)
+        method = string_like(method, "method", options=methods)
 
         fit_funcs = {
             "newton": _fit_newton,

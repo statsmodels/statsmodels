@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from statsmodels.tools.validation import string_like
+
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted
 class PredictionResultsBase:
@@ -224,6 +226,9 @@ class PredictionResultsMonotonic(PredictionResultsBase):
             The array has the lower and the upper limit of the confidence
             interval in the columns.
         """
+        method = string_like(
+            method, "method", options=("endpoint", "delta"), lower=False
+        )
         tmp = np.linspace(0, 1, 6)
         # TODO: drop check?
         is_linear = (self.func(tmp) == tmp).all()
@@ -331,6 +336,9 @@ class PredictionResultsMean(PredictionResultsBase):
             The array has the lower and the upper limit of the confidence
             interval in the columns.
         """
+        method = string_like(
+            method, "method", options=("endpoint", "delta"), lower=False
+        )
         tmp = np.linspace(0, 1, 6)
         is_linear = (self.link.inverse(tmp) == tmp).all()
         if method == "endpoint" and not is_linear:

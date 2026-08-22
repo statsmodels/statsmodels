@@ -33,6 +33,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 
 
 class DescrStatsW:
@@ -1059,14 +1060,15 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
 
+        usevar = string_like(
+            usevar, "usevar", options=("pooled", "unequal"), lower=False
+        )
         if usevar == "pooled":
             stdm = self.std_meandiff_pooledvar
             dof = d1.nobs - 1 + d2.nobs - 1
-        elif usevar == "unequal":
+        else:  # usevar == "unequal"
             stdm = self.std_meandiff_separatevar
             dof = self.dof_satt()
-        else:
-            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         tstat, pval = _tstat_generic(
             d1.mean, d2.mean, stdm, dof, alternative, diff=value
@@ -1104,12 +1106,13 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
 
+        usevar = string_like(
+            usevar, "usevar", options=("pooled", "unequal"), lower=False
+        )
         if usevar == "pooled":
             stdm = self.std_meandiff_pooledvar
-        elif usevar == "unequal":
+        else:  # usevar == "unequal"
             stdm = self.std_meandiff_separatevar
-        else:
-            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         tstat, pval = _zstat_generic(
             d1.mean, d2.mean, stdm, alternative, diff=value
@@ -1154,14 +1157,15 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
         diff = d1.mean - d2.mean
+        usevar = string_like(
+            usevar, "usevar", options=("pooled", "unequal"), lower=False
+        )
         if usevar == "pooled":
             std_diff = self.std_meandiff_pooledvar
             dof = d1.nobs - 1 + d2.nobs - 1
-        elif usevar == "unequal":
+        else:  # usevar == "unequal"
             std_diff = self.std_meandiff_separatevar
             dof = self.dof_satt()
-        else:
-            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         res = _tconfint_generic(
             diff, std_diff, dof, alpha=alpha, alternative=alternative
@@ -1205,12 +1209,13 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
         diff = d1.mean - d2.mean
+        usevar = string_like(
+            usevar, "usevar", options=("pooled", "unequal"), lower=False
+        )
         if usevar == "pooled":
             std_diff = self.std_meandiff_pooledvar
-        elif usevar == "unequal":
+        else:  # usevar == "unequal"
             std_diff = self.std_meandiff_separatevar
-        else:
-            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         res = _zconfint_generic(
             diff, std_diff, alpha=alpha, alternative=alternative
@@ -1540,8 +1545,9 @@ def ztest(
 
     # usevar can be pooled or unequal
 
-    if usevar not in {"pooled", "unequal"}:
-        raise NotImplementedError('usevar can only be "pooled" or "unequal"')
+    usevar = string_like(
+        usevar, "usevar", options=("pooled", "unequal"), lower=False
+    )
 
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
@@ -1557,7 +1563,7 @@ def ztest(
             var = nobs1 * x1_var + nobs2 * x2_var
             var /= nobs1 + nobs2 - 2 * ddof
             var *= 1.0 / nobs1 + 1.0 / nobs2
-        elif usevar == "unequal":
+        else:  # usevar == "unequal"
             var = x1_var / (nobs1 - ddof) + x2_var / (nobs2 - ddof)
     else:
         var = x1_var / (nobs1 - ddof)
@@ -1631,8 +1637,7 @@ def zconfint(
     # usevar is not used, always pooled
     # mostly duplicate code from ztest
 
-    if usevar != "pooled":
-        raise NotImplementedError('only usevar="pooled" is implemented')
+    _ = string_like(usevar, "usevar", options=("pooled",), lower=False)
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
     x1_mean = x1.mean(0)

@@ -967,8 +967,8 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.8,
             0.5,
             False,
-            ValueError,
-            "Alternative must be one of `two-sided`, `larger`, or `smaller`.",
+            TypeError,
+            "alternative must be a string",
         ),
         # Invalid alternative value
         (
@@ -979,7 +979,7 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
             0.5,
             "invalid-alternative",
             ValueError,
-            "Alternative must be one of `two-sided`, `larger`, or `smaller`.",
+            "alternative",
         ),
         # Relative effect > 0.5 but alternative is smaller
         (

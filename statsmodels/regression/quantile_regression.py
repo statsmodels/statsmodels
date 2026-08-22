@@ -29,6 +29,7 @@ from statsmodels.regression.linear_model import (
 )
 from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
+from statsmodels.tools.validation import string_like
 
 
 class QuantReg(RegressionModel):
@@ -146,22 +147,22 @@ class QuantReg(RegressionModel):
         if q <= 0 or q >= 1:
             raise ValueError("q must be strictly between 0 and 1")
 
-        kern_names = ["biw", "cos", "epa", "gau", "par"]
-        if kernel not in kern_names:
-            raise ValueError("kernel must be one of " + ", ".join(kern_names))
-        else:
-            kernel = kernels[kernel]
+        kernel = string_like(
+            kernel, "kernel", options=("biw", "cos", "epa", "gau", "par"),
+            lower=False,
+        )
+        kernel = kernels[kernel]
 
+        bandwidth = string_like(
+            bandwidth, "bandwidth",
+            options=("hsheather", "bofinger", "chamberlain"), lower=False,
+        )
         if bandwidth == "hsheather":
             bandwidth = hall_sheather
         elif bandwidth == "bofinger":
             bandwidth = bofinger
-        elif bandwidth == "chamberlain":
+        else:  # bandwidth == "chamberlain"
             bandwidth = chamberlain
-        else:
-            raise ValueError(
-                "bandwidth must be in 'hsheather', 'bofinger', 'chamberlain'"
-            )
 
         endog = self.endog
         exog = self.exog
@@ -236,15 +237,14 @@ class QuantReg(RegressionModel):
 
         fhat0 = 1.0 / (nobs * h) * np.sum(kernel(e / h))
 
+        vcov = string_like(vcov, "vcov", options=("robust", "iid"), lower=False)
         if vcov == "robust":
             d = np.where(e > 0, (q / fhat0) ** 2, ((1 - q) / fhat0) ** 2)
             xtxi = pinv(np.dot(exog.T, exog))
             xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
             vcov = xtxi @ xtdx @ xtxi
-        elif vcov == "iid":
+        else:  # vcov == "iid"
             vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
-        else:
-            raise ValueError("vcov must be 'robust' or 'iid'")
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
 

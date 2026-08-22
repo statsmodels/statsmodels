@@ -273,10 +273,10 @@ class PCA:
             warnings.warn(warn, ValueWarning, stacklevel=2)
             self._ncomp = min_dim
 
-        self._method = method
         # Workaround to avoid instance methods in __dict__
-        if self._method not in ("eig", "svd", "nipals"):
-            raise ValueError(f"method {method} is not known.")
+        self._method = string_like(
+            method, "method", options=("eig", "svd", "nipals"), lower=False
+        )
 
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)

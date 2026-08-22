@@ -34,6 +34,7 @@ import warnings
 import numpy as np
 from scipy import signal
 
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.tsatools import lagmat
 
 
@@ -600,12 +601,9 @@ class VarmaPoly:
         """
         if a is not None:
             _a = a
-        elif name == "ar":
-            _a = self.ar
-        elif name == "ma":
-            _a = self.ma
         else:
-            raise ValueError("no array or name given")
+            name = string_like(name, "name", options=("ar", "ma"))
+            _a = self.ar if name == "ar" else self.ma
         return _a.reshape(-1, self.nvarall)
 
     # @property
@@ -628,12 +626,9 @@ class VarmaPoly:
         """
         if a is not None:
             _a = a
-        elif name == "ar":
-            _a = self.ar
-        elif name == "ma":
-            _a = self.ma
         else:
-            raise ValueError("no array or name given")
+            name = string_like(name, "name", options=("ar", "ma"))
+            _a = self.ar if name == "ar" else self.ma
         return _a.swapaxes(1, 2).reshape(-1, self.nvarall).T
 
     # @property
@@ -659,12 +654,9 @@ class VarmaPoly:
         """
         if a is not None:
             _a = a
-        elif name == "ar":
-            _a = self.ar
-        elif name == "ma":
-            _a = self.ma
         else:
-            raise ValueError("no array or name given")
+            name = string_like(name, "name", options=("ar", "ma"))
+            _a = self.ar if name == "ar" else self.ma
         astacked = _a.reshape(-1, self.nvarall)
         lenpk, nvars = astacked.shape  # [0]
         amat = np.eye(lenpk, k=nvars)
