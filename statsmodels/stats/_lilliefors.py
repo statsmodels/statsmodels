@@ -81,8 +81,8 @@ def ksstat(x, cdf, alternative="two-sided", args=()):
     This calculates the test statistic for a test of the distribution G(x) of
     an observed variable against a given distribution F(x). Under the null
     hypothesis the two distributions are identical, G(x)=F(x). The
-    alternative hypothesis can be either 'two-sided' (default), 'less'
-    or 'greater'. The KS test is only valid for continuous distributions.
+    alternative hypothesis can be either 'two-sided' (default), 'lower'
+    or 'upper'. The KS test is only valid for continuous distributions.
 
     Parameters
     ----------
@@ -91,7 +91,7 @@ def ksstat(x, cdf, alternative="two-sided", args=()):
     cdf : str or callable
         String: name of a distribution in scipy.stats.
         Callable: function to evaluate cdf.
-    alternative : {'two-sided', 'less', 'greater'}, optional
+    alternative : {'two-sided', 'lower', 'upper'}, optional
         Defines the alternative hypothesis (see explanation). Default is
         'two-sided'.
     args : tuple, optional
@@ -109,8 +109,8 @@ def ksstat(x, cdf, alternative="two-sided", args=()):
     Notes
     -----
     In the one-sided test, the alternative is that the empirical
-    cumulative distribution function of the random variable is "less"
-    or "greater" than the cumulative distribution function F(x) of the
+    cumulative distribution function of the random variable is "lower"
+    or "upper" than the cumulative distribution function F(x) of the
     hypothesis, G(x)<=F(x), resp. G(x)>=F(x).
 
     In contrast to scipy.stats.kstest, this function only calculates the
@@ -120,8 +120,8 @@ def ksstat(x, cdf, alternative="two-sided", args=()):
     alternative = string_like(
         alternative,
         "alternative",
-        options=("two-sided", "less", "greater"),
-        deprecated={"two_sided": "two-sided"},
+        options=("two-sided", "lower", "upper"),
+        deprecated={"two_sided": "two-sided", "less": "lower", "greater": "upper"},
     )
     nobs = float(len(x))
 
@@ -135,9 +135,9 @@ def ksstat(x, cdf, alternative="two-sided", args=()):
 
     d_plus = (np.arange(1.0, nobs + 1) / nobs - cdfvals).max()
     d_min = (cdfvals - np.arange(0.0, nobs) / nobs).max()
-    if alternative == "greater":
+    if alternative == "upper":
         return d_plus
-    elif alternative == "less":
+    elif alternative == "lower":
         return d_min
 
     return np.max([d_plus, d_min])
@@ -313,7 +313,7 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     min_nobs = 4 if dist == "norm" else 3
     if nobs < min_nobs:
         raise ValueError(
-            f"Test for distribution {dist} requires at least {min_nobs} " "observations"
+            f"Test for distribution {dist} requires at least {min_nobs} observations"
         )
 
     d_ks = ksstat(z, test_d, alternative="two-sided")

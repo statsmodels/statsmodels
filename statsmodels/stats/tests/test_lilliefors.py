@@ -139,9 +139,12 @@ def test_get_lilliefors_errors():
 def test_ksstat():
     rs = np.random.RandomState(328903821)
     x = rs.uniform(0, 1, 100)
-    two_sided = ksstat(x, "uniform", alternative="two_sided")
-    greater = ksstat(x, "uniform", alternative="greater")
-    lower = ksstat(x, stats.uniform, alternative="lower")
-    print(two_sided, greater, lower)
+    with pytest.warns(FutureWarning, match="alternative='two_sided' is a deprecated"):
+        two_sided = ksstat(x, "uniform", alternative="two_sided")
+    with pytest.warns(FutureWarning, match="alternative='greater' is a deprecated"):
+        greater = ksstat(x, "uniform", alternative="greater")
+    with pytest.warns(FutureWarning, match="alternative='less' is a deprecated"):
+        lower = ksstat(x, stats.uniform, alternative="less")
+
     assert lower <= two_sided
     assert greater <= two_sided

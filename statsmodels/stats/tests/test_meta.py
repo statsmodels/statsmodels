@@ -111,7 +111,7 @@ def test_effectsize_2proportions_clip_default_zero_kwds():
     nobs2 = np.array([20, 20, 20])
 
     eff, var_eff = effectsize_2proportions(
-        count1, nobs1, count2, nobs2, statistic="or", zero_correction="clip"
+        count1, nobs1, count2, nobs2, statistic="odds-ratio", zero_correction="clip"
     )
     assert np.all(np.isfinite(eff))
     assert np.all(np.isfinite(var_eff))
@@ -121,7 +121,7 @@ def test_effectsize_2proportions_clip_default_zero_kwds():
         nobs1,
         count2,
         nobs2,
-        statistic="or",
+        statistic="odds-ratio",
         zero_correction="clip",
         zero_kwds={"clip_bounds": (1e-6, 1 - 1e-6)},
     )
@@ -403,7 +403,7 @@ class TestMetaBinOR:
         cls.res2 = res2 = results_meta.results_or_dl_hk
         cls.dta = (res2.event_e, res2.n_e, res2.event_c, res2.n_c)
 
-        eff, var_eff = effectsize_2proportions(*cls.dta, statistic="or")
+        eff, var_eff = effectsize_2proportions(*cls.dta, statistic="odds-ratio")
         res1 = combine_effects(eff, var_eff, method_re="chi2", use_t=True)
         cls.eff = eff
         cls.var_eff = var_eff
