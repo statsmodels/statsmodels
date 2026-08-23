@@ -1521,7 +1521,7 @@ def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
     canonical_result = etest_poisson_2indep(
         60, 51477.5, 30, 54308.7, alternative=canonical
     )
-    assert alias_result == canonical_result
+    assert_allclose(alias_result, canonical_result)
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")

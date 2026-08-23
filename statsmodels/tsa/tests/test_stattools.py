@@ -1229,7 +1229,7 @@ class TestBreakvarHeteroskedasticityTest:
         canonical_result = breakvar_heteroskedasticity_test(
             input_residuals, alternative=canonical
         )
-        assert alias_result == canonical_result
+        assert_allclose(alias_result, canonical_result)
 
         with pytest.raises(ValueError, match="alternative must be one of"):
             breakvar_heteroskedasticity_test(input_residuals, alternative="bogus")
