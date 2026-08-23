@@ -1098,17 +1098,19 @@ class TestBreakvarHeteroskedasticityTest:
                 np.nan,
             ]
         )
+        # H(h) is a ratio of sums of squares, so it is F(dfn, dfd) only after
+        # rescaling by dfd / dfn.  Column 1 has an unbalanced (3, 2) split.
         expected_pvalue = np.array(
             [
                 2
                 * min(
-                    self.f.cdf(expected_statistic[0], 3, 3),
-                    self.f.sf(expected_statistic[0], 3, 3),
+                    self.f.cdf(expected_statistic[0] * 3 / 3, 3, 3),
+                    self.f.sf(expected_statistic[0] * 3 / 3, 3, 3),
                 ),
                 2
                 * min(
-                    self.f.cdf(expected_statistic[1], 3, 2),
-                    self.f.sf(expected_statistic[1], 3, 2),
+                    self.f.cdf(expected_statistic[1] * 2 / 3, 3, 2),
+                    self.f.sf(expected_statistic[1] * 2 / 3, 3, 2),
                 ),
                 np.nan,
             ]
@@ -1118,6 +1120,61 @@ class TestBreakvarHeteroskedasticityTest:
 
         assert_equal(actual_statistic, expected_statistic)
         assert_equal(actual_pvalue, expected_pvalue)
+
+    @pytest.mark.parametrize("use_f", [True, False])
+    @pytest.mark.parametrize(
+        "alternative", ["increasing", "decreasing", "two-sided"]
+    )
+    def test_unbalanced_degrees_of_freedom(self, alternative, use_f):
+        # When missing values leave the two subsets with different numbers of
+        # usable residuals, H(h) -- a ratio of *sums* of squares -- must be
+        # rescaled by denom_dof / numer_dof before it is F(dfn, dfd), and
+        # inverting it for "decreasing" must swap the two degrees of freedom.
+        resid = np.array([np.nan, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
+        # h = 3; numerator {7, 8, 9} -> dfn = 3, denominator {2, 3} -> dfd = 2
+        stat = (7.0**2 + 8.0**2 + 9.0**2) / (2.0**2 + 3.0**2)
+        dfn, dfd = 3, 2
+        if alternative == "decreasing":
+            stat = 1.0 / stat
+            dfn, dfd = dfd, dfn
+        if use_f:
+            scaled, dist, args = stat * dfd / dfn, self.f, (dfn, dfd)
+        else:
+            scaled, dist, args = stat * dfd, self.chi2, (dfn,)
+        if alternative == "two-sided":
+            expected = 2 * min(dist.cdf(scaled, *args), dist.sf(scaled, *args))
+        else:
+            expected = dist.sf(scaled, *args)
+
+        result = breakvar_heteroskedasticity_test(
+            resid, alternative=alternative, use_f=use_f
+        )
+        assert_allclose(result.statistic, stat)
+        assert_allclose(result.pvalue, expected)
+
+    @pytest.mark.parametrize(
+        "resid",
+        [
+            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0],
+            [np.nan, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+        ],
+        ids=["balanced", "unbalanced"],
+    )
+    def test_one_sided_alternatives_are_complementary(self, resid):
+        # The exact (F) versions of the two one-sided tests are opposite tails
+        # of the same statistic, so their p-values sum to one -- including
+        # when missing values make the degrees of freedom unbalanced, because
+        # 1 / F(dfn, dfd) is F(dfd, dfn).  The unscaled ratio of sums does not
+        # have this property.  It does not hold for use_f=False: the two chi2
+        # approximations are different limits (dfd -> oo and dfn -> oo).
+        resid = np.asarray(resid)
+        up = breakvar_heteroskedasticity_test(
+            resid, alternative="increasing"
+        ).pvalue
+        down = breakvar_heteroskedasticity_test(
+            resid, alternative="decreasing"
+        ).pvalue
+        assert_allclose(up + down, 1.0)
 
     @pytest.mark.parametrize(
         "subset_length,expected_statistic,expected_pvalue",

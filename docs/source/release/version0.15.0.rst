@@ -583,6 +583,16 @@ Notable Bug Fixes
   count. :pr:`9907`
 - Cast the ``np.repeat`` argument to platform ``intp`` size in the
   Jonckheere-Terpstra test so it works on 32-bit platforms (Pyodide). :pr:`10075`
+- ``breakvar_heteroskedasticity_test`` (and the state space and ETS
+  ``test_heteroskedasticity`` methods built on it) referred the raw ratio of
+  the two sums of squares to ``F(numer_dof, denom_dof)``.  The ratio of sums
+  is that ``F`` only after rescaling by ``denom_dof / numer_dof``, so the
+  p-values were wrong whenever missing observations left the two subsets with
+  different numbers of usable residuals -- for example a multivariate state
+  space model with a ragged edge.  The ``use_f=False`` variant had its
+  multiplier and its degrees of freedom interchanged, and the ``decreasing``
+  alternative did not swap the degrees of freedom when it inverted the
+  statistic.  Balanced samples, which is the usual case, are unaffected.
 
 
 Build, Packaging, and Infrastructure

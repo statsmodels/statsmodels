@@ -2300,7 +2300,7 @@ def breakvar_heteroskedasticity_test(
     for i, dof in enumerate(numer_dof):
         if dof < 2:
             warnings.warn(
-                f"Early subset of data for variable {i:d}"
+                f"Later subset of data for variable {i:d}"
                 " has too few non-missing observations to"
                 " calculate test statistic.",
                 stacklevel=2,
@@ -2313,7 +2313,7 @@ def breakvar_heteroskedasticity_test(
     for i, dof in enumerate(denom_dof):
         if dof < 2:
             warnings.warn(
-                f"Later subset of data for variable {i:d}"
+                f"Early subset of data for variable {i:d}"
                 " has too few non-missing observations to"
                 " calculate test statistic.",
                 stacklevel=2,
@@ -2322,33 +2322,43 @@ def breakvar_heteroskedasticity_test(
 
     test_statistic = numer_squared_sum / denom_squared_sum
 
-    # Setup functions to calculate the p-values
+    # Under the null the two sums of squares are independent and, divided by
+    # the common variance, are chi2 with dfn and dfd degrees of freedom.  The
+    # ratio of their *means* is F(dfn, dfd), so H(h) -- a ratio of *sums* --
+    # must be rescaled by dfd / dfn before being referred to that
+    # distribution.  The two agree when dfn == dfd, which is the usual case;
+    # they differ only when missing observations leave the two subsets with
+    # different numbers of usable residuals.
+    #
+    # The chi2 form is the dfd -> oo limit: the denominator sum converges to
+    # dfd * sigma**2, so dfd * H(h) -> chi2(dfn).
     if use_f:
         from scipy.stats import f
 
-        def pval_lower(test_statistics):
-            return f.cdf(test_statistics, numer_dof, denom_dof)
-
-        def pval_upper(test_statistics):
-            return f.sf(test_statistics, numer_dof, denom_dof)
+        def tail_pvalues(stat, dfn, dfd):
+            """Lower- and upper-tail p-values for the statistic."""
+            scaled = stat * dfd / dfn
+            return f.cdf(scaled, dfn, dfd), f.sf(scaled, dfn, dfd)
 
     else:
         from scipy.stats import chi2
 
-        def pval_lower(test_statistics):
-            return chi2.cdf(numer_dof * test_statistics, denom_dof)
+        def tail_pvalues(stat, dfn, dfd):
+            """Lower- and upper-tail p-values for the statistic."""
+            scaled = stat * dfd
+            return chi2.cdf(scaled, dfn), chi2.sf(scaled, dfn)
 
-        def pval_upper(test_statistics):
-            return chi2.sf(numer_dof * test_statistics, denom_dof)
-
-    # Calculate the one- or two-sided p-values
-    if alternative == "increasing":
-        p_value = pval_upper(test_statistic)
-    elif alternative == "decreasing":
+    # Calculate the one- or two-sided p-values.  Inverting the statistic for
+    # the "decreasing" alternative swaps the roles of the two subsets, so the
+    # degrees of freedom have to swap with it.
+    if alternative == "decreasing":
         test_statistic = 1.0 / test_statistic
-        p_value = pval_upper(test_statistic)
-    elif alternative == "two-sided":
-        p_value = 2 * np.minimum(pval_lower(test_statistic), pval_upper(test_statistic))
+        numer_dof, denom_dof = denom_dof, numer_dof
+    lower, upper = tail_pvalues(test_statistic, numer_dof, denom_dof)
+    if alternative == "two-sided":
+        p_value = 2 * np.minimum(lower, upper)
+    else:  # "increasing" or "decreasing"
+        p_value = upper
 
     if len(test_statistic) == 1:
         return BreakvarHeteroskedasticityResult(test_statistic[0], p_value[0])
