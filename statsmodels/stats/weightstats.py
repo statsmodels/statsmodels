@@ -35,6 +35,16 @@ from scipy import stats
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.validation import string_like
 
+# Undocumented short forms accepted for backwards compatibility by
+# _tstat_generic, _tconfint_generic, _zstat_generic, _zstat_generic2 and
+# _zconfint_generic. Deprecated in favor of the documented spellings.
+_ALTERNATIVE_ALIASES = {
+    "2-sided": "two-sided",
+    "2s": "two-sided",
+    "l": "larger",
+    "s": "smaller",
+}
+
 
 class DescrStatsW:
     """
@@ -657,15 +667,20 @@ def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
         t-distributed with ``df`` degrees of freedom.
     """
 
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
     tstat = (value1 - value2 - diff) / std_diff
-    if alternative in ["two-sided", "2-sided", "2s"]:
+    if alternative == "two-sided":
         pvalue = stats.t.sf(np.abs(tstat), dof) * 2
-    elif alternative in ["larger", "l"]:
+    elif alternative == "larger":
         pvalue = stats.t.sf(tstat, dof)
-    elif alternative in ["smaller", "s"]:
+    elif alternative == "smaller":
         pvalue = stats.t.cdf(tstat, dof)
-    else:
-        raise ValueError("invalid alternative")
     return tstat, pvalue
 
 
@@ -702,20 +717,25 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
         "larger".
     """
 
-    if alternative in ["two-sided", "2-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
+    if alternative == "two-sided":
         tcrit = stats.t.ppf(1 - alpha / 2.0, dof)
         lower = mean - tcrit * std_mean
         upper = mean + tcrit * std_mean
-    elif alternative in ["larger", "l"]:
+    elif alternative == "larger":
         tcrit = stats.t.ppf(alpha, dof)
         lower = mean + tcrit * std_mean
         upper = np.inf
-    elif alternative in ["smaller", "s"]:
+    elif alternative == "smaller":
         tcrit = stats.t.ppf(1 - alpha, dof)
         lower = -np.inf
         upper = mean + tcrit * std_mean
-    else:
-        raise ValueError("invalid alternative")
 
     return lower, upper
 
@@ -756,15 +776,20 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
         t-distributed with ``df`` degrees of freedom.
     """
 
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
     zstat = (value1 - value2 - diff) / std_diff
-    if alternative in ["two-sided", "2-sided", "2s"]:
+    if alternative == "two-sided":
         pvalue = stats.norm.sf(np.abs(zstat)) * 2
-    elif alternative in ["larger", "l"]:
+    elif alternative == "larger":
         pvalue = stats.norm.sf(zstat)
-    elif alternative in ["smaller", "s"]:
+    elif alternative == "smaller":
         pvalue = stats.norm.cdf(zstat)
-    else:
-        raise ValueError("invalid alternative")
     return zstat, pvalue
 
 
@@ -799,15 +824,20 @@ def _zstat_generic2(value, std, alternative):
         normally distributed.
     """
 
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
     zstat = value / std
-    if alternative in ["two-sided", "2-sided", "2s"]:
+    if alternative == "two-sided":
         pvalue = stats.norm.sf(np.abs(zstat)) * 2
-    elif alternative in ["larger", "l"]:
+    elif alternative == "larger":
         pvalue = stats.norm.sf(zstat)
-    elif alternative in ["smaller", "s"]:
+    elif alternative == "smaller":
         pvalue = stats.norm.cdf(zstat)
-    else:
-        raise ValueError("invalid alternative")
     return zstat, pvalue
 
 
@@ -842,20 +872,25 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         "larger".
     """
 
-    if alternative in ["two-sided", "2-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
+    if alternative == "two-sided":
         zcrit = stats.norm.ppf(1 - alpha / 2.0)
         lower = mean - zcrit * std_mean
         upper = mean + zcrit * std_mean
-    elif alternative in ["larger", "l"]:
+    elif alternative == "larger":
         zcrit = stats.norm.ppf(alpha)
         lower = mean + zcrit * std_mean
         upper = np.inf
-    elif alternative in ["smaller", "s"]:
+    elif alternative == "smaller":
         zcrit = stats.norm.ppf(1 - alpha)
         lower = -np.inf
         upper = mean + zcrit * std_mean
-    else:
-        raise ValueError("invalid alternative")
 
     return lower, upper
 

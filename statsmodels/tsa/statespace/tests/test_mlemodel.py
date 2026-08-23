@@ -981,7 +981,7 @@ def test_diagnostics():
         res.test_serial_correlation(method="invalid")
 
     # Smoke tests for other options
-    res.test_heteroskedasticity(method=None, alternative="d", use_f=False)
+    res.test_heteroskedasticity(method=None, alternative="decreasing", use_f=False)
     res.test_serial_correlation(method="boxpierce")
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -421,7 +422,9 @@ def float_like(value, name, optional=False, strict=False):
     )
 
 
-def string_like(value, name, optional=False, options=None, lower=True):
+def string_like(
+    value, name, optional=False, options=None, lower=True, deprecated=None
+):
     """
     Check if object is string-like and raise if not
 
@@ -437,18 +440,26 @@ def string_like(value, name, optional=False, options=None, lower=True):
         Allowed values for input parameter `value`.
     lower : bool, optional
         Convert all case-based characters in `value` into lowercase.
+    deprecated : dict[str, str], optional
+        Mapping from a deprecated, undocumented spelling of an option to
+        the documented value in `options` it stands for. A `value`
+        matching one of these deprecated spellings is still accepted and
+        normalized to its replacement, but raises a ``FutureWarning``.
+        Ignored if `options` is None.
 
     Returns
     -------
     str
-        The validated input
+        The validated input, normalized to its replacement in `options`
+        if it matched a key of `deprecated`.
 
     Raises
     ------
     TypeError
         If the value is not a string or None when optional is True.
     ValueError
-        If the input is not in ``options`` when ``options`` is set.
+        If the input is not in ``options`` (or a key of ``deprecated``,
+        if provided) when ``options`` is set.
 
     """
     if optional and value is None:
@@ -458,11 +469,23 @@ def string_like(value, name, optional=False, options=None, lower=True):
         raise TypeError(f"{name} must be a string{extra_text}")
     if lower:
         value = value.lower()
-    if options is not None and value not in options:
+    all_options = options
+    if options is not None and deprecated is not None:
+        all_options = tuple(options) + tuple(deprecated)
+    if all_options is not None and value not in all_options:
         extra_text = "If not None, " if optional else ""
-        options_text = "'" + "', '".join(options) + "'"
+        options_text = "'" + "', '".join(all_options) + "'"
         msg = f"{extra_text}{name} must be one of: {options_text}"
         raise ValueError(msg)
+    if deprecated is not None and value in deprecated:
+        replacement = deprecated[value]
+        warnings.warn(
+            f"{name}={value!r} is a deprecated alias for {name}={replacement!r} "
+            "and will be removed in a future version.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        value = replacement
     return value
 
 

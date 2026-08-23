@@ -1217,6 +1217,18 @@ def etest_poisson_2indep(
     for the Difference of Two Poisson Means.” Computational Statistics & Data
     Analysis 51 (6): 3085-99. https://doi.org/10.1016/j.csda.2006.02.004.
     """
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={
+            "2-sided": "two-sided",
+            "2s": "two-sided",
+            "l": "larger",
+            "s": "smaller",
+        },
+    )
     y1, n1, y2, n2 = (
         np.asarray(count1),
         np.asarray(exposure1),
@@ -1310,14 +1322,12 @@ def etest_poisson_2indep(
     stat_space = stat_func(y_grid[:, None], y_grid[None, :])  # broadcasting
     eps = 1e-15  # correction for strict inequality check
 
-    if alternative in ["two-sided", "2-sided", "2s"]:
+    if alternative == "two-sided":
         mask = np.abs(stat_space) >= (np.abs(stat_sample) - eps)
-    elif alternative in ["larger", "l"]:
+    elif alternative == "larger":
         mask = stat_space >= (stat_sample - eps)
-    elif alternative in ["smaller", "s"]:
+    elif alternative == "smaller":
         mask = stat_space <= (stat_sample + eps)
-    else:
-        raise ValueError("invalid alternative")
 
     pvalue = ((pdf1[:, None] * pdf2[None, :])[mask]).sum()
     return stat_sample, pvalue

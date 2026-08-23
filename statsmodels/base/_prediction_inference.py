@@ -73,17 +73,27 @@ class PredictionResultsBase:
             the attribute of the instance, specified in `__init__`. Default
             if not specified is the normal distribution.
         """
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated={
+                "2-sided": "two-sided",
+                "2s": "two-sided",
+                "l": "larger",
+                "s": "smaller",
+            },
+        )
         # assumes symmetric distribution
         stat = (self.predicted - value) / self.se
 
-        if alternative in ["two-sided", "2-sided", "2s"]:
+        if alternative == "two-sided":
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args) * 2
-        elif alternative in ["larger", "l"]:
+        elif alternative == "larger":
             pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative in ["smaller", "s"]:
+        elif alternative == "smaller":
             pvalue = self.dist.cdf(stat, *self.dist_args)
-        else:
-            raise ValueError("invalid alternative")
         return stat, pvalue
 
     def _conf_int_generic(self, center, se, alpha, dist_args=None):

@@ -348,6 +348,46 @@ def test_optional_string():
         string_like(b"4", "value", optional=True)
 
 
+def test_string_deprecated_alias():
+    # a value matching a key of `deprecated` is accepted and normalized to
+    # its replacement, but warns
+    with pytest.warns(
+        FutureWarning,
+        match=r"value='old' is a deprecated alias for value='new'",
+    ):
+        out = string_like(
+            "old", "value", options=("new", "other"), deprecated={"old": "new"}
+        )
+    assert out == "new"
+
+    # documented options are unaffected and never warn
+    out = string_like(
+        "new", "value", options=("new", "other"), deprecated={"old": "new"}
+    )
+    assert out == "new"
+
+    # a value that is neither a documented option nor a deprecated alias
+    # still raises, and the message lists both
+    with pytest.raises(
+        ValueError,
+        match=r"value must be one of: 'new', 'other', 'old'",
+    ):
+        string_like(
+            "bogus", "value", options=("new", "other"), deprecated={"old": "new"}
+        )
+
+    # lower= still applies before matching against options and deprecated
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        out = string_like(
+            "OLD",
+            "value",
+            options=("new", "other"),
+            lower=True,
+            deprecated={"old": "new"},
+        )
+    assert out == "new"
+
+
 @pytest.fixture(params=(1.0, 1.1, np.float32(1.2), np.array([1.2]), 1.2 + 0j))
 def floating(request):
     return request.param

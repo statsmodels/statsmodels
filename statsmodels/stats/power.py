@@ -39,6 +39,12 @@ from scipy import optimize, special, stats
 
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.tools.rootfinding import brentq_expanding
+from statsmodels.tools.validation import string_like
+
+# Undocumented short form accepted for backwards compatibility by
+# ttest_power, normal_power and normal_power_het. Deprecated in favor of
+# the documented spelling.
+_ALTERNATIVE_ALIASES = {"2s": "two-sided"}
 
 
 def nct_cdf(x, df, nc):
@@ -93,17 +99,20 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
     if df is None:
         df = nobs - 1
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
+    if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
-    elif alternative in ["smaller", "larger"]:
-        alpha_ = alpha
     else:
-        raise ValueError(
-            "alternative has to be 'two-sided', 'larger' " + "or 'smaller'"
-        )
+        alpha_ = alpha
 
     pow_ = 0
-    if alternative in ["two-sided", "2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         crit_upp = stats.t.isf(alpha_, df)
         # print crit_upp, df, d*np.sqrt(nobs)
         # use private methods, generic methods return nan with negative d
@@ -114,7 +123,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
             # pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
             # use scipy.special
             pow_ = nct_sf(crit_upp, df, d * np.sqrt(nobs))
-    if alternative in ["two-sided", "2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         crit_low = stats.t.ppf(alpha_, df)
         # print crit_low, df, d*np.sqrt(nobs)
         if np.any(np.isnan(crit_low)):
@@ -156,20 +165,23 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
 
     d = effect_size
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
+    if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
-    elif alternative in ["smaller", "larger"]:
-        alpha_ = alpha
     else:
-        raise ValueError(
-            "alternative has to be 'two-sided', 'larger' " + "or 'smaller'"
-        )
+        alpha_ = alpha
 
     pow_ = 0
-    if alternative in ["two-sided", "2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         crit = stats.norm.isf(alpha_)
         pow_ = stats.norm.sf(crit - d * np.sqrt(nobs) / sigma)
-    if alternative in ["two-sided", "2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         crit = stats.norm.ppf(alpha_)
         pow_ += stats.norm.cdf(crit - d * np.sqrt(nobs) / sigma)
     return pow_
@@ -217,21 +229,24 @@ def normal_power_het(
     if std_alternative is None:
         std_alternative = std_null
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+    )
+    if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
-    elif alternative in ["smaller", "larger"]:
-        alpha_ = alpha
     else:
-        raise ValueError(
-            "alternative has to be 'two-sided', 'larger' " + "or 'smaller'"
-        )
+        alpha_ = alpha
 
     std_ratio = std_null / std_alternative
     pow_ = 0
-    if alternative in ["two-sided", "2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         crit = stats.norm.isf(alpha_)
         pow_ = stats.norm.sf(crit * std_ratio - d * np.sqrt(nobs) / std_alternative)
-    if alternative in ["two-sided", "2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         crit = stats.norm.ppf(alpha_)
         pow_ += stats.norm.cdf(crit * std_ratio - d * np.sqrt(nobs) / std_alternative)
     return pow_

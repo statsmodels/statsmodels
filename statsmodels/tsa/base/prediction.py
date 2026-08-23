@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from statsmodels.tools.validation import string_like
+
 
 class PredictionResults:
     """
@@ -119,17 +121,27 @@ class PredictionResults:
             given by the attribute of the instance specified in `__init__`.
             The default, if not specified, is the normal distribution.
         """
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated={
+                "2-sided": "two-sided",
+                "2s": "two-sided",
+                "l": "larger",
+                "s": "smaller",
+            },
+        )
         # assumes symmetric distribution
         stat = (self.predicted_mean - value) / self.se_mean
 
-        if alternative in ["two-sided", "2-sided", "2s"]:
+        if alternative == "two-sided":
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args) * 2
-        elif alternative in ["larger", "l"]:
+        elif alternative == "larger":
             pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative in ["smaller", "s"]:
+        elif alternative == "smaller":
             pvalue = self.dist.cdf(stat, *self.dist_args)
-        else:
-            raise ValueError("invalid alternative")
         return stat, pvalue
 
     def conf_int(self, alpha=0.05):
