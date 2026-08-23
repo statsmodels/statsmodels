@@ -1317,16 +1317,22 @@ def pacf(
     nlags: int | None = None,
     method: Literal[
         "yw",
+        "ywa",
         "ywadjusted",
+        "yw_adjusted",
+        "ywm",
+        "ywmle",
+        "yw_mle",
         "ols",
         "ols-inefficient",
         "ols-adjusted",
-        "ywm",
-        "ywmle",
         "ld",
+        "lda",
         "ldadjusted",
+        "ld_adjusted",
         "ldb",
         "ldbiased",
+        "ld_biased",
         "burg",
     ] = "ywadjusted",
     alpha: float | None = None,
@@ -1347,18 +1353,18 @@ def pacf(
     method : str, optional
         Specifies which method for the calculations to use.
 
-        - "yw" or "ywadjusted" : Yule-Walker with sample-size adjustment in
-          denominator for acovf. Default.
-        - "ywm" or "ywmle" : Yule-Walker without adjustment.
+        - "yw", "ywa", "ywadjusted" or "yw_adjusted" : Yule-Walker with
+          sample-size adjustment in denominator for acovf. Default.
+        - "ywm", "ywmle" or "yw_mle" : Yule-Walker without adjustment.
         - "ols" : regression of time series on lags of it and on constant.
         - "ols-inefficient" : regression of time series on lags using a single
           common sample to estimate all pacf coefficients.
         - "ols-adjusted" : regression of time series on lags with a bias
           adjustment.
-        - "ld" or "ldadjusted" : Levinson-Durbin recursion with bias
-          correction.
-        - "ldb" or "ldbiased" : Levinson-Durbin recursion without bias
-          correction.
+        - "ld", "lda", "ldadjusted" or "ld_adjusted" : Levinson-Durbin
+          recursion with bias correction.
+        - "ldb", "ldbiased" or "ld_biased" : Levinson-Durbin recursion
+          without bias correction.
         - "burg" :  Burg's partial autocorrelation estimator.
 
     alpha : float, optional
