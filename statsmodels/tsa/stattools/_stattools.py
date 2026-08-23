@@ -2333,20 +2333,18 @@ def breakvar_heteroskedasticity_test(
     # The chi2 form is the dfd -> oo limit: the denominator sum converges to
     # dfd * sigma**2, so dfd * H(h) -> chi2(dfn).
     if use_f:
-        from scipy.stats import f
 
         def tail_pvalues(stat, dfn, dfd):
             """Lower- and upper-tail p-values for the statistic."""
             scaled = stat * dfd / dfn
-            return f.cdf(scaled, dfn, dfd), f.sf(scaled, dfn, dfd)
+            return stats.f.cdf(scaled, dfn, dfd), stats.f.sf(scaled, dfn, dfd)
 
     else:
-        from scipy.stats import chi2
 
         def tail_pvalues(stat, dfn, dfd):
             """Lower- and upper-tail p-values for the statistic."""
             scaled = stat * dfd
-            return chi2.cdf(scaled, dfn), chi2.sf(scaled, dfn)
+            return stats.chi2.cdf(scaled, dfn), stats.chi2.sf(scaled, dfn)
 
     # Calculate the one- or two-sided p-values.  Inverting the statistic for
     # the "decreasing" alternative swaps the roles of the two subsets, so the
