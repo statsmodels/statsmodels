@@ -74,14 +74,14 @@ def _make_asymptotic_function(params):
     return f
 
 
-def ksstat(x, cdf, alternative="two_sided", args=()):
+def ksstat(x, cdf, alternative="two-sided", args=()):
     """
     Calculate statistic for the Kolmogorov-Smirnov test for goodness of fit
 
     This calculates the test statistic for a test of the distribution G(x) of
     an observed variable against a given distribution F(x). Under the null
     hypothesis the two distributions are identical, G(x)=F(x). The
-    alternative hypothesis can be either 'two_sided' (default), 'less'
+    alternative hypothesis can be either 'two-sided' (default), 'less'
     or 'greater'. The KS test is only valid for continuous distributions.
 
     Parameters
@@ -91,9 +91,9 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     cdf : str or callable
         String: name of a distribution in scipy.stats.
         Callable: function to evaluate cdf.
-    alternative : {'two_sided', 'less', 'greater'}, optional
+    alternative : {'two-sided', 'less', 'greater'}, optional
         Defines the alternative hypothesis (see explanation). Default is
-        'two_sided'.
+        'two-sided'.
     args : tuple, optional
         Distribution parameters for call to cdf.
 
@@ -117,6 +117,12 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     statistic which can be used either as distance measure or to implement
     case specific p-values.
     """
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "less", "greater"),
+        deprecated={"two_sided": "two-sided"},
+    )
     nobs = float(len(x))
 
     if isinstance(cdf, str):
@@ -279,6 +285,7 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     For implementation details, see lilliefors_critical_value_simulation.py in
     the test directory.
     """
+    dist = string_like(dist, "dist", options=("norm", "exp"))
     pvalmethod = string_like(pvalmethod, "pvalmethod", options=("approx", "table"))
     x = np.asarray(x)
     if x.ndim == 2 and x.shape[1] == 1:
@@ -306,11 +313,10 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     min_nobs = 4 if dist == "norm" else 3
     if nobs < min_nobs:
         raise ValueError(
-            f"Test for distribution {dist} requires at least {min_nobs} "
-            "observations"
+            f"Test for distribution {dist} requires at least {min_nobs} " "observations"
         )
 
-    d_ks = ksstat(z, test_d, alternative="two_sided")
+    d_ks = ksstat(z, test_d, alternative="two-sided")
 
     if pvalmethod == "approx":
         pval = pval_lf(d_ks, nobs)

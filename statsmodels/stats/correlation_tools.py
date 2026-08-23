@@ -5,7 +5,6 @@ Author: Josef Perktold
 License: BSD-3
 """
 
-
 from typing import NamedTuple
 import warnings
 
@@ -21,7 +20,7 @@ from statsmodels.tools.sm_exceptions import (
     iteration_limit_doc,
 )
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.validation import bool_like
+from statsmodels.tools.validation import bool_like, string_like
 
 
 def clip_evals(x, value=0):  # threshold=0, value=0):
@@ -176,9 +175,16 @@ class CovNearestResult(NamedTuple):
     std: np.ndarray
 
 
-def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
-                return_all=False, *, min_diag=None,
-                result_object: bool | None = None):
+def cov_nearest(
+    cov,
+    method="clipped",
+    threshold=1e-15,
+    n_fact=100,
+    return_all=False,
+    *,
+    min_diag=None,
+    result_object: bool | None = None,
+):
     """
     Find the nearest covariance matrix that is positive (semi-) definite
 
@@ -262,6 +268,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
 
+    method = string_like(method, "method", options=("clipped", "nearest"))
     result_object = bool_like(result_object, "result_object", optional=True)
     cov = np.asarray(cov)
     if min_diag is not None:
@@ -277,7 +284,7 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
             k = cov.shape[0]
             cov[np.arange(k), np.arange(k)] = np.maximum(diag, min_diag)
 
-    cov_, std_ = cov2corr(cov, return_std=True)
+    cov_, std_ = cov2corr(cov, return_std=True, result_object=True)
     if method == "clipped":
         corr_ = corr_clipped(cov_, threshold=threshold)
     else:  # method == 'nearest'

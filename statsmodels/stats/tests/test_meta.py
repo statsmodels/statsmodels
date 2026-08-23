@@ -57,7 +57,7 @@ class TestEffectsizeBinom:
         # cls.count2, cls.nobs2, cls.count1, cls.nobs1 = df_12y.values.T
         cls.count1, cls.nobs1, cls.count2, cls.nobs2 = df_12y.values.T
 
-    def test_effectsize(self):
+    def test_effectsize_risk_ratio(self):
         res2 = self.results
         dta = (self.count1, self.nobs1, self.count2, self.nobs2)
         # count1, nobs1, count2, nobs2 = dta
@@ -66,17 +66,40 @@ class TestEffectsizeBinom:
         assert_allclose(eff, res2.y_rd, rtol=1e-13)
         assert_allclose(var_eff, res2.v_rd, rtol=1e-13)
 
-        eff, var_eff = effectsize_2proportions(*dta, statistic="rr")
+        eff, var_eff = effectsize_2proportions(*dta, statistic="risk-ratio")
         assert_allclose(eff, res2.y_rr, rtol=1e-13)
         assert_allclose(var_eff, res2.v_rr, rtol=1e-13)
+        with pytest.warns(FutureWarning, match="statistic='rr' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="rr")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
 
-        eff, var_eff = effectsize_2proportions(*dta, statistic="or")
+    def test_effectsize_odds_ratio(self):
+        res2 = self.results
+        dta = (self.count1, self.nobs1, self.count2, self.nobs2)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="odds-ratio")
         assert_allclose(eff, res2.y_or, rtol=1e-13)
         assert_allclose(var_eff, res2.v_or, rtol=1e-13)
 
-        eff, var_eff = effectsize_2proportions(*dta, statistic="as")
+        with pytest.warns(FutureWarning, match="statistic='or' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="or")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
+
+    def test_effectsize_arcsin(self):
+        res2 = self.results
+        dta = (self.count1, self.nobs1, self.count2, self.nobs2)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="arcsin")
         assert_allclose(eff, res2.y_as, rtol=1e-13)
         assert_allclose(var_eff, res2.v_as, rtol=1e-13)
+
+        with pytest.warns(FutureWarning, match="statistic='as' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="as")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
+
+        with pytest.warns(FutureWarning, match="statistic='arcsine' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="arcsine")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
 
 
 def test_effectsize_2proportions_clip_default_zero_kwds():
