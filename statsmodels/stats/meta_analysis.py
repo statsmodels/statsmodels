@@ -15,7 +15,7 @@ from scipy import stats
 
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
-from statsmodels.tools.validation import float_like
+from statsmodels.tools.validation import float_like, string_like
 
 
 @dataclass(frozen=True, slots=True)
@@ -454,7 +454,7 @@ def effectsize_2proportions(
     ----------
     count1, nobs1, count2, nobs2 : array_like
         Data for two samples.
-    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsine"}, optional
+    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsin"}, optional
         Statistic for the comparison of two proportions.
         Effect sizes for "odds-ratio" and "risk-ratio" are in logarithm.
     zero_correction : {None, float, "tac", "clip"}, optional
@@ -484,9 +484,6 @@ def effectsize_2proportions(
     -----
     Status: API is experimental, Options for zero handling is incomplete.
 
-    The names for ``statistics`` keyword can be shortened to "rd", "rr", "or"
-    and "as".
-
     The statistics are defined as:
 
      - risk difference = p1 - p2
@@ -497,17 +494,31 @@ def effectsize_2proportions(
     where p1 and p2 are the estimated proportions in sample 1 (treatment) and
     sample 2 (control).
 
-    log-odds-ratio and log-risk-ratio can be transformed back to ``or`` and
-    `rr` using `exp` function.
+    log-odds-ratio and log-risk-ratio can be transformed back to ``odds-ratio`` and
+    ``risk-ratio`` using ``exp`` function.
 
     See Also
     --------
     statsmodels.stats.contingency_tables
     """
+
+    statistic = string_like(
+        statistic,
+        "statistic",
+        options=("diff", "risk-ratio", "odds-ratio", "arcsin"),
+        deprecated={
+            "rd": "diff",
+            "rr": "risk-ratio",
+            "or": "odds-ratio",
+            "arcsine": "arcsin",
+            "as": "arcsin",
+        },
+    )
     if zero_correction is None:
         cc1 = cc2 = 0
     elif zero_correction == "tac":
         # treatment arm continuity correction Ruecker et al 2009, section 3.2
+
         nobs_t = nobs1 + nobs2
         cc1 = nobs2 / nobs_t
         cc2 = nobs1 / nobs_t
@@ -517,7 +528,6 @@ def effectsize_2proportions(
         cc1 = cc2 = 0
     else:
         cc1 = cc2 = float_like(zero_correction, "zero_correction", optional=False)
-
     zero_mask1 = (count1 == 0) | (count1 == nobs1)
     zero_mask2 = (count2 == 0) | (count2 == nobs2)
     zmask = np.logical_or(zero_mask1, zero_mask2)
@@ -529,33 +539,30 @@ def effectsize_2proportions(
     if zero_correction == "clip":
         p1 = np.clip(p1, *clip_bounds)
         p2 = np.clip(p2, *clip_bounds)
-
-    if statistic in ["diff", "rd"]:
+    if statistic == "diff":
         rd = p1 - p2
         rd_var = p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2
         eff = rd
         var_eff = rd_var
-    elif statistic in ["risk-ratio", "rr"]:
+    elif statistic == "risk-ratio":
         # rr = p1 / p2
+
         log_rr = np.log(p1) - np.log(p2)
         log_rr_var = (1 - p1) / p1 / n1 + (1 - p2) / p2 / n2
         eff = log_rr
         var_eff = log_rr_var
-    elif statistic in ["odds-ratio", "or"]:
+    elif statistic == "odds-ratio":
         # or_ = p1 / (1 - p1) * (1 - p2) / p2
+
         log_or = np.log(p1) - np.log(1 - p1) - np.log(p2) + np.log(1 - p2)
         log_or_var = 1 / (p1 * (1 - p1) * n1) + 1 / (p2 * (1 - p2) * n2)
         eff = log_or
         var_eff = log_or_var
-    elif statistic in ["arcsine", "arcsin", "as"]:
+    else:  # statistic == "arcsin"
         as_ = np.arcsin(np.sqrt(p1)) - np.arcsin(np.sqrt(p2))
         as_var = (1 / n1 + 1 / n2) / 4
         eff = as_
         var_eff = as_var
-    else:
-        msg = 'statistic not recognized, use one of "rd", "rr", "or", "as"'
-        raise NotImplementedError(msg)
-
     return eff, var_eff
 
 
@@ -580,7 +587,7 @@ def combine_effects(
         Mean of effect size measure for all samples.
     variance : array_like
         Variance of mean or effect size measure for all samples.
-    method_re : {"iterated", "chi2"}, optional
+    method_re : {"iterated", "pm", "chi2", "dl"}, optional
         Method that is used to compute the between random effects variance.
         "iterated" or "pm" uses Paule and Mandel method to iteratively
         estimate the random effects variance. Options for the iteration can
@@ -666,14 +673,14 @@ def combine_effects(
     q = (weights_fe * eff**2).sum(0)
     q -= (weights_fe * eff).sum() ** 2 / w_total_fe
     df = k - 1
-
-    if method_re.lower() in ["iterated", "pm"]:
+    method = string_like(
+        method_re, "method_re", options=("iterated", "pm", "chi2", "dl"), lower=True
+    )
+    if method in ("iterated", "pm"):
         tau2, _ = _fit_tau_iterative(eff, var_eff, **kwds)
-    elif method_re.lower() in ["chi2", "dl"]:
+    else:  # method in ["chi2", "dl"]
         c = w_total_fe - (weights_fe**2).sum() / w_total_fe
         tau2 = (q - df) / c
-    else:
-        raise ValueError('method_re should be "iterated" or "chi2"')
 
     weights_re = 1 / (var_eff + tau2)  # no  bias_correction ?
     w_total_re = weights_re.sum(0)

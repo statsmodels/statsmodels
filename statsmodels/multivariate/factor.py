@@ -806,10 +806,10 @@ class FactorResults:
 
         Parameters
         ----------
-        method : {'bartlett', 'regression', 'ols', 'gls'}, optional
-            Method to use for factor scoring.
-            'regression' can be abbreviated to `reg`. 'ols' and 'gls' are
-            unofficial, unverified methods, see Notes.
+        method : {'bartlett', 'regression', 'reg', 'ols', 'gls'}, optional
+            Method to use for factor scoring. 'regression' is the same as
+            `reg`. 'ols' and 'gls' are unofficial, unverified methods, see
+            Notes.
 
         Returns
         -------
@@ -831,28 +831,28 @@ class FactorResults:
         L = self.loadings
         # TODO: check row versus column convention for T
         uni = 1 - self.communality  # self.uniqueness
+        method = string_like(
+            method, "method", options=("bartlett", "regression", "reg", "ols", "gls")
+        )
 
         if method == "bartlett":
             s_mat = np.linalg.inv(L.T.dot(L / (uni[:, None]))).dot(L.T / uni).T
-        elif method.startswith("reg"):
+        elif method == "regression" or method == "reg":
             corr = self.model.corr
             corr_f = self._corr_factors()
             # if orthogonal then corr_f is just eye
             s_mat = corr_f.dot(L.T.dot(np.linalg.inv(corr))).T
         elif method == "ols":
             # not verified
-            corr = self.model.corr
             corr_f = self._corr_factors()
             s_mat = corr_f.dot(np.linalg.pinv(L)).T
-        elif method == "gls":
+        else:  # method == "gls"
             # not verified
             # s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
-            corr = self.model.corr
             corr_f = self._corr_factors()
             s_mat = np.linalg.inv(np.linalg.inv(corr_f) + L.T.dot(L / (uni[:, None])))
             s_mat = s_mat.dot(L.T / uni).T
-        else:
-            raise ValueError('method not available, use "bartlett ' + 'or "regression"')
+
         return s_mat
 
     def factor_scoring(self, endog=None, method="bartlett", transform=True):
