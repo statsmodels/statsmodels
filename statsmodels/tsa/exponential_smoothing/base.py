@@ -20,6 +20,9 @@ from statsmodels.tools.tools import pinv_extended
 from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.statespace.tools import _safe_cond
+from statsmodels.tsa.stattools._stattools import (
+    breakvar_heteroskedasticity_test,
+)
 
 
 class StateSpaceMLEModel(tsbase.TimeSeriesModel):
@@ -630,6 +633,10 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             where `het[0][0]` is the test statistic, and `het[0][1]` is the
             p-value.
 
+        See Also
+        --------
+        statsmodels.tsa.stattools.breakvar_heteroskedasticity_test
+
         Notes
         -----
         The null hypothesis is of no heteroskedasticity. That means different
@@ -681,30 +688,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             method = "breakvar"
         _ = string_like(method, "method", options=("breakvar",))
 
-        alternative = string_like(
-            alternative,
-            "alternative",
-            options=("increasing", "decreasing", "two-sided"),
-            lower=True,
-            deprecated={
-                "i": "increasing",
-                "inc": "increasing",
-                "d": "decreasing",
-                "dec": "decreasing",
-                "2": "two-sided",
-                "2-sided": "two-sided",
-            },
-        )
-
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
         # Store some values
         if hasattr(self, "filter_results"):
-            squared_resid = (
-                self.filter_results.standardized_forecasts_error**2
-            )
+            resid = self.filter_results.standardized_forecasts_error
             d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
             # This differs from self.nobs_effective because here we want to
             # exclude exact diffuse periods, whereas self.nobs_effective
@@ -712,72 +702,22 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             # periods.
             nobs_effective = self.nobs - d
         else:
-            squared_resid = self.standardized_forecasts_error**2
-            if squared_resid.ndim == 1:
-                squared_resid = np.asarray(squared_resid)
-                squared_resid = squared_resid[np.newaxis, :]
+            resid = np.asarray(self.standardized_forecasts_error)
+            if resid.ndim == 1:
+                resid = resid[np.newaxis, :]
             nobs_effective = self.nobs_effective
             d = 0
-        squared_resid = np.asarray(squared_resid)
+        h = int(np.round(nobs_effective / 3))
 
         test_statistics = []
         p_values = []
         for i in range(self.model.k_endog):
-            h = int(np.round(nobs_effective / 3))
-            numer_resid = squared_resid[i, -h:]
-            numer_resid = numer_resid[~np.isnan(numer_resid)]
-            numer_dof = len(numer_resid)
-
-            denom_resid = squared_resid[i, d:d + h]
-            denom_resid = denom_resid[~np.isnan(denom_resid)]
-            denom_dof = len(denom_resid)
-
-            if numer_dof < 2:
-                warnings.warn(f"Early subset of data for variable {i:d}"
-                              "  has too few non-missing observations to"
-                              " calculate test statistic.",
-                              stacklevel=2,
-                              )
-                numer_resid = np.nan
-            if denom_dof < 2:
-                warnings.warn(f"Later subset of data for variable {i:d}"
-                              "  has too few non-missing observations to"
-                              " calculate test statistic.",
-                              stacklevel=2,
-                              )
-                denom_resid = np.nan
-
-            test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
-
-            # Setup functions to calculate the p-values
-            if use_f:
-                def pval_lower(test_statistics, numer_dof, denom_dof):
-                    return stats.f.cdf(test_statistics, numer_dof, denom_dof)
-
-                def pval_upper(test_statistics, numer_dof, denom_dof):
-                    return stats.f.sf(test_statistics, numer_dof, denom_dof)
-
-            else:
-                def pval_lower(test_statistics, numer_dof, denom_dof):
-                    return stats.chi2.cdf(numer_dof * test_statistics, denom_dof)
-
-                def pval_upper(test_statistics, numer_dof, denom_dof):
-                    return stats.chi2.sf(numer_dof * test_statistics, denom_dof)
-            # Calculate the one- or two-sided p-values
-            alternative = alternative.lower()
-            if alternative == "increasing":
-                p_value = pval_upper(test_statistic, numer_dof, denom_dof)
-            elif alternative == "decreasing":
-                test_statistic = 1. / test_statistic
-                p_value = pval_upper(test_statistic, numer_dof, denom_dof)
-            else:  # alternative == "two-sided"
-                p_value = 2 * np.minimum(
-                    pval_lower(test_statistic, numer_dof, denom_dof),
-                    pval_upper(test_statistic, numer_dof, denom_dof)
-                )
-
-            test_statistics.append(test_statistic)
-            p_values.append(p_value)
+            _het_result = breakvar_heteroskedasticity_test(
+                resid[i, d:], subset_length=h, alternative=alternative,
+                use_f=use_f
+            )
+            test_statistics.append(_het_result.statistic)
+            p_values.append(_het_result.pvalue)
 
         output = np.c_[test_statistics, p_values]
 
