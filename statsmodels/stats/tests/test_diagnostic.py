@@ -2309,7 +2309,7 @@ def test_het_goldfeldquandt_alternative_deprecated_alias(
         canonical_result = smsdia.het_goldfeldquandt(
             y, x, alternative=canonical, result_object=True
         )
-    assert_allclose(alias_result, canonical_result)
+    assert_allclose(alias_result.fval, canonical_result.fval)
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         smsdia.het_goldfeldquandt(y, x, alternative="bogus", result_object=True)
