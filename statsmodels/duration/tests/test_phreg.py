@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary2 import Summary
 
 # All the R results
 from .results import survival_enet_r_results, survival_r_results
@@ -56,7 +57,8 @@ class TestPHReg:
     @staticmethod
     def load_file(fname):
         cur_dir = Path(__file__).resolve().parent
-        data = np.genfromtxt(Path(cur_dir).joinpath("results", fname), delimiter=" ")
+        df = pd.read_csv(Path(cur_dir).joinpath("results", fname), delimiter=" ", header=None)
+        data = df.values
         time = data[:, 0]
         status = data[:, 1]
         entry = data[:, 2]
@@ -356,6 +358,20 @@ class TestPHReg:
         msg = "200 observations have positive entry times"
         assert_(msg in str(smry))
 
+    def test_summary_after_remove_data(self):
+        # summary() must still work after remove_data() has been called
+        rs = np.random.RandomState(34234)
+        time = 50 * rs.uniform(size=200)
+        status = rs.randint(0, 2, 200).astype(np.float64)
+        exog = rs.normal(size=(200, 4))
+
+        mod = PHReg(time, exog, status)
+        res = mod.fit()
+
+        assert isinstance(res.summary(), Summary)
+        res.remove_data()
+        assert isinstance(res.summary(), Summary)
+
     @pytest.mark.smoke
     def test_predict(self):
         # All smoke tests. We should be able to convert the lhr and hr
@@ -436,6 +452,17 @@ class TestPHReg:
                 llf_r = plf(params, model, time, s)
                 llf_sm = plf(sm_result.params, model, time, s)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
+
+    def test_invalid_ties_raises(self):
+        time, status, entry, exog = self.load_file("survival_data_50_2.csv")
+        with pytest.raises(ValueError, match="ties"):
+            PHReg(time, exog, status=status, ties="not-a-tie-method")
+
+    def test_fit_regularized_invalid_method_raises(self):
+        time, status, entry, exog = self.load_file("survival_data_50_2.csv")
+        model = PHReg(time, exog, status=status, ties="breslow")
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
 
 
 cur_dir = Path(__file__).resolve().parent

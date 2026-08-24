@@ -19,6 +19,7 @@ import pandas as pd
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.linalg import transf_constraints
+from statsmodels.tools.validation import string_like
 
 # Obtain b splines from patsy
 
@@ -85,10 +86,10 @@ def _eval_bspline_basis(x, knots, degree, deriv="all", include_intercept=True):
         duplicate copies of the boundary knots should already be included.
     degree : int
         Degree of the spline.
-    deriv : {"all", 0, 1, 2}
+    deriv : {"all", 0, 1, 2}, optional
         Which derivative of the basis to return. If "all", a tuple with
         the basis and its first and second derivatives is returned.
-    include_intercept : bool
+    include_intercept : bool, optional
         If False, the first basis column (the constant) is dropped.
 
     Returns
@@ -103,7 +104,7 @@ def _eval_bspline_basis(x, knots, degree, deriv="all", include_intercept=True):
         from scipy.interpolate import splev
     except ImportError as err:
         raise ImportError("spline functionality requires scipy") from err
-    # 'knots' are assumed to be already pre-processed. E.g. usually you
+    # 'knots' are assumed to be already pre-processed. e.g., usually you
     # want to include duplicate copies of boundary knots; you should do
     # that *before* calling this constructor.
     knots = np.sort(np.atleast_1d(np.asarray(knots, dtype=float)))
@@ -201,7 +202,27 @@ def compute_all_knots(x, df, degree):
 
 
 def make_bsplines_basis(x, df, degree):
-    """Make a spline basis for x."""
+    """
+    Make a spline basis for x
+
+    Parameters
+    ----------
+    x : array_like
+        Underlying explanatory variable used to place the interior knots.
+    df : int
+        Number of basis functions or degrees of freedom.
+    degree : int
+        Degree of the spline.
+
+    Returns
+    -------
+    basis : ndarray
+        Design matrix for the spline basis.
+    der_basis : ndarray
+        First derivative of `basis`.
+    der2_basis : ndarray
+        Second derivative of `basis`.
+    """
 
     all_knots, _, _, _ = compute_all_knots(x, df, degree)
     basis, der_basis, der2_basis = _eval_bspline_basis(x, all_knots, degree)
@@ -234,9 +255,9 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     knots : array_like, optional
         Interior knots. If provided, these are used directly instead of
         being computed from `x`.
-    degree : int
+    degree : int, optional
         Degree of the spline.
-    spacing : {"quantile", "equal"}
+    spacing : {"quantile", "equal"}, optional
         Method used to compute interior knots when `knots` is not
         provided: quantiles of `x`, or equally spaced over its range.
     lower_bound : float, optional
@@ -258,13 +279,15 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
     if all_knots is not None:
         return all_knots
 
+    spacing = string_like(
+        spacing, "spacing", options=("quantile", "equal"), lower=False
+    )
+
     x_min = x.min()
     x_max = x.max()
 
-    if degree < 0:
-        raise ValueError(f"degree must be greater than 0 (not {degree!r})")
-    if int(degree) != degree:
-        raise ValueError(f"degree must be an integer (not {degree!r})")
+    if degree < 0 or int(degree) != degree:
+        raise ValueError(f"degree must be an integer >= 0 (got {degree!r})")
 
     # These are guaranteed to all be 1d vectors by the code above
     # x = np.concatenate(tmp["xs"])
@@ -288,13 +311,17 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
             # Need to compute inner knots
             knot_quantiles = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = _R_compat_quantile(x, knot_quantiles)
-        elif spacing == "equal":
+        else:  # spacing == "equal"
             # Need to compute inner knots
             grid = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = x_min + grid * (x_max - x_min)
-            diff_knots = inner_knots[1] - inner_knots[0]
-        else:
-            raise ValueError("incorrect option for spacing")
+            # The n_inner_knots + 1 segments spanning [x_min, x_max] all
+            # have this width by construction of the uniform grid above, so
+            # this is equivalent to inner_knots[1] - inner_knots[0]) whenever
+            # that difference exists, and (unlike that difference) remains
+            # well-defined for n_inner_knots in (0, 1), where there are too
+            # few inner knots to take a difference between two of them.
+            diff_knots = (x_max - x_min) / (n_inner_knots + 1)
     if knots is not None:
         inner_knots = knots
     if lower_bound is None:
@@ -316,8 +343,12 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
 
     if spacing == "equal":
         diffs = np.arange(1, order + 1) * diff_knots
-        lower_knots = inner_knots[0] - diffs[::-1]
-        upper_knots = inner_knots[-1] + diffs
+        # Anchor on x_min/x_max + / - diff_knots rather than inner_knots[0]
+        # and inner_knots[-1]: equal to those when there is at least one
+        # inner knot (by construction of the grid above), but also
+        # well-defined when n_inner_knots == 0 and inner_knots is empty.
+        lower_knots = (x_min + diff_knots) - diffs[::-1]
+        upper_knots = (x_max - diff_knots) + diffs
         all_knots = np.concatenate((lower_knots, inner_knots, upper_knots))
     else:
         all_knots = np.concatenate(([lower_bound, upper_bound] * order,
@@ -337,7 +368,7 @@ def _get_integration_points(knots, k_points=3):
     ----------
     knots : array_like
         1-D array of knots.
-    k_points : int
+    k_points : int, optional
         Number of points to insert between each pair of consecutive
         knots.
 
@@ -370,17 +401,17 @@ def get_covder2(smoother, k_points=3, integration_points=None,
         Smoother for which the penalty matrix based on the second
         derivative is computed. Needs a ``knots`` attribute and a
         ``transform`` method.
-    k_points : int
+    k_points : int, optional
         Number of points to insert between each pair of consecutive knots
         when `integration_points` is not provided.
     integration_points : array_like, optional
         Points at which to evaluate the second derivative. If not
         provided, points are generated from `smoother.knots` using
         `k_points`.
-    skip_ctransf : bool
+    skip_ctransf : bool, optional
         Whether to skip the constraint transform when evaluating the
         smoother's derivative.
-    deriv : int
+    deriv : int, optional
         Derivative of the smoother basis used to compute the penalty
         matrix.
 
@@ -390,11 +421,8 @@ def get_covder2(smoother, k_points=3, integration_points=None,
         Approximation to the integral of the cross product of the
         `deriv`-th derivative of the smoother basis functions.
     """
-    try:
-        from scipy.integrate import simpson
-    except ImportError:
-        # Remove after SciPy 1.7 is the minimum version
-        from scipy.integrate import simps as simpson
+    from scipy.integrate import simpson
+
     knots = smoother.knots
     if integration_points is None:
         x = _get_integration_points(knots, k_points=k_points)
@@ -417,7 +445,7 @@ def make_poly_basis(x, degree, intercept=True):
         1-D array of the underlying explanatory variable.
     degree : int
         Highest power included in the polynomial basis.
-    intercept : bool
+    intercept : bool, optional
         If False, the constant column is dropped from the basis and its
         derivatives.
 
@@ -474,11 +502,11 @@ class UnivariateGamSmoother(with_metaclass(ABCMeta)):
     ----------
     x : ndarray, 1-D
         Underlying explanatory variable for the smooth term.
-    constraints : {None, str, array_like}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints. ``constraints = 'center'`` applies a linear
         transform to remove the constant and center the basis functions.
-    variable_name : str
+    variable_name : str, optional
         The name for the underlying explanatory variable, x, used for
         creating the column and parameter names for the basis functions.
     """
@@ -538,7 +566,7 @@ class UnivariateGenericSmoother(UnivariateGamSmoother):
         Second derivative of `basis`.
     cov_der2 : ndarray
         Penalty matrix based on the second derivative.
-    variable_name : str
+    variable_name : str, optional
         The name for the underlying explanatory variable, x, used for
         creating the column and parameter names for the basis functions.
     """
@@ -566,7 +594,7 @@ class UnivariatePolynomialSmoother(UnivariateGamSmoother):
         Underlying explanatory variable for the smooth term.
     degree : int
         Highest power included in the polynomial basis.
-    variable_name : str
+    variable_name : str, optional
         The name for the underlying explanatory variable, x, used for
         creating the column and parameter names for the basis functions.
     """
@@ -612,24 +640,24 @@ class UnivariateBSplines(UnivariateGamSmoother):
         underlying explanatory variable for smooth terms.
     df : int
         number of basis functions or degrees of freedom
-    degree : int
+    degree : int, optional
         degree of the spline
-    include_intercept : bool
+    include_intercept : bool, optional
         If False, then the basis functions are transformed so that they
         do not include a constant. This avoids perfect collinearity if
         a constant or several components are included in the model.
-    constraints : {None, str, array}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
         constant and center the basis functions.
-    variable_name : {None, str}
+    variable_name : str, optional
         The name for the underlying explanatory variable, x, used in for
         creating the column and parameter names for the basis functions.
-    covder2_kwds : {None, dict}
+    covder2_kwds : dict, optional
         options for computing the penalty matrix from the second derivative
         of the spline.
-    knot_kwds : {None, list[dict]}
+    **knot_kwds
         option for the knot selection.
         By default knots are selected in the same way as in patsy, however the
         number of knots is independent of keeping or removing the constant.
@@ -638,16 +666,16 @@ class UnivariateBSplines(UnivariateGamSmoother):
         range.
         The available options used with `get_knots_bsplines` are
 
-        - knots : None or array
+        - knots : array_like, optional
           interior knots
         - spacing : 'quantile' or 'equal'
-        - lower_bound : None or float
+        - lower_bound : float, optional
           location of lower boundary knots, all boundary knots are at the same
           point
-        - upper_bound : None or float
+        - upper_bound : float, optional
           location of upper boundary knots, all boundary knots are at the same
           point
-        - all_knots : None or array
+        - all_knots : array_like, optional
           If all knots are provided, then those will be taken as given and
           all other options will be ignored.
     """
@@ -685,10 +713,10 @@ class UnivariateBSplines(UnivariateGamSmoother):
         ----------
         x_new : ndarray
             observations of the underlying explanatory variable
-        deriv : int
+        deriv : int, optional
             which derivative of the spline basis to compute
             This is an option for internal computation.
-        skip_ctransf : bool
+        skip_ctransf : bool, optional
             whether to skip the constraint transform
             This is an option for internal computation.
 
@@ -723,16 +751,16 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         Underlying explanatory variable for the smooth term.
     df : int
         Number of basis functions or degrees of freedom.
-    constraints : {None, str, array_like}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints. ``constraints = 'no-const'`` drops the
         constant column from the basis.
-    transform : {None, "domain", tuple}
+    transform : None, "domain", or tuple, optional
         Rescaling applied to `x` before computing the basis. If
         ``"domain"``, `x` is rescaled to the unit interval using its own
         minimum and maximum. If a tuple ``(low, upp)``, `x` is rescaled
         to the unit interval using those bounds instead.
-    variable_name : str
+    variable_name : str, optional
         The name for the underlying explanatory variable, x, used for
         creating the column and parameter names for the basis functions.
     """
@@ -757,7 +785,7 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
         ----------
         x : ndarray
             Observations of the underlying explanatory variable.
-        initialize : bool
+        initialize : bool, optional
             If True, the rescaling bounds (`domain_low`, `domain_upp`,
             `domain_diff`) are computed from `x` (or from the tuple
             passed to `transform` at instance construction) and stored
@@ -795,13 +823,13 @@ class UnivariateCubicSplines(UnivariateGamSmoother):
 
         basis = self._splines_x()[:, :-1]
         # demean except for constant, does not affect derivatives
-        if not self.constraints == "none":
+        if self.constraints is not None:
             self.transf_mean = basis[:, 1:].mean(0)
             basis[:, 1:] -= self.transf_mean
         else:
             self.transf_mean = np.zeros(basis.shape[1])
         s = self._splines_s()[:-1, :-1]
-        if not self.constraints == "none":
+        if self.constraints is not None:
             ctransf = np.diag(1/np.max(np.abs(basis), axis=0))
         else:
             ctransf = np.eye(basis.shape[1])
@@ -896,12 +924,12 @@ class UnivariateCubicCyclicSplines(UnivariateGamSmoother):
         underlying explanatory variable for smooth terms.
     df : int
         number of basis functions or degrees of freedom
-    constraints : {None, str, array}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
         constant and center the basis functions.
-    variable_name : None or str
+    variable_name : str, optional
         The name for the underlying explanatory variable, x, used in for
         creating the column and parameter names for the basis functions.
     """
@@ -1041,11 +1069,11 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
         Underlying explanatory variable(s) for the smooth terms. If
         2-dimensional, observations are in rows and explanatory
         variables in columns.
-    variable_names : {list[str], None}
+    variable_names : list of str, optional
         Names for the underlying explanatory variables. If None and
         `x` is a pandas object, the names are taken from it, otherwise
         generic names are generated.
-    include_intercept : bool or list[bool]
+    include_intercept : bool or list of bool, optional
         If False, then the basis functions of each smooth term are
         transformed so that they do not include a constant. Can be a
         single bool applied to all smooth terms, or a list with one
@@ -1117,7 +1145,7 @@ class AdditiveGamSmoother(with_metaclass(ABCMeta)):
 
         Parameters
         ----------
-        x_new: ndarray
+        x_new : ndarray
             observations of the underlying explanatory variable
 
         Returns
@@ -1166,10 +1194,10 @@ class PolynomialSmoother(AdditiveGamSmoother):
         Underlying explanatory variable(s) for the smooth terms. If
         2-dimensional, observations are in rows and explanatory
         variables in columns.
-    degrees : array_like[int]
+    degrees : sequence of int
         Highest power included in the polynomial basis for each
         explanatory variable in `x`.
-    variable_names : {list[str], None}
+    variable_names : list of str, optional
         The names for the underlying explanatory variables, used for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.
@@ -1202,27 +1230,27 @@ class BSplines(AdditiveGamSmoother):
         underlying explanatory variable for smooth terms.
         If 2-dimensional, then observations should be in rows and
         explanatory variables in columns.
-    df :  {int, array_like[int]}
+    df : int or sequence of int
         number of basis functions or degrees of freedom; should be equal
         in length to the number of columns of `x`; may be an integer if
         `x` has one column or is 1-D.
-    degree : {int, array_like[int]}
+    degree : int or sequence of int
         degree(s) of the spline; the same length and type rules apply as
         to `df`
-    include_intercept : bool
+    include_intercept : bool, optional
         If False, then the basis functions are transformed so that they
         do not include a constant. This avoids perfect collinearity if
         a constant or several components are included in the model.
-    constraints : {None, str, array}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
         constant and center the basis functions.
-    variable_names : {list[str], None}
+    variable_names : list of str, optional
         The names for the underlying explanatory variables, x used in for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.
-    knot_kwds : None or list of dict
+    knot_kwds : list of dict, optional
         option for the knot selection.
         By default knots are selected in the same way as in patsy, however the
         number of knots is independent of keeping or removing the constant.
@@ -1231,16 +1259,16 @@ class BSplines(AdditiveGamSmoother):
         range.
         The available options used with `get_knots_bsplines` are
 
-        - knots : None or array
+        - knots : array_like, optional
           interior knots
         - spacing : 'quantile' or 'equal'
-        - lower_bound : None or float
+        - lower_bound : float, optional
           location of lower boundary knots, all boundary knots are at the same
           point
-        - upper_bound : None or float
+        - upper_bound : float, optional
           location of upper boundary knots, all boundary knots are at the same
           point
-        - all_knots : None or array
+        - all_knots : array_like, optional
           If all knots are provided, then those will be taken as given and
           all other options will be ignored.
 
@@ -1248,11 +1276,17 @@ class BSplines(AdditiveGamSmoother):
     Attributes
     ----------
     smoothers : list of univariate smooth component instances
-    basis : design matrix, array of spline bases columns for all components
-    penalty_matrices : list of penalty matrices, one for each smooth term
-    dim_basis : number of columns in the basis
-    k_variables : number of smooth components
-    col_names : created names for the basis columns
+        The individual smooth components making up the additive model.
+    basis : ndarray
+        Design matrix of spline basis columns for all components.
+    penalty_matrices : list of ndarray
+        Penalty matrices, one for each smooth term.
+    dim_basis : int
+        Number of columns in the basis.
+    k_variables : int
+        Number of smooth components.
+    col_names : list of str
+        Names created for the basis columns.
 
     There are additional attributes about the specification of the splines
     and some attributes mainly for internal use.
@@ -1318,18 +1352,18 @@ class CubicSplines(AdditiveGamSmoother):
         underlying explanatory variable for smooth terms.
         If 2-dimensional, then observations should be in rows and
         explanatory variables in columns.
-    df :  array_like[int]
+    df : sequence of int
         number of basis functions or degrees of freedom; should be equal
         in length to the number of columns of `x`.
-    constraints : {None, str, array}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints.
         `constraints = 'center'` applies a linear transform to remove the
         constant and center the basis functions.
-    transform : {None, "domain", tuple}
+    transform : None, "domain", or tuple, optional
         Rescaling applied to each column of `x` before computing the
         basis. See `UnivariateCubicSplines` for details.
-    variable_names : {list[str], None}
+    variable_names : list of str, optional
         The names for the underlying explanatory variables, x used in for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.
@@ -1338,7 +1372,9 @@ class CubicSplines(AdditiveGamSmoother):
                  variable_names=None):
         self.dfs = df
         self.constraints = constraints
-        self.transform = transform
+        # NOTE: cannot use `self.transform` here -- AdditiveGamSmoother
+        # defines a `transform(self, x_new)` method that this would shadow.
+        self.transform_arg = transform
         super().__init__(x, constraints=constraints,
                          variable_names=variable_names)
 
@@ -1348,7 +1384,7 @@ class CubicSplines(AdditiveGamSmoother):
             uv_smoother = UnivariateCubicSplines(
                             self.x[:, v], df=self.dfs[v],
                             constraints=self.constraints,
-                            transform=self.transform,
+                            transform=self.transform_arg,
                             variable_name=self.variable_names[v])
             smoothers.append(uv_smoother)
 
@@ -1367,12 +1403,12 @@ class CyclicCubicSplines(AdditiveGamSmoother):
         underlying explanatory variable for smooth terms.
         If 2-dimensional, then observations should be in rows and
         explanatory variables in columns.
-    df :  int
+    df : sequence of int
         number of basis functions or degrees of freedom
-    constraints : {None, str, array}
+    constraints : None, str, or ndarray, optional
         Constraints are used to transform the basis functions to satisfy
         those constraints.
-    variable_names : {list[str], None}
+    variable_names : list of str, optional
         The names for the underlying explanatory variables, x used in for
         creating the column and parameter names for the basis functions.
         If ``x`` is a pandas object, then the names will be taken from it.

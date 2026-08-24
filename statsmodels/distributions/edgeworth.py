@@ -37,8 +37,8 @@ def _faa_di_bruno_partitions(n):
         Each solution is itself a list of the form `[(m, k_m), ...]`
         for non-zero `k_m`. Notice that the index `m` is 1-based.
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> _faa_di_bruno_partitions(2)
     [[(1, 2)], [(2, 1)]]
     >>> for p in _faa_di_bruno_partitions(4):
@@ -59,12 +59,12 @@ def cumulant_from_moments(momt, n):
 
     Parameters
     ----------
-    momt : array_like
+    momt : sequence of float
         `momt[j]` contains `(j+1)`-th moment.
         These can be raw moments around zero, or central moments
         (in which case, `momt[0]` == 0).
     n : int
-        which cumulant to calculate (must be >1)
+        which cumulant to calculate (must be >= 1)
 
     Returns
     -------

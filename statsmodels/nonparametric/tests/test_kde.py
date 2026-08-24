@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -8,7 +9,12 @@ from scipy import stats
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric import bandwidths
-from statsmodels.nonparametric.kde import KDEUnivariate as KDE
+from statsmodels.nonparametric.kde import (
+    KDEResult,
+    KDEUnivariate as KDE,
+    kdensity,
+    kdensityfft,
+)
 from statsmodels.sandbox.nonparametric import kernels
 
 # get results from Stata
@@ -16,16 +22,16 @@ from statsmodels.sandbox.nonparametric import kernels
 curdir = Path(__file__).resolve().parent
 rfname = Path(curdir).joinpath("results", "results_kde.csv")
 # print rfname
-KDEResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
+KDEResults = pd.read_csv(rfname, dtype=float)
 
 rfname = Path(curdir).joinpath("results", "results_kde_univ_weights.csv")
-KDEWResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
+KDEWResults = pd.read_csv(rfname)
 
 # get results from R
 curdir = Path(__file__).resolve().parent
 rfname = Path(curdir).joinpath("results", "results_kcde.csv")
 # print rfname
-KCDEResults = np.genfromtxt(Path(rfname).open("rb"), delimiter=",", names=True)
+KCDEResults = pd.read_csv(rfname, dtype=float)
 
 # setup test data
 
@@ -202,7 +208,8 @@ class TestKdeWeights(CheckKDE):
     def setup_class(cls):
         cls.res1 = cls.result_factory()
         fname = Path(curdir).joinpath("results", "results_kde_weights.csv")
-        cls.res_density = np.genfromtxt(Path(fname).open("rb"), skip_header=1)
+        cls.res_density = pd.read_csv(fname, skiprows=1, header=None).values.squeeze()
+        cls.res_density2 = np.genfromtxt(Path(fname).open("rb"), skip_header=1)
 
     @classmethod
     def result_factory(cls):
@@ -227,7 +234,7 @@ class TestKDEGaussFFT(CheckKDE):
         cls.decimal_density = 2  # low accuracy because binning is different
         cls.res1 = cls.result_factory()
         rfname2 = Path(curdir).joinpath("results", "results_kde_fft.csv")
-        cls.res_density = np.genfromtxt(Path(rfname2).open("rb"))
+        cls.res_density = pd.read_csv(rfname2, header=None).values.squeeze()
 
     @classmethod
     def result_factory(cls):
@@ -464,3 +471,41 @@ def test_entropy_infinite_domain_kernel():
     kde = KDE(Xi).fit(kernel="gau", fft=False, bw="silverman")
 
     assert np.isfinite(kde.entropy)
+
+
+@pytest.mark.parametrize("func", [kdensity, kdensityfft])
+def test_kdensity_result_object_default(func):
+    # retgrid=True (the default) yields a KDEResult with the same length and
+    # contents as the legacy (density, grid, bw) tuple, so it is adopted
+    # without a warning.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = func(Xi)
+    assert isinstance(res, KDEResult)
+    assert len(res) == 3
+
+    # retgrid=False does change shape, so that path still warns.
+    with pytest.warns(FutureWarning, match="result_object"):
+        res = func(Xi, retgrid=False)
+    assert not isinstance(res, KDEResult)
+    assert len(res) == 2
+
+
+@pytest.mark.parametrize("func", [kdensity, kdensityfft])
+def test_kdensity_result_object_true(func):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = func(Xi, result_object=True)
+    assert isinstance(res, KDEResult)
+    assert res.grid is not None
+    assert res[0] is res.density
+    assert res[1] is res.grid
+    assert res[2] == res.bw
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = func(Xi, retgrid=False, result_object=True)
+    assert isinstance(res, KDEResult)
+    # The grid is computed regardless of retgrid, so it is reported rather
+    # than None-filled.
+    assert res.grid is not None

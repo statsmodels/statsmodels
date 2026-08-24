@@ -13,8 +13,6 @@ import pytest
 
 from statsmodels.sandbox.nonparametric import kernels
 
-DEBUG = 0
-
 curdir = Path(__file__).resolve().parent
 fname = "results/results_kernel_regression.csv"
 results = pd.read_csv(Path(curdir).joinpath(fname))

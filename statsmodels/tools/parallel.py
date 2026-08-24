@@ -29,8 +29,8 @@ def parallel_func(func, n_jobs, verbose=5):
         A function
     n_jobs : int
         Number of jobs to run in parallel
-    verbose : int
-        Verbosity level
+    verbose : int, optional
+        Verbosity level. Default is 5.
 
     Returns
     -------

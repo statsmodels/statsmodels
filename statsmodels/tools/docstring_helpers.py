@@ -89,7 +89,7 @@ class Substitution:
     >>> sub_author_name = Substitution(author='Jason')
 
     >>> @sub_author_name
-    >>> def some_function(x):
+    ... def some_function(x):
     ...    "%(author)s wrote this function"
 
     Note that some_function.__doc__ is now "Jason wrote this function"
@@ -99,7 +99,7 @@ class Substitution:
     >>> sub_first_last_names = Substitution('Edgar Allen', 'Poe')
 
     >>> @sub_first_last_names
-    >>> def some_function(x):
+    ... def some_function(x):
     ...    "%s %s wrote the Raven"
     """
 
@@ -117,7 +117,7 @@ class Substitution:
         Update self.params with supplied args
 
         Only valid when Substitution was constructed with keyword arguments
-        (i.e. self.params is a dict). No-op for positional (tuple) params.
+        (i.e., self.params is a dict). No-op for positional (tuple) params.
         """
         if isinstance(self.params, dict):
             self.params.update(*args, **kwargs)

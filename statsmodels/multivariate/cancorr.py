@@ -23,7 +23,8 @@ class CanCorr(Model):
         x1 = x * x_cancoef, x1' * x1 is identity matrix
         y1 = y * y_cancoef, y1' * y1 is identity matrix
 
-    and the correlation between x1 and y1 is maximized.
+    and the correlation between x1 and y1 is maximized. The implementation is
+    based on [1]_, [2]_, and [3]_.
 
     Parameters
     ----------
@@ -31,9 +32,9 @@ class CanCorr(Model):
         The endogenous (left-hand-side) variables.
     exog : array_like
         The exogenous (right-hand-side) variables.
-    tolerance : float
+    tolerance : float, optional
         Eigenvalue tolerance, values smaller than which are considered 0.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
@@ -60,9 +61,9 @@ class CanCorr(Model):
 
     References
     ----------
-    .. [*] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
-    .. [*] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
-    .. [*] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
+    .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
+    .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
+    .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """
 
     def __init__(
@@ -85,7 +86,7 @@ class CanCorr(Model):
 
         Parameters
         ----------
-        tolerance : float
+        tolerance : float, optional
             Eigenvalue tolerance, values smaller than which are considered 0.
         """
         nobs, k_yvar = self.endog.shape

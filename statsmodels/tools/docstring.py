@@ -16,12 +16,12 @@ def dedent_lines(lines):
 
     Parameters
     ----------
-    lines : list[str]
+    lines : list of str
         The lines to dedent.
 
     Returns
     -------
-    list[str]
+    list of str
         The dedented lines.
     """
     return textwrap.dedent("\n".join(lines)).split("\n")
@@ -33,12 +33,12 @@ def strip_blank_lines(line):
 
     Parameters
     ----------
-    line : list[str]
+    line : list of str
         The lines to strip. Modified and returned in place.
 
     Returns
     -------
-    list[str]
+    list of str
         The lines with leading and trailing blank lines removed.
     """
     while line and not line[0].strip():
@@ -55,8 +55,8 @@ class Reader:
         """
         Parameters
         ----------
-        data : str or list[str]
-           String with lines separated by '\n', or a list of lines.
+        data : str or list of str
+            String with lines separated by '\\n', or a list of lines.
         """
         if isinstance(data, list):
             self._str = data
@@ -133,7 +133,7 @@ class Parameter(NamedTuple):
         The name of the parameter.
     type : str
         The type description of the parameter, as written in the docstring.
-    desc : list[str]
+    desc : list of str
         The description lines for the parameter.
     """
 
@@ -208,7 +208,7 @@ class NumpyDocString(Mapping):
         if self._doc.eof():
             return False
 
-        l1 = self._doc.peek().strip()  # e.g. Parameters
+        l1 = self._doc.peek().strip()  # e.g., Parameters
 
         if l1.startswith(".. index::"):
             return True
@@ -615,7 +615,7 @@ class Docstring:
 
         Parameters
         ----------
-        parameters : str, list[str]
+        parameters : str or list of str
             The names of the parameters to remove.
         """
         if self._docstring is None:
@@ -636,7 +636,7 @@ class Docstring:
 
         Parameters
         ----------
-        after : {None, str}
+        after : None or str
             If None, insert the parameters before the first parameter in the
             docstring. Otherwise, the name of the existing parameter after
             which the new parameters are inserted.
@@ -690,7 +690,7 @@ class Docstring:
 
         Parameters
         ----------
-        parameters : str, list[str]
+        parameters : str or list of str
             The names of the parameters to extract.
         indent : int, optional
             Number of spaces to indent every line of the output. Default is
@@ -738,7 +738,7 @@ def remove_parameters(docstring, parameters):
     ----------
     docstring : str
         The docstring to modify.
-    parameters : str, list[str]
+    parameters : str or list of str
         The names of the parameters to remove.
 
     Returns
@@ -759,7 +759,7 @@ def indent(text, prefix, predicate=None):
 
     Parameters
     ----------
-    text : {None, str}
+    text : None or str
         If None, function always returns ""
     prefix : str
         Prefix to add to the start of each line

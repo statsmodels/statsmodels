@@ -24,7 +24,6 @@ jobs:
       python313_win_latest:
         python.version: '3.13'
         python.architecture: 'x64'
-        lint: true
       python314t_win_latest:
         python.version: '3.14'
         python.architecture: 'x64-freethreaded'
@@ -53,11 +52,6 @@ jobs:
   - pwsh: |
       python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
     displayName: 'Build Cython Extensions'
-
-  - pwsh: |
-      ruff check statsmodels docs tools
-    displayName: "Lint"
-    condition: eq(variables['lint'], 'true')
 
   - pwsh: |
       pytest statsmodels --skip-examples --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50

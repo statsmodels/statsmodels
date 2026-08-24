@@ -63,9 +63,9 @@ class SARIMAX(MLEModel):
         integer giving the periodicity (number of periods in season), often it
         is 4 for quarterly data or 12 for monthly data. Default is no seasonal
         effect.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the non-zero polynomial exponents to include, in
@@ -81,7 +81,7 @@ class SARIMAX(MLEModel):
     mle_regression : bool, optional
         Whether or not to use estimate the regression coefficients for the
         exogenous variables as part of maximum likelihood estimation or through
-        the Kalman filter (i.e. recursive least squares). If
+        the Kalman filter (i.e., recursive least squares). If
         `time_varying_regression` is True, this must be set to False. Default
         is True.
     simple_differencing : bool, optional
@@ -126,6 +126,10 @@ class SARIMAX(MLEModel):
         If 'raise', an error is raised. Default is 'none'.
     validate_specification : bool, optional
         Whether or not to validate the model specification. Default is True.
+    validate_exog : bool, optional
+        Whether or not to check that `exog` does not duplicate a constant trend
+        with a constant column. Has no effect unless `validate_specification`
+        is True. Default is True.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -163,7 +167,7 @@ class SARIMAX(MLEModel):
         component of the model.
     hamilton_representation : bool
         Whether or not to use the Hamilton representation of an ARMA process.
-    trend : str{'n','c','t','ct'} or iterable
+    trend : {'n', 'c', 't', 'ct'} or iterable
         Parameter controlling the deterministic
         trend polynomial :math:`A(t)`. See the class
         parameter documentation for more information.
@@ -216,7 +220,7 @@ class SARIMAX(MLEModel):
     k_seasonal_ma_params : int
         Number of seasonal moving average parameters to be estimated.
     k_trend : int
-        Order of the trend polynomial plus one (i.e. the constant polynomial
+        Order of the trend polynomial plus one (i.e., the constant polynomial
         would have `k_trend=1`).
     k_exog : int
         Number of exogenous regressors.
@@ -239,7 +243,7 @@ class SARIMAX(MLEModel):
             \theta_q (L) \tilde \theta_Q (L^s) \zeta_t
 
     where :math:`\eta_t` is only applicable in the case of measurement error
-    (although it is also used in the case of a pure regression model, i.e. if
+    (although it is also used in the case of a pure regression model, i.e., if
     p=q=0).
 
     In terms of this model, regression with SARIMA errors can be represented
@@ -288,14 +292,15 @@ class SARIMAX(MLEModel):
     does).
 
     If `filter_concentrated = True` is used, then the scale of the model is
-    concentrated out of the likelihood. A benefit of this is that there the
+    concentrated out of the likelihood. A benefit of this is that the
     dimension of the parameter vector is reduced so that numerical maximization
     of the log-likelihood function may be faster and more stable. If this
-    option in a model with measurement error, it is important to note that the
-    estimated measurement error parameter will be relative to the scale, and
-    is named "snr.measurement_error" instead of "var.measurement_error". To
-    compute the variance of the measurement error in this case one would
-    multiply `snr.measurement_error` parameter by the scale.
+    option is used in a model with measurement error, it is important to note
+    that the estimated measurement error parameter will be relative to the
+    scale, and is named "snr.measurement_error" instead of
+    "var.measurement_error". To compute the variance of the measurement error
+    in this case one would multiply `snr.measurement_error` parameter by the
+    scale.
 
     If `simple_differencing = True` is used, then the `endog` and `exog` data
     are differenced prior to putting the model in state-space form. This has
@@ -341,13 +346,14 @@ class SARIMAX(MLEModel):
                  hamilton_representation=False, concentrate_scale=False,
                  trend_offset=1, use_exact_diffuse=False, dates=None,
                  freq=None, missing="none", validate_specification=True,
-                 **kwargs):
+                 validate_exog=True, **kwargs):
 
         self._spec = SARIMAXSpecification(
             endog, exog=exog, order=order, seasonal_order=seasonal_order,
             trend=trend, enforce_stationarity=None, enforce_invertibility=None,
             concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification)
+            missing=missing, validate_specification=validate_specification,
+            validate_exog=validate_exog)
         self._params = SARIMAXParams(self._spec)
 
         # Save given orders
@@ -715,7 +721,12 @@ class SARIMAX(MLEModel):
         # then the exogenous data is incorporated as a time-varying component
         # of the design matrix
         if self.state_regression:
-            if self._k_order > 0:
+            # The first block of the design vector (differencing and ARMA
+            # states) is only empty when simple differencing removes the
+            # differencing states from the state vector and there are no ARMA
+            # states (e.g. time-varying regression with order=(0, 0, 0) and
+            # simple_differencing=True)
+            if self._k_order > 0 or self._k_states_diff > 0:
                 design = np.c_[
                     np.reshape(
                         np.repeat(design, self.nobs),
@@ -782,7 +793,11 @@ class SARIMAX(MLEModel):
                     transition[start, end + self.seasonal_periods - 1] = 1
 
                 # \iota
-                transition[start, self._k_states_diff] = 1
+                # (the seasonal differencing states accumulate the
+                # stationary component at column _k_states_diff, which only
+                # exists if there are ARMA states)
+                if self._k_order > 0:
+                    transition[start, self._k_states_diff] = 1
 
         # Differencing component
         if self._k_diff > 0:
@@ -797,8 +812,12 @@ class SARIMAX(MLEModel):
                     ([0] * (self.seasonal_periods - 1) + [1]) *
                     self._k_seasonal_diff)
             # [1 0]
-            column = self._k_states_diff
-            transition[:self._k_diff, column] = 1
+            # (the differencing states accumulate the stationary component
+            # at column _k_states_diff, which only exists if there are ARMA
+            # states)
+            if self._k_order > 0:
+                column = self._k_states_diff
+                transition[:self._k_diff, column] = 1
 
         return transition
 
@@ -929,7 +948,7 @@ class SARIMAX(MLEModel):
     def start_params(self):
         """Starting parameters for maximum likelihood estimation"""
 
-        # Perform differencing if necessary (i.e. if simple differencing is
+        # Perform differencing if necessary (i.e., if simple differencing is
         # false so that the state-space model will use the entire dataset)
         trend_data = self._trend_data
         if not self.simple_differencing and (
@@ -1673,7 +1692,7 @@ class SARIMAX(MLEModel):
         # (Hamilton)
         # SARIMA trend enters through the a time-varying state intercept,
         # associated with the first row of the stationary component of the
-        # state vector (i.e. the first element of the state vector following
+        # state vector (i.e., the first element of the state vector following
         # any differencing elements)
         if self._k_trend > 0:
             data = np.dot(self._trend_data, params_trend).astype(params.dtype)
@@ -1705,7 +1724,7 @@ class SARIMAX(MLEModel):
             self.ssm[self.transition_ar_params_idx] = reduced_polynomial_ar[1:]
         elif self.ssm.transition.dtype != params.dtype:
             # This is required if the transition matrix is not really in use
-            # (e.g. for an MA(q) process) so that it's dtype never changes as
+            # (e.g., for an MA(q) process) so that it's dtype never changes as
             # the parameters' dtype changes. This changes the dtype manually.
             self.ssm["transition"] = self.ssm["transition"].real.astype(
                 params.dtype)
@@ -1934,6 +1953,13 @@ class SARIMAXResults(MLEResults):
 
     def extend(self, endog, exog=None, **kwargs):
         kwargs.setdefault("trend_offset", self.nobs + 1)
+        # GH 8991. The specification was already validated when the original
+        # model was created, and `extend` cannot change it. Only the constant-
+        # `exog` check can misfire when re-run on the new data alone: `exog`
+        # that is constant over the extension window but not over the full
+        # sample would raise as though it collided with a constant trend.
+        # Disable just that check and leave the rest of the validation active.
+        kwargs.setdefault("validate_exog", False)
         return super().extend(endog, exog=exog, **kwargs)
 
     @cache_readonly

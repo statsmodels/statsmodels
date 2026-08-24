@@ -61,14 +61,9 @@ from statsmodels.stats.moment_helpers import mc2mvsk, mvsk2mc
 try:
     from scipy.stats._mvn import mvndst
 except ImportError:
-    try:
-        # Must be using SciPy <1.8.0 where this function was moved (it's not a
-        # public SciPy function, but we need it here)
-        from scipy.stats.mvn import mvndst
-    except ImportError:
 
-        def mvndst(*args, **kwargs):
-            raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
+    def mvndst(*args, **kwargs):
+        raise ImportError("mvndst not available. Much use SciPy < 1.16.0")
 
 
 # note copied from distr_skewnorm_0.py
@@ -498,7 +493,7 @@ class NormExpan_gen(distributions.rv_continuous):
 """ A class for the distribution of a non-linear monotonic transformation of a continuous random variable
 
 simplest usage:
-example: create log-gamma distribution, i.e. y = log(x),
+example: create log-gamma distribution, i.e., y = log(x),
             where x is gamma distributed (also available in scipy.stats)
     loggammaexpg = Transf_gen(stats.gamma, np.log, np.exp)
 
@@ -508,7 +503,7 @@ example: what is the distribution of the discount factor y=1/(1+x)
     invnormalg = Transf_gen(stats.norm, inversew, inversew_inv, decr=True, a=-np.inf)
 
 This class does not work well for distributions with difficult shapes,
-    e.g. 1/x where x is standard normal, because of the singularity and jump at zero.
+    e.g., 1/x where x is standard normal, because of the singularity and jump at zero.
 
 Note: I'm working from my version of scipy.stats.distribution.
       But this script runs under scipy 0.6.0 (checked with numpy: 1.2.0rc2 and python 2.4)
@@ -722,12 +717,12 @@ This is a companion to the distributions of non-linear monotonic transformation 
 when the inverse mapping is a 2-valued correspondence, for example for absolute value or square
 
 simplest usage:
-example: create squared distribution, i.e. y = x**2,
+example: create squared distribution, i.e., y = x**2,
             where x is normal or t distributed
 
 
 This class does not work well for distributions with difficult shapes,
-    e.g. 1/x where x is standard normal, because of the singularity and jump at zero.
+    e.g., 1/x where x is standard normal, because of the singularity and jump at zero.
 
 
 This verifies for normal - chi2, normal - halfnorm, foldnorm, and t - F
@@ -1234,7 +1229,7 @@ def mvnormcdf(upper, mu, cov, lower=None, **kwds):
        lower and upper integration limits with length equal to the number
        of dimensions of the multivariate normal distribution. It can contain
        -np.inf or np.inf for open integration intervals
-    mu : array_lik, 1d
+    mu : array_like, 1d
        list or array of means
     cov : array_like, 2d
        specifies covariance matrix

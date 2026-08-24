@@ -29,6 +29,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import (
     AutoReg,
     AutoRegResultsWrapper,
+    InformationCriteria,
     ar_select_order,
 )
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -108,7 +109,10 @@ for param in params:
         final.append(param)
 params = final
 names = ("AR", "Seasonal", "Trend", "Exog", "Cov Type")
-ids = [", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)]) for param in params]
+ids = [
+    ", ".join([n + ": " + str(p) for n, p in zip(names, param, strict=True)])
+    for param in params
+]
 
 
 @pytest.fixture(scope="module", params=params, ids=ids)
@@ -214,6 +218,19 @@ def test_other_tests_autoreg(ols_autoreg_result):
     a.t_test(r)
     r = np.eye(a.params.shape[0])
     a.wald_test(r, scalar=True)
+
+
+@pytest.mark.parametrize("pandas", [True, False])
+@pytest.mark.parametrize("nexog", [0, 2])
+def test_summary_after_remove_data(pandas, nexog):
+    data = gen_data(250, nexog, pandas)
+    # exog = {} if nexog == 0 else {"exog": data.exog}
+    mod = AutoReg(data.endog, 0, trend="n", seasonal=pandas, exog=data.exog)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
 
 
 # TODO: test likelihood for ARX model?
@@ -535,6 +552,17 @@ def test_ar_select_order_smoke():
     ar_select_order(data, 4, glob=True, seasonal=True, period=12)
 
 
+def test_ar_select_order_ics_are_information_criteria():
+    data = sunspots.load().data["SUNACTIVITY"]
+    res = ar_select_order(data, 4)
+    assert len(res._ics) > 0
+    for _, ic in res._ics:
+        assert isinstance(ic, InformationCriteria)
+        assert ic[0] == ic.aic
+        assert ic[1] == ic.bic
+        assert ic[2] == ic.hqic
+
+
 def test_predict_ar_constant():
     """
     Test AutoReg fit by OLS with a constant.
@@ -719,6 +747,13 @@ def test_ar_order_select():
     assert not res.seasonal
     assert res.trend == "c"
     assert res.period is None
+
+
+def test_ar_select_order_invalid_ic_raises():
+    rs = np.random.RandomState(12345)
+    y = arma_generate_sample([1, -0.75, 0.3], [1], 100, distrvs=rs.standard_normal)
+    with pytest.raises(ValueError, match="ic"):
+        ar_select_order(y, maxlag=4, ic="not-a-real-ic")
 
 
 def test_autoreg_constant_column_trend():

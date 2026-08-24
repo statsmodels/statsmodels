@@ -24,14 +24,14 @@ class PredictionResults:
         The array containing the prediction means.
     var_pred_mean : ndarray
         The array of the variance of the prediction means.
-    var_resid : ndarray
+    var_resid : float or ndarray
         The array of residual variances.
-    df : int
+    df : None or int, optional
         The degree of freedom used if dist is 't'.
-    dist : {'norm', 't', object}
+    dist : {None, 'norm', 't', object}, optional
         Either a string for the normal or t distribution or another object
         that exposes a `ppf` method.
-    row_labels : list[str]
+    row_labels : None or array_like, optional
         Row labels used in summary frame.
 
     """
@@ -135,10 +135,11 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     Parameters
     ----------
-    self : RegressionResults
-        Results instance used to generate predictions.
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If the model was not fit
+        using a formula, the columns are matched by position and not by name,
+        so a DataFrame must have its columns in the same order as the exog
+        used to fit the model.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -146,10 +147,10 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    weights : array_like, optional
+    weights : None or array_like, optional
         Weights interpreted as in WLS, used for the variance of the predicted
         residual.
-    row_labels : list
+    row_labels : None or array_like, optional
         A list of row labels to use.  If not provided, read `exog` is
         available.
     pred_kwds : dict, optional

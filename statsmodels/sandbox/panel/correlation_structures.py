@@ -48,6 +48,8 @@ def corr_ar(k_vars, ar):
 
     Parameters
     ----------
+    k_vars : int
+        number of variables, correlation matrix will be (k_vars, k_vars)
     ar : array_like, 1d
         AR lag-polynomial including 1 for lag 0
 
@@ -72,6 +74,8 @@ def corr_arma(k_vars, ar, ma):
 
     Parameters
     ----------
+    k_vars : int
+        number of variables, correlation matrix will be (k_vars, k_vars)
     ar : array_like, 1d
         AR lag-polynomial including 1 for lag 0
     ma : array_like, 1d
@@ -154,6 +158,14 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
         auto-covariance
     order : int, optional
         The order of the autoregressive process.  Default is 1.
+    method : str, optional
+        Method to use in estimating the coefficients. See
+        ``statsmodels.regression.linear_model.yule_walker`` for details.
+        Default is 'unbiased'.
+    df : int, optional
+        Degrees of freedom correction. See
+        ``statsmodels.regression.linear_model.yule_walker`` for details.
+        Default is None.
     inv : bool
         If inv is True the inverse of R is also returned.  Default is False.
 
@@ -166,7 +178,10 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
     Rinv : ndarray
         inverse of the Toepliz matrix
     """
-    return yule_walker(acov, order=order, method=method, df=df, inv=inv, demean=False)
+    return yule_walker(
+        acov, order=order, method=method, df=df, inv=inv, demean=False,
+        result_object=False,
+    )
 
 
 class ARCovariance:

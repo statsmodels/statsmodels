@@ -421,8 +421,12 @@ class TestPCA:
 
     def test_equivalence_full_matrices(self):
         x = self.x.copy()
-        svd_full_matrices_true = PCA(x, svd_full_matrices=True).factors
-        svd_full_matrices_false = PCA(x).factors
+        pca_true = PCA(x, svd_full_matrices=True)
+        svd_full_matrices_true = pca_true.factors
+        assert pca_true._svd_full_matrices
+        pca_false = PCA(x)
+        svd_full_matrices_false = pca_false.factors
+        assert not pca_false._svd_full_matrices
         assert_allclose(svd_full_matrices_true, svd_full_matrices_false)
 
 
@@ -441,6 +445,22 @@ def test_too_many_missing():
         PCA(data, ncomp=5, missing="drop-col")
     p = PCA(data, missing="drop-min")
     assert max(p.factors.shape) == max(data.shape) - 1
+
+
+def test_prepare_data_all_nan():
+    # GH: _prepare_data's all-NaN branch did
+    # `return np.empty(adj_data.shape[1]).fill(np.nan)`, but ndarray.fill()
+    # mutates in place and returns None, so the branch returned None
+    # instead of a NaN-filled array.
+    rs = np.random.RandomState(0)
+    data = rs.standard_normal((10, 4))
+    p = PCA(data)
+    p._adjusted_data = np.full_like(data, np.nan)
+
+    result = p._prepare_data()
+    assert result is not None
+    assert result.shape == (4,)
+    assert np.all(np.isnan(result))
 
 
 def test_gls_warning():

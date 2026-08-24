@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import stats
 
 import statsmodels.distributions.tools as dt
@@ -63,6 +64,9 @@ def test_average_grid():
     assert_allclose(res0, res1 / x1.max() / x2.max(), rtol=1e-13)
     res0 = dt.average_grid(y, coords=[x1 / x1.max(), x2 / x2.max()], _method="convolve")
     assert_allclose(res0, res1 / x1.max() / x2.max(), rtol=1e-13)
+
+    with pytest.raises(ValueError, match="_method"):
+        dt.average_grid(y, coords=[x1, x2], _method="not-a-method")
 
 
 def test_grid_class():
@@ -231,6 +235,9 @@ def test_bernstein_1d():
 
     res_bp = dt._eval_bernstein_1d(xg2, xg1, method="bpoly")
     assert_allclose(res_bp, xg2, atol=1e-12)
+
+    with pytest.raises(ValueError, match="method"):
+        dt._eval_bernstein_1d(xg2, xg1, method="not-a-method")
 
 
 def test_bernstein_2d():

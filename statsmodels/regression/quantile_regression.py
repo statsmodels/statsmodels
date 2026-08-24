@@ -27,8 +27,9 @@ from statsmodels.regression.linear_model import (
     RegressionResults,
     RegressionResultsWrapper,
 )
-from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
+from statsmodels.tools.validation import string_like
 
 
 class QuantReg(RegressionModel):
@@ -40,9 +41,9 @@ class QuantReg(RegressionModel):
 
     Parameters
     ----------
-    endog : array_like or dataframe
+    endog : array_like
         Endogenous/response variable.
-    exog : array_like or dataframe
+    exog : array_like
         Exogenous/explanatory variable(s).
 
     Notes
@@ -101,9 +102,9 @@ class QuantReg(RegressionModel):
 
         Parameters
         ----------
-        q : float
+        q : float, optional
             Quantile must be strictly between 0 and 1.
-        vcov : str
+        vcov : {'robust', 'iid'}, optional
             Method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
@@ -111,16 +112,17 @@ class QuantReg(RegressionModel):
               in Greene 6th edition)
             - iid : iid errors (as in Stata 12)
 
-        kernel : str
+        kernel : {'biw', 'cos', 'epa', 'gau', 'par'}, optional
             Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
+            - biw: Biweight
             - epa: Epanechnikov
             - cos: Cosine
             - gau: Gaussian
             - par: Parzen
 
-        bandwidth : str
+        bandwidth : {'hsheather', 'bofinger', 'chamberlain'}, optional
             Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
@@ -128,9 +130,9 @@ class QuantReg(RegressionModel):
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
-        max_iter : int
+        max_iter : int, optional
             Maximum number of iterations.
-        p_tol : float
+        p_tol : float, optional
             Convergence tolerance for the iterative parameter estimates.
         **kwargs
             Additional keyword arguments, accepted for API compatibility.
@@ -145,22 +147,22 @@ class QuantReg(RegressionModel):
         if q <= 0 or q >= 1:
             raise ValueError("q must be strictly between 0 and 1")
 
-        kern_names = ["biw", "cos", "epa", "gau", "par"]
-        if kernel not in kern_names:
-            raise ValueError("kernel must be one of " + ", ".join(kern_names))
-        else:
-            kernel = kernels[kernel]
+        kernel = string_like(
+            kernel, "kernel", options=("biw", "cos", "epa", "gau", "par"),
+            lower=False,
+        )
+        kernel = kernels[kernel]
 
+        bandwidth = string_like(
+            bandwidth, "bandwidth",
+            options=("hsheather", "bofinger", "chamberlain"), lower=False,
+        )
         if bandwidth == "hsheather":
             bandwidth = hall_sheather
         elif bandwidth == "bofinger":
             bandwidth = bofinger
-        elif bandwidth == "chamberlain":
+        else:  # bandwidth == "chamberlain"
             bandwidth = chamberlain
-        else:
-            raise ValueError(
-                "bandwidth must be in 'hsheather', 'bofinger', 'chamberlain'"
-            )
 
         endog = self.endog
         exog = self.exog
@@ -235,15 +237,14 @@ class QuantReg(RegressionModel):
 
         fhat0 = 1.0 / (nobs * h) * np.sum(kernel(e / h))
 
+        vcov = string_like(vcov, "vcov", options=("robust", "iid"), lower=False)
         if vcov == "robust":
             d = np.where(e > 0, (q / fhat0) ** 2, ((1 - q) / fhat0) ** 2)
             xtxi = pinv(np.dot(exog.T, exog))
             xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
             vcov = xtxi @ xtdx @ xtxi
-        elif vcov == "iid":
+        else:  # vcov == "iid"
             vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
-        else:
-            raise ValueError("vcov must be 'robust' or 'iid'")
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
 
@@ -317,7 +318,7 @@ class QuantRegResults(RegressionResults):
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
-    # @cache_readonly
+    @cache_writable()
     def scale(self):
         return 1.0
 
@@ -377,7 +378,13 @@ class QuantRegResults(RegressionResults):
     def HC3_se(self):
         raise NotImplementedError
 
-    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
+    def summary(
+            self,
+            yname=None,
+            xname=None,
+            title=None,
+            alpha=0.05
+    ):
         """
         Summarize the Regression Results
 
@@ -386,13 +393,13 @@ class QuantRegResults(RegressionResults):
         yname : str, optional
             Default is `y`.
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model.
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals.
 
         Returns
@@ -405,8 +412,19 @@ class QuantRegResults(RegressionResults):
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
-        eigvals = self.eigenvals
-        condno = self.condition_number
+        # Cache the data-dependent scalars computed below as a plain dict
+        # (not cache_readonly) so that summary() keeps working after
+        # remove_data() has cleared resid/model.exog and the like.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+
+        def cached(key, compute):
+            if key not in cache:
+                cache[key] = compute()
+            return cache[key]
+
+        eigvals = cached("eigvals", lambda: self.eigenvals)
+        condno = cached("condno", lambda: self.condition_number)
+        prsquared = cached("prsquared", lambda: self.prsquared)
 
         top_left = [
             ("Dep. Variable:", None),
@@ -417,7 +435,7 @@ class QuantRegResults(RegressionResults):
         ]
 
         top_right = [
-            ("Pseudo R-squared:", [f"{self.prsquared:#8.4g}"]),
+            ("Pseudo R-squared:", [f"{prsquared:#8.4g}"]),
             ("Bandwidth:", [f"{self.bandwidth:#8.4g}"]),
             ("Sparsity:", [f"{self.sparsity:#8.4g}"]),
             ("No. Observations:", None),

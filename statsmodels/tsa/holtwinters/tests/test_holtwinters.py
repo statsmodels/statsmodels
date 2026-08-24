@@ -1673,7 +1673,7 @@ def test_error_boxcox():
     mod = ExponentialSmoothing(
         y**2, use_boxcox=True, initialization_method="legacy-heuristic"
     )
-    with pytest.raises(ValueError, match="use_boxcox was set"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'use_boxcox'"):
         mod.fit(use_boxcox=False)
 
 
@@ -1717,9 +1717,11 @@ def test_error_initialization(ses):
             initial_trend=2.0,
         )
     mod = ExponentialSmoothing(ses, initialization_method="known", initial_level=1.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'initial_level'"):
         mod.fit(initial_level=2.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        TypeError, match="unexpected keyword argument 'use_basinhopping'"
+    ):
         mod.fit(use_basinhopping=True, method="least_squares")
 
 
@@ -1957,7 +1959,7 @@ def test_summary_boxcox(ses):
     mod = ExponentialSmoothing(
         ses**2, use_boxcox=True, initialization_method="heuristic"
     )
-    with pytest.raises(ValueError, match="use_boxcox was set at model"):
+    with pytest.raises(TypeError, match="unexpected keyword argument 'use_boxcox'"):
         mod.fit(use_boxcox=True)
     res = mod.fit()
     summ = str(res.summary())
@@ -1981,9 +1983,26 @@ def test_simulate(ses):
         TypeError, match="When creating a random number generator from a"
     ):
         res.simulate(10, error="additive", anchor=100, rng="bad_value")
-    with pytest.raises(ValueError, match="Argument random_errors has unexpected value"):
+    with pytest.raises(ValueError, match="random_errors must be"):
         with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
             res.simulate(10, error="additive", random_errors="bad_values", rng=0)
+
+
+def test_simulate_error_aliases(ses):
+    # "additive"/"multiplicative" are documented aliases for "add"/"mul"
+    mod = ExponentialSmoothing(np.asarray(ses), initialization_method="heuristic")
+    res = mod.fit()
+    innov = np.arange(1, 41, dtype=float).reshape(10, 4)
+    add_sim = res.simulate(10, repetitions=4, error="add", random_errors=innov)
+    additive_sim = res.simulate(
+        10, repetitions=4, error="additive", random_errors=innov
+    )
+    assert_almost_equal(np.asarray(add_sim), np.asarray(additive_sim))
+    mul_sim = res.simulate(10, repetitions=4, error="mul", random_errors=innov)
+    multiplicative_sim = res.simulate(
+        10, repetitions=4, error="multiplicative", random_errors=innov
+    )
+    assert_almost_equal(np.asarray(mul_sim), np.asarray(multiplicative_sim))
 
 
 @pytest.mark.parametrize("index_typ", ["date_range", "period", "range"])

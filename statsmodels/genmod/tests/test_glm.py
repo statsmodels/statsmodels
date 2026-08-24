@@ -23,7 +23,8 @@ import statsmodels.api as sm
 from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.formula._manager import FormulaManager
-from statsmodels.genmod.generalized_linear_model import GLM, SET_USE_BIC_LLF
+from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import (
     approx_fprime,
     approx_fprime_cs,
@@ -44,34 +45,13 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_glm.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
-
-def teardown_module():
-    if pdf_output:
-        pdf.close()
-
 
 @pytest.fixture(scope="module")
 def iris():
     cur_dir = Path(__file__).resolve().parent
-    return np.genfromtxt(
-        Path(cur_dir).joinpath("results", "iris.csv"),
-        delimiter=",",
-        skip_header=1,
-    )
+    return pd.read_csv(
+        Path(cur_dir).joinpath("results", "iris.csv")
+    ).values
 
 
 class CheckModelResultsMixin:
@@ -216,9 +196,9 @@ class CheckModelResultsMixin:
     decimal_bic = DECIMAL_4
 
     def test_bic(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            assert_almost_equal(self.res1.bic, self.res2.bic_Stata, self.decimal_bic)
+        assert_almost_equal(
+            self.res1.bic_deviance, self.res2.bic_Stata, self.decimal_bic
+        )
 
     def test_degrees(self):
         assert_equal(self.res1.model.df_resid, self.res2.df_resid)
@@ -1111,9 +1091,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         # Check that offset shifts the linear predictor
         mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
         offset = rs.uniform(1, 2, 10)
-        with pytest.warns(FutureWarning):
-            # deprecation warning for linear keyword
-            pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
+        pred1 = mod3.predict(exog=exog1, offset=offset, which="linear")
         pred2 = mod3.predict(exog=exog1, offset=2 * offset, which="linear")
         assert_almost_equal(pred2, pred1 + offset)
 
@@ -1276,13 +1254,10 @@ def test_plots(close_figures):
     for j in 0, 1:
         fig = result.plot_added_variable(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_partial_residuals(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_ceres_residuals(j)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
 
     # formula interface
     data = pd.DataFrame({"y": endog, "x1": exog[:, 0], "x2": exog[:, 1]})
@@ -1292,13 +1267,10 @@ def test_plots(close_figures):
         xname = ["x1", "x2"][j]
         fig = result.plot_added_variable(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_partial_residuals(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
         fig = result.plot_ceres_residuals(xname)
         add_lowess(fig.axes[0], frac=0.5)
-        close_or_save(pdf, fig)
 
 
 def gen_endog(lin_pred, family_class, link, binom_version=0):
@@ -2820,6 +2792,263 @@ class TestRegularized:
                 llf_sm = plf(sm_result.params, model, endog, alpha, L1_wt)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
+    def test_regularized_l1_slsqp_vs_glmnet(self):
+        # Mirrors test_regularized, but fits with method="l1_slsqp"
+        # wherever the glmnet reference case is a pure lasso fit
+        # (L1_wt == 1), which is the only penalty l1_slsqp supports.
+        # l1_slsqp should agree with the glmnet reference about as
+        # well as elastic_net does, and the two solvers should
+        # converge to essentially the same optimum for the same
+        # problem.
+
+        from .results import glmnet_r_results
+
+        for dtype in "binomial", "poisson":
+
+            cur_dir = Path(__file__).resolve().parent
+            data = np.loadtxt(
+                Path(cur_dir).joinpath("results", f"enet_{dtype}.csv"),
+                delimiter=",",
+            )
+
+            endog = data[:, 0]
+            exog = data[:, 1:]
+
+            fam = {
+                "binomial": sm.families.Binomial,
+                "poisson": sm.families.Poisson,
+            }[dtype]
+
+            for j in range(9):
+
+                vn = f"rslt_{dtype}_{j:d}"
+                r_result = getattr(glmnet_r_results, vn)
+                L1_wt = r_result[0]
+                alpha = r_result[1]
+                params = r_result[2:]
+
+                if L1_wt != 1:
+                    # l1_slsqp only supports the lasso penalty.
+                    continue
+
+                model = GLM(endog, exog, family=fam())
+                sm_result = model.fit_regularized(
+                    method="l1_slsqp", alpha=alpha
+                )
+                assert sm_result.converged
+
+                enet_result = model.fit_regularized(
+                    method="elastic_net", L1_wt=L1_wt, alpha=alpha
+                )
+                assert enet_result.converged
+
+                # Agreement with glmnet is comparable to elastic_net's.
+                assert_allclose(params, sm_result.params, atol=1e-2, rtol=0.3)
+
+                # The two solvers should converge to the same optimum.
+                assert_allclose(
+                    sm_result.params, enet_result.params,
+                    atol=1e-3, rtol=1e-2,
+                )
+
+                # The penalized log-likelihood that we are maximizing.
+                def plf(params, model, endog, alpha, L1_wt):
+                    llf = model.loglike(params) / len(endog)
+                    llf = llf - alpha * (
+                        (1 - L1_wt) * np.sum(params**2) / 2
+                        + L1_wt * np.sum(np.abs(params))
+                    )
+                    return llf
+
+                # Confirm that we are doing better than glmnet.
+                llf_r = plf(params, model, endog, alpha, L1_wt)
+                llf_sm = plf(sm_result.params, model, endog, alpha, L1_wt)
+                assert_equal(np.sign(llf_sm - llf_r), 1)
+
+    @staticmethod
+    def _load_enet_data(dtype):
+        cur_dir = Path(__file__).resolve().parent
+        file_path = cur_dir / "results" / f"enet_{dtype}.csv"
+        data = np.loadtxt(file_path, delimiter=",")
+        return data[:, 0], data[:, 1:]
+
+    def test_regularized_l1_slsqp_vs_discrete(self):
+        # The l1_slsqp method uses the same solver as the L1
+        # fit_regularized of the discrete models, so the results
+        # should agree closely.  The discrete models penalize the
+        # total log-likelihood while GLM penalizes the average
+        # log-likelihood, so alpha is rescaled by nobs.
+
+        for dtype in "binomial", "poisson":
+            endog, exog = self._load_enet_data(dtype)
+            nobs = len(endog)
+
+            fam = {
+                "binomial": sm.families.Binomial,
+                "poisson": sm.families.Poisson,
+            }[dtype]
+            disc_model = {
+                "binomial": discrete.Logit,
+                "poisson": discrete.Poisson,
+            }[dtype]
+
+            for alpha in 0.01, 0.1:
+                model = GLM(endog, exog, family=fam())
+                sm_result = model.fit_regularized(
+                    method="l1_slsqp", alpha=alpha
+                )
+
+                disc_result = disc_model(endog, exog).fit_regularized(
+                    method="l1", alpha=alpha * nobs, disp=0
+                )
+
+                assert_allclose(
+                    sm_result.params, disc_result.params, atol=1e-5, rtol=1e-4
+                )
+
+    def test_regularized_l1_slsqp_vs_elastic_net(self):
+        # elastic_net with L1_wt=1 minimizes the same objective
+        # function as l1_slsqp, so the two methods should give
+        # similar results.
+
+        for dtype in "binomial", "poisson":
+            endog, exog = self._load_enet_data(dtype)
+
+            fam = {
+                "binomial": sm.families.Binomial,
+                "poisson": sm.families.Poisson,
+            }[dtype]
+
+            for alpha in 0.01, 0.1:
+                result_l1 = GLM(endog, exog, family=fam()).fit_regularized(
+                    method="l1_slsqp", alpha=alpha
+                )
+                result_enet = GLM(endog, exog, family=fam()).fit_regularized(
+                    method="elastic_net", L1_wt=1.0, alpha=alpha
+                )
+
+                assert_allclose(
+                    result_l1.params, result_enet.params, atol=1e-4, rtol=1e-3
+                )
+
+    def test_regularized_l1_slsqp_gaussian(self):
+        # Check a family where the scale parameter is estimated, using
+        # OLS as the reference, for which coordinate descent lasso is
+        # exact.
+        from statsmodels.regression.linear_model import OLS
+
+        rs = np.random.RandomState(3423)
+        n = 200
+        exog = rs.normal(size=(n, 4))
+        exog[:, 0] = 1
+        lin_pred = np.dot(exog, np.r_[1.0, 0.5, 0.0, -0.5])
+        endog = lin_pred + rs.normal(size=n)
+
+        for alpha in 0.01, 0.1:
+            result_glm = GLM(endog, exog).fit_regularized(
+                method="l1_slsqp", alpha=alpha
+            )
+            result_ols = OLS(endog, exog).fit_regularized(
+                L1_wt=1.0, alpha=alpha
+            )
+
+            assert_allclose(
+                result_glm.params, result_ols.params, atol=1e-5, rtol=1e-4
+            )
+
+    def test_regularized_l1_slsqp_refit(self):
+        # refit=True returns an unregularized fit restricted to the
+        # variables with non-zero coefficients in the regularized fit.
+        endog, exog = self._load_enet_data("binomial")
+
+        result = GLM(endog, exog, family=sm.families.Binomial()).fit_regularized(
+            method="l1_slsqp", alpha=0.1, refit=True
+        )
+        ii = np.flatnonzero(result.params)
+        assert 0 < len(ii) < exog.shape[1]
+
+        expected = GLM(
+            endog, exog[:, ii], family=sm.families.Binomial()
+        ).fit()
+        assert_allclose(result.params[ii], expected.params, rtol=1e-8)
+
+    def test_regularized_l1_slsqp_no_convergence_warns(self):
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+        endog, exog = self._load_enet_data("binomial")
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        with pytest.warns(ConvergenceWarning):
+            model.fit_regularized(method="l1_slsqp", alpha=0.1, maxiter=1)
+
+    def test_regularized_method_errors(self):
+        endog, exog = self._load_enet_data("binomial")
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="l1", alpha=0.1)
+        with pytest.raises(ValueError, match="L1_wt must be 1"):
+            model.fit_regularized(method="l1_slsqp", L1_wt=0.5, alpha=0.1)
+
+        # An invalid method must be rejected even when L1_wt == 0, i.e.
+        # the method must be validated before the L1_wt == 0 shortcut to
+        # ridge regression is taken.
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="l1", L1_wt=0, alpha=0.1)
+
+        # l1_slsqp only supports the lasso penalty, so L1_wt=0 must not
+        # be silently redirected to a ridge fit.
+        with pytest.raises(ValueError, match="L1_wt must be 1"):
+            model.fit_regularized(method="l1_slsqp", L1_wt=0, alpha=0.1)
+
+    def test_regularized_elastic_net_ridge_shortcut(self):
+        # method="elastic_net" with L1_wt=0 is still handled by the
+        # ridge shortcut.
+        from statsmodels.base.elastic_net import RegularizedResultsWrapper
+
+        endog, exog = self._load_enet_data("binomial")
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        result = model.fit_regularized(
+            method="elastic_net", L1_wt=0, alpha=0.1
+        )
+        assert isinstance(result, RegularizedResultsWrapper)
+
+    def test_regularized_l1_slsqp_fit_history_iteration(self):
+        # The "iteration" count in fit_history must reflect the actual
+        # number of iterations performed by the solver, and must never
+        # exceed maxiter.  l1_slsqp reports an already 1-indexed
+        # iteration count from scipy, unlike elastic_net's zero-indexed
+        # sweep counter, so the two need different bookkeeping to both
+        # respect maxiter.
+        endog, exog = self._load_enet_data("binomial")
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        result = model.fit_regularized(
+            method="l1_slsqp", alpha=0.1, maxiter=1, refit=True
+        )
+        assert result.fit_history["iteration"] <= 1
+
+        model = GLM(endog, exog, family=sm.families.Binomial())
+        result = model.fit_regularized(
+            method="elastic_net", L1_wt=1.0, alpha=0.1, maxiter=1,
+            refit=True,
+        )
+        assert result.fit_history["iteration"] <= 1
+
+    def test_regularized_elastic_net_method_alias(self):
+        # "coord_descent" and "elastic_net" are accepted as synonyms by
+        # the shared fit_elasticnet helper.
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        endog, exog = self._load_enet_data("binomial")
+        model = GLM(endog, exog, family=sm.families.Binomial())
+
+        result_a = fit_elasticnet(model, method="coord_descent", alpha=0.1)
+        result_b = fit_elasticnet(model, method="elastic_net", alpha=0.1)
+
+        assert_allclose(result_a.params, result_b.params)
+
 
 class TestConvergence:
     @classmethod
@@ -2993,6 +3222,36 @@ def test_int_scale():
     assert res.scale.dtype == np.float64
 
 
+def test_invalid_scale_string_raises():
+    # scale may be a float/int, None, or one of the strings "X2"/"dev"
+    # (case-insensitively); anything else must be rejected. Numeric scale
+    # is unaffected, see test_int_scale above.
+    data = longley.load()
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    with pytest.raises(ValueError, match="scale"):
+        mod.fit(scale="not-a-scale")
+
+
+def test_predict_invalid_which_raises():
+    data = longley.load()
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    res = mod.fit()
+    with pytest.raises(ValueError, match="which"):
+        res.predict(which="not-a-real-option")
+
+
+def test_estimate_scale_invalid_scaletype_raises():
+    # scaletype is a public, documented attribute that can be set directly
+    # (not only through fit's validated `scale` argument), so
+    # estimate_scale must independently validate it.
+    data = longley.load()
+    mod = GLM(data.endog, data.exog, family=sm.families.Gaussian())
+    res = mod.fit()
+    mod.scaletype = "not-a-scale"
+    with pytest.raises(ValueError, match="scaletype"):
+        mod.estimate_scale(res.fittedvalues)
+
+
 @pytest.mark.parametrize("dtype", [np.int8, np.int16, np.int32, np.int64])
 def test_int_exog(dtype):
     # GH-6627, make use of floats internally
@@ -3005,29 +3264,15 @@ def test_int_exog(dtype):
     assert isinstance(res.params, np.ndarray)
 
 
-@pytest.mark.thread_unsafe(reason="Sets global use_bic parameter")
 def test_glm_bic(iris):
-    # TODO: Before 0.15 release remove future warning and simplify test
     X = np.c_[np.ones(100), iris[50:, :4]]
     y = np.array(iris)[50:, 4].astype(np.int32)
     y -= 1
-    SET_USE_BIC_LLF(True)
     model = GLM(y, X, family=sm.families.Binomial()).fit()
     # 34.9244 is what glm() of R yields
     assert_almost_equal(model.bic, 34.9244, decimal=3)
     assert_almost_equal(model.bic_llf, 34.9244, decimal=3)
-    SET_USE_BIC_LLF(False)
-    assert_almost_equal(model.bic, model.bic_deviance, decimal=3)
-    SET_USE_BIC_LLF(None)
-
-
-def test_glm_bic_warning(iris):
-    X = np.c_[np.ones(100), iris[50:, :4]]
-    y = np.array(iris)[50:, 4].astype(np.int32)
-    y -= 1
-    model = GLM(y, X, family=sm.families.Binomial()).fit()
-    with pytest.warns(FutureWarning, match="The bic"):
-        assert isinstance(model.bic, float)
+    assert_almost_equal(model.bic, model.bic_llf, decimal=3)
 
 
 def test_output_exposure_null():
@@ -3197,3 +3442,98 @@ def test_glm_summary2_method():
     res_g1 = mod.fit(start_params=res1.params, method="bfgs")
     summ = res_g1.summary2()
     assert re.compile(r"Method:\s+bfgs").findall(str(summ))
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    data = longley.load()
+    data.endog = np.require(data.endog, requirements="W")
+    data.exog = np.require(data.exog, requirements="W")
+    data.exog = add_constant(data.exog, prepend=False)
+    res = GLM(data.endog, data.exog, family=sm.families.Gaussian()).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_glm_get_margeff():
+    # GLMResults.get_margeff is exported but had no direct test coverage
+    # (only GEEResults.get_margeff, a different implementation, was
+    # exercised). With the identity link, dy/dx reduces exactly to the
+    # coefficient, giving a closed-form check.
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    exog = add_constant(x)
+    beta = np.array([0.5, 1.2, -0.7])
+    endog = exog @ beta + rng.normal(size=n) * 0.1
+
+    res = GLM(endog, exog, family=sm.families.Gaussian()).fit()
+
+    # dy/dx for the identity link is exactly the fitted coefficient, not
+    # merely close to the true data-generating beta.
+    me = res.get_margeff()
+    assert_allclose(me.margeff, res.params[1:], rtol=1e-10)
+
+    me_mean = res.get_margeff(at="mean")
+    assert_allclose(me_mean.margeff, res.params[1:], rtol=1e-10)
+
+    # With a log link, dy/dx = mu * beta at each observation; the "overall"
+    # (average) effect must match the mean of that closed-form expression.
+    endog_pos = np.exp(endog * 0.05)
+    res_log = GLM(
+        endog_pos, exog, family=sm.families.Gaussian(sm.families.links.Log())
+    ).fit()
+    me_log = res_log.get_margeff()
+    manual = np.mean(
+        res_log.fittedvalues[:, None] * res_log.params[1:], axis=0
+    )
+    assert_allclose(me_log.margeff, manual, rtol=1e-10)
+
+
+def test_loglike_mu_matches_loglike():
+    # loglike_mu(mu, scale) must equal loglike(params, scale) when mu is
+    # the model's own predicted mean at those params: same likelihood,
+    # computed two different ways.
+    rs = np.random.RandomState(987456)
+    n = 200
+    exog = sm.add_constant(rs.standard_normal((n, 2)))
+    lin = exog @ [0.2, 0.5, -0.3]
+    endog = rs.poisson(np.exp(lin))
+    mod = GLM(endog, exog, family=sm.families.Poisson())
+    res = mod.fit()
+
+    mu = mod.predict(res.params)
+    assert_allclose(mod.loglike_mu(mu, scale=1.0),
+                    mod.loglike(res.params, scale=1.0), rtol=1e-12)
+
+
+def test_information_is_expected_hessian():
+    rs = np.random.RandomState(1)
+    n = 150
+    exog = sm.add_constant(rs.standard_normal((n, 2)))
+    endog = rs.poisson(np.exp(exog @ [0.1, 0.3, -0.2]))
+    mod = GLM(endog, exog, family=sm.families.Poisson())
+    res = mod.fit()
+    assert_allclose(mod.information(res.params),
+                    mod.hessian(res.params, observed=False), rtol=1e-12)
+
+
+def test_derivative_predict_matches_numerical_derivative():
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rs = np.random.RandomState(2468)
+    n = 300
+    exog = sm.add_constant(rs.standard_normal((n, 2)))
+    lin = exog @ [0.1, 0.4, -0.25]
+    endog = rs.binomial(1, 1 / (1 + np.exp(-lin)))
+    mod = GLM(endog, exog, family=sm.families.Binomial())
+    res = mod.fit()
+
+    analytic = mod._derivative_predict(res.params)
+    numeric = approx_fprime(res.params, mod.predict, centered=True)
+    assert_allclose(analytic, numeric, rtol=1e-4, atol=1e-6)
+    # exog=None must default to the estimation exog and agree with the
+    # lower-level helper margins/score computations use internally
+    assert_allclose(analytic, mod._deriv_mean_dparams(res.params), rtol=1e-12)

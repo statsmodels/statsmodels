@@ -38,12 +38,30 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog`` and ``endog_name``
+        attributes.
+
+    Notes
+    -----
+    The nile Dataset instance does not contain an exog attribute.
     """
     return load_pandas()
 
 
 def load_pandas():
+    """
+    Load the Nile data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog`` and ``endog_name``
+        attributes.
+
+    Notes
+    -----
+    The nile Dataset instance does not contain an exog attribute.
+    """
     data = _get_data()
     # TODO: time series
     endog = pd.Series(data["volume"], index=data["year"].astype(int))

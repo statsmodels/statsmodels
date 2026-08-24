@@ -1,5 +1,6 @@
 from statsmodels.compat.pandas import MONTH_END
 
+from pathlib import Path
 import tempfile
 
 import numpy as np
@@ -85,7 +86,7 @@ def test_x13_arima_plot(dataset, close_figures):
     res.plot()
 
 
-def test_x13_arima_plot_no_pandas(dataset):
+def test_x13_arima_plot_no_pandas(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
 
@@ -229,11 +230,17 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         x13_arima_analysis(dataset, rawspec=ft.name)
+        try:
+            Path(ft.name).unlink()
+        except OSError:
+            # While it best ot unlink, not strictly required
+            pass
 
 
 def test_x13_arima_invalid_rawspec(dataset):

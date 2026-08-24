@@ -5,6 +5,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
+
 import numpy as np
 
 from statsmodels.base.model import Model
@@ -13,7 +15,26 @@ from statsmodels.robust.covariance import _get_detcov_startidx
 import statsmodels.robust.norms as rnorms
 from statsmodels.robust.robust_linear_model import RLM
 import statsmodels.robust.scale as rscale
-from statsmodels.tools.testing import Holder
+
+
+class DetSStartResult(NamedTuple):
+    """
+    Result of one starting-value fit within :meth:`RLMDetS.fit`.
+
+    Parameters
+    ----------
+    scale : float
+        Estimated scale of the RLM fit from this starting value.
+    params : ndarray
+        Estimated parameters of the RLM fit from this starting value.
+    method : int
+        Index of the starting value that produced this fit, used to
+        identify which entry of ``results_iter`` this is.
+    """
+
+    scale: float
+    params: np.ndarray
+    method: int
 
 
 class RLMDetS(Model):
@@ -22,21 +43,22 @@ class RLMDetS(Model):
 
     Parameters
     ----------
-    endog : array-like, 1-dim
+    endog : array_like
         Dependent, endogenous variable.
-    exog : array-like, 1-dim
+    exog : array_like
         Independent, exogenous regressor variables.
-    norm : robust norm
+    norm : statsmodels.robust.norms.RobustNorm, optional
         Redescending robust norm used for S-estimation.
         Default is TukeyBiweight.
-    breakdown_point : float in (0, 0.5)
+    breakdown_point : float in (0, 0.5), optional
         Breakdown point of the S-estimator.
-    col_indices : None or array-like of ints
+    col_indices : array_like[int], optional
         Index of columns of exog to use in the mahalanobis distance
         computation for the starting sets of the S-estimator.
-        Default is all exog except first column (constant). Todo: will
-        change when we autodetect the constant column.
-    include_endog : bool
+        If None (default), all exog columns except the first (constant)
+        column are used. Todo: will change when we autodetect the
+        constant column.
+    include_endog : bool, optional
         If true, then the endog variable is combined with the exog
         variables to compute the mahalanobis distances for the starting
         sets of the S-estimator.
@@ -121,14 +143,38 @@ class RLMDetS(Model):
         return res
 
     def fit(self, h, maxiter=100, maxiter_step=5, start_params_extra=None):
+        """
+        Estimate the model using a deterministic S-estimator.
 
+        Parameters
+        ----------
+        h : int
+            Size of the initial sets used to compute the starting values
+            for the S-estimator.
+        maxiter : int, optional
+            Maximum number of iterations used for the final fit starting
+            from the best starting value. Default is 100.
+        maxiter_step : int, optional
+            Maximum number of iterations used when fitting each starting
+            value while searching for the best starting value. Default
+            is 5.
+        start_params_extra : list[ndarray] or None, optional
+            Additional starting parameter arrays to consider together
+            with the starting sets generated internally. Default is
+            None, which means no extra starting values are used.
+
+        Returns
+        -------
+        statsmodels.robust.robust_linear_model.RLMResults
+            Results instance corresponding to the best starting value.
+        """
         start_params_all = self._get_start_params(h)
         if start_params_extra:
             start_params_all.extend(start_params_extra)
         res = {}
         for ii, sp in enumerate(start_params_all):
             res_ii = self._fit_one(sp, maxiter=maxiter_step)
-            res[ii] = Holder(
+            res[ii] = DetSStartResult(
                 scale=res_ii.scale,
                 params=res_ii.params,
                 method=ii,  # method  # TODO need start set method
@@ -154,23 +200,24 @@ class RLMDetSMM(RLMDetS):
 
     Parameters
     ----------
-    endog : array-like, 1-dim
+    endog : array_like
         Dependent, endogenous variable.
-    exog : array-like, 1-dim
+    exog : array_like
         Independent, exogenous regressor variables.
-    norm : robust norm
+    norm : statsmodels.robust.norms.RobustNorm, optional
         Redescending robust norm used for S- and MM-estimation.
         Default is TukeyBiweight.
-    efficiency : float in (0, 1)
+    efficiency : float in (0, 1), optional
         Asymptotic efficiency of the MM-estimator (used in second stage).
-    breakdown_point : float in (0, 0.5)
+    breakdown_point : float in (0, 0.5), optional
         Breakdown point of the preliminary S-estimator.
-    col_indices : None or array-like of ints
+    col_indices : array_like[int], optional
         Index of columns of exog to use in the mahalanobis distance computation
         for the starting sets of the S-estimator.
-        Default is all exog except first column (constant). Todo: will change
-        when we autodetect the constant column.
-    include_endog : bool
+        If None (default), all exog columns except the first (constant)
+        column are used. Todo: will change when we autodetect the
+        constant column.
+    include_endog : bool, optional
         If true, then the endog variable is combined with the exog variables
         to compute the mahalanobis distances for the starting sets of the
         S-estimator.
@@ -200,16 +247,18 @@ class RLMDetSMM(RLMDetS):
 
         Parameters
         ----------
-        h : int
-            The size of the initial sets for the S-estimator.
-            Default is ... (todo).
-        scale_binding : bool
+        h : int or None, optional
+            The size of the initial sets for the S-estimator. If None
+            (default), ``max(nobs // 2 + 1, k_params + 1)`` is used, the
+            same rule as :meth:`CovDetS.fit`'s ``h_start`` default.
+            Unused if `start` is provided.
+        scale_binding : bool, optional
             If true, then the scale is fixed in the second stage M-estimation,
-            i.e. this is the MM-estimator.
+            i.e., this is the MM-estimator.
             If false, then the high breakdown point M-scale is used also in the
             second stage M-estimation if that estimated scale is smaller than
             the scale of the preliminary, first stage S-estimator.
-        start : tuple or None
+        start : tuple or None, optional
             If None, then the starting parameters and scale for the second
             stage M-estimation are taken from the first stage S-estimator.
             Alternatively, the starting parameters and starting scale can be
@@ -218,7 +267,8 @@ class RLMDetSMM(RLMDetS):
 
         Returns
         -------
-        results instance
+        statsmodels.robust.robust_linear_model.RLMResults
+            Results instance
 
         Notes
         -----
@@ -234,6 +284,9 @@ class RLMDetSMM(RLMDetS):
         """
         norm_m = self.norm_mean
         if start is None:
+            if h is None:
+                nobs, k_params = self.exog.shape
+                h = max(nobs // 2 + 1, k_params + 1)
             res_s = super().fit(h)
             start_params = np.asarray(res_s.params)
             start_scale = res_s.scale

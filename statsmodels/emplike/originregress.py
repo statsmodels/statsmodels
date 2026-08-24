@@ -16,14 +16,19 @@ References
 Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
 
 """
+
+import warnings
+
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2
 
+from statsmodels.emplike.descriptive import EmpLikeTestResult
 from statsmodels.regression.linear_model import OLS, RegressionResults
 
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.validation import bool_like
 
 
 class ELOriginRegress:
@@ -33,16 +38,16 @@ class ELOriginRegress:
 
     Parameters
     ----------
-    endog : nx1 array
+    endog : array_like
         Array of response variables.
-    exog : nxk array
+    exog : array_like
         Array of exogenous variables.  Assumes no array of ones
 
     Attributes
     ----------
-    endog : nx1 array
+    endog : array_like
         Array of response variables
-    exog : nxk array
+    exog : array_like
         Array of exogenous variables.  Assumes no array of ones.
     nobs : int
         Number of observations.
@@ -71,7 +76,7 @@ class ELOriginRegress:
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
-            np.array([0]), np.array([0]), ret_params=1
+            np.array([0]), np.array([0]), ret_params=1, result_object=False
         )
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
@@ -87,7 +92,7 @@ class ELOriginRegress:
         params : ndarray
             Parameters, including the (fixed at 0) intercept term,
             as returned by `fit`.
-        exog : ndarray, optional
+        exog : array_like, optional
             Exogenous variables to use for the prediction.  If None,
             the exog attached to the model is used.
 
@@ -107,7 +112,7 @@ class OriginResults(RegressionResults):
 
     Parameters
     ----------
-    model : class
+    model : OLS
         An OLS model with an intercept.
     params : 1darray
         Fitted parameters.
@@ -120,7 +125,7 @@ class OriginResults(RegressionResults):
 
     Attributes
     ----------
-    model : class
+    model : OLS
         An OLS model with an intercept.
     params : 1darray
         Fitted parameter.
@@ -157,6 +162,8 @@ class OriginResults(RegressionResults):
 
     # No covariance matrix so normal inference is not valid
     >>> fitted.conf_int()
+    Traceback (most recent call last):
+     ...
     TypeError: unsupported operand type(s) for *: 'instancemethod' and 'float'
     """
     def __init__(self, model, params, est_llr, llf_el):
@@ -166,7 +173,14 @@ class OriginResults(RegressionResults):
         self.llf_el = llf_el
 
     def el_test(
-        self, b0_vals, param_nums, method="nm", stochastic_exog=1, return_weights=0
+        self,
+        b0_vals,
+        param_nums,
+        method="nm",
+        stochastic_exog=1,
+        return_weights=0,
+        *,
+        result_object=None,
     ):
         """
         Returns the llr and p-value for a hypothesized parameter value
@@ -180,30 +194,57 @@ class OriginResults(RegressionResults):
             Which parameters to test.  Note this uses python
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
-        method : str
+        method : str, optional
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'.
-        stochastic_exog : bool
-            When TRUE, the exogenous variables are assumed to be stochastic.
+        stochastic_exog : bool, optional
+            When True, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
-            regressors.  Default is TRUE.
-        return_weights : bool
+            regressors.  Default is True.
+        return_weights : bool, optional
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False.
+        result_object : bool, optional
+            Flag indicating whether to return the results as an
+            ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
+            ``return_weights=True`` the NamedTuple holds the same three
+            elements as the legacy tuple, so it unpacks identically and is
+            always returned, with no warning. When ``return_weights=False``
+            the legacy two-element tuple is returned by default and a
+            ``FutureWarning`` is issued.
+
+            .. deprecated:: 0.15.0
+
+                In release 0.16.0 or after July 2027, whichever is later, the
+                default will change to always return an
+                ``EmpLikeTestResult``. Set ``result_object=True`` to opt in
+                now, or ``result_object=False`` to silence the warning and
+                keep the current return type.
 
         Returns
         -------
-        llr : float
-            The log likelihood ratio for the hypothesized values.
-        pval : float
-            The p-value corresponding to `llr`.
-        weights : ndarray, optional
-            The observation weights that optimize the likelihood
-            ratio.  Only returned if `return_weights` is True.
+        EmpLikeTestResult or tuple
+            If ``result_object=True`` or ``return_weights=True``, a
+            NamedTuple with fields:
+
+            llr : float
+                The log likelihood ratio for the hypothesized values.
+            pvalue : float
+                The p-value corresponding to ``llr``.
+            weights : ndarray or None
+                The observation weights that optimize the likelihood ratio.
+                ``None`` when ``return_weights`` is False, since they are
+                not computed in that case.
+
+            See :class:`~statsmodels.emplike.descriptive.EmpLikeTestResult`.
+
+            Otherwise (the deprecated default), the plain ``(llr, pvalue)``
+            tuple.
         """
+        result_object = bool_like(result_object, "result_object", optional=True)
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
         test_res = self.model.fit().el_test(
@@ -212,14 +253,30 @@ class OriginResults(RegressionResults):
             method=method,
             stochastic_exog=stochastic_exog,
             return_weights=return_weights,
+            result_object=False,
         )
         llr_test = test_res[0]
         llr_res = llr_test - self.llr
         pval = chi2.sf(llr_res, self.model.exog.shape[1] - 1)
-        if return_weights:
-            return llr_res, pval, test_res[2]
-        else:
-            return llr_res, pval
+        # The weights come from the underlying OLSResults.el_test, which only
+        # computes them when return_weights is True, so they stay None here
+        # otherwise.
+        weights = test_res[2] if return_weights else None
+        if result_object is None and not return_weights:
+            warnings.warn(
+                "OriginResults.el_test currently returns a plain tuple whose "
+                "length depends on the return_weights argument. In release "
+                "0.16.0 or after July 2027, whichever is later, the default "
+                "behavior will switch to always returning an "
+                "EmpLikeTestResult NamedTuple. Set result_object=True to "
+                "switch now, or result_object=False to keep the current "
+                "behavior and silence this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if result_object or return_weights:
+            return EmpLikeTestResult(llr_res, pval, weights)
+        return llr_res, pval
 
     def conf_int_el(
         self,
@@ -274,9 +331,13 @@ class OriginResults(RegressionResults):
         def f(b0):
             b0 = np.array([b0])
             val = self.el_test(
-                b0, param_num, method=method, stochastic_exog=stochastic_exog
+                b0,
+                param_num,
+                method=method,
+                stochastic_exog=stochastic_exog,
+                result_object=True,
             )
-            return val[0] - r0
+            return val.llr - r0
 
         _param = np.squeeze(self.params[param_num])
         lowerl = optimize.brentq(f, np.squeeze(lower_bound), _param)

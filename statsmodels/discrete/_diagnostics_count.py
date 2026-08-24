@@ -3,14 +3,17 @@ Created on Fri Sep 15 12:53:45 2017
 
 Author: Josef Perktold
 """
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from statsmodels.discrete.discrete_model import Poisson
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import InvalidTestWarning, SingularMatrixWarning
 
 
@@ -24,14 +27,14 @@ def _combine_bins(edge_index, x):
 
     Parameters
     ----------
-    edge_index : array_like
+    edge_index : sequence of int
          This defines the (zero-based) indices for the columns that are to be
          combined. Each index in `edge_index` except the last is the starting
          index for a bin. The largest index in a bin is the next
          ``edge_index - 1``.
-    x : 1d or 2d array
-        Array for which columns are combined. If x is 1-dimensional, then it
-        will be treated as a 2-d row vector.
+    x : array_like
+        1-d or 2-d array for which columns are combined. If x is
+        1-dimensional, then it will be treated as a 2-d row vector.
 
     Returns
     -------
@@ -42,7 +45,7 @@ def _combine_bins(edge_index, x):
 
     Examples
     --------
-    >>> dia.combine_bins([0,1,5], np.arange(4))
+    >>> dia._combine_bins([0,1,5], np.arange(4))
     (array([0, 6]), array([1, 4]))
 
     This aggregates to two bins with the sum of 1 and 4 elements.
@@ -54,7 +57,7 @@ def _combine_bins(edge_index, x):
     If the rightmost index is smaller than len(x)+1, then the remaining
     columns will not be included.
 
-    >>> dia.combine_bins([0,1,3], np.arange(4))
+    >>> dia._combine_bins([0,1,3], np.arange(4))
     (array([0, 3]), array([1, 2]))
     """
     x = np.asarray(x)
@@ -82,19 +85,19 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
 
     Parameters
     ----------
-    freq, probs_predicted : ndarrays
+    freq, probs_predicted : array_like
         Two arrays of probabilities, this can be any probabilities for
         the same events, default is designed for comparing predicted
         and observed probabilities.
-    label : str or tuple
+    label : str or tuple, optional
         If string, then it will be used as the label for probs_predicted and
         "freq" is used for the other probabilities.
         If label is a tuple of strings, then its two elements are used as
         labels for both probabilities.
-    upp_xlim : None or int
+    upp_xlim : int, optional
         If it is not None, then the xlim of the first two plots are set to
         (0, upp_xlim), otherwise the matplotlib default is used.
-    fig : None or matplotlib figure instance
+    fig : matplotlib.figure.Figure, optional
         If fig is provided, then the axes will be added to it in a (3,1)
         subplot grid, otherwise a matplotlib figure instance is created.
 
@@ -111,7 +114,7 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
         label0, label1 = "freq", label
 
     if fig is None:
-        import matplotlib.pyplot as plt
+        plt = _import_mpl()
 
         fig = plt.figure(figsize=(8, 12))
     ax1 = fig.add_subplot(311)
@@ -139,6 +142,43 @@ def plot_probs(freq, probs_predicted, label="predicted", upp_xlim=None, fig=None
     return fig
 
 
+@dataclass(frozen=True, slots=True)
+class ChisquareProbResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`test_chisquare_prob`.
+
+    Parameters
+    ----------
+    statistic : float
+        Chi-square test statistic.
+    pvalue : float
+        p-value based on the chi-square distribution.
+    df : int
+        Degrees of freedom of the test.
+    diff1 : ndarray
+        Difference between the observed and predicted binned indicator
+        variables, ``d_ind_bins - probs_bins``.
+    res_aux : RegressionResults
+        Fitted auxiliary OLS regression used to compute `statistic`.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    df: int
+    diff1: np.ndarray
+    res_aux: object
+    distribution: str
+
+
 def test_chisquare_prob(results, probs, bin_edges=None):
     """
     Chi-square test for predicted probabilities using cmt-opg.
@@ -150,22 +190,16 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     probs : ndarray
         Array of predicted probabilities with observations
         in rows and event counts in columns
-    bin_edges : None or array
+    bin_edges : array_like, optional
         intervals to combine several counts into cells
-        see combine_bins
+        see _combine_bins
 
     Returns
     -------
-    (api not stable, replace by test-results class)
-    statistic : float
-        Chi-square statistic for test.
-    p-value : float
-        p-value of test
-    df : int
-        degrees of freedom for chisquare distribution
-    extras : ???
-        currently returns a tuple with some intermediate results
-        (diff, res_aux)
+    ChisquareProbResult
+        See :class:`ChisquareProbResult` for a description of the
+        attributes. The api is not stable and might be replaced by a
+        test-results class.
 
     Notes
     -----
@@ -173,7 +207,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     Status : experimental, no verified unit tests, needs to be generalized
     currently only OPG version with auxiliary regression is implemented
 
-    Assumes counts are np.arange(probs.shape[1]), i.e. consecutive
+    Assumes counts are np.arange(probs.shape[1]), i.e., consecutive
     integers starting at zero.
 
     Auxiliary regression drops the last column of binned probs to avoid
@@ -223,7 +257,7 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     statistic = chi2_stat
     pvalue = stats.chi2.sf(chi2_stat, df)
 
-    res = HolderTuple(
+    res = ChisquareProbResult(
         statistic=statistic,
         pvalue=pvalue,
         df=df,
@@ -234,7 +268,37 @@ def test_chisquare_prob(results, probs, bin_edges=None):
     return res
 
 
-class DispersionResults(HolderTuple):
+@dataclass(frozen=True, slots=True)
+class DispersionResults(LimitedIterationMixin[np.ndarray]):
+    """
+    Result of :func:`test_poisson_dispersion`.
+
+    Parameters
+    ----------
+    statistic : ndarray
+        Test statistic for each of the dispersion tests.
+    pvalue : ndarray
+        p-value for each of the dispersion tests.
+    method : list of str
+        Short name of each dispersion test.
+    alternative : list of str
+        Description of the alternative variance assumption of each test.
+    name : str
+        Descriptive title for the collection of tests.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: np.ndarray
+    pvalue: np.ndarray
+    method: list
+    alternative: list
+    name: str
 
     def summary_frame(self):
         frame = pd.DataFrame(
@@ -249,7 +313,7 @@ class DispersionResults(HolderTuple):
         return frame
 
 
-def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
+def test_poisson_dispersion(results, method="all"):
     """
     Score/LM type tests for Poisson variance assumptions
 
@@ -258,7 +322,7 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     H0: var(y) = E(y) and assuming E(y) is correctly specified
     H1: var(y) ~= E(y)
 
-    The tests are based on the constrained model, i.e. the Poisson model.
+    The tests are based on the constrained model, i.e., the Poisson model.
     The tests differ in their assumed alternatives, and in their maintained
     assumptions.
 
@@ -267,18 +331,15 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     results : Poisson results instance
         This can be a results instance for either a discrete Poisson or a GLM
         with family Poisson.
-    method : str
+    method : str, optional
         Not used yet. Currently results for all methods are returned.
-    _old : bool
-        Temporary keyword for backwards compatibility, will be removed
-        in future version of statsmodels.
 
     Returns
     -------
-    res : instance
-        The instance of DispersionResults has the hypothesis test results,
-        statistic, pvalue, method, alternative, as main attributes and a
-        summary_frame method that returns the results as pandas DataFrame.
+    DispersionResults
+        See :class:`DispersionResults` for a description of the attributes.
+        The instance also has a `summary_frame` method that returns the
+        results as a pandas DataFrame.
 
     """
 
@@ -342,18 +403,14 @@ def test_poisson_dispersion(results, method="all", _old=False):  # noqa: PT019
     description.append(["CT nb1 HC3", "mu (1 + a)"])
 
     results_all = np.array(results_all)
-    if _old:
-        # for backwards compatibility in 0.14, remove in later versions
-        return results_all, description
-    else:
-        res = DispersionResults(
-            statistic=results_all[:, 0],
-            pvalue=results_all[:, 1],
-            method=[i[0] for i in description],
-            alternative=[i[1] for i in description],
-            name="Poisson Dispersion Test",
-        )
-        return res
+    res = DispersionResults(
+        statistic=results_all[:, 0],
+        pvalue=results_all[:, 1],
+        method=[i[0] for i in description],
+        alternative=[i[1] for i in description],
+        name="Poisson Dispersion Test",
+    )
+    return res
 
 
 def _test_poisson_dispersion_generic(
@@ -375,6 +432,41 @@ def _test_poisson_dispersion_generic(
     of the `exog_new_test`.
 
     Warning: insufficiently tested, especially for options
+
+    Parameters
+    ----------
+    results : results instance
+        Results instance for a fitted Poisson model.
+    exog_new_test : ndarray
+        Additional exog variables that are added to the variance function
+        and whose coefficients are tested by a Wald test.
+    exog_new_control : ndarray, optional
+        Additional control variables that are added to the variance
+        function together with `exog_new_test`, but whose coefficients
+        are not tested.
+    include_score : bool, optional
+        If True, then the score of the mean model is added as an
+        additional control variable.
+    use_endog : bool, optional
+        If True, then the variance function is specified in terms of the
+        squared residuals based on `endog`. If False, then it is based on
+        the fitted mean instead of `endog`.
+    cov_type : str, optional
+        Covariance type for the auxiliary OLS regression used in the
+        test. Default is "HC3".
+    cov_kwds : dict, optional
+        Keywords for the specified covariance type of the auxiliary OLS
+        regression.
+    use_t : bool, optional
+        If True, then the t-distribution is used for the auxiliary OLS
+        regression.
+
+    Returns
+    -------
+    stat_ols : float
+        Test statistic.
+    pval_ols : float
+        p-value of the test.
     """
 
     if hasattr(results, "_results"):
@@ -428,6 +520,40 @@ def _test_poisson_dispersion_generic(
     return stat_ols, pval_ols
 
 
+@dataclass(frozen=True, slots=True)
+class ZeroinflationJHResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`test_poisson_zeroinflation_jh`.
+
+    Parameters
+    ----------
+    statistic : float
+        Score test statistic, chi-square distributed.
+    pvalue : float
+        p-value based on the chi-square distribution.
+    df : int
+        Degrees of freedom, equal to the number of columns of `exog_infl`.
+    rank_score : int
+        Rank of the score covariance matrix, may differ from `df` if the
+        covariance matrix is singular.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    df: int
+    rank_score: int
+    distribution: str
+
+
 def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     """
     Score test for zero inflation or deflation in Poisson.
@@ -442,21 +568,23 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     results_poisson : results instance
         The test is only valid if the results instance is a Poisson
         model.
-    exog_infl : ndarray
+    exog_infl : ndarray, optional
         Explanatory variables for the zero-inflated or zero-modified
         alternative. If exog_infl is None, then the inflation
         probability is assumed to be constant.
 
     Returns
     -------
-    score test results based on chisquare distribution
+    ZeroinflationJHResult
+        See :class:`ZeroinflationJHResult` for a description of the
+        attributes.
 
     Notes
     -----
     This is a score test based on the null hypothesis that
     the true model is Poisson. It will also reject for
     other deviations from a Poisson model if those affect
-    the zero probabilities, e.g. in the direction of
+    the zero probabilities, e.g., in the direction of
     excess dispersion as in the Negative Binomial
     or Generalized Poisson model.
     Therefore, rejection in this test does not imply that
@@ -511,7 +639,7 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
     df = exog_infl.shape[1]
     pvalue = stats.chi2.sf(statistic, df)
 
-    res = HolderTuple(
+    res = ZeroinflationJHResult(
         statistic=statistic,
         pvalue=pvalue,
         df=df,
@@ -519,6 +647,52 @@ def test_poisson_zeroinflation_jh(results_poisson, exog_infl=None):
         distribution="chi2",
     )
     return res
+
+
+@dataclass(frozen=True, slots=True)
+class ZeroModificationTestResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`test_poisson_zeroinflation_broek` and
+    :func:`test_poisson_zeros`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic, standard normal distributed.
+    pvalue : float
+        Two-sided p-value based on the normal distribution.
+    pvalue_smaller : float
+        One-sided p-value for the alternative that zeros are inflated
+        (statistic is larger).
+    pvalue_larger : float
+        One-sided p-value for the alternative that zeros are deflated
+        (statistic is smaller).
+    chi2 : float
+        Chi-square statistic, ``statistic ** 2``.
+    pvalue_chi2 : float
+        Two-sided p-value based on the chi-square distribution with one
+        degree of freedom.
+    df_chi2 : int
+        Degrees of freedom of the chi-square distribution, always 1.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"normal"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    pvalue_smaller: float
+    pvalue_larger: float
+    chi2: float
+    pvalue_chi2: float
+    df_chi2: int
+    distribution: str
 
 
 def test_poisson_zeroinflation_broek(results_poisson):
@@ -533,6 +707,18 @@ def test_poisson_zeroinflation_broek(results_poisson):
 
     The test reports two sided and one sided alternatives based on
     the normal distribution of the test statistic.
+
+    Parameters
+    ----------
+    results_poisson : Poisson results instance
+        The results instance for a fitted Poisson model. The test
+        assumes that the model includes a constant.
+
+    Returns
+    -------
+    ZeroModificationTestResult
+        See :class:`ZeroModificationTestResult` for a description of the
+        attributes.
 
     References
     ----------
@@ -555,7 +741,7 @@ def test_poisson_zeroinflation_broek(results_poisson):
     pvalue_upp = stats.norm.sf(statistic)
     pvalue_low = stats.norm.cdf(statistic)
 
-    res = HolderTuple(
+    res = ZeroModificationTestResult(
         statistic=statistic,
         pvalue=pvalue_two,
         pvalue_smaller=pvalue_upp,
@@ -582,8 +768,9 @@ def test_poisson_zeros(results):
 
     Returns
     -------
-    HolderTuple
-        Test statistic, p-values and distribution information.
+    ZeroModificationTestResult
+        See :class:`ZeroModificationTestResult` for a description of the
+        attributes.
 
     References
     ----------
@@ -615,7 +802,7 @@ def test_poisson_zeros(results):
     pvalue_upp = stats.norm.sf(statistic)
     pvalue_low = stats.norm.cdf(statistic)
 
-    res = HolderTuple(
+    res = ZeroModificationTestResult(
         statistic=statistic,
         pvalue=pvalue_two,
         pvalue_smaller=pvalue_upp,

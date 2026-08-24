@@ -5,10 +5,10 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import integrate, optimize, stats
-
-from statsmodels.tools.testing import Holder
 
 
 def _var_normal(norm):
@@ -122,16 +122,16 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         Required asymptotic relative efficiency compared to least squares
         at the normal reference distribution. For example, ``eff=0.95`` for
         95% efficiency.
-    kwd : str
+    kwd : str, optional
         Name of keyword for tuning parameter.
-    kwargs : dict or None
+    kwargs : dict or None, optional
         Dict for other keyword parameters.
-    use_jump : bool
+    use_jump : bool, optional
         If False (default), then use computation that require continuous
         psi function.
         If True, then use computation then the psi function can have jump
         discontinuities.
-    bracket : None or tuple
+    bracket : tuple, optional
         Bracket with lower and upper bounds to use for scipy.optimize.brentq.
         If None, than a default bracket, currently [0.1, 10], is used.
 
@@ -159,29 +159,53 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
     return res
 
 
+class TuningSEstimatorMeanResult(NamedTuple):
+    """
+    Result of :func:`tuning_s_estimator_mean`.
+
+    Parameters
+    ----------
+    breakdown : float or ndarray
+        Breakdown point(s), same as the `breakdown` function argument.
+    eff : float or ndarray
+        Relative efficiency at the given breakdown point(s).
+    param : float or ndarray
+        Tuning parameter for the norm at the given breakdown point(s).
+    scale_bias : float or ndarray
+        Correction term for Fisher consistency at the given breakdown
+        point(s).
+    all : ndarray
+        Stacked array with rows `breakdown`, `eff`, `param` and
+        `scale_bias` for all requested breakdown points, regardless of
+        whether a scalar or iterable `breakdown` was given.
+    """
+
+    breakdown: float | np.ndarray
+    eff: float | np.ndarray
+    param: float | np.ndarray
+    scale_bias: float | np.ndarray
+    all: np.ndarray
+
+
 def tuning_s_estimator_mean(norm, breakdown=None):
     """
     Tuning parameter and scale bias correction for S-estimators of mean
 
     The reference distribution is the normal distribution.
-    This requires a (hard) redescending norm, i.e. with finite max rho.
+    This requires a (hard) redescending norm, i.e., with finite max rho.
 
     Parameters
     ----------
     norm : instance of RobustNorm subclass
-    breakdown : float or iterable of float in (0, 0.5]
+    breakdown : float or iterable of float in (0, 0.5], optional
         Desired breakdown point between 0 and 0.5.
         Default if breakdown is None is a list of breakdown points.
 
     Returns
     -------
-    Holder
-        Instance with the following attributes:
-
-        - `breakdown` : breakdown point
-        - `eff` : relative efficiency
-        - `param` : tuning parameter for norm
-        - `scale_bias` : correction term for Fisher consistency.
+    TuningSEstimatorMeanResult
+        Named tuple with `breakdown`, `eff`, `param`, and `scale_bias`.
+        See :class:`TuningSEstimatorMeanResult` for details.
 
     Notes
     -----
@@ -231,7 +255,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
         # use one list
         res = res[0]
 
-    res2 = Holder(
+    res2 = TuningSEstimatorMeanResult(
         breakdown=res[0],
         eff=res[1],
         param=res[2],
@@ -284,7 +308,8 @@ def scale_bias_cov(norm, k_vars):
 
     Returns
     -------
-    scale_bias: float
+    scale_bias : float
+        Scale bias correction term.
     breakdown_point : float
         Breakdown point computed as scale bias divided by max rho.
     """
@@ -350,7 +375,7 @@ def eff_mvmean(norm, k_vars):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
 
     Returns
     -------
@@ -397,7 +422,7 @@ def eff_mvshape(norm, k_vars):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
 
     Returns
     -------
@@ -446,16 +471,16 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
-    efficiency : float < 1
+        Number of variables in multivariate random variable, i.e., dimension.
+    efficiency : float < 1, optional
         Desired asymptotic relative efficiency of mean estimator.
         Default is 0.95.
-    eff_mean : bool
+    eff_mean : bool, optional
         If eff_mean is true (default), then tuning parameter is to achieve
         efficiency of mean estimate.
         If eff_mean is false, then tuning parameter is to achieve efficiency
         of shape estimate.
-    limits : tuple
+    limits : tuple, optional
         Limits for rootfinding with scipy.optimize.brentq.
         In some cases the interval limits for rootfinding can be too small
         and not cover the root. Current default limits are (0.5, 30).
@@ -568,10 +593,10 @@ def tukeybiweight_mvmean_eff(k, eff, eff_mean=True):
     Parameters
     ----------
     k : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
     eff : float
         Desired asymptotic relative efficiency of mean estimator.
-    eff_mean : bool
+    eff_mean : bool, optional
         If eff_mean is true (default), then tuning parameter is to achieve
         efficiency of mean estimate.
         If eff_mean is false, then tuning parameter is to achieve efficiency

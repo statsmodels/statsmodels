@@ -12,6 +12,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
@@ -87,24 +88,27 @@ def gls(
 
     Returns
     -------
-    parameters : SARIMAXParams object
-        Contains the parameter estimates from the final iteration.
-    other_results : Bunch
-        Additional estimation results with the following components:
+    ARMAEstimationResult
+        A result object with fields:
 
-        * `spec` - SARIMAXSpecification instance for the input arguments.
-        * `params` - SARIMAXParams estimates from each GLS iteration,
-          including the initial OLS estimates.
-        * `converged` - whether the feasible GLS iterations converged. This is
-          None when `n_iter` is specified.
-        * `differences` - absolute changes in the exogenous coefficient
-          estimates at each iteration.
-        * `iterations` - number of feasible GLS iterations performed.
-        * `arma_estimator` - estimator used for the ARMA error process.
-        * `arma_estimator_kwargs` - keyword arguments passed to the ARMA
-          estimator.
-        * `arma_results` - ancillary result objects returned by the ARMA
-          estimator at each iteration.
+        parameters : SARIMAXParams object
+            Contains the parameter estimates from the final iteration.
+        other_results : Bunch
+            Additional estimation results with the following components:
+
+            * `spec` - SARIMAXSpecification instance for the input arguments.
+            * `params` - SARIMAXParams estimates from each GLS iteration,
+              including the initial OLS estimates.
+            * `converged` - whether the feasible GLS iterations converged.
+              This is None when `n_iter` is specified.
+            * `differences` - absolute changes in the exogenous coefficient
+              estimates at each iteration.
+            * `iterations` - number of feasible GLS iterations performed.
+            * `arma_estimator` - estimator used for the ARMA error process.
+            * `arma_estimator_kwargs` - keyword arguments passed to the ARMA
+              estimator.
+            * `arma_results` - ancillary result objects returned by the ARMA
+              estimator at each iteration.
 
     Notes
     -----
@@ -228,24 +232,28 @@ def gls(
         # Step 2: ARMA
         # TODO: allow estimator-specific kwargs?
         if arma_estimator == "yule_walker":
-            p_arma, res_arma = yule_walker(
+            _arma_result = yule_walker(
                 resid, ar_order=spec.ar_order, demean=False, **arma_estimator_kwargs
             )
+            p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         elif arma_estimator == "burg":
             _check_arma_estimator_kwargs(arma_estimator_kwargs, "burg")
-            p_arma, res_arma = burg(resid, ar_order=spec.ar_order, demean=False)
+            _arma_result = burg(resid, ar_order=spec.ar_order, demean=False)
+            p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         elif arma_estimator == "innovations":
             _check_arma_estimator_kwargs(arma_estimator_kwargs, "innovations")
-            out, res_arma = innovations(resid, ma_order=spec.ma_order, demean=False)
+            _arma_result = innovations(resid, ma_order=spec.ma_order, demean=False)
+            out, res_arma = _arma_result.parameters, _arma_result.other_results
             p_arma = out[-1]
         elif arma_estimator == "hannan_rissanen":
-            p_arma, res_arma = hannan_rissanen(
+            _arma_result = hannan_rissanen(
                 resid,
                 ar_order=spec.ar_order,
                 ma_order=spec.ma_order,
                 demean=False,
                 **arma_estimator_kwargs,
             )
+            p_arma, res_arma = _arma_result.parameters, _arma_result.other_results
         else:
             # For later iterations, use a "warm start" for parameter estimates
             # (speeds up estimation and convergence)
@@ -266,7 +274,7 @@ def gls(
                 spec.seasonal_order[3],
             )
             if arma_estimator == "innovations_mle":
-                p_arma, res_arma = innovations_mle(
+                _arma_result = innovations_mle(
                     resid,
                     order=tmp_order,
                     seasonal_order=tmp_seasonal_order,
@@ -275,7 +283,7 @@ def gls(
                     **arma_estimator_kwargs,
                 )
             else:
-                p_arma, res_arma = statespace(
+                _arma_result = statespace(
                     resid,
                     order=tmp_order,
                     seasonal_order=tmp_seasonal_order,
@@ -283,6 +291,8 @@ def gls(
                     start_params=start_params,
                     **arma_estimator_kwargs,
                 )
+            p_arma = _arma_result.parameters
+            res_arma = _arma_result.other_results
 
         ar_params = p_arma.ar_params
         seasonal_ar_params = p_arma.seasonal_ar_params
@@ -294,7 +304,7 @@ def gls(
         # Step 3: GLS
         # Compute transformed variables that satisfy OLS assumptions
         # Note: In section 6.1.1 of Brockwell and Davis (2016), these
-        # transformations are developed as computed by left multiplcation
+        # transformations are developed as computed by left multiplication
         # by a matrix T. However, explicitly constructing T and then
         # performing the left-multiplications does not scale well when nobs is
         # large. Instead, we can retrieve the transformed variables as the
@@ -371,4 +381,4 @@ def gls(
         }
     )
 
-    return p, other_results
+    return ARMAEstimationResult(p, other_results)

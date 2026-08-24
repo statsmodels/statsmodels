@@ -18,11 +18,11 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
     exog : array_like
         Covariates such that censoring becomes independent of
         outcome times conditioned on the covariate values.
-    kfunc : function
+    kfunc : callable
         A kernel function
     freq_weights : array_like
         Optional frequency weights
-    dimred : bool
+    dimred : bool, optional
         If True, proportional hazards regression models are used to
         reduce exog to two columns by predicting overall events and
         censoring in two separate models.  If False, exog is used
@@ -31,10 +31,10 @@ def _kernel_cumincidence(time, status, exog, kfunc, freq_weights,
 
     Returns
     -------
-    utime : array_like
+    utime : ndarray
         The unique times at which the cumulative incidence functions
         are estimated.
-    ip : list of arrays
+    ip : list of ndarray
         ip[k-1] contains the estimated cumulative incidence rates
         for outcome k=1, 2, ...
     """
@@ -140,16 +140,16 @@ def _kernel_survfunc(time, status, exog, kfunc, freq_weights):
     exog : array_like
         Covariates such that censoring is independent conditional on
         exog
-    kfunc : function
+    kfunc : callable
         Kernel function
     freq_weights : array_like
         Optional frequency weights
 
     Returns
     -------
-    probs : array_like
+    probs : ndarray
         The estimated survival probabilities
-    times : array_like
+    times : ndarray
         The times at which the survival probabilities are estimated
 
     References

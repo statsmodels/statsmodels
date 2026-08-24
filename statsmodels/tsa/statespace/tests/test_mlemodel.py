@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import nile
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.statespace import (
     kalman_filter,
     kalman_smoother,
@@ -315,6 +316,40 @@ def test_score_misc():
 
     # Test that the score function works
     mod.score(res.params)
+
+
+def test_score_hessian_invalid_method_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="method"):
+        mod.score(res.params, method="invalid")
+    with pytest.raises(ValueError, match="method"):
+        mod.score_obs(res.params, method="invalid")
+    with pytest.raises(ValueError, match="method"):
+        mod.hessian(res.params, method="invalid")
+
+
+def test_info_criteria_invalid_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="criteria"):
+        res.info_criteria("invalid")
+    with pytest.raises(ValueError, match="method"):
+        res.info_criteria("aic", method="invalid")
+
+
+def test_get_prediction_invalid_information_set_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="information_set"):
+        res.get_prediction(information_set="invalid")
+
+
+def test_get_smoothed_decomposition_invalid_raises():
+    mod, res = get_dummy_mod()
+
+    with pytest.raises(ValueError, match="decomposition_of"):
+        res.get_smoothed_decomposition(decomposition_of="invalid")
 
 
 def test_from_formula():
@@ -664,6 +699,18 @@ def test_summary():
         res.summary()
 
 
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dates = pd.date_range(start="1980-01-01", end="1984-01-01", freq="YS")
+    endog = pd.Series([1, 2, 3, 4, 5], index=dates)
+    mod = MLEModel(endog, **kwargs)
+    res = mod.filter([])
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
 def check_endog(endog, nobs=2, k_endog=1, **kwargs):
     # create the model
     mod = MLEModel(endog, **kwargs)
@@ -689,7 +736,7 @@ def check_endog(endog, nobs=2, k_endog=1, **kwargs):
 
 
 def test_basic_endog():
-    # Test various types of basic python endog inputs (e.g. lists, scalars...)
+    # Test various types of basic python endog inputs (e.g., lists, scalars...)
 
     # Check cannot call with non-array_like
     # fails due to checks in statsmodels base classes
@@ -834,7 +881,7 @@ def test_numpy_endog():
 
 
 def test_pandas_endog():
-    # Test various types of pandas endog inputs (e.g. TimeSeries, etc.)
+    # Test various types of pandas endog inputs (e.g., TimeSeries, etc.)
 
     # Example (failure): pandas.Series, no dates
     endog = pd.Series([1.0, 2.0])
@@ -914,7 +961,7 @@ def test_diagnostics():
     desired = res.test_normality(method="jarquebera")
     assert_allclose(actual, desired)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="method"):
         res.test_normality(method="invalid")
 
     actual = res.test_heteroskedasticity(method=None)
@@ -923,18 +970,18 @@ def test_diagnostics():
 
     with pytest.raises(ValueError):
         res.test_heteroskedasticity(method=None, alternative="invalid")
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="method"):
         res.test_heteroskedasticity(method="invalid")
 
     actual = res.test_serial_correlation(method=None)
     desired = res.test_serial_correlation(method="ljungbox")
     assert_allclose(actual, desired)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="method"):
         res.test_serial_correlation(method="invalid")
 
     # Smoke tests for other options
-    res.test_heteroskedasticity(method=None, alternative="d", use_f=False)
+    res.test_heteroskedasticity(method=None, alternative="decreasing", use_f=False)
     res.test_serial_correlation(method="boxpierce")
 
 
@@ -1360,3 +1407,24 @@ def test_invalid_kwargs():
     # (Note: once deprectation is completed in v0.15, switch to checking for
     # a TypeError, as below)
     # with pytest.raises(TypeError, sarimax.SARIMAX, endog, invalid_kwarg=True)
+
+
+def test_set_inversion_method_and_initialization_property():
+    rs = np.random.RandomState(2026)
+    endog = rs.standard_normal(80).cumsum()
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+
+    mod.set_inversion_method(invert_lu=True)
+    assert mod.ssm.invert_lu is True
+
+    mod.set_inversion_method(inversion_method=mod.ssm.inversion_method | 0)
+    assert isinstance(mod.ssm.inversion_method, int)
+
+    # initialization is a passthrough property to ssm.initialization
+    assert mod.initialization is mod.ssm.initialization
+
+    from statsmodels.tsa.statespace.initialization import Initialization
+    new_init = Initialization(mod.k_states, "diffuse")
+    mod.initialization = new_init
+    assert mod.ssm.initialization is new_init
+    assert mod.initialization is new_init

@@ -1,6 +1,51 @@
+from typing import NamedTuple
+
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable
+
+
+class ForecastInterval(NamedTuple):
+    """
+    Result of the module-level
+    :func:`~statsmodels.tsa.vector_ar.var_model.forecast_interval` and
+    :meth:`~statsmodels.tsa.vector_ar.var_model.VARProcess.forecast_interval`.
+
+    Parameters
+    ----------
+    point_forecast : ndarray
+        Mean value of forecast.
+    forc_lower : ndarray
+        Lower bound of confidence interval.
+    forc_upper : ndarray
+        Upper bound of confidence interval.
+    """
+
+    point_forecast: np.ndarray
+    forc_lower: np.ndarray
+    forc_upper: np.ndarray
+
+
+class ErrorBand(NamedTuple):
+    """
+    Impulse-response error band, shared by
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz1`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz2`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.err_band_sz3`,
+    :meth:`~statsmodels.tsa.vector_ar.irf.IRAnalysis.errband_mc`,
+    :meth:`~statsmodels.tsa.vector_ar.svar_model.SVARResults.sirf_errband_mc`,
+    and :meth:`~statsmodels.tsa.vector_ar.var_model.VARResults.irf_errband_mc`.
+
+    Parameters
+    ----------
+    lower : ndarray
+        Lower error band for the impulse responses.
+    upper : ndarray
+        Upper error band for the impulse responses.
+    """
+
+    lower: np.ndarray
+    upper: np.ndarray
 
 
 class HypothesisTestResults:
@@ -20,7 +65,7 @@ class HypothesisTestResults:
     signif : float
         Significance level. Must be between 0 and 1.
     method : str
-        The kind of test (e.g. ``"f"`` for F-test, ``"wald"`` for Wald-test).
+        The kind of test (e.g., ``"f"`` for F-test, ``"wald"`` for Wald-test).
     title : str
         A title describing the test. It will be part of the summary.
     h0 : str
@@ -94,18 +139,22 @@ class CausalityTestResults(HypothesisTestResults):
     caused : list of str
         This list contains the potentially caused variables.
     test_statistic : float
+        The test's test statistic.
     crit_value : float
+        The test's critical value.
     pvalue : float
+        The test's p-value. Must be between 0 and 1.
     df : int
         Degrees of freedom.
     signif : float
         Significance level.
-    test : str {``"granger"``, ``"inst"``}, default: ``"granger"``
-        If ``"granger"``, Granger-causality has been tested. If ``"inst"``,
+    test : {"granger", "inst"}, optional
+        If "granger", Granger-causality has been tested. If "inst",
         instantaneous causality has been tested.
-    method : str {``"f"``, ``"wald"``}
-        The kind of test. ``"f"`` indicates an F-test, ``"wald"`` indicates a
-        Wald-test.
+    method : {"f", "wald"}, optional
+        The kind of test. "f" indicates an F-test, "wald" indicates a
+        Wald-test. Must be specified explicitly; a ValueError is raised
+        if left as None.
     """
     def __init__(self, causing, caused, test_statistic, crit_value, pvalue, df,
                  signif, test="granger", method=None):

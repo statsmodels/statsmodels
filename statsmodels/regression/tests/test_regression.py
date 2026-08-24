@@ -23,13 +23,18 @@ from scipy.stats import t as student_t
 
 from statsmodels.datasets import longley
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import (
     GLS,
     OLS,
     WLS,
+    CompareLRTestResult,
+    ELTestResult,
+    YuleWalkerResult,
     burg,
     yule_walker,
 )
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -80,17 +85,6 @@ class CheckRegressionResults:
                 conf2[i][1],
                 rtol=10**-self.decimal_confidenceintervals,
             )
-
-    decimal_conf_int_subset = DECIMAL_4
-
-    def test_conf_int_subset(self):
-        if len(self.res1.params) > 1:
-            with pytest.warns(FutureWarning, match="cols is"):
-                ci1 = self.res1.conf_int(cols=(1, 2))
-            ci2 = self.res1.conf_int()[1:3]
-            assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
-        else:
-            pass
 
     decimal_scale = DECIMAL_4
 
@@ -178,6 +172,11 @@ class CheckRegressionResults:
         hqic1 = self.res1.info_criteria("hqic")
         hqic2 = (self.res1.aic - 2 * k) + 2 * np.log(np.log(nobs)) * k
         assert_allclose(hqic1, hqic2, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("aic"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("AIC"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("bic"), self.res1.bic, rtol=1e-10)
+        with pytest.raises(ValueError, match="crit"):
+            self.res1.info_criteria("not-a-real-criterion")
 
     decimal_bic = DECIMAL_4
 
@@ -294,7 +293,9 @@ class TestOLS(CheckRegressionResults):
         with warnings.catch_warnings(record=True):
             x = rs.randn(5)
             y = rs.randn(5, 6)
-            results = OLS(x, y).fit()
+            with pytest.warns(SingularMatrixWarning, match="The design matrix is rank"):
+                # Intentional to get a nan rsquared_adj
+                results = OLS(x, y).fit()
             rsquared_adj = results.rsquared_adj
             assert_equal(rsquared_adj, np.nan)
 
@@ -750,7 +751,7 @@ class TestOLS_GLS_WLS_equivalence:
         params_1 = np.array([self.results[0].params] * len(self.results))
         assert_allclose(params, params_1)
 
-    def test_ss(self):
+    def test_bse(self):
         bse = np.array([r.bse for r in self.results])
         bse_1 = np.array([self.results[0].bse] * len(self.results))
         assert_allclose(bse, bse_1)
@@ -808,6 +809,26 @@ class TestWLS_CornerCases:
         weights = np.ones((10, 10))
         with pytest.raises(ValueError):
             WLS(self.endog, self.exog, weights=weights)
+
+    def test_whiten_wrong_ndim(self):
+        mod = WLS(self.endog, self.exog, weights=1)
+        with pytest.raises(ValueError):
+            mod.whiten(np.ones((2, 2, 2)))
+
+    def test_rank_deficient_warning(self):
+        x = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, 6.0],
+            ]
+        )
+        y = np.array([1.0, 2.0, 3.0])
+
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            result = WLS(y, x).fit()
+
+        assert_allclose(result.fittedvalues, y)
 
 
 class TestWLSExogWeights(CheckRegressionResults):
@@ -962,7 +983,9 @@ class TestYuleWalker:
         from statsmodels.datasets.sunspots import load
 
         data = load()
-        cls.rho, cls.sigma = yule_walker(data.endog, order=4, method="mle")
+        cls.rho, cls.sigma = yule_walker(
+            data.endog, order=4, method="mle", result_object=False
+        )
         cls.R_params = [
             1.2831003105694765,
             -0.45240924374091945,
@@ -972,6 +995,124 @@ class TestYuleWalker:
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
+
+
+def test_yule_walker_result_object_default_warns():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with pytest.warns(FutureWarning, match="result_object"):
+        res = yule_walker(data.endog, order=2)
+    assert not isinstance(res, YuleWalkerResult)
+
+
+def test_yule_walker_result_object_true():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, result_object=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is None
+    assert res[0] is res.rho
+    assert res[1] == res.sigma
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, inv=True, result_object=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is not None
+
+
+class TestCompareAndElTestNamedTuple:
+    @classmethod
+    def setup_class(cls):
+        rs = np.random.RandomState(12345)
+        nobs = 200
+        x = rs.standard_normal((nobs, 2))
+        y = 1 + x[:, 0] + rs.standard_normal(nobs)
+        exog_full = add_constant(x)
+        cls.res_full = OLS(y, exog_full).fit()
+        cls.res_restr = OLS(y, add_constant(x[:, 0])).fit()
+
+    def test_compare_lr_test_returns_namedtuple(self):
+        # compare_lr_test always returns three values, so it returns the
+        # NamedTuple unconditionally with no deprecation cycle.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.compare_lr_test(self.res_restr)
+        assert isinstance(res, CompareLRTestResult)
+        assert res[0] == res.statistic
+        assert res[1] == res.pvalue
+        assert res[2] == res.df_diff
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res_large = self.res_full.compare_lr_test(
+                self.res_restr, large_sample=True
+            )
+        assert isinstance(res_large, CompareLRTestResult)
+
+    def test_el_test_invalid_method_raises(self):
+        # An unsupported `method` used to fall through both `if` branches
+        # with no `else`, leaving `llr` unassigned and raising
+        # UnboundLocalError instead of a clear ValueError.
+        with pytest.raises(ValueError):
+            self.res_full.el_test(
+                np.array([0.0]), np.array([1]), method="unknown"
+            )
+
+    def test_el_test_result_object_default_warns(self):
+        with pytest.warns(FutureWarning, match="result_object"):
+            res = self.res_full.el_test(np.array([0.0]), np.array([1]))
+        assert not isinstance(res, ELTestResult)
+
+    def test_el_test_result_object_true_full(self):
+        # len(param_nums) == len(params): no nuisance parameters
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]), np.array([0, 1]), result_object=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+        assert res[0] == res.statistic
+        assert res[1] == res.pvalue
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]),
+                np.array([0, 1]),
+                return_weights=True,
+                result_object=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is None
+
+    def test_el_test_result_object_true_nuisance(self):
+        # len(param_nums) < len(params): nuisance parameters present
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]), np.array([1]), result_object=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]),
+                np.array([1]),
+                ret_params=True,
+                result_object=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is not None
 
 
 class TestDataDimensions(CheckRegressionResults):
@@ -1079,7 +1220,7 @@ def test_fvalue_const_only():
 
 
 def test_conf_int_single_regressor():
-    # GH#706 single-regressor model (i.e. no intercept) with 1D exog
+    # GH#706 single-regressor model (i.e., no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
     rs = np.random.RandomState(3232121)
     y = pd.Series(rs.randn(10))
@@ -1160,6 +1301,28 @@ Notes: \\newline
 
 
 class TestRegularizedFit:
+
+    def test_invalid_method_raises(self):
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        rs = np.random.RandomState(742)
+        n = 100
+        endog = rs.normal(size=n)
+        exog = rs.normal(size=(n, 3))
+        model = OLS(endog, exog)
+
+        # OLS.fit_regularized only exposes "elastic_net"/"sqrt_lasso"
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
+
+        # fit_elasticnet itself also accepts "coord_descent"/"l1_slsqp"
+        with pytest.raises(ValueError, match="method"):
+            fit_elasticnet(model, method="not-a-method")
+
+        with pytest.raises(ValueError, match="trim_mode"):
+            fit_elasticnet(
+                model, method="l1_slsqp", L1_wt=1.0, trim_mode="not-a-trim-mode"
+            )
 
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
@@ -1361,6 +1524,14 @@ def test_fvalue_only_constant():
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
     res.summary()
+
+
+def test_fit_invalid_method_raises():
+    rs = np.random.RandomState(89432)
+    exog = add_constant(rs.normal(size=(50, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.normal(size=50)
+    with pytest.raises(ValueError, match="method"):
+        OLS(endog, exog).fit(method="not-a-method")
 
 
 def test_ridge():
@@ -1574,6 +1745,22 @@ def test_condition_number():
     assert_allclose(res.condition_number, np.linalg.cond(x))
 
 
+def test_condition_number_nonpositive_eigval():
+    # GH 9653
+    rs = np.random.RandomState(323218)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    for smallest_eigval in (0.0, -1e-12):
+        eigvals = res.eigenvals.copy()
+        eigvals[-1] = smallest_eigval
+        res._cache["eigenvals"] = eigvals
+        assert res.condition_number == np.inf
+        del res._cache["condition_number"]
+    del res._cache["eigenvals"]
+
+
 def test_slim_summary():
     rs = np.random.RandomState(323217)
     y = rs.standard_normal(100)
@@ -1642,3 +1829,37 @@ def test_slim_summary_skips_diagnostics(monkeypatch):
     # the full summary does compute the normality diagnostics
     with pytest.raises(RuntimeError):
         res.summary()
+
+
+def _fit_ols_for_summary():
+    data = longley.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog = add_constant(exog, prepend=False)
+    return OLS(endog, exog).fit()
+
+
+def _fit_gls_for_summary():
+    data = longley.load()
+    exog = add_constant(
+        np.column_stack((data.exog.iloc[:, 1], data.exog.iloc[:, 4])),
+        prepend=False,
+    )
+    tmp_results = OLS(data.endog, exog).fit()
+    rho = np.corrcoef(tmp_results.resid[1:], tmp_results.resid[:-1])[0][1]
+    order = toeplitz(np.arange(16))
+    sigma = rho**order
+    return GLS(data.endog, exog, sigma=sigma).fit()
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [_fit_ols_for_summary, _fit_gls_for_summary],
+    ids=["OLS", "GLS"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

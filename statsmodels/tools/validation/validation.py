@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -41,9 +42,11 @@ def _right_squeeze(arr, stop_dim=0):
 def array_like(
     obj,
     name,
+    *,
     dtype=np.double,
-    ndim=1,
+    ndim=None,
     maxdim=None,
+    mindim: int = 1,
     shape=None,
     order=None,
     contiguous=False,
@@ -60,26 +63,29 @@ def array_like(
         __array__ method returns an array, or any (nested) sequence.
     name : str
         Name of the variable to use in exceptions
-    dtype : {None, numpy.dtype, str}
+    dtype : numpy.dtype or str, optional
         Required dtype. Default is double. If None, does not change the dtype
         of obj (if present) or uses NumPy to automatically detect the dtype
-    ndim : {int, None}
+    ndim : int, optional
         Required number of dimensions of obj. If None, no check is performed.
         If the number of dimensions of obj is less than ndim, additional axes
         are inserted on the right. See examples.
-    maxdim : {int, None}
+    maxdim : int, optional
         Maximum allowed dimension.  Use ``maxdim`` instead of ``ndim`` when
         inputs are allowed to have ndim 1, 2, ..., or maxdim.
-    shape : {tuple[int], None}
+    mindim : int, optional
+        Minimum allowed dimension.  Arrays with ndim < mindim will be reshaped
+        to have ndim = mindim by adding singleton dimensions on the right.
+    shape : tuple of int, optional
         Required shape obj.  If None, no check is performed. Partially
         restricted shapes can be checked using None. See examples.
-    order : {'C', 'F', None}
+    order : {'C', 'F'}, optional
         Order of the array
-    contiguous : bool
+    contiguous : bool, optional
         Ensure that the array's data is contiguous with order ``order``
-    optional : bool
+    optional : bool, optional
         Flag indicating whether None is allowed
-    writeable : bool
+    writeable : bool, optional
         Whether to ensure the returned array is writeable
 
     Returns
@@ -100,9 +106,6 @@ def array_like(
     >>> a.shape
     (4,)
 
-    >>> type(a.orig)
-    pandas.core.series.Series
-
     Squeezes singleton dimensions when required
     >>> x = np.array(x).reshape((4, 1))
     >>> a = array_like(x, 'x', ndim=1)
@@ -120,7 +123,7 @@ def array_like(
     >>> y = array_like(x, 'x', ndim=3, shape=(4, None, 4))
 
     Check only the first two dimensions
-    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10))
+    >>> z = array_like(x, 'x', ndim=3, shape=(4, 10, None))
 
     Raises ValueError if constraints are not satisfied
     >>> z = array_like(x, 'x', ndim=2)
@@ -128,12 +131,12 @@ def array_like(
      ...
     ValueError: x is required to have ndim 2 but has ndim 3
 
-    >>> z = array_like(x, 'x', shape=(10, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(10, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (10, 4, 4) but has shape (4, 10, 4)
 
-    >>> z = array_like(x, 'x', shape=(None, 4, 4))
+    >>> z = array_like(x, 'x', ndim=3, shape=(None, 4, 4))
     Traceback (most recent call last):
      ...
     ValueError: x is required to have shape (*, 4, 4) but has shape (4, 10, 4)
@@ -153,7 +156,9 @@ def array_like(
         if arr.ndim > maxdim:
             msg = f"{name} must have ndim <= {maxdim}"
             raise ValueError(msg)
-    elif ndim is not None:
+    if mindim is not None and arr.ndim < mindim:
+        arr = np.reshape(arr, arr.shape + (1,) * (mindim - arr.ndim))
+    if ndim is not None:
         if arr.ndim > ndim:
             arr = _right_squeeze(arr, stop_dim=ndim)
         elif arr.ndim < ndim:
@@ -182,7 +187,7 @@ class PandasWrapper:
 
     Parameters
     ----------
-    pandas_obj : {Series, DataFrame}
+    pandas_obj : Series or DataFrame
         Object to extract the index from for wrapping
 
     Notes
@@ -203,23 +208,25 @@ class PandasWrapper:
 
         Parameters
         ----------
-        obj : {array_like}
+        obj : array_like
             The value to wrap like to a pandas Series or DataFrame.
-        columns : {str, list[str]}
+        columns : str or list of str, optional
             Column names or series name, if obj is 1d.
-        append : str
+        append : str, optional
             String to append to the columns to create a new column name.
-        trim_start : int
+        trim_start : int, optional
             The number of observations to drop from the start of the index, so
             that the index applied is index[trim_start:].
-        trim_end : int
+        trim_end : int, optional
             The number of observations to drop from the end of the index , so
             that the index applied is index[:nobs - trim_end].
 
         Returns
         -------
-        array_like
-            A pandas Series or DataFrame, depending on the shape of obj.
+        Series, DataFrame or ndarray
+            A pandas Series or DataFrame, depending on the shape of obj, if
+            the object used to create the wrapper was pandas. Otherwise,
+            returns `obj` converted to an ndarray, unchanged.
 
         """
         obj = np.asarray(obj)
@@ -263,9 +270,9 @@ def bool_like(value, name, optional=False, strict=False):
         Value to verify
     name : str
         Variable name for exceptions
-    optional : bool
+    optional : bool, optional
         Flag indicating whether None is allowed
-    strict : bool
+    strict : bool, optional
         If True, then only allow bool. If False, allow types that support
         casting to bool.
 
@@ -306,9 +313,9 @@ def int_like(
         Value to verify
     name : str
         Variable name for exceptions
-    optional : bool
+    optional : bool, optional
         Flag indicating whether None is allowed
-    strict : bool
+    strict : bool, optional
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
 
@@ -350,7 +357,7 @@ def required_int_like(value: Any, name: str, strict: bool = False) -> int:
         Value to verify
     name : str
         Variable name for exceptions
-    strict : bool
+    strict : bool, optional
         If True, then only allow int or np.integer that are not bool. If False,
         allow types that support integer division by 1 and conversion to int.
 
@@ -375,9 +382,9 @@ def float_like(value, name, optional=False, strict=False):
         Value to verify
     name : str
         Variable name for exceptions
-    optional : bool
+    optional : bool, optional
         Flag indicating whether None is allowed
-    strict : bool
+    strict : bool, optional
         If True, then only allow int, np.integer, float or np.inexact that are
         not bool or complex. If False, allow complex types with 0 imag part or
         any other type that is float-like in the sense that it supports
@@ -415,7 +422,9 @@ def float_like(value, name, optional=False, strict=False):
     )
 
 
-def string_like(value, name, optional=False, options=None, lower=True):
+def string_like(
+    value, name, optional=False, options=None, lower=True, deprecated=None
+):
     """
     Check if object is string-like and raise if not
 
@@ -425,24 +434,32 @@ def string_like(value, name, optional=False, options=None, lower=True):
         Value to verify.
     name : str
         Variable name for exceptions.
-    optional : bool
+    optional : bool, optional
         Flag indicating whether None is allowed.
-    options : tuple[str]
+    options : tuple[str], optional
         Allowed values for input parameter `value`.
-    lower : bool
+    lower : bool, optional
         Convert all case-based characters in `value` into lowercase.
+    deprecated : dict[str, str], optional
+        Mapping from a deprecated, undocumented spelling of an option to
+        the documented value in `options` it stands for. A `value`
+        matching one of these deprecated spellings is still accepted and
+        normalized to its replacement, but raises a ``FutureWarning``.
+        Ignored if `options` is None.
 
     Returns
     -------
     str
-        The validated input
+        The validated input, normalized to its replacement in `options`
+        if it matched a key of `deprecated`.
 
     Raises
     ------
     TypeError
         If the value is not a string or None when optional is True.
     ValueError
-        If the input is not in ``options`` when ``options`` is set.
+        If the input is not in ``options`` (or a key of ``deprecated``,
+        if provided) when ``options`` is set.
 
     """
     if optional and value is None:
@@ -452,11 +469,23 @@ def string_like(value, name, optional=False, options=None, lower=True):
         raise TypeError(f"{name} must be a string{extra_text}")
     if lower:
         value = value.lower()
-    if options is not None and value not in options:
+    all_options = options
+    if options is not None and deprecated is not None:
+        all_options = tuple(options) + tuple(deprecated)
+    if all_options is not None and value not in all_options:
         extra_text = "If not None, " if optional else ""
-        options_text = "'" + "', '".join(options) + "'"
+        options_text = "'" + "', '".join(all_options) + "'"
         msg = f"{extra_text}{name} must be one of: {options_text}"
         raise ValueError(msg)
+    if deprecated is not None and value in deprecated:
+        replacement = deprecated[value]
+        warnings.warn(
+            f"{name}={value!r} is a deprecated alias for {name}={replacement!r} "
+            "and will be removed in a future version.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        value = replacement
     return value
 
 
@@ -470,14 +499,14 @@ def dict_like(value, name, optional=False, strict=True):
         Value to verify
     name : str
         Variable name for exceptions
-    optional : bool
+    optional : bool, optional
         Flag indicating whether None is allowed
-    strict : bool
+    strict : bool, optional
         If True, then only allow dict. If False, allow any Mapping-like object.
 
     Returns
     -------
-    converted : dict_like
+    converted : dict or Mapping
         value
 
     """
@@ -485,7 +514,7 @@ def dict_like(value, name, optional=False, strict=True):
         return None
     if not isinstance(value, Mapping) or (strict and not (isinstance(value, dict))):
         extra_text = "If not None, " if optional else ""
-        strict_text = " or dict_like (i.e., a Mapping)" if strict else ""
+        strict_text = "" if strict else " or dict_like (i.e., a Mapping)"
         msg = f"{extra_text}{name} must be a dict{strict_text}"
         raise TypeError(msg)
     return value

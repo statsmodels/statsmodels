@@ -62,9 +62,9 @@ class OptAFT(_OptFuncts):
 
         Parameters
         ----------
-        test_vals : 1d array
-            The regression coefficients of the model.  This includes the
-            nuisance and parameters of interest.
+        test_vals : ndarray
+            The regression coefficients of the model, as a 1d array.  This
+            includes the nuisance and parameters of interest.
 
         Returns
         -------
@@ -201,7 +201,7 @@ class OptAFT(_OptFuncts):
         ----------
         b0 : float
             Value of a regression parameter
-        param_num : int
+        param_num : int, optional
             Parameter index of b0
 
         Returns
@@ -219,29 +219,29 @@ class emplikeAFT:
 
     Parameters
     ----------
-    endog : nx1 array
+    endog : ndarray
         Response variables that are subject to random censoring
 
-    exog : nxk array
+    exog : ndarray
         Matrix of covariates
 
-    censors : nx1 array
+    censors : array_like
         Array with entries 0 or 1.  0 indicates a response was
         censored.
 
     Attributes
     ----------
-    nobs : float
+    nobs : int
         Number of observations
     endog : ndarray
         Endog array
     exog : ndarray
         Exogenous variable matrix
-    censors
+    censors : ndarray
         Censors array but sets the max(endog) to uncensored
-    nvar : float
+    nvar : int
         Number of exogenous variables
-    uncens_nobs : float
+    uncens_nobs : int
         Number of uncensored observations
     uncens_endog : ndarray
         Uncensored response variables
@@ -250,11 +250,13 @@ class emplikeAFT:
 
     Methods
     -------
-    params
-        Fits model parameters
+    fit
+        Fits the model and returns an AFTResults instance, whose
+        ``params`` and ``test_beta`` methods fit model parameters and
+        test if beta = b0 for any vector b0, respectively.
 
-    test_beta
-        Tests if beta = b0 for any vector b0.
+    predict
+        Returns the linear predictor, params multiplied by endog.
 
     Notes
     -----
@@ -312,9 +314,9 @@ class emplikeAFT:
 
         Parameters
         ----------
-        tie_indic : 1d array
+        tie_indic : ndarray
             Indicates if the i'th observation is the same as the ith +1
-        untied_km : 1d array
+        untied_km : ndarray
             Km estimates at each observation assuming no ties.
 
         Returns
@@ -346,9 +348,9 @@ class emplikeAFT:
 
         Parameters
         ----------
-        endog : nx1 array
+        endog : ndarray
             Array of response variables
-        censors : nx1 array
+        censors : ndarray
             Censor-indicating variable
 
         Returns
@@ -412,6 +414,21 @@ class emplikeAFT:
 
 
 class AFTResults(OptAFT):
+    """
+    Results class for an accelerated failure time model fit via
+    empirical likelihood.
+
+    Parameters
+    ----------
+    model : emplikeAFT
+        The fitted AFT model.
+
+    Attributes
+    ----------
+    model : emplikeAFT
+        The AFT model used to compute the results.
+    """
+
     def __init__(self, model):
         self.model = model
 
@@ -435,29 +452,26 @@ class AFTResults(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30, print_weights=1):
+    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30):
         """
         Returns the profile log likelihood for regression parameters
         'param_nums' at 'b0_vals'
 
         Parameters
         ----------
-        b0_vals : list
+        b0_vals : list of float
             The value of parameters to be tested
-        param_nums : list
+        param_nums : list of int
             Which parameters to be tested
         maxiter : int, optional
             How many iterations to use in the EM algorithm.  Default is 30
         ftol : float, optional
             The function tolerance for the EM optimization.
             Default is ``10**-5``
-        print_weights : bool, optional
-            If true, returns the weights that maximize the profile
-            log likelihood. Default is True
 
         Returns
         -------
-        test_results : tuple
+        test_results : tuple of float
             The log-likelihood and p-value of the test.
 
         Notes
@@ -505,7 +519,7 @@ class AFTResults(OptAFT):
         uncens_exog = exog[uncensored, :]
         reg_model = OLS(uncens_endog, uncens_exog).fit()
         llr, pval, new_weights = reg_model.el_test(
-            b0_vals, param_nums, return_weights=True
+            b0_vals, param_nums, return_weights=True, result_object=False
         )  # Needs to be changed
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs
@@ -579,7 +593,7 @@ class AFTResults(OptAFT):
 
         Returns
         -------
-        Interval : tuple
+        Interval : tuple of float
             Lower and upper confidence limit
 
         Notes

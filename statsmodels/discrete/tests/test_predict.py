@@ -203,7 +203,7 @@ class CheckExtras:
 
     def test_score_test_alpha(self):
         # this is mostly sanity check
-        # we need heteroscedastic model, i.e. exog_dispersion as comparison
+        # we need heteroscedastic model, i.e., exog_dispersion as comparison
         # res1 = self.res1
         modr = self.klass(endog, exog.values[:, :-1])
         resr = modr.fit(method="newton", maxiter=300)
@@ -422,3 +422,18 @@ def test_distr(case, close_figures):
             # ZI models warn about missing hat_matrix_diag
             warnings.simplefilter("ignore", category=UserWarning)
             influ.plot_influence()
+
+
+def test_prediction_results_monotonic_conf_int_invalid_method():
+    rs = np.random.RandomState(918273)
+    n = 100
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    endog = (rs.standard_normal(n) + exog[:, 1] > 0).astype(float)
+    res = Logit(endog, exog).fit(disp=False)
+    pred = res.get_prediction()
+    assert isinstance(pred, PredictionResultsMonotonic)
+
+    assert pred.conf_int(method="endpoint") is not None
+    assert pred.conf_int(method="delta") is not None
+    with pytest.raises(ValueError, match="method"):
+        pred.conf_int(method="not-a-method")

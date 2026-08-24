@@ -166,6 +166,17 @@ def test_random_walk(close_figures):
     run_ucm("random_walk", use_exact_diffuse=True)
 
 
+@pytest.mark.matplotlib
+def test_plot_components_invalid_which_raises(close_figures):
+    import matplotlib.pyplot as plt
+
+    mod = UnobservedComponents(np.arange(20) * 1.0, "local level")
+    res = mod.smooth([1.0, 1.0])
+    fig = plt.figure()
+    with pytest.raises(ValueError, match="which"):
+        res.plot_components(which="invalid", fig=fig)
+
+
 def test_local_level(close_figures):
     run_ucm("local_level")
     run_ucm("local_level", use_exact_diffuse=True)
@@ -835,3 +846,21 @@ def test_apply_results():
     assert_allclose(
         res3.forecast(10, exog=np.ones(10)), res1.forecast(10, exog=np.ones(10))
     )
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    endog = np.arange(100) * 1.0
+    exog = endog * 2
+    endog[::2] += 0.01
+    endog[1::2] -= 0.01
+
+    with warnings.catch_warnings(record=True):
+        mod = UnobservedComponents(
+            endog, irregular=True, exog=exog, mle_regression=False
+        )
+        res = mod.fit(disp=-1)
+
+    assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)

@@ -16,6 +16,7 @@ __all__ = [
     "ETSModel",
     "ExponentialSmoothing",
     "Holt",
+    "LocalProjections",
     "MarkovAutoregression",
     "MarkovRegression",
     "STLForecast",
@@ -32,6 +33,7 @@ __all__ = [
     "arma_order_select_ic",
     "bds",
     "bk_filter",
+    "block_jackknife",
     "breakvar_heteroskedasticity_test",
     "ccf",
     "ccovf",
@@ -39,8 +41,10 @@ __all__ = [
     "coint",
     "datetools",
     "detrend",
+    "diebold_mariano_test",
     "filters",
     "graphics",
+    "hamilton_filter",
     "hp_filter",
     "innovations",
     "interp",
@@ -49,6 +53,7 @@ __all__ = [
     "lagmat2ds",
     "leybourne",
     "pacf",
+    "pacf_burg",
     "pacf_ols",
     "pacf_yw",
     "pccf",
@@ -75,6 +80,7 @@ from .arima_process import ArmaProcess, arma_generate_sample
 from .base import datetools
 from .exponential_smoothing.ets import ETSModel
 from .filters import api as filters, bk_filter, cf_filter, hp_filter
+from .filters.hamilton_filter import hamilton_filter
 from .forecasting.stl import STLForecast
 from .holtwinters import ExponentialSmoothing, Holt, SimpleExpSmoothing
 from .innovations import api as innovations
@@ -93,13 +99,16 @@ from .stattools import (
     adfuller,
     arma_order_select_ic,
     bds,
+    block_jackknife,
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
     coint,
+    diebold_mariano_test,
     kpss,
     leybourne,
     pacf,
+    pacf_burg,
     pacf_ols,
     pacf_yw,
     pccf,
@@ -108,6 +117,7 @@ from .stattools import (
     zivot_andrews,
 )
 from .tsatools import add_lag, add_trend, detrend, lagmat, lagmat2ds
+from .vector_ar.local_proj import LocalProjections
 from .vector_ar.svar_model import SVAR
 from .vector_ar.var_model import VAR
 from .vector_ar.vecm import VECM

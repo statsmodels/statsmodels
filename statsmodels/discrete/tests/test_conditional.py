@@ -1,12 +1,14 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 
 from statsmodels.discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
     ConditionalPoisson,
 )
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
 
 
@@ -286,6 +288,18 @@ def test_lasso_poisson():
     assert_allclose(result2.params, result3.params)
 
 
+def test_fit_regularized_invalid_method():
+    rs = np.random.RandomState(3423948)
+    n = 200
+    groups = np.kron(np.arange(10), np.ones(n // 10))
+    x = rs.normal(size=(n, 2))
+    y = (rs.uniform(size=n) < 0.5).astype(int)
+
+    model = ConditionalLogit(y, x, groups=groups)
+    with pytest.raises(ValueError, match="method"):
+        model.fit_regularized(method="not-a-method")
+
+
 def gen_mnlogit(n):
 
     rs = np.random.RandomState(235)
@@ -325,7 +339,7 @@ def test_conditional_mnlogit_2d():
 
     df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    result = model.fit(generator=rs)
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -346,7 +360,7 @@ def test_conditional_mnlogit_3d():
     df, rs = gen_mnlogit(90)
     df["x3"] = rs.normal(size=df.shape[0])
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3", groups="g", data=df)
-    result = model.fit(generator=rs)
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -369,6 +383,45 @@ def test_conditional_mnlogit_3d():
     result.summary()
 
 
+@pytest.mark.parametrize(
+    "rng",
+    [0, np.random.RandomState(0), np.random.default_rng(0)],
+    ids=["int", "randomstate", "generator"],
+)
+def test_conditional_mnlogit_fit_rng_types(recwarn, rng):
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    model.fit(rng=rng, disp=False)
+    future_warnings = [w for w in recwarn.list if issubclass(w.category, FutureWarning)]
+    assert not future_warnings, [str(w.message) for w in future_warnings]
+
+
+@pytest.mark.singleton_randomstate
+def test_conditional_mnlogit_fit_warn():
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    with pytest.warns(FutureWarning, match="When start_params is not specified,"):
+        model.fit(rng=None, disp=False)
+
+
+def test_conditional_mnlogit_fit_rng_reproducible():
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    res1 = model.fit(rng=0, disp=False)
+    res2 = model.fit(rng=0, disp=False)
+    assert_allclose(res1.params, res2.params)
+
+
 def test_skip_hessian():
     y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
     g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
@@ -381,3 +434,44 @@ def test_skip_hessian():
     result_hess = model.fit(skip_hessian=False)
     assert result_no_hess.normalized_cov_params is None
     assert isinstance(result_hess.normalized_cov_params, np.ndarray)
+
+
+def _fit_conditional_logit_for_summary():
+    y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[0, 0, 1, 0, 0, 1, 0, 1, 1, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalLogit(y, x, groups=g).fit()
+
+
+def _fit_conditional_poisson_for_summary():
+    y = np.r_[3, 1, 4, 8, 2, 5, 4, 7, 2, 6]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[2, 1, 0, 0, 1, 2, 3, 2, 0, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalPoisson(y, x, groups=g).fit()
+
+
+def _fit_conditional_mnlogit_for_summary():
+    df, rs = gen_mnlogit(90)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    return model.fit(rng=rs)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_conditional_logit_for_summary,
+        _fit_conditional_poisson_for_summary,
+        _fit_conditional_mnlogit_for_summary,
+    ],
+    ids=["ConditionalLogit", "ConditionalPoisson", "ConditionalMNLogit"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

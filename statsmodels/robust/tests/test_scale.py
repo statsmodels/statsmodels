@@ -462,3 +462,31 @@ def test_scale_trimmed_approx():
     assert_allclose(s2, s, rtol=1e-1)
     s = scale_trimmed(x, alpha, distr=stats.t, distargs=(100,)).scale
     assert_allclose(s, [2], rtol=1e-1)
+
+    # "med" is a documented alias for "median"
+    res_med = scale_trimmed(x, alpha, center="med")
+    res_median = scale_trimmed(x, alpha, center="median")
+    assert_allclose(res_med.scale, res_median.scale)
+
+    # center may also be array_like, not just one of the 4 string options
+    res_num = scale_trimmed(x, alpha, center=0.0)
+    assert res_num.center_type == "user"
+
+    with pytest.raises(ValueError, match="center"):
+        scale_trimmed(x, alpha, center="not-a-center")
+
+
+def test_scale_trimmed_distarge():
+    nobs = 500
+    rs = np.random.RandomState(965578)
+    x = 2 * rs.randn(nobs)
+    x[:10] = 60
+
+    alpha = 0.2
+    res = scale.scale_trimmed(x, alpha)
+    assert_allclose(res.scale, 2, rtol=1e-1)
+    distr = stats.norm
+    res_distr = scale.scale_trimmed(x, alpha, distr=distr)
+    assert_allclose(res_distr.scale, res.scale)
+    res_distargs = scale.scale_trimmed(x, alpha, distargs=())
+    assert_allclose(res_distargs.scale, res.scale)

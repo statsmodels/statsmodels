@@ -406,7 +406,7 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Notes
     -----
-    No regression function (e.g. lstsq) is called. Instead "projection
+    No regression function (e.g., lstsq) is called. Instead "projection
     vector" p_i_j is calculated, and y_fit[i] = sum(p_i_j * y[j]) = y_fit[i]
     for j s.t. x[j] is in the neighborhood of xval. p_i_j is a function of
     the weights, xval, and its neighbors.

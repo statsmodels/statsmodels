@@ -13,25 +13,6 @@ try:
 except ImportError:
     pass
 
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_mice.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
-
-
-def teardown_module():
-    if pdf_output:
-        pdf.close()
-
 
 def gendat():
     """
@@ -119,6 +100,31 @@ class TestMICEData:
         assert_equal(len(endog_obs), 190)
         assert_equal(exog_obs.shape, [190, 6])
         assert_equal(exog_miss.shape, [10, 6])
+
+    def test_split_data_predict_kwds_use_missing_rows(self):
+        # predict_miss_kwds must be subset to the rows where the variable
+        # being imputed is missing, not to the observed rows.
+        rs = np.random.RandomState(3927)
+        df = gendat()
+        imp_data = mice.MICEData(df, rng=rs)
+        imp_data.set_imputer(
+            "x3",
+            formula="x1 + x2 + x4 + x5 + y",
+            predict_kwds={"offset": mice.PatsyFormula("x5")},
+        )
+
+        ixo = imp_data.ix_obs["x3"]
+        ixm = imp_data.ix_miss["x3"]
+        x5 = np.asarray(imp_data.data["x5"])
+
+        _, exog_obs, exog_miss, predict_obs_kwds, predict_miss_kwds = (
+            imp_data.get_split_data("x3")
+        )
+
+        assert_equal(predict_obs_kwds["offset"].shape[0], exog_obs.shape[0])
+        assert_equal(predict_miss_kwds["offset"].shape[0], exog_miss.shape[0])
+        assert_allclose(predict_obs_kwds["offset"], x5[ixo])
+        assert_allclose(predict_miss_kwds["offset"], x5[ixm])
 
     def test_settingwithcopywarning(self):
         "Test that MICEData does not throw a SettingWithCopyWarning when imputing (https://github.com/statsmodels/statsmodels/issues/5430)"
@@ -287,12 +293,11 @@ class TestMICEData:
             for hide_complete_rows in False, True:
                 for color_row_patterns in False, True:
                     plt.clf()
-                    fig = imp_data.plot_missing_pattern(
+                    imp_data.plot_missing_pattern(
                         row_order=row_order,
                         hide_complete_rows=hide_complete_rows,
                         color_row_patterns=color_row_patterns,
                     )
-                    close_or_save(pdf, fig)
                     close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -307,7 +312,6 @@ class TestMICEData:
         for plot_points in False, True:
             fig = imp_data.plot_bivariate("x2", "x4", plot_points=plot_points)
             fig.get_axes()[0].set_title("plot_bivariate")
-            close_or_save(pdf, fig)
             close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -322,7 +326,6 @@ class TestMICEData:
         for plot_points in False, True:
             fig = imp_data.plot_fit_obs("x4", plot_points=plot_points)
             fig.get_axes()[0].set_title("plot_fit_scatterplot")
-            close_or_save(pdf, fig)
             close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -337,7 +340,6 @@ class TestMICEData:
         for _ in False, True:
             fig = imp_data.plot_imputed_hist("x4")
             fig.get_axes()[0].set_title("plot_imputed_hist")
-            close_or_save(pdf, fig)
             close_figures()
 
 

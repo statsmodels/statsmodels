@@ -279,12 +279,12 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
         Dictionary containing the contingency table.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be represents; if that is not true, will
+        of keys to be represented; if that is not true, will
         automatically consider the missing values as 0
     horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : float or array of floats, optional
+    gap : float or array_like of float, optional
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
@@ -318,7 +318,8 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
 
     if len(gap) < L:
         last = gap[-1]
-        gap = list(*gap) + [last / 1.5**idx for idx in range(L)]
+        n_extra = L - len(gap)
+        gap = list(gap) + [last / 1.5**idx for idx in range(1, n_extra + 1)]
     # trim if it's too long
 
     gap = gap[:L]
@@ -449,9 +450,9 @@ def _normalize_data(data, index):
 
     Parameters
     ----------
-    data : {dict, Series, ndarray, DataFrame}
+    data : dict, Series, ndarray, or DataFrame
         The contingency table to normalize.
-    index : list, optional
+    index : list or None
         The preferred order for the category ordering. If None, the
         order in which the keys were found is used.
 
@@ -539,7 +540,7 @@ def _statistical_coloring(data):
 
     Parameters
     ----------
-    data : {dict, Series, ndarray, DataFrame}
+    data : dict, Series, ndarray, or DataFrame
         The contingency table to color.
 
     Returns
@@ -724,16 +725,16 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     Parameters
     ----------
-    data : {dict, Series, ndarray, DataFrame}
+    data : dict, Series, ndarray, or DataFrame
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
-        of keys to be represents; if that is not true, will
+        of keys to be represented; if that is not true, will
         automatically consider the missing values as 0.  The order
         of the keys will be the same as the one of insertion.
         If a dict of a Series (or any other dict like object)
         is used, it will take the keys as labels.  If a
-        np.ndarray is provided, it will generate a simple
+        ndarray is provided, it will generate a simple
         numerical labels.
     index : list, optional
         Gives the preferred order for the category ordering. If not specified
@@ -746,7 +747,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     horizontal : bool, optional
         The starting direction of the split (by default along
         the horizontal axis)
-    gap : {float, sequence[float]}, optional
+    gap : float or sequence[float], optional
         The list of gaps to be applied on each subdivision.
         If the length of the given array is less of the number
         of subcategories (or if it's a single number) it will extend
@@ -775,7 +776,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     axes_label : bool, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
-    label_rotation : {float, list[float]}, optional
+    label_rotation : float or list[float], optional
         The rotation of the axis label (if present). If a list is given
         each axis can have a different rotation
 
@@ -843,7 +844,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> plt.show()
 
     If you need to modify the labeling and the coloring you can give
-    a function tocreate the labels and one with the graphical properties
+    a function to create the labels and one with the graphical properties
     starting from the key tuple
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}

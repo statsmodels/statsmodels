@@ -61,13 +61,13 @@ class Summary:
         ----------
         df : DataFrame
             The DataFrame to add to the summary table.
-        index : bool
+        index : bool, optional
             Reproduce the DataFrame row labels in summary table
-        header : bool
+        header : bool, optional
             Reproduce the DataFrame column labels in summary table
-        float_format : str
+        float_format : str, optional
             Formatting to float data columns
-        align : str
+        align : str, optional
             Data alignment (l/c/r)
         """
 
@@ -82,11 +82,11 @@ class Summary:
 
         Parameters
         ----------
-        array : ndarray
-            A 2D numpy array.
-        align : str
+        array : array_like
+            A 2D array of values.
+        align : str, optional
             Data alignment (l/c/r)
-        float_format : str
+        float_format : str, optional
             Formatting to array if type is float
         """
 
@@ -103,11 +103,11 @@ class Summary:
         d : dict
             Keys and values are automatically coerced to strings with str().
             Users are encouraged to format them before using add_dict.
-        ncols : int
+        ncols : int, optional
             Number of columns of the output table
-        align : str
+        align : str, optional
             Data alignment (l/c/r)
-        float_format : str
+        float_format : str, optional
             Formatting to float data columns
         """
 
@@ -170,16 +170,18 @@ class Summary:
         Parameters
         ----------
         results : Model results instance
-        alpha : float
-            significance level for the confidence intervals (optional)
-        float_format: str
-            Float formatting for summary of parameters (optional)
-        title : str
-            Title of the summary table (optional)
-        xname : list[str] of length equal to the number of parameters
-            Names of the independent variables (optional)
-        yname : str
-            Name of the dependent variable (optional)
+            The result instance to summarize.
+        alpha : float, optional
+            Significance level for the confidence intervals.
+        float_format : str, optional
+            Float formatting for summary of parameters.
+        title : str, optional
+            Title of the summary table.
+        xname : list of str, optional
+            Names of the independent variables. Must have length equal to
+            the number of parameters.
+        yname : str, optional
+            Name of the dependent variable.
         """
 
         param = summary_params(results, alpha=alpha, use_t=results.use_t)
@@ -250,9 +252,9 @@ class Summary:
 
         Parameters
         ----------
-        label : str
+        label : str, optional
             Label of the summary table that can be referenced
-            in a latex document (optional)
+            in a latex document.
         """
         tables = self.tables
         settings = self.settings
@@ -363,7 +365,7 @@ def summary_model(results):
 
     info = {}
     info["Model:"] = lambda x: x.model.__class__.__name__
-    info["Model Family:"] = lambda x: x.family.__class.__name__
+    info["Model Family:"] = lambda x: x.family.__class__.__name__
     info["Link Function:"] = lambda x: x.family.link.__class__.__name__
     info["Dependent Variable:"] = lambda x: x.model.endog_names
     info["Date:"] = time_now
@@ -414,20 +416,20 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         instance. May also be a tuple of
         (results, params, bse, tvalues, pvalues, conf_int) for
         multivariate endog.
-    yname : {str, None}
+    yname : str, optional
         optional name for the endogenous variable, default is "y"
-    xname : {list[str], None}
+    xname : list of str, optional
         optional names for the exogenous variables, default is "var_xx"
-    alpha : float
+    alpha : float, optional
         significance level for the confidence intervals
-    use_t : bool
+    use_t : bool, optional
         indicator whether the p-values are based on the Student-t
         distribution (if True) or on the normal distribution (if False)
-    skip_header : bool
+    skip_header : bool, optional
         If false (default), then the header row is added. If true, then no
         header row is added.
-    float_format : str
-        float formatting options (e.g. ".3g")
+    float_format : str, optional
+        float formatting options (e.g., ".3g")
 
     Returns
     -------
@@ -476,11 +478,11 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
     ----------
     result : Model results instance
         The result instance to summarize.
-    float_format : str
+    float_format : str, optional
         Formatting to apply to coefficients and standard errors.
-    stars : bool
+    stars : bool, optional
         If True, append significance stars to the coefficients.
-    include_r2 : bool
+    include_r2 : bool, optional
         If True, include R-squared and adjusted R-squared in the column.
 
     Returns
@@ -567,12 +569,12 @@ def _make_unique(list_of_names):
 
     Parameters
     ----------
-    list_of_names : list[str]
+    list_of_names : list of str
         The candidate names.
 
     Returns
     -------
-    list[str]
+    list of str
         `list_of_names` unchanged if all entries are already unique.
         Otherwise, a list of the same length where repeated names have
         had roman-numeral-like "I" suffixes appended to disambiguate them
@@ -600,15 +602,16 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
+        The results to summarize side-by-side.
     float_format : str, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list[str], optional
+    model_names : list of str, optional
         Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
-    stars : bool
+    stars : bool, optional
         print significance stars
-    info_dict : dict, default None
+    info_dict : dict, optional
         dict of functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
@@ -617,7 +620,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         additionally `N` for all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list[str], optional
+    regressor_order : list of str, optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     drop_omitted : bool, optional
@@ -626,7 +629,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
-    fixed_effects : list[str], optional
+    fixed_effects : list of str, optional
         List of categorical variables for which to indicate presence of
         fixed effects.
     fe_present : str, optional
@@ -764,7 +767,7 @@ def _formatter(element, float_format="%.4f"):
     element : object
         The value to format. Formatted as a float if possible, otherwise
         converted to a string.
-    float_format : str
+    float_format : str, optional
         The format string to apply if `element` can be formatted as a
         float.
 
@@ -790,23 +793,23 @@ def _df_to_simpletable(df, align="r", float_format="%.4f", header=True,
     ----------
     df : DataFrame
         The DataFrame to convert.
-    align : str
+    align : str, optional
         Data alignment (l/c/r).
-    float_format : str
+    float_format : str, optional
         Formatting to apply to float data columns.
-    header : bool
+    header : bool, optional
         If True, use the DataFrame column labels as the table header.
-    index : bool
+    index : bool, optional
         If True, use the DataFrame row labels as the table stubs.
-    table_dec_above : str
+    table_dec_above : str, optional
         Character used for the decoration line above the table.
-    table_dec_below : str
+    table_dec_below : str, optional
         Character used for the decoration line below the table.
-    header_dec_below : str
+    header_dec_below : str, optional
         Character used for the decoration line below the header.
-    pad_col : int
+    pad_col : int, optional
         Extra spaces to add to the column separator.
-    pad_index : int
+    pad_index : int, optional
         Extra spaces to add after each stub.
 
     Returns

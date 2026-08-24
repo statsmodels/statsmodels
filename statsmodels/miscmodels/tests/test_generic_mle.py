@@ -10,6 +10,7 @@ from numpy.testing import assert_allclose, assert_almost_equal, assert_array_les
 from scipy import stats
 
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.iolib.summary import Summary
 
 
 class MyPareto(GenericLikelihoodModel):
@@ -243,3 +244,27 @@ class TestTwoPeakLLHNoExog:
         assert_allclose(res_bs[2].mean(0), self.params, rtol=1e-1)
         # SMOKE test,
         res.summary()
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    # MyPareto does not set its own results_class, so fit() returns a plain
+    # GenericLikelihoodModelResults instance.
+    params = [2, 0, 2]
+    nobs = 100
+    rs = np.random.RandomState(1234)
+    rvs = stats.pareto.rvs(*params, **dict(size=nobs), random_state=rs)
+
+    mod_par = MyPareto(rvs)
+    mod_par.fixed_params = None
+    mod_par.fixed_paramsmask = None
+    mod_par.df_model = 0
+    mod_par.k_extra = k_extra = 3
+    mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model - k_extra
+    mod_par.data.xnames = ["shape", "loc", "scale"]
+
+    res = mod_par.fit(disp=None)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

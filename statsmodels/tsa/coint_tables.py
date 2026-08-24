@@ -87,6 +87,37 @@ ejcp2 = np.array(ss_ejcp2.split(), float).reshape(-1, 3)
 
 
 def c_sja(n, p):
+    """
+    Critical values for the Johansen maximum eigenvalue statistic
+
+    Parameters
+    ----------
+    n : int
+        The dimension of the VAR system. Must be between 1 and 12,
+        inclusive.
+    p : int
+        The order of the time polynomial in the null hypothesis, -1 for no
+        deterministic part, 0 for a constant term, or 1 for a constant and
+        a linear trend.
+
+    Returns
+    -------
+    ndarray
+        Array of critical values for the maximum eigenvalue statistic at
+        the 90%, 95%, and 99% levels. NaNs are returned if ``n`` or ``p``
+        is out of range.
+
+    Notes
+    -----
+    The values returned by this function were generated using a method
+    described in MacKinnon (1996), using his FORTRAN program johdist.f.
+
+    References
+    ----------
+    MacKinnon, Haug, Michelis (1996) 'Numerical distribution functions of
+    likelihood ratio tests for cointegration', Queen's University Institute
+    for Economic Research Discussion paper.
+    """
     if ((p > 1) or (p < -1)) or ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
@@ -199,6 +230,36 @@ tjcp2 = np.array(ss_tjcp2.split(), float).reshape(-1, 3)
 
 
 def c_sjt(n, p):
+    """
+    Critical values for the Johansen trace statistic
+
+    Parameters
+    ----------
+    n : int
+        The dimension of the VAR system. Must be between 1 and 12,
+        inclusive.
+    p : int
+        The order of the time polynomial in the null hypothesis, -1 for no
+        deterministic part, 0 for a constant term, or 1 for a constant and
+        a linear trend.
+
+    Returns
+    -------
+    ndarray
+        Array of critical values for the trace statistic at the 90%, 95%,
+        and 99% levels. NaNs are returned if ``n`` or ``p`` is out of range.
+
+    Notes
+    -----
+    The values returned by this function were generated using a method
+    described in MacKinnon (1996), using his FORTRAN program johdist.f.
+
+    References
+    ----------
+    MacKinnon, Haug, Michelis (1996) 'Numerical distribution functions of
+    likelihood ratio tests for cointegration', Queen's University Institute
+    for Economic Research Discussion paper.
+    """
     if ((p > 1) or (p < -1)) or ((n > 12) or (n < 1)):
         jc = np.full(3, np.nan)
     elif p == -1:
@@ -211,11 +272,3 @@ def c_sjt(n, p):
         raise ValueError("invalid p")
 
     return jc
-
-
-if __name__ == "__main__":
-    for p in range(-2, 3, 1):
-        for n in range(12):
-            print(n, p)
-            print(c_sja(n, p))
-            print(c_sjt(n, p))

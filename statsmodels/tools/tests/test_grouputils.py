@@ -10,6 +10,7 @@ from statsmodels.datasets import anes96, grunfeld
 from statsmodels.tools.grouputils import (
     Group,
     Grouping,
+    GroupSorted,
     combine_indices,
     dummy_sparse,
     group_sums,
@@ -25,6 +26,25 @@ class CheckGrouping:
     def test_count_categories(self):
         self.grouping.count_categories(level=0)
         np.testing.assert_equal(self.grouping.counts, self.expected_counts)
+
+    def test_levels(self):
+        levels = self.grouping.levels
+        if hasattr(self.grouping.index, "levels"):
+            assert levels is self.grouping.index.levels
+        else:
+            assert_equal(
+                np.asarray(levels),
+                np.asarray(pd.Categorical(self.grouping.index).categories),
+            )
+
+    def test_check_index(self):
+        # GH: check_index used `if not index:`, which raises for a
+        # multi-element pandas Index/MultiIndex, and called the long-removed
+        # DataFrame.sort() instead of sort_index().
+        self.grouping.check_index(is_sorted=False, unique=False)
+        self.grouping.check_index(
+            is_sorted=False, unique=False, index=self.grouping.index
+        )
 
     def test_sort(self):
         # data frame
@@ -149,6 +169,12 @@ class CheckGrouping:
             )
             np.testing.assert_equal(self.grouping._dummies.toarray(), expected)
 
+            # dummies_time() is a thin convenience wrapper: dummy_sparse(1)
+            # then return _dummies
+            np.testing.assert_equal(
+                self.grouping.dummies_time().toarray(), expected
+            )
+
 
 class TestMultiIndexGrouping(CheckGrouping):
     @classmethod
@@ -172,6 +198,35 @@ class TestIndexGrouping(CheckGrouping):
         cls.data = index_data
 
         cls.expected_counts = [20] * 11
+
+
+def test_group_sorted_subclass_no_infinite_recursion():
+    # GH: GroupSorted.__init__ used super(self.__class__, self), which
+    # recurses infinitely for any subclass that doesn't override __init__,
+    # since self.__class__ always resolves to the most-derived runtime type.
+    class MyGroupSorted(GroupSorted):
+        pass
+
+    g = MyGroupSorted(np.array([0, 0, 1, 1, 2]))
+    assert isinstance(g, MyGroupSorted)
+    assert g.groupidx == [(0, 2), (2, 4), (4, 5)]
+
+
+def test_check_index_sorted_detection():
+    # GH: check_index used to raise AttributeError (DataFrame has no
+    # attribute "sort") on any call with the default is_sorted=True, and
+    # separately raised ValueError ("truth value ... is ambiguous") when an
+    # explicit multi-element index was passed, instead of correctly
+    # detecting whether the index is sorted.
+    sorted_grouping = Grouping(pd.Index([1, 1, 2, 2, 3]))
+    sorted_grouping.check_index(unique=False)  # default index=None
+    sorted_grouping.check_index(unique=False, index=pd.Index([1, 1, 2, 2, 3]))
+
+    unsorted_grouping = Grouping(pd.Index([2, 1, 3]))
+    with pytest.raises(Exception, match="not be sorted"):
+        unsorted_grouping.check_index(unique=False)
+    with pytest.raises(Exception, match="not be sorted"):
+        unsorted_grouping.check_index(unique=False, index=pd.Index([2, 1, 3]))
 
 
 def test_init_api():
@@ -772,7 +827,7 @@ def test_dummy_sparse():
 
     g = np.array([0, 0, 2, 1, 1, 2, 0])
     indi = dummy_sparse(g)
-    assert isinstance(indi, sparse.csr_matrix)
+    assert isinstance(indi, sparse.csr_array)
     result = indi.toarray()
     expected = np.array(
         [[1, 0, 0], [1, 0, 0], [0, 0, 1], [0, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]],

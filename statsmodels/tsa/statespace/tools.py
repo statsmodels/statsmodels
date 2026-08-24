@@ -145,7 +145,7 @@ def companion_matrix(polynomial):
 
     Parameters
     ----------
-    polynomial : array_like or list
+    polynomial : array_like or int
         If an iterable, interpreted as the coefficients of the polynomial from
         which to form the companion matrix. Polynomial coefficients are in
         order of increasing degree, and may be either scalars (as in an AR(p)
@@ -280,7 +280,7 @@ def diff(series, k_diff=1, k_seasonal_diff=None, seasonal_periods=1):
         The series to be differenced.
     k_diff : int, optional
         The number of simple differences to perform. Default is 1.
-    k_seasonal_diff : int or None, optional
+    k_seasonal_diff : int, optional
         The number of seasonal differences to perform. Default is no seasonal
         differencing.
     seasonal_periods : int, optional
@@ -322,18 +322,18 @@ def concat(series, axis=0, allow_mix=False):
 
     Parameters
     ----------
-    series : iterable
-        An iterable of series to be concatenated
+    series : sequence of array_like
+        A sequence of series to be concatenated
     axis : int, optional
-        The axis along which to concatenate. Default is 1 (columns).
-    allow_mix : bool
+        The axis along which to concatenate. Default is 0 (rows).
+    allow_mix : bool, optional
         Whether or not to allow a mix of pandas and non-pandas objects. Default
         is False. If true, the returned object is an ndarray, and additional
-        pandas metadata (e.g. column names, indices, etc) is lost.
+        pandas metadata (e.g., column names, indices, etc) is lost.
 
     Returns
     -------
-    concatenated : array or pd.DataFrame
+    concatenated : array or DataFrame
         The concatenated array. Will be a DataFrame if series are pandas
         objects.
     """
@@ -403,13 +403,13 @@ def is_invertible(polynomial, threshold=1 - 1e-10):
 
     Parameters
     ----------
-    polynomial : array_like or tuple, list
+    polynomial : array_like or list of array_like
         Coefficients of a polynomial, in order of increasing degree.
         For example, `polynomial=[1, -0.5]` corresponds to the polynomial
         :math:`1 - 0.5x` which has root :math:`2`. If it is a matrix
         polynomial (in which case the coefficients are coefficient matrices),
         a tuple or list of matrices should be passed.
-    threshold : number
+    threshold : float, optional
         Allowed threshold for `is_invertible` to return True. Default is 1.
 
     See Also
@@ -527,8 +527,7 @@ def constrain_stationary_univariate(unconstrained):
     -------
     constrained : ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
-        component, to be transformed to arbitrary parameters used by the
-        optimizer.
+        component, used in likelihood evaluation.
 
     References
     ----------
@@ -563,9 +562,7 @@ def unconstrain_stationary_univariate(constrained):
     Returns
     -------
     unconstrained : ndarray
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component.
+        Unconstrained parameters used by the optimizer.
 
     References
     ----------
@@ -815,7 +812,7 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
 
     Parameters
     ----------
-    unconstrained : array or list
+    unconstrained : ndarray or list of ndarray
         Arbitrary matrices to be transformed to stationary coefficient matrices
         of the VAR. If a list, should be a list of length `order`, where each
         element is an array sized `k_endog` x `k_endog`. If an array, should be
@@ -838,10 +835,14 @@ def constrain_stationary_multivariate_python(unconstrained, error_variance,
 
     Returns
     -------
-    constrained : array or list
+    constrained : ndarray or list of ndarray
         Transformed coefficient matrices leading to a stationary VAR
         representation. Will match the type of the passed `unconstrained`
         variable (so if a list was passed, a list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term, transformed if
+        `transform_variance` is True (otherwise this is the same as the
+        input `error_variance`).
 
     Notes
     -----
@@ -1069,7 +1070,7 @@ def _compute_multivariate_acovf_from_coefficients(
 
     Parameters
     ----------
-    coefficients : array or list
+    coefficients : ndarray or list of ndarray
         The coefficients matrices. If a list, should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`. If
         an array, should be the coefficient matrices horizontally concatenated
@@ -1360,7 +1361,7 @@ def _compute_multivariate_pacf_from_coefficients(constrained, error_variance,
 
     Parameters
     ----------
-    constrained : array or list
+    constrained : ndarray or list of ndarray
         The coefficients matrices. If a list, should be a list of length
         `order`, where each element is an array sized `k_endog` x `k_endog`. If
         an array, should be the coefficient matrices horizontally concatenated
@@ -1421,7 +1422,7 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
 
     Parameters
     ----------
-    constrained : array or list
+    constrained : ndarray or list of ndarray
         Constrained parameters of, e.g., an autoregressive or moving average
         component, to be transformed to arbitrary parameters used by the
         optimizer. If a list, should be a list of length `order`, where each
@@ -1435,11 +1436,14 @@ def unconstrain_stationary_multivariate(constrained, error_variance):
 
     Returns
     -------
-    unconstrained : ndarray
-        Unconstrained parameters used by the optimizer, to be transformed to
-        stationary coefficients of, e.g., an autoregressive or moving average
-        component. Will match the type of the passed `constrained`
-        variable (so if a list was passed, a list will be returned).
+    unconstrained : ndarray or list of ndarray
+        Unconstrained parameters used by the optimizer. Will match the type
+        of the passed `constrained` variable (so if a list was passed, a
+        list will be returned).
+    error_variance : ndarray
+        The variance / covariance matrix of the error term. This is the same
+        as the input `error_variance`, since this function does not
+        transform the error variance term.
 
     Notes
     -----
@@ -1490,7 +1494,7 @@ def validate_matrix_shape(name, shape, nrows, ncols, nobs):
     ----------
     name : str
         The name of the matrix being validated (used in exception messages)
-    shape : array_like
+    shape : sequence of int
         The shape of the matrix to be validated. May be of size 2 or (if
         the matrix is time-varying) 3.
     nrows : int
@@ -1541,7 +1545,7 @@ def validate_vector_shape(name, shape, nrows, nobs):
     ----------
     name : str
         The name of the vector being validated (used in exception messages)
-    shape : array_like
+    shape : sequence of int
         The shape of the vector to be validated. May be of size 1 or (if
         the vector is time-varying) 2.
     nrows : int
@@ -1609,7 +1613,7 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
 
     Returns
     -------
-    reordered_matrix : array_like
+    reordered_matrix : ndarray
         The reordered matrix.
     """
     if prefix is None:
@@ -1644,7 +1648,7 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
 
     Returns
     -------
-    reordered_vector : array_like
+    reordered_vector : ndarray
         The reordered vector.
     """
     if prefix is None:
@@ -1692,7 +1696,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
 
     Returns
     -------
-    copied_matrix : array_like
+    copied_matrix : ndarray
         The matrix B with the non-missing submatrix of A copied onto it.
     """
     if prefix is None:
@@ -1737,8 +1741,8 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
 
     Returns
     -------
-    copied_vector : array_like
-        The vector b with the non-missing subvector of b copied onto it.
+    copied_vector : ndarray
+        The vector b with the non-missing subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
@@ -1793,7 +1797,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
 
     Returns
     -------
-    copied_matrix : array_like
+    copied_matrix : ndarray
         The matrix B with the non-index submatrix of A copied onto it.
     """
     if prefix is None:
@@ -1838,8 +1842,8 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
 
     Returns
     -------
-    copied_vector : array_like
-        The vector b with the non-index subvector of b copied onto it.
+    copied_vector : ndarray
+        The vector b with the non-index subvector of a copied onto it.
     """
     if prefix is None:
         prefix = find_best_blas_type((a, b))[0]
@@ -1876,7 +1880,7 @@ def prepare_exog(exog):
     k_exog : int
         The number of exogenous regressors (columns of `exog`). Zero if
         `exog` is None.
-    exog : array_like or None
+    exog : ndarray, DataFrame, or None
         The `exog` array, coerced to a two-dimensional array (or
         `pandas.DataFrame`, if `exog` was a pandas object) if it was not
         already. None if `exog` is None.
@@ -1904,7 +1908,7 @@ def prepare_trend_spec(trend):
 
     Parameters
     ----------
-    trend : {str, array_like, None}
+    trend : str, array_like, or None
         The trend specification. Can be a string, in which case it must be
         one of 'n' (no trend), 'c' (constant), 't' (linear trend in time),
         'ct' (both constant and linear trend), or 'ctt' (constant, linear
@@ -1920,7 +1924,7 @@ def prepare_trend_spec(trend):
         entries indicate that the associated degree term is included in the
         model, in order of increasing degree.
     k_trend : int
-        The number of distinct trend elements (i.e. the number of non-zero
+        The number of distinct trend elements (i.e., the number of non-zero
         entries of `polynomial_trend`). Note that this is not the same as
         the degree of the trend polynomial.
     """
@@ -1968,7 +1972,7 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
         in the trend data, in order of increasing degree. See
         `prepare_trend_spec`.
     k_trend : int
-        The number of distinct trend elements (i.e. the number of non-zero
+        The number of distinct trend elements (i.e., the number of non-zero
         entries of `polynomial_trend`).
     nobs : int
         The number of observations for which to construct trend data.
@@ -2014,7 +2018,7 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
     ----------
     ssm : KalmanSmoother
         The `statespace.kalman_smoother.KalmanSmoother` object (or a
-        subclass, e.g. `statespace.simulation_smoother.SimulationSmoother`)
+        subclass, e.g., `statespace.simulation_smoother.SimulationSmoother`)
         with an underlying Cython state space, Kalman filter, and Kalman
         smoother that have already been run so that the required attributes
         are available.
@@ -2029,7 +2033,7 @@ def _compute_smoothed_state_weights(ssm, compute_t=None, compute_j=None,
         prior mean. Default is True if 0 is in `compute_j`, and False
         otherwise.
     scale : float, optional
-        The scale of the model, as computed e.g. by the Kalman filter. Used
+        The scale of the model, as computed e.g., by the Kalman filter. Used
         to scale the weights appropriately. Default is 1.0.
 
     Returns
@@ -2153,7 +2157,7 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
 
     Returns
     -------
-    weights : array_like
+    weights : ndarray
         Weight matrices that can be used to construct the smoothed state from
         the observations. The returned matrix is always shaped
         `(nobs, nobs, k_states, k_endog)`, and entries that are not computed
@@ -2164,11 +2168,11 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
         this matrix contains the weight of the `p`-th element of the
         observation vector at time `j` in constructing the `m`-th element of
         the smoothed state vector at time `t`.
-    state_intercept_weights : array_like
+    state_intercept_weights : ndarray
         Weight matrices describing the impact of the state intercept on the
         smoothed state vector. The returned matrix is always shaped
         `(nobs, nobs, k_states, k_states)`.
-    prior_weights : array_like
+    prior_weights : ndarray
         Weight matrices that describe the impact of the prior (also called the
         initialization) on the smoothed state vector. The returned matrix is
         always shaped `(nobs, k_states, k_states)`. If prior weights are not
@@ -2203,7 +2207,7 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
        multivariate filtering approach, and we handle singular forecast error
        covariance matrices by using a pseudo-inverse.
     2. Constructing observation weights for periods in which the exact diffuse
-       filter (see e.g. Chapter 5 of [1]_) is operative is not done here, and
+       filter (see e.g., Chapter 5 of [1]_) is operative is not done here, and
        so the corresponding entries in the returned weight matrices will always
        be set equal to zeros. While handling these periods may be implemented
        in the future, one option for constructing these weights is to use an
@@ -2263,15 +2267,15 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
         Model used to compute the index. In the case of computing impacts of
         data updates, this would be the model estimated with the updated
         dataset. Otherwise, can be the same as `previous_model`.
-    impact_date : {int, str, datetime}, optional
+    impact_date : int, str, or datetime, optional
         Specific individual impact date. Cannot be used in combination with
         `start`, `end`, or `periods`.
-    start : {int, str, datetime}, optional
+    start : int, str, or datetime, optional
         Starting point of the impact dates. If given, one of `end` or `periods`
         must also be given. If a negative integer, will be computed relative to
         the dates in the `updated_model` index. Cannot be used in combination
         with `impact_date`.
-    end : {int, str, datetime}, optional
+    end : int, str, or datetime, optional
         Ending point of the impact dates. If given, one of `start` or `periods`
         must also be given. If a negative integer, will be computed relative to
         the dates in the `updated_model` index. Cannot be used in combination
@@ -2285,7 +2289,7 @@ def get_impact_dates(previous_model, updated_model, impact_date=None,
     start : int
         Integer location of the first included impact dates.
     end : int
-        Integer location of the last included impact dates (i.e. this integer
+        Integer location of the last included impact dates (i.e., this integer
         location is included in the returned `index`).
     index : pd.Index
         Index associated with `start` and `end`, as computed from the

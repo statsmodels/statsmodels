@@ -12,7 +12,7 @@ def rainbow(n):
 
     Returns
     -------
-    R : (n,3) array
+    R : ndarray of shape (n, 3)
         An array of rows of RGB color values
 
     Notes

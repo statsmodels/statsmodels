@@ -29,9 +29,9 @@ def fit_l1_slsqp(
 
     Parameters
     ----------
-    f : function
+    f : callable
         Objective function to be minimized, as in LikelihoodModel.fit.
-    score : function
+    score : callable
         Gradient of the unregularized objective function.
     start_params : array_like
         Starting values for the parameters.
@@ -40,14 +40,14 @@ def fit_l1_slsqp(
     kwargs : dict
         All the usual parameters from LikelihoodModel.fit, plus:
 
-        alpha : non-negative scalar or numpy array (same size as parameters)
+        alpha : non-negative scalar or array_like (same size as parameters)
             The weight multiplying the l1 penalty term.
-        trim_mode : 'auto, 'size', or 'off'
+        trim_mode : 'auto', 'size', or 'off'
             If not 'off', trim (set to zero) parameters that would have
             been zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
             If 'size', trim params if they have very small absolute value.
-        size_trim_tol : float or 'auto' (default = 'auto')
+        size_trim_tol : float
             Threshold below which a parameter is trimmed. Used when
             trim_mode == 'size'.
         auto_trim_tol : float
@@ -61,18 +61,18 @@ def fit_l1_slsqp(
             If true, print out a full QC report upon failure.
         acc : float (default 1e-6)
             Requested accuracy as used by slsqp.
-    disp : bool
+    disp : bool, optional
         Set to True to print convergence messages.
-    maxiter : int
+    maxiter : int, optional
         The maximum number of iterations to perform.
-    callback : function, optional
+    callback : callable, optional
         Called after each iteration, as callback(xk), where xk is the
         current parameter vector.
-    retall : bool
+    retall : bool, optional
         Set to True to return list of solutions at each iteration.
-    full_output : bool
+    full_output : bool, optional
         Set to True to also return auxiliary output from the solver.
-    hess : optional
+    hess : callable, optional
         Unused; the Hessian is not required by slsqp.
 
     Returns

@@ -66,7 +66,7 @@ class OaxacaBlinder:
     exog : array_like
         The exogenous variable(s) or the independent variable(s) that you are
         using to explain the endogenous variable.
-    bifurcate : {int, str}
+    bifurcate : int or str
         The column of the exogenous variable(s) on which to split. This would
         generally be the group that you wish to explain the two means for.
         Int of the column for a NumPy array or int/string for the name of
@@ -85,7 +85,7 @@ class OaxacaBlinder:
         See linear_model.RegressionResults.get_robustcov_results for a
         description of the required keywords for alternative covariance
         estimators.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -110,7 +110,7 @@ class OaxacaBlinder:
     '3' is the column of which we want to explain or which indicates
     the two groups. In this case, it is if you rent.
 
-    >>> model = sm.OaxacaBlinder(df.endog, df.exog, 3, hasconst = False)
+    >>> model = sm.OaxacaBlinder(data.endog, data.exog, 3, hasconst = False)
     >>> model.two_fold().summary()
     Oaxaca-Blinder Two-fold Effects
     Unexplained Effect: 27.94091
@@ -406,10 +406,10 @@ class OaxacaBlinder:
             If true, bootstrapped standard errors will be calculated.
         two_fold_type : str, optional
             This method allows for the specific calculation of the
-            non-discriminatory model. There are four different types
-            available at this time: pooled, cotton, reimers, self_submitted.
-            Pooled is assumed and if a non-viable parameter is given,
-            pooled will be run.
+            non-discriminatory model. There are five different types
+            available at this time: pooled, nuemark, cotton, reimers,
+            self_submitted. Pooled is assumed and if a non-viable
+            parameter is given, pooled will be run.
 
             pooled - This type assumes that the pooled model's parameters
             (a normal regression) is the non-discriminatory model.
@@ -562,10 +562,11 @@ class OaxacaResults:
 
     Attributes
     ----------
-    params
-        A list of all values for the fitted models.
-    std
-        A list of standard error calculations.
+    params : tuple of float
+        A tuple of all values for the fitted models.
+    std : tuple of float or None
+        A tuple of standard error calculations, or None if standard
+        errors were not requested.
     """
 
     def __init__(self, results, model_type, std_val=None):

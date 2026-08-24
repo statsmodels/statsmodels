@@ -10,7 +10,7 @@ def check_random_state(seed=None, deprecated=False, warn=True):
 
     Parameters
     ----------
-    seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine}, optional
+    seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, scipy.stats.qmc.QMCEngine, optional
         If `seed` is None fresh, unpredictable entropy will be pulled from the
         OS and `numpy.random.Generator` is used.
         If `seed` is an int or ``array_like[ints]``, a new ``Generator`` instance
@@ -26,7 +26,7 @@ def check_random_state(seed=None, deprecated=False, warn=True):
 
     Returns
     -------
-    rng : {`numpy.random.Generator`, `numpy.random.RandomState`, `scipy.stats.qmc.QMCEngine`}
+    rng : numpy.random.Generator, numpy.random.RandomState, or scipy.stats.qmc.QMCEngine
         Random number generator.
 
     Notes

@@ -222,7 +222,7 @@ class ModelData:
         combined : dict
             Dictionary with keys endog, exog and the keys of kwargs, with
             missing rows dropped if `missing` is "drop".
-        missing_idx : list[int]
+        missing_idx : list of str
             The row indices that contained missing values and were
             dropped, or an empty list if there was no missing data.
         """
@@ -708,7 +708,7 @@ def handle_data_class_factory(endog, exog):
     -------
     ModelData
         The data handling class appropriate for the type of `endog` and
-        `exog`, e.g. `PandasData` if either is a pandas object.
+        `exog`, e.g., `PandasData` if either is a pandas object.
     """
     if data_util._is_using_ndarray_type(endog, exog):
         klass = ModelData
@@ -733,6 +733,10 @@ def handle_data_class_factory(endog, exog):
 
 
 def handle_data(endog, exog, missing="none", hasconst=None, **kwargs):
+    # Convert Polars objects to pandas
+    endog = data_util._to_pandas(endog)
+    exog = data_util._to_pandas(exog)
+
     # deal with lists and tuples up-front
     if isinstance(endog, (list, tuple)):
         endog = np.asarray(endog)

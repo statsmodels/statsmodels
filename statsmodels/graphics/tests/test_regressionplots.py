@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from numpy.testing import assert_array_less, assert_equal
 from pandas import DataFrame, Series
@@ -5,6 +7,7 @@ import pytest
 
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (
+    PartRegressPlotResult,
     abline_plot,
     add_lowess,
     influence_plot,
@@ -15,6 +18,7 @@ from statsmodels.graphics.regressionplots import (
     plot_fit,
     plot_leverage_resid2,
     plot_partial_residuals,
+    plot_partregress,
     plot_partregress_grid,
     plot_regress_exog,
 )
@@ -23,20 +27,6 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-pdf_output = False
-
-if pdf_output:
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pdf = PdfPages("test_regressionplots.pdf")
-else:
-    pdf = None
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
 
 
 class TestPlot:
@@ -76,8 +66,6 @@ class TestPlot:
         np.testing.assert_equal(x0, px1)
         np.testing.assert_equal(yf, px2)
 
-        close_or_save(pdf, fig)
-
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_plot_oth(self, close_figures):
@@ -93,8 +81,6 @@ class TestPlot:
         fig = plot_ccpr_grid(res, exog_idx=[0, 1])
         for ax in fig.axes:
             add_lowess(ax)
-
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -189,7 +175,6 @@ class TestABLine:
         fig = abline_plot(model_results=self.mod)
         ax = fig.axes[0]
         ax.scatter(self.X[:, 1], self.y)
-        close_or_save(pdf, fig)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -197,16 +182,14 @@ class TestABLine:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:, 1], self.y)
-        fig = abline_plot(model_results=self.mod, ax=ax)
-        close_or_save(pdf, fig)
+        abline_plot(model_results=self.mod, ax=ax)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_abline_ab(self, close_figures):
         mod = self.mod
         intercept, slope = mod.params
-        fig = abline_plot(intercept=intercept, slope=slope)
-        close_or_save(pdf, fig)
+        abline_plot(intercept=intercept, slope=slope)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -216,8 +199,7 @@ class TestABLine:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.scatter(self.X[:, 1], self.y)
-        fig = abline_plot(intercept=intercept, slope=slope, ax=ax)
-        close_or_save(pdf, fig)
+        abline_plot(intercept=intercept, slope=slope, ax=ax)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
@@ -231,7 +213,6 @@ class TestABLine:
         abline_plot(intercept=intercept, slope=2 * slope, ax=ax)
         lines = ax.get_lines()
         lines.pop(0).remove()
-        close_or_save(pdf, fig)
 
 
 class TestABLinePandas(TestABLine):
@@ -265,7 +246,6 @@ class TestAddedVariablePlot:
         fig = plot_added_variable(results, 0)
         ax = fig.get_axes()[0]
         ax.set_title("Added variable plot (OLS)")
-        close_or_save(pdf, fig)
         close_figures()
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -321,7 +301,6 @@ class TestAddedVariablePlot:
                         ti += weight_str + "\n"
                         ti += f"Using '{resid_type}' residuals"
                         ax.set_title(ti)
-                        close_or_save(pdf, fig)
                         close_figures()
 
 
@@ -362,7 +341,6 @@ class TestPartialResidualPlot:
                 if j == 1:
                     ti += " (called as method)"
                 ax.set_title(ti + "\nPoisson regression\n" + effect_str)
-                close_or_save(pdf, fig)
 
 
 class TestCERESPlot:
@@ -402,7 +380,6 @@ class TestCERESPlot:
                 if j == 1:
                     ti += " (called as method)"
                 ax.set_title(ti + "\nPoisson regression\n" + effect_str)
-                close_or_save(pdf, fig)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -423,10 +400,60 @@ def test_partregress_formula_env(close_figures):
         )
     )
     sm.graphics.plot_partregress(
-        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1,
+        result_object=False,
     )
 
-    sm.graphics.plot_partregress("a", "lg(b)", ["c"], obs_labels=False, data=df)
+    sm.graphics.plot_partregress(
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, result_object=False
+    )
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_partregress_result_object(close_figures):
+    rs = np.random.RandomState(98474364)
+    x1 = rs.standard_normal(50)
+    x2 = rs.standard_normal(50)
+    y = 1 + x1 + rs.standard_normal(50)
+
+    # ret_coords=False still returns a bare figure by default, and warns
+    # because that is the path whose shape will change.
+    with pytest.warns(FutureWarning, match="result_object"):
+        res = plot_partregress(y, x1, x2[:, None])
+    assert not isinstance(res, PartRegressPlotResult)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = plot_partregress(y, x1, x2[:, None], result_object=True)
+    assert isinstance(res, PartRegressPlotResult)
+    # The residuals are computed to draw the plot, so they are reported even
+    # though ret_coords was not set.
+    assert res.coords is not None
+    assert len(res.coords) == 2
+
+    # ret_coords=True is a drop-in: same length and contents as the legacy
+    # (fig, coords) tuple, so it returns the NamedTuple without warning.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = plot_partregress(y, x1, x2[:, None], ret_coords=True)
+    assert isinstance(res, PartRegressPlotResult)
+    assert res.coords is not None
+    assert len(res.coords) == 2
+
+    # The NamedTuple is used whenever it unpacks identically, so
+    # result_object=False cannot opt out of it here.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = plot_partregress(
+            y, x1, x2[:, None], ret_coords=True, result_object=False
+        )
+    assert isinstance(res, PartRegressPlotResult)
+    assert len(res) == 2
+    # ...and it still unpacks like the legacy (fig, coords) tuple
+    fig, coords = res
+    assert fig is res.fig
+    assert coords is res.coords
 
 
 @pytest.mark.matplotlib
@@ -446,5 +473,3 @@ def test_add_ellipse_and_lowess(close_figures):
     # Test add_lowess with new signature (exog, endog passed explicitly)
     fig_out2 = add_lowess(ax, exog=x, endog=y)
     assert_equal(isinstance(fig_out2, plt.Figure), True)
-
-    close_or_save(pdf, fig)

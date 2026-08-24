@@ -115,16 +115,6 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
         mod = smd.Poisson(endog, exog)
         cls.res1 = mod.fit(disp=False)
 
-        debug = False
-        if debug:
-            # for debugging
-            cls.bse_nonrobust = cls.res1.bse.copy()
-            cls.res1 = mod.fit(disp=False)
-            cls.get_robust_clu()
-            cls.res3 = cls.res1
-            cls.bse_rob3 = cls.bse_rob.copy()
-            cls.res1 = mod.fit(disp=False)
-
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')

@@ -81,8 +81,15 @@ class KDEMultivariate(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
-    rng : {int, Generator, RandomState}, optional
-        A seed to use. If None, will use the global RandomState.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -153,7 +160,7 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The value for the bandwidth parameter(s).
         func : callable, optional
             Function to transform the likelihood values (before summing); for
@@ -198,7 +205,7 @@ class KDEMultivariate(GenericKDE):
 
         Returns
         -------
-        pdf_est : array_like
+        pdf_est : ndarray
             Probability density function evaluated at `data_predict`.
 
         Notes
@@ -240,7 +247,7 @@ class KDEMultivariate(GenericKDE):
 
         Returns
         -------
-        cdf_est : array_like
+        cdf_est : ndarray
             The estimate of the cdf.
 
         Notes
@@ -289,7 +296,7 @@ class KDEMultivariate(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The bandwidth parameter(s).
 
         Returns
@@ -405,7 +412,7 @@ class KDEMultivariateConditional(GenericKDE):
         example ``dep_type='ccuo'``.
     indep_type : str
         The type of the independent variables; specified like `dep_type`.
-    bw : array_like or str, optional
+    bw : array_like or str
         If an array, it is a fixed user-specified bandwidth.  If a string,
         should be one of:
 
@@ -415,8 +422,15 @@ class KDEMultivariateConditional(GenericKDE):
 
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    rng : {int, Generator, RandomState}, optional
-        A seed to use. If None, will use the global RandomState.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -492,7 +506,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The bandwidth parameter(s).
         func : callable, optional
             Function to transform the likelihood values (before summing); for
@@ -544,7 +558,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Returns
         -------
-        pdf : array_like
+        pdf : ndarray
             The value of the probability density at `endog_predict` and `exog_predict`.
 
         Notes
@@ -603,7 +617,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Returns
         -------
-        cdf_est : array_like
+        cdf_est : ndarray
             The estimate of the cdf.
 
         Notes
@@ -680,7 +694,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         Parameters
         ----------
-        bw : array_like
+        bw : ndarray
             The bandwidth parameter(s).
 
         Returns

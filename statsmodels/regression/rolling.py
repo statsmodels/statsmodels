@@ -50,9 +50,9 @@ class RollingStore(NamedTuple):
 
 common_params = "\n".join(map(strip4, model._model_params_doc.split("\n")))
 window_parameters = """\
-window : int
+window : {int, None}, optional
     Length of the rolling window. Must be strictly larger than the number
-    of variables in the model.
+    of variables in the model. If None, the entire sample is used.
 """
 
 weight_parameters = """
@@ -63,7 +63,7 @@ weights : array_like, optional
 """
 
 _missing_param_doc = """\
-min_nobs : {int, None}
+min_nobs : {int, None}, optional
     Minimum number of observations required to estimate a model when
     data are missing.  If None, the minimum depends on the number of
     regressors in the model. Must be smaller than window.
@@ -105,6 +105,7 @@ categories) rather than an explicit constant (e.g., a column of 1s).
 Examples
 --------
 >>> from statsmodels.regression.rolling import Rolling%(model)s
+>>> from statsmodels.tools.tools import add_constant
 >>> from statsmodels.datasets import longley
 >>> data = longley.load()
 >>> exog = add_constant(data.exog, prepend=False)
@@ -116,7 +117,8 @@ Use params_only to skip all calculations except parameter estimation
 >>> rolling_params = mod.fit(params_only=True)
 
 Use expanding and min_nobs to fill the initial results using an
-expanding scheme until window observation, and the roll.
+expanding scheme until window observations are available, after which
+rolling is used.
 
 >>> mod = Rolling%(model)s(data.endog, exog, window=60, min_nobs=12,
 ... expanding=True)
@@ -155,7 +157,7 @@ class RollingWLS:
         Model.__init__(self, endog, exog, missing="none", hasconst=False)
         self.k_constant = k_const
         self.data.const_idx = const_idx
-        self._y = array_like(endog, "endog")
+        self._y = array_like(endog, "endog", ndim=1)
         nobs = self._y.shape[0]
         self._x = array_like(exog, "endog", ndim=2, shape=(nobs, None))
         window = int_like(window, "window", optional=True)
@@ -298,7 +300,7 @@ class RollingWLS:
 
         Parameters
         ----------
-        method : {'inv', 'lstsq', 'pinv'}
+        method : {'inv', 'lstsq', 'pinv'}, optional
             Method to use when computing the model parameters.
 
             * 'inv' - use moving windows inner-products and matrix inversion.
@@ -307,7 +309,7 @@ class RollingWLS:
             * 'lstsq' - Use numpy.linalg.lstsq
             * 'pinv' - Use numpy.linalg.pinv. This method matches the default
               estimator in non-moving regression estimators.
-        cov_type : {'nonrobust', 'HCCM', 'HC0'}
+        cov_type : {'nonrobust', 'HCCM', 'HC0'}, optional
             Covariance estimator:
 
             * nonrobust - The classic OLS covariance estimator
@@ -333,6 +335,9 @@ class RollingWLS:
         """
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
+        )
+        cov_type = string_like(
+            cov_type, "cov_type", options=("nonrobust", "HCCM", "HC0"), lower=False
         )
         reset = int_like(reset, "reset", optional=True)
         reset = self._y.shape[0] if reset is None else reset
@@ -630,7 +635,7 @@ class RollingRegressionResults:
 
         Returns
         -------
-        array_like
+        ndarray or DataFrame
             The estimated model covariances. If the original input is a numpy
             array, the returned covariance is a 3-d array with shape
             (nobs, nvar, nvar). If the original inputs are pandas types, then
@@ -701,7 +706,7 @@ class RollingRegressionResults:
             with np.errstate(invalid="ignore"):
                 return stats.norm.sf(np.abs(self.tvalues)) * 2
 
-    def _conf_int(self, alpha, cols):
+    def _conf_int(self, alpha):
         bse = np.asarray(self.bse)
 
         if self.use_t:
@@ -716,22 +721,16 @@ class RollingRegressionResults:
         params = np.asarray(self.params)
         lower = params - q * bse
         upper = params + q * bse
-        if cols is not None:
-            cols = np.asarray(cols)
-            lower = lower[:, cols]
-            upper = upper[:, cols]
         return np.asarray(list(zip(lower, upper, strict=True)))
 
     @Appender(LikelihoodModelResults.conf_int.__doc__)
-    def conf_int(self, alpha=0.05, cols=None):
-        ci = self._conf_int(alpha, cols)
+    def conf_int(self, alpha=0.05):
+        ci = self._conf_int(alpha)
         if not self._use_pandas:
             return ci
         ci_names = ("lower", "upper")
         row_names = self.model.data.row_labels
         col_names = self.model.data.param_names
-        if cols is not None:
-            col_names = [col_names[i] for i in cols]
         mi = MultiIndex.from_product((col_names, ci_names))
         ci = np.reshape(np.swapaxes(ci, 1, 2), (ci.shape[0], -1))
         return DataFrame(ci, columns=mi, index=row_names)
@@ -765,11 +764,11 @@ class RollingRegressionResults:
 
         Parameters
         ----------
-        variables : {int, str, Iterable[int], Iterable[str], None}, optional
+        variables : {int, str, list[int], list[str], None}, optional
             Integer index or string name of the variables whose coefficients
             to plot. Can also be an iterable of integers or strings. Default
             plots all coefficients.
-        alpha : float, optional
+        alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha)%. Set
             to None to exclude confidence intervals.
         legend_loc : str, optional
@@ -791,7 +790,7 @@ class RollingRegressionResults:
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
         if alpha is not None:
-            ci = self._conf_int(alpha, None)
+            ci = self._conf_int(alpha)
 
         row_labels = self.model.data.row_labels
         if row_labels is None:

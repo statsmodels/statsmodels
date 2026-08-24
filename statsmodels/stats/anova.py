@@ -37,17 +37,33 @@ def anova_single(model, **kwargs):
     model : fitted linear model results instance
         A fitted linear model
     **kwargs
-        typ : int or str {1,2,3} or {"I","II","III"}
+        typ : {1, 2, 3, "I", "II", "III"}, optional
             Type of sum of squares to use.
-        test : str {"F", "Chisq", "Cp"} or None
+        test : {"F", "Chisq", "Cp", None}, optional
             Test statistics to provide. Default is "F".
-        robust : {None, "hc0", "hc1", "hc2", "hc3"}
+        robust : {None, "hc0", "hc1", "hc2", "hc3"}, optional
             Use heteroscedasticity-corrected coefficient covariance matrix.
             If robust covariance is desired, it is recommended to use `hc3`.
 
     Notes
     -----
     Use of this function is discouraged. Use anova_lm instead.
+
+    **Type I**: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
+
+    **Type II**: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
+
+    **Type III**: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
     """
     test = kwargs.get("test", "F")
     typ = kwargs.get("typ", 1)
@@ -105,10 +121,10 @@ def anova1_lm_single(
         Preallocated DataFrame to be filled in with the Anova results.
     n_rows : int
         Number of rows, including the residual row, in `table`.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}
         Test statistic to provide.
     pr_test : str
-        Name of the column holding the p-value for `test`, e.g. "PR(>F)".
+        Name of the column holding the p-value for `test`, e.g., "PR(>F)".
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Type of heteroscedasticity-robust covariance estimator; accepted
         for interface consistency but not used for Type I sums of squares.
@@ -123,6 +139,10 @@ def anova1_lm_single(
     Notes
     -----
     Use of this function is discouraged. Use anova_lm instead.
+
+    Type I: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
     """
     # maybe we should rethink using pinv > qr in OLS/linear models?
     mgr = FormulaManager()
@@ -174,10 +194,10 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         The model specification describing the terms of `model`.
     n_rows : int
         Number of rows, including the residual row, in the returned table.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}
         Test statistic to provide.
     pr_test : str
-        Name of the column holding the p-value for `test`, e.g. "PR(>F)".
+        Name of the column holding the p-value for `test`, e.g., "PR(>F)".
     robust : {None, "hc0", "hc1", "hc2", "hc3"}
         Type of heteroscedasticity-robust covariance estimator to use, if
         any.
@@ -192,9 +212,12 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     -----
     Use of this function is discouraged. Use anova_lm instead.
 
-    Type II
-    Sum of Squares compares marginal contribution of terms. Thus, it is
-    not particularly useful for models with significant interaction terms.
+    Type II: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
+
     """
     mgr = FormulaManager()
     terms_info = model_spec.terms[:]  # copy
@@ -269,6 +292,15 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
 
 
 def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
+    """
+    Notes
+    -----
+    Type III: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
+    """
     mgr = FormulaManager()
     n_rows += mgr.has_intercept(model_spec)
     terms_info = model_spec.terms
@@ -322,14 +354,14 @@ def anova_lm(*args, **kwargs):
     ----------
     *args : fitted linear model results instance
         One or more fitted linear models
-    scale : float
+    scale : float or None, optional
         Estimate of variance, If None, will be estimated from the largest
         model. Default is None.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}, optional
         Test statistics to provide. Default is "F".
-    typ : str or int {"I","II","III"} or {1,2,3}
-        The type of Anova test to perform. See notes.
-    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+    typ : {1, 2, 3, "I", "II", "III"}, optional
+        The type of Anova test to perform. Default is I, more see notes.
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}, optional
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
 
@@ -367,9 +399,28 @@ def anova_lm(*args, **kwargs):
     Model statistics are given in the order of args. Models must have been fit
     using the formula api.
 
+    **Type I**: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
+
+    **Type II**: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
+
+    **Type III**: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
+
     See Also
     --------
-    model_results.compare_f_test, model_results.compare_lm_test
+    statsmodels.regression.linear_model.RegressionResults.compare_f_test
+        Nested model comparrison using an F-test
+    statsmodels.regression.linear_model.RegressionResults.compare_lm_test
+        Nested model comparrison using an LM test
 
     Examples
     --------
@@ -493,11 +544,11 @@ class AnovaRM:
         The within-subject factors
     between : list[str]
         The between-subject factors, this is not yet implemented
-    aggregate_func : {None, 'mean', callable}
+    aggregate_func : {None, 'mean', callable}, optional
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will
-        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        not perform any aggregation; 'mean' is a shortcut to `numpy.mean`.
         An exception will be raised if aggregation is required, but no
         aggregation function was specified.
 
@@ -702,32 +753,3 @@ class AnovaResults:
         summ.add_df(self.anova_table)
 
         return summ
-
-
-if __name__ == "__main__":
-    from statsmodels.formula.api import ols
-
-    # in R
-    # library(car)
-    # write.csv(Moore, "moore.csv", row.names=FALSE)
-
-    moore = pd.read_csv(
-        "moore.csv",
-        skiprows=1,
-        names=["partner_status", "conformity", "fcategory", "fscore"],
-    )
-    moore_lm = ols(
-        "conformity ~ C(fcategory, Sum)*C(partner_status, Sum)", data=moore
-    ).fit()
-
-    mooreB = ols("conformity ~ C(partner_status, Sum)", data=moore).fit()
-
-    # for each term you just want to test vs the model without its
-    # higher-order terms
-
-    # using Monette-Fox slides and Marden class notes for linear algebra /
-    # Reference for Orthogonal Projections/complement in ANOVA:
-    # https://people.math.aau.dk/~rw/Undervisning/MM_BI/
-    # Handouts/anova_orthog.pdf
-
-    table = anova_lm(moore_lm, typ=2)

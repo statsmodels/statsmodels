@@ -43,8 +43,8 @@ def drop_missing(y, x=None, axis=1):
         Additional data with observations possibly containing NaN
         values. If provided, an observation is dropped if it is
         missing in either `y` or `x`.
-    axis : int
-        Axis along which to look for missing observations.  Default is 1, ie.,
+    axis : int, optional
+        Axis along which to look for missing observations.  Default is 1, i.e.,
         observations in rows.
 
     Returns
@@ -81,94 +81,6 @@ def drop_missing(y, x=None, axis=1):
         return np.compress(keepidx, y, axis=keep_axis)
 
 
-# TODO: needs to better preserve dtype and be more flexible
-# ie., if you still have a string variable in your array you do not
-# want to cast it to float
-# TODO: add name validator (ie., bad names for datasets.grunfeld)
-def categorical(data, col=None, dictnames=False, drop=False):
-    """
-    Construct a dummy matrix from categorical variables
-
-    .. deprecated:: 0.12
-
-       Use pandas.get_dummies instead.
-
-    Parameters
-    ----------
-    data : array_like
-        An array, Series or DataFrame.  This can be either a 1d vector of
-        the categorical variable or a 2d array with the column specifying
-        the categorical variable specified by the col argument.
-    col : {str, int, None}
-        If data is a DataFrame col must in a column of data. If data is a
-        Series, col must be either the name of the Series or None. For arrays,
-        `col` can be an int that is the (zero-based) column index
-        number.  `col` can only be None for a 1d array.  The default is None.
-    dictnames : bool, optional
-        If True, a dictionary mapping the column number to the categorical
-        name is returned.  Used to have information about plain arrays.
-    drop : bool
-        Whether or not keep the categorical variable in the returned matrix.
-
-    Returns
-    -------
-    dummy_matrix : array_like
-        A matrix of dummy (indicator/binary) float variables for the
-        categorical data.
-    dictnames :  dict[int, str], optional
-        Mapping between column numbers and categorical names.
-
-    Notes
-    -----
-    This returns a dummy variable for *each* distinct variable.  If a
-    DataFrame is provided, the names for the new variable is the
-    old variable name - underscore - category name.  So if the variable
-    'vote' had answers as 'yes' or 'no' then the returned array would have two
-    new variables-- 'vote_yes' and 'vote_no'.  There is currently
-    no name checking.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import statsmodels.api as sm
-
-    Univariate examples
-
-    >>> import string
-    >>> string_var = [string.ascii_lowercase[0:5],
-    ...               string.ascii_lowercase[5:10],
-    ...               string.ascii_lowercase[10:15],
-    ...               string.ascii_lowercase[15:20],
-    ...               string.ascii_lowercase[20:25]]
-    >>> string_var *= 5
-    >>> string_var = np.asarray(sorted(string_var))
-    >>> design = sm.tools.categorical(string_var, drop=True)
-
-    Or for a numerical categorical variable
-
-    >>> instr = np.floor(np.arange(10,60, step=2)/10)
-    >>> design = sm.tools.categorical(instr, drop=True)
-
-    With a structured array
-
-    >>> num = np.random.randn(25,2)
-    >>> struct_ar = np.zeros((25,1),
-    ...                      dtype=[('var1', 'f4'),('var2', 'f4'),
-    ...                             ('instrument','f4'),('str_instr','a5')])
-    >>> struct_ar['var1'] = num[:,0][:,None]
-    >>> struct_ar['var2'] = num[:,1][:,None]
-    >>> struct_ar['instrument'] = instr[:,None]
-    >>> struct_ar['str_instr'] = string_var[:,None]
-    >>> design = sm.tools.categorical(struct_ar, col='instrument', drop=True)
-
-    Or
-
-    >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
-
-    """
-    raise NotImplementedError("categorical has been removed")
-
-
 # TODO: add an axis argument to this for sysreg
 def add_constant(data, prepend=True, has_constant="skip"):
     """
@@ -178,10 +90,10 @@ def add_constant(data, prepend=True, has_constant="skip"):
     ----------
     data : array_like
         A column-ordered design matrix.
-    prepend : bool
-        If true, the constant is in the first column.  Else the constant is
-        appended (last column).
-    has_constant : str {'raise', 'add', 'skip'}
+    prepend : bool, optional
+        If True (default), the constant is in the first column. If False, the
+        constant is appended (last column).
+    has_constant : {'raise', 'add', 'skip'}, optional
         Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if any column has a constant value. Using 'add' will add a
@@ -281,7 +193,7 @@ def pinv_extended(x, rcond=1e-15):
     ----------
     x : array_like
         The array to invert, 2d.
-    rcond : float
+    rcond : float, optional
         Singular values below ``rcond * max(singular values)`` are
         treated as zero.
 
@@ -339,7 +251,7 @@ def recipr(x):
 
 def recipr0(x):
     """
-    Reciprocal of an array with entries less than 0 set to 0
+    Reciprocal of an array with entries equal to 0 set to 0
 
     Parameters
     ----------
@@ -525,22 +437,22 @@ class Bunch(dict):
 
 def _ensure_2d(x, ndarray=False):
     """
-    Ensure that an input is 2 dimensional, converting or reshaping as needed
+    Ensure that an input is 2-dimensional, converting or reshaping as needed
 
     Parameters
     ----------
-    x : ndarray, Series, DataFrame or None
+    x : ndarray, Series, or DataFrame
         Input to verify dimensions, and to transform as necessary
-    ndarray : bool
+    ndarray : bool, optional
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a
         DataFrame.
 
     Returns
     -------
-    out : ndarray, DataFrame or None
+    out : ndarray, DataFrame
         array or DataFrame with 2 dimensions.  One dimensional arrays are
-        returned as nobs by 1. None is returned if x is None.
+        returned as nobs by 1.
     names : list of str or None
         list containing variables names when the input is a pandas datatype.
         Returns None if the input is an ndarray.
@@ -548,10 +460,7 @@ def _ensure_2d(x, ndarray=False):
     Notes
     -----
     Accepts None for simplicity
-
     """
-    if x is None:
-        return x
     is_pandas = _is_using_pandas(x, None)
     if x.ndim == 2:
         if is_pandas:
@@ -559,7 +468,7 @@ def _ensure_2d(x, ndarray=False):
         else:
             return x, None
     elif x.ndim > 2:
-        raise ValueError("x mst be 1 or 2-dimensional.")
+        raise ValueError("x must be 1 or 2-dimensional.")
 
     name = x.name if is_pandas else None
     if ndarray:
@@ -579,7 +488,7 @@ def matrix_rank(m, tol=None, method="qr"):
     tol : float, optional
         The tolerance to use when testing the matrix rank. If not provided
         an appropriate value is selected.
-    method : {"ip", "qr", "svd"}
+    method : {"ip", "qr", "svd"}, optional
         The method used. "ip" uses the inner-product of a normalized version
         of m and then computes the rank using NumPy's matrix_rank.
         "qr" uses a QR decomposition and is the default. "svd" defers to
@@ -592,9 +501,9 @@ def matrix_rank(m, tol=None, method="qr"):
 
     Notes
     -----
-    When using a QR factorization, the rank is determined by the number of
-    elements on the leading diagonal of the R matrix that are above tol
-    in absolute value.
+    When using a QR factorization, the factorization is column pivoted and
+    the rank is determined by the number of elements on the leading diagonal
+    of the R matrix that are above tol in absolute value.
 
     """
     m = array_like(m, "m", ndim=2)
@@ -604,7 +513,11 @@ def matrix_rank(m, tol=None, method="qr"):
         m = m.T @ m
         return np.linalg.matrix_rank(m, tol=tol, hermitian=True)
     elif method == "qr":
-        (r,) = scipy.linalg.qr(m, mode="r")
+        # The pivoted factorization orders the diagonal of R by decreasing
+        # magnitude, which makes the number of diagonal elements above tol a
+        # rank estimate and keeps tol keyed to the largest of them. Without
+        # pivoting the count depends on the order of the columns of m.
+        r, _ = scipy.linalg.qr(m, mode="r", pivoting=True)
         abs_diag = np.abs(np.diag(r))
         if tol is None:
             tol = abs_diag[0] * m.shape[1] * np.finfo(float).eps

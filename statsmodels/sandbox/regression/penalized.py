@@ -14,7 +14,7 @@ open issues
   are based on "posterior" as for example bse and cov_params
 
 * helper functions to construct priors?
-* increasing penalization for ordered regressors, e.g. polynomials
+* increasing penalization for ordered regressors, e.g., polynomials
 
 * compare with random/mixed effects/coefficient, like estimated priors
 
@@ -187,6 +187,10 @@ class TheilGLS(GLS):
             The covariance matrix for cov_type='sandwich' treats the stochastic
             restriction (R and q) as fixed and has a sandwich form analogously
             to M-estimators.
+        use_t : bool
+            If use_t is True, then confidence intervals and p-values in the
+            results instance are based on the t distribution. If use_t is
+            False, then they are based on the normal distribution.
 
         Returns
         -------
@@ -244,7 +248,7 @@ class TheilGLS(GLS):
         if cov_type == "sandwich":
             normalized_cov_params = xpxi_sandwich
         elif cov_type == "data-prior":
-            normalized_cov_params = xpxi  # why attach it to self, i.e. model?
+            normalized_cov_params = xpxi  # why attach it to self, i.e., model?
         else:
             raise ValueError("cov_type has to be 'sandwich' or 'data-prior'")
 
@@ -302,7 +306,7 @@ class TheilGLS(GLS):
 
 
 # TODO:
-# I need the hatmatrix in the model if I want to do iterative fitting, e.g. GCV
+# I need the hatmatrix in the model if I want to do iterative fitting, e.g., GCV
 # move to model or use it from a results instance inside the model,
 #    each call to fit returns results instance
 # note: we need to recalculate hatmatrix for each lambda, so keep in results is fine

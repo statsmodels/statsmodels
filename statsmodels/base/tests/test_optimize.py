@@ -210,6 +210,22 @@ def test_minimize_no_hess_method(min_method):
     assert_allclose(res.params, res_default.params, rtol=1e-4)
 
 
+def test_fit_invalid_method_raises():
+    from statsmodels.discrete.discrete_model import Poisson
+
+    exog = np.column_stack((np.ones(10), np.arange(10) / 10.0))
+    endog = np.array([1, 2, 1, 3, 2, 4, 3, 5, 4, 6])
+    mod = Poisson(endog, exog)
+
+    with pytest.raises(ValueError, match="method"):
+        mod.fit(method="not-a-method", disp=0)
+
+    # case-insensitive, matching the previous manual `method.lower()`
+    res_upper = mod.fit(method="BFGS", disp=0)
+    res_lower = mod.fit(method="bfgs", disp=0)
+    assert_allclose(res_upper.params, res_lower.params)
+
+
 def test_lbfgs_disp_false_no_output(capsys):
     xopt, _ = _fit_lbfgs(
         dummy_func,

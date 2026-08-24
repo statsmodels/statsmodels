@@ -32,11 +32,11 @@ def get_var_endog(y, lags, trend="c", has_constant="skip"):
         The endogenous variables, of shape (nobs, neqs).
     lags : int
         The number of lags to include in each row of the predictor matrix.
-    trend : str {"n", "c", "ct", "ctt"}
+    trend : {"n", "c", "ct", "ctt"}, optional
         The trend to add. 'n' adds no trend, 'c' adds a constant, 'ct' adds
         a constant and linear trend, and 'ctt' adds a constant and linear
         and quadratic trend. Default is "c".
-    has_constant : str {"raise", "add", "skip"}
+    has_constant : {"raise", "add", "skip"}, optional
         Controls what happens when trend is 'c' and a constant column
         already exists. 'raise' will raise an error. 'add' will add a
         column of 1s. 'skip' will return the data without change. 'skip'
@@ -59,6 +59,31 @@ def get_var_endog(y, lags, trend="c", has_constant="skip"):
 
 
 def get_trendorder(trend="c"):
+    """
+    Map a trend string to the number of deterministic terms it implies.
+
+    Parameters
+    ----------
+    trend : {"n", "c", "ct", "ctt"}, optional
+        The trend to encode. 'n' adds no trend, 'c' adds a constant, 'ct'
+        adds a constant and linear trend, and 'ctt' adds a constant and
+        linear and quadratic trend. Default is "c".
+
+    Returns
+    -------
+    int
+        The number of deterministic terms implied by `trend`: 0 for "n",
+        1 for "c", 2 for "ct", or 3 for "ctt".
+
+    Raises
+    ------
+    ValueError
+        If `trend` is not one of the recognized trend strings.
+
+    Notes
+    -----
+    "nc" is also accepted as a legacy alias for "n".
+    """
     # Handle constant, etc.
     if trend == "c":
         trendorder = 1
@@ -86,12 +111,12 @@ def make_lag_names(names, lag_order, trendorder=1, exog=None):
         for.
     lag_order : int
         The number of lags to include.
-    trendorder : int
+    trendorder : int, optional
         The order of the trend to add at the beginning of the list. 0
         excludes a trend, 1 includes only a constant, 2 also includes a
         linear trend term, and 3 also includes a quadratic trend term.
         Default is 1.
-    exog : ndarray, optional
+    exog : array_like, optional
         Exogenous variables to include names for.
 
     Returns
@@ -247,10 +272,37 @@ def parse_lutkepohl_data(path):  # pragma: no cover
 
 
 def norm_signif_level(alpha=0.05):
+    """
+    Compute the two-sided critical value of the standard normal distribution.
+
+    Parameters
+    ----------
+    alpha : float, optional
+        The significance level. Default is 0.05.
+
+    Returns
+    -------
+    float
+        The value ``z`` such that ``P(-z < Z < z) = 1 - alpha`` for a
+        standard normal random variable ``Z``.
+    """
     return stats.norm.ppf(1 - alpha / 2)
 
 
 def acf_to_acorr(acf):
+    """
+    Scale an autocovariance function into an autocorrelation function.
+
+    Parameters
+    ----------
+    acf : ndarray
+        Autocovariance function, of shape (nlags, neqs, neqs).
+
+    Returns
+    -------
+    ndarray
+        Autocorrelation function with the same shape as `acf`.
+    """
     diag = np.diag(acf[0])
     # numpy broadcasting sufficient
     return acf / np.sqrt(np.outer(diag, diag))
@@ -272,45 +324,50 @@ def varsim(
     Parameters
     ----------
     coefs : ndarray
-        Coefficients for the VAR lags of endog.
-    intercept : None or ndarray 1-D (neqs,) or (steps, neqs)
+        Coefficients for the VAR lags of endog, of shape (p, k, k).
+    intercept : None or array_like
         This can be either the intercept for each equation or an offset.
         If None, then the VAR process has a zero intercept.
-        If intercept is 1-D, then the same (endog specific) intercept is added
-        to all observations.
-        If intercept is 2-D, then it is treated as an offset and is added as
-        an observation specific intercept to the autoregression. In this case,
-        the intercept/offset should have same number of rows as steps, and the
-        same number of columns as endogenous variables (neqs).
-    sig_u : ndarray
-        Covariance matrix of the residuals or innovations.
-        If sig_u is None, then an identity matrix is used.
-    steps : {None, int}
-        number of observations to simulate, this includes the initial
-        observations to start the autoregressive process.
-        If offset is not None, then exog of the model are used if they were
-        provided in the model
+        If intercept is 1-D of shape (neqs,), then the same (endog specific)
+        intercept is added to all observations.
+        If intercept is 2-D of shape (steps, neqs), then it is treated as an
+        offset and is added as an observation specific intercept to the
+        autoregression. In this case, the intercept/offset should have same
+        number of rows as steps, and the same number of columns as
+        endogenous variables (neqs).
+    sig_u : None or array_like
+        Covariance matrix of the residuals or innovations, of shape
+        (neqs, neqs). If sig_u is None, then an identity matrix is used.
+    steps : int, optional
+        Number of observations to simulate, this includes the initial
+        observations to start the autoregressive process. Default is 100.
     initial_values : array_like, optional
         Initial values for use in the simulation. Shape should be
         (nlags, neqs) or (neqs,). Values should be ordered from less to
         most recent. Note that this values will be returned by the
         simulation as the first values of `endog_simulated` and they
         will count for the total number of steps.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
-        If `rng` is not None, then it will be used with for the random
-        variables generated by numpy.random.
-    seed : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        Used to generate the random innovations for the simulation. If
+        `rng` is None, a new ``Generator`` is created using fresh entropy
+        from the operating system. If `rng` is an int, a new
+        ``RandomState`` instance is created, seeded with `rng`; this
+        integer-seeding behavior is deprecated and will change to
+        creating a ``Generator`` in a future release. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
+    seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            seed has been deprecated. In-line with SPEC-007, use
            rng for passing a random number generator or seed.
-    nsimulations : {None, int}
+    nsimulations : None or int, optional
         Number of simulations to perform. If `nsimulations` is None it will
         perform one simulation and return value will have shape (steps, neqs).
 
     Returns
     -------
-    endog_simulated : nd_array
+    endog_simulated : ndarray
         Endog of the simulated VAR process. Shape will be (nsimulations, steps, neqs)
         or (steps, neqs) if `nsimulations` is None.
     """
@@ -362,6 +419,22 @@ def varsim(
 
 
 def get_index(lst, name):
+    """
+    Resolve a variable name, or an already-integer position, to an index.
+
+    Parameters
+    ----------
+    lst : sequence of str
+        The list of variable names to search.
+    name : str or int
+        The variable name to look up. If `name` is already an int, it is
+        returned unchanged, interpreted as a position in `lst`.
+
+    Returns
+    -------
+    int
+        The index of `name` in `lst`, or `name` itself if it is an int.
+    """
     try:
         result = lst.index(name)
     except Exception:
@@ -428,25 +501,27 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
 
     Parameters
     ----------
-    n_seasons : int >= 0
-        Number of seasons (e.g. 12 for monthly data and 4 for quarterly data).
-    len_endog : int >= 0
-        Total number of observations.
-    first_period : int, default: 0
+    n_seasons : int
+        Number of seasons (e.g., 12 for monthly data and 4 for quarterly
+        data). Must be non-negative.
+    len_endog : int
+        Total number of observations. Must be non-negative.
+    first_period : int, optional
         Season of the first observation. As an example, suppose we have monthly
         data and the first observation is in March (third month of the year).
         In this case we pass 2 as first_period. (0 for the first season,
         1 for the second, ..., n_seasons-1 for the last season).
         An integer greater than n_seasons-1 are treated in the same way as the
-        integer modulo n_seasons.
-    centered : bool, default: False
+        integer modulo n_seasons. Default is 0.
+    centered : bool, optional
         If True, center (demean) the dummy variables. That is useful in order
         to get seasonal dummies that are orthogonal to the vector of constant
-        dummy variables (a vector of ones).
+        dummy variables (a vector of ones). Default is False.
 
     Returns
     -------
-    seasonal_dummies : ndarray (len_endog x n_seasons-1)
+    ndarray
+        Seasonal dummy variables, of shape (len_endog, n_seasons - 1).
     """
     if n_seasons == 0:
         return np.empty((len_endog, 0))

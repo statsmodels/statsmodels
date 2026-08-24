@@ -3,6 +3,7 @@ import pandas as pd
 from scipy.stats.distributions import chi2, norm
 
 from statsmodels.graphics import utils
+from statsmodels.tools.validation import string_like
 
 
 def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
@@ -17,7 +18,7 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
         An array of times (censoring times or event times)
     status : array_like
         Status at the event time, status==1 is the 'event'
-        (e.g. death, failure), meaning that the event occurs at the
+        (e.g., death, failure), meaning that the event occurs at the
         given value in `time`; status==0 indicates that censoring
         has occurred, meaning that the event occurs after the given
         value in `time`.
@@ -26,29 +27,29 @@ def _calc_survfunc_right(time, status, weights=None, entry=None, compress=True,
     entry : array_like, optional
         An array of entry times for handling left truncation (the
         subject is not in the risk set on or before the entry time)
-    compress : bool
+    compress : bool, optional
         If True, only times at which an event occurred are retained
         in the returned arrays.
-    retall : bool
+    retall : bool, optional
         If True, all computed results (including the standard
         error) are returned.  If False, only `sp`, `utime`, `rtime`,
         `n`, and `d` are returned.
 
     Returns
     -------
-    sp : array_like
+    sp : ndarray
         The estimated survival probabilities
-    se : array_like
+    se : ndarray
         The standard errors for the values in `sp`.  Only returned
         if `retall` is True.
-    utime : array_like
+    utime : ndarray
         The unique times at which the survival function is estimated
-    rtime : array_like
+    rtime : ndarray
         The rank (0, 1, 2, ...) of each observed time among the
         unique times
-    n : array_like
+    n : ndarray
         The size of the risk set just prior to each time in `utime`
-    d : array_like
+    d : ndarray
         The number of events at each time in `utime`
     """
 
@@ -140,13 +141,13 @@ def _calc_incidence_right(time, status, weights=None):
 
     Returns
     -------
-    ip : list of arrays
+    ip : list of ndarray
         ip[k-1] contains the estimated cumulative incidence rates
         for outcome k=1, 2, ...
-    se : list of arrays or None
+    se : list of ndarray or None
         The standard errors for the values in `ip`.  None if
         `weights` is provided.
-    utime : array_like
+    utime : ndarray
         The unique times at which the incidence rates are estimated
     """
 
@@ -238,17 +239,17 @@ class CumIncidenceRight:
     status : array_like
         If status >= 1 indicates which event occurred at time t.  If
         status = 0, the subject was censored at time t.
-    title : str
+    title : str, optional
         Optional title used for plots and summary output.
-    freq_weights : array_like
+    freq_weights : array_like, optional
         Optional frequency weights
-    exog : array_like
+    exog : array_like, optional
         Optional, if present used to account for violation of
         independent censoring.
-    bw_factor : float
+    bw_factor : float, optional
         Band-width multiplier for kernel-based estimation.  Only
         used if exog is provided.
-    dimred : bool
+    dimred : bool, optional
         If True, proportional hazards regression models are used to
         reduce exog to two columns by predicting overall events and
         censoring in two separate models.  If False, exog is used
@@ -257,12 +258,12 @@ class CumIncidenceRight:
 
     Attributes
     ----------
-    times : array_like
+    times : ndarray
         The distinct times at which the incidence rates are estimated
-    cinc : list of arrays
+    cinc : list of ndarray
         cinc[k-1] contains the estimated cumulative incidence rates
         for outcome k=1,2,...
-    cinc_se : list of arrays
+    cinc_se : list of ndarray or None
         The standard errors for the values in `cinc`.  Not available when
         exog and/or frequency weights are provided.
 
@@ -294,14 +295,23 @@ class CumIncidenceRight:
     https://arxiv.org/pdf/math/0409180.pdf
     """
 
-    def __init__(self, time, status, title=None, freq_weights=None,
-                 exog=None, bw_factor=1., dimred=True):
+    def __init__(
+            self,
+            time,
+            status,
+            title=None,
+            freq_weights=None,
+            exog=None,
+            bw_factor=1.,
+            dimred=True
+    ):
 
         _checkargs(time, status, None, freq_weights, None)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
+        self.title = "" if not title else title
 
         if exog is not None:
             from ._kernel_estimates import _kernel_cumincidence
@@ -316,13 +326,13 @@ class CumIncidenceRight:
                                      dimred)
             self.times = x[0]
             self.cinc = x[1]
+            self.cinc_se = np.full_like(x[1], np.nan)
             return
 
         x = _calc_incidence_right(time, status, freq_weights)
         self.cinc = x[0]
         self.cinc_se = x[1]
         self.times = x[2]
-        self.title = "" if not title else title
 
 
 class SurvfuncRight:
@@ -340,39 +350,39 @@ class SurvfuncRight:
         An array of times (censoring times or event times)
     status : array_like
         Status at the event time, status==1 is the 'event'
-        (e.g. death, failure), meaning that the event
+        (e.g., death, failure), meaning that the event
         occurs at the given value in `time`; status==0
         indicates that censoring has occurred, meaning that
         the event occurs after the given value in `time`.
     entry : array_like, optional
         An array of entry times for handling left truncation (the
         subject is not in the risk set on or before the entry time)
-    title : str
+    title : str, optional
         Optional title used for plots and summary output.
-    freq_weights : array_like
+    freq_weights : array_like, optional
         Optional frequency weights
-    exog : array_like
+    exog : array_like, optional
         Optional, if present used to account for violation of
         independent censoring.
-    bw_factor : float
+    bw_factor : float, optional
         Band-width multiplier for kernel-based estimation.  Only used
         if exog is provided.
 
     Attributes
     ----------
-    surv_prob : array_like
+    surv_prob : ndarray
         The estimated value of the survivor function at each time
         point in `surv_times`.
-    surv_prob_se : array_like
+    surv_prob_se : ndarray
         The standard errors for the values in `surv_prob`.  Not available
         if exog is provided.
-    surv_times : array_like
+    surv_times : ndarray
         The points where the survival function changes.
-    n_risk : array_like
+    n_risk : ndarray
         The number of subjects at risk just before each time value in
         `surv_times`.  Not available if exog is provided.
-    n_events : array_like
-        The number of events (e.g. deaths) that occur at each point
+    n_events : ndarray
+        The number of events (e.g., deaths) that occur at each point
         in `surv_times`.  Not available if exog is provided.
 
     Notes
@@ -405,6 +415,7 @@ class SurvfuncRight:
         if entry is not None:
             entry = self.entry = np.asarray(entry)
 
+        self.title = "" if not title else title
         if exog is not None:
             if entry is not None:
                 raise ValueError("exog and entry cannot both be present")
@@ -419,6 +430,10 @@ class SurvfuncRight:
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
+            self.surv_prob_se = np.full_like(x[1], np.nan)
+            self.n_risk = np.full_like(x[1], np.nan)
+            self.n_events = np.full_like(x[1], np.nan)
+
             return
 
         x = _calc_survfunc_right(time, status, weights=freq_weights,
@@ -429,7 +444,6 @@ class SurvfuncRight:
         self.surv_times = x[2]
         self.n_risk = x[4]
         self.n_events = x[5]
-        self.title = "" if not title else title
 
     def plot(self, ax=None):
         """
@@ -503,12 +517,11 @@ class SurvfuncRight:
         p : float
             The probability point for which a confidence interval is
             determined.
-        alpha : float
+        alpha : float, optional
             The confidence interval has nominal coverage probability
             1 - `alpha`.
-        method : str
-            Function to use for g-transformation, must be one of
-            "cloglog", "linear", "log", "logit", or "asinsqrt".
+        method : {"cloglog", "linear", "log", "logit", "asinsqrt"}, optional
+            Function to use for g-transformation.
 
         Returns
         -------
@@ -532,7 +545,11 @@ class SurvfuncRight:
 
         tr = norm.ppf(1 - alpha / 2)
 
-        method = method.lower()
+        method = string_like(
+            method,
+            "method",
+            options=("cloglog", "linear", "log", "logit", "asinsqrt"),
+        )
         if method == "cloglog":
 
             def g(x):
@@ -559,15 +576,13 @@ class SurvfuncRight:
 
             def gprime(x):
                 return 1 / (x * (1 - x))
-        elif method == "asinsqrt":
+        else:  # method == "asinsqrt"
 
             def g(x):
                 return np.arcsin(np.sqrt(x))
 
             def gprime(x):
                 return 1 / (2 * np.sqrt(x) * np.sqrt(1 - x))
-        else:
-            raise ValueError("unknown method")
 
         r = g(self.surv_prob) - g(1 - p)
         r /= (gprime(self.surv_prob) * self.surv_prob_se)
@@ -614,39 +629,35 @@ class SurvfuncRight:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the desired simultaneous coverage
             probability for the confidence region.  Currently alpha
             must be set to 0.05, giving 95% simultaneous intervals.
-        method : str
+        method : {"hw"}, optional
             The method used to produce the simultaneous confidence
             band.  Only the Hall-Wellner (hw) method is currently
             implemented.
-        transform : str
+        transform : {"log", "arcsin"}, optional
             The transform used to produce the interval (note that
             the returned interval is on the survival probability
-            scale regardless of which transform is used).  Only
-            `log` and `arcsin` are implemented.
+            scale regardless of which transform is used).
 
         Returns
         -------
-        lcb : array_like
+        lcb : ndarray
             The lower confidence limits corresponding to the points
             in `surv_times`.
-        ucb : array_like
+        ucb : ndarray
             The upper confidence limits corresponding to the points
             in `surv_times`.
         """
 
-        method = method.lower()
-        if method != "hw":
-            msg = "only the Hall-Wellner (hw) method is implemented"
-            raise ValueError(msg)
+        _ = string_like(method, "method", options=("hw",))
 
         if alpha != 0.05:
             raise ValueError("alpha must be set to 0.05")
 
-        transform = transform.lower()
+        transform = string_like(transform, "transform", options=("log", "arcsin"))
         s2 = self.surv_prob_se**2 / self.surv_prob**2
         nn = self.n_risk
         if transform == "log":
@@ -655,7 +666,7 @@ class SurvfuncRight:
             theta = np.exp(theta)
             lcb = self.surv_prob**(1/theta)
             ucb = self.surv_prob**theta
-        elif transform == "arcsin":
+        else:  # transform == "arcsin"
             k = 1.3581
             k *= (1 + nn * s2) / (2 * np.sqrt(nn))
             k *= np.sqrt(self.surv_prob / (1 - self.surv_prob))
@@ -664,8 +675,6 @@ class SurvfuncRight:
             lcb = np.sin(v)**2
             v = np.clip(f + k, -np.inf, np.pi/2)
             ucb = np.sin(v)**2
-        else:
-            raise ValueError("Unknown transform")
 
         return lcb, ucb
 
@@ -685,20 +694,20 @@ def survdiff(time, status, group, weight_type=None, strata=None,
         censored.
     group : array_like
         Indicators of the two groups
-    weight_type : str
+    weight_type : str, optional
         The following weight types are implemented:
-            None (default) : logrank test
-            fh : Fleming-Harrington, weights by S^(fh_p),
-                 requires exponent fh_p to be provided as keyword
-                 argument; the weights are derived from S defined at
-                 the previous event time, and the first weight is
-                 always 1.
-            gb : Gehan-Breslow, weights by the number at risk
-            tw : Tarone-Ware, weights by the square root of the number
-                 at risk
-    strata : array_like
+
+        - None (default) : logrank test
+        - "fh" : Fleming-Harrington, weights by S^(fh_p), requires exponent
+          fh_p to be provided as keyword argument; the weights are derived
+          from S defined at the previous event time, and the first weight
+          is always 1.
+        - gb : Gehan-Breslow, weights by the number at risk
+        - tw : Tarone-Ware, weights by the square root of the number at risk
+
+    strata : array_like, optional
         Optional stratum indicators for a stratified test
-    entry : array_like
+    entry : array_like, optional
         Entry times to handle left truncation. The subject is not in
         the risk set on or before the entry time.
 
@@ -851,7 +860,7 @@ def plot_survfunc(survfuncs, ax=None):
 
     Parameters
     ----------
-    survfuncs : object or array_like
+    survfuncs : SurvfuncRight or list of SurvfuncRight
         A single SurvfuncRight object, or a list of SurvfuncRight
         objects that are plotted together.
     ax : AxesSubplot, optional

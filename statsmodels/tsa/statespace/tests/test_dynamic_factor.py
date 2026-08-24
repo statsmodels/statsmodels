@@ -13,7 +13,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.iolib.summary import forg
+from statsmodels.iolib.summary import Summary, forg
 from statsmodels.tsa.statespace import dynamic_factor
 
 from .results import results_dynamic_factor, results_varmax
@@ -224,13 +224,13 @@ class TestDynamicFactor2(CheckDynamicFactor):
         pass
 
     def test_aic(self):
-        # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
+        # Stata uses 9 df (i.e., 9 params) here instead of 13, because since the
         # model did not coverge, 4 of the parameters are not fully estimated
         # (possibly they are still at starting values?) so the AIC is off
         pass
 
     def test_bic(self):
-        # Stata uses 9 df (i.e. 9 params) here instead of 13, because since the
+        # Stata uses 9 df (i.e., 9 params) here instead of 13, because since the
         # model did not coverge, 4 of the parameters are not fully estimated
         # (possibly they are still at starting values?) so the BIC is off
         pass
@@ -661,7 +661,7 @@ class TestDynamicFactor_scalar_error(CheckDynamicFactor):
 
 class TestStaticFactor(CheckDynamicFactor):
     """
-    Test for a static factor model (i.e. factors are not autocorrelated).
+    Test for a static factor model (i.e., factors are not autocorrelated).
     """
 
     def construct_model(self):
@@ -680,14 +680,14 @@ class TestStaticFactor(CheckDynamicFactor):
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
     def test_bic(self):
-        # Stata uses 5 df (i.e. 5 params) here instead of 6, because one param
+        # Stata uses 5 df (i.e., 5 params) here instead of 6, because one param
         # is basically zero.
         pass
 
 
 class TestSUR(CheckDynamicFactor):
     """
-    Test for a seemingly unrelated regression model (i.e. no factors) with
+    Test for a seemingly unrelated regression model (i.e., no factors) with
     errors cross-sectionally, but not auto-, correlated
     """
 
@@ -720,7 +720,7 @@ class TestSUR(CheckDynamicFactor):
 
 class TestSUR_autocorrelated_errors(CheckDynamicFactor):
     """
-    Test for a seemingly unrelated regression model (i.e. no factors) where
+    Test for a seemingly unrelated regression model (i.e., no factors) where
     the errors are vector autocorrelated, but innovations are uncorrelated.
     """
 
@@ -1066,3 +1066,26 @@ def test_start_params_nans():
     mod2 = dynamic_factor.DynamicFactor(endog2, k_factors=1, factor_order=1)
 
     assert_allclose(mod2.start_params, mod1.start_params)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    dta = pd.DataFrame(
+        results_varmax.lutkepohl_data,
+        columns=["inv", "inc", "consump"],
+        index=pd.date_range("1960-01-01", "1982-10-01", freq="QS"),
+    )
+    dta["dln_inv"] = np.log(dta["inv"]).diff()
+    dta["dln_inc"] = np.log(dta["inc"]).diff()
+    dta["dln_consump"] = np.log(dta["consump"]).diff()
+    endog = dta.loc[
+        "1960-04-01":"1978-10-01", ["dln_inv", "dln_inc", "dln_consump"]
+    ]
+
+    true = results_dynamic_factor.lutkepohl_sfm.copy()
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=0)
+    res = mod.smooth(true["params"], cov_type="approx")
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

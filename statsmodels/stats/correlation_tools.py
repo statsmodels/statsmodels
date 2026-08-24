@@ -5,6 +5,7 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -19,6 +20,7 @@ from statsmodels.tools.sm_exceptions import (
     iteration_limit_doc,
 )
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import bool_like, string_like
 
 
 def clip_evals(x, value=0):  # threshold=0, value=0):
@@ -39,16 +41,16 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     ----------
     corr : ndarray, (k, k)
         initial correlation matrix
-    threshold : float
+    threshold : float, optional
         clipping threshold for smallest eigenvalue, see Notes
-    n_fact : int or float
+    n_fact : int or float, optional
         factor to determine the maximum number of iterations. The maximum
         number of iterations is the integer part of the number of columns in
         the correlation matrix times n_fact.
 
     Returns
     -------
-    corr_new : ndarray, (optional)
+    corr_new : ndarray
         corrected correlation matrix
 
     See Also
@@ -109,12 +111,12 @@ def corr_clipped(corr, threshold=1e-15):
     ----------
     corr : ndarray, (k, k)
         initial correlation matrix
-    threshold : float
+    threshold : float, optional
         clipping threshold for smallest eigenvalue, see Notes
 
     Returns
     -------
-    corr_new : ndarray, (optional)
+    corr_new : ndarray
         corrected correlation matrix
 
     See Also
@@ -127,7 +129,7 @@ def corr_clipped(corr, threshold=1e-15):
     The smallest eigenvalue of the corrected correlation matrix is
     approximately equal to the ``threshold``. In examples, the
     smallest eigenvalue can be by a factor of 10 smaller than the threshold,
-    e.g. threshold 1e-8 can result in smallest eigenvalue in the range
+    e.g., threshold 1e-8 can result in smallest eigenvalue in the range
     between 1e-9 and 1e-8.
     If the threshold=0, then the smallest eigenvalue of the correlation matrix
     might be negative, but zero within a numerical error, for example in the
@@ -152,37 +154,97 @@ def corr_clipped(corr, threshold=1e-15):
     return x_new
 
 
-def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=False):
+class CovNearestResult(NamedTuple):
     """
-    Find the nearest covariance matrix that is positive (semi-) definite
-
-    This leaves the diagonal, i.e. the variance, unchanged
+    Result of :func:`cov_nearest` when the intermediate results are
+    returned.
 
     Parameters
     ----------
-    cov : ndarray, (k,k)
+    cov : ndarray
+        Corrected covariance matrix.
+    corr : ndarray
+        Corrected correlation matrix.
+    std : ndarray
+        Standard deviation taken from the diagonal of the input covariance
+        matrix.
+    """
+
+    cov: np.ndarray
+    corr: np.ndarray
+    std: np.ndarray
+
+
+def cov_nearest(
+    cov,
+    method="clipped",
+    threshold=1e-15,
+    n_fact=100,
+    return_all=False,
+    *,
+    min_diag=None,
+    result_object: bool | None = None,
+):
+    """
+    Find the nearest covariance matrix that is positive (semi-) definite
+
+    This leaves the diagonal, i.e., the variance, unchanged, unless ``min_diag``
+    is used to enforce a strictly positive diagonal (see below).
+
+    Parameters
+    ----------
+    cov : array_like, (k,k)
         initial covariance matrix
-    method : str
+    method : {"clipped", "nearest"}, optional
         if "clipped", then the faster but less accurate ``corr_clipped`` is
         used. If "nearest", then ``corr_nearest`` is used
-    threshold : float
+    threshold : float, optional
         clipping threshold for smallest eigen value, see Notes
-    n_fact : int or float
+    n_fact : int or float, optional
         factor to determine the maximum number of iterations in
         ``corr_nearest``. See its doc string
-    return_all : bool
+    return_all : bool, optional
         if False (default), then only the covariance matrix is returned.
         If True, then correlation matrix and standard deviation are
         additionally returned.
+    min_diag : None or float, optional
+        If None (default), the diagonal of ``cov`` is left unchanged. This
+        function converts the covariance matrix to a correlation matrix, which
+        is not defined if a diagonal element (variance) is zero or negative and
+        results in a matrix that contains ``nan``. If ``min_diag`` is a positive
+        float, then diagonal elements that are smaller than ``min_diag`` are
+        raised to ``min_diag`` before the conversion, and a ``SpecificationWarning``
+        is issued. This makes it possible to correct matrices with a zero or
+        negative diagonal, at the cost of changing those variances.
+    result_object : bool, optional
+        Flag controlling whether a ``CovNearestResult`` NamedTuple is
+        returned. When ``return_all=True`` a ``CovNearestResult`` is always
+        returned; it holds the same three elements as the legacy tuple, so
+        it unpacks and indexes identically. When ``return_all=False`` a bare
+        covariance matrix is returned unless ``result_object=True``, which
+        yields a ``CovNearestResult`` carrying the correlation matrix and
+        standard deviations too.
 
     Returns
     -------
-    cov_ : ndarray
-        corrected covariance matrix
-    corr_ : ndarray, (optional)
-        corrected correlation matrix
-    std_ : ndarray, (optional)
-        standard deviation
+    CovNearestResult or ndarray
+        When ``return_all=True`` (or ``result_object=True``), a NamedTuple
+        with fields:
+
+        cov : ndarray
+            corrected covariance matrix
+        corr : ndarray
+            corrected correlation matrix
+        std : ndarray
+            standard deviation
+
+        ``CovNearestResult`` has the same length and contents as the plain
+        ``(cov_, corr_, std_)`` tuple it replaces, so it unpacks and indexes
+        identically. See
+        :class:`~statsmodels.stats.correlation_tools.CovNearestResult`.
+
+        When ``return_all=False`` a bare corrected covariance matrix is
+        returned instead.
 
     See Also
     --------
@@ -206,7 +268,23 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
 
     from statsmodels.stats.moment_helpers import corr2cov, cov2corr
 
-    cov_, std_ = cov2corr(cov, return_std=True)
+    method = string_like(method, "method", options=("clipped", "nearest"))
+    result_object = bool_like(result_object, "result_object", optional=True)
+    cov = np.asarray(cov)
+    if min_diag is not None:
+        diag = np.diag(cov)
+        if np.any(diag < min_diag):
+            warnings.warn(
+                f"Diagonal elements below min_diag={min_diag!r} have been "
+                "raised to min_diag; the corresponding variances are changed.",
+                SpecificationWarning,
+                stacklevel=2,
+            )
+            cov = cov.copy()
+            k = cov.shape[0]
+            cov[np.arange(k), np.arange(k)] = np.maximum(diag, min_diag)
+
+    cov_, std_ = cov2corr(cov, return_std=True, result_object=True)
     if method == "clipped":
         corr_ = corr_clipped(cov_, threshold=threshold)
     else:  # method == 'nearest'
@@ -214,10 +292,15 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100, return_all=F
 
     cov_ = corr2cov(corr_, std_)
 
-    if return_all:
-        return cov_, corr_, std_
-    else:
-        return cov_
+    # CovNearestResult has exactly the same length and contents as the legacy
+    # (cov_, corr_, std_) tuple, so it unpacks and indexes identically and is
+    # always used when return_all is True.  When return_all is False a bare
+    # covariance matrix is returned, as before; pass result_object=True to
+    # always get a CovNearestResult.  The correlation matrix and standard
+    # deviations are computed either way, so nothing is None-filled.
+    if result_object or return_all:
+        return CovNearestResult(cov_, corr_, std_)
+    return cov_
 
 
 def _nmono_linesearch(
@@ -239,16 +322,16 @@ def _nmono_linesearch(
         The search direction
     obj_hist : array_like
         Objective function history (must contain at least one value)
-    M : positive int
+    M : positive int, optional
         Number of previous function points to consider (see references
         for details).
-    sig1 : real
+    sig1 : real, optional
         Tuning parameter, see references for details.
-    sig2 : real
+    sig2 : real, optional
         Tuning parameter, see references for details.
-    gam : real
+    gam : real, optional
         Tuning parameter, see references for details.
-    maxiter : int
+    maxiter : int, optional
         The maximum number of iterations; returns None for all outputs
         if convergence does not occur by this point
 
@@ -333,7 +416,7 @@ def _spg_optim(
         The gradient of the objective function
     start : array_like
         The starting point
-    project : function
+    project : callable
         In-place projection of the argument to the domain
         of func.
     maxiter : scalar, optional
@@ -601,25 +684,25 @@ def corr_nearest_factor(
 
     Parameters
     ----------
-    corr : square array
+    corr : ndarray or sparse matrix
         The target matrix (to which the nearest correlation matrix is
         sought).  Must be square, but need not be positive
         semidefinite.
     rank : int
         The rank of the factor structure of the solution, i.e., the
         number of linearly independent columns of X.
-    ctol : positive real
+    ctol : positive real, optional
         Convergence criterion.
-    lam_min : float
+    lam_min : float, optional
         Tuning parameter for spectral projected gradient optimization
         (smallest allowed step in the search direction).
-    lam_max : float
+    lam_max : float, optional
         Tuning parameter for spectral projected gradient optimization
         (largest allowed step in the search direction).
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations in spectral projected gradient
         optimization.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -765,12 +848,12 @@ def cov_nearest_factor_homog(cov, rank, *, rng=None):
 
     Parameters
     ----------
-    cov : array_like
+    cov : ndarray or sparse matrix
         The input array, must be square but need not be positive
         semidefinite
     rank : int
         The rank of the fitted factor structure
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -792,7 +875,7 @@ def cov_nearest_factor_homog(cov, rank, *, rng=None):
 
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of cov - k*I, which can
-    in turn be easily obtained form the eigen-decomposition of `cov`.
+    in turn be easily obtained from the eigen-decomposition of `cov`.
     Thus the problem can be reduced to a 1-dimensional search for k
     that does not require repeated eigen-decompositions.
 
@@ -853,10 +936,10 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Parameters
     ----------
-    data : array_like
+    data : ndarray
         The data from which the row-wise thresholded correlation
         matrix is to be computed.
-    minabs : non-negative real
+    minabs : non-negative real, optional
         The threshold value; correlation coefficients smaller in
         magnitude than minabs are set to zero.  If None, defaults
         to 1 / sqrt(n), see Notes for more information.
@@ -890,7 +973,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
 
     Examples
     --------
-    Here X is a tall data matrix (e.g. with 100,000 rows and 50
+    Here X is a tall data matrix (e.g., with 100,000 rows and 50
     columns).  The row-wise correlation matrix of X is calculated
     and stored in sparse form, with all entries smaller than 0.3
     treated as 0.
@@ -935,8 +1018,7 @@ def corr_thresholded(data, minabs=None, max_elt=1e7):
     ipos = np.concatenate(ipos_all)
     jpos = np.concatenate(jpos_all)
     cor_values = np.concatenate(cor_values)
-
-    cmat = sparse.coo_matrix((cor_values, (ipos, jpos)), (nrow, nrow))
+    cmat = sparse.coo_array((cor_values, (ipos, jpos)), (nrow, nrow))
 
     return cmat
 
@@ -1020,7 +1102,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     Use kernel averaging to estimate a multivariate covariance function
 
     The goal is to estimate a covariance function C(x, y) =
-    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g. representing
+    cov(Z(x), Z(y)) where x, y are vectors in R^p (e.g., representing
     locations in time or space), and Z(.) represents a multivariate
     process on R^p.
 
@@ -1034,7 +1116,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
         The rows of exog are realizations of the process obtained at
         specified points.
     loc : array_like
-        The rows of loc are the locations (e.g. in space or time) at
+        The rows of loc are the locations (e.g., in space or time) at
         which the rows of exog are observed.
     groups : array_like
         The values of groups are labels for distinct independent copies
@@ -1042,7 +1124,7 @@ def kernel_covariance(exog, loc, groups, kernel=None, bw=None):
     kernel : MultivariateKernel instance, optional
         An instance of MultivariateKernel, defaults to
         GaussianMultivariateKernel.
-    bw : array_like or scalar
+    bw : array_like or scalar, optional
         A bandwidth vector, or bandwidth multiplier.  If a 1d array, it
         contains kernel bandwidths for each component of the process, and
         must have length equal to the number of columns of exog.  If a scalar,

@@ -12,6 +12,7 @@ from scipy.optimize import minimize
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.hannan_rissanen import (
     _validate_fixed_params,
     hannan_rissanen,
@@ -39,13 +40,17 @@ def innovations(endog, ma_order=0, demean=True):
 
     Returns
     -------
-    parameters : list of SARIMAXParams objects
-        List elements correspond to estimates at different `ma_order`. For
-        example, parameters[0] is an `SARIMAXParams` instance corresponding
-        to `ma_order=0`.
-    other_results : Bunch
-        Includes one component, `spec`, containing the `SARIMAXSpecification`
-        instance corresponding to the input arguments.
+    ARMAEstimationResult
+        A result object with fields:
+
+        parameters : list of SARIMAXParams objects
+            List elements correspond to estimates at different `ma_order`.
+            For example, parameters[0] is an `SARIMAXParams` instance
+            corresponding to `ma_order=0`.
+        other_results : Bunch
+            Includes one component, `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments.
 
     Notes
     -----
@@ -92,7 +97,7 @@ def innovations(endog, ma_order=0, demean=True):
         }
     )
 
-    return out, other_results
+    return ARMAEstimationResult(out, other_results)
 
 
 def innovations_mle(
@@ -135,19 +140,23 @@ def innovations_mle(
     fixed_params : dict, optional
         Dictionary of parameter names and fixed values. Keys must be valid
         AR or MA parameter names as returned by
-        ``SARIMAXSpecification.param_names`` (e.g. ``{"ar.L1": 0.5}``).
+        ``SARIMAXSpecification.param_names`` (e.g., ``{"ar.L1": 0.5}``).
         ``sigma2`` may not be fixed. Default is None, which fixes no
         parameters.
 
     Returns
     -------
-    parameters : SARIMAXParams object
-    other_results : Bunch
-        Includes four components: `spec`, containing the `SARIMAXSpecification`
-        instance corresponding to the input arguments; `minimize_kwargs`,
-        containing any keyword arguments passed to `minimize`; `start_params`,
-        containing the untransformed starting parameters passed to `minimize`;
-        and `minimize_results`, containing the output from `minimize`.
+    ARMAEstimationResult
+        A result object with fields:
+
+        parameters : SARIMAXParams object
+        other_results : Bunch
+            Includes four components: `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments; `minimize_kwargs`, containing any keyword arguments
+            passed to `minimize`; `start_params`, containing the
+            untransformed starting parameters passed to `minimize`; and
+            `minimize_results`, containing the output from `minimize`.
 
     Notes
     -----
@@ -225,9 +234,10 @@ def innovations_mle(
         sp = SARIMAXParams(spec=spec)
 
         # Estimate starting parameters via Hannan-Rissanen
-        hr, hr_results = hannan_rissanen(
+        _hr_result = hannan_rissanen(
             endog, ar_order=spec.ar_order, ma_order=spec.ma_order, demean=False
         )
+        hr, hr_results = _hr_result.parameters, _hr_result.other_results
         if spec.seasonal_periods == 0:
             # If no seasonal component, then `hr` gives starting parameters
             sp.params = hr.params
@@ -243,9 +253,10 @@ def innovations_mle(
 
             ar_order = np.array(spec.seasonal_ar_lags) * spec.seasonal_periods
             ma_order = np.array(spec.seasonal_ma_lags) * spec.seasonal_periods
-            seasonal_hr, seasonal_hr_results = hannan_rissanen(
+            _seasonal_hr_result = hannan_rissanen(
                 hr_results.resid, ar_order=ar_order, ma_order=ma_order, demean=False
             )
+            seasonal_hr = _seasonal_hr_result.parameters
 
             # Set the starting parameters
             sp.ar_params = hr.ar_params
@@ -324,4 +335,4 @@ def innovations_mle(
         }
     )
 
-    return p, other_results
+    return ARMAEstimationResult(p, other_results)

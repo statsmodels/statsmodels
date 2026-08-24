@@ -5,6 +5,10 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
+from collections.abc import Iterator
+from typing import ClassVar, Generic, TypeVar
+import warnings
+
 import numpy as np
 
 from statsmodels.tools.testing import Holder
@@ -13,6 +17,15 @@ from statsmodels.tools.testing import Holder
 class HolderTuple(Holder):
     """
     Holder class with indexing
+
+    .. deprecated:: 0.15
+        ``HolderTuple`` is no longer used internally by statsmodels. Result
+        classes that used to subclass ``HolderTuple`` have been replaced by
+        documented dataclass (or ``NamedTuple``) result classes; those that
+        need the same limited ``(statistic, pvalue)`` unpacking are frozen
+        dataclasses that subclass
+        :class:`~statsmodels.stats.base.LimitedIterationMixin`.
+        ``HolderTuple`` will be removed after statsmodels 0.16 is released.
 
     Parameters
     ----------
@@ -25,6 +38,13 @@ class HolderTuple(Holder):
     """
 
     def __init__(self, tuple_=None, **kwds):
+        warnings.warn(
+            "HolderTuple is deprecated and is no longer used internally by "
+            "statsmodels. It will be removed after statsmodels 0.16 is "
+            "released. Use a documented NamedTuple result class instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
         super().__init__(**kwds)
         if tuple_ is not None:
             self.tuple = tuple(getattr(self, att) for att in tuple_)
@@ -45,6 +65,65 @@ class HolderTuple(Holder):
         return np.array(list(self.tuple), dtype=dtype, copy=copy)
 
 
+_V = TypeVar("_V")
+
+
+class LimitedIterationMixin(Generic[_V]):
+    """
+    Base class giving a dataclass tuple-like access to some fields.
+
+    Several result classes were changed from ``NamedTuple`` subclasses to
+    frozen :func:`~dataclasses.dataclass` instances, so that additional
+    fields can be added over time without changing what iteration and
+    unpacking return. A dataclass is not iterable and cannot be indexed, so
+    this mixin restores limited, tuple-like access to a fixed subset of the
+    fields, matching the ``(statistic, pvalue)`` (or single-value) unpacking
+    of the result classes they replaced. Concretely it adds
+
+    - ``__iter__``, so that ``a, b = result`` and ``list(result)`` yield the
+      selected fields in order,
+    - ``__getitem__``, so that ``result[0]`` indexes into the same fields,
+      and
+    - ``__len__``, returning the number of selected fields.
+
+    All other fields remain available through attribute access only, which
+    is the preferred API. Unlike the ``NamedTuple`` classes these replaced,
+    iteration and indexing are permanently restricted to ``_iter_fields`` and
+    do not emit a warning.
+
+    Subclassing a plain base class (rather than applying a decorator that
+    attaches ``__iter__``/``__getitem__``/``__len__`` at runtime) keeps these
+    methods, and their return type, visible to static type checkers: ``a, b
+    = result`` and ``result[0]`` are typed as ``_V``, and ``len(result)`` is
+    recognized. Parametrize the mixin with the common type of the selected
+    fields and set ``_iter_fields``::
+
+        @dataclass(frozen=True, slots=True)
+        class SomeResult(LimitedIterationMixin[float]):
+            _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+            statistic: float
+            pvalue: float
+            extra: float
+
+    ``_iter_fields`` must be annotated ``ClassVar`` so that ``@dataclass``
+    does not treat it as a field.
+    """
+
+    __slots__ = ()
+    _iter_fields: ClassVar[tuple[str, ...]]
+
+    def __iter__(self) -> Iterator[_V]:
+        for name in self._iter_fields:
+            yield getattr(self, name)
+
+    def __getitem__(self, index: int) -> _V:
+        return tuple(self)[index]
+
+    def __len__(self) -> int:
+        return len(self._iter_fields)
+
+
 class AllPairsResults:
     """
     Results class for pairwise comparisons, based on p-values
@@ -55,13 +134,13 @@ class AllPairsResults:
         p-values from a pairwise comparison test
     all_pairs : list of tuples
         list of indices, one pair for each comparison
-    multitest_method : str
+    multitest_method : str, optional
         method that is used by default for p-value correction. This is used
         as default by the methods like if the multiple-testing method is not
         specified as argument.
-    levels : {list[str], None}
+    levels : list[str] or None, optional
         optional names of the levels or groups
-    n_levels : None or int
+    n_levels : None or int, optional
         If None, then the number of levels or groups is inferred from the
         other arguments. It can be explicitly specified, if the inferred
         number is incorrect.
@@ -132,7 +211,8 @@ class AllPairsResults:
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we do not assume we have all pairs
-        pvals_mat[list(zip(*self.all_pairs, strict=True))] = self.pval_corrected()
+        rows, cols = zip(*self.all_pairs, strict=True)
+        pvals_mat[rows, cols] = self.pval_corrected()
         return pvals_mat
 
     def summary(self):

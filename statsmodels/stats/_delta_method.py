@@ -33,17 +33,17 @@ class NonlinearDeltaCov:
     ----------
     func : callable, f(params)
         Nonlinear function of the estimation parameters. The return of
-        the function can be vector valued, i.e. a 1-D array.
+        the function can be vector valued, i.e., a 1-D array.
     params : ndarray
         Parameters at which function `func` is evaluated.
     cov_params : ndarray
         Covariance matrix of the parameters `params`.
-    deriv : function or None
+    deriv : callable or None, optional
         First derivative or Jacobian of func. If deriv is None, then a
         numerical derivative will be used. If func returns a 1-D array,
         then the `deriv` should have rows corresponding to the elements
         of the return of func.
-    func_args : None
+    func_args : None, optional
         Not yet implemented.
     """
     def __init__(self, func, params, cov_params, deriv=None, func_args=None):
@@ -61,7 +61,7 @@ class NonlinearDeltaCov:
 
         Parameters
         ----------
-        params : None or ndarray
+        params : ndarray or None, optional
             Values at which gradient is evaluated. If params is None, then
             the attached params are used.
             TODO: should we drop this
@@ -169,27 +169,27 @@ class NonlinearDeltaCov:
         alpha : float, optional
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
-        use_t : boolean
+        use_t : bool, optional
             If use_t is False (default), then the normal distribution is used
             for the confidence interval, otherwise the t distribution with
             `df` degrees of freedom is used.
-        df : int or float
+        df : int or float, optional
             degrees of freedom for t distribution. Only used and required if
             use_t is True.
-        var_extra : None or array_like float
+        var_extra : array_like, optional
             Additional variance that is added to the variance based on the
             delta method. This can be used to obtain confidence intervals for
             new observations (prediction interval).
-        predicted : ndarray (float)
+        predicted : ndarray, optional
             Predicted value, can be used to avoid repeated calculations if it
             is already available.
-        se : ndarray (float)
+        se : ndarray, optional
             Standard error, can be used to avoid repeated calculations if it
             is already available.
 
         Returns
         -------
-        conf_int : array
+        conf_int : ndarray
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
             lower, the second column contains all upper limits.
@@ -231,25 +231,25 @@ class NonlinearDeltaCov:
 
         Parameters
         ----------
-        xname : list of strings, optional
+        xname : list of str, optional
             Default is `c_##` for ## in p the number of regressors.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
-        title : string, optional
+        title : str, optional
             Title for the params table. If not None, then this replaces the
             default title.
-        use_t : boolean
+        use_t : bool, optional
             If use_t is False (default), then the normal distribution is used
             for the confidence interval, otherwise the t distribution with
             `df` degrees of freedom is used.
-        df : int or float
+        df : int or float, optional
             Degrees of freedom for t distribution. Only used and required if
             use_t is True.
 
         Returns
         -------
-        smry : string or Summary instance
+        smry : str or Summary instance
             This contains a parameter results table in the case of t or z
             test in the same form as the parameter results table in the
             model results summary. For F or Wald test, the return is a

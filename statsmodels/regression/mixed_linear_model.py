@@ -142,8 +142,8 @@ Therefore, optimization methods requiring the Hessian matrix such as
 the Newton-Raphson algorithm cannot be used for model fitting.
 
 """
-
 from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.scipy import SP_LT_2
 
 from io import StringIO
 import tokenize
@@ -166,6 +166,7 @@ from statsmodels.tools.sm_exceptions import (
     SingularMatrixWarning,
     ValueWarning,
 )
+from statsmodels.tools.validation import string_like
 
 _warn_cov_sing = "The random effects covariance matrix is singular."
 
@@ -310,7 +311,7 @@ class MixedLMParams:
         Parameters
         ----------
         params : array_like
-            The mode parameters packed into a single vector.
+            The model parameters packed into a single vector.
         k_fe : int
             The number of covariates with fixed effects
         k_re : int
@@ -373,16 +374,16 @@ class MixedLMParams:
 
         Parameters
         ----------
-        fe_params : array_like
+        fe_params : array_like, optional
             The fixed effects parameter (a 1-dimensional array).  If
             None, there are no fixed effects.
-        cov_re : array_like
+        cov_re : ndarray, optional
             The random effects covariance matrix (a square, symmetric
             2-dimensional array).
-        cov_re_sqrt : array_like
+        cov_re_sqrt : ndarray, optional
             The Cholesky (lower triangular) square root of the random
             effects covariance matrix.
-        vcomp : array_like
+        vcomp : array_like, optional
             The variance component parameters.  If None, there are no
             variance components.
 
@@ -434,7 +435,7 @@ class MixedLMParams:
             If True, the Cholesky square root of `cov_re` is
             included in the packed result.  Otherwise the
             lower triangle of `cov_re` is included.
-        has_fe : bool
+        has_fe : bool, optional
             If True, the fixed effects parameters are included
             in the packed result, otherwise they are omitted.
 
@@ -485,9 +486,9 @@ def _smw_solver(s, A, AtA, Qi, di):
     ----------
     s : scalar
         See above for usage
-    A : ndarray
+    A : ndarray or sparse matrix
         p x q matrix, in general q << p, may be sparse.
-    AtA : square ndarray
+    AtA : square ndarray or sparse matrix
         :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
         The matrix `B` is q x q, where q = r + d.  `B` consists of a r
@@ -513,7 +514,10 @@ def _smw_solver(s, A, AtA, Qi, di):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(A):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         def solver(rhs):
             ql = A.T.dot(rhs)
@@ -557,9 +561,9 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     ----------
     s : positive scalar
         See above for usage
-    A : ndarray
+    A : ndarray or sparse matrix
         p x q matrix, in general q << p.
-    AtA : square ndarray
+    AtA : square ndarray or sparse matrix
         :math:`A^\prime  A`, a q x q matrix.
     Qi : square symmetric ndarray
         The matrix `B` is q x q, where q = r + d.  `B` consists of a r
@@ -588,7 +592,10 @@ def _smw_logdet(s, A, AtA, Qi, di, B_logdet):
     qmat[0:m, 0:m] += Qi
 
     if sparse.issparse(qmat):
-        qmat[m:, m:] += sparse.diags(di)
+        if SP_LT_2:
+            qmat[m:, m:] += sparse.diags(di)
+        else:
+            qmat[m:, m:] += sparse.diags_array(di)
 
         # There are faster but much more difficult ways to do this
         # https://stackoverflow.com/questions/19107617
@@ -652,21 +659,21 @@ class MixedLM(base.LikelihoodModel):
     groups : 1d array_like
         A vector of labels determining the groups -- data from
         different groups are independent
-    exog_re : 2d array_like
+    exog_re : 2d array_like, optional
         A matrix of covariates used to determine the variance and
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each group.
-    exog_vc : VCSpec instance or dict-like (deprecated)
+    exog_vc : VCSpec instance or dict-like (deprecated), optional
         A VCSPec instance defines the structure of the variance
         components in the model.  Alternatively, see notes below
         for a dictionary-based format.  The dictionary format is
         deprecated and may be removed at some point in the future.
-    use_sqrt : bool
+    use_sqrt : bool, optional
         If True, optimization is carried out using the lower
         triangle of the square root of the random effects
         covariance matrix, otherwise it is carried out using the
         lower triangle of the random effects covariance matrix.
-    missing : str
+    missing : {"none", "drop", "raise"}, optional
         The approach to missing data handling
 
     Notes
@@ -718,10 +725,10 @@ class MixedLM(base.LikelihoodModel):
     Pandas Series with compatible indexing with ``exog_re``, and
     ``exog_re`` has two columns.
 
-    >>> g = pd.groupby(groups, by=groups).groups
+    >>> g = groups.groupby(groups).groups
     >>> vc = {}
-    >>> vc['1'] = {k : exog_re.loc[g[k], 0] for k in g}
-    >>> vc['2'] = {k : exog_re.loc[g[k], 1] for k in g}
+    >>> vc['1'] = {k : exog_re.loc[g[k], [0]].to_numpy() for k in g}
+    >>> vc['2'] = {k : exog_re.loc[g[k], [1]].to_numpy() for k in g}
     >>> model = sm.MixedLM(endog, exog, groups, exog_vc=vc)
     >>> result = model.fit()
 
@@ -946,23 +953,23 @@ class MixedLM(base.LikelihoodModel):
             The formula specifying the model
         data : array_like
             The data for the model. See Notes.
-        re_formula : str
+        re_formula : str, optional
             A one-sided formula defining the variance structure of the
             model.  The default gives a random intercept for each
             group.
-        vc_formula : dict-like
+        vc_formula : dict-like, optional
             Formulas describing variance components.  `vc_formula[vc]` is
             the formula for the component with variance parameter named
             `vc`.  The formula is processed into a matrix, and the columns
             of this matrix are linearly combined with independent random
             coefficients having mean zero and a common variance.
-        subset : array_like
+        subset : array_like, optional
             An array-like object of booleans, integers, or index
             values that indicate the subset of df to use in the
             model. Assumes df is a `pandas.DataFrame`
-        use_sparse : bool
+        use_sparse : bool, optional
             If True, use sparse matrices for variance component design matrices.
-        missing : str
+        missing : {"none", "drop"}, optional
             Either 'none' or 'drop'
         args : extra arguments
             These are passed to the model
@@ -1112,7 +1119,7 @@ class MixedLM(base.LikelihoodModel):
                     )
                     evc_colnames.append(mat.columns.tolist())
                     if use_sparse:
-                        evc_mats.append(sparse.csr_matrix(mat))
+                        evc_mats.append(sparse.csr_array(mat))
                     else:
                         evc_mats.append(np.asarray(mat))
                 vc_mats.append(evc_mats)
@@ -1125,6 +1132,7 @@ class MixedLM(base.LikelihoodModel):
         kwargs["exog_re"] = exog_re
         kwargs["exog_vc"] = exog_vc
         kwargs["groups"] = groups
+        kwargs["missing"] = missing
         advance_eval_env(kwargs)
         mod = super().from_formula(formula, data, *args, **kwargs)
 
@@ -1148,7 +1156,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array_like
+        params : MixedLMParams or array_like
             Parameters of a mixed linear model.  Can be either a
             MixedLMParams instance, or a vector containing the packed
             model parameters in which the fixed effects parameters are
@@ -1182,7 +1190,7 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        array : array_like
+        array : None or array_like
             An array with the same length as endog to be split by
             group. If None, None is returned.
 
@@ -1219,22 +1227,22 @@ class MixedLM(base.LikelihoodModel):
         ----------
         start_params : array_like, optional
             Starting values for the optimization.
-        method : str of Penalty object
+        method : str or Penalty object, optional
             Method for regularization.  If a string, must be 'l1'.
-        alpha : array_like
+        alpha : scalar or array_like, optional
             Scalar or vector of penalty weights.  If a scalar, the
             same weight is applied to all coefficients; if a vector,
             it contains a weight for each coefficient.  If method is a
             Penalty object, the weights are scaled by alpha.  For L1
             regularization, the weights are used directly.
-        ceps : positive real scalar
+        ceps : positive real scalar, optional
             Fixed effects parameters smaller than this value
             in magnitude are treated as being zero.
-        ptol : positive real scalar
+        ptol : positive real scalar, optional
             Convergence occurs when the sup norm difference
             between successive values of `fe_params` is less than
             `ptol`.
-        maxit : int
+        maxit : int, optional
             The maximum number of iterations.
         **fit_kwargs
             Additional keyword arguments passed to fit.
@@ -1380,7 +1388,7 @@ class MixedLM(base.LikelihoodModel):
             The covariance matrix of the random effects.
         vcomp : array_like (1d)
             The variance components.
-        tol : float
+        tol : float, optional
             A tolerance parameter to determine when covariances
             are singular.
 
@@ -1465,7 +1473,7 @@ class MixedLM(base.LikelihoodModel):
         Notes
         -----
         If P are the standard form parameters and R are the
-        transformed parameters (i.e. with the Cholesky square root
+        transformed parameters (i.e., with the Cholesky square root
         covariance and square root transformed variance components),
         then P[i] = lin[i] * R + R' * quad[i] * R
 
@@ -1569,9 +1577,9 @@ class MixedLM(base.LikelihoodModel):
         if any_sparse:
             for j, x in enumerate(ex):
                 if not sparse.issparse(x):
-                    ex[j] = sparse.csr_matrix(x)
+                    ex[j] = sparse.csr_array(x)
             ex = sparse.hstack(ex)
-            ex = sparse.csr_matrix(ex)
+            ex = sparse.csr_array(ex)
         else:
             ex = np.concatenate(ex, axis=1)
 
@@ -1584,11 +1592,11 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams, or array_like.
+        params : MixedLMParams, or array_like
             The parameter value.  If array-like, must be a packed
             parameter vector containing only the covariance
             parameters.
-        profile_fe : bool
+        profile_fe : bool, optional
             If True, replace the provided value of `fe_params` with
             the GLS estimates.
 
@@ -1695,14 +1703,14 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        ex_r : array_like
+        ex_r : ndarray or sparse matrix
             The random effects design matrix
-        solver : function
+        solver : callable
             A function that given x returns V^{-1}x, where V
             is the group's marginal covariance matrix.
         group_ix : int
             The group index
-        max_ix : {int, None}
+        max_ix : {None, int}, optional
             If not None, the generator ends when this index
             is reached.
 
@@ -1755,7 +1763,7 @@ class MixedLM(base.LikelihoodModel):
             The parameter value.  If array-like, must be a packed
             parameter vector containing only the covariance
             parameters.
-        profile_fe : bool
+        profile_fe : bool, optional
             If True, replace the provided value of `fe_params` with
             the GLS estimates.
 
@@ -1824,13 +1832,13 @@ class MixedLM(base.LikelihoodModel):
 
         Returns
         -------
-        score_fe : array_like
+        score_fe : ndarray
             The score vector with respect to the fixed effects
             parameters.
-        score_re : array_like
+        score_re : ndarray
             The score vector with respect to the random effects
             parameters (excluding variance components parameters).
-        score_vc : array_like
+        score_vc : ndarray
             The score vector with respect to variance components
             parameters.
 
@@ -1974,20 +1982,20 @@ class MixedLM(base.LikelihoodModel):
         params : MixedLMParams or array_like
             The model parameters.  If array-like must contain packed
             parameters that are compatible with this model instance.
-        calc_fe : bool
+        calc_fe : bool, optional
             If True, calculate the score vector for the fixed effects
             parameters.  If False, this vector is not calculated, and
             a vector of zeros is returned in its place.
 
         Returns
         -------
-        score_fe : array_like
+        score_fe : ndarray
             The score vector with respect to the fixed effects
             parameters.
-        score_re : array_like
+        score_re : ndarray
             The score vector with respect to the random effects
             parameters (excluding variance components parameters).
-        score_vc : array_like
+        score_vc : ndarray
             The score vector with respect to variance components
             parameters.
 
@@ -2026,7 +2034,7 @@ class MixedLM(base.LikelihoodModel):
         -------
         hess : 2d ndarray
             The Hessian matrix, evaluated at `params`.
-        sing : boolean
+        sing : bool
             If True, the covariance matrix is singular and a
             pseudo-inverse is returned.
 
@@ -2256,27 +2264,27 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array_like or MixedLMParams
+        start_params : array_like or MixedLMParams, optional
             Starting values for the profile log-likelihood.  If not a
             `MixedLMParams` instance, this should be an array
             containing the packed parameters for the profile
             log-likelihood, including the fixed effects
             parameters.
-        reml : bool
+        reml : bool, optional
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
-        niter_sa : int
+        niter_sa : int, optional
             Currently this argument is ignored and has no effect
             on the results.
-        do_cg : bool, defaults to True
+        do_cg : bool, optional
             If False, the optimization is skipped and a results
             object at the given (or default) starting values is
             returned.
-        fe_pen : Penalty object
+        fe_pen : Penalty object, optional
             A penalty on the fixed effects
-        cov_pen : CovariancePenalty object
+        cov_pen : CovariancePenalty object, optional
             A penalty for the random effects covariance matrix
-        free : MixedLMParams object
+        free : MixedLMParams object, optional
             If not `None`, this is a mask that allows parameters to be
             held fixed at specified values.  A 1 indicates that the
             corresponding parameter is estimated, a 0 indicates that
@@ -2285,9 +2293,9 @@ class MixedLM(base.LikelihoodModel):
             independent random effects.  Note that some optimization
             methods do not respect this constraint (bfgs and lbfgs both
             work).
-        full_output : bool
+        full_output : bool, optional
             If true, attach iteration history to results
-        method : str
+        method : str or list[str], optional
             Optimization method.  Can be a scipy.optimize method name,
             or a list of such names to be tried in sequence.
         **fit_kwargs
@@ -2406,7 +2414,7 @@ class MixedLM(base.LikelihoodModel):
             msg = f"Gradient optimization failed, |grad| = {gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
-        # Convert to the final parameterization (i.e. undo the square
+        # Convert to the final parameterization (i.e., undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
         params = MixedLMParams.from_packed(
@@ -2486,7 +2494,7 @@ class MixedLM(base.LikelihoodModel):
             `_mixedlm_distribution` for more information.
         scale : scalar
             The unexplained variance
-        exog : array_like
+        exog : None or array_like
             An array of fixed effect covariates.  If None, model.exog
             is used.
 
@@ -2512,7 +2520,7 @@ class _mixedlm_distribution:
         notes for more information.
     scale : scalar
         The unexplained variance
-    exog : array_like
+    exog : None or array_like
         An array of fixed effect covariates.  If None, model.exog
         is used.
 
@@ -2555,13 +2563,13 @@ class _mixedlm_distribution:
         ----------
         n : int
             Ignored, but required by the interface.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        random_state : {None, int, array_like of int, numpy.random.Generator, numpy.random.RandomState}, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -2611,7 +2619,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
     Attributes
     ----------
-    model : class instance
+    model : MixedLM
         Pointer to MixedLM model instance that called fit.
     normalized_cov_params : ndarray
         The sampling covariance matrix of the estimates
@@ -2630,7 +2638,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         The standard errors of the fitted fixed effects coefficients
     bse_re : ndarray
         The standard errors of the fitted random effects covariance
-        matrix and variance components.  The first `k_re * (k_re + 1)`
+        matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
         the variance components.
@@ -2692,7 +2700,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         """
         Return the standard errors of the variance parameters
 
-        The first `k_re x (k_re + 1)` elements of the returned array
+        The first `k_re x (k_re + 1) / 2` elements of the returned array
         are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
         components.
@@ -2821,7 +2829,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         Parameters
         ----------
-        r_matrix : array_like
+        r_matrix : ndarray
             If an array is given, a p x k 2d array or length k 1d
             array specifying the linear restrictions. It is assumed
             that the linear combination is equal to zero.
@@ -2864,7 +2872,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
 
         Returns
@@ -2914,7 +2922,12 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         info["Dependent Variable:"] = yname
         info["Method:"] = self.method
         info["Scale:"] = self.scale
-        info["Log-Likelihood:"] = self.llf
+        # Cache llf as a plain (non-cache_readonly) attribute so summary()
+        # keeps working after remove_data() has cleared model.exog.
+        cache = self.__dict__.setdefault("_summary_cache", {})
+        if "llf" not in cache:
+            cache["llf"] = self.llf
+        info["Log-Likelihood:"] = cache["llf"]
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
         if title is None:
@@ -3013,24 +3026,24 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
         Parameters
         ----------
-        re_ix : int
+        re_ix : int or str
             If vtype is `re`, this value is the index of the variance
             parameter for which to construct a profile likelihood.  If
             `vtype` is 'vc' then `re_ix` is the name of the variance
             parameter to be profiled.
-        vtype : str
+        vtype : {'re', 'vc'}
             Either 're' or 'vc', depending on whether the profile
             analysis is for a random effect or a variance component.
-        num_low : int
+        num_low : int, optional
             The number of points at which to calculate the likelihood
             below the MLE of the parameter of interest.
-        dist_low : float
+        dist_low : float, optional
             The distance below the MLE of the parameter of interest to
             begin calculating points on the profile likelihood.
-        num_high : int
+        num_high : int, optional
             The number of points at which to calculate the likelihood
             above the MLE of the parameter of interest.
-        dist_high : float
+        dist_high : float, optional
             The distance above the MLE of the parameter of interest to
             begin calculating points on the profile likelihood.
         **fit_kwargs
@@ -3048,6 +3061,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         Only variance parameters can be profiled.
 
         """
+        vtype = string_like(vtype, "vtype", options=("re", "vc"), lower=False)
         pmodel = self.model
         k_fe = pmodel.k_fe
         k_re = pmodel.k_re
@@ -3076,7 +3090,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
             low = (cov_re[0, 0] - dist_low) / self.scale
             high = (cov_re[0, 0] + dist_high) / self.scale
 
-        elif vtype == "vc":
+        else:  # vtype == "vc"
             re_ix = self.model.exog_vc.names.index(re_ix)
             params = self.params_object.copy()
             vcomp = self.vcomp
@@ -3194,7 +3208,7 @@ def _handle_missing(data, groups, formula, re_formula, vc_formula):
     tokens = sorted(tokens & set(data.columns))
 
     data = data[tokens]
-    ii = pd.notna(data).all(1)
+    ii = pd.notna(data).all(axis=1)
     if type(groups) is not str:
         ii &= pd.notna(groups)
 

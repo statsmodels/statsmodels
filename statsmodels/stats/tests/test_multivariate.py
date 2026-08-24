@@ -3,7 +3,6 @@ Created on Sun Nov  5 14:48:19 2017
 
 Author: Josef Perktold
 """
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 
@@ -242,8 +241,8 @@ class TestCovStructure:
         p_chi2 = 0.0004589987613319
         # df = 3
         chi2 = 17.91025335733012
-
         stat, pv = smmv.test_cov_diagonal(cov, nobs)
+
         assert_allclose(stat, chi2, rtol=1e-8)
         assert_allclose(pv, p_chi2, rtol=1e-7)
 
@@ -272,6 +271,10 @@ class TestCovStructure:
         stat, pv = smmv.test_cov(cov, nobs, cov_null)
         assert_allclose(stat, chi2, rtol=1e-7)
         assert_allclose(pv, p_chi2, rtol=1e-6)
+
+        stat_2, pv_2 = smmv.test_cov(cov.tolist(), nobs, cov_null.tolist())
+        assert_allclose(stat, stat_2, rtol=1e-7)
+        assert_allclose(pv, pv_2, rtol=1e-6)
 
 
 def test_cov_oneway():

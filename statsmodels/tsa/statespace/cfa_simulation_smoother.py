@@ -19,7 +19,7 @@ class CFASimulationSmoother:
     model : Representation
         The state space model.
     cfa_simulation_smoother_classes : dict, optional
-        Dictionary with keys equal to the prefix (i.e. the Numpy data type
+        Dictionary with keys equal to the prefix (i.e., the Numpy data type
         prefix ("s", "d", "c", or "z")) and values equal to the corresponding
         Cython CFA simulation smoother class. See `tools.py` for more
         information.
@@ -42,7 +42,7 @@ class CFASimulationSmoother:
 
     However, this simulation smoother cannot be used with all state space
     models, including several of the most popular. In particular, the CFA
-    algorithm cannot support degenerate distributions (i.e. positive
+    algorithm cannot support degenerate distributions (i.e., positive
     semi-definite covariance matrices) for the initial state (which is the
     prior for the first state) or the observation or state innovations.
 
@@ -69,7 +69,7 @@ class CFASimulationSmoother:
 
     - It does not yet allow diffuse initialization of the state vector.
     - It produces simulated states only for exactly the observations in the
-      model (i.e. it cannot produce simulations for a subset of the model
+      model (i.e., it cannot produce simulations for a subset of the model
       observations or for observations outside the model).
 
     References
@@ -165,11 +165,11 @@ class CFASimulationSmoother:
 
         Parameters
         ----------
-        variates : array_like, optional
+        variates : ndarray, optional
             Random variates, distributed standard Normal. Usually only
-            specified if results are to be replicated (e.g. to enforce a seed)
+            specified if results are to be replicated (e.g., to enforce a seed)
             or for testing. If not specified, random variates are drawn. Must
-            be shaped (nobs, k_states).
+            be shaped (k_states, nobs).
         update_posterior : bool, optional
             Whether to update the posterior mean and covariance matrix (held
             in the `posterior_mean` and `posterior_cov_inv_chol_sparse`
@@ -202,12 +202,12 @@ class CFASimulationSmoother:
           `posterior_mean` attribute.
         - The (lower triangular) Cholesky factor of the inverse posterior
           covariance matrix, :math:`L`, is held in sparse diagonal banded
-          storage in the `posterior_cov_inv_chol` attribute.
+          storage in the `posterior_cov_inv_chol_sparse` attribute.
         - The posterior covariance matrix :math:`Var(\alpha \mid Y_n)` can be
           computed on demand by accessing the `posterior_cov` property. Note
           that this matrix can be extremely large, so care must be taken when
           accessing this property. In most cases, it will be preferred to make
-          use of the `posterior_cov_inv_chol` attribute rather than the
+          use of the `posterior_cov_inv_chol_sparse` attribute rather than the
           `posterior_cov` attribute.
         """
         # (Re) initialize the _statespace representation

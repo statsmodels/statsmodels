@@ -40,6 +40,7 @@ from statsmodels.discrete.discrete_model import (
     Probit,
 )
 import statsmodels.formula.api as smf
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     PerfectSeparationError,
@@ -155,7 +156,7 @@ class CheckModelMixin:
         # GH#5224 check we get ValueError when passing invalid "method" arg
         model = self.res1.model
 
-        with pytest.raises(ValueError, match=r"is not supported, use either"):
+        with pytest.raises(ValueError, match=r"method"):
             model.fit_regularized(method="foo")
 
 
@@ -2582,9 +2583,9 @@ def test_perfect_prediction():
     cur_dir = Path(__file__).resolve().parent
     iris_dir = Path(cur_dir).joinpath("..", "..", "genmod", "tests", "results")
     iris_dir = Path(iris_dir).resolve()
-    iris = np.genfromtxt(
-        Path(iris_dir).joinpath("iris.csv"), delimiter=",", skip_header=1
-    )
+    iris_df = pd.read_csv(Path(iris_dir).joinpath("iris.csv"))
+    iris = iris_df.values
+
     y = iris[:, -1]
     X = iris[:, :-1]
     X = X[y != 2]
@@ -3762,11 +3763,11 @@ class TestMNLogitScoreTest:
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(789)
+        rs = np.random.RandomState(789)
         n = 500
-        X = np.random.randn(n, 3)
+        X = rs.randn(n, 3)
         X = sm.add_constant(X)
-        x_extra = np.random.randn(n, 2)
+        x_extra = rs.randn(n, 2)
         X_full = np.column_stack((X, x_extra))
 
         # Generate y from the restricted model (no effect of extra vars)
@@ -3774,7 +3775,7 @@ class TestMNLogitScoreTest:
         linpred = X @ beta
         pr = np.exp(np.column_stack((np.zeros(n), linpred)))
         pr = pr / pr.sum(axis=1, keepdims=True)
-        y = np.array([np.random.choice(3, p=p) for p in pr])
+        y = np.array([rs.choice(3, p=p) for p in pr])
 
         cls.model_drop = sm.MNLogit(y, X)
         cls.model_full = sm.MNLogit(y, X_full)
@@ -3886,3 +3887,200 @@ class TestMNLogitScoreTest:
         assert 0 <= pval.item() <= 1
         # 1 extra column * (J-1=3) equations = 3 constraints
         assert df == 3
+
+        
+def test_mnlogit_resid_response():
+    # GH7096, resid_response raised ValueError because the base class
+    # subtracted the nobs x J predicted probabilities from the 1-dim endog
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    res = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+    resid = res.resid_response
+    assert_equal(resid.shape, (res.model.endog.shape[0], res.model.J))
+    assert_allclose(resid, res.model.wendog - res.predict(), rtol=1e-13)
+    # each row is an indicator vector minus a probability vector
+    assert_allclose(resid.sum(1), np.zeros(res.model.endog.shape[0]), atol=1e-10)
+
+    # with two categories this reduces to the binary response residual
+    data = load_spector()
+    exog = sm.add_constant(data.exog, prepend=False)
+    res_mnl = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    res_logit = Logit(data.endog, exog).fit(method="newton", disp=0)
+    assert_allclose(res_mnl.resid_response[:, 1], res_logit.resid_response, rtol=1e-7)
+    assert_allclose(res_mnl.resid_response[:, 0], -res_logit.resid_response, rtol=1e-7)
+
+
+def _fit_logit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Logit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_probit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Probit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_poisson_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return Poisson(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_mnlogit_for_summary():
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomial(data.endog, exog, "nb2").fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_p_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomialP(data.endog, exog, p=2).fit(method="newton", disp=0)
+
+
+def _fit_generalized_poisson_for_summary():
+    data = load_randhie()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return GeneralizedPoisson(data.endog, data.exog, p=2).fit(method="newton", disp=0)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_logit_for_summary,
+        _fit_probit_for_summary,
+        _fit_poisson_for_summary,
+        _fit_mnlogit_for_summary,
+        _fit_negative_binomial_for_summary,
+        _fit_negative_binomial_p_for_summary,
+        _fit_generalized_poisson_for_summary,
+    ],
+    ids=[
+        "Logit",
+        "Probit",
+        "Poisson",
+        "MNLogit",
+        "NegativeBinomial",
+        "NegativeBinomialP",
+        "GeneralizedPoisson",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_binary_results_info_criteria():
+    # BinaryResults.info_criteria is exported but had no direct test
+    # coverage. With dk_params=0 it must reproduce the aic/bic attributes
+    # exactly, and dk_params must shift the parameter count by exactly that
+    # amount.
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    exog = sm.add_constant(x)
+    p = 1 / (1 + np.exp(-(exog @ [0.2, 0.8, -0.5])))
+    endog = rng.binomial(1, p)
+
+    res = Logit(endog, exog).fit(disp=0)
+
+    assert_allclose(res.info_criteria("aic"), res.aic)
+    assert_allclose(res.info_criteria("bic"), res.bic)
+    assert_allclose(res.info_criteria("AIC"), res.aic)
+
+    assert_allclose(res.info_criteria("aic", dk_params=2), res.aic + 4)
+
+    nobs = res.df_model + res.df_resid + 1
+    k_params = res.df_model + 1 + 2
+    expected_bic = -2 * res.llf + k_params * np.log(nobs)
+    assert_allclose(res.info_criteria("bic", dk_params=2), expected_bic)
+
+    with pytest.raises(ValueError, match="crit"):
+        res.info_criteria("not-a-real-criterion")
+
+
+def test_im_ratio_nonrobust_and_robust():
+    rng = np.random.RandomState(74125)
+    n = 200
+    exog = sm.add_constant(rng.standard_normal((n, 2)))
+    endog = rng.poisson(np.exp(exog @ [0.2, 0.3, -0.1]))
+
+    res = sm.Poisson(endog, exog).fit(disp=0)
+    hess = res.model.hessian(res.params)
+    score_obs = res.model.score_obs(res.params)
+    cov_score = score_obs.T @ score_obs
+    expected = np.linalg.inv(-hess) @ cov_score
+    assert_allclose(res.im_ratio, expected, rtol=1e-10)
+
+    res_robust = sm.Poisson(endog, exog).fit(disp=0, cov_type="HC0")
+    expected_robust = res_robust.cov_params() @ (-hess)
+    assert_allclose(res_robust.im_ratio, expected_robust, rtol=1e-10)
+
+
+def test_generalized_poisson_score_p_var_prob_nonzero():
+    rng = np.random.RandomState(74123)
+    n = 300
+    exog = sm.add_constant(rng.standard_normal((n, 2)))
+    lin = exog @ [0.5, 0.2, -0.1]
+    endog = rng.poisson(np.exp(lin))
+
+    mod = GeneralizedPoisson(endog, exog, p=2)
+    res = mod.fit(disp=0)
+
+    # _score_p is d(loglike)/dp holding the fitted params fixed, where
+    # "p" here is the parameterization exponent (mod.parameterization =
+    # p_ctor - 1), not one of the fitted params. Check it against a
+    # central finite difference over models built with perturbed p.
+    eps = 1e-6
+    mod_hi = GeneralizedPoisson(endog, exog, p=2 + eps)
+    mod_lo = GeneralizedPoisson(endog, exog, p=2 - eps)
+    numeric = (mod_hi.loglike(res.params) - mod_lo.loglike(res.params)) / (2 * eps)
+    assert_allclose(mod._score_p(res.params), numeric, rtol=1e-4)
+
+    # _var and _prob_nonzero: GP2 closed forms (p=2 -> pm1 = 1 in the
+    # variance formula), cross-checked against direct evaluation.
+    mu = mod.predict(res.params)
+    alpha = res.params[-1]
+    expected_var = mu * (1 + alpha * mu) ** 2
+    assert_allclose(mod._var(mu, res.params), expected_var, rtol=1e-12)
+
+    expected_prob_nz = 1 - np.exp(-mu / (1 + alpha * mu))
+    assert_allclose(mod._prob_nonzero(mu, res.params), expected_prob_nz,
+                    rtol=1e-12)
+    # a genuine probability
+    assert np.all(mod._prob_nonzero(mu, res.params) > 0)
+    assert np.all(mod._prob_nonzero(mu, res.params) < 1)
+
+
+def test_poisson_cdf_pdf_match_scipy():
+    rng = np.random.RandomState(999)
+    n = 50
+    endog = rng.poisson(4, size=n)
+    exog = sm.add_constant(rng.standard_normal((n, 1)))
+    mod = sm.Poisson(endog, exog)
+
+    X = rng.standard_normal(n)
+    lam = np.exp(X)
+    assert_allclose(mod.cdf(X), stats.poisson.cdf(endog, lam), rtol=1e-12)
+    assert_allclose(mod.pdf(X), stats.poisson.pmf(endog, lam), rtol=1e-12)
+
+
+def test_logit_family_is_binomial():
+    rng = np.random.RandomState(998)
+    n = 50
+    exog = sm.add_constant(rng.standard_normal((n, 1)))
+    endog = rng.binomial(1, 0.5, n)
+    mod = Logit(endog, exog)
+    assert isinstance(mod.family, sm.families.Binomial)

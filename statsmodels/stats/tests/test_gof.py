@@ -6,9 +6,36 @@ Author: Josef Perktold
 """
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
+import pytest
 
-from statsmodels.stats.gof import chisquare, chisquare_effectsize, chisquare_power
+from statsmodels.stats.gof import (
+    chisquare,
+    chisquare_effectsize,
+    chisquare_power,
+    powerdiscrepancy,
+)
 from statsmodels.tools.testing import Holder
+
+
+def test_powerdiscrepancy_lambd_aliases():
+    observed = np.array([2.0, 4.0, 2.0, 1.0, 1.0])
+    expected = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
+
+    lambd_and_a = [
+        ("loglikeratio", 0),
+        ("freeman_tukey", -0.5),
+        ("pearson", 1),
+        ("modified_loglikeratio", -1),
+        ("cressie_read", 2 / 3.0),
+    ]
+    for lambd, a in lambd_and_a:
+        d_str, p_str = powerdiscrepancy(observed, expected, lambd=lambd)
+        d_num, p_num = powerdiscrepancy(observed, expected, lambd=a)
+        assert_almost_equal(d_str, d_num, decimal=13)
+        assert_almost_equal(p_str, p_num, decimal=13)
+
+    with pytest.raises(ValueError, match="lambd"):
+        powerdiscrepancy(observed, expected, lambd="not-a-lambd")
 
 
 def test_chisquare_power():

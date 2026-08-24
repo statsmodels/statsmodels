@@ -67,7 +67,7 @@ class KalmanFilter(Representation):
 
     Parameters
     ----------
-    k_endog : {array_like, int}
+    k_endog : ndarray or int
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -82,7 +82,7 @@ class KalmanFilter(Representation):
     tolerance : float, optional
         The tolerance at which the Kalman filter determines convergence to
         steady-state. Default is 1e-19.
-    results_class : class, optional
+    results_class : type, optional
         Default results class to use to save filtering output. Default is
         `FilterResults`. If specified, class must extend from `FilterResults`.
     kalman_filter_classes : dict, optional
@@ -355,7 +355,7 @@ class KalmanFilter(Representation):
         # Kalman filter to indicate that the scale should not be concentrated
         # out, so that self.filter_concentrated = False, but we still want to
         # alert the results object that we are viewing the model as one in
-        # which the scale had been concentrated out for e.g. degree of freedom
+        # which the scale had been concentrated out for e.g., degree of freedom
         # computations.
         # This value should always be None, except within the fixed_scale
         # context, and should not be modified by users or anywhere else.
@@ -750,7 +750,7 @@ class KalmanFilter(Representation):
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
-        >>> mod.ssm..conserve_memory
+        >>> mod.ssm.conserve_memory
         0
         >>> mod.ssm.memory_no_predicted
         False
@@ -800,7 +800,7 @@ class KalmanFilter(Representation):
 
         Parameters
         ----------
-        scale : numeric
+        scale : float or None
             Scale of the model.
 
         Notes
@@ -883,6 +883,9 @@ class KalmanFilter(Representation):
         loglikelihood_burn : int, optional
             The number of initial periods during which the loglikelihood is not
             recorded. Default is 0.
+        complex_step : bool, optional
+            Whether or not to compute the filter using complex-step
+            differentiation. Default is False.
 
         Notes
         -----
@@ -981,7 +984,7 @@ class KalmanFilter(Representation):
 
         Returns
         -------
-        loglike : array of float
+        loglike : ndarray of float
             Array of loglikelihood values for each observation.
         """
         if self.memory_no_likelihood:
@@ -1095,19 +1098,20 @@ class KalmanFilter(Representation):
             must be transformed using the `initial_state_cov` covariance
             matrix. Default is True.
         simulator : SimulationSmoothResults, optional
-            A simulator object to use to perform the simulation, e.g. as
+            A simulator object to use to perform the simulation, e.g., as
             returned by a prior call with `return_simulator=True`. If not
             specified, a new simulator is created.
         return_simulator : bool, optional
             Whether or not to return the simulator object. Typically used to
             improve performance when performing repeated sampling. Default is
             False.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -1160,11 +1164,12 @@ class KalmanFilter(Representation):
             The number of steps for which impulse responses are calculated.
             Default is 10. Note that the initial impulse is not counted as a
             step, so if `steps=1`, the output will have 2 entries.
-        impulse : int or array_like
+        impulse : int or array_like, optional
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1` where `k_posdef` is the same as in the state
             space model. Alternatively, a custom impulse vector may be
             provided; must be a column vector with shape `(k_posdef, 1)`.
+            Default is 0.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -1186,7 +1191,7 @@ class KalmanFilter(Representation):
 
         TODO: add note about how for time-varying systems this is - perhaps
         counter-intuitively - returning the impulse response within the given
-        model (i.e. starting at period 0 defined by the model) and it is *not*
+        model (i.e., starting at period 0 defined by the model) and it is *not*
         doing impulse responses after the end of the model. To compute impulse
         responses from arbitrary time points, it is necessary to clone a new
         model with the appropriate system matrices.
@@ -1303,7 +1308,7 @@ class FilterResults(FrozenRepresentation):
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
-    shapes : dictionary of name,tuple
+    shapes : dict of str to tuple
         A dictionary recording the shapes of each of the
         representation matrices as tuples.
     endog : ndarray
@@ -1322,12 +1327,12 @@ class FilterResults(FrozenRepresentation):
         The selection matrix, :math:`R`.
     state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
-    missing : array of bool
+    missing : ndarray of bool
         An array of the same size as `endog`, filled
         with boolean values that are True if the
         corresponding entry in `endog` is NaN and False
         otherwise.
-    nmissing : array of int
+    nmissing : ndarray of int
         An array of size `nobs`, where the ith entry
         is the number (between 0 and `k_endog`) of NaNs in
         the ith row of the `endog` array.
@@ -1335,11 +1340,11 @@ class FilterResults(FrozenRepresentation):
         Whether or not the representation matrices are time-invariant
     initialization : str
         Kalman filter initialization method.
-    initial_state : array_like
+    initial_state : ndarray
         The state vector used to initialize the Kalman filter.
-    initial_state_cov : array_like
+    initial_state_cov : ndarray
         The state covariance matrix used to initialize the Kalman filter.
-    initial_diffuse_state_cov : array_like
+    initial_diffuse_state_cov : ndarray
         Diffuse state covariance matrix used to initialize the Kalman filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
@@ -1372,7 +1377,7 @@ class FilterResults(FrozenRepresentation):
         The predicted state vector at each time period.
     predicted_state_cov : ndarray
         The predicted state covariance matrix at each time period.
-    forecast_error_diffuse_cov : ndarray
+    forecasts_error_diffuse_cov : ndarray
         Diffuse forecast error covariance matrix at each time period.
     predicted_diffuse_state_cov : ndarray
         The predicted diffuse state covariance matrix at each time period.
@@ -1627,10 +1632,10 @@ class FilterResults(FrozenRepresentation):
                     # forecast error covariance matrices) as usual, but their
                     # dimension will only be equal to the number of non-missing
                     # elements, and their location in memory will be in the
-                    # first blocks (e.g. for the forecasts_error, the first
+                    # first blocks (e.g., for the forecasts_error, the first
                     # k_endog - nmissing[t] columns will be filled in),
                     # regardless of which endogenous variables they refer to
-                    # (i.e. the non- missing endogenous variables for that
+                    # (i.e., the non- missing endogenous variables for that
                     # observation). Furthermore, the forecast error covariance
                     # matrix is only valid for those elements. What is done is
                     # to set all elements to nan for these observations so that
@@ -1750,7 +1755,7 @@ class FilterResults(FrozenRepresentation):
         # The self.model._scale value is only not None within a fixed_scale
         # context, in which case it is set and indicates that we should
         # generally view this results object as using a concentrated scale
-        # (e.g. for d.o.f. computations), but because the fixed scale was
+        # (e.g., for d.o.f. computations), but because the fixed scale was
         # actually applied to the model prior to filtering, we do not need to
         # make any adjustments to the filter output, etc.
         elif self.model._scale is not None:
@@ -1873,7 +1878,7 @@ class FilterResults(FrozenRepresentation):
         end : int, optional
             Zero-indexed observation number at which to end prediction, i.e.,
             the last prediction will be at end.
-        dynamic : int, optional
+        dynamic : bool or int, optional
             Offset relative to `start` at which to begin dynamic prediction.
             Prior to this observation, true endogenous values will be used for
             prediction; starting with this observation and continuing through
@@ -2006,7 +2011,7 @@ class FilterResults(FrozenRepresentation):
             # Otherwise initialize with the predicted state / cov from the
             # existing results, at index kf_start (note that the time
             # dimension of predicted_state and predicted_state_cov is
-            # self.nobs + 1; so e.g. in the case of pure forecasting we should
+            # self.nobs + 1; so e.g., in the case of pure forecasting we should
             # be using the very last predicted state and predicted state cov
             # elements, and kf_start will equal self.nobs which is correct)
             else:
@@ -2058,6 +2063,9 @@ class PredictionResults(FilterResults):
     nforecast : int
         Number of in-sample forecasts (these always follow the dynamic
         predictions directly).
+    oos_results : FilterResults, optional
+        Filtering output associated with the out-of-sample forecasting
+        period, if any. Default is None.
 
     Attributes
     ----------
@@ -2367,7 +2375,7 @@ def _check_dynamic(dynamic, start, end, nobs):
 
     Parameters
     ----------
-    dynamic : {int, None}
+    dynamic : int or None
         The offset relative to start of the dynamic forecasts. None if no
         dynamic forecasts are required.
     start : int
@@ -2379,7 +2387,7 @@ def _check_dynamic(dynamic, start, end, nobs):
 
     Returns
     -------
-    dynamic : {int, None}
+    dynamic : int or None
         The start location of the first dynamic forecast. None if there
         are no in-sample dynamic forecasts.
     ndynamic : int
