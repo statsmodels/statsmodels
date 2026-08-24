@@ -2144,7 +2144,7 @@ class LikelihoodModelResults(Results):
             df_resid = getattr(self, "df_resid_inference", self.df_resid)
         except AttributeError:
             df_resid = getattr(self, 'df_resid_inference', self.resid)
-        
+
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
