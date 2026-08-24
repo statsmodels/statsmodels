@@ -3982,30 +3982,30 @@ class TestMNLogitScoreTest:
     def test_score_test_smoke(self):
         """score_test with exog_extra should not crash (GH#9273)."""
         res_drop = self.model_drop.fit(disp=0)
-        stat, pval, df = res_drop.score_test(exog_extra=self.exog_extra)
-        assert np.isfinite(stat.item())
-        assert 0 <= pval.item() <= 1
+        test_result = res_drop.score_test(exog_extra=self.exog_extra)
+        assert np.isfinite(test_result.statistic.item())
+        assert 0 <= test_result.pvalue.item() <= 1
         # 2 extra columns * (J-1=2) equations = 4 constraints
-        assert df == 4
+        assert test_result.k_constraint == 4
 
     def test_score_test_df(self):
         """k_constraints should equal k_extra * (J-1)."""
         res_drop = self.model_drop.fit(disp=0)
         # Single extra column
-        _, _, df1 = res_drop.score_test(
-            exog_extra=self.exog_extra[:, :1])
-        assert df1 == 2
+        test_result = res_drop.score_test(exog_extra=self.exog_extra[:, :1])
+        assert test_result.k_constraint == 2
         # Two extra columns
-        _, _, df2 = res_drop.score_test(exog_extra=self.exog_extra)
-        assert df2 == 4
+        test_result = res_drop.score_test(exog_extra=self.exog_extra)
+        assert test_result.k_constraint == 4
 
     def test_score_wald_equivalence(self):
         """Score test should be close to Wald test from the full model."""
         res_drop = self.model_drop.fit(disp=0)
         res_full = self.model_full.fit(disp=0)
 
-        lm_stat, lm_pval, lm_df = res_drop.score_test(
-            exog_extra=self.exog_extra)
+        test_result = res_drop.score_test(exog_extra=self.exog_extra)
+        lm_stat, lm_pval = test_result
+        lm_df = test_result.k_constraint
 
         # Build restriction matrix for Wald test on full model
         K_full = self.model_full.exog.shape[1]  # 6
@@ -4027,12 +4027,10 @@ class TestMNLogitScoreTest:
     def test_score_test_hc0(self):
         """HC0 robust covariance should work for MNLogit score_test."""
         res_drop = self.model_drop.fit(disp=0)
-        res = res_drop.score_test(
-            exog_extra=self.exog_extra, cov_type="HC0")
-        stat, pval, df = res
-        assert np.isfinite(np.asarray(stat).item())
-        assert 0 <= np.asarray(pval).item() <= 1
-        assert df == 4
+        res = res_drop.score_test(exog_extra=self.exog_extra, cov_type="HC0")
+        assert np.isfinite(res.statistic.item())
+        assert 0 <= res.pvalue.item() <= 1
+        assert res.k_constraint == 4
 
     def test_score_factor_consistency(self):
         """score_factor should reproduce score_obs via Kronecker product."""
@@ -4079,8 +4077,8 @@ class TestMNLogitScoreTest:
         result = model.fit(disp=0)
 
         exog_extra = np.random.randn(n, 1)
-        stat, pval, df = result.score_test(exog_extra=exog_extra)
-        assert np.isfinite(stat.item())
-        assert 0 <= pval.item() <= 1
+        test_result = result.score_test(exog_extra=exog_extra)
+        assert np.isfinite(test_result.statistic.item())
+        assert 0 <= test_result.pvalue.item() <= 1
         # 1 extra column * (J-1=3) equations = 3 constraints
-        assert df == 3
+        assert test_result.k_constraint == 3

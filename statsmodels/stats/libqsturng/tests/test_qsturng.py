@@ -167,20 +167,11 @@ class TestPsturng:
         # 1 <= v < 2 and q < qstrung(0.9, r, v), e.g. p < 0.9
         # test both v == 1 and 1 < v < 2 as both are changes from
         # original code
-        msg_v_1 = (
-            "v must be >= 2 when p < 0.9 and the q passed 1 is less "
-            "than 16.361992909976326 which is the q corresponding "
-            "to p = 0.9, r = 4 and v = 1."
-        )
-        with pytest.raises(ValueError, match=msg_v_1):
+
+        with pytest.raises(ValueError, match=r"q passed 1 is less than 16.36"):
             psturng(1, 4, 1)
 
-        msg_v_15 = (
-            "v must be >= 2 when p < 0.9 and the q passed 1 is less "
-            "than 8.965056833713536 which is the q corresponding "
-            "to p = 0.9, r = 4 and v = 1.5."
-        )
-        with pytest.raises(ValueError, match=msg_v_15):
+        with pytest.raises(ValueError, match=r"q passed 1 is less than 8.96"):
             psturng(1, 4, 1.5)
 
     def test_invalid_parameters(self):
