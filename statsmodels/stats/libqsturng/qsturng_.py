@@ -2062,24 +2062,24 @@ def _select_ps(p):
     # better estimates, but the function this is refactoring
     # just used linear distance.
     """returns the points to use for interpolating p"""
-    if p >= .99:
-        return .990, .995, .999
-    elif p >= .975:
-        return .975, .990, .995
-    elif p >= .95:
-        return .950, .975, .990
-    elif p >= .900:
-        return .900, .950, .975
-    elif p >= .875:
-        return .850, .900, .950
-    elif p >= .825:
-        return .800, .850, .900
-    elif p >= .7625:
-        return .750, .800, .850
-    elif p >= .675:
-        return .675, .750, .800
-    elif p >= .500:
-        return .500, .675, .750
+    if p >= 0.99:
+        return 0.990, 0.995, 0.999
+    elif p >= 0.975:
+        return 0.975, 0.990, 0.995
+    elif p >= 0.95:
+        return 0.950, 0.975, 0.990
+    elif p >= 0.900:
+        return 0.900, 0.950, 0.975
+    elif p >= 0.875:
+        return 0.850, 0.900, 0.950
+    elif p >= 0.825:
+        return 0.800, 0.850, 0.900
+    elif p >= 0.7625:
+        return 0.750, 0.800, 0.850
+    elif p >= 0.675:
+        return 0.675, 0.750, 0.800
+    elif p >= 0.500:
+        return 0.500, 0.675, 0.750
     else:
         return 0.100, 0.500, 0.675
 
@@ -2252,9 +2252,9 @@ def _qsturng(p, r, v):
         raise ValueError("p must be between .1 and .999")
 
     if p < 0.9 and v < 2:
-        raise ValueError('v must be >= 2 when p < .9')
+        raise ValueError("v must be >= 2 when p < .9")
     elif v < 1:
-         raise ValueError('v must be >= 1 when p >= .9')
+        raise ValueError("v must be >= 1 when p >= .9")
 
     # The easy case. A tabled value is requested.
 
