@@ -1172,7 +1172,6 @@ class FactorResults:
         c.flat[:: c.shape[0] + 1] += self.uniqueness
         return c
 
-    @cache_readonly
     def uniq_stderr(self, kurt=0):
         """
         The standard errors of the uniquenesses
@@ -1181,6 +1180,11 @@ class FactorResults:
         ----------
         kurt : float, optional
             Excess kurtosis
+
+        Returns
+        -------
+        ndarray
+            The standard errors of the uniquenesses
 
         Notes
         -----
