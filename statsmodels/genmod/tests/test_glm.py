@@ -1698,6 +1698,8 @@ def test_gradient_irls_eim(family_and_link, binom_version):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             mod_gradient = sm.GLM(endog, exog, family=family_class(link=link()))
+        if isinstance(mod_gradient.family, fam.InverseGaussian):
+            max_start_irls = 25
         rslt_gradient = mod_gradient.fit(
             max_start_irls=max_start_irls,
             start_params=start_params,
