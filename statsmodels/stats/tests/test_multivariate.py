@@ -272,6 +272,10 @@ class TestCovStructure:
         assert_allclose(stat, chi2, rtol=1e-7)
         assert_allclose(pv, p_chi2, rtol=1e-6)
 
+        stat_2, pv_2 = smmv.test_cov(cov.tolist(), nobs, cov_null.tolist())
+        assert_allclose(stat, stat_2, rtol=1e-7)
+        assert_allclose(pv, pv_2, rtol=1e-6)
+
 
 def test_cov_oneway():
     # from Stata 14
