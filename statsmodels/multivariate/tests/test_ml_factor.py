@@ -207,7 +207,7 @@ def test_2factor():
     e = np.asarray(
         [0.11056836, 0.05191071, 0.09836349, 0.09836349, 0.05191071, 0.11056836]
     )
-    assert_allclose(rslt.uniq_stderr, e, atol=1e-4)
+    assert_allclose(rslt.uniq_stderr(), e, atol=1e-4)
     e = np.asarray(
         [
             [0.08842151, 0.08842151],
