@@ -29,9 +29,6 @@ jobs:
           python.version: '3.14'
           python.architecture: 'x64-freethreaded'
           PANDAS_VERSION: 3
-        python_312_latest:
-          python.version: '3.12'
-          python.architecture: 'x64'
           coverage: true
           PYTEST_PATTERN: '(not slow or slow) and not joblib'
         python_311_wheel:
@@ -67,18 +64,18 @@ jobs:
           SM_TEST_COPY_ON_WRITE: 1
           coverage: true
           test.x13: true
-        python_312_pre:
-          python.version: '3.12'
+        python_313_pre:
+          python.version: '3.13'
           python.architecture: 'x64'
           pip.pre: true
-        python_312_formulaic_no_patsy:
-          python.version: '3.12'
+        python_313_formulaic_no_patsy:
+          python.version: '3.13'
           python.architecture: 'x64'
           SM_FORMULA_ENGINE: "formulaic"
           PIP_UNINSTALL: "patsy matplotlib joblib"
           USE_MATPLOTLIB: false
-        python_312_no_formulaic:
-          python.version: '3.12'
+        python_314_no_formulaic:
+          python.version: '3.14'
           python.architecture: 'x64'
           PIP_UNINSTALL: "formulaic"
       ${{ if eq(parameters.name, 'macOS') }}:
@@ -87,8 +84,8 @@ jobs:
         python310_macos_compat:
           python.version: '3.10'
           python.architecture: 'x64'
-        python313_macos_latest_install:
-          python.version: '3.13'
+        python314_macos_latest_install:
+          python.version: '3.14'
           python.architecture: 'x64'
           test.install: true
     maxParallel: 20
