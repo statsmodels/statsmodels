@@ -888,7 +888,11 @@ def test_alternative_deprecated_alias(alias, canonical):
     # spelling out the documented alternative
     x1 = [1, 2, 3, 4, 5, 6, 2, 4, 6, 8]
 
-    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+    # the version-scoped message wiring is a real call site, not just a
+    # string_like-level unit test: "removed after statsmodels 0.16"
+    with pytest.warns(
+        FutureWarning, match=r"removed after statsmodels 0\.16 is released"
+    ):
         stat_alias, pval_alias = ztest(x1, value=3, alternative=alias)
     stat, pval = ztest(x1, value=3, alternative=canonical)
     assert stat_alias == stat

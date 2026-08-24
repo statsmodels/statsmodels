@@ -859,6 +859,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated={"2s": "two-sided"},
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         alpha = alpha / 2
@@ -914,6 +915,7 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated={"2s": "two-sided", "l": "larger", "s": "smaller"},
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         pval = stats.binomtest(count, n=nobs, p=prop).pvalue
@@ -1398,6 +1400,7 @@ def proportions_chisquare_pairscontrol(
         options=("two-sided",),
         lower=False,
         deprecated={"2s": "two-sided"},
+        removed_after="0.16",
     )
     if value is not None:
         raise NotImplementedError
@@ -2641,6 +2644,7 @@ def samplesize_proportions_2indep_onetail(
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated={"2s": "two-sided"},
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         alpha = alpha / 2

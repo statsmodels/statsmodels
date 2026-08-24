@@ -1228,6 +1228,7 @@ def etest_poisson_2indep(
             "l": "larger",
             "s": "smaller",
         },
+        removed_after="0.16",
     )
     y1, n1, y2, n2 = (
         np.asarray(count1),

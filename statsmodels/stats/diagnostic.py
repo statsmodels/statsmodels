@@ -1407,6 +1407,7 @@ def het_goldfeldquandt(
             "2": "two-sided",
             "2-sided": "two-sided",
         },
+        removed_after="0.16",
     )
     resols1 = OLS(y[:split], x[:split]).fit()
     resols2 = OLS(y[start2:], x[start2:]).fit()

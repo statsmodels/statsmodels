@@ -2283,6 +2283,7 @@ def breakvar_heteroskedasticity_test(
             "2": "two-sided",
             "2-sided": "two-sided",
         },
+        removed_after="0.16",
     )
     squared_resid = np.asarray(resid, dtype=float) ** 2
     if squared_resid.ndim == 1:

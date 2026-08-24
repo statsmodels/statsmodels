@@ -513,6 +513,7 @@ def effectsize_2proportions(
             "arcsine": "arcsin",
             "as": "arcsin",
         },
+        removed_after="0.16",
     )
     if zero_correction is None:
         cc1 = cc2 = 0

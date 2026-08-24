@@ -105,6 +105,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
@@ -171,6 +172,7 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
@@ -235,6 +237,7 @@ def normal_power_het(
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work

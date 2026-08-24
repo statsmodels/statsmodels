@@ -84,6 +84,7 @@ class PredictionResultsBase:
                 "l": "larger",
                 "s": "smaller",
             },
+            removed_after="0.16",
         )
         # assumes symmetric distribution
         stat = (self.predicted - value) / self.se

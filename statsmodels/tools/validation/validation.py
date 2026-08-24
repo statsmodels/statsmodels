@@ -423,7 +423,13 @@ def float_like(value, name, optional=False, strict=False):
 
 
 def string_like(
-    value, name, optional=False, options=None, lower=True, deprecated=None
+    value,
+    name,
+    optional=False,
+    options=None,
+    lower=True,
+    deprecated=None,
+    removed_after=None,
 ):
     """
     Check if object is string-like and raise if not
@@ -446,6 +452,13 @@ def string_like(
         matching one of these deprecated spellings is still accepted and
         normalized to its replacement, but raises a ``FutureWarning``.
         Ignored if `options` is None.
+    removed_after : str, optional
+        statsmodels version after which the spellings in `deprecated` will
+        stop being accepted, e.g. ``"0.16"``. Included in the
+        ``FutureWarning`` message when `deprecated` triggers. Ignored if
+        `deprecated` is None; if `deprecated` is set but `removed_after` is
+        not, the message says only that the alias will be removed "in a
+        future version".
 
     Returns
     -------
@@ -479,9 +492,16 @@ def string_like(
         raise ValueError(msg)
     if deprecated is not None and value in deprecated:
         replacement = deprecated[value]
+        if removed_after is not None:
+            removal_text = (
+                f"and will be removed after statsmodels {removed_after} "
+                "is released."
+            )
+        else:
+            removal_text = "and will be removed in a future version."
         warnings.warn(
             f"{name}={value!r} is a deprecated alias for {name}={replacement!r} "
-            "and will be removed in a future version.",
+            f"{removal_text}",
             FutureWarning,
             stacklevel=2,
         )
