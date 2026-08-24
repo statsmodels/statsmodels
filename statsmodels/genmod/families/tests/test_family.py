@@ -1,6 +1,8 @@
 """
 Test functions for genmod.families.family
 """
+from statsmodels.compat.platform import PLATFORM_32
+
 import warnings
 
 import numpy as np
@@ -171,6 +173,13 @@ def test_binomial_varfunc_deriv():
     assert_allclose(bv.deriv(mu0), numerical, rtol=1e-4)
 
 
+@pytest.mark.skipif(
+    PLATFORM_32,
+    reason=(
+            "scipy.special.log_wright_bessel does not have sufficient accuracy on "
+            "32-bit platforms"
+    )
+)
 def test_tweedie_log_wright_bessel():
     """
     Test the scipy log_wright_bessel function.
