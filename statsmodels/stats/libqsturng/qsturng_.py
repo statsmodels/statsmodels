@@ -2062,24 +2062,24 @@ def _select_ps(p):
     # better estimates, but the function this is refactoring
     # just used linear distance.
     """returns the points to use for interpolating p"""
-    if p >= .99:
-        return .990, .995, .999
-    elif p >= .975:
-        return .975, .990, .995
-    elif p >= .95:
-        return .950, .975, .990
-    elif p >= .900:
-        return .900, .950, .975
-    elif p >= .875:
-        return .850, .900, .950
-    elif p >= .825:
-        return .800, .850, .900
-    elif p >= .7625:
-        return .750, .800, .850
-    elif p >= .675:
-        return .675, .750, .800
-    elif p >= .500:
-        return .500, .675, .750
+    if p >= 0.99:
+        return 0.990, 0.995, 0.999
+    elif p >= 0.975:
+        return 0.975, 0.990, 0.995
+    elif p >= 0.95:
+        return 0.950, 0.975, 0.990
+    elif p >= 0.900:
+        return 0.900, 0.950, 0.975
+    elif p >= 0.875:
+        return 0.850, 0.900, 0.950
+    elif p >= 0.825:
+        return 0.800, 0.850, 0.900
+    elif p >= 0.7625:
+        return 0.750, 0.800, 0.850
+    elif p >= 0.675:
+        return 0.675, 0.750, 0.800
+    elif p >= 0.500:
+        return 0.500, 0.675, 0.750
     else:
         return 0.100, 0.500, 0.675
 
@@ -2251,11 +2251,10 @@ def _qsturng(p, r, v):
     if p < 0.1 or p > 0.999:
         raise ValueError("p must be between .1 and .999")
 
-    if p < 0.9:
-        if v < 2:
-            raise ValueError("v must be > 2 when p < .9")
+    if p < 0.9 and v < 2:
+        raise ValueError("v must be >= 2 when p < .9")
     elif v < 1:
-        raise ValueError("v must be > 1 when p >= .9")
+        raise ValueError("v must be >= 1 when p >= .9")
 
     # The easy case. A tabled value is requested.
 
@@ -2406,10 +2405,20 @@ def _psturng(q, r, v):
     def opt_func(p, r, v):
         return np.squeeze(abs(_qsturng(p, r, v) - q))
 
-    if v == 1:
-        if q < _qsturng(0.9, r, 1):
-            return 0.1
+    if 1 <= v < 2:
+        if q < _qsturng(0.9, r, v):
+            # qtukey in R does not cover v < 2 for any p. And the papers referenced all
+            # assume p >= 0.9 for 1 <= v < 2.  In this case, where q < the critical value
+            # for p = 0.9 and v < 2, we cannot return a p-value as it could be anything
+            # more than 0.1 and existing sources, including the R implementations do not
+            # support this computation.
+            raise ValueError(
+                f"v must be >= 2 when p < 0.9 and the q passed {q} is less than"
+                f" {_qsturng(0.9, r, v)} which is the q corresponding to p = 0.9,"
+                f" r = {r} and v = {v}."
+            )
         elif q > _qsturng(0.999, r, 1):
+            # Setting p = 0.001 = 1-0.999 for all q larger than when p
             return 0.001
         soln = 1.0 - fminbound(opt_func, 0.9, 0.999, args=(r, v))
         return np.atleast_1d(soln)
