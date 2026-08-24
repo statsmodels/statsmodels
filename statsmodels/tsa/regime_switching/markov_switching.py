@@ -1174,7 +1174,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         """
         params = np.array(params, ndmin=1)
 
-        return approx_hess_cs(params, self.loglike)
+        return approx_hess_cs(params, self.loglike, args=(transformed,))
 
     def fit(
         self,

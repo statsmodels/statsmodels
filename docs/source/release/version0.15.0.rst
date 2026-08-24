@@ -757,6 +757,8 @@ Notable Bug Fixes
 - Correct the knot-centering computation in ``get_knots_bsplines`` for
   splines with few interior knots, where it previously produced
   incorrect (non-equally-spaced) knots or raised. :pr:`10177`
+- Pass ``transformed`` through to the likelihood when computing the
+  ``MarkovSwitching`` Hessian, matching ``score``. :issue:`10148`
 
 
 Build, Packaging, and Infrastructure

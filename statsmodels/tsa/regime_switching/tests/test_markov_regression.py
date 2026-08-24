@@ -3707,3 +3707,23 @@ def test_results_fittedvalues_resid_joint_likelihoods_cov_params_robust():
     hess = mod.hessian(res.params, transformed=True)
     expected, _ = pinv_extended(hess.dot(cov_opg).dot(hess))
     assert_allclose(cov_robust, expected, rtol=1e-8)
+
+
+def test_hessian_respects_transformed():
+    # GH#10148: hessian previously ignored transformed, unlike score().
+    rng = np.random.default_rng(0)
+    y = np.concatenate([rng.normal(0, 1, 80), rng.normal(4, 1, 80)])
+    mod = markov_regression.MarkovRegression(y, k_regimes=2)
+    params = mod.start_params
+
+    hess_transformed = mod.hessian(params, transformed=True)
+    hess_untransformed = mod.hessian(params, transformed=False)
+
+    k = len(params)
+    assert hess_transformed.shape == (k, k)
+    assert hess_untransformed.shape == (k, k)
+    assert np.all(np.isfinite(hess_transformed))
+    assert np.all(np.isfinite(hess_untransformed))
+    # transform_params is not the identity for this model, so the two
+    # Hessians must differ if the flag is forwarded to loglike.
+    assert np.max(np.abs(hess_transformed - hess_untransformed)) > 1e-8
