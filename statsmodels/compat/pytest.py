@@ -40,7 +40,7 @@ def pytest_warns(
 
     Parameters
     ----------
-    warning : {None, Warning, tuple[Warning, ...]}
+    warning : type[Warning], tuple[type[Warning], ...], or None
         None if no warning is produced, or a single or multiple Warnings.
 
     Returns

@@ -185,6 +185,8 @@ def test_error():
         ).fit(reset=-1)
     with pytest.raises(ValueError):
         RollingWLS(y, x).fit(method="unknown")
+    with pytest.raises(ValueError):
+        RollingWLS(y, x).fit(cov_type="unknown")
     with pytest.raises(ValueError, match="min_nobs must be larger"):
         RollingWLS(y, x, min_nobs=1)
     with pytest.raises(ValueError, match="min_nobs must be larger"):

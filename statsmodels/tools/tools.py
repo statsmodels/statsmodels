@@ -43,7 +43,7 @@ def drop_missing(y, x=None, axis=1):
         Additional data with observations possibly containing NaN
         values. If provided, an observation is dropped if it is
         missing in either `y` or `x`.
-    axis : int
+    axis : int, optional
         Axis along which to look for missing observations.  Default is 1, i.e.,
         observations in rows.
 
@@ -90,10 +90,10 @@ def add_constant(data, prepend=True, has_constant="skip"):
     ----------
     data : array_like
         A column-ordered design matrix.
-    prepend : bool
+    prepend : bool, optional
         If True (default), the constant is in the first column. If False, the
         constant is appended (last column).
-    has_constant : str {'raise', 'add', 'skip'}
+    has_constant : {'raise', 'add', 'skip'}, optional
         Behavior if ``data`` already has a constant. The default will return
         data without adding another constant. If 'raise', will raise an
         error if any column has a constant value. Using 'add' will add a
@@ -193,7 +193,7 @@ def pinv_extended(x, rcond=1e-15):
     ----------
     x : array_like
         The array to invert, 2d.
-    rcond : float
+    rcond : float, optional
         Singular values below ``rcond * max(singular values)`` are
         treated as zero.
 
@@ -437,22 +437,22 @@ class Bunch(dict):
 
 def _ensure_2d(x, ndarray=False):
     """
-    Ensure that an input is 2 dimensional, converting or reshaping as needed
+    Ensure that an input is 2-dimensional, converting or reshaping as needed
 
     Parameters
     ----------
-    x : ndarray, Series, DataFrame or None
+    x : ndarray, Series, or DataFrame
         Input to verify dimensions, and to transform as necessary
-    ndarray : bool
+    ndarray : bool, optional
         Flag indicating whether to always return a NumPy array. Setting False
         will return an pandas DataFrame when the input is a Series or a
         DataFrame.
 
     Returns
     -------
-    out : ndarray, DataFrame or None
+    out : ndarray, DataFrame
         array or DataFrame with 2 dimensions.  One dimensional arrays are
-        returned as nobs by 1. None is returned if x is None.
+        returned as nobs by 1.
     names : list of str or None
         list containing variables names when the input is a pandas datatype.
         Returns None if the input is an ndarray.
@@ -460,10 +460,7 @@ def _ensure_2d(x, ndarray=False):
     Notes
     -----
     Accepts None for simplicity
-
     """
-    if x is None:
-        return x
     is_pandas = _is_using_pandas(x, None)
     if x.ndim == 2:
         if is_pandas:
@@ -491,7 +488,7 @@ def matrix_rank(m, tol=None, method="qr"):
     tol : float, optional
         The tolerance to use when testing the matrix rank. If not provided
         an appropriate value is selected.
-    method : {"ip", "qr", "svd"}
+    method : {"ip", "qr", "svd"}, optional
         The method used. "ip" uses the inner-product of a normalized version
         of m and then computes the rank using NumPy's matrix_rank.
         "qr" uses a QR decomposition and is the default. "svd" defers to
@@ -504,9 +501,9 @@ def matrix_rank(m, tol=None, method="qr"):
 
     Notes
     -----
-    When using a QR factorization, the rank is determined by the number of
-    elements on the leading diagonal of the R matrix that are above tol
-    in absolute value.
+    When using a QR factorization, the factorization is column pivoted and
+    the rank is determined by the number of elements on the leading diagonal
+    of the R matrix that are above tol in absolute value.
 
     """
     m = array_like(m, "m", ndim=2)
@@ -516,7 +513,11 @@ def matrix_rank(m, tol=None, method="qr"):
         m = m.T @ m
         return np.linalg.matrix_rank(m, tol=tol, hermitian=True)
     elif method == "qr":
-        (r,) = scipy.linalg.qr(m, mode="r")
+        # The pivoted factorization orders the diagonal of R by decreasing
+        # magnitude, which makes the number of diagonal elements above tol a
+        # rank estimate and keeps tol keyed to the largest of them. Without
+        # pivoting the count depends on the order of the columns of m.
+        r, _ = scipy.linalg.qr(m, mode="r", pivoting=True)
         abs_diag = np.abs(np.diag(r))
         if tol is None:
             tol = abs_diag[0] * m.shape[1] * np.finfo(float).eps

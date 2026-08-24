@@ -50,9 +50,9 @@ class RollingStore(NamedTuple):
 
 common_params = "\n".join(map(strip4, model._model_params_doc.split("\n")))
 window_parameters = """\
-window : int
+window : {int, None}, optional
     Length of the rolling window. Must be strictly larger than the number
-    of variables in the model.
+    of variables in the model. If None, the entire sample is used.
 """
 
 weight_parameters = """
@@ -63,7 +63,7 @@ weights : array_like, optional
 """
 
 _missing_param_doc = """\
-min_nobs : {int, None}
+min_nobs : {int, None}, optional
     Minimum number of observations required to estimate a model when
     data are missing.  If None, the minimum depends on the number of
     regressors in the model. Must be smaller than window.
@@ -157,7 +157,7 @@ class RollingWLS:
         Model.__init__(self, endog, exog, missing="none", hasconst=False)
         self.k_constant = k_const
         self.data.const_idx = const_idx
-        self._y = array_like(endog, "endog")
+        self._y = array_like(endog, "endog", ndim=1)
         nobs = self._y.shape[0]
         self._x = array_like(exog, "endog", ndim=2, shape=(nobs, None))
         window = int_like(window, "window", optional=True)
@@ -300,7 +300,7 @@ class RollingWLS:
 
         Parameters
         ----------
-        method : {'inv', 'lstsq', 'pinv'}
+        method : {'inv', 'lstsq', 'pinv'}, optional
             Method to use when computing the model parameters.
 
             * 'inv' - use moving windows inner-products and matrix inversion.
@@ -309,7 +309,7 @@ class RollingWLS:
             * 'lstsq' - Use numpy.linalg.lstsq
             * 'pinv' - Use numpy.linalg.pinv. This method matches the default
               estimator in non-moving regression estimators.
-        cov_type : {'nonrobust', 'HCCM', 'HC0'}
+        cov_type : {'nonrobust', 'HCCM', 'HC0'}, optional
             Covariance estimator:
 
             * nonrobust - The classic OLS covariance estimator
@@ -335,6 +335,9 @@ class RollingWLS:
         """
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
+        )
+        cov_type = string_like(
+            cov_type, "cov_type", options=("nonrobust", "HCCM", "HC0"), lower=False
         )
         reset = int_like(reset, "reset", optional=True)
         reset = self._y.shape[0] if reset is None else reset
@@ -632,7 +635,7 @@ class RollingRegressionResults:
 
         Returns
         -------
-        array_like
+        ndarray or DataFrame
             The estimated model covariances. If the original input is a numpy
             array, the returned covariance is a 3-d array with shape
             (nobs, nvar, nvar). If the original inputs are pandas types, then
@@ -761,11 +764,11 @@ class RollingRegressionResults:
 
         Parameters
         ----------
-        variables : {int, str, Iterable[int], Iterable[str], None}, optional
+        variables : {int, str, list[int], list[str], None}, optional
             Integer index or string name of the variables whose coefficients
             to plot. Can also be an iterable of integers or strings. Default
             plots all coefficients.
-        alpha : float, optional
+        alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha)%. Set
             to None to exclude confidence intervals.
         legend_loc : str, optional

@@ -6,6 +6,8 @@ toeplitz structure is not exploited, need cholesky or inv for toeplitz
 Author: josef-pktd
 """
 
+import warnings
+
 import numpy as np
 from scipy import linalg
 from scipy.linalg import toeplitz
@@ -104,7 +106,7 @@ def mvn_loglike_chol(x, sigma):
         The log likelihood.
     logdetsigma : float
         The log of the determinant of `sigma`.
-    float
+    logdet_cholsigmainv : float
         Twice the sum of the log of the diagonal of the Cholesky factor
         of the inverse of `sigma`.
     """
@@ -237,6 +239,18 @@ class MLEGLS(GenericLikelihoodModel):
     distributed N(0,1)? Maybe extend to mean handling, or assume it is
     already removed.
     """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "MLEGLS is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
 
     def _params2cov(self, params, nobs):
         """

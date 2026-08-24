@@ -28,7 +28,7 @@ class Penalty:
 
     Parameters
     ----------
-    weights : array_like
+    weights : array_like, optional
         A vector of weights that determines the weight of the penalty
         for each parameter.
 
@@ -201,9 +201,9 @@ class SCAD(Penalty):
     ----------
     tau : float
         Slope and threshold for linear segment.
-    c : float
+    c : float, optional
         Factor for second threshold which is c * tau.
-    weights : None or array
+    weights : array_like, optional
         Weights for penalty of each parameter. If an entry is zero, then the
         corresponding parameter will not be penalized.
 
@@ -298,11 +298,14 @@ class SCADSmoothed(SCAD):
     ----------
     tau : float
         Slope and threshold for linear segment.
-    c : float
+    c : float, optional
         Factor for second threshold.
-    c0 : float
+    c0 : float, optional
         Threshold for quadratically smoothed segment.
-    restriction : None or array
+    weights : array_like, optional
+        Weights for penalty of each parameter. If an entry is zero, then the
+        corresponding parameter will not be penalized.
+    restriction : None or ndarray, optional
         Linear transformation of the parameters. If it is not None, then
         the penalty function is applied to each transformed parameter
         independently.
@@ -408,12 +411,12 @@ class ConstraintsPenalty:
 
     Parameters
     ----------
-    penalty: instance of penalty function
+    penalty : instance of penalty function
         Currently this requires an instance of a univariate, vectorized
         penalty class.
-    weights : None or ndarray
+    weights : array_like, optional
         Weights for adding penalties of transformed params.
-    restriction : None or ndarray
+    restriction : None or array_like, optional
         If it is not None, then restriction defines a linear transformation
         of the parameters. The penalty function is applied to each transformed
         parameter independently.

@@ -54,7 +54,7 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
         Chisquare-statistic, for example from a hypothesis test.
     df : int or float
         Degrees of freedom.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
@@ -143,7 +143,7 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
         Numerator degrees of freedom.
     df2 : int or float
         Denominator degrees of freedom.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
@@ -214,7 +214,7 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
         t-statistic, for example from a hypothesis test.
     df : int or float
         Degrees of freedom.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns

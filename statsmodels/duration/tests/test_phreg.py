@@ -453,6 +453,17 @@ class TestPHReg:
                 llf_sm = plf(sm_result.params, model, time, s)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
 
+    def test_invalid_ties_raises(self):
+        time, status, entry, exog = self.load_file("survival_data_50_2.csv")
+        with pytest.raises(ValueError, match="ties"):
+            PHReg(time, exog, status=status, ties="not-a-tie-method")
+
+    def test_fit_regularized_invalid_method_raises(self):
+        time, status, entry, exog = self.load_file("survival_data_50_2.csv")
+        model = PHReg(time, exog, status=status, ties="breslow")
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
+
 
 cur_dir = Path(__file__).resolve().parent
 rdir = Path(cur_dir).joinpath("results")

@@ -10,6 +10,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import array_like
 
 
 def durbin_watson(resids, axis=0):
@@ -26,7 +27,7 @@ def durbin_watson(resids, axis=0):
 
     Returns
     -------
-    dw : float, array_like
+    dw : float or ndarray
         The Durbin-Watson statistic.
 
     Notes
@@ -65,9 +66,9 @@ def omni_normtest(resids, axis=0):
 
     Returns
     -------
-    statistic : float or array_like
+    statistic : float or ndarray
         The Chi^2 test statistic.
-    pvalue : float or array_like
+    pvalue : float or ndarray
         The two-tailed p-value for the hypothesis test.
     """
     # TODO: change to exception in summary branch and catch in summary()
@@ -97,13 +98,13 @@ def jarque_bera(resids, axis=0):
 
     Returns
     -------
-    JB : {float, ndarray}
+    JB : float or ndarray
         The Jarque-Bera test statistic.
-    JBpv : {float, ndarray}
+    JBpv : float or ndarray
         The pvalue of the test statistic.
-    skew : {float, ndarray}
+    skew : float or ndarray
         Estimated skewness of the data.
-    kurtosis : {float, ndarray}
+    kurtosis : float or ndarray
         Estimated kurtosis of the data.
 
     Notes
@@ -187,7 +188,7 @@ def robust_skewness(y, axis=0):
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
-
+    y = array_like(y, "y")
     if axis is None:
         y = y.ravel()
         axis = 0
@@ -303,7 +304,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
     Parameters
     ----------
-    y : array_like
+    y : ndarray
         Data to compute use in the estimator.
     axis : int or None, optional
         Axis along which the kurtosis are computed.  If `None`, the
@@ -361,6 +362,7 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
+    y = array_like(y, "y")
     if (axis is None or
             (y.squeeze().ndim == 1 and y.ndim != 1)):
         y = y.ravel()
@@ -463,10 +465,12 @@ def _wmedian(A, W):
 
     Parameters
     ----------
-    A : 1-d NumPy array of float
-        The numeric values for which the weighted median is to be computed.
-    W : 1-d NumPy array of int
-        The corresponding non-negative integer weights for each value in A.
+    A : ndarray
+        1-d array of the numeric values for which the weighted median is to
+        be computed.
+    W : ndarray
+        1-d array of the corresponding non-negative integer weights for each
+        value in A.
 
     Returns
     -------
@@ -512,24 +516,24 @@ def _construct_A_W(L, R, Zplus, Zminus, n_plus, eps2):
 
     Parameters
     ----------
-    L : np.ndarray
+    L : ndarray
         1-d array of left bounds.
-    R : np.ndarray
+    R : ndarray
         1-d array of right bounds.
-    Zplus : np.ndarray
+    Zplus : ndarray
         1-d array of input values.
-    Zminus :  np.ndarray
+    Zminus : ndarray
         1-d array of input values.
     n_plus : int
     eps2 : float
 
     Returns
     -------
-    A : np.ndarray
+    A : ndarray
         Array of kernel values.
-    W : np.ndarray
+    W : ndarray
         Corresponding weights.
-    valid_i : np.ndarray
+    valid_i : ndarray
         Indices used for construction.
     """
     valid_i = np.where(L <= R)[0]
@@ -555,9 +559,9 @@ def _h_kern(index_plus, index_minus, Zplus, Zminus, n_plus, eps2):
         Index of Zplus.
     index_minus : int-like
         Index of Zminus.
-    Zplus : np.ndarray
+    Zplus : ndarray
         1-d array of input values.
-    Zminus :  np.ndarray
+    Zminus : ndarray
         1-d array of input values.
     n_plus : int
     eps2 : float
@@ -582,20 +586,20 @@ def _finalize_h_kernel_sweep(L, R, Zplus, Zminus, n_plus, eps2):
 
     Parameters
     ----------
-    L : np.ndarray
+    L : ndarray
         1-d array of left indices.
-    R : np.ndarray
+    R : ndarray
         1-d array of right indices.
-    Zplus : np.ndarray
+    Zplus : ndarray
         1-d array of input values.
-    Zminus :  np.ndarray
+    Zminus : ndarray
         1-d array of input values.
     n_plus : int
     eps2 : float
 
     Returns
     -------
-    A : numpy.ndarray of float
+    A : ndarray of float
         1-d array of sorted h_kern values in descending order.
     """
 
@@ -631,8 +635,12 @@ def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
 
     Parameters
     ----------
-    X : np.ndarray
+    X : ndarray
         Input 1-d array of numeric values.
+    eps1 : float, optional
+        Relative tolerance used to detect extreme values and near-ties.
+    eps2 : float, optional
+        Absolute tolerance used as a tie breaker in the H kernel.
 
     Returns
     -------
@@ -721,9 +729,9 @@ def _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, k, eps1, eps2):
 
     Parameters
     ----------
-    Zplus : np.ndarray
+    Zplus : ndarray
         1-d array of input values with Zplus >= -Zeps.
-    Zminus :  np.ndarray
+    Zminus : ndarray
         1-d array of input values with Zminus <= Zeps.
     n_plus : int
     n_minus : int
@@ -815,9 +823,9 @@ def _medcouple_1d(y, use_fast=True):
 
     Parameters
     ----------
-    y : np.ndarray
+    y : ndarray
         1-d data to compute use in the estimator.
-    use_fast : bool
+    use_fast : bool, optional
         Whether to use the O(n log n) implementation. Defaults to True.
 
     Returns
@@ -843,10 +851,10 @@ def medcouple(y, axis=0, use_fast=True):
     ----------
     y : array_like
         Data to compute use in the estimator.
-    axis : {int, None}
+    axis : int or None, optional
         Axis along which the medcouple statistic is computed.  If `None`, the
         entire array is used.
-    use_fast : bool
+    use_fast : bool, optional
         Whether to use the faster O(N log N) implementation. Default is True.
         To use the legacy O(N**2) version, set to False.
 

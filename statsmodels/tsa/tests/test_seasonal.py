@@ -270,7 +270,7 @@ class TestDecompose:
         assert_almost_equal(res_add.trend, TREND, 2)
         assert_almost_equal(res_add.resid, RANDOM, 3)
 
-        res_mult = seasonal_decompose(np.abs(self.data.values), "m", period=4)
+        res_mult = seasonal_decompose(np.abs(self.data.values), "mul", period=4)
 
         assert_almost_equal(res_mult.seasonal, MULT_SEASONAL, 4)
         assert_almost_equal(res_mult.trend, MULT_TREND, 2)
@@ -397,9 +397,9 @@ class TestDecompose:
         assert_almost_equal(res_add_override.resid.values.squeeze(), RANDOM, 3)
         assert_equal(res_add.seasonal.index.values.squeeze(), self.data.index.values)
 
-        res_mult = seasonal_decompose(np.abs(self.data), "m", period=4)
+        res_mult = seasonal_decompose(np.abs(self.data), "mul", period=4)
         res_mult_override = seasonal_decompose(
-            np.abs(freq_override_data), "m", period=4
+            np.abs(freq_override_data), "mul", period=4
         )
         assert_almost_equal(res_mult.seasonal.values.squeeze(), MULT_SEASONAL, 4)
         assert_almost_equal(res_mult.trend.values.squeeze(), MULT_TREND, 2)
@@ -411,7 +411,7 @@ class TestDecompose:
         assert_almost_equal(res_mult_override.resid.values.squeeze(), MULT_RANDOM, 4)
         assert_equal(res_mult.seasonal.index.values.squeeze(), self.data.index.values)
 
-        res_mult_pi = seasonal_decompose(np.abs(self.data_period_index), "m", period=4)
+        res_mult_pi = seasonal_decompose(np.abs(self.data_period_index), "mul", period=4)
         assert_almost_equal(
             res_mult.seasonal.values.squeeze(), res_mult_pi.seasonal.values.squeeze(), 4
         )
@@ -558,7 +558,7 @@ class TestDecompose:
         assert_almost_equal(res_add.resid, resid, 3)
 
         res_mult = seasonal_decompose(
-            np.abs(self.data.values), "m", period=4, two_sided=False
+            np.abs(self.data.values), "mul", period=4, two_sided=False
         )
 
         seasonal = np.array(
@@ -816,11 +816,28 @@ class TestDecompose:
         trend = seasonal_decompose(x, period=period, extrapolate_trend="period").trend
         assert_almost_equal(trend, x)
 
+    def test_extrapolate_trend_freq_deprecated(self):
+        x = np.arange(12)
+        period = 4
+        with pytest.warns(FutureWarning, match="extrapolate_trend='freq'"):
+            trend_freq = seasonal_decompose(
+                x, period=period, extrapolate_trend="freq"
+            ).trend
+        trend_period = seasonal_decompose(
+            x, period=period, extrapolate_trend="period"
+        ).trend
+        assert_almost_equal(trend_freq, trend_period)
+
+    def test_extrapolate_trend_invalid_string_raises(self):
+        x = np.arange(12)
+        with pytest.raises(ValueError, match="extrapolate_trend"):
+            seasonal_decompose(x, period=4, extrapolate_trend="not-a-value")
+
     def test_raises(self):
         with pytest.raises(ValueError):
             seasonal_decompose(self.data.values)
         with pytest.raises(ValueError):
-            seasonal_decompose(self.data, "m", period=4)
+            seasonal_decompose(self.data, "mul", period=4)
         x = self.data.astype(float).copy()
         x.iloc[2] = np.nan
         with pytest.raises(ValueError):

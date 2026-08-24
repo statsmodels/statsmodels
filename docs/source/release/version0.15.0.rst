@@ -100,7 +100,7 @@ The migration follows a single rule:
   ``store=True`` paths of the ``stats.diagnostic`` tests.
 - Where adopting it would change how many values are unpacked, the legacy
   tuple is still returned and a ``FutureWarning`` is raised. Pass
-  ``use_namedtuple=True`` to opt in now, or ``use_namedtuple=False`` to keep
+  ``result_object=True`` to opt in now, or ``result_object=False`` to keep
   the current behaviour and silence the warning. The default changes in 0.16.
 
 Functions whose result shape never varied were converted outright, with no
@@ -318,8 +318,8 @@ This applies to:
   and :func:`~statsmodels.graphics.regressionplots.plot_partregress` with
   ``ret_coords=False``.
 
-Pass ``use_namedtuple=True`` to adopt the new result now, or
-``use_namedtuple=False`` to keep the old return type and silence the warning.
+Pass ``result_object=True`` to adopt the new result now, or
+``result_object=False`` to keep the old return type and silence the warning.
 The default becomes the ``NamedTuple`` in 0.16.
 
 ``RegressionResults.compare_lr_test`` always returned three values, so it was
@@ -454,6 +454,8 @@ New Features and Enhancements
 - Add the Diebold-Mariano test of equal predictive accuracy. :pr:`10066`
 - Add the Pesaran-Timmermann test of directional predictive accuracy. :pr:`10055`
 - Add local false discovery rate estimation (``local_fdr_correction``). :pr:`10069`
+- Add ``LocalProjections``, a Jordà (2005) local-projections estimator for
+  impulse response functions with Newey-West HAC standard errors. :pr:`9871`
 
 .. rubric:: Performance
 
@@ -581,6 +583,16 @@ Notable Bug Fixes
   count. :pr:`9907`
 - Cast the ``np.repeat`` argument to platform ``intp`` size in the
   Jonckheere-Terpstra test so it works on 32-bit platforms (Pyodide). :pr:`10075`
+- ``breakvar_heteroskedasticity_test`` (and the state space and ETS
+  ``test_heteroskedasticity`` methods built on it) referred the raw ratio of
+  the two sums of squares to ``F(numer_dof, denom_dof)``.  The ratio of sums
+  is that ``F`` only after rescaling by ``denom_dof / numer_dof``, so the
+  p-values were wrong whenever missing observations left the two subsets with
+  different numbers of usable residuals -- for example a multivariate state
+  space model with a ragged edge.  The ``use_f=False`` variant had its
+  multiplier and its degrees of freedom interchanged, and the ``decreasing``
+  alternative did not swap the degrees of freedom when it inverted the
+  statistic.  Balanced samples, which is the usual case, are unaffected.
 
 
 Build, Packaging, and Infrastructure

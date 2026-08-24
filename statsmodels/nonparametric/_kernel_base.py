@@ -12,6 +12,7 @@ from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import array_like
 
 try:
     import joblib
@@ -91,8 +92,9 @@ def _compute_subset(
         subset of data.
     data : ndarray
         The full data array from which the subset is drawn.
-    bw : ndarray
-        The bandwidth values used to fit the sub-sample model.
+    bw : str
+        The bandwidth selection method (e.g. "cv_ml", "cv_ls" or
+        "normal_reference") used to fit the sub-sample model.
     co : float
         Twice the order of the continuous kernel, used in the scaling
         factor exponent.
@@ -117,7 +119,7 @@ def _compute_subset(
     bound : tuple of int
         The (start, stop) indices used to slice `data` when `randomize`
         is False.
-    generator : {RandomState, Generator}
+    generator : numpy.random.Generator or numpy.random.RandomState
         The random number generator used when `randomize` is True.
 
     Returns
@@ -210,7 +212,7 @@ class GenericKDE:
 
         Parameters
         ----------
-        bw : {array_like, str}
+        bw : array_like or str
             If array_like: user-specified bandwidth.
             If a string, should be one of:
 
@@ -292,7 +294,7 @@ class GenericKDE:
 
         Parameters
         ----------
-        bw : {array_like, str, None}
+        bw : array_like, str, or None
             If a string, the bandwidth selection method, used to set
             ``self._bw_method``. Otherwise `bw` is returned unchanged.
 
@@ -309,11 +311,11 @@ class GenericKDE:
 
         if bw is None:
             self._bw_method = "normal_reference"
-        if isinstance(bw, str):
+        elif isinstance(bw, str):
             self._bw_method = bw
         else:
             self._bw_method = "user-specified"
-            return bw
+            return array_like(bw, "bw")
 
         nobs = self.nobs
         n_sub = self.n_sub
@@ -716,7 +718,7 @@ def gpke(
     ----------
     bw : 1-D ndarray
         The user-specified bandwidth parameters.
-    data : 1D or 2-D ndarray
+    data : 2-D ndarray
         The training data.
     data_predict : 1-D ndarray
         The evaluation points at which the kernel estimation is performed.
@@ -734,8 +736,10 @@ def gpke(
 
     Returns
     -------
-    dens : array_like
-        The generalized product kernel density estimator.
+    dens : float or ndarray
+        The generalized product kernel density estimator, summed over
+        observations if `tosum` is True, otherwise the per-observation
+        array of kernel values.
 
     Notes
     -----
@@ -780,12 +784,15 @@ def initialize_generator(
 
     Parameters
     ----------
-    entropy : {None, int, array_like[int], Generator, RandomState}, optional
-        If an initialized NumPy random Generator or an initialized RandomState,
-        the object is returned unchanged. If it is an integer or array_like of
-        integers, the value is used to seed a new numpy.random.default_rng. If
-        None, the functions will continue to use the legacy singleton
-        RandomState.
+    entropy : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `entropy` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `entropy` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `entropy`. If `entropy`
+        is already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -795,7 +802,7 @@ def initialize_generator(
 
     Returns
     -------
-    generator: {Generator, RandomState}
+    generator : numpy.random.Generator or numpy.random.RandomState
         The object that is used for random number generation.
     """
     if entropy is None:

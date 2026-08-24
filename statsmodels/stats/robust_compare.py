@@ -10,6 +10,8 @@ import numbers
 
 import numpy as np
 
+from statsmodels.tools.validation import string_like
+
 # the trimboth and trim_mean are taken from scipy.stats.stats
 # and enhanced by axis
 
@@ -31,14 +33,14 @@ def trimboth(a, proportiontocut, axis=0):
         Data to trim.
     proportiontocut : float or int
         Proportion of data to trim at each end.
-    axis : int or None
+    axis : int or None, optional
         Axis along which the observations are trimmed. The default is to trim
         along axis=0. If axis is None then the array will be flattened before
         trimming.
 
     Returns
     -------
-    out : array-like
+    out : ndarray
         Trimmed version of array `a`.
 
     Examples
@@ -78,7 +80,7 @@ def trim_mean(a, proportiontocut, axis=0):
         Input array.
     proportiontocut : float
         Fraction to cut off at each tail of the sorted observations.
-    axis : int or None
+    axis : int or None, optional
         Axis along which the trimmed means are computed. The default is axis=0.
         If axis is None then the trimmed mean will be computed for the
         flattened array.
@@ -100,16 +102,16 @@ class TrimmedMean:
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         The data, observations to analyze.
     fraction : float in (0, 0.5)
         The fraction of observations to trim at each tail.
         The number of observations trimmed at each tail is
         ``int(fraction * nobs)``.
-    is_sorted : boolean
+    is_sorted : bool, optional
         Indicator if data is already sorted. By default the data is sorted
         along ``axis``.
-    axis : int
+    axis : int, optional
         The axis of reduce operations. By default axis=0, that is observations
         are along the zero dimension, i.e., rows if 2-dim.
     """
@@ -200,12 +202,12 @@ class TrimmedMean:
 
         Parameters
         ----------
-        value : float
+        value : float, optional
             Value of the mean under the Null hypothesis.
-        transform : {'trimmed', 'winsorized'}
+        transform : {'trimmed', 'winsorized'}, optional
             Specified whether the mean test is based on trimmed or winsorized
             data.
-        alternative : {'two-sided', 'larger', 'smaller'}
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             Defines the alternative hypothesis. The following options are
             available (default is 'two-sided'):
 
@@ -228,14 +230,15 @@ class TrimmedMean:
         import statsmodels.stats.weightstats as smws
 
         df = self.nobs_reduced - 1
+        transform = string_like(
+            transform, "transform", options=("trimmed", "winsorized"), lower=False
+        )
         if transform == "trimmed":
             mean_ = self.mean_trimmed
             std_ = self.std_mean_trimmed
-        elif transform == "winsorized":
+        else:  # transform == "winsorized"
             mean_ = self.mean_winsorized
             std_ = self.std_mean_winsorized
-        else:
-            raise ValueError("transform can only be 'trimmed' or 'winsorized'")
 
         res = smws._tstat_generic(
             mean_, 0, std_, df, alternative=alternative, diff=value
@@ -274,15 +277,15 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=
     ----------
     data : array_like
         Observations for the data.
-    center : "median", "mean", "trimmed" or float
+    center : {'median', 'mean', 'trimmed'} or float, optional
         Statistic used for centering observations. If a float, then this
         value is used to center. Default is median.
-    transform : 'abs', 'square', 'identity' or a callable
+    transform : {'abs', 'square', 'identity'} or callable, optional
         The transform for the centered data.
-    trim_frac : float in [0, 0.5)
+    trim_frac : float in [0, 0.5), optional
         Fraction of observations that are trimmed on each side of the sorted
         observations. This is only used if center is `trimmed`.
-    axis : int
+    axis : int, optional
         Axis along which the data are transformed when centering.
 
     Returns
@@ -292,6 +295,11 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=
     """
     x = np.asarray(data)  # x is shorthand from earlier code
 
+    if isinstance(transform, str):
+        transform = string_like(
+            transform, "transform", options=("abs", "square", "identity"),
+            lower=False,
+        )
     if transform == "abs":
         tfunc = np.abs
     elif transform == "square":
@@ -309,6 +317,10 @@ def scale_transform(data, center="median", transform="abs", trim_frac=0.2, axis=
     else:
         raise ValueError("transform should be abs, square or exp")
 
+    if isinstance(center, str):
+        center = string_like(
+            center, "center", options=("median", "mean", "trimmed"), lower=False
+        )
     if center == "median":
         res = tfunc(x - np.expand_dims(np.median(x, axis=axis), axis))
     elif center == "mean":

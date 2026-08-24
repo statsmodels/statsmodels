@@ -38,18 +38,13 @@ unknown. Journal of the American Statistical Association, Vol 64, No. 325.
 (1969), pp. 387-389.
 """
 
-from functools import partial
+from functools import cache, partial
 
 import numpy as np
 from scipy import stats
 
 from statsmodels.tools.validation import string_like
 
-from ._lilliefors_critical_values import (
-    PERCENTILES,
-    asymp_critical_values,
-    critical_values,
-)
 from .tabledist import TableDist
 
 
@@ -79,15 +74,15 @@ def _make_asymptotic_function(params):
     return f
 
 
-def ksstat(x, cdf, alternative="two_sided", args=()):
+def ksstat(x, cdf, alternative="two-sided", args=()):
     """
     Calculate statistic for the Kolmogorov-Smirnov test for goodness of fit
 
     This calculates the test statistic for a test of the distribution G(x) of
     an observed variable against a given distribution F(x). Under the null
     hypothesis the two distributions are identical, G(x)=F(x). The
-    alternative hypothesis can be either 'two_sided' (default), 'less'
-    or 'greater'. The KS test is only valid for continuous distributions.
+    alternative hypothesis can be either 'two-sided' (default), 'lower'
+    or 'upper'. The KS test is only valid for continuous distributions.
 
     Parameters
     ----------
@@ -96,10 +91,10 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     cdf : str or callable
         String: name of a distribution in scipy.stats.
         Callable: function to evaluate cdf.
-    alternative : {'two_sided', 'less', 'greater'}, optional
+    alternative : {'two-sided', 'lower', 'upper'}, optional
         Defines the alternative hypothesis (see explanation). Default is
-        'two_sided'.
-    args : tuple, sequence
+        'two-sided'.
+    args : tuple, optional
         Distribution parameters for call to cdf.
 
     Returns
@@ -114,14 +109,20 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
     Notes
     -----
     In the one-sided test, the alternative is that the empirical
-    cumulative distribution function of the random variable is "less"
-    or "greater" than the cumulative distribution function F(x) of the
+    cumulative distribution function of the random variable is "lower"
+    or "upper" than the cumulative distribution function F(x) of the
     hypothesis, G(x)<=F(x), resp. G(x)>=F(x).
 
     In contrast to scipy.stats.kstest, this function only calculates the
     statistic which can be used either as distance measure or to implement
     case specific p-values.
     """
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "lower", "upper"),
+        deprecated={"two_sided": "two-sided", "less": "lower", "greater": "upper"},
+    )
     nobs = float(len(x))
 
     if isinstance(cdf, str):
@@ -134,14 +135,15 @@ def ksstat(x, cdf, alternative="two_sided", args=()):
 
     d_plus = (np.arange(1.0, nobs + 1) / nobs - cdfvals).max()
     d_min = (cdfvals - np.arange(0.0, nobs) / nobs).max()
-    if alternative == "greater":
+    if alternative == "upper":
         return d_plus
-    elif alternative == "less":
+    elif alternative == "lower":
         return d_min
 
     return np.max([d_plus, d_min])
 
 
+@cache
 def get_lilliefors_table(dist="norm"):
     """
     Generates tables for significance levels of Lilliefors test statistics
@@ -162,6 +164,17 @@ def get_lilliefors_table(dist="norm"):
     # function just to keep things together
     # for this test alpha is sf probability, i.e., right tail probability
 
+    # deferred import: this table is a large, generated module (~380 lines
+    # of literal arrays) that is only needed when a Lilliefors test is
+    # actually run, so import it lazily and cache the resulting TableDist
+    # (via lru_cache on this function) rather than paying the parsing cost
+    # at package import time.
+    from ._lilliefors_critical_values import (
+        PERCENTILES,
+        asymp_critical_values,
+        critical_values,
+    )
+
     alpha = 1 - np.array(PERCENTILES) / 100.0
     alpha = alpha[::-1]
     dist = "normal" if dist == "norm" else dist
@@ -179,10 +192,6 @@ def get_lilliefors_table(dist="norm"):
 
     lf = TableDist(alpha, size, crit_lf, asymptotic=asymp_fn)
     return lf
-
-
-lilliefors_table_norm = get_lilliefors_table(dist="norm")
-lilliefors_table_expon = get_lilliefors_table(dist="exp")
 
 
 def pval_lf(d_max, n):
@@ -276,6 +285,7 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
     For implementation details, see lilliefors_critical_value_simulation.py in
     the test directory.
     """
+    dist = string_like(dist, "dist", options=("norm", "exp"))
     pvalmethod = string_like(pvalmethod, "pvalmethod", options=("approx", "table"))
     x = np.asarray(x)
     if x.ndim == 2 and x.shape[1] == 1:
@@ -288,26 +298,25 @@ def kstest_fit(x, dist="norm", pvalmethod="table"):
 
     nobs = len(x)
 
+    dist = string_like(dist, "dist", options=("norm", "exp"), lower=False)
     if dist == "norm":
         z = (x - x.mean()) / x.std(ddof=1)
         test_d = stats.norm.cdf
-        lilliefors_table = lilliefors_table_norm
-    elif dist == "exp":
+    else:  # dist == "exp"
         z = x / x.mean()
         test_d = stats.expon.cdf
-        lilliefors_table = lilliefors_table_expon
         pvalmethod = "table"
-    else:
-        raise ValueError("Invalid dist parameter, must be 'norm' or 'exp'")
+    # deferred/cached: only builds (and imports) the critical-value table
+    # for the distribution actually requested
+    lilliefors_table = get_lilliefors_table(dist=dist)
 
     min_nobs = 4 if dist == "norm" else 3
     if nobs < min_nobs:
         raise ValueError(
-            f"Test for distribution {dist} requires at least {min_nobs} "
-            "observations"
+            f"Test for distribution {dist} requires at least {min_nobs} observations"
         )
 
-    d_ks = ksstat(z, test_d, alternative="two_sided")
+    d_ks = ksstat(z, test_d, alternative="two-sided")
 
     if pvalmethod == "approx":
         pval = pval_lf(d_ks, nobs)

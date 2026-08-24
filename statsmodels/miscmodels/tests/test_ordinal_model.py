@@ -587,3 +587,25 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_predict_which():
+    data = ds.df
+    mod = OrderedModel(
+        data["apply"].values.codes,
+        np.asarray(data[["pared", "public", "gpa"]], float),
+        distr="logit",
+    )
+    res = mod.fit(method="bfgs", disp=False)
+
+    prob = res.predict(which="prob")
+    cum = res.predict(which="cum")
+    cumprob = res.predict(which="cumprob")
+    linpred = res.predict(which="linpred")
+
+    assert_allclose(cum, cumprob)
+    assert_allclose(np.cumsum(prob, axis=1), cumprob, atol=1e-10)
+    assert linpred.ndim == 1
+
+    with pytest.raises(ValueError, match="which"):
+        res.predict(which="not-a-real-option")

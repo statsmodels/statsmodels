@@ -37,6 +37,18 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the Danish money demand data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     data.index.freq = "QS-JAN"
     return du.Dataset(data=data, names=list(data.columns))
@@ -49,7 +61,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----

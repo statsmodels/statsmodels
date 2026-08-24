@@ -155,6 +155,7 @@ from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 
 
 class ResultsGeneric:
@@ -201,10 +202,10 @@ def lm_test_glm(result, exog_extra, mean_deriv=None):
     ----------
     result : GLMResults instance
         results instance with the constrained model
-    exog_extra : ndarray or None
+    exog_extra : array_like or None
         additional exogenous variables for variable addition test
         This can be set to None if mean_deriv is provided.
-    mean_deriv : None or ndarray
+    mean_deriv : None or array_like, optional
         Extra moment condition that correspond to the partial derivative of
         a mean function with respect to some parameters.
 
@@ -328,7 +329,7 @@ def cm_test_robust(resid, resid_deriv, instruments, weights=1):
     instruments : ndarray, (nobs, k_instruments)
         indicator variables of Wooldridge, multiplies the conditional moment
         restriction
-    weights : ndarray
+    weights : array_like, optional
         This is a weights function as used in WLS. The moment
         restrictions are multiplied by weights. This corresponds to the
         inverse of the variance in a heteroskedastic model.
@@ -691,24 +692,24 @@ def conditional_moment_test_generic(
     mom_test_deriv : ndarray, 2-D, square (k_constraints, k_constraints)
         derivative of moment conditions under test with respect to the
         parameters of the model summed over observations.
-    mom_incl : ndarray, 2-D (nobs, k_params)
+    mom_incl : None or ndarray, 2-D (nobs, k_params)
         moment conditions that where use in estimation, assumed to be zero
         This is score_obs in the case of (Q)MLE
     mom_incl_deriv : ndarray, 2-D, square (k_params, k_params)
         derivative of moment conditions of estimator summed over observations
         This is the information matrix or Hessian in the case of (Q)MLE.
-    var_mom_all : None, or ndarray, 2-D, (k, k) with k = k_constraints + k_params
+    var_mom_all : None or ndarray, 2-D, (k, k) with k = k_constraints + k_params, optional
         Expected product or variance of the joint (column_stacked) moment
         conditions. The stacking should have the variance of the moment
         conditions under test in the first k_constraint rows and columns.
-        If it is not None, then it will be estimated based on cov_type.
+        If it is None, then it will be estimated based on cov_type.
         I think: This is the Hessian of the extended or alternative model
         under full MLE and score test assuming information matrix identity
         holds.
-    cov_type : str
+    cov_type : {"OPG"}, optional
         Type of covariance estimator for the joint moments. Currently only
         "OPG" (outer product of gradients) is implemented.
-    cov_kwds : dict or None
+    cov_kwds : dict, optional
         Not used yet. Reserved for keyword arguments for alternative
         covariance estimators once they are implemented.
 
@@ -731,8 +732,7 @@ def conditional_moment_test_generic(
     Wooldridge ???
     Pagan and Vella 1989
     """
-    if cov_type != "OPG":
-        raise NotImplementedError
+    _ = string_like(cov_type, "cov_type", options=("OPG",), lower=False)
 
     k_constraints = mom_test.shape[1]
 
@@ -817,16 +817,16 @@ def conditional_moment_test_regression(
     var_mom_all : ndarray, optional
         Not used yet. Reserved for the joint covariance of the moment
         conditions.
-    demean : bool
+    demean : bool, optional
         If True, then the columns of the combined moment conditions are
         demeaned before running the artificial regression.
-    cov_type : str
+    cov_type : str, optional
         Covariance type used in the artificial regression. If "OPG",
         then the outer-product-of-gradients regression is used and the
         test statistic is `nobs` times R-squared. Otherwise, a robust
         Wald test on the coefficients of the artificial regression is
         used.
-    cov_kwds : dict or None
+    cov_kwds : dict, optional
         Keyword arguments for the covariance estimator specified by
         `cov_type`, used only if `cov_type` is not "OPG".
 

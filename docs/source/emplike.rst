@@ -54,7 +54,7 @@ Examples
   el.ci_mean()
 
   # test variance is 1
-  res = el.test_var(1, use_namedtuple=True)
+  res = el.test_var(1, result_object=True)
   print(f"llr: {res.llr}, pvalue: {res.pvalue}")
 
 

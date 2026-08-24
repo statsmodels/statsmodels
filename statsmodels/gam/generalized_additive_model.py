@@ -176,7 +176,7 @@ class GLMGamResults(GLMResults):
         ----------
         exog : array_like, optional
             The values for the linear explanatory variables.
-        exog_smooth : array_like
+        exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is False, then ``exog`` is returned unchanged and
@@ -230,7 +230,7 @@ class GLMGamResults(GLMResults):
         ----------
         exog : array_like, optional
             The values for the linear explanatory variables
-        exog_smooth : array_like
+        exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
@@ -295,7 +295,7 @@ class GLMGamResults(GLMResults):
         ----------
         exog : array_like, optional
             The values for which you want to predict.
-        exog_smooth : array_like
+        exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
             If transform is True, then the basis representation of the smooth
@@ -325,7 +325,7 @@ class GLMGamResults(GLMResults):
         ----------
         smooth_index : int
             index of the smooth term within list of smooth terms
-        include_constant : bool
+        include_constant : bool, optional
             If true, then the estimated intercept is added to the prediction
             and its standard errors. This avoids that the confidence interval
             has zero width at the imposed identification constraint, e.g.
@@ -379,19 +379,20 @@ class GLMGamResults(GLMResults):
         ----------
         smooth_index : int
             index of the smooth term within list of smooth terms
-        plot_se : bool
+        plot_se : bool, optional
             If plot_se is true, then the confidence interval for the linear
             prediction will be added to the plot.
-        cpr : bool
+        cpr : bool, optional
             If cpr (component plus residual) is true, then a scatter plot of
             the partial working residuals will be added to the plot.
-        include_constant : bool
+        include_constant : bool, optional
             If true, then the estimated intercept is added to the prediction
             and its standard errors. This avoids that the confidence interval
             has zero width at the imposed identification constraint, e.g.
             either at a reference point or at the mean.
-        ax : None or matplotlib axis instance
-           If ax is not None, then the plot will be added to it.
+        ax : AxesSubplot, optional
+            An axes on which to draw the graph. If None, new figure and
+            axes objects are created.
 
         Returns
         -------
@@ -468,14 +469,14 @@ class GLMGamResults(GLMResults):
 
         Parameters
         ----------
-        observed : bool
+        observed : bool, optional
             If true, then observed hessian is used in the hat matrix
             computation. If false, then the expected hessian is used.
             In the case of a canonical link function both are the same.
             This is only relevant for models that implement both observed
             and expected Hessian, which is currently only GLM. Other
             models only use the observed Hessian.
-        _axis : int
+        _axis : int, optional
             This is mainly for internal use. By default it returns the usual
             diagonal of the hat matrix. If _axis is zero, then the result
             corresponds to the effective degrees of freedom, ``edf`` for each
@@ -547,21 +548,22 @@ class GLMGam(PenalizedMixin, GLM):
     ----------
     endog : array_like
         The response variable.
-    exog : array_like or None
+    exog : array_like, optional
         These explanatory variables are treated as linear. The model in
-        this case is a partial linear model.
+        this case is a partial linear model. If None, the model does not
+        include a linear part.
     smoother : instance of additive smoother class
         Examples of smoother instances include Bsplines or CyclicCubicSplines.
     alpha : float or list of floats
         Penalization weights for smooth terms. The length of the list needs
         to be the same as the number of smooth terms in the ``smoother``.
-    family : instance of GLM family
+    family : family class instance, optional
         See GLM.
-    offset : None or array_like
+    offset : array_like, optional
         See GLM.
-    exposure : None or array_like
+    exposure : array_like, optional
         See GLM.
-    missing : str
+    missing : str, optional
         Missing value handling is not supported in this class, and the
         value must be 'none'.
     **kwargs
@@ -722,22 +724,22 @@ class GLMGam(PenalizedMixin, GLM):
             through to the underlying optimizer.
         maxiter : int, optional
             Maximum number of iterations. Default is 1000.
-        method : str
+        method : str, optional
             The special optimization method is "pirls" which uses a
             penalized version of IRLS. This is the default. Other methods
             are gradient optimizers as used in
             base.model.LikelihoodModel.fit that are called on the
             penalized log-likelihood.
-        tol : float
+        tol : float, optional
             Convergence tolerance for "pirls". Default is 1e-8.
         scale : str or float, optional
             `scale` can be 'X2', 'dev', or a float. See GLM.fit for details.
-        cov_type : str
+        cov_type : str, optional
             The type of parameter estimate covariance matrix to compute.
-        cov_kwds : dict-like
+        cov_kwds : dict-like, optional
             Extra arguments for calculating the covariance of the parameter
             estimates.
-        use_t : bool
+        use_t : bool, optional
             If True, the Student t-distribution is used for inference.
         full_output : bool, optional
             Set to True to have all available output in the Results
@@ -745,7 +747,7 @@ class GLMGam(PenalizedMixin, GLM):
         disp : bool, optional
             Set to True to print convergence messages. Not used if method
             is "pirls".
-        max_start_irls : int
+        max_start_irls : int, optional
             The number of PIRLS iterations used to obtain starting values
             for gradient optimization. Only relevant if `method` is set to
             something other than "pirls".
@@ -835,17 +837,17 @@ class GLMGam(PenalizedMixin, GLM):
             specific ``starting_mu`` is used to initialize the fit.
         maxiter : int, optional
             Maximum number of PIRLS iterations. Default is 100.
-        tol : float
+        tol : float, optional
             Convergence tolerance. Default is 1e-8.
         scale : str or float, optional
             `scale` can be 'X2', 'dev', or a float. See GLM.fit for
             details.
-        cov_type : str
+        cov_type : str, optional
             The type of parameter estimate covariance matrix to compute.
-        cov_kwds : dict-like
+        cov_kwds : dict-like, optional
             Extra arguments for calculating the covariance of the
             parameter estimates.
-        use_t : bool
+        use_t : bool, optional
             If True, the Student t-distribution is used for inference.
         weights : array_like, optional
             Case weights to be used in the WLS updates. If None, then
@@ -978,16 +980,16 @@ class GLMGam(PenalizedMixin, GLM):
 
         Parameters
         ----------
-        criterion : str
+        criterion : str, optional
             name of results attribute to be minimized.
             Default is 'aic', other options are 'gcv', 'cv' or 'bic'.
-        start_params : None or array
+        start_params : array_like, optional
             starting parameters for alpha in the penalization weight
             minimization. The parameters are internally exponentiated and
             the minimization is with respect to ``exp(alpha)``
-        start_model_params : None or array
+        start_model_params : array_like, optional
             starting parameter for the ``model._fit_pirls``.
-        method : 'basinhopping', 'nm' or 'minimize'
+        method : 'basinhopping', 'nm' or 'minimize', optional
             'basinhopping' and 'nm' directly use the underlying scipy.optimize
             functions `basinhopping` and `fmin`. 'minimize' provides access
             to the high level interface, `scipy.optimize.minimize`.
@@ -1094,23 +1096,23 @@ class GLMGam(PenalizedMixin, GLM):
 
         Parameters
         ----------
-        alphas : None or list of arrays
+        alphas : list of array_like, optional
             Grid of alpha values to search over, one array per smooth
             term. If None, a default grid is constructed, see Notes.
-        cv_iterator : instance
+        cv_iterator : instance, optional
             instance of a cross-validation iterator, by default this is a
             KFold instance
-        cost : function
+        cost : callable, optional
             default is mean squared error. The cost function to evaluate the
             prediction error for the left out sample. This should take two
             arrays as argument and return one float.
-        k_folds : int
+        k_folds : int, optional
             number of folds if default Kfold iterator is used.
             This is ignored if ``cv_iterator`` is not None.
-        k_grid : int
+        k_grid : int, optional
             number of points in the default grid of alpha values for each
             smooth term. This is ignored if ``alphas`` is not None.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If

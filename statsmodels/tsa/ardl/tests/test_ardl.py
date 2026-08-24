@@ -297,6 +297,11 @@ def test_ardl_select_order(
     assert res.ar_lags is None or isinstance(res.ar_lags, list)
 
 
+def test_ardl_select_order_invalid_ic_raises(data):
+    with pytest.raises(ValueError, match="ic"):
+        ardl_select_order(data.y, 2, data.x, 2, ic="not-a-real-ic")
+
+
 def test_ardl_no_regressors(data):
     res = ARDL(
         data.y,
@@ -636,6 +641,32 @@ def test_append_matches_apply():
     )
 
 
+def test_apply_refit_reestimates_params():
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c").fit()
+
+    y_apply, x_apply = y.iloc[:50], x.iloc[:50]
+    applied_fixed = res.apply(endog=y_apply, exog=x_apply, refit=False)
+    applied_refit = res.apply(endog=y_apply, exog=x_apply, refit=True)
+
+    # refit=False just carries the original params over unchanged
+    assert_allclose(applied_fixed.params, res.params)
+    # refit=True re-estimates on the new data, matching a fresh fit
+    fresh = ARDL(y_apply, 3, x_apply, order=res.model._order, trend="c").fit()
+    assert_allclose(applied_refit.params, fresh.params)
+    assert not np.allclose(applied_refit.params, res.params)
+
+
+def test_apply_unexpected_exog_raises():
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res_no_exog = ARDL(y.iloc[:45], 3, trend="c").fit()
+
+    with pytest.raises(ValueError, match="exog must be None"):
+        res_no_exog.apply(endog=y.iloc[:50], exog=x.iloc[:50])
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
@@ -816,7 +847,7 @@ def test_bounds_test(case):
         5: 6.785325,
     }
     bounds_result = res.bounds_test(case)
-    assert_allclose(bounds_result.stat, expected[case])
+    assert_allclose(bounds_result.statistic, expected[case])
     assert "BoundsTestResult" in str(bounds_result)
 
 
@@ -832,9 +863,9 @@ def test_bounds_test_simulation(case):
     bounds_result = res.bounds_test(
         case=case, asymptotic=False, rng=[1, 2, 3, 4], nsim=10_000
     )
-    assert (bounds_result.p_values >= 0.0).all()
-    assert (bounds_result.p_values <= 1.0).all()
-    assert (bounds_result.crit_vals > 0.0).all().all()
+    assert (bounds_result.pvalue >= 0.0).all()
+    assert (bounds_result.pvalue <= 1.0).all()
+    assert (bounds_result.critical_values > 0.0).all().all()
 
 
 @pytest.mark.parametrize(
@@ -850,9 +881,9 @@ def test_bounds_test_rng(rng):
     )
     res = mod.fit()
     bounds_result = res.bounds_test(case=3, asymptotic=False, rng=rng, nsim=10_000)
-    assert (bounds_result.p_values >= 0.0).all()
-    assert (bounds_result.p_values <= 1.0).all()
-    assert (bounds_result.crit_vals > 0.0).all().all()
+    assert (bounds_result.pvalue >= 0.0).all()
+    assert (bounds_result.pvalue <= 1.0).all()
+    assert (bounds_result.critical_values > 0.0).all().all()
 
 
 def test_bounds_test_simulate_order():
@@ -866,8 +897,8 @@ def test_bounds_test_simulate_order():
     bounds_result = res.bounds_test(3)
     assert "BoundsTestResult" in str(bounds_result)
     bounds_result_sim = res.bounds_test(3, asymptotic=False, nsim=10_000, rng=[1, 2, 3])
-    assert_allclose(bounds_result.stat, bounds_result_sim.stat)
-    assert (bounds_result_sim.p_values > bounds_result.p_values).all()
+    assert_allclose(bounds_result.statistic, bounds_result_sim.statistic)
+    assert (bounds_result_sim.pvalue > bounds_result.pvalue).all()
 
 
 def test_resids_ardl_uecm():

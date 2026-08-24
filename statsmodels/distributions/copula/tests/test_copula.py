@@ -694,7 +694,7 @@ class CheckRvsDim:
             self.copula.rvs(nobs, random_state=rng)
 
 
-class TestGaussianCopula(CheckCopula):
+class TestGaussianCopula(CheckModernCopula):
     copula = GaussianCopula(corr=[[1.0, 0.8], [0.8, 1.0]])
     dim = 2
     pdf_u = [
@@ -747,7 +747,7 @@ class TestGaussianCopula3d(CheckRvsDim):
     use_pdf = False
 
 
-class TestStudentTCopula(CheckCopula):
+class TestStudentTCopula(CheckModernCopula):
     copula = StudentTCopula(corr=[[1.0, 0.8], [0.8, 1.0]], df=2)
     dim = 2
     pdf_u = [

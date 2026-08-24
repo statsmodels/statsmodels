@@ -48,16 +48,18 @@ from scipy import special, stats
 doc_params = """\
 Parameters
     ----------
-    x : array_like, float
-        Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kde is computed.
+    x : float or array_like
+        Points at which the kernel is evaluated. ``x`` can be scalar or
+        1-dim.
+    sample : array_like
+        1-d sample from which the kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
     Returns
     -------
-    Components for kernel estimation"""
+    ndarray
+        Kernel values evaluated at `x` for each point in `sample`."""
 
 
 def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
@@ -65,10 +67,10 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
     kernel_type : str or callable
@@ -76,7 +78,7 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         Currently supported kernel names are "beta", "beta2", "gamma",
         "gamma2", "bs", "invgamma", "invgauss", "lognorm", "recipinvgauss" and
         "weibull".
-    weights : None or ndarray, optional
+    weights : None or array_like, optional
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
@@ -133,10 +135,10 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
 
     Parameters
     ----------
-    x : array_like, float
-        Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    x : float or array_like
+        Points for which cdf is evaluated. ``x`` can be scalar or 1-dim.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
     kernel_type : str or callable
@@ -144,7 +146,7 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         Currently supported kernel names are "beta", "beta2", "gamma",
         "gamma2", "bs", "invgamma", "invgauss", "lognorm", "recipinvgauss" and
         "weibull".
-    weights : None or ndarray, optional
+    weights : None or array_like, optional
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
@@ -407,10 +409,10 @@ def _kernel_pdf_gamma(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -432,10 +434,10 @@ def _kernel_cdf_gamma(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -583,10 +585,10 @@ def kernel_pdf_invgauss_(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -655,10 +657,10 @@ def kernel_pdf_recipinvgauss_(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -807,10 +809,10 @@ def kernel_pdf_lognorm_(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 

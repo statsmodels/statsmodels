@@ -81,10 +81,10 @@ Descriptive Statistics and Tests
    stattools.adfuller
    stattools.ADFullerResult
    stattools.kpss
-   stattools.KpssResult
+   stattools.KPSSResult
    stattools.leybourne
    stattools.range_unit_root_test
-   stattools.RangeUnitRootTestResult
+   stattools.RURResult
    stattools.zivot_andrews
    stattools.coint
    stattools.CointResult

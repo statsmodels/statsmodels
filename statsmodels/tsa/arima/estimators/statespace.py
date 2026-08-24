@@ -60,7 +60,7 @@ def statespace(endog, exog=None, order=(0, 0, 0),
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
         other_results : Bunch

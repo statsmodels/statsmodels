@@ -399,32 +399,27 @@ def test_twosample_poisson():
 
     # example 1
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald")
+    s1, pv1 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald")
     pv1r = 0.000356
     assert_allclose(pv1, pv1r * 2, rtol=0, atol=5e-6)
     assert_allclose(s1, 3.384913, atol=0, rtol=5e-6)  # regression test
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score")
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score")
     pv2r = 0.000316
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.417402, atol=0, rtol=5e-6)  # regression test
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald-log")
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="wald-log")
     pv2r = 0.000420
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.3393, atol=0, rtol=5e-6)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score-log")
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="score-log")
     pv2r = 0.000200
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.5406, atol=0, rtol=5e-5)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt")
+    s2, pv2 = smr.test_poisson_2indep(count1, n1, count2, n2, method="sqrt")
     pv2r = 0.000285
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-6)
     assert_allclose(s2, 3.445485, atol=0, rtol=5e-6)  # regression test
@@ -433,40 +428,35 @@ def test_twosample_poisson():
     # example2
     # I don't know why it's only 2.5 decimal agreement, rounding?
     count1, n1, count2, n2 = 41, 28010, 15, 19017
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s1, pv1 = smr.test_poisson_2indep(
+    s1, pv1 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="wald", value=1.5
         )
     pv1r = 0.2309
     assert_allclose(pv1, pv1r * 2, rtol=0, atol=5e-4)
     assert_allclose(s1, 0.735447, atol=0, rtol=5e-6)  # regression test
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="score", value=1.5
         )
     pv2r = 0.2398
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.706631, atol=0, rtol=5e-6)  # regression test
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="wald-log", value=1.5
         )
     pv2r = 0.2402
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7056, atol=0, rtol=5e-4)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="score-log", value=1.5
         )
     pv2r = 0.2303
     assert_allclose(pv2, pv2r * 2, rtol=0, atol=5e-4)
     assert_allclose(s2, 0.7380, atol=0, rtol=5e-4)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="sqrt", value=1.5
         )
     pv2r = 0.2499
@@ -477,37 +467,32 @@ def test_twosample_poisson():
     # example 1 onesided
     count1, n1, count2, n2 = 60, 51477.5, 30, 54308.7
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s1, pv1 = smr.test_poisson_2indep(
+    s1, pv1 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="wald", alternative="larger"
         )
     pv1r = 0.000356
     assert_allclose(pv1, pv1r, rtol=0, atol=5e-6)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="score", alternative="larger"
         )
     pv2r = 0.000316
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-6)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="sqrt", alternative="larger"
         )
     pv2r = 0.000285
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-6)
 
     # 'exact-cond', 'cond-midp'
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="exact-cond", value=1, alternative="larger"
         )
     pv2r = 0.000428  # typo in Gu et al, switched pvalues between C and M
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="cond-midp", value=1, alternative="larger"
         )
     pv2r = 0.000310
@@ -528,22 +513,19 @@ def test_twosample_poisson():
     # example2 onesided
     # I don't know why it's only 2.5 decimal agreement, rounding?
     count1, n1, count2, n2 = 41, 28010, 15, 19017
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s1, pv1 = smr.test_poisson_2indep(
+    s1, pv1 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="wald", value=1.5, alternative="larger"
         )
     pv1r = 0.2309
     assert_allclose(pv1, pv1r, rtol=0, atol=5e-4)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="score", value=1.5, alternative="larger"
         )
     pv2r = 0.2398
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="sqrt", value=1.5, alternative="larger"
         )
     pv2r = 0.2499
@@ -551,15 +533,13 @@ def test_twosample_poisson():
 
     # 'exact-cond', 'cond-midp'
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="exact-cond", value=1.5, alternative="larger"
         )
     pv2r = 0.2913
     assert_allclose(pv2, pv2r, rtol=0, atol=5e-4)
 
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        s2, pv2 = smr.test_poisson_2indep(
+    s2, pv2 = smr.test_poisson_2indep(
             count1, n1, count2, n2, method="cond-midp", value=1.5, alternative="larger"
         )
     pv2r = 0.2450
@@ -853,8 +833,7 @@ def test_alternative(case):
     # regression test numbers, but those are close to each other
     alt, meth = case
     count1, n1, count2, n2 = 6, 51.0, 1, 54.0
-    with pytest.warns(FutureWarning, match="Unpacking"):
-        _, pv = smr.test_poisson_2indep(
+    _, pv = smr.test_poisson_2indep(
             count1, n1, count2, n2, method=meth, value=1.2, alternative=alt
         )
     assert_allclose(pv, cases_alt[case], rtol=1e-13)
@@ -1486,3 +1465,63 @@ def test_confint_poisson_alternative(count, exposure, method, alpha, alternative
     elif alternative == "smaller":
         two_sided_ci = (two_sided_ci[0], np.inf)
         assert_allclose(one_sided_ci, two_sided_ci, rtol=1e-12)
+
+
+def test_poisson_invalid_alternative_raises():
+    with pytest.raises(ValueError, match="alternative"):
+        confint_poisson(5, 10, method="wald", alternative="not-a-real-alternative")
+    with pytest.raises(ValueError, match="alternative"):
+        tolerance_int_poisson(
+            5, 10, method="wald", alternative="not-a-real-alternative"
+        )
+    with pytest.raises(ValueError, match="alternative"):
+        confint_quantile_poisson(
+            5, 10, prob=0.9, method="wald", alternative="not-a-real-alternative"
+        )
+
+
+def test_poisson_2indep_invalid_compare_raises():
+    with pytest.raises(ValueError, match="compare"):
+        smr.test_poisson_2indep(5, 10, 8, 10, method="wald", compare="not-a-compare")
+    with pytest.raises(ValueError, match="compare"):
+        etest_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
+    with pytest.raises(ValueError, match="compare"):
+        confint_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
+
+
+def test_power_2indep_invalid_method_var_raises():
+    with pytest.raises(ValueError, match="method_var"):
+        power_poisson_ratio_2indep(
+            rate1=2, rate2=1, nobs1=20, method_var="not-a-method-var"
+        )
+    with pytest.raises(ValueError, match="method_var"):
+        power_equivalence_poisson_2indep(
+            rate1=2, rate2=1, nobs1=20, low=0.5, upp=2,
+            method_var="not-a-method-var",
+        )
+    with pytest.raises(ValueError, match="method_var"):
+        power_negbin_ratio_2indep(
+            rate1=2, rate2=1, nobs1=20, method_var="not-a-method-var"
+        )
+    with pytest.raises(ValueError, match="method_var"):
+        power_equivalence_neginb_2indep(
+            rate1=2, rate2=1, nobs1=20, low=0.5, upp=2,
+            method_var="not-a-method-var",
+        )
+
+
+@pytest.mark.parametrize(
+    "alias,canonical", [("2s", "two-sided"), ("l", "larger"), ("s", "smaller")]
+)
+def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        alias_result = etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative=alias)
+    canonical_result = etest_poisson_2indep(
+        60, 51477.5, 30, 54308.7, alternative=canonical
+    )
+    assert_allclose(alias_result, canonical_result)
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")

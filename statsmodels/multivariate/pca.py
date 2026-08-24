@@ -43,11 +43,11 @@ class PCA:
     data : array_like
         Variables in columns, observations in rows.
     ncomp : int, optional
-        Number of components to return.  If None, returns the as many as the
+        Number of components to return.  If None, returns as many as the
         smaller of the number of rows or columns in data.
     standardize : bool, optional
         Flag indicating to use standardized data with mean 0 and unit
-        variance.  standardized being True implies demean.  Using standardized
+        variance.  standardize being True implies demean.  Using standardized
         data is equivalent to computing principal components from the
         correlation matrix of data.
     demean : bool, optional
@@ -63,11 +63,12 @@ class PCA:
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components.  Setting gls to True requires
-        ncomp to be less than the min of the number of rows or columns.
-    weights : ndarray, optional
+        ncomp to be strictly less than nvar, the number of variables (columns)
+        in data.
+    weights : array_like, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
-    method : str, optional
+    method : {'svd', 'eig', 'nipals'}, optional
         Sets the linear algebra routine used to compute eigenvectors:
 
         * 'svd' uses a singular value decomposition (default).
@@ -75,7 +76,7 @@ class PCA:
         * 'nipals' uses the NIPALS algorithm and can be faster than SVD when
           ncomp is small and nvars is large. See notes about additional changes
           when using NIPALS.
-    missing : {str, None}
+    missing : {'drop-row', 'drop-col', 'drop-min', 'fill-em', None}, optional
         Method for missing data.  Choices are:
 
         * 'drop-row' - drop rows with missing values.
@@ -88,9 +89,9 @@ class PCA:
         Tolerance to use when checking for convergence when using NIPALS.
     max_iter : int, optional
         Maximum iterations when using NIPALS.
-    tol_em : float
+    tol_em : float, optional
         Tolerance to use when checking for convergence of the EM algorithm.
-    max_em_iter : int
+    max_em_iter : int, optional
         Maximum iterations for the EM algorithm.
     svd_full_matrices : bool, optional
         If the 'svd' method is selected, this flag is used to set the parameter
@@ -99,30 +100,30 @@ class PCA:
 
     Attributes
     ----------
-    factors : array or DataFrame
+    factors : ndarray or DataFrame
         nobs by ncomp array of principal components (scores)
-    scores :  array or DataFrame
+    scores : ndarray or DataFrame
         nobs by ncomp array of principal components - identical to factors
-    loadings : array or DataFrame
+    loadings : ndarray or DataFrame
         ncomp by nvar array of principal component loadings for constructing
         the factors
-    coeff : array or DataFrame
+    coeff : ndarray or DataFrame
         nvar by ncomp array of principal component loadings for constructing
         the projections
-    projection : array or DataFrame
+    projection : ndarray or DataFrame
         nobs by var array containing the projection of the data onto the ncomp
         estimated factors
-    rsquare : array or Series
+    rsquare : ndarray or Series
         ncomp array where the element in the ith position is the R-square
         of including the first i principal components.  Note: values are
         calculated on the transformed data, not the original data
-    ic : array or DataFrame
+    ic : ndarray or DataFrame
         ncomp by 3 array containing the Bai and Ng (2002) Information
         criteria.  Each column is a different criteria, and each row
         represents the number of included factors.
-    eigenvals : array or Series
+    eigenvals : ndarray or Series
         nvar array of eigenvalues
-    eigenvecs : array or DataFrame
+    eigenvecs : ndarray or DataFrame
         nvar by nvar array of eigenvectors
     weights : ndarray
         nvar array of weights used to compute the principal components,
@@ -272,12 +273,10 @@ class PCA:
             warnings.warn(warn, ValueWarning, stacklevel=2)
             self._ncomp = min_dim
 
-        self._method = method
         # Workaround to avoid instance methods in __dict__
-        if self._method not in ("eig", "svd", "nipals"):
-            raise ValueError(f"method {method} is not known.")
-        if self._method == "svd":
-            self._svd_full_matrices = True
+        self._method = string_like(
+            method, "method", options=("eig", "svd", "nipals"), lower=False
+        )
 
         self.rows = np.arange(self._nobs)
         self.cols = np.arange(self._nvar)
@@ -683,7 +682,7 @@ estimates are based on only {eff_series} (effective) series."""
 
         Returns
         -------
-        array_like
+        ndarray or DataFrame
             The nobs by nvar array of the projection onto ncomp factors.
         """
         # Projection needs to be scaled/shifted based on inputs
@@ -765,7 +764,7 @@ estimates are based on only {eff_series} (effective) series."""
 
         Returns
         -------
-        matplotlib.figure.Figure
+        Figure
             The handle to the figure.
         """
         import statsmodels.graphics.utils as gutils
@@ -820,7 +819,7 @@ estimates are based on only {eff_series} (effective) series."""
 
         Returns
         -------
-        matplotlib.figure.Figure
+        Figure
             The handle to the figure.
         """
         import statsmodels.graphics.utils as gutils
@@ -856,14 +855,14 @@ def pca(
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         Variables in columns, observations in rows.
     ncomp : int, optional
-        Number of components to return.  If None, returns the as many as the
+        Number of components to return.  If None, returns as many as the
         smaller of the number of rows or columns of data.
     standardize : bool, optional
         Flag indicating to use standardized data with mean 0 and unit
-        variance.  standardized being True implies demean.
+        variance.  standardize being True implies demean.
     demean : bool, optional
         Flag indicating whether to demean data before computing principal
         components.  demean is ignored if standardize is True.
@@ -875,13 +874,13 @@ def pca(
         in the first step principal components are used to estimate residuals,
         and then the inverse residual variance is used as a set of weights to
         estimate the final principal components
-    weights : ndarray, optional
+    weights : array_like, optional
         Series weights to use after transforming data according to standardize
         or demean when computing the principal components.
-    method : str, optional
+    method : {'svd', 'eig', 'nipals'}, optional
         Determines the linear algebra routine used.  'svd', the default,
         uses a singular value decomposition. 'eig' uses an eigenvalue
-        decomposition.
+        decomposition. 'nipals' uses the NIPALS algorithm.
 
     Returns
     -------

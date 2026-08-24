@@ -52,18 +52,18 @@ def arma_order_select_ic(
     ----------
     y : array_like
         Array of time-series data.
-    max_ar : int
+    max_ar : int, optional
         Maximum number of AR lags to use. Default 4.
-    max_ma : int
+    max_ma : int, optional
         Maximum number of MA lags to use. Default 2.
-    ic : str, list
+    ic : str or sequence of str, optional
         Information criteria to report. Either a single string or a list
         of different criteria is possible.
-    trend : str
+    trend : {'n', 'c'}, optional
         The trend to use when fitting the ARMA models.
-    model_kw : dict
+    model_kw : dict, optional
         Keyword arguments to be passed to the ``ARIMA`` model.
-    fit_kw : dict
+    fit_kw : dict, optional
         Keyword arguments to be passed to ``ARIMA.fit``.
 
     Returns

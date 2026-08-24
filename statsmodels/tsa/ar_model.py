@@ -110,12 +110,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    lags : {None, int, list[int]}
+    lags : int, sequence of int, or None
         The number of lags to include in the model if an integer or the
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
-        None excludes all AR lags, and behave identically to 0.
-    trend : {'n', 'c', 't', 'ct', 'ctt'}
+        None excludes all AR lags, and behaves identically to 0.
+    trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
         * 'n' - No trend.
@@ -124,7 +124,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         * 'ct' - Constant and linear time trend.
         * 'ctt' - Constant and linear and quadratic time trends.
 
-    seasonal : bool
+    seasonal : bool, optional
         Flag indicating whether to include seasonal dummies in the model. If
         seasonal is True and trend includes 'c', then the first period
         is excluded from the seasonal terms.
@@ -132,7 +132,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         Exogenous variables to include in the model. Must have the same number
         of observations as endog and should be aligned so that endog[i] is
         regressed on exog[i].
-    hold_back : {None, int}
+    hold_back : int, optional
         Initial observations to exclude from the estimation sample.  If None,
         then hold_back is equal to the maximum lag in the model.  Set to a
         non-zero value to produce comparable models with different lag
@@ -140,15 +140,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
-    period : {None, int}
+    period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
-    deterministic : DeterministicProcess
+    deterministic : DeterministicProcess, optional
         A deterministic process.  If provided, trend and seasonal are ignored.
         A warning is raised if trend is not "n" or seasonal is not False.
 
@@ -334,7 +334,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         hold_back = self._hold_back
         exog_names = []
         endog_names = self.endog_names
-        x, y = lagmat(self.endog, maxlag, original="sep", use_namedtuple=False)
+        _lagmat_result = lagmat(self.endog, maxlag, original="sep")
+        x, y = _lagmat_result.lags, _lagmat_result.leads
         exog_names.extend([endog_names + f".L{lag}" for lag in self._lags])
         if len(self._lags) < maxlag:
             x = x[:, np.asarray(self._lags) - 1]
@@ -391,7 +392,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Parameters
         ----------
-        cov_type : str
+        cov_type : str, optional
             The covariance estimator to use. The most common choices are listed
             below.  Supports all covariance estimators that are available
             in ``OLS.fit``.
@@ -486,7 +487,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The model parameters used to compute the log-likelihood.
 
         Returns
@@ -508,7 +509,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The parameters to use when evaluating the score.
 
         Returns
@@ -527,7 +528,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The model parameters.
 
         Returns
@@ -545,7 +546,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The parameters to use when evaluating the Hessian.
 
         Returns
@@ -615,14 +616,14 @@ class AutoReg(tsa_model.TimeSeriesModel):
             Offset relative to start at which to begin dynamic prediction.
         num_oos : int
             Number of out-of-sample observations to forecast.
-        exog : ndarray
+        exog : array_like or None
             Array containing replacement exog values.
-        exog_oos : ndarray
+        exog_oos : array_like or None
             Array containing out-of-sample exog values.
 
         Returns
         -------
-        Series
+        ndarray or Series
             The predicted values.
         """
         reg = []
@@ -707,10 +708,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
         num_oos : int
             Number of out-of-sample observations, so that the returned size is
             num_oos + (end - start + 1).
-        exog : {ndarray, DataFrame}
+        exog : array_like or None
             Array containing replacement exog values
-        exog_oos : {ndarray, DataFrame}
+        exog_oos : array_like or None
             Containing forecast exog values
+
+        Returns
+        -------
+        ndarray or Series
+            The predicted values.
         """
         hold_back = self._hold_back
         nobs = self.endog.shape[0]
@@ -815,7 +821,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
-        dynamic : {bool, int, str, datetime, Timestamp}, optional
+        dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
             will be used for prediction; starting with this observation and
@@ -823,10 +829,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
-        exog : array_like
+        exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
-        exog_oos : array_like
+        exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous variable.
             Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
@@ -834,7 +840,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
 
         Returns
         -------
-        predictions : {ndarray, Series}
+        predictions : ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
             forecasts.
         """
@@ -935,7 +941,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         The fitted parameters from the AR Model.
     cov_params : ndarray
         The estimated covariance matrix of the model parameters.
-    normalized_cov_params : ndarray
+    normalized_cov_params : ndarray, optional
         The array inv(dot(x.T,x)) where x contains the regressors in the
         model.
     scale : float, optional
@@ -1218,11 +1224,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         Parameters
         ----------
-        lags : int
+        lags : int, optional
             The maximum number of lags to use in the test. Jointly tests that
             all autocorrelations up to and including lag j are zero for
             j = 1, 2, ..., lags. If None, uses min(10, nobs // 5).
-        model_df : int
+        model_df : int, optional
             The model degree of freedom to use when adjusting computing the
             test statistic to account for parameter estimation. If None, uses
             the number of AR lags included in the model.
@@ -1301,7 +1307,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         Parameters
         ----------
-        lags : int
+        lags : int, optional
             The maximum number of lags to use in the test. Jointly tests that
             all squared autocorrelations up to and including lag j are zero for
             j = 1, 2, ..., lags. If None, uses lag=12*(nobs/100)^{1/4}.
@@ -1326,7 +1332,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             lags = min(nobs_effective // 5, 10)
         out = []
         for lag in range(1, lags + 1):
-            res = het_arch(self.resid, nlags=lag, use_namedtuple=False)
+            res = het_arch(self.resid, nlags=lag, result_object=False)
             out.append([res[0], res[1], lag])
         index = pd.RangeIndex(1, lags + 1, name="Lag")
         cols = ["ARCH-LM", "P-value", "DF"]
@@ -1425,7 +1431,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
-        dynamic : {bool, int, str, datetime, Timestamp}, optional
+        dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
             will be used for prediction; starting with this observation and
@@ -1433,10 +1439,10 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
-        exog : array_like
+        exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
-        exog_oos : array_like
+        exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous variable.
             Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
@@ -1470,18 +1476,18 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         Parameters
         ----------
-        steps : {int, str, datetime}, default 1
+        steps : int, str, or datetime, optional
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
-            steps must be an integer.
-        exog : {ndarray, DataFrame}
+            steps must be an integer. The default is 1.
+        exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows
 
         Returns
         -------
-        array_like
+        ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
             forecasts.
 
@@ -1565,18 +1571,18 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         Parameters
         ----------\n%(predict_params)s
-        alpha : {float, None}
+        alpha : float or None, optional
             The tail probability not covered by the confidence interval. Must
             be in (0, 1). Confidence interval is constructed assuming normally
             distributed shocks. If None, figure will not show the confidence
             interval.
-        in_sample : bool
+        in_sample : bool, optional
             Flag indicating whether to include the in-sample period in the
             plot.
-        fig : Figure
+        fig : Figure, optional
             An existing figure handle. If not provided, a new figure is
             created.
-        figsize: tuple[float, float]
+        figsize : tuple of float, optional
             Tuple containing the figure size values.
 
         Returns
@@ -2082,9 +2088,9 @@ def ar_select_order(
         A 1-d endogenous response variable. The dependent variable.
     maxlag : int
         The maximum lag to consider.
-    ic : {'aic', 'hqic', 'bic'}
+    ic : {'aic', 'hqic', 'bic'}, optional
         The information criterion to use in the selection.
-    glob : bool
+    glob : bool, optional
         Flag indicating whether to use a global search across all combinations
         of lags.  In practice, this option is not computationally feasible when
         maxlag is larger than 15 (or perhaps 20) since the global search
@@ -2119,6 +2125,7 @@ def ar_select_order(
     >>> mod.ar_lags
     array([1, 2, 9])
     """
+    ic = string_like(ic, "ic", options=("aic", "hqic", "bic"))
     full_mod = AutoReg(
         endog,
         maxlag,
@@ -2186,8 +2193,7 @@ def ar_select_order(
             lags = lags or 0
             ics.append((lags, compute_ics(res)))
 
-    key_loc = {"aic": 0, "bic": 1, "hqic": 2}[ic]
-    ics = sorted(ics, key=lambda x: x[1][key_loc])
+    ics = sorted(ics, key=lambda x: getattr(x[1], ic))
     selected_model = ics[0][0]
     mod = AutoReg(
         endog,
@@ -2222,12 +2228,12 @@ class AROrderSelectionResults:
         self._trend = trend
         self._seasonal = seasonal
         self._period = period
-        aic = sorted(ics, key=lambda r: r[1][0])
-        self._aic = {key: val[0] for key, val in aic}
-        bic = sorted(ics, key=lambda r: r[1][1])
-        self._bic = {key: val[1] for key, val in bic}
-        hqic = sorted(ics, key=lambda r: r[1][2])
-        self._hqic = {key: val[2] for key, val in hqic}
+        aic = sorted(ics, key=lambda r: r[1].aic)
+        self._aic = {key: val.aic for key, val in aic}
+        bic = sorted(ics, key=lambda r: r[1].bic)
+        self._bic = {key: val.bic for key, val in bic}
+        hqic = sorted(ics, key=lambda r: r[1].hqic)
+        self._hqic = {key: val.hqic for key, val in hqic}
 
     @property
     def model(self) -> AutoReg:
@@ -2256,7 +2262,8 @@ class AROrderSelectionResults:
 
         Returns
         -------
-        dict[tuple, float]
+        dict
+            Mapping from lag specification to the criterion value.
         """
         return self._aic
 
@@ -2267,7 +2274,8 @@ class AROrderSelectionResults:
 
         Returns
         -------
-        dict[tuple, float]
+        dict
+            Mapping from lag specification to the criterion value.
         """
         return self._bic
 
@@ -2278,7 +2286,8 @@ class AROrderSelectionResults:
 
         Returns
         -------
-        dict[tuple, float]
+        dict
+            Mapping from lag specification to the criterion value.
         """
         return self._hqic
 

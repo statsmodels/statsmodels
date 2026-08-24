@@ -25,6 +25,8 @@ from typing import NamedTuple
 import numpy as np
 from scipy import stats
 
+from statsmodels.tools.validation import string_like
+
 
 # copied from regression/stats.utils
 def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
@@ -41,21 +43,20 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     Parameters
     ----------
-    observed : Iterable
+    observed : array_like
         Observed values
-    expected : Iterable
+    expected : array_like
         Expected values
-    lambd : {float, str}
+    lambd : float or {'loglikeratio', 'freeman_tukey', 'pearson', 'modified_loglikeratio', 'cressie_read'}, optional
         * float : exponent `a` for power discrepancy
         * 'loglikeratio': a = 0
         * 'freeman_tukey': a = -0.5
         * 'pearson': a = 1   (standard chisquare test statistic)
         * 'modified_loglikeratio': a = -1
         * 'cressie_read': a = 2/3
-        * 'neyman' : a = -2 (Neyman-modified chisquare, reference from a book?)
-    axis : int
+    axis : int, optional
         axis for observations of one series
-    ddof : int
+    ddof : int, optional
         degrees of freedom correction,
 
     Returns
@@ -121,6 +122,17 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
+    if isinstance(lambd, str):
+        lambd = string_like(
+            lambd,
+            "lambd",
+            options=(
+                "loglikeratio", "freeman_tukey", "pearson",
+                "modified_loglikeratio", "cressie_read",
+            ),
+            lower=False,
+        )
+
     if not isinstance(lambd, str):
         a = lambd
     elif lambd == "loglikeratio":
@@ -131,12 +143,8 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         a = 1
     elif lambd == "modified_loglikeratio":
         a = -1
-    elif lambd == "cressie_read":
+    else:  # lambd == "cressie_read"
         a = 2/3.0
-    else:
-        raise ValueError("lambd has to be a number or one of "
-                         "loglikeratio, freeman_tukey, pearson, "
-                         "modified_loglikeratio or cressie_read")
 
     n = np.sum(o, axis=axis)
     nt = n
@@ -279,14 +287,14 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 
     Parameters
     ----------
-    rvs : ndarray
+    rvs : array_like
         sample data
     distfn : distribution instance
         Discrete distribution function to be tested; needs ``a``, ``b`` and
         ``cdf`` attributes/methods.
     arg : sequence
         parameters of distribution
-    nsupp : int
+    nsupp : int, optional
         number of bins. The algorithm tries to find bins with equal weights.
         depending on the distribution, the actual number of bins can be smaller.
 
@@ -384,7 +392,7 @@ class ChisquareResult(NamedTuple):
         Degrees of freedom of the (potentially noncentral) chisquare
         distribution used to compute ``pvalue``, equal to
         ``n_bins - 1 - ddof``.
-    distr : {"chi2", "ncx2"}
+    distribution : {"chi2", "ncx2"}
         The name of the distribution used to compute ``pvalue``: ``"chi2"``
         when ``value`` is 0, otherwise ``"ncx2"`` (the noncentral chisquare
         distribution).
@@ -393,7 +401,7 @@ class ChisquareResult(NamedTuple):
     chisq: float
     pvalue: float
     df: int
-    distr: str
+    distribution: str
 
 
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
@@ -415,11 +423,11 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     f_exp : array_like, optional
         Expected frequencies. If None, then the observed frequencies are
         assumed to follow a uniform distribution over the bins.
-    value : float
+    value : float, optional
         Value of the effect size under the null hypothesis.
-    ddof : int
+    ddof : int, optional
         Degrees of freedom correction.
-    return_basic : bool
+    return_basic : bool, optional
         If True, return only the chisquare statistic and the p-value as a
         plain tuple. If False, return a :class:`ChisquareResult` NamedTuple
         that additionally reports the degrees of freedom and the name of
@@ -435,7 +443,7 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
 
     If ``return_basic`` is False, a :class:`ChisquareResult` NamedTuple is
     returned instead, with fields ``chisq``, ``pvalue``, ``df``, and
-    ``distr``.
+    ``distribution``.
 
     Notes
     -----
@@ -471,15 +479,17 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     chisq = ((f_obs - f_exp)**2 / f_exp).sum(0)
     if value == 0:
         pvalue = stats.chi2.sf(chisq, df)
-        distr = "chi2"
+        distribution = "chi2"
     else:
         pvalue = stats.ncx2.sf(chisq, df, value**2 * nobs)
-        distr = "ncx2"
+        distribution = "ncx2"
 
     if return_basic:
         return chisq, pvalue
     else:
-        return ChisquareResult(chisq=chisq, pvalue=pvalue, df=df, distr=distr)
+        return ChisquareResult(
+            chisq=chisq, pvalue=pvalue, df=df, distribution=distribution
+        )
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
@@ -495,11 +505,11 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
         statistic. This follows Cohen's definition (sqrt).
     nobs : int or float
         number of observations
-    n_bins : int (or float)
+    n_bins : int or float
         number of bins, or points in the discrete distribution
-    alpha : float in (0,1)
+    alpha : float, optional
         significance level of the test, default alpha=0.05
-    ddof : int
+    ddof : int, optional
         degrees of freedom correction, default 0
 
     Returns
@@ -545,7 +555,7 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
         and broadcast in the other dimensions
         Both probs0 and probs1 are normalized to add to one (in the ``axis``
         dimension).
-    correction : None or tuple
+    correction : None or tuple, optional
         If None, then the effect size is the chisquare statistic divide by
         the number of observations.
         If the correction is a tuple (nobs, df), then the effectsize is
@@ -553,11 +563,11 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
         correction can make the effectsize negative. In that case, the
         effectsize is set to zero.
         Pederson and Johnson (1990) as referenced in McLaren et all. (1994)
-    cohen : bool
+    cohen : bool, optional
         If True, then the square root is returned as in the definition of the
         effect size by Cohen (1977), If False, then the original effect size
         is returned.
-    axis : int
+    axis : int, optional
         If the probability arrays broadcast to more than 1 dimension, then
         this is the axis over which the sums are taken.
 

@@ -9,19 +9,21 @@ License: BSD-3
 """
 
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar, NamedTuple
 
 import numpy as np
 from scipy import stats
 from scipy.stats import rankdata
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
     _tstat_generic,
     _zconfint_generic,
     _zstat_generic,
 )
+from statsmodels.tools.validation import string_like
 
 
 def rankdata_2samp(x1, x2):
@@ -68,8 +70,8 @@ def rankdata_2samp(x1, x2):
     return rank1, rank2, ranki1, ranki2
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ProbSuperiorResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ProbSuperiorResult(LimitedIterationMixin[float]):
     """
     Result of :meth:`RankCompareResult.test_prob_superior`.
 
@@ -84,7 +86,14 @@ class ProbSuperiorResult(NamedTuple):
         distribution was used.
     distribution : {"normal", "t"}
         Name of the reference distribution used for `pvalue`.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -92,8 +101,8 @@ class ProbSuperiorResult(NamedTuple):
     distribution: str
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class TostProbSuperiorResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class TostProbSuperiorResult(LimitedIterationMixin[float]):
     """
     Result of :meth:`RankCompareResult.tost_prob_superior`.
 
@@ -112,7 +121,14 @@ class TostProbSuperiorResult(NamedTuple):
         for the upper threshold test.
     title : str
         Descriptive title of the equivalence test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -121,8 +137,8 @@ class TostProbSuperiorResult(NamedTuple):
     title: str
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class RankCompareResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class RankCompareResult(LimitedIterationMixin[float]):
     """
     Results for rank comparison
 
@@ -131,17 +147,21 @@ class RankCompareResult(NamedTuple):
 
     Parameters
     ----------
-    statistic : float
-        The Brunner-Munzel W statistic.
-    pvalue : float
+    statistic : float or None
+        The Brunner-Munzel W statistic. None if not computed from ranks,
+        e.g., for results returned by `rank_compare_2ordinal`.
+    pvalue : float or None
         p-value based on the t distribution if `use_t` is True, otherwise
-        based on the normal distribution.
-    s1 : float
+        based on the normal distribution. None if not computed, e.g., for
+        results returned by `rank_compare_2ordinal`.
+    s1 : float or None
         Variance-like quantity for sample 1 used in the Brunner-Munzel
-        statistic.
-    s2 : float
+        statistic. None if not computed, e.g., for results returned by
+        `rank_compare_2ordinal`.
+    s2 : float or None
         Variance-like quantity for sample 2 used in the Brunner-Munzel
-        statistic.
+        statistic. None if not computed, e.g., for results returned by
+        `rank_compare_2ordinal`.
     var1 : float
         Estimated variance contribution of sample 1 to `prob1`.
     var2 : float
@@ -150,16 +170,18 @@ class RankCompareResult(NamedTuple):
         Estimated variance of `statistic`.
     var_prob : float
         Estimated variance of `prob1` (and `prob2`).
-    nobs1 : int
+    nobs_1 : int
         Number of observations in sample 1.
-    nobs2 : int
+    nobs_2 : int
         Number of observations in sample 2.
     nobs : int
-        Total number of observations, ``nobs1 + nobs2``.
-    mean1 : float
-        Mean rank of sample 1 in the pooled sample.
-    mean2 : float
-        Mean rank of sample 2 in the pooled sample.
+        Total number of observations, ``nobs_1 + nobs_2``.
+    mean1 : float or None
+        Mean rank of sample 1 in the pooled sample. None if not computed
+        from ranks, e.g., for results returned by `rank_compare_2ordinal`.
+    mean2 : float or None
+        Mean rank of sample 2 in the pooled sample. None if not computed
+        from ranks, e.g., for results returned by `rank_compare_2ordinal`.
     prob1 : float
         Probability that a random draw from sample 1 is stochastically
         larger than a random draw from sample 2,
@@ -177,7 +199,14 @@ class RankCompareResult(NamedTuple):
     use_t : bool
         Whether the t distribution (True) or normal distribution (False)
         is used for `pvalue` and inference in the instance methods.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
@@ -187,8 +216,8 @@ class RankCompareResult(NamedTuple):
     var2: float
     var: float
     var_prob: float
-    nobs1: int
-    nobs2: int
+    nobs_1: int
+    nobs_2: int
     nobs: int
     mean1: float
     mean2: float
@@ -209,13 +238,13 @@ class RankCompareResult(NamedTuple):
 
         Parameters
         ----------
-        value : float
+        value : float, optional
             Value, default 0, shifts the confidence interval,
             e.g., ``value=0.5`` centers the confidence interval at zero.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : str
+        alternative : {"two-sided", "larger", "smaller"}, optional
             The alternative hypothesis, H1, has to be one of the following
 
                * 'two-sided' : H1: ``prob - value`` not equal to 0.
@@ -256,9 +285,9 @@ class RankCompareResult(NamedTuple):
 
         Parameters
         ----------
-        value : float
+        value : float, optional
             Value of the probability under the Null hypothesis.
-        alternative : str
+        alternative : {"two-sided", "larger", "smaller"}, optional
             The alternative hypothesis, H1, has to be one of the following
 
                * 'two-sided' : H1: ``prob - value`` not equal to 0.
@@ -268,7 +297,7 @@ class RankCompareResult(NamedTuple):
         Returns
         -------
         ProbSuperiorResult
-            Namedtuple with the following main attributes
+            Result object with the following main attributes
 
             statistic : float
                 Test statistic for z- or t-test
@@ -325,7 +354,7 @@ class RankCompareResult(NamedTuple):
         Returns
         -------
         TostProbSuperiorResult
-            Namedtuple with the following main attributes
+            Result object with the following main attributes
 
             pvalue : float
                 Pvalue of the equivalence test given by the larger pvalue of
@@ -372,12 +401,12 @@ class RankCompareResult(NamedTuple):
 
         Parameters
         ----------
-        const, slope : float
+        const, slope : float, optional
             Constant and slope for linear (affine) transformation.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence interval, coverage is
             ``1-alpha``
-        alternative : str
+        alternative : {"two-sided", "larger", "smaller"}, optional
             The alternative hypothesis, H1, has to be one of the following
 
                * 'two-sided' : H1: ``prob - value`` not equal to 0.
@@ -418,7 +447,7 @@ class RankCompareResult(NamedTuple):
 
         Parameters
         ----------
-        prob : float in (0, 1)
+        prob : float in (0, 1), optional
             Probability to be converted to Cohen's d effect size.
             If prob is None, then the ``prob1`` attribute is used.
 
@@ -438,9 +467,9 @@ class RankCompareResult(NamedTuple):
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Significance level for confidence intervals. Coverage is 1 - alpha
-        xname : None or list of str
+        xname : list of str, optional
             If None, then each row has a name column with generic names.
             If xname is a list of strings, then it will be included as part
             of those names.
@@ -504,7 +533,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     ----------
     x1, x2 : array_like
         Array of samples, should be one-dimensional.
-    use_t : boolean
+    use_t : bool, optional
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
         If use_t is false, then the normal distribution is used.
@@ -628,7 +657,7 @@ def rank_compare_2indep(x1, x2, use_t=True):
     return RankCompareResult(statistic=wbfn, pvalue=pvalue, s1=S1, s2=S2,
                              var1=var1, var2=var2, var=var,
                              var_prob=var_prob,
-                             nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                             nobs_1=nobs1, nobs_2=nobs2, nobs=nobs,
                              mean1=meanr1, mean2=meanr2,
                              prob1=prob1, prob2=prob2,
                              somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
@@ -656,10 +685,10 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     count2 : array_like
         Counts of the second sample, number of categories and ordering needs
         to be the same as for sample 1.
-    ddof : scalar
+    ddof : int, optional
         Degrees of freedom correction for variance estimation. The default
         ddof=1 corresponds to `rank_compare_2indep`.
-    use_t : bool
+    use_t : bool, optional
         If use_t is true, the t distribution with Welch-Satterthwaite type
         degrees of freedom is used for p-value and confidence interval.
         If use_t is false, then the normal distribution is used.
@@ -710,7 +739,7 @@ def rank_compare_2ordinal(count1, count2, ddof=1, use_t=True):
     res = RankCompareResult(statistic=None, pvalue=None, s1=None, s2=None,
                             var1=var1, var2=var2, var=var,
                             var_prob=var_prob,
-                            nobs1=nobs1, nobs2=nobs2, nobs=nobs,
+                            nobs_1=nobs1, nobs_2=nobs2, nobs=nobs,
                             mean1=None, mean2=None,
                             prob1=prob1, prob2=prob2,
                             somersd1=prob1 * 2 - 1, somersd2=prob2 * 2 - 1,
@@ -738,7 +767,7 @@ class JonckheereTerpstraResult(NamedTuple):
         The alternative hypothesis that was tested.
     nobs : int
         Total number of observations across all samples.
-    k_groups : int
+    n_groups : int
         Number of samples, i.e., the number of ordered groups.
     counts : ndarray
         Number of observations in each sample.
@@ -760,7 +789,7 @@ class JonckheereTerpstraResult(NamedTuple):
     distribution: str
     alternative: str
     nobs: int
-    k_groups: int
+    n_groups: int
     counts: np.ndarray
     mean_null: float
     var_null: float
@@ -783,7 +812,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
         Sequence containing at least two one-dimensional samples of numeric,
         finite observations, in the order implied by the alternative
         hypothesis.
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         Defines the alternative hypothesis. The following options are
         available:
 
@@ -795,7 +824,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
     -------
     res : JonckheereTerpstraResult
         A NamedTuple with the Jonckheere-Terpstra statistic, pvalue and related
-        quantities. The key fieleds are``statistic`` and ``pvalue``. See
+        quantities. The key fields are ``statistic`` and ``pvalue``. See
         :class:`JonckheereTerpstraResult` for the full list of fields.
 
     See Also
@@ -834,10 +863,12 @@ def jonckheere_terpstra(samples, alternative="larger"):
     samples = list(samples)
     if len(samples) < 2:
         raise ValueError("`samples` must contain at least two ordered samples.")
-    if alternative not in ("two-sided", "larger", "smaller"):
-        raise ValueError(
-            "alternative must be one of 'two-sided', 'larger', or 'smaller'."
-        )
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
 
     arrays = []
     for idx, sample in enumerate(samples):
@@ -938,7 +969,7 @@ def jonckheere_terpstra(samples, alternative="larger"):
         distribution="normal",
         alternative=alternative,
         nobs=nobs,
-        k_groups=n_groups,
+        n_groups=n_groups,
         counts=counts,
         mean_null=mean_null,
         var_null=var_s / 4.0,
@@ -1028,9 +1059,9 @@ class RankPlacementsResult(NamedTuple):
 
     Parameters
     ----------
-    n_1 : int
+    nobs_1 : int
         Number of observations in the first sample.
-    n_2 : int
+    nobs_2 : int
         Number of observations in the second sample.
     overall_ranks_pooled : ndarray
         Ranks of the pooled sample.
@@ -1048,8 +1079,8 @@ class RankPlacementsResult(NamedTuple):
         Placements of the second sample in the pooled sample.
     """
 
-    n_1: int
-    n_2: int
+    nobs_1: int
+    nobs_2: int
     overall_ranks_pooled: np.ndarray
     overall_ranks_1: np.ndarray
     overall_ranks_2: np.ndarray
@@ -1093,15 +1124,15 @@ def _compute_rank_placements(x1, x2) -> RankPlacementsResult:
     thought of as measures of the degree of overlap or
     separation between two samples.
     """
-    n_1 = len(x1)
-    n_2 = len(x2)
+    nobs_1 = len(x1)
+    nobs_2 = len(x2)
 
     # Overall ranks for each obs among combined sample
     overall_ranks_pooled = rankdata(
         np.r_[x1, x2], method="average"
     )
-    overall_ranks_1 = overall_ranks_pooled[:n_1]
-    overall_ranks_2 = overall_ranks_pooled[n_1:]
+    overall_ranks_1 = overall_ranks_pooled[:nobs_1]
+    overall_ranks_2 = overall_ranks_pooled[nobs_1:]
     # Within group ranks for each obs
     within_group_ranks_1 = rankdata(x1, method="average")
     within_group_ranks_2 = rankdata(x2, method="average")
@@ -1110,8 +1141,8 @@ def _compute_rank_placements(x1, x2) -> RankPlacementsResult:
     placements_2 = overall_ranks_2 - within_group_ranks_2
 
     return RankPlacementsResult(
-        n_1=n_1,
-        n_2=n_2,
+        nobs_1=nobs_1,
+        nobs_2=nobs_2,
         overall_ranks_pooled=overall_ranks_pooled,
         overall_ranks_1=overall_ranks_1,
         overall_ranks_2=overall_ranks_2,
@@ -1280,10 +1311,12 @@ def samplesize_rank_compare_onetail(
             "Ratio of reference group to treatment group must be"
             " strictly positive."
         )
-    if alternative not in ("two-sided", "larger", "smaller"):
-        raise ValueError(
-            "Alternative must be one of `two-sided`, `larger`, or `smaller`."
-        )
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
 
     # Group 1 is the treatment group, Group 2 is the reference group
     rank_place = _compute_rank_placements(
@@ -1291,8 +1324,8 @@ def samplesize_rank_compare_onetail(
         reference_sample,
     )
     # Extra few bytes of name binding for explicitness & readability
-    n_syn = rank_place.n_1
-    n_ref = rank_place.n_2
+    n_syn = rank_place.nobs_1
+    n_ref = rank_place.nobs_2
     overall_ranks_pooled = rank_place.overall_ranks_pooled
     placements_syn = rank_place.placements_1
     placements_ref = rank_place.placements_2

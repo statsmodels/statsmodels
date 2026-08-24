@@ -74,6 +74,7 @@ from scipy import interpolate, stats
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import string_like
 
 try:
     # Studentized Range in SciPy 1.7+
@@ -622,20 +623,45 @@ class TukeyHSDResults:
 
     Attributes
     ----------
-    reject : array of boolean, True if we reject Null for group pair
-    meandiffs : pairwise mean differences
-    confint : confidence interval for pairwise mean differences
-    std_pairs : standard deviation of pairwise mean differences
-    q_crit : critical value of studentized range statistic at given alpha
-    halfwidths : half widths of simultaneous confidence interval
-    pvalues : adjusted p-values from the HSD test
+    reject : ndarray
+        Boolean array indicating whether the null hypothesis is rejected for
+        each group pair.
+    meandiffs : ndarray
+        Pairwise mean differences.
+    confint : ndarray
+        Confidence intervals for the pairwise mean differences.
+    std_pairs : ndarray
+        Standard deviations of the pairwise mean differences.
+    q_crit : float or ndarray
+        Critical value or values of the studentized range statistic at the
+        specified significance level.
+    halfwidths : ndarray
+        Half widths of the simultaneous confidence intervals. This attribute
+        is available after calling `plot_simultaneous`.
+    pvalues : ndarray
+        Adjusted p-values from the HSD test.
+    reject2 : ndarray
+        Alternative boolean rejection decisions based on the confidence
+        intervals.
+    df_total : float or ndarray
+        Total degrees of freedom used for each pairwise comparison.
+    df_total_hsd : float
+        Total degrees of freedom used for the HSD critical value.
+    variance : float or ndarray
+        Variance estimate or estimates used in the pairwise comparisons.
+    alpha : float
+        Significance level used for the test.
+    group_t : ndarray
+        Treatment group label for each pairwise comparison.
+    group_c : ndarray
+        Control group label for each pairwise comparison.
+    data : ndarray
+        Original response data from the `MultiComparison` instance.
+    groups : ndarray
+        Original group labels from the `MultiComparison` instance.
+    groupsunique : ndarray
+        Unique group labels from the `MultiComparison` instance.
 
-    Notes
-    -----
-    halfwidths is only available after call to `plot_simultaneous`.
-
-    Other attributes contain information about the data from the
-    MultiComparison instance: data, df_total, groups, groupsunique, variance.
     """
 
     def __init__(
@@ -1156,14 +1182,15 @@ class MultiComparison:
             np.column_stack([self.data, self.groupintlab]), useranks=False
         )
 
+        use_var = string_like(
+            use_var, "use_var", options=("unequal", "equal"), lower=False
+        )
         gmeans = self.groupstats.groupmean
         gnobs = self.groupstats.groupnobs
         if use_var == "unequal":
             var_ = self.groupstats.groupvarwithin()
-        elif use_var == "equal":
+        else:  # use_var == "equal"
             var_ = np.var(self.groupstats.groupdemean(), ddof=len(gmeans))
-        else:
-            raise ValueError('use_var should be "unequal" or "equal"')
 
         # res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs,
         # 4:confint, 5:q_crit, 6:df_total, 7:reject2, 8: pvals

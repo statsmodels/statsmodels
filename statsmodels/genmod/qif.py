@@ -29,6 +29,20 @@ class QIFCovariance:
         """
         Returns the term'th basis matrix, which is a dim x dim
         matrix.
+
+        Parameters
+        ----------
+        dim : int
+            The dimension of the basis matrix.
+        term : int
+            The index of the basis matrix to return, ranging from 0
+            to `num_terms` - 1.
+
+        Returns
+        -------
+        ndarray or None
+            The dim x dim basis matrix for `term`, or None if `term`
+            is greater than or equal to `num_terms`.
         """
         raise NotImplementedError
 
@@ -116,11 +130,12 @@ class QIF(base.Model):
     groups : array_like
         Labels indicating which group each observation belongs to.
         Observations in different groups should be independent.
-    family : genmod family
-        An instance of a GLM family.
-    cov_struct : QIFCovariance instance
-        An instance of a QIFCovariance.
-    missing : str
+    family : genmod family, optional
+        An instance of a GLM family. The default is Gaussian.
+    cov_struct : QIFCovariance instance, optional
+        An instance of a QIFCovariance. The default is
+        QIFIndependence.
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised.
@@ -193,15 +208,15 @@ class QIF(base.Model):
         -------
         qif : float
             The value of the QIF objective function.
-        grad : array_like
+        grad : ndarray
             The gradient vector of the QIF objective function.
-        cmat : array_like
+        cmat : ndarray
             The estimated covariance matrix of the estimating
             equations.
-        gn : array_like
+        gn : ndarray
             The moment vector, i.e., the average of the estimating
             equations over the groups.
-        gn_deriv : array_like
+        gn_deriv : ndarray
             The gradients of each estimating equation with
             respect to the parameter.
         """
@@ -336,14 +351,14 @@ class QIF(base.Model):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        groups : array_like or string
+        groups : array_like or str
             Array of grouping labels.  If a string, this is the name
             of a variable in `data` that contains the grouping labels.
         data : array_like
             The data for the model.
-        subset : array_like
+        subset : array_like, optional
             An array_like object of booleans, integers, or index
-            values that indicate the subset of the data to used when
+            values that indicate the subset of the data to use when
             fitting the model.
 
         Returns
@@ -367,14 +382,14 @@ class QIF(base.Model):
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
         start_params : array_like, optional
             Starting values
-        tol : float
+        tol : float, optional
             Convergence threshold for difference of successive
             estimates.
-        gtol : float
+        gtol : float, optional
             Convergence threshold for gradient.
         ddof_scale : int, optional
             Degrees of freedom for the scale parameter
@@ -428,7 +443,15 @@ class QIF(base.Model):
 
 
 class QIFResults(base.LikelihoodModelResults):
-    """Results class for QIF Regression"""
+    """
+    Results class for QIF Regression
+
+    Attributes
+    ----------
+    qif : float
+        The value of the QIF objective function at the estimated
+        parameters.
+    """
     def __init__(self, model, params, cov_params, scale,
                  use_t=False, **kwds):
 
@@ -476,14 +499,14 @@ class QIFResults(base.LikelihoodModelResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is `var_#` where `#`
             is the 0-based index of the regressor. Must match the number of
             parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
 
         Returns

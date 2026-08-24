@@ -28,6 +28,7 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.validation import string_like
 
 
 class OrderedModel(GenericLikelihoodModel):
@@ -69,17 +70,17 @@ class OrderedModel(GenericLikelihoodModel):
         Endogenous or dependent ordered categorical variable with k levels.
         Labels or values of endog will internally transformed to consecutive
         integers, 0, 1, 2, ...
-        pd.Series with ordered Categorical as dtype should be preferred as it
+        Series with ordered Categorical as dtype should be preferred as it
         gives the order relation between the levels.
         If endog is not a pandas Categorical, then categories are
         sorted in lexicographic order (by numpy.unique).
     exog : array_like
         Exogenous, explanatory variables. This should not include an intercept.
-        pd.DataFrame are also accepted.
-        see Notes about constant when using formulas
+        A DataFrame is also accepted.
+        See Notes about constant when using formulas.
     offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    distr : string 'probit' or 'logit', or a distribution instance
+    distr : {"probit", "logit"} or distribution instance, optional
         The default is currently 'probit' which uses the normal distribution
         and corresponds to an ordered Probit model. The distribution is
         assumed to have the main methods of scipy.stats distributions, mainly
@@ -237,7 +238,7 @@ class OrderedModel(GenericLikelihoodModel):
 
         Parameters
         ----------
-        labels : array_like
+        labels : sequence
             The category labels of the ordered endogenous variable.
         k_levels : int, optional
             The number of levels/categories. If None, it is inferred from
@@ -415,7 +416,7 @@ class OrderedModel(GenericLikelihoodModel):
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
-        which : {"prob", "linpred", "cum", "cumprob"}
+        which : {"prob", "linpred", "cum", "cumprob"}, optional
             Determines which statistic is predicted.
 
             - prob : predicted probabilities to be in each choice. 2-dim.
@@ -437,6 +438,10 @@ class OrderedModel(GenericLikelihoodModel):
             one-dimensional.
         """
         # note, exog and offset handling is in linpred
+        which = string_like(
+            which, "which", options=("prob", "linpred", "cum", "cumprob"),
+            lower=False,
+        )
 
         thresh = self.transform_threshold_params(params)
         xb = self._linpred(params, exog=exog, offset=offset)
@@ -448,11 +453,9 @@ class OrderedModel(GenericLikelihoodModel):
         if which == "prob":
             prob = self.prob(low, upp)
             return prob
-        elif which in ["cum", "cumprob"]:
+        else:  # which in ("cum", "cumprob")
             cumprob = self.cdf(upp)
             return cumprob
-        else:
-            raise ValueError("`which` is not available")
 
     def _linpred(self, params, exog=None, offset=None):
         """

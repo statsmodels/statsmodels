@@ -45,6 +45,12 @@ def test_numeric_cutoff():
     assert_almost_equal(expected, results)
 
 
+def test_invalid_string_cutoff_raises():
+    x = [1] * 5 + [2] * 6 + [3] * 8
+    with pytest.raises(ValueError, match="cutoff"):
+        runstest_1samp(x, cutoff="not-a-cutoff")
+
+
 def test_single_run():
     x = [1] * 10
     expected = (-2.8856349, 0.0039062)

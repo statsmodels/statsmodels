@@ -6,6 +6,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -13,6 +14,13 @@ from statsmodels.discrete.discrete_model import Poisson
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
 import statsmodels.stats._diagnostic_other as diao
+
+
+def test_score_test_invalid_hypothesis_raises():
+    # hypothesis is validated before any use of `self`/`model`, so this
+    # is cheap to check without a fitted model.
+    with pytest.raises(ValueError, match="hypothesis"):
+        score_test(None, hypothesis="not-a-hypothesis")
 
 
 class CheckScoreTest:
@@ -28,13 +36,13 @@ class CheckScoreTest:
         wald = res_full.wald_test(restriction, scalar=True)
         # note: need to use method for res_constr for correct df_resid
         res = res_constr.score_test()
-        lm_constr = np.hstack([res.statistic, res.pvalue, res.df])
+        lm_constr = np.hstack([res.statistic, res.pvalue, res.k_constraint])
         res = score_test(res_drop, exog_extra=self.exog_extra)
-        lm_extra = np.hstack([res.statistic, res.pvalue, res.df])
+        lm_extra = np.hstack([res.statistic, res.pvalue, res.k_constraint])
         res = res_full.score_test(
             params_constrained=res_constr.params, k_constraints=res_constr.k_constr
         )
-        lm_full = np.hstack([res.statistic, res.pvalue, res.df])
+        lm_full = np.hstack([res.statistic, res.pvalue, res.k_constraint])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
@@ -48,9 +56,9 @@ class CheckScoreTest:
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
         _res = score_test(res_constr, cov_type=cov_type)
-        lm_constr = np.hstack([_res.statistic, _res.pvalue, _res.df])
+        lm_constr = np.hstack([_res.statistic, _res.pvalue, _res.k_constraint])
         _res = score_test(res_drop, exog_extra=self.exog_extra, cov_type=cov_type)
-        lm_extra = np.hstack([_res.statistic, _res.pvalue, _res.df])
+        lm_extra = np.hstack([_res.statistic, _res.pvalue, _res.k_constraint])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)

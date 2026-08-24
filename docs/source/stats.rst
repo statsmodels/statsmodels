@@ -602,6 +602,7 @@ functions for statistical power
 .. autosummary::
    :toctree: generated
 
+   PowerResult
    power_poisson_ratio_2indep
    PowerRatioResult
    power_equivalence_poisson_2indep
@@ -644,6 +645,20 @@ Status: experimental, API might change, added in 0.12
    CovOnewayResult
    test_cov_spherical
    CovTestResult
+
+.. module:: statsmodels.stats.multivariate_tools
+   :synopsis: Tools for multivariate analysis
+
+.. currentmodule:: statsmodels.stats.multivariate_tools
+
+.. autosummary::
+   :toctree: generated
+
+   cancorr
+   cc_ranktest
+   CCRankTestResult
+   cc_stats
+   CCStatsResult
 
 
 .. _oneway_stats:

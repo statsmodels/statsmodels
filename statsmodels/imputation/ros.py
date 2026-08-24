@@ -44,7 +44,7 @@ def _ros_sort(df, observations, censorship, warn=False):
         observation is left-censored. (i.e., True -> censored,
         False -> uncensored)
 
-    warn : bool
+    warn : bool, optional
         Whether to warn when censored observations larger than the
         maximum uncensored observation are dropped.
 
@@ -269,8 +269,8 @@ def _ros_group_rank(df, dl_idx, censorship):
 
     Returns
     -------
-    ranks : ndarray
-        Array of ranks for the dataset.
+    ranks : Series
+        Series of ranks for the dataset.
     """
 
     # (editted for pandas 0.14 compatibility; see commit 63f162e
@@ -292,7 +292,7 @@ def _ros_plot_pos(row, censorship, cohn):
 
     Parameters
     ----------
-    row : {Series, dict}
+    row : Series or dict
         Full observation (row) from a censored dataset. Requires a
         'rank', 'det_limit_index', and `censorship` column.
 
@@ -338,7 +338,8 @@ def _norm_plot_pos(observations):
 
     Returns
     -------
-    plotting_position : array of floats
+    plotting_position : ndarray
+        Array of standard normal plotting positions.
     """
     ppos, sorted_res = stats.probplot(observations, fit=False)
     return stats.norm.cdf(ppos)
@@ -365,7 +366,8 @@ def plotting_positions(df, censorship, cohn):
 
     Returns
     -------
-    plotting_position : array of float
+    plotting_position : Series
+        Series of plotting positions.
 
     See Also
     --------
@@ -514,10 +516,10 @@ def impute_ros(
 
     Parameters
     ----------
-    observations : str or array-like
+    observations : str or array_like
         Label of the column or the float array of censored observations
 
-    censorship : str
+    censorship : str or array_like
         Label of the column or the bool array of the censorship
         status of the observations.
 
@@ -528,36 +530,40 @@ def impute_ros(
         If `observations` and `censorship` are labels, this is the
         DataFrame that contains those columns.
 
-    min_uncensored : int (default is 2)
+    min_uncensored : int, optional
         The minimum number of uncensored values required before ROS
         can be used to impute the censored observations. When this
         criterion is not met, simple substitution is used instead.
+        Default is 2.
 
-    max_fraction_censored : float (default is 0.8)
+    max_fraction_censored : float, optional
         The maximum fraction of censored data below which ROS can be
         used to impute the censored observations. When this fraction is
-        exceeded, simple substituion is used instead.
+        exceeded, simple substituion is used instead. Default is 0.8.
 
-    substitution_fraction : float (default is 0.5)
+    substitution_fraction : float, optional
         The fraction of the detection limit to be used during simple
-        substitution of the censored values.
+        substitution of the censored values. Default is 0.5.
 
-    transform_in : callable (default is np.log)
+    transform_in : callable, optional
         Transformation to be applied to the values prior to fitting a
-        line to the plotting positions vs. uncensored values.
+        line to the plotting positions vs. uncensored values. Default
+        is ``np.log``.
 
-    transform_out : callable (default is np.exp)
+    transform_out : callable, optional
         Transformation to be applied to the imputed censored values
-        estimated from the previously computed best-fit line.
+        estimated from the previously computed best-fit line. Default
+        is ``np.exp``.
 
-    as_array : bool (default is True)
+    as_array : bool, optional
         When True, a numpy array of the imputed observations is
         returned. Otherwise, a modified copy of the original dataframe
-        with all of the intermediate calculations is returned.
+        with all of the intermediate calculations is returned. Default
+        is True.
 
     Returns
     -------
-    imputed : {ndarray, DataFrame}
+    imputed : ndarray or DataFrame
         The final observations where the censored values have either been
         imputed through ROS or substituted as a fraction of the
         detection limit.

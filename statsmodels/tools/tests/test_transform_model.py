@@ -5,9 +5,9 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
@@ -48,7 +48,8 @@ def test_standardize1():
     assert_allclose(xs5[:, 1:], xs1, rtol=1e-13, atol=1e-20)
 
 
-def test_standardize_ols():
+@pytest.mark.parametrize("ddof", [1, 5])
+def test_standardize_ols(ddof):
 
     rs = np.random.RandomState(123)
     nobs = 20
@@ -57,7 +58,7 @@ def test_standardize_ols():
     endog = exog.sum(1) + rs.randn(nobs)
 
     res2 = OLS(endog, exog).fit()
-    transf = StandardizeTransform(exog)
+    transf = StandardizeTransform(exog, ddof=ddof)
     exog_st = transf(exog)
     res1 = OLS(endog, exog_st).fit()
     params = transf.transform_params(res1.params)

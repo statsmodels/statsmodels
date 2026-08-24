@@ -824,6 +824,14 @@ def test_comparison_types():
     assert_allclose(news.total_impacts, 0)
 
 
+def test_invalid_comparison_type():
+    endog = dta["infl"].copy()
+    mod = sarimax.SARIMAX(endog)
+    res = mod.smooth([0.5, 1.0])
+    with pytest.raises(ValueError, match="comparison_type"):
+        res.news(endog, comparison_type="not-a-comparison-type")
+
+
 @pytest.mark.parametrize("use_periods", [True, False])
 def test_start_end_dates(use_periods):
     endog = dta["infl"].copy()
@@ -1303,4 +1311,126 @@ def test_mixed_revisions(revisions_details_start):
     assert_allclose(
         news.impacts["impact of revisions"],
         revision_details.groupby(level=[2, 3]).sum()["impact"]
+    )
+
+
+def test_news_summary_methods():
+    # Regression test: summary_revisions() used a block `.iloc[:, 2:-1] =`
+    # assignment to write formatted strings back into a float-dtype slice,
+    # which pandas >= 2.2 rejects as a lossy set. It had no test coverage at
+    # all (unlike summary_news, which already used the safe per-column
+    # assignment pattern this was fixed to match), so the break went
+    # unnoticed. This test exercises every summary/detail method on
+    # NewsResults and checks their content against independently computable
+    # values, not just that they run without raising.
+    y = np.log(dta[["realgdp", "realcons",
+                    "realinv", "cpi"]]).diff().iloc[1:] * 100
+    y.iloc[-1, 0] = np.nan
+
+    y_revised = y.copy()
+    revisions = {
+        ("2009Q2", "realgdp"): 1.1,
+        ("2009Q3", "realcons"): 0.5,
+        ("2009Q2", "realinv"): -0.3,
+        ("2009Q2", "cpi"): 0.2,
+        ("2009Q3", "cpi"): 0.2,
+    }
+    for key, diff in revisions.items():
+        y_revised.loc[key] += diff
+
+    mod = varmax.VARMAX(y, trend="n")
+    ar_coeff = {"realgdp": 0.9, "realcons": 0.8, "realinv": 0.7, "cpi": 0.6}
+    params = np.r_[np.diag(list(ar_coeff.values())).flatten(),
+                   [1, 0, 1, 0, 0, 1, 0, 0, 0, 1]]
+    res = mod.smooth(params)
+    res_revised = res.apply(y_revised)
+    news = res_revised.news(res, comparison_type="previous", tolerance=-1)
+
+    # get_impacts (no grouping) must sum to the same total as total_impacts,
+    # which is independently verified elsewhere in this module.
+    assert_allclose(
+        news.get_impacts().to_numpy().sum(),
+        news.total_impacts.to_numpy().sum(),
+    )
+
+    # get_details combines news + revision details; row count is exactly
+    # the sum of the two source tables it concatenates.
+    details = news.get_details()
+    assert_equal(
+        len(details),
+        len(news.data_updates) + len(news.revision_details_by_impact),
+    )
+
+    # summary_revisions: check the rendered table reproduces the known
+    # revision amounts and previous values, not just that it doesn't raise.
+    revisions_table = news.summary_revisions()
+    rendered = str(revisions_table)
+    for (date, variable), diff in revisions.items():
+        assert_(f"{diff:.2f}" in rendered)
+        prev_value = y.loc[date, variable]
+        assert_(f"{prev_value:.2f}" in rendered)
+
+    # summary_news: unchanged from before (already covered), no updates in
+    # this fixture so nothing further to check content-wise here
+    assert_(str(news.summary_news()).strip() != "")
+    assert_equal(len(news.data_updates), 0)
+
+    # summary_impacts: for every impacted variable, "estimate (new)" must
+    # equal "estimate (prev)" + "total impact" -- and "total impact" must
+    # match total_impacts, already independently verified above via
+    # get_impacts()/total_impacts.
+    impacts_text = str(news.summary_impacts())
+    for variable in news.total_impacts.columns:
+        total_impact = news.total_impacts.loc["2009Q3", variable]
+        prev = news.prev_impacted_forecasts.loc["2009Q3", variable]
+        new = news.post_impacted_forecasts.loc["2009Q3", variable]
+        assert_allclose(new - prev, total_impact, atol=1e-10)
+        assert_(f"{total_impact:.2f}" in impacts_text)
+        assert_(f"{prev:.2f}" in impacts_text)
+        assert_(f"{new:.2f}" in impacts_text)
+
+    # impacted_variable= must narrow the table to just that variable's row
+    cpi_text = str(news.summary_impacts(impacted_variable="cpi"))
+    assert_(f'{news.total_impacts.loc["2009Q3", "cpi"]:.2f}' in cpi_text)
+    for variable in ("realgdp", "realcons", "realinv"):
+        assert_(variable not in cpi_text)
+
+    # summary_details(source="revisions"): grouping by impacted variable
+    # must reproduce the same total-impact values as summary_impacts,
+    # since this dataset has revisions only (no updates)
+    details_text = str(news.summary_details(source="revisions"))
+    for variable in news.total_impacts.columns:
+        total_impact = news.total_impacts.loc["2009Q3", variable]
+        assert_(f"{total_impact:.2f}" in details_text)
+
+    # summary(): combines the header metadata with the same impacts table
+    full_text = str(news.summary())
+    assert_("# of revisions" in full_text)
+    assert_("# of new datapoints" in full_text)
+    # 5 raw revisions, 0 new datapoints, matching this fixture's setup
+    header = full_text.split("Impacts", maxsplit=1)[0]
+    assert_(str(len(revisions)) in header)
+    assert_(str(len(news.data_updates)) in header)
+    for variable in news.total_impacts.columns:
+        total_impact = news.total_impacts.loc["2009Q3", variable]
+        assert_(f"{total_impact:.2f}" in full_text)
+
+    # summary_details' source parameter: "news" is the default (already
+    # exercised above); "revisions" is a separate code path.
+    assert_(str(news.summary_details(source="revisions")).strip() != "")
+    with pytest.raises(ValueError, match="source"):
+        news.summary_details(source="invalid")
+
+    # revision_details_by_impact aggregates by (impact date, impacted
+    # variable): the two cpi revisions (2009Q2 and 2009Q3) both land on the
+    # same impact date/variable and are combined into one "all prior
+    # revisions" row, so there are 4 rows (one per impacted variable) rather
+    # than 5 (one per raw revision). Since there are no updates in this
+    # comparison, summing by impacted variable must reproduce total_impacts
+    # exactly.
+    rev_by_impact = news.revision_details_by_impact
+    assert_equal(len(rev_by_impact), 4)
+    by_var = rev_by_impact.reset_index().groupby("impacted variable")["impact"].sum()
+    assert_allclose(
+        by_var.sort_index(), news.total_impacts.loc["2009Q3"].sort_index()
     )

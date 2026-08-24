@@ -337,7 +337,7 @@ def get_prediction_index(
     index_generated : bool, optional
         Whether the model's underlying index was internally generated
         rather than taken directly from `endog` / `exog`. Default is None.
-    data : statsmodels.base.data.ModelData
+    data : statsmodels.base.data.ModelData, optional
         The model's data object, used to obtain row labels and to set the
         `predict_start`, `predict_end`, and `predict_dates` attributes.
 
@@ -487,7 +487,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         ----------
         dates : array_like, optional
             An array like object containing dates.
-        freq : str, tuple, datetime.timedelta, DateOffset or None, optional
+        freq : str, tuple, datetime.timedelta, or DateOffset, optional
             A frequency specification for either `dates` or the row labels from
             the endog / exog data.
 

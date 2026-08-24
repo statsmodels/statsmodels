@@ -2018,6 +2018,77 @@ def test_invalid_time_varying():
         )
 
 
+def test_time_varying_regression_differencing():
+    # GH 8725: with time-varying regression and differencing integrated in
+    # the state vector (so that there are no ARMA states), the design matrix
+    # was missing the differencing-state columns and the differencing states
+    # were incorrectly coupled into the regression state
+    nobs = 100
+    rng = np.random.default_rng(1234)
+    exog = rng.normal(size=nobs)
+    endog = 0.7 * exog + rng.normal(size=nobs)
+
+    mod = sarimax.SARIMAX(
+        endog,
+        exog=exog,
+        order=(0, 1, 0),
+        time_varying_regression=True,
+        mle_regression=False,
+    )
+
+    # The design matrix must contain the differencing state column along
+    # with the time-varying exogenous column
+    design = mod.ssm["design"]
+    assert_equal(design.shape, (1, 2, nobs))
+    assert_almost_equal(design[0, 0], np.ones(nobs))
+    assert_almost_equal(design[0, 1], exog)
+
+    # The differencing state must not feed into the regression state
+    assert_almost_equal(mod.ssm["transition"], np.eye(2))
+
+    # The model can now be fit, and the time-varying coefficient should
+    # estimate the static regression slope of the differenced data
+    d_endog = np.diff(endog)
+    d_exog = np.diff(exog)
+    slope = np.dot(d_exog, d_endog) / np.dot(d_exog, d_exog)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = mod.fit(disp=-1)
+    assert_allclose(res.smoothed_state[1].mean(), slope, atol=0.2)
+
+
+def test_time_varying_regression_seasonal_differencing():
+    # GH 8725: same failure mode as test_time_varying_regression_differencing
+    # but with seasonal differencing states
+    nobs = 80
+    rng = np.random.default_rng(1234)
+    exog = rng.normal(size=nobs)
+    endog = 0.5 * exog + rng.normal(size=nobs)
+
+    mod = sarimax.SARIMAX(
+        endog,
+        exog=exog,
+        order=(0, 0, 0),
+        seasonal_order=(0, 1, 0, 4),
+        time_varying_regression=True,
+        mle_regression=False,
+    )
+
+    design = mod.ssm["design"]
+    assert_equal(design.shape, (1, 5, nobs))
+    assert_almost_equal(design[0, -1], exog)
+
+    # The seasonal differencing states must not feed into the regression
+    # state
+    transition = mod.ssm["transition"]
+    assert_almost_equal(transition[-1], [0, 0, 0, 0, 1])
+    assert_(np.all(transition[:4, 4] == 0))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        mod.fit(disp=-1)
+
+
 def test_manual_stationary_initialization():
     endog = results_sarimax.wpi1_data
 
@@ -3069,3 +3140,31 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_model_latex_names_matches_model_names_structure():
+    rs = np.random.RandomState(19)
+    endog = rs.standard_normal(60).cumsum()
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1), trend="ct")
+
+    names = mod.model_names
+    latex_names = mod.model_latex_names
+
+    assert set(names.keys()) == set(latex_names.keys())
+    for key in names:
+        if names[key] is None:
+            assert latex_names[key] is None
+        else:
+            assert len(names[key]) == len(latex_names[key])
+            assert len(set(latex_names[key])) == len(latex_names[key])
+
+    # ar/ma coefficients get a distinct latex (greek) rendering; the
+    # "intercept"/"drift" trend labels are shared verbatim between the two
+    assert names["trend"] == ["intercept", "drift"]
+    assert latex_names["trend"] == ["intercept", "drift"]
+    assert names["ar"] == ["ar.L1"]
+    assert latex_names["ar"] == [r"$\phi_1$"]
+    assert names["ma"] == ["ma.L1"]
+    assert latex_names["ma"] == [r"$\theta_1$"]
+    assert names["variance"] == ["sigma2"]
+    assert latex_names["variance"] == [r"$\sigma_\zeta^2$"]

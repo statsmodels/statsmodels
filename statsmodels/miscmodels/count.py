@@ -33,6 +33,7 @@ from scipy import stats
 from scipy.special import factorial
 
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.validation import array_like
 
 
 def maxabs(arr1, arr2):
@@ -126,9 +127,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
     exog : array_like, optional
         A nobs x k array where `nobs` is the number of observations and
         `k` is the number of regressors.
-    offset : array_like, optional
+    offset : ndarray, optional
         Offset added to the linear predictor before computing the mean.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
         nan checking is done. If 'drop', any observations with nans are
         dropped. If 'raise', an error is raised. Default is 'none'.
@@ -138,6 +139,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
     def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
+        offset = array_like(offset, "offset", optional=True)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column
@@ -199,9 +201,9 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         A nobs x k array where `nobs` is the number of observations and
         `k` is the number of regressors. If None, a column of ones is
         used.
-    offset : array_like, optional
+    offset : ndarray, optional
         Offset added to the linear predictor before computing the mean.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
         nan checking is done. If 'drop', any observations with nans are
         dropped. If 'raise', an error is raised. Default is 'none'.

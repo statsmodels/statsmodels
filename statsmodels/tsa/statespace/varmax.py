@@ -17,6 +17,7 @@ from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.vector_ar import var_model
 
 from .initialization import Initialization
@@ -46,7 +47,7 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
@@ -82,7 +83,7 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : str{'n','c','t','ct'} or iterable
+    trend : {'n', 'c', 't', 'ct'} or iterable
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
@@ -153,9 +154,12 @@ class VARMAX(MLEModel):
         self.k_ma = int(order[1])
 
         # Check for valid model
-        if error_cov_type not in ["diagonal", "unstructured"]:
-            raise ValueError("Invalid error covariance matrix type"
-                             " specification.")
+        self.error_cov_type = string_like(
+            error_cov_type,
+            "error_cov_type",
+            options=("diagonal", "unstructured"),
+            lower=False,
+        )
         if self.k_ar == 0 and self.k_ma == 0:
             raise ValueError("Invalid VARMAX(p,q) specification; at least one"
                              " p,q must be greater than zero.")

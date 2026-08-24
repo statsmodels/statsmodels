@@ -57,7 +57,7 @@ class TestEffectsizeBinom:
         # cls.count2, cls.nobs2, cls.count1, cls.nobs1 = df_12y.values.T
         cls.count1, cls.nobs1, cls.count2, cls.nobs2 = df_12y.values.T
 
-    def test_effectsize(self):
+    def test_effectsize_risk_ratio(self):
         res2 = self.results
         dta = (self.count1, self.nobs1, self.count2, self.nobs2)
         # count1, nobs1, count2, nobs2 = dta
@@ -66,17 +66,67 @@ class TestEffectsizeBinom:
         assert_allclose(eff, res2.y_rd, rtol=1e-13)
         assert_allclose(var_eff, res2.v_rd, rtol=1e-13)
 
-        eff, var_eff = effectsize_2proportions(*dta, statistic="rr")
+        eff, var_eff = effectsize_2proportions(*dta, statistic="risk-ratio")
         assert_allclose(eff, res2.y_rr, rtol=1e-13)
         assert_allclose(var_eff, res2.v_rr, rtol=1e-13)
+        with pytest.warns(FutureWarning, match="statistic='rr' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="rr")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
 
-        eff, var_eff = effectsize_2proportions(*dta, statistic="or")
+    def test_effectsize_odds_ratio(self):
+        res2 = self.results
+        dta = (self.count1, self.nobs1, self.count2, self.nobs2)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="odds-ratio")
         assert_allclose(eff, res2.y_or, rtol=1e-13)
         assert_allclose(var_eff, res2.v_or, rtol=1e-13)
 
-        eff, var_eff = effectsize_2proportions(*dta, statistic="as")
+        with pytest.warns(FutureWarning, match="statistic='or' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="or")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
+
+    def test_effectsize_arcsin(self):
+        res2 = self.results
+        dta = (self.count1, self.nobs1, self.count2, self.nobs2)
+
+        eff, var_eff = effectsize_2proportions(*dta, statistic="arcsin")
         assert_allclose(eff, res2.y_as, rtol=1e-13)
         assert_allclose(var_eff, res2.v_as, rtol=1e-13)
+
+        with pytest.warns(FutureWarning, match="statistic='as' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="as")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
+
+        with pytest.warns(FutureWarning, match="statistic='arcsine' is a deprecated"):
+            eff_alt, _ = effectsize_2proportions(*dta, statistic="arcsine")
+        assert_allclose(eff, eff_alt, rtol=1e-13)
+
+
+def test_effectsize_2proportions_clip_default_zero_kwds():
+    # zero_correction="clip" must use the documented default clip bounds
+    # when zero_kwds is not provided
+    count1 = np.array([0, 5, 10])
+    nobs1 = np.array([20, 20, 20])
+    count2 = np.array([3, 20, 8])
+    nobs2 = np.array([20, 20, 20])
+
+    eff, var_eff = effectsize_2proportions(
+        count1, nobs1, count2, nobs2, statistic="odds-ratio", zero_correction="clip"
+    )
+    assert np.all(np.isfinite(eff))
+    assert np.all(np.isfinite(var_eff))
+
+    eff2, var_eff2 = effectsize_2proportions(
+        count1,
+        nobs1,
+        count2,
+        nobs2,
+        statistic="odds-ratio",
+        zero_correction="clip",
+        zero_kwds={"clip_bounds": (1e-6, 1 - 1e-6)},
+    )
+    assert_allclose(eff, eff2, rtol=1e-13)
+    assert_allclose(var_eff, var_eff2, rtol=1e-13)
 
 
 class TestEffSmdMeta:
@@ -274,8 +324,7 @@ class TestMetaK1:
         # assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)  # percent in R
         # assert_allclose(res3.h2, res.H2, atol=1e-10)
         th = res3.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th.statistic, th.pvalue
         df = th.df
         assert_allclose(pv, res.QEp, atol=1e-10)
         assert_allclose(q, res.QE, atol=1e-10)
@@ -301,8 +350,7 @@ class TestMetaK1:
         assert_allclose(res3.i2, res.I2 / 100, atol=1e-10)
         assert_allclose(res3.h2, res.H2, atol=1e-10)
         th = res3.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th
         df = th.df
         assert_allclose(pv, res.QEp, atol=1e-10)
         assert_allclose(q, res.QE, atol=1e-10)
@@ -340,8 +388,7 @@ class TestMetaK1:
         assert_allclose(ci[2][1], res_fes.ci_ub, atol=1e-10)
 
         th = res3.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th
         df = th.df
         assert_allclose(pv, res_dls.QEp, atol=1e-10)
         assert_allclose(q, res_dls.QE, atol=1e-10)
@@ -356,7 +403,7 @@ class TestMetaBinOR:
         cls.res2 = res2 = results_meta.results_or_dl_hk
         cls.dta = (res2.event_e, res2.n_e, res2.event_c, res2.n_c)
 
-        eff, var_eff = effectsize_2proportions(*cls.dta, statistic="or")
+        eff, var_eff = effectsize_2proportions(*cls.dta, statistic="odds-ratio")
         res1 = combine_effects(eff, var_eff, method_re="chi2", use_t=True)
         cls.eff = eff
         cls.var_eff = var_eff
@@ -380,8 +427,7 @@ class TestMetaBinOR:
         assert_allclose(res1.sd_eff_w_re_hksj, res2.seTE_random, rtol=1e-13)
 
         th = res1.test_homogeneity()
-        with pytest.warns(FutureWarning, match="Unpacking"):
-            q, pv = th
+        q, pv = th
         df = th.df
         assert_allclose(q, res2.Q, rtol=1e-13)
         assert_allclose(pv, res2.pval_Q, rtol=1e-13)
@@ -430,3 +476,47 @@ class TestMetaBinOR:
         assert fig_out is fig
         with pytest.raises(TypeError, match="unexpected keyword"):
             res1.plot_forest(junk=5, use_t=False)
+
+
+def test_conf_int_samples():
+    from scipy import stats as sp_stats
+
+    from statsmodels.tools.sm_exceptions import InvalidTestWarning
+
+    rs = np.random.RandomState(918273)
+    k = 8
+    eff = rs.standard_normal(k)
+    var_eff = rs.uniform(0.5, 1.5, k)
+    res = combine_effects(eff, var_eff, method_re="dl")
+
+    ci_low, ci_upp = res.conf_int_samples(alpha=0.05, use_t=False)
+    crit = sp_stats.norm.isf(0.025)
+    assert_allclose(ci_low, res.eff - crit * res.sd_eff)
+    assert_allclose(ci_upp, res.eff + crit * res.sd_eff)
+    assert res.ci_sample_distr == "normal"
+
+    # cached: a second call with the same (alpha, use_t) returns the
+    # exact cached arrays rather than recomputing
+    ci_low2, ci_upp2 = res.conf_int_samples(alpha=0.05, use_t=False)
+    assert ci_low2 is ci_low
+    assert ci_upp2 is ci_upp
+
+    # use_t=True with nobs given uses the t distribution
+    nobs = 12
+    ci_low_t, ci_upp_t = res.conf_int_samples(alpha=0.05, use_t=True, nobs=nobs)
+    crit_t = sp_stats.t.isf(0.025, nobs - 1)
+    assert_allclose(ci_low_t, res.eff - crit_t * res.sd_eff)
+    assert res.ci_sample_distr == "t"
+
+    # use_t=True without nobs or ci_func falls back to normal with a warning
+    with pytest.warns(InvalidTestWarning, match="requires `nobs`"):
+        ci_low_fb, _ = res.conf_int_samples(alpha=0.1, use_t=True)
+    crit_fb = sp_stats.norm.isf(0.05)
+    assert_allclose(ci_low_fb, res.eff - crit_fb * res.sd_eff)
+    assert res.ci_sample_distr == "normal"
+
+    # a user-provided ci_func is used directly
+    sentinel = (np.zeros(k), np.ones(k))
+    ci_custom = res.conf_int_samples(alpha=0.2, ci_func=lambda alpha, **kw: sentinel)
+    assert ci_custom is sentinel
+    assert res.ci_sample_distr == "ci_func"

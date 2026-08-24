@@ -516,7 +516,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
@@ -636,7 +636,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             Parameters at which to create the initial probabilities.
         regime_transition : ndarray, optional
             The regime transition matrix. If not provided, calculated using
@@ -710,7 +710,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             Array of parameters at which to construct the transition matrix.
         exog_tvtp : array_like, optional
             Array of exogenous or lagged variables to use in calculating
@@ -764,7 +764,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             Parameters at which to form predictions
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
@@ -844,7 +844,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        predict : array_like
+        predict : ndarray
             Array of predictions conditional on current, and possibly past,
             regimes
         """
@@ -903,10 +903,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         cov_type : str, optional
             See `fit` for a description of covariance matrix types
             for results object.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             See `fit` for a description of required keywords for alternative
             covariance estimators
-        return_raw : bool,optional
+        return_raw : bool, optional
             Whether or not to return only the raw Hamilton filter output or a
             full results object. Default is to return a full results object.
         results_class : type, optional
@@ -1028,10 +1028,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         cov_type : str, optional
             See `fit` for a description of covariance matrix types
             for results object.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             See `fit` for a description of required keywords for alternative
             covariance estimators
-        return_raw : bool,optional
+        return_raw : bool, optional
             Whether or not to return only the raw Hamilton filter output or a
             full results object. Default is to return a full results object.
         results_class : type, optional
@@ -1209,7 +1209,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         cov_type : str, optional
             The type of covariance matrix estimator to use. Can be one of
             'approx', 'opg', 'robust', or 'none'. Default is 'approx'.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             Keywords for alternative covariance estimators
         method : str, optional
             The `method` determines which solver from `scipy.optimize`
@@ -1253,9 +1253,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         search_iter : int, optional
             Number of initial EM iteration steps used to improve each of the
             search parameter repetitions.
-        search_scale : float or array, optional.
+        search_scale : float or array_like, optional
             Scale of variates for random start parameter search.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -1356,7 +1356,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         cov_type : str, optional
             The type of covariance matrix estimator to use. Can be one of
             'approx', 'opg', 'robust', or 'none'. Default is 'none'.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             Keywords for alternative covariance estimators
         maxiter : int, optional
             The maximum number of iterations to perform.
@@ -1509,7 +1509,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         ----------
         reps : int
             Number of random permutations to try.
-        start_params : ndarray, optional
+        start_params : array_like, optional
             Starting parameter vector. If not given, class-level start
             parameters are used.
         transformed : bool, optional
@@ -1517,11 +1517,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             are already transformed. Default is True.
         em_iter : int, optional
             Number of EM iterations to apply to each random permutation.
-        scale : array or float, optional
+        scale : float or array_like, optional
             Scale of variates for random start parameter search. Can be given
             as an array of length equal to the number of parameters or as a
             single scalar.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -1636,7 +1636,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
 
@@ -1698,7 +1698,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
 
         Notes
@@ -1851,7 +1851,7 @@ class KimSmootherResults(HamiltonFilterResults):
 
     Parameters
     ----------
-    model : MarkovSwitchingModel
+    model : MarkovSwitching instance
         The model object.
     result : dict
         A dictionary containing two keys: 'smoothed_joint_probabilities' and
@@ -1861,10 +1861,12 @@ class KimSmootherResults(HamiltonFilterResults):
     ----------
     nobs : int
         Number of observations.
-    k_endog : int
-        The dimension of the observation series.
-    k_states : int
-        The dimension of the unobserved state process.
+    k_regimes : int
+        The number of unobserved regimes.
+    smoothed_joint_probabilities : ndarray
+        Smoothed joint probabilities at each time period.
+    smoothed_marginal_probabilities : ndarray
+        Smoothed marginal probabilities at each time period.
     """
 
     def __init__(self, model, result):
@@ -1888,7 +1890,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : str
+    cov_type : str, optional
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 
@@ -2236,7 +2238,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             Integer of the start observation. Default is 0.
         title : str, optional
             The title of the summary table.
-        model_name : str
+        model_name : str or list of str, optional
             The name of the model used. Default is to use model class name.
         display_params : bool, optional
             Whether or not to display tables of estimated parameters. Default

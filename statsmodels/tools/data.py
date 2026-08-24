@@ -71,9 +71,9 @@ def interpret_data(data, colnames=None, rownames=None):
     ----------
     data : array_like
         Data to convert.
-    colnames : sequence or None
+    colnames : sequence or None, optional
         Column names. May be part of the data structure.
-    rownames : sequence or None
+    rownames : sequence or None, optional
         Row names. May be part of the data structure.
 
     Returns
@@ -173,12 +173,12 @@ def _as_array_with_name(obj, default_name):
     obj : array_like
         Array, or pandas Series, to convert to an array.
     default_name : str
-        The default name to return in case the object isn't a pd.Series or has
+        The default name to return in case the object isn't a Series or has
         no name attribute.
 
     Returns
     -------
-    array_and_name : tuple[np.ndarray, str]
+    array_and_name : tuple (ndarray, str)
         The data cast to an ndarray and the series name or None.
 
     """

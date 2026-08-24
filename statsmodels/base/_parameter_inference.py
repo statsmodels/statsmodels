@@ -4,16 +4,18 @@ Created on Wed May 30 15:11:09 2018
 @author: josef
 """
 
-from typing import NamedTuple
+from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import compat_2tuple_unpack
+from statsmodels.stats.base import LimitedIterationMixin
+from statsmodels.tools.validation import string_like
 
 
-@compat_2tuple_unpack("statistic", "pvalue")
-class ScoreTestResult(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class ScoreTestResult(LimitedIterationMixin[float]):
     """
     Result of :func:`_lm_robust` and :func:`score_test`.
 
@@ -27,16 +29,23 @@ class ScoreTestResult(NamedTuple):
         p-value(s) of the test, based on `distribution`.
     distribution : {"chi2", "norm"}
         Name of the reference distribution used for `pvalue`.
-    df : int or None
-        Degrees of freedom of the chi-square distribution, equal to the
-        number of constraints. Only set for the joint hypothesis test
-        (``distribution="chi2"``), otherwise None.
+    k_constraint : int or None, optional
+        Number of constraints tested, equal to the degrees of freedom of
+        the chi-square distribution. Only set for the joint hypothesis
+        test (``distribution="chi2"``), otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
     """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
 
     statistic: float
     pvalue: float
     distribution: str
-    df: int | None = None
+    k_constraint: int | None = None
 
 
 # this is a copy from stats._diagnostic_other to avoid circular imports
@@ -108,7 +117,7 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
     return ScoreTestResult(
         statistic=lm_stat,
         pvalue=pval,
-        df=k_constraints,
+        k_constraint=k_constraints,
         distribution="chi2",
     )
 
@@ -124,6 +133,8 @@ def score_test(
     r_matrix=None,
     scale=None,
     observed=True,
+    *,
+    return_object: bool | None = None,
 ):
     """score test for restrictions or for omitted variables
 
@@ -152,60 +163,73 @@ def score_test(
 
     Parameters
     ----------
-    exog_extra : None or array_like
+    exog_extra : array_like, tuple of array_like, or None, optional
         Explanatory variables that are jointly tested for inclusion in the
-        model, i.e., omitted variables.
-    params_constrained : array_like
+        model, i.e., omitted variables. A 2-tuple of array_like can be
+        given to jointly test the addition of exogenous regressors to
+        both the mean and a second (e.g., precision or scale) model
+        component.
+    params_constrained : array_like, optional
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
         variables.
-    hypothesis : str, 'joint' (default) or 'separate'
+    hypothesis : {'joint', 'separate'}, optional
         If hypothesis is 'joint', then the chisquare test results for the
         joint hypothesis that all constraints hold is returned.
-        If hypothesis is 'joint', then z-test results for each constraint
+        If hypothesis is 'separate', then z-test results for each constraint
         is returned.
         This is currently only implemented for cov_type="nonrobust".
-    cov_type : str
+    cov_type : str, optional
         Warning: only partially implemented so far, currently only "nonrobust"
         and "HC0" are supported.
         If cov_type is None, then the cov_type specified in fit for the Wald
         tests is used.
         If the cov_type argument is not None, then it will be used instead of
         the Wald cov_type given in fit.
-    cov_kwds : dict or None
+    cov_kwds : dict, optional
         Keyword arguments for the specified `cov_type`.
-    k_constraints : int or None
+    k_constraints : int or None, optional
         Number of constraints that were used in the estimation of params
         restricted relative to the number of exog in the model.
         This must be provided if no exog_extra are given. If exog_extra is
         not None, then k_constraints is assumed to be zero if it is None.
-    r_matrix : array_like or None
+    r_matrix : array_like or None, optional
         Restriction matrix for the constraints. If not provided, it is
         constructed from `self.constraints` or from `exog_extra`.
-    scale : float or None
+    scale : float or None, optional
         Optional scale to use in the score and Hessian calculation, for
         example for the results of a fit_constrained estimation with fixed
         scale.
-    observed : bool
+    observed : bool, optional
         If True, then the observed Hessian is used in calculating the
         covariance matrix of the score. If false then the expected
         information matrix is used. This currently only applies to GLM where
         EIM is available.
         Warning: This option might still change.
+    return_object : bool, optional
+        No longer used. ``score_test`` always returns a ``ScoreTestResult``,
+        which unpacks as the ``(statistic, pvalue)`` tuple this function has
+        always returned, with ``k_constraint`` (and ``distribution``)
+        available as attributes.
+
+        .. deprecated:: 0.15.0
+
+            This parameter has no effect and will be removed in a future
+            release.
 
     Returns
     -------
     ScoreTestResult
         See :class:`ScoreTestResult` for a description of the attributes.
         For ``hypothesis="joint"``, `statistic` and `pvalue` are the
-        chisquare test and `df` is the number of constraints. For
+        chisquare test and `k_constraint` is the number of constraints. For
         ``hypothesis="separate"``, `statistic` and `pvalue` are arrays
-        with one z-test per constraint, and `df` is None.
+        with one z-test per constraint, and `k_constraint` is None.
 
     Notes
     -----
     Status: experimental, several options are not implemented yet or are not
-    verified yet. Currently available ptions might also still change.
+    verified yet. Currently available options might also still change.
 
     cov_type is 'nonrobust':
 
@@ -218,6 +242,9 @@ def score_test(
     The covariance matrix of the score is the simple empirical covariance of
     score_obs without degrees of freedom correction.
     """
+    hypothesis = string_like(
+        hypothesis, "hypothesis", options=("joint", "separate"), lower=False
+    )
     # TODO: we are computing unnecessary things for cov_type nonrobust
     if hasattr(self, "_results"):
         # use numpy if we have wrapper, not relevant if method
@@ -333,10 +360,10 @@ def score_test(
         return ScoreTestResult(
             statistic=chi2stat,
             pvalue=pval,
-            df=k_constraints,
+            k_constraint=k_constraints,
             distribution="chi2",
         )
-    elif hypothesis == "separate":
+    else:  # hypothesis == "separate"
         diff = score
         bse = np.sqrt(np.diag(cov_score_test))
         stat = diff / bse
@@ -346,8 +373,6 @@ def score_test(
             pvalue=pval,
             distribution="norm",
         )
-    else:
-        raise NotImplementedError('only hypothesis "joint" is available')
 
 
 def _scorehess_extra(

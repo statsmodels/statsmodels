@@ -121,11 +121,11 @@ class ExponentialSmoothing(TimeSeriesModel):
     ----------
     endog : array_like
         The time series to model.
-    trend : {"add", "mul", "additive", "multiplicative", None}, optional
+    trend : {"add", "mul", "additive", "multiplicative"} or None, optional
         Type of trend component.
     damped_trend : bool, optional
         Should the trend component be damped.
-    seasonal : {"add", "mul", "additive", "multiplicative", None}, optional
+    seasonal : {"add", "mul", "additive", "multiplicative"} or None, optional
         Type of seasonal component.
     seasonal_periods : int, optional
         The number of periods in a complete seasonal cycle, e.g., 4 for
@@ -170,7 +170,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     use_boxcox : {True, False, 'log', float}, optional
         Should the Box-Cox transform be applied to the data first? If 'log'
         then apply the log. If float then use the value as lambda.
-    bounds : dict[str, tuple[float, float]], optional
+    bounds : dict of str to tuple of float, optional
         A dictionary containing bounds for the parameters in the model,
         excluding the initial values if estimated. The keys of the dictionary
         are the variable names, e.g., smoothing_level or initial_slope.
@@ -184,7 +184,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     freq : str, optional
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
@@ -472,13 +472,13 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : dict
             The fitted model parameters.
-        start : int, str, or datetime
+        start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting, ie.,
             the first forecast is start. Can also be a date string to
             parse or a datetime type.
-        end : int, str, or datetime
+        end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, ie.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type.
@@ -960,7 +960,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "bh") and "least_squares" (also "ls"). basinhopping tries multiple
             starting values in an attempt to find a global minimizer in
             non-convex problems, and so is slower than the others.
-        minimize_kwargs : dict[str, Any]
+        minimize_kwargs : dict, optional
             A dictionary of keyword arguments passed to SciPy's minimize
             function if method is one of "L-BFGS-B", "TNC",
             "SLSQP", "Powell", or "trust-constr", or SciPy's basinhopping
@@ -1100,20 +1100,20 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Parameters
         ----------
-        initial_level : {float, None}
+        initial_level : float, optional
             The initial value used for the level component.
-        initial_trend : {float, None}
+        initial_trend : float, optional
             The initial value used for the trend component.
-        force : bool
+        force : bool, optional
             Force the calculation even if initial values exist.
 
         Returns
         -------
         initial_level : float
             The initial value used for the level component.
-        initial_trend : {float, None}
+        initial_trend : float or None
             The initial value used for the trend component.
-        initial_seasons : list
+        initial_seasons : list of float
             The initial values used for the seasonal components.
 
         Notes
@@ -1499,7 +1499,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
             the value is set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood.
-        start_params : ndarray, optional
+        start_params : array_like, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data.
@@ -1509,13 +1509,13 @@ class SimpleExpSmoothing(ExponentialSmoothing):
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
-        method : str, default "L-BFGS-B"
+        method : str, optional
             The minimizer used. Valid options are "L-BFGS-B" (default), "TNC",
             "SLSQP", "Powell", "trust-constr", "basinhopping" (also "bh") and
             "least_squares" (also "ls"). basinhopping tries multiple starting
             values in an attempt to find a global minimizer in non-convex
             problems, and so is slower than the others.
-        minimize_kwargs : dict[str, Any]
+        minimize_kwargs : dict, optional
             A dictionary of keyword arguments passed to SciPy's minimize
             function if method is one of "L-BFGS-B" (default), "TNC",
             "SLSQP", "Powell", or "trust-constr", or SciPy's basinhopping
@@ -1659,7 +1659,7 @@ class Holt(ExponentialSmoothing):
             set then this value will be used as the value.
         optimized : bool, optional
             Estimate model parameters by maximizing the log-likelihood.
-        start_params : ndarray, optional
+        start_params : array_like, optional
             Starting values to used when optimizing the fit.  If not provided,
             starting values are determined using a combination of grid search
             and reasonable values based on the initial values of the data.
@@ -1669,13 +1669,13 @@ class Holt(ExponentialSmoothing):
         remove_bias : bool, optional
             Remove bias from forecast values and fitted values by enforcing
             that the average residual is equal to zero.
-        method : str, default "L-BFGS-B"
+        method : str, optional
             The minimizer used. Valid options are "L-BFGS-B" (default), "TNC",
             "SLSQP", "Powell", "trust-constr", "basinhopping" (also "bh") and
             "least_squares" (also "ls"). basinhopping tries multiple starting
             values in an attempt to find a global minimizer in non-convex
             problems, and so is slower than the others.
-        minimize_kwargs : dict[str, Any]
+        minimize_kwargs : dict, optional
             A dictionary of keyword arguments passed to SciPy's minimize
             function if method is one of "L-BFGS-B" (default), "TNC",
             "SLSQP", "Powell", or "trust-constr", or SciPy's basinhopping

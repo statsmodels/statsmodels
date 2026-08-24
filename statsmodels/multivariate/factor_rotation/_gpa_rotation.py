@@ -23,6 +23,8 @@ Psychometrika, 67, 7-19.
 
 import numpy as np
 
+from statsmodels.tools.validation import string_like
+
 
 def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         rotation_method="orthogonal", tol=1e-5):
@@ -38,35 +40,36 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
 
     Parameters
     ----------
-    A : numpy matrix
+    A : ndarray
         non rotated factors
-    T : numpy matrix (default identity matrix)
-        initial guess of rotation matrix
-    ff : function (default None)
+    T : ndarray, optional
+        initial guess of rotation matrix. The default is the identity
+        matrix.
+    ff : callable, optional
         criterion :math:`\phi` to optimize. Should have A, T, L as keyword
         arguments
         and mapping to a float. Only used (and required) if vgQ is not
         provided.
-    vgQ : function (default None)
+    vgQ : callable, optional
         criterion :math:`\phi` to optimize and its derivative. Should have
          A, T, L as keyword arguments and mapping to a tuple containing a
         float and vector. Can be omitted if ff is provided.
-    max_tries : int (default 501)
+    max_tries : int, optional
         maximum number of iterations
-    rotation_method : str
+    rotation_method : {'orthogonal', 'oblique'}, optional
         should be one of {orthogonal, oblique}
-    tol : float
+    tol : float, optional
         stop criterion, algorithm stops if Frobenius norm of gradient is
         smaller then tol
 
     Returns
     -------
-    Lh : numpy matrix
+    Lh : ndarray
         rotated factors
-    Phi : numpy matrix
+    Phi : ndarray
         Factor correlation matrix. Equals the identity matrix if
         `rotation_method` is 'orthogonal'.
-    Th : numpy matrix
+    Th : ndarray
         rotation matrix satisfying :math:`Lh = A(Th^*)^{-1}` (or
         :math:`Lh = A Th` for orthogonal rotations)
     table : list
@@ -74,9 +77,12 @@ def GPA(A, ff=None, vgQ=None, T=None, max_tries=501,
         step size for each iteration, used for monitoring convergence
     """
     # pre processing
-    if rotation_method not in ["orthogonal", "oblique"]:
-        raise ValueError("rotation_method should be one of "
-                         "{orthogonal, oblique}")
+    rotation_method = string_like(
+        rotation_method,
+        "rotation_method",
+        options=("orthogonal", "oblique"),
+        lower=False,
+    )
     if vgQ is None:
         if ff is None:
             raise ValueError("ff should be provided if vgQ is not")
@@ -166,14 +172,14 @@ def Gf(T, ff):
 
     Parameters
     ----------
-    T : numpy matrix
+    T : ndarray
         matrix at which the gradient is evaluated
-    ff : function
+    ff : callable
         criterion function of a single matrix argument, mapping to a float
 
     Returns
     -------
-    numpy matrix
+    ndarray
         Numerical approximation of the gradient of `ff` at `T`.
     """
     k = T.shape[0]
@@ -199,25 +205,28 @@ def rotateA(A, T, rotation_method="orthogonal"):
 
     Parameters
     ----------
-    A : numpy matrix
+    A : ndarray
         non rotated factors
-    T : numpy matrix
+    T : ndarray
         rotation matrix
-    rotation_method : str
+    rotation_method : {'orthogonal', 'oblique'}, optional
         should be one of {orthogonal, oblique}
 
     Returns
     -------
-    numpy matrix
+    ndarray
         The rotated factors :math:`L`.
     """
+    rotation_method = string_like(
+        rotation_method,
+        "rotation_method",
+        options=("orthogonal", "oblique"),
+        lower=False,
+    )
     if rotation_method == "orthogonal":
         L = A.dot(T)
-    elif rotation_method == "oblique":
+    else:  # rotation_method == "oblique"
         L = A.dot(np.linalg.inv(T.T))
-    else:  # i.e., if rotation_method == 'oblique':
-        raise ValueError("rotation_method should be one of "
-                         "{orthogonal, oblique}")
     return L
 
 
@@ -274,24 +283,24 @@ def oblimin_objective(L=None, A=None, T=None, gamma=0,
 
     Parameters
     ----------
-    L : numpy matrix (default None)
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
-    gamma : float (default 0)
-        a parameter
-    rotation_method : str
+    gamma : float, optional
+        a parameter. The default is 0.
+    rotation_method : {'orthogonal', 'oblique'}, optional
         should be one of {orthogonal, oblique}
-    return_gradient : bool (default True)
+    return_gradient : bool, optional
         toggles return of gradient
 
     Returns
     -------
     phi : float
         Value of the objective function.
-    Gphi : numpy matrix
+    Gphi : ndarray
         Gradient of the objective function, only returned if
         `return_gradient` is True.
     """
@@ -348,22 +357,22 @@ def orthomax_objective(L=None, A=None, T=None, gamma=0, return_gradient=True):
 
     Parameters
     ----------
-    L : numpy matrix (default None)
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
-    gamma : float (default 0)
-        a parameter
-    return_gradient : bool (default True)
+    gamma : float, optional
+        a parameter, between 0 and 1. The default is 0.
+    return_gradient : bool, optional
         toggles return of gradient
 
     Returns
     -------
     phi : float
         Value of the objective function.
-    Gphi : numpy matrix
+    Gphi : ndarray
         Gradient of the objective function, only returned if
         `return_gradient` is True.
     """
@@ -438,24 +447,24 @@ def CF_objective(L=None, A=None, T=None, kappa=0,
 
     Parameters
     ----------
-    L : numpy matrix (default None)
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
-    kappa : float (default 0)
-        a parameter
-    rotation_method : str
+    kappa : float, optional
+        a parameter, between 0 and 1. The default is 0.
+    rotation_method : {'orthogonal', 'oblique'}, optional
         should be one of {orthogonal, oblique}
-    return_gradient : bool (default True)
+    return_gradient : bool, optional
         toggles return of gradient
 
     Returns
     -------
     phi : float
         Value of the objective function.
-    Gphi : numpy matrix
+    Gphi : ndarray
         Gradient of the objective function, only returned if
         `return_gradient` is True.
     """
@@ -515,22 +524,22 @@ def vgQ_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
 
     Parameters
     ----------
-    H : numpy matrix
+    H : ndarray
         target matrix
-    L : numpy matrix (default None)
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
-    rotation_method : str
+    rotation_method : {'orthogonal', 'oblique'}, optional
         should be one of {orthogonal, oblique}
 
     Returns
     -------
     q : float
         Value of the objective function.
-    Gq : numpy matrix
+    Gq : ndarray
         Gradient of the objective function.
     """
     if L is None:
@@ -566,15 +575,15 @@ def ff_target(H, L=None, A=None, T=None, rotation_method="orthogonal"):
 
     Parameters
     ----------
-    H : numpy matrix
+    H : ndarray
         target matrix
-    L : numpy matrix (default None)
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
-    rotation_method : str
+    rotation_method : {'orthogonal', 'oblique'}, optional
         should be one of {orthogonal, oblique}
 
     Returns
@@ -616,22 +625,23 @@ def vgQ_partial_target(H, W=None, L=None, A=None, T=None):
 
     Parameters
     ----------
-    H : numpy matrix
+    H : ndarray
         target matrix
-    W : numpy matrix (default matrix with equal weight one for all entries)
-        matrix with weights, entries can either be one or zero
-    L : numpy matrix (default None)
+    W : ndarray, optional
+        matrix with weights, entries can either be one or zero. The
+        default is a matrix of ones, i.e., equal weight for all entries.
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
 
     Returns
     -------
     q : float
         Value of the objective function.
-    Gq : numpy matrix
+    Gq : ndarray
         Gradient of the objective function.
     """
     if W is None:
@@ -666,15 +676,16 @@ def ff_partial_target(H, W=None, L=None, A=None, T=None):
 
     Parameters
     ----------
-    H : numpy matrix
+    H : ndarray
         target matrix
-    W : numpy matrix (default matrix with equal weight one for all entries)
-        matrix with weights, entries can either be one or zero
-    L : numpy matrix (default None)
+    W : ndarray, optional
+        matrix with weights, entries can either be one or zero. The
+        default is a matrix of ones, i.e., equal weight for all entries.
+    L : ndarray, optional
         rotated factors, i.e., :math:`L=A(T^*)^{-1}=AT`
-    A : numpy matrix (default None)
+    A : ndarray, optional
         non rotated factors
-    T : numpy matrix (default None)
+    T : ndarray, optional
         rotation matrix
 
     Returns

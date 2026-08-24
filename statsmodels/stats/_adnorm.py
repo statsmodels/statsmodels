@@ -20,23 +20,23 @@ def anderson_statistic(x, dist="norm", fit=True, params=(), axis=0):
     ----------
     x : array_like
         The data to test.
-    dist : {'norm', callable}
+    dist : {'norm', callable}, optional
         The assumed distribution under the null of test statistic.
-    fit : bool
+    fit : bool, optional
         If True, then the distribution parameters are estimated.
         Currently only for 1d data x, except in case dist='norm'.
-    params : tuple
+    params : tuple, optional
         The optional distribution parameters if fit is False.
-    axis : int
+    axis : int, optional
         If dist is 'norm' or fit is False, then data can be an n-dimensional
         and axis specifies the axis of a variable.
 
     Returns
     -------
-    {float, ndarray}
+    float or ndarray
         The Anderson-Darling statistic.
     """
-    x = array_like(x, "x", ndim=None)
+    x = array_like(x, "x", mindim=None)
     fit = bool_like(fit, "fit")
     axis = int_like(axis, "axis")
     y = np.sort(x, axis=axis)
@@ -82,14 +82,14 @@ def normal_ad(x, axis=0):
     ----------
     x : array_like
         The data array.
-    axis : int
+    axis : int, optional
         The axis to perform the test along.
 
     Returns
     -------
-    ad2 : float
+    ad2 : float or ndarray
         Anderson Darling test statistic.
-    pval : float
+    pval : float or ndarray
         The pvalue for hypothesis that the data comes from a normal
         distribution with unknown mean and variance.
 

@@ -49,7 +49,7 @@ from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     PerfectSeparationWarning,
 )
-from statsmodels.tools.validation import float_like
+from statsmodels.tools.validation import float_like, string_like
 
 # need import in module instead of lazily to copy `__doc__`
 from . import families
@@ -80,25 +80,25 @@ class GLM(base.LikelihoodModel):
         is the number of regressors. An intercept is not included by default
         and should be added by the user (models specified using a formula
         include an intercept by default). See `statsmodels.tools.add_constant`.
-    family : family class instance
+    family : family class instance, optional
         The default is Gaussian.  To specify the binomial distribution, use
         family = sm.families.Binomial().
         Each family can take a link instance as an argument.  See
         sm.families.family for more information.
-    offset : array_like or None
+    offset : array_like, optional
         An offset to be included in the model.  If provided, must be
         an array whose length is the number of rows in exog.
-    exposure : array_like or None
+    exposure : array_like, optional
         Log(exposure) will be added to the linear prediction in the model.
         Exposure is only valid if the log link is used. If provided, it must be
         an array with the same length as endog.
-    freq_weights : array_like
+    freq_weights : array_like, optional
         1d array of frequency weights. The default is None. If None is selected
         or a blank value, then the algorithm will replace with an array of 1's
         with length equal to the endog.
         WARNING: Using weights is not verified yet for all possible options
         and results, see Notes.
-    var_weights : array_like
+    var_weights : array_like, optional
         1d array of variance (analytic) weights. The default is None. If None
         is selected or a blank value, then the algorithm will replace with an
         array of 1's with length equal to the endog.
@@ -119,7 +119,7 @@ class GLM(base.LikelihoodModel):
         See Notes.  Note that `endog` is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
         as well.
-    exposure : array_like
+    exposure : ndarray or None
         Include ln(exposure) in model with coefficient constrained to 1. Can
         only be used if the link is the logarithm function.
     exog : ndarray
@@ -155,13 +155,13 @@ class GLM(base.LikelihoodModel):
     normalized_cov_params : ndarray
         The p x p normalized covariance of the design / exogenous data.
         This is approximately equal to (X.T X)^(-1)
-    offset : array_like
+    offset : ndarray or None
         Include offset in model with coefficient constrained to 1.
     scale : float
         The estimate of the scale / dispersion of the model fit.  Only
         available after fit is called.  See GLM.fit and GLM.estimate_scale
         for more information.
-    scaletype : str
+    scaletype : str, float, or None
         The scaling used for fitting the model.  This is only available after
         fit is called.  The default is None.  See GLM.fit for more information.
     weights : ndarray
@@ -495,7 +495,7 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             Parameter at which score is evaluated.
-        scale : None or float
+        scale : float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
@@ -518,14 +518,14 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             Parameter at which score is evaluated.
-        scale : None or float
+        scale : float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
 
         Returns
         -------
-        score : ndarray_1d
+        score : ndarray, 1d
             The first derivative of the log-likelihood function calculated as
             the sum of `score_obs`
         """
@@ -543,14 +543,14 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             parameter at which score is evaluated
-        scale : None or float
+        scale : float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
 
         Returns
         -------
-        score_factor : ndarray_1d
+        score_factor : ndarray, 1d
             A 1d weight vector used in the calculation of the score_obs.
             The score_obs are obtained by `score_factor[:, None] * exog`
         """
@@ -576,11 +576,11 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             parameter at which Hessian is evaluated
-        scale : None or float
+        scale : float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is returned. If false then the
             expected information matrix is returned.
 
@@ -634,11 +634,11 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             parameter at which Hessian is evaluated
-        scale : None or float
+        scale : float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is returned (default).
             If False, then the expected information matrix is returned.
 
@@ -734,10 +734,10 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             parameter at which score is evaluated
-        exog : ndarray or None
+        exog : ndarray, optional
             Explanatory variables at which derivative are computed.
             If None, then the estimation exog is used.
-        transform : str
+        transform : str, optional
             The marginal effects transformation.
         offset, exposure : None
             Not yet implemented.
@@ -794,14 +794,14 @@ class GLM(base.LikelihoodModel):
         ----------
         params : ndarray
             parameter at which score is evaluated
-        scale : None or float
+        scale : float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray, 2d
             The derivative of the score_obs with respect to endog. This
             can is given by `score_factor0[:, None] * exog` where
             `score_factor0` is the score_factor without the residual.
@@ -836,15 +836,15 @@ class GLM(base.LikelihoodModel):
             estimated parameter of the restricted model. This can be the
             parameter estimate for the current when testing for omitted
             variables.
-        k_constraints : int or None
+        k_constraints : int, optional
             Number of constraints that were used in the estimation of params
             restricted relative to the number of exog in the model.
             This must be provided if no exog_extra are given. If exog_extra is
             not None, then k_constraints is assumed to be zero if it is None.
-        exog_extra : None or array_like
+        exog_extra : array_like, optional
             Explanatory variables that are jointly tested for inclusion in the
             model, i.e., omitted variables.
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is used in calculating the
             covariance matrix of the score. If false then the expected
             information matrix is used.
@@ -945,16 +945,13 @@ class GLM(base.LikelihoodModel):
             return np.array(self.scaletype)
 
         if isinstance(self.scaletype, str):
-            if self.scaletype.lower() == "x2":
+            scaletype = string_like(self.scaletype, "scaletype", options=("x2", "dev"))
+            if scaletype == "x2":
                 return self._estimate_x2_scale(mu)
-            elif self.scaletype.lower() == "dev":
+            else:  # scaletype == "dev"
                 return self.family.deviance(
                     self.endog, mu, self.var_weights, self.freq_weights, 1.0
                 ) / (self.df_resid)
-            else:
-                raise ValueError(
-                    f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
-                )
         else:
             raise ValueError(
                 f"Scale {self.scaletype} with type {type(self.scaletype)} not understood"
@@ -973,9 +970,9 @@ class GLM(base.LikelihoodModel):
         ----------
         mu : array_like
             Fitted mean response variable
-        method : str, defaults to 'brentq'
+        method : str, optional
             Scipy optimizer used to solve the Pearson equation. Only brentq
-            currently supported.
+            currently supported. The default is 'brentq'.
         low : float, optional
             Low end of the bracketing interval [a,b] to be used in the search
             for the power. Defaults to 1.01.
@@ -1026,7 +1023,7 @@ class GLM(base.LikelihoodModel):
             function.  See notes for details.
         offset : array_like, optional
             Offset values.  See notes for details.
-        which : 'mean', 'linear', 'var'(optional)
+        which : {'mean', 'linear', 'var_unscaled'}, optional
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
@@ -1037,7 +1034,8 @@ class GLM(base.LikelihoodModel):
 
         Returns
         -------
-        An array of fitted values
+        ndarray
+            An array of fitted values
 
         Notes
         -----
@@ -1068,6 +1066,9 @@ class GLM(base.LikelihoodModel):
         else:
             exposure = np.log(np.asarray(exposure))
 
+        which = string_like(
+            which, "which", options=("mean", "linear", "var_unscaled"), lower=False
+        )
         if exog is None:
             exog = self.exog
 
@@ -1077,12 +1078,10 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(linpred)
         elif which == "linear":
             return linpred
-        elif which == "var_unscaled":
+        else:  # which == "var_unscaled"
             mean = self.family.fitted(linpred)
             var_ = self.family.variance(mean)
             return var_
-        else:
-            raise ValueError(f'The which value "{which}" is not recognized')
 
     def get_distribution(
         self,
@@ -1101,17 +1100,17 @@ class GLM(base.LikelihoodModel):
         ----------
         params : array_like
             The model parameters.
-        scale : scalar
+        scale : scalar, optional
             The scale parameter.
-        exog : array_like
+        exog : array_like, optional
             The predictor variable matrix.
-        offset : array_like or None
+        offset : array_like, optional
             Offset variable for predicted mean.
-        exposure : array_like or None
+        exposure : array_like, optional
             Log(exposure) will be added to the linear prediction.
-        var_weights : array_like
-            1d array of variance (analytic) weights. The default is None.
-        n_trials : int
+        var_weights : array_like, optional
+            1d array of variance (analytic) weights. The default is 1.
+        n_trials : int, optional
             Number of trials for the binomial distribution. The default is 1
             which corresponds to a Bernoulli random variable.
 
@@ -1186,24 +1185,24 @@ class GLM(base.LikelihoodModel):
             initial mean will be calculated as ``np.dot(exog, start_params)``.
         maxiter : int, optional
             Default is 100.
-        method : str
+        method : str, optional
             Default is 'IRLS' for iteratively reweighted least squares.
             Otherwise gradient optimization is used.
-        tol : float
+        tol : float, optional
             Convergence tolerance.  Default is 1e-8.
-        scale : str or float, optional
+        scale : {'X2', 'dev'} or float, optional
             `scale` can be 'X2', 'dev', or a float
             The default value is None, which uses `X2` for Gamma, Gaussian,
             and Inverse Gaussian.
             `X2` is Pearson's chi-square divided by `df_resid`.
             The default is 1 for the Binomial and Poisson families.
             `dev` is the deviance divided by df_resid
-        cov_type : str
+        cov_type : str, optional
             The type of parameter estimate covariance matrix to compute.
-        cov_kwds : dict-like
+        cov_kwds : dict-like, optional
             Extra arguments for calculating the covariance of the parameter
             estimates.
-        use_t : bool
+        use_t : bool, optional
             If True, the Student t-distribution is used for inference.
         full_output : bool, optional
             Set to True to have all available output in the Results object's
@@ -1213,7 +1212,7 @@ class GLM(base.LikelihoodModel):
         disp : bool, optional
             Set to True to print convergence messages.  Not used if method is
             IRLS.
-        max_start_irls : int
+        max_start_irls : int, optional
             The number of IRLS iterations used to obtain starting
             values for gradient optimization.  Only relevant if
             `method` is set to something other than 'IRLS'.
@@ -1253,9 +1252,7 @@ class GLM(base.LikelihoodModel):
         as `results_wls` attribute.
         """
         if isinstance(scale, str):
-            scale = scale.lower()
-            if scale not in ("x2", "dev"):
-                raise ValueError("scale must be either X2 or dev when a string.")
+            scale = string_like(scale, "scale", options=("x2", "dev"))
         elif scale is not None:
             # GH-6627
             try:
@@ -1520,20 +1517,24 @@ class GLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : {'elastic_net'}
-            Only the `elastic_net` approach is currently implemented.
-        alpha : scalar or array_like
+        method : {'elastic_net', 'l1_slsqp'}, optional
+            'elastic_net' uses coordinate descent and supports the full
+            elastic net penalty.  'l1_slsqp' solves a smooth constrained
+            reformulation of the L1 problem with slsqp, an interior
+            point style method, and only supports the lasso penalty
+            (L1_wt must be 1).
+        alpha : scalar or array_like, optional
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        start_params : array_like
+        start_params : array_like, optional
             Starting values for `params`.
-        refit : bool
+        refit : bool, optional
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
-        opt_method : string
+        opt_method : str, optional
             The method used for numerical optimization.
         **kwargs
             Additional keyword arguments used when fitting the model.
@@ -1571,17 +1572,51 @@ class GLM(base.LikelihoodModel):
             one sweep through all coefficients.
         zero_tol : float
             Coefficients below this threshold are treated as zero.
+
+        The l1_slsqp method uses the following keyword arguments:
+
+        maxiter : int
+            Maximum number of iterations (default 1000).
+        trim_mode : {'auto', 'size', 'off'}
+            If not 'off', trim (set to zero) parameters that would have
+            been zero if the solver reached the theoretical minimum.
+            If 'auto', trim params using the theoretical optimality
+            conditions.  If 'size', trim params if they have very small
+            absolute value.
+        size_trim_tol : float
+            Tolerance used when trim_mode is 'size'.
+        auto_trim_tol : float
+            Tolerance used when trim_mode is 'auto'.
+        qc_tol : float
+            Print warning and do not allow auto trim when the
+            optimality conditions are violated by this much.
+        qc_verbose : bool
+            If True, print out a full QC report upon failure.
+        acc : float
+            Requested accuracy as used by slsqp (default 1e-10).
         """
 
-        if kwargs.get("L1_wt", 1) == 0:
+        method = string_like(
+            method, "method", options=("elastic_net", "l1_slsqp"), lower=False
+        )
+
+        if method == "elastic_net" and kwargs.get("L1_wt", 1) == 0:
             return self._fit_ridge(alpha, start_params, opt_method)
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
+        if method == "elastic_net":
+            defaults = {
+                "maxiter": 50,
+                "L1_wt": 1,
+                "cnvrg_tol": 1e-10,
+                "zero_tol": 1e-10,
+            }
+        else:
+            # l1_slsqp uses an interior point style method, in contrast
+            # to the coordinate descent used by elastic_net.
+            defaults = {"maxiter": 1000}
 
-        defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10, "zero_tol": 1e-10}
         defaults.update(kwargs)
 
         llkw = kwargs.get("loglike_kwds", {})
@@ -1608,7 +1643,9 @@ class GLM(base.LikelihoodModel):
 
         if not result.converged:
             warnings.warn(
-                "Elastic net fitting did not converge", ConvergenceWarning, stacklevel=2
+                "Regularized fitting did not converge",
+                ConvergenceWarning,
+                stacklevel=2,
             )
 
         return result
@@ -1664,7 +1701,7 @@ class GLM(base.LikelihoodModel):
             Otherwise, the constraints can be given as strings or list of
             strings.
             see t_test for details
-        start_params : None or array_like
+        start_params : array_like, optional
             starting values for the optimization. `start_params` needs to be
             given in the original parameter space and are internally
             transformed.
@@ -1712,7 +1749,7 @@ class GLM(base.LikelihoodModel):
     @property
     def offset_name(self):
         """
-        Name of the offset variable if available. If offset is not a pd.Series,
+        Name of the offset variable if available. If offset is not a Series,
         defaults to 'offset'.
         """
         return self._offset_name
@@ -1720,7 +1757,7 @@ class GLM(base.LikelihoodModel):
     @property
     def exposure_name(self):
         """
-        Name of the exposure variable if available. If exposure is not a pd.Series,
+        Name of the exposure variable if available. If exposure is not a Series,
         defaults to 'exposure'.
         """
         return self._exposure_name
@@ -1729,14 +1766,14 @@ class GLM(base.LikelihoodModel):
     def freq_weights_name(self):
         """
         Name of the freq weights variable if available. If freq_weights is not a
-        pd.Series, defaults to 'freq_weights'.
+        Series, defaults to 'freq_weights'.
         """
         return self._freq_weights_name
 
     @property
     def var_weights_name(self):
         """
-        Name of var weights variable if available. If var_weights is not a pd.Series,
+        Name of var weights variable if available. If var_weights is not a Series,
         defaults to 'var_weights'.
 
         """
@@ -1760,7 +1797,7 @@ class GLMResults(base.LikelihoodModelResults):
     df_resid : float
         See GLM.df_resid
     fit_history : dict
-        Contains information about the iterations. Its keys are `iterations`,
+        Contains information about the iterations. Its keys are `iteration`,
         `deviance` and `params`.
     model : class instance
         Pointer to GLM model instance that called fit.
@@ -1777,8 +1814,8 @@ class GLMResults(base.LikelihoodModelResults):
     scale : float
         The estimate of the scale / dispersion for the model fit.
         See GLM.fit and GLM.estimate_scale for more information.
-    stand_errors : ndarray
-        The standard errors of the fitted GLM.   # TODO still named bse
+    bse : ndarray
+        The standard errors of the fitted GLM.
 
     See Also
     --------
@@ -2092,7 +2129,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        kind : P"cs", "mcf"}
+        kind : {'cs', 'mcf'}, optional
             Type of pseudo R-square to return
 
         Returns
@@ -2160,12 +2197,12 @@ class GLMResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        crit : string
+        crit : str
             One of 'aic', 'bic', or 'qaic'.
-        scale : float
+        scale : float, optional
             The scale parameter estimated using the parent model,
             used only for qaic.
-        dk_params : int or float
+        dk_params : int or float, optional
             Correction to the number of parameters used in the information
             criterion. By default, only mean parameters are included, the
             scale parameter is not included in the parameter count.
@@ -2173,7 +2210,8 @@ class GLMResults(base.LikelihoodModelResults):
 
         Returns
         -------
-        Value of information criterion.
+        float
+            Value of information criterion.
 
         Notes
         -----
@@ -2189,8 +2227,8 @@ class GLMResults(base.LikelihoodModelResults):
 
         References
         ----------
-        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
-        Inference; Springer New York.
+        .. [BurnhamAnderson2002] Burnham KP, Anderson KR (2002). Model Selection
+           and Multimodel Inference; Springer New York.
         """
         crit = crit.lower()
         k_params = self.df_model + 1 + dk_params
@@ -2245,7 +2283,7 @@ class GLMResults(base.LikelihoodModelResults):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
-        which : 'mean', 'linear', 'var'(optional)
+        which : None or {'mean', 'linear', 'var_unscaled'}, optional
             Statistic to predict. Default is 'mean'.
             If which is None, then the pre-0.14 backwards compatible
             prediction results class is returned.
@@ -2259,7 +2297,7 @@ class GLMResults(base.LikelihoodModelResults):
             - 'var_unscaled' variance of endog implied by the likelihood model.
               This does not include scale or var_weights.
 
-        average : bool
+        average : bool, optional
             Keyword is only used if ``which`` is not None.
             If average is True, then the mean prediction is computed, that is,
             predictions are computed for individual exog and then the average
@@ -2269,7 +2307,7 @@ class GLMResults(base.LikelihoodModelResults):
         agg_weights : ndarray, optional
             Keyword is only used if ``which`` is not None.
             Aggregation weights, only used if average is True.
-        row_labels : list of str or None
+        row_labels : list of str, optional
             If row_labels are provided, then they will replace the generated
             labels.
 
@@ -2359,6 +2397,8 @@ class GLMResults(base.LikelihoodModelResults):
         cov_kwds=None,
         k_constraints=None,
         observed=True,
+        *,
+        return_object: bool | None = None,
     ):
 
         if self.model._has_freq_weights is True:
@@ -2390,6 +2430,7 @@ class GLMResults(base.LikelihoodModelResults):
             k_constraints=k_constraints,
             scale=None,
             observed=observed,
+            return_object=return_object,
         )
 
         self.model.df_resid = mod_df_resid
@@ -2401,7 +2442,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        observed : bool
+        observed : bool, optional
             If true, then observed hessian is used in the hat matrix
             computation. If false, then the expected hessian is used.
             In the case of a canonical link function both are the same.
@@ -2424,7 +2465,7 @@ class GLMResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        observed : bool
+        observed : bool, optional
             If true, then observed hessian is used in the hat matrix
             computation. If false, then the expected hessian is used.
             In the case of a canonical link function both are the same.
@@ -2465,15 +2506,15 @@ class GLMResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        exog : array_like
+        exog : array_like, optional
             The predictor variable matrix.
-        offset : array_like or None
+        offset : array_like, optional
             Offset variable for predicted mean.
-        exposure : array_like or None
+        exposure : array_like, optional
             Log(exposure) will be added to the linear prediction.
-        var_weights : array_like
+        var_weights : array_like, optional
             1d array of variance (analytic) weights. The default is 1.
-        n_trials : int
+        n_trials : int, optional
             Number of trials for the binomial distribution. The default is 1
             which corresponds to a Bernoulli random variable.
 
@@ -2668,14 +2709,14 @@ class GLMResults(base.LikelihoodModelResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is `var_#` for ## in
             the number of regressors. Must match the number of parameters in
             the model
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
 
         Returns
@@ -2759,18 +2800,18 @@ class GLMResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        yname : str
-            Name of the dependent variable (optional)
-        xname : list[str], optional
+        yname : str, optional
+            Name of the dependent variable
+        xname : list of str, optional
             Names for the exogenous variables, default is `var_#` for ## in
             the number of regressors. Must match the number of parameters in
             the model
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
-        float_format : str
+        float_format : str, optional
             print format for floats in parameters summary
 
         Returns

@@ -41,7 +41,7 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
   `[tool.ruff.lint.isort]`). Import sections: `future`, `compat`,
   `standard-library`, `third-party`, `first-party`, `local-folder` — with
   `statsmodels.compat` treated as its own `compat` section.
-- `ruff` and `flake8` must pass in the directories `statsmodels`, `docs`, and `tools`.
+- `ruff check .` and `flake8 .` must pass when run from the repo root.
 - `black` (line-length 88) is acceptable for auto-formatting, but not required.
   Only use `black` to format changes to files, or in new files. Do not use `black` to
   wholesale reformat existing files.
@@ -63,6 +63,83 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
      unreleased `versionX.Y.Z.rst`).
 - If it's a substantial new feature, an example notebook is strongly encouraged.
   (see the "Add an example" step in `CONTRIBUTING.md`).
+
+### Docstring type conventions
+
+Distilled from a repo-wide numpydoc type-correctness pass (2026-08). These
+govern the `Parameters`/`Returns`/`Attributes` *type* field specifically —
+apply them whenever writing or reviewing a docstring, not just during a
+dedicated cleanup:
+
+- **Verify against the actual code, don't pattern-match.** The most common
+  real bug in this codebase's docstrings is a type that describes what
+  "sounds right" for the parameter's name rather than what the
+  implementation actually does with it (coercion, indexing, arithmetic).
+  Read the function body before writing or trusting a type string.
+- **`array_like` vs `ndarray` vs `sequence of X`:**
+  - `array_like` — the value is coerced (`np.asarray`/`np.array(...)`) and
+    then used with real array semantics (arithmetic, broadcasting,
+    `.shape`/`.ndim`, or passed into another `array_like`-typed call).
+  - `ndarray` — genuinely restricted to an already-constructed numpy array
+    (no coercion happens; `.shape`/`.ndim`/fancy-indexing used directly on
+    the raw parameter, or a plain list would raise).
+  - `sequence of X` (or `list of X` if genuinely list-only) — the value is
+    only ever iterated, indexed, or `len()`'d, never given real array
+    treatment. Don't default to `array_like` just because a parameter
+    accepts "more than a bare `ndarray`" — check which of the three is
+    actually true.
+  - `Returns`/`Attributes` describe the concrete output/stored type, never
+    the `Parameters`-side acceptance convention — a value that's always a
+    real `ndarray`/`Series`/`DataFrame` by the time it's returned should
+    say so, even if the same name accepts `array_like` as an input.
+- **No bracket-subscript container types.** `list[int]`, `array_like[int]`,
+  `dict[str, int]`, `tuple[float]` are all wrong — use prose:
+  `list of int`, `array_like of int`, `dict of str to int`,
+  `tuple of float`.
+- **`, optional` is the only default marker.** Every parameter with a
+  default ends its type string with `, optional`; don't also write
+  `, default: X` or restate the default value in the type field — the
+  default belongs in prose, in the description below the type line.
+- **Don't write `None or X, optional`** when `None` is just the ordinary
+  default sentinel — `, optional` already conveys that `None` is accepted.
+  Write plain `X, optional`. Keep the explicit `None or X` form only when
+  `None` triggers genuinely different downstream behavior (a distinct code
+  path, not just "the code checks `is None`" — check whether it *branches*
+  meaningfully).
+- **Curly braces `{...}` are for literal value enumerations only**, never
+  for type unions — `{int, str}` should be `int or str`. A real string-enum
+  parameter (validated with `raise ValueError` against exact literal
+  values, e.g. `trend`, `method`) should list the actual accepted values,
+  not an approximation. Inside the braces, use plain quoted values with no
+  backtick markup: `{"n", "co"}` is correct, `` {``"n"``, ``"co"``} `` is
+  wrong (redundant RST markup once the value is already quoted inside
+  braces).
+- `bool` not `boolean`; `str` not `string`; `callable` not
+  `function`/`class`.
+- The canonical type string for an RNG-seeding parameter (after the
+  `seed`→`rng` migration) is exactly:
+  `rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional`
+  — no `None` in the list (redundant with `, optional`), no curly braces.
+  If the parameter actually flows into something narrower (e.g. a legacy
+  `scipy` `seed=` kwarg that rejects `array_like of int`), use the
+  narrower, verified form instead of the full canonical one.
+- Standard numpydoc section headers only: `Parameters`, `Returns`,
+  `Yields`, `Raises`, `Warns`, `Other Parameters`, `Attributes`, `Methods`,
+  `See Also`, `Notes`, `References`, `Examples`, `Warnings`. Don't invent
+  new section names (`Restrictions`, `Column order`, etc.) — fold that
+  content into `Notes`. Section-underline length must match the header
+  text length exactly (this repo's own docstring tooling expects an exact
+  match, not just RST's "underline ≥ header length" minimum).
+- Every documented parameter/attribute/return must actually exist in the
+  current signature/implementation, and every real parameter should be
+  documented — check both directions, since signatures drift out of sync
+  with docstrings over time (a stale copy-pasted name from a sibling
+  method is a very common real bug, not just a style nit).
+- A real, non-docstring bug found while auditing docstrings (dead
+  parameters, unused kwargs, wrong operator precedence, etc.) belongs in
+  its own `BUG:` commit — don't fold a behavior fix into a `DOC:` commit,
+  and don't silently "fix" the docstring to match buggy behavior without
+  flagging the underlying bug.
 
 ## Testing conventions
 

@@ -44,3 +44,10 @@ def test_halton():
     sample = sequences.halton(dim=2, n_sample=3, bounds=corners, start_index=2)
     out = np.array([[7.5, 2.3], [1.25, 3.3], [6.25, 4.3]])
     npt.assert_almost_equal(sample, out, decimal=1)
+
+
+def test_primes_array():
+    primes = sequences.n_primes(15)
+    assert isinstance(primes, np.ndarray)
+    primes = sequences.n_primes(200)
+    assert isinstance(primes, np.ndarray)

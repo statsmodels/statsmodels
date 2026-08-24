@@ -7,6 +7,7 @@ from scipy.stats import f as fdist, t as student_t
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import clean0, fullrank
+from statsmodels.tools.validation import string_like
 
 
 # TODO: should this be public if it's just a container?
@@ -122,7 +123,7 @@ class ContrastResults:
         ----------
         xname : list[str], optional
             Default is `c_##` for ## in the number of regressors.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
         title : str, optional
@@ -189,7 +190,7 @@ class ContrastResults:
         ----------
         xname : list[str], optional
             Default is `c_##` for ## in the number of regressors.
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals. Default is
             alpha = 0.05 which implies a confidence level of 95%.
 
@@ -555,11 +556,11 @@ def t_test_multi(
         Results of an estimated model.
     contrasts : ndarray
         Restriction matrix for t_test.
-    method : str or list of strings
+    method : str or list of str, optional
         Method for multiple testing p-value correction, default is 'hs'.
-    alpha : float
+    alpha : float, optional
         Significance level for multiple testing reject decision.
-    ci_method : None
+    ci_method : None, optional
         Not used yet, will be for multiplicity corrected confidence intervals.
     contrast_names : {list[str], None}
         If contrast_names are provided, then they are used in the index of the
@@ -634,7 +635,7 @@ def _embed_constraints(contrasts, k_params, idx_start, index=None):
         Index of the first parameter of this factor. The restrictions on the
         factor are inserted as a block in the full restriction matrix starting
         at column with index `idx_start`.
-    index : slice or ndarray
+    index : slice or ndarray, optional
         Column index if constraints do not form a block in the full restriction
         matrix, i.e., if parameters that are subject to restrictions are not
         consecutive in the list of parameters.
@@ -669,13 +670,13 @@ def _constraints_factor(
         The number of rows should be equal to the number of levels or categories
         of the factor, the number of columns should be equal to the number
         of parameters for this factor.
-    comparison : str
+    comparison : {"pairwise", "pw", "pairs"}, optional
         Currently only 'pairwise' is implemented. The restriction matrix
         can be used for testing the hypothesis that all pairwise differences
         are zero.
-    k_params : int
+    k_params : int, optional
         Number of parameters.
-    idx_start : int
+    idx_start : int, optional
         Index of the first parameter of this factor. The restrictions on the
         factor are inserted as a block in the full restriction matrix starting
         at column with index `idx_start`.
@@ -692,10 +693,10 @@ def _constraints_factor(
 
     import statsmodels.sandbox.stats.multicomp as mc
 
-    if comparison in ["pairwise", "pw", "pairs"]:
-        c_all = -mc.contrast_allpairs(k_level)
-    else:
-        raise NotImplementedError("currentlyonly pairwise comparison")
+    _ = string_like(
+        comparison, "comparison", options=("pairwise", "pw", "pairs"), lower=False
+    )
+    c_all = -mc.contrast_allpairs(k_level)
 
     contrasts = c_all.dot(cm)
     if k_params is not None:
@@ -722,15 +723,15 @@ def t_test_pairwise(
         name of the term for which pairwise comparisons are computed.
         Term names for categorical effects are created by patsy and
         correspond to the main part of the exog names.
-    method : {str, list[str]}
+    method : str or list of str, optional
         multiple testing p-value correction, default is 'hs',
         see stats.multipletesting
-    alpha : float
+    alpha : float, optional
         significance level for multiple testing reject decision.
-    factor_labels : {list[str], None}
+    factor_labels : list[str], optional
         Labels for the factor levels used for pairwise labels. If not
         provided, then the labels from the formula's model_spec are used.
-    ignore : bool
+    ignore : bool, optional
         Turn off some of the exceptions raised by input checks.
 
     Returns
@@ -852,10 +853,10 @@ def wald_test_noncent(params, r_matrix, value, results, diff=None, joint=True):
     results : Results instance of a model
         The results instance is used to compute the covariance matrix of the
         linear constraints using `cov_params`.
-    diff : None or ndarray
+    diff : None or ndarray, optional
         If diff is not None, then it will be used instead of
         ``diff = r_matrix @ params - value``.
-    joint : bool
+    joint : bool, optional
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
         If joint is False, then an array of noncentrality parameters will be
@@ -905,10 +906,10 @@ def wald_test_noncent_generic(
         hypothesis. If value is None, then it will be replaced by zero.
     cov_params : ndarray
         Covariance matrix of the parameter estimates.
-    diff : None or ndarray
+    diff : None or ndarray, optional
         If diff is not None, then it will be used instead of
         ``diff = r_matrix @ params - value``.
-    joint : bool
+    joint : bool, optional
         If joint is True, then the noncentrality parameter for the joint
         hypothesis will be returned.
         If joint is False, then an array of noncentrality parameters will be

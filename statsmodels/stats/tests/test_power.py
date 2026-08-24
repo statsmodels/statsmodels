@@ -1111,3 +1111,24 @@ def test_normal_sample_size_one_tail():
     nobs_with_zeros = smp.normal_sample_size_one_tail(5, powers, alphas, 2, 2)
     # check_nans = np.isnan(zero_mask) == np.isnan(nobs_with_nans)
     assert_array_equal(nobs_with_zeros[powers <= alphas], 0)
+
+
+@pytest.mark.parametrize(
+    "power_func",
+    [
+        lambda alternative: smp.ttest_power(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power_het(0.5, 20, 0.05, alternative=alternative),
+    ],
+    ids=["ttest_power", "normal_power", "normal_power_het"],
+)
+def test_alternative_deprecated_alias(power_func):
+    # the undocumented "2s" short form still works but warns, and is
+    # equivalent to spelling out "two-sided"
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        power_alias = power_func("2s")
+    power_canonical = power_func("two-sided")
+    assert power_alias == power_canonical
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        power_func("bogus")

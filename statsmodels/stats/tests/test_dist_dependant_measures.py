@@ -63,7 +63,7 @@ class TestDistDependenceMeasures:
 
     def test_input_validation_unknown_method(self):
         rs = np.random.RandomState(34784729)
-        with pytest.raises(ValueError, match="Unknown 'method' parameter"):
+        with pytest.raises(ValueError, match="method"):
             ddm.distance_covariance_test(self.x, self.y, method="wrong_name", rng=rs)
 
     def test_statistic_value_asym_method(self):

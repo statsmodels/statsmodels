@@ -182,6 +182,9 @@
   - img: ../_static/images/stationarity_detrending_adf_kpss.png
     target: notebooks/generated/stationarity_detrending_adf_kpss.html
     text: Stationarity and detrending (ADF/KPSS)
+  - img: ../_static/images/local_projections.png
+    target: notebooks/generated/local_projections.html
+    text: Local Projections
 - header: State space models
   id: statespace
   links:

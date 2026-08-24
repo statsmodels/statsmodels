@@ -188,7 +188,7 @@ class LeastSquares(RobustNorm):
 
                 \rho(z) = \frac{z^2}{2}
         """
-
+        z = np.asarray(z)
         return z**2 * 0.5
 
     def psi(self, z):
@@ -1236,17 +1236,19 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        bp : float in [0.05, 0.5] or None
+        bp : float in [0.05, 0.10, 0.15, ..., 0.5], optional
             Required breakdown point
             Either bp or eff has to be specified, but not both.
-        eff : float or None
+        eff : float or None, optional
             Required asymptotic efficiency.
             Either bp or eff has to be specified, but not both.
 
         Returns
         -------
-        float
-            The tuning parameter.
+        tuple of float
+            The output depends on whether using bp or eff. If using bp, returns
+            (tuning parameter, efficiency, scale bias) where c is the tuning.
+            If using eff, (tuning parameter, breakdown point).
         """
         if ((bp is None and eff is None) or
                 (bp is not None and eff is not None)):
@@ -1782,26 +1784,28 @@ class MQuantileNorm(RobustNorm):
     -----
     This is mainly for base norms that are not redescending, like HuberT or
     LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
-    in the case of non-redescending Norms.)
+    in the case of non-redescending Norms.) See [BianchiEtAl2015]_,
+    [BrecklingChambers1988]_, [Jones1994]_, and [NeweyPowell1987]_ for more
+    information.
 
     Expectiles are M-quantiles with the LeastSquares as base norm.
 
     References
     ----------
-    .. [*] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic Properties
-       and Variance Estimators of the M-Quantile Regression Coefficients
+    .. [BianchiEtAl2015] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic
+       Properties and Variance Estimators of the M-Quantile Regression Coefficients
        Estimators.” Communications in Statistics - Theory and Methods 44 (11):
        2416-29. doi:10.1080/03610926.2013.791375.
 
-    .. [*] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
+    .. [BrecklingChambers1988] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
        Biometrika 75 (4): 761-71. doi:10.2307/2336317.
 
-    .. [*] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
+    .. [Jones1994] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
        Statistics & Probability Letters 20 (2): 149-53.
        doi:10.1016/0167-7152(94)90031-0.
 
-    .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
-       Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
+    .. [NeweyPowell1987] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric
+       Least Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
        doi:10.2307/1911031.
     """
 
@@ -1834,6 +1838,7 @@ class MQuantileNorm(RobustNorm):
         rho : ndarray
             The value of the robust criterion function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.rho(z)
 
@@ -1853,6 +1858,7 @@ class MQuantileNorm(RobustNorm):
         psi : ndarray
             The value of the psi function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi(z)
 
@@ -1872,6 +1878,7 @@ class MQuantileNorm(RobustNorm):
         weights : ndarray
             The value of the weighting function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.weights(z)
 
@@ -1893,6 +1900,7 @@ class MQuantileNorm(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
 
@@ -1925,7 +1933,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
 
     Parameters
     ----------
-    a : ndarray
+    a : array_like
         Array over which the location parameter is to be estimated
     scale : ndarray
         Scale parameter to be used in M-estimator

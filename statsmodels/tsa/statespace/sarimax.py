@@ -63,7 +63,7 @@ class SARIMAX(MLEModel):
         integer giving the periodicity (number of periods in season), often it
         is 4 for quarterly data or 12 for monthly data. Default is no seasonal
         effect.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
         Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
@@ -167,7 +167,7 @@ class SARIMAX(MLEModel):
         component of the model.
     hamilton_representation : bool
         Whether or not to use the Hamilton representation of an ARMA process.
-    trend : str{'n','c','t','ct'} or iterable
+    trend : {'n', 'c', 't', 'ct'} or iterable
         Parameter controlling the deterministic
         trend polynomial :math:`A(t)`. See the class
         parameter documentation for more information.
@@ -721,7 +721,12 @@ class SARIMAX(MLEModel):
         # then the exogenous data is incorporated as a time-varying component
         # of the design matrix
         if self.state_regression:
-            if self._k_order > 0:
+            # The first block of the design vector (differencing and ARMA
+            # states) is only empty when simple differencing removes the
+            # differencing states from the state vector and there are no ARMA
+            # states (e.g. time-varying regression with order=(0, 0, 0) and
+            # simple_differencing=True)
+            if self._k_order > 0 or self._k_states_diff > 0:
                 design = np.c_[
                     np.reshape(
                         np.repeat(design, self.nobs),
@@ -788,7 +793,11 @@ class SARIMAX(MLEModel):
                     transition[start, end + self.seasonal_periods - 1] = 1
 
                 # \iota
-                transition[start, self._k_states_diff] = 1
+                # (the seasonal differencing states accumulate the
+                # stationary component at column _k_states_diff, which only
+                # exists if there are ARMA states)
+                if self._k_order > 0:
+                    transition[start, self._k_states_diff] = 1
 
         # Differencing component
         if self._k_diff > 0:
@@ -803,8 +812,12 @@ class SARIMAX(MLEModel):
                     ([0] * (self.seasonal_periods - 1) + [1]) *
                     self._k_seasonal_diff)
             # [1 0]
-            column = self._k_states_diff
-            transition[:self._k_diff, column] = 1
+            # (the differencing states accumulate the stationary component
+            # at column _k_states_diff, which only exists if there are ARMA
+            # states)
+            if self._k_order > 0:
+                column = self._k_states_diff
+                transition[:self._k_diff, column] = 1
 
         return transition
 

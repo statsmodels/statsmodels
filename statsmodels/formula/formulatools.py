@@ -24,25 +24,25 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     X : array_like
         Either exog or None. If all the data for the formula is provided in
         Y then you must explicitly set X to None.
-    formula : str or patsy.model_desc
+    formula : str or ModelDesc
         You can pass a handler by import formula_handler and adding a
         key-value pair where the key is the formula object class and
         the value is a function that returns endog, exog, formula object.
-    depth : int
+    depth : int, optional
         The number of stack frames to go up when evaluating variables that
         are not found in Y or X.
-    missing : str
+    missing : str, optional
         The action to take on missing values, e.g., "drop" or "raise".
 
     Returns
     -------
-    result : array_like or tuple of array_like
+    result : DataFrame, ndarray, or tuple of DataFrame or ndarray
         endog and exog (or just endog if X is None), preserving the input
         type of Y, X.
-    missing_mask : ndarray or None
+    missing_mask : ndarray, Series, or None
         Boolean mask indicating observations dropped due to missing values,
         or None if no values were dropped.
-    model_spec : ModelSpec or DesignInfo or None
+    model_spec : ModelSpec, DesignInfo, or None
         The right-hand-side model specification, or None if there is no
         RHS design.
     """

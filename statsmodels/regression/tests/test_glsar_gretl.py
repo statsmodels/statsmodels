@@ -114,7 +114,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.wresid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.wresid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=4)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
@@ -145,7 +145,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.wresid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.wresid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
 
@@ -314,7 +314,9 @@ class TestGLSARGretl:
         names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = Path(__file__).parent.resolve()
         fpath = Path(cur_dir).joinpath("results/leverage_influence_ols_nostars.txt")
-        lev = pd.read_csv(fpath, skiprows=3, skipfooter=3, sep=r"\s+", header=None)
+        lev = pd.read_csv(
+            fpath, skiprows=3, skipfooter=3, sep=r"\s+", header=None, engine="python"
+        )
         lev.columns = names
 
         res = res_ols  # for easier copying
@@ -356,7 +358,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.resid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.resid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 

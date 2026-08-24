@@ -459,7 +459,7 @@ bounds_test = ecm_fit.bounds_test(case=4)
 bounds_test
 
 
-bounds_test.crit_vals
+bounds_test.critical_values
 
 
 # Case 3 also rejects the null of no levels relationship.

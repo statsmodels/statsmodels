@@ -67,14 +67,14 @@ class ExponentialSmoothing(MLEModel):
         or length `seasonal - 1` (in which case the last initial value
         is computed to make the average effect zero). Only used if
         initialization is 'known'.
-    bounds : iterable[tuple], optional
+    bounds : iterable of tuple, optional
         An iterable containing bounds for the parameters. Must contain four
         elements, where each element is a tuple of the form (lower, upper).
         Default is (0.0001, 0.9999) for the level, trend, and seasonal
         smoothing parameters and (0.8, 0.98) for the trend damping parameter.
     concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
-        out of the likelihood.
+        out of the likelihood. Default is True.
     dates : array_like of datetime, optional
         An array-like object of datetime objects. If a Pandas object is given
         for endog, it is assumed to have a DateIndex.
@@ -164,7 +164,9 @@ class ExponentialSmoothing(MLEModel):
         self.seasonal_periods = int_like(seasonal, "seasonal", optional=True)
         self.seasonal = self.seasonal_periods is not None
         self.initialization_method = string_like(
-            initialization_method, "initialization_method").lower()
+            initialization_method, "initialization_method",
+            options=("concentrated", "estimated", "simple", "heuristic", "known"),
+        )
         self.concentrate_scale = bool_like(concentrate_scale,
                                            "concentrate_scale")
 
@@ -182,10 +184,6 @@ class ExponentialSmoothing(MLEModel):
         if self.seasonal and self.seasonal_periods is None:
             raise NotImplementedError("Unable to detect season automatically;"
                                       " please specify `seasonal_periods`.")
-
-        if self.initialization_method not in ["concentrated", "estimated",
-                                              "simple", "heuristic", "known"]:
-            raise ValueError(f'Invalid initialization method "{initialization_method}".')
 
         if self.initialization_method == "known":
             if initial_level is None:

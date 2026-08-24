@@ -533,6 +533,14 @@ def test_fdr_twostage():
     assert_allclose(res3[1], res1[1])  # check default maxiter
 
 
+def test_fdrcorrection_invalid_method_raises():
+    pvals = np.array([0.01, 0.02, 0.3, 0.04, 0.5])
+    with pytest.raises(ValueError, match="method"):
+        fdrcorrection(pvals, method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        fdrcorrection_twostage(pvals, method="not-a-method")
+
+
 @pytest.mark.parametrize("method", sorted(multitest_methods_names))
 def test_issorted(method):
     # test that is_sorted keyword works correctly

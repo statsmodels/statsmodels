@@ -55,7 +55,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
         other_results : Bunch
@@ -190,7 +190,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     else:
         # Step 1: Compute long AR model via Yule-Walker, get residuals
         initial_ar_params, _ = yule_walker(
-            endog, order=initial_ar_order, method="mle", use_namedtuple=False)
+            endog, order=initial_ar_order, method="mle", result_object=False)
         X = lagmat(endog, initial_ar_order, trim="both")
         y = endog[initial_ar_order:]
         resid = y - X.dot(initial_ar_params)

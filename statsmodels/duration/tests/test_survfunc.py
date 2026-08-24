@@ -62,6 +62,31 @@ def test_survfunc1():
     assert_allclose(sr.n_risk, n_risk1)
     assert_allclose(sr.n_events, n_events1)
 
+    df = sr.summary()
+    assert list(df.index) == list(sr.surv_times)
+    assert_allclose(df["Surv prob"].values, sr.surv_prob)
+    assert_allclose(df["Surv prob SE"].values, sr.surv_prob_se)
+    assert_allclose(df["num at risk"].values, sr.n_risk)
+    assert_allclose(df["num events"].values, sr.n_events)
+
+    # quantile(p): first time where the survival curve drops below 1-p,
+    # i.e. the smallest t with P(T > t) < 1-p
+    for p in (0.1, 0.5, 0.9):
+        q = sr.quantile(p)
+        ii = np.flatnonzero(sr.surv_prob < 1 - p)
+        expected = np.nan if len(ii) == 0 else sr.surv_times[ii[0]]
+        if np.isnan(expected):
+            assert np.isnan(q)
+        else:
+            assert q == expected
+            # the survival probability at (just before) the quantile has
+            # indeed just dropped below 1-p
+            assert sr.surv_prob[sr.surv_times == q][0] < 1 - p
+
+    # p beyond the lowest observed survival probability: no such time
+    p_beyond = 1 - sr.surv_prob.min() + 0.01
+    assert np.isnan(sr.quantile(p_beyond))
+
 
 def test_survfunc2():
     # Test where some times have no events.
@@ -104,6 +129,11 @@ def test_simultaneous_cb():
     assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378, 0.45595321, 0.43341115])
     assert_allclose(ucb2[ix], np.r_[0.96465636, 0.92745068, 0.90885428, 0.88796708])
 
+    with pytest.raises(ValueError, match="method"):
+        sf.simultaneous_cb(method="not-a-method")
+    with pytest.raises(ValueError, match="transform"):
+        sf.simultaneous_cb(transform="not-a-transform")
+
 
 def test_bmt():
     # All tests against SAS
@@ -135,6 +165,9 @@ def test_bmt():
     for method in "linear", "cloglog", "log", "logit", "asinsqrt":
         lcb, ucb = sf.quantile_ci(0.25, method=method)
         assert_allclose(cb[method], np.r_[lcb, ucb])
+
+    with pytest.raises(ValueError, match="method"):
+        sf.quantile_ci(0.25, method="not-a-method")
 
 
 def test_survdiff():

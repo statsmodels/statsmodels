@@ -15,6 +15,7 @@ from statsmodels.tools.sm_exceptions import (
     EstimationWarning,
     SpecificationWarning,
 )
+from statsmodels.tools.validation import string_like
 
 from .factor_rotation import promax, rotate_factors
 
@@ -35,13 +36,28 @@ def _check_args_1(endog, n_factor, corr, nobs):
         Directly specified correlation matrix.
     nobs : int or None
         The number of observations.
+
+    Raises
+    ------
+    ValueError
+        If neither `endog` nor `corr` is provided, or if `n_factor` is not
+        positive.
+
+    Warns
+    -----
+    SpecificationWarning
+        If both `endog` and `corr` are provided, since `corr` is then
+        ignored.
+    UserWarning
+        If `nobs` is provided together with `endog`, since `nobs` is then
+        taken from `endog`.
     """
-    msg = "Either endog or corr must be provided."
-    if endog is not None and corr is not None:
-        raise ValueError(msg)
     if endog is None and corr is None:
+        raise ValueError("Either endog or corr must be provided.")
+    if endog is not None and corr is not None:
         warnings.warn(
-            "Both endog and corr are provided, corr will be used for factor analysis.",
+            "Both endog and corr are provided, endog will be used for factor "
+            "analysis.",
             SpecificationWarning,
             stacklevel=2,
         )
@@ -92,28 +108,30 @@ class Factor(Model):
 
     Parameters
     ----------
-    endog : array_like
+    endog : array_like, optional
         Variables in columns, observations in rows.  May be `None` if
         `corr` is not `None`.
-    n_factor : int
+    n_factor : int, optional
         The number of factors to extract
-    corr : array_like
+    corr : array_like, optional
         Directly specify the correlation matrix instead of estimating
-        it from `endog`.  If provided, `endog` is not used for the
-        factor analysis, it may be used in post-estimation.
-    method : str
+        it from `endog`.  Exactly one of `endog` and `corr` is required.
+        If both are provided a ``SpecificationWarning`` is raised and
+        `corr` is ignored in favor of the correlation matrix computed
+        from `endog`.
+    method : {'pa', 'ml'}, optional
         The method to extract factors, currently must be either 'pa'
         for principal axis factor analysis or 'ml' for maximum
         likelihood estimation.
-    smc : bool
+    smc : bool, optional
         Whether or not to apply squared multiple correlations (method='pa')
-    endog_names : str
+    endog_names : array_like of str, optional
         Names of endogenous variables.  If specified, it will be used
         instead of the column names in endog
-    nobs : int
+    nobs : int, optional
         The number of observations, not used if endog is present. Needs to
         be provided for inference if endog is None.
-    missing : 'none', 'drop', or 'raise'
+    missing : {'none', 'drop', 'raise'}, optional
         Missing value handling for endog, default is row-wise deletion 'drop'
         If 'none', no nan checking is done. If 'drop', any observations with
         nans are dropped. If 'raise', an error is raised.
@@ -237,21 +255,23 @@ class Factor(Model):
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations for iterative estimation algorithms
-        tol : float
+        tol : float, optional
             Stopping criteria (error tolerance) for iterative estimation
             algorithms
-        start : array_like
-            Starting values, currently only used for ML estimation
-        opt_method : str
+        start : tuple of (array_like, array_like), optional
+            Starting values for the loadings and uniquenesses, currently
+            only used for ML estimation. If None, starting values are
+            obtained using the EM algorithm.
+        opt_method : str, optional
             Optimization method for ML estimation
-        opt : dict-like
+        opt : dict, optional
             Keyword arguments passed to optimizer, only used for ML estimation
-        em_iter : int
+        em_iter : int, optional
             The number of EM iterations before starting gradient optimization,
             only used for ML estimation.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -280,9 +300,9 @@ class Factor(Model):
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations for communality estimation
-        tol : float
+        tol : float, optional
             If `norm(communality - last_communality)  < tolerance`,
             estimation stops
 
@@ -369,7 +389,7 @@ class Factor(Model):
 
         Parameters
         ----------
-        par : ndarray or tuple of 2 ndarray's
+        par : ndarray or tuple of (ndarray, ndarray)
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
@@ -413,7 +433,7 @@ class Factor(Model):
 
         Parameters
         ----------
-        par : ndarray or tuple of 2 ndarray's
+        par : ndarray or tuple of (ndarray, ndarray)
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
@@ -467,7 +487,7 @@ class Factor(Model):
 
         Parameters
         ----------
-        start : None or tuple of 2 ndarray's
+        start : None or tuple of (ndarray, ndarray)
             Starting values for the loadings and uniquenesses. If None,
             starting values are obtained using the EM algorithm.
         em_iter : int
@@ -475,11 +495,16 @@ class Factor(Model):
             optimization.
         opt_method : str
             Optimization method used by `scipy.optimize.minimize`.
-        opt : dict-like or None
+        opt : dict or None
             Keyword arguments passed to the optimizer.
-        rng : RandomState or Generator
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Random number generator used to draw starting values when
-            `start` is None.
+            `start` is None. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int or array of ints, a new ``Generator`` is
+            created, seeded with `rng`. If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
 
         Returns
         -------
@@ -537,9 +562,13 @@ class Factor(Model):
         ----------
         iter : int
             The number of EM iterations to perform.
-        rng : RandomState or Generator
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             Random number generator used to draw starting values for the
-            loadings.
+            loadings. If `rng` is None, a new ``Generator`` is created
+            using fresh entropy from the operating system. If `rng` is
+            an int or array of ints, a new ``Generator`` is created,
+            seeded with `rng`. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
 
         Returns
         -------
@@ -642,7 +671,7 @@ class FactorResults:
         principal components; not available under ML estimation.
     n_comp : int
         Number of components (factors)
-    nobs : int
+    nobs : int or None
         Number of observations
     fa_method : str
         The method used to obtain the decomposition, either 'pa' for
@@ -777,9 +806,10 @@ class FactorResults:
 
         Parameters
         ----------
-        method : 'bartlett' or 'regression'
-            Method to use for factor scoring.
-            'regression' can be abbreviated to `reg`
+        method : {'bartlett', 'regression', 'reg', 'ols', 'gls'}, optional
+            Method to use for factor scoring. 'regression' is the same as
+            `reg`. 'ols' and 'gls' are unofficial, unverified methods, see
+            Notes.
 
         Returns
         -------
@@ -801,28 +831,28 @@ class FactorResults:
         L = self.loadings
         # TODO: check row versus column convention for T
         uni = 1 - self.communality  # self.uniqueness
+        method = string_like(
+            method, "method", options=("bartlett", "regression", "reg", "ols", "gls")
+        )
 
         if method == "bartlett":
             s_mat = np.linalg.inv(L.T.dot(L / (uni[:, None]))).dot(L.T / uni).T
-        elif method.startswith("reg"):
+        elif method == "regression" or method == "reg":
             corr = self.model.corr
             corr_f = self._corr_factors()
             # if orthogonal then corr_f is just eye
             s_mat = corr_f.dot(L.T.dot(np.linalg.inv(corr))).T
         elif method == "ols":
             # not verified
-            corr = self.model.corr
             corr_f = self._corr_factors()
             s_mat = corr_f.dot(np.linalg.pinv(L)).T
-        elif method == "gls":
+        else:  # method == "gls"
             # not verified
             # s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
-            corr = self.model.corr
             corr_f = self._corr_factors()
             s_mat = np.linalg.inv(np.linalg.inv(corr_f) + L.T.dot(L / (uni[:, None])))
             s_mat = s_mat.dot(L.T / uni).T
-        else:
-            raise ValueError('method not available, use "bartlett ' + 'or "regression"')
+
         return s_mat
 
     def factor_scoring(self, endog=None, method="bartlett", transform=True):
@@ -838,10 +868,11 @@ class FactorResults:
             Data to be scored using the factor scoring coefficient matrix.
             If None, the (standardized) endog used to fit the Factor model
             is used instead.
-        method : 'bartlett' or 'regression'
+        method : {'bartlett', 'regression', 'ols', 'gls'}, optional
             Method to use for factor scoring.
-            'regression' can be abbreviated to `reg`
-        transform : bool
+            'regression' can be abbreviated to `reg`. 'ols' and 'gls' are
+            unofficial, unverified methods, see Notes.
+        transform : bool, optional
             If transform is true and endog is provided, then it will be
             standardized using mean and scale of original data, which has to
             be available in this case.
@@ -938,8 +969,8 @@ class FactorResults:
 
         Parameters
         ----------
-        style : 'display' (default), 'raw' or 'strings'
-            Style to use for display
+        style : {'display', 'raw', 'strings'}, optional
+            Style to use for display. The default is 'display'.
 
             * 'raw' returns just a DataFrame of the loadings matrix, no options are
                applied
@@ -947,18 +978,18 @@ class FactorResults:
             * 'strings' returns a DataFrame with string elements with optional sorting
                and suppressing small loading coefficients.
 
-        sort_ : bool
+        sort_ : bool, optional
             If True, then the rows of the DataFrame is sorted by contribution of each
             factor. applies if style is either 'display' or 'strings'
-        threshold : float
+        threshold : float, optional
             If the threshold is larger than zero, then loading coefficients are
             either colored white (if style is 'display') or replace by empty
             string (if style is 'strings').
-        highlight_max : bool
+        highlight_max : bool, optional
             This add a background color to the largest coefficient in each row.
-        color_max : html color
+        color_max : str, optional
             default is 'yellow'. color for background of row maximum
-        decimals : None or int
+        decimals : int, optional
             If None, then pandas default precision applies. Otherwise values are
             rounded to the specified decimals. If style is 'display', then the
             underlying dataframe is not changed. If style is 'strings', then
@@ -996,9 +1027,9 @@ class FactorResults:
             index=self.endog_names,
         )
 
-        if style not in ["raw", "display", "strings"]:
-            msg = "style has to be one of 'raw', 'display', 'strings'"
-            raise ValueError(msg)
+        style = string_like(
+            style, "style", options=("raw", "display", "strings"), lower=False
+        )
 
         if style == "raw":
             return loadings_df
@@ -1080,7 +1111,7 @@ class FactorResults:
         ----------
         ncomp : int, optional
             Number of loadings to include in the plot.  If None, will
-            included the same as the number of maximum possible loadings
+            include the same as the number of maximum possible loadings
 
         Returns
         -------
@@ -1098,17 +1129,18 @@ class FactorResults:
 
         Parameters
         ----------
-        loading_pairs : None or a list of tuples
+        loading_pairs : list of tuples, optional
             Specify plots. Each tuple (i, j) represent one figure, i and j is
             the loading number for x-axis and y-axis, respectively. If `None`,
             all combinations of the loadings will be plotted.
-        plot_prerotated : True or False
+        plot_prerotated : bool, optional
             If True, the loadings before rotation applied will be plotted. If
             False, rotated loadings will be plotted.
 
         Returns
         -------
-        figs : a list of figure handles
+        list of Figure
+            Handles to the figures.
         """
         _import_mpl()
         from .plots import plot_loadings
@@ -1147,7 +1179,7 @@ class FactorResults:
 
         Parameters
         ----------
-        kurt : float
+        kurt : float, optional
             Excess kurtosis
 
         Notes

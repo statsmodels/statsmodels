@@ -166,6 +166,26 @@ def test_scale_transform(center):
     assert_allclose(xt0, xtt[0, :], rtol=1e-13)
 
 
+@pytest.mark.parametrize("transform", ["abs", "square", "identity"])
+def test_scale_transform_transform_options(transform):
+    rs = np.random.RandomState(32832188)
+    x = rs.randn(20)
+    xt = scale_transform(x, center="median", transform=transform)
+    assert xt.shape == x.shape
+
+    # center may be a plain number, transform may be a callable
+    xt_num = scale_transform(x, center=0.0, transform=transform)
+    assert xt_num.shape == x.shape
+
+    xt_callable = scale_transform(x, center="median", transform=np.abs)
+    assert_allclose(xt_callable, scale_transform(x, center="median", transform="abs"))
+
+    with pytest.raises(ValueError, match="transform"):
+        scale_transform(x, center="median", transform="not-a-transform")
+    with pytest.raises(ValueError, match="center"):
+        scale_transform(x, center="not-a-center", transform="abs")
+
+
 class TestOnewayEquivalenc:
 
     @classmethod
@@ -807,3 +827,19 @@ def test_simulate_equivalence():
     ]
     # regression test numbers
     assert_allclose(pow_, [0.147749, 0.173358, 0.177412], atol=0.007)
+
+
+def test_confint_noncentrality_alternative():
+    f_stat, df = 5.0, (2, 30)
+    # undocumented "2s"/"ts" aliases still work but warn
+    for alias in ("2s", "ts"):
+        with pytest.warns(FutureWarning, match="is a deprecated alias"):
+            ci_alias = confint_noncentrality(f_stat, df, alternative=alias)
+        ci = confint_noncentrality(f_stat, df, alternative="two-sided")
+        assert_allclose(ci_alias, ci)
+
+    # only "two-sided" is implemented; "larger"/"smaller" must still raise,
+    # now as a ValueError from the shared alternative validation rather
+    # than a NotImplementedError
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        confint_noncentrality(f_stat, df, alternative="larger")

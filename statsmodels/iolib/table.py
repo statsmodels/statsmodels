@@ -96,10 +96,10 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
     ----------
     csvfile : str
         Path to a file containing comma separated values.
-    headers : bool or tuple of str
+    headers : bool or tuple of str, optional
         The first row may contain headers: set headers=True. Can also
         supply headers directly as a tuple of strings.
-    stubs : bool or tuple of str
+    stubs : bool or tuple of str, optional
         The first column may contain stubs: set stubs=True. Can also
         supply stubs directly as a tuple of strings.
     title : str, optional
@@ -113,26 +113,34 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
     rows = list()
     with Path(csvfile).open(encoding="utf-8") as fh:
         reader = csv.reader(fh)
+        use_stubs = stubs is True
         if headers is True:
-            headers = next(reader)
+            _headers = next(reader)
+            if use_stubs:
+                # The first column of the header row labels the stub
+                # column, which has no corresponding entry once the stub
+                # values are split off from each data row below.
+                _headers = _headers[1:]
         elif headers is False:
-            headers = ()
-        if stubs is True:
-            stubs = list()
+            _headers = ()
+        else:
+            _headers = tuple(str(val) for val in headers)
+        if use_stubs:
+            _stubs = list()
             for row in reader:
                 if row:
-                    stubs.append(row[0])
+                    _stubs.append(row[0])
                     rows.append(row[1:])
         else:  # no stubs, or stubs provided
             for row in reader:
                 if row:
                     rows.append(row)
         if stubs is False:
-            stubs = ()
+            _stubs = ()
     ncols = len(rows[0])
     if any(len(row) != ncols for row in rows):
         raise OSError("All rows of CSV file must have same length.")
-    return SimpleTable(data=rows, headers=headers, stubs=stubs)
+    return SimpleTable(data=rows, headers=_headers, stubs=_stubs, title=title)
 
 
 class SimpleTable(list):
@@ -168,25 +176,25 @@ class SimpleTable(list):
         ----------
         data : list of lists or 2d array (not matrix!)
             R rows by K columns of table elements
-        headers : list (or tuple) of str
+        headers : sequence of str, optional
             sequence of K strings, one per header
-        stubs : list (or tuple) of str
+        stubs : sequence of str, optional
             sequence of R strings, one per stub
-        title : str
+        title : str, optional
             title of the table
-        datatypes : list of int
+        datatypes : list of int, optional
             indexes to `data_fmts`
-        txt_fmt : dict
+        txt_fmt : dict, optional
             text formatting options
-        ltx_fmt : dict
+        ltx_fmt : dict, optional
             latex formatting options
-        csv_fmt : dict
+        csv_fmt : dict, optional
             csv formatting options
-        html_fmt : dict
+        html_fmt : dict, optional
             html formatting options
-        celltype : class
+        celltype : class, optional
             the cell class for the table (default: Cell)
-        rowtype : class
+        rowtype : class, optional
             the row class for the table (default: Row)
         fmt_dict : dict
             general formatting options
@@ -242,9 +250,9 @@ class SimpleTable(list):
 
         Parameters
         ----------
-        headers : list[str]
+        headers : sequence of str
             K strings, where K is number of columns
-        stubs : list[str]
+        stubs : sequence of str
             R strings, where R is number of non-header rows
 
         Notes
@@ -289,7 +297,7 @@ class SimpleTable(list):
         headers : sequence of str
             The header strings, one per column. The strings may contain
             newlines, to indicate multiline headers.
-        dec_below : str
+        dec_below : str, optional
             The decoration tag to use below the header row.
         """
         header_rows = [header.split("\n") for header in headers]
@@ -566,7 +574,7 @@ class SimpleTable(list):
 
         Parameters
         ----------
-        center : bool
+        center : bool, optional
             If True, wrap the tabular environment in a center environment.
         **fmt_dict
             Additional formatting options that override the table's LaTeX
@@ -710,14 +718,14 @@ class Row(list):
     ----------
     seq : sequence of data or cells
         The contents of the row.
-    datatype : str
+    datatype : str, optional
         One of 'data' or 'header'.
     table : SimpleTable, optional
         The table the row belongs to, if any.
     celltype : class, optional
         The cell class used to wrap the values in `seq`. If None, uses
         `table._Cell` if `table` is not None, otherwise `Cell`.
-    dec_below : str
+    dec_below : str, optional
         (e.g., 'header_dec_below' or 'row_dec_below')
         decoration tag, identifies the decoration to go below the row.
         (Decoration is repeated as needed for text formats.)
@@ -843,7 +851,7 @@ class Row(list):
 
         Parameters
         ----------
-        output_format : str
+        output_format : str, optional
             One of 'txt', 'csv', 'html' or 'latex'.
         **fmt_dict
             Additional formatting options that override the row's
@@ -928,7 +936,7 @@ class Cell:
 
     Parameters
     ----------
-    data : object or Cell
+    data : object or Cell, optional
         The cell's data. If a Cell instance is passed, its data,
         datatype and formatting are copied.
     datatype : object, optional
@@ -1069,7 +1077,7 @@ class Cell:
         ----------
         width : int
             The width, in characters, to pad the formatted cell to.
-        output_format : str
+        output_format : str, optional
             One of 'txt', 'csv', 'html' or 'latex'.
         **fmt_dict
             Additional formatting options that override the cell's

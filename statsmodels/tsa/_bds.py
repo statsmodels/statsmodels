@@ -29,12 +29,14 @@ def distance_indicators(x, epsilon=None, distance=1.5):
 
     Parameters
     ----------
-    x : 1d array
+    x : array_like
         observations of time series for which heaviside distance indicators
         are calculated
-    epsilon : scalar, optional
-        the threshold distance to use in calculating the heaviside indicators
-    distance : scalar, optional
+    epsilon : float, optional
+        the threshold distance to use in calculating the heaviside
+        indicators. If not provided, computed as ``distance`` times the
+        standard deviation of ``x``
+    distance : float, optional
         if epsilon is omitted, specifies the distance multiplier to use when
         computing it
 
@@ -82,7 +84,7 @@ def correlation_sum(indicators, embedding_dim):
     -------
     corrsum : float
         Correlation sum
-    indicators_joint
+    indicators_joint : ndarray
         matrix of joint-distance-threshold indicators
     """
     if not indicators.ndim == 2:
@@ -107,7 +109,7 @@ def correlation_sums(indicators, max_dim):
 
     Parameters
     ----------
-    indicators : 2d array
+    indicators : ndarray
         matrix of distance threshold indicators
     max_dim : int
         maximum embedding dimension
@@ -140,8 +142,11 @@ def _var(indicators, max_dim):
 
     Returns
     -------
-    variances : float
-        Variance of BDS effect
+    variances : ndarray
+        Variance of the BDS effect for each embedding dimension from 2 to
+        max_dim.
+    k : float
+        Intermediate probability estimate used in the variance calculation.
     """
     nobs = len(indicators)
     corrsum_1dim, _ = correlation_sum(indicators, 1)
@@ -169,22 +174,25 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
         Observations of time series for which bds statistics is calculated.
-    max_dim : int
+    max_dim : int, optional
         The maximum embedding dimension.
-    epsilon : {float, None}, optional
+    epsilon : float, optional
         The threshold distance to use in calculating the correlation sum.
+        If not provided, computed as ``distance`` times the standard
+        deviation of ``x``.
     distance : float, optional
         Specifies the distance multiplier to use when computing the test
         statistic if epsilon is omitted.
 
     Returns
     -------
-    bds_stat : float
-        The BDS statistic.
-    pvalue : float
-        The p-values associated with the BDS statistic.
+    bds_stat : float or ndarray
+        The BDS statistic. An ndarray is returned if max_dim > 2.
+    pvalue : float or ndarray
+        The p-values associated with the BDS statistic. An ndarray is
+        returned if max_dim > 2.
 
     Notes
     -----

@@ -14,11 +14,25 @@ from statsmodels.tools.validation import array_like
 
 
 def _nan_reduction_result(arr, axis):
-    """Explicit nan with the shape a reduction of `arr` over `axis` would give.
+    """
+    Explicit nan with the shape a reduction of `arr` over `axis` would give
 
     Used for empty inputs, where the underlying numpy reduction has no
-    identity element. Returns a scalar when the reduction collapses the whole
-    array, otherwise an array of nan with the remaining shape.
+    identity element. Returns a scalar when the reduction collapses the
+    whole array, otherwise an array of nan with the remaining shape.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The array whose reduced shape determines the shape of the result.
+    axis : None or int
+        The axis that would be reduced over.
+
+    Returns
+    -------
+    float or ndarray
+        ``nan`` if `axis` is None or `arr` is 1d, otherwise an array of
+        ``nan`` with the shape that reducing `arr` over `axis` would give.
     """
     if axis is None or arr.ndim <= 1:
         return np.nan
@@ -35,7 +49,7 @@ def mse(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -65,7 +79,7 @@ def rmse(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -96,10 +110,10 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
       The actual value.
     y_hat : array_like
        The predicted value.
-    axis : int
+    axis : int, optional
        Axis along which the summary statistic is calculated
-    zeros : float
-       Value to assign to error where y is zero
+    zeros : float, optional
+       Value to assign to error where y is zero. Default is nan.
 
     Returns
     -------
@@ -127,7 +141,7 @@ def maxabs(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -160,7 +174,7 @@ def meanabs(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -189,7 +203,7 @@ def medianabs(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -218,7 +232,7 @@ def bias(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -247,7 +261,7 @@ def medianbias(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -276,9 +290,9 @@ def vare(x1, x2, ddof=0, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    ddof : int
+    ddof : int, optional
        Delta degrees of freedom used in the variance calculation.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -307,9 +321,9 @@ def stde(x1, x2, ddof=0, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    ddof : int
+    ddof : int, optional
        Delta degrees of freedom used in the standard deviation calculation.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -339,12 +353,12 @@ def iqr(x1, x2, axis=0):
        One of the inputs into the IQR calculation.
     x2 : array_like
        The other input into the IQR calculation.
-    axis : {None, int}
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
     -------
-    iqr : {float, ndarray}
+    iqr : float or ndarray of float
        Interquartile range along given axis.
 
     Notes
@@ -352,8 +366,8 @@ def iqr(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they must broadcast.
 
     """
-    x1 = array_like(x1, "x1", dtype=None, ndim=None)
-    x2 = array_like(x2, "x2", dtype=None, ndim=None)
+    x1 = array_like(x1, "x1", dtype=None, mindim=None)
+    x2 = array_like(x2, "x2", dtype=None, mindim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()
@@ -381,7 +395,7 @@ def aic(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -407,7 +421,7 @@ def aicc(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -442,7 +456,7 @@ def bic(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -468,7 +482,7 @@ def hqic(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -505,7 +519,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns
@@ -560,7 +574,7 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns
@@ -598,7 +612,7 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns
@@ -636,7 +650,7 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns

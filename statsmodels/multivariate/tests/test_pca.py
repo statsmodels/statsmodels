@@ -421,8 +421,12 @@ class TestPCA:
 
     def test_equivalence_full_matrices(self):
         x = self.x.copy()
-        svd_full_matrices_true = PCA(x, svd_full_matrices=True).factors
-        svd_full_matrices_false = PCA(x).factors
+        pca_true = PCA(x, svd_full_matrices=True)
+        svd_full_matrices_true = pca_true.factors
+        assert pca_true._svd_full_matrices
+        pca_false = PCA(x)
+        svd_full_matrices_false = pca_false.factors
+        assert not pca_false._svd_full_matrices
         assert_allclose(svd_full_matrices_true, svd_full_matrices_false)
 
 

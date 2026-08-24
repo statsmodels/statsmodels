@@ -25,7 +25,12 @@ __all__ = [
     "multipletests",
 ]
 
-from statsmodels.tools.validation import array_like, bool_like, float_like
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    string_like,
+)
 
 # ==============================================
 #
@@ -101,9 +106,9 @@ def multipletests(
     ----------
     pvals : array_like, 1-d
         uncorrected p-values.   Must be 1-dimensional.
-    alpha : float
+    alpha : float, optional
         FWER, family-wise error rate, e.g., 0.1
-    method : str
+    method : str, optional
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:
 
@@ -117,25 +122,26 @@ def multipletests(
         - `fdr_by` : Benjamini/Yekutieli (negative)
         - `fdr_tsbh` : two stage fdr correction (non-negative)
         - `fdr_tsbky` : two stage fdr correction (non-negative)
+        - `fdr_gbs` : adaptive step-down (Gavrilov, Benjamini, Sarkar)
         - `lfdr` : support line
 
-    maxiter : int or bool
+    maxiter : int or bool, optional
         Maximum number of iterations for two-stage fdr, `fdr_tsbh` and
         `fdr_tsbky`. It is ignored by all other methods.
         maxiter=1 (default) corresponds to the two stage method.
         maxiter=-1 corresponds to full iterations which is maxiter=len(pvals).
         maxiter=0 uses only a single stage fdr correction using a 'bh' or 'bky'
         prior fraction of assumed true hypotheses.
-    is_sorted : bool
+    is_sorted : bool, optional
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
         pvalues are already sorted in ascending order.
-    returnsorted : bool
+    returnsorted : bool, optional
          not tested, return sorted p-values instead of original sequence
 
     Returns
     -------
-    reject : ndarray, boolean
+    reject : ndarray, bool
         true for hypothesis that can be rejected for given alpha
     pvals_corrected : ndarray
         p-values corrected for multiple tests
@@ -345,7 +351,7 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     -------
     rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : ndarray
+    pvals_corrected : ndarray
         pvalues adjusted for multiple hypothesis testing to limit FDR
 
     Notes
@@ -400,16 +406,20 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     else:
         pvals_sorted = pvals  # alias
 
+    method = string_like(
+        method,
+        "method",
+        options=("i", "indep", "p", "poscorr", "n", "negcorr"),
+        lower=False,
+    )
     if method in ["i", "indep", "p", "poscorr"]:
         ecdffactor = _ecdf(pvals_sorted)
-    elif method in ["n", "negcorr"]:
+    else:  # method in ("n", "negcorr")
         cm = np.sum(1.0 / np.arange(1, len(pvals_sorted) + 1))  # corrected this
         ecdffactor = _ecdf(pvals_sorted) / cm
     #    elif method in ['n', 'negcorr']:
     #        cm = np.sum(np.arange(len(pvals)))
     #        ecdffactor = ecdf(pvals_sorted)/cm
-    else:
-        raise ValueError("only indep and negcorr implemented")
     reject = pvals_sorted <= ecdffactor * alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
@@ -610,16 +620,16 @@ def fdrcorrection_twostage(
     ----------
     pvals : array_like
         set of p-values of the individual tests.
-    alpha : float
+    alpha : float, optional
         error rate
-    method : {'bky', 'bh'}
+    method : {'bky', 'bh'}, optional
         see Notes for details
 
         * 'bky' - implements the procedure in Definition 6 of Benjamini, Krieger
            and Yekutieli 2006
         * 'bh' - the two stage method of Benjamini and Hochberg
 
-    maxiter : int or bool
+    maxiter : int or bool, optional
         Maximum number of iterations.
         maxiter=1 (default) corresponds to the two stage method.
         maxiter=-1 corresponds to full iterations which is maxiter=len(pvals).
@@ -629,11 +639,11 @@ def fdrcorrection_twostage(
         deprecated ``iter`` keyword.
         maxiter=False is two-stage fdr (maxiter=1)
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
-    iter : bool
+    iter : None, optional
         Removed keyword that is kept only for backwards compatibility.
         Passing anything other than the default ``None`` raises a
         ``TypeError``; use ``maxiter`` instead.
-    is_sorted : bool
+    is_sorted : bool, optional
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
         pvalues are already sorted in ascending order.
@@ -642,7 +652,7 @@ def fdrcorrection_twostage(
     -------
     rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : ndarray
+    pvals_corrected : ndarray
         pvalues adjusted for multiple hypotheses testing to limit FDR
     m0 : int
         ntest - rej, estimated number of true (not rejected) hypotheses
@@ -684,15 +694,14 @@ def fdrcorrection_twostage(
         pvals_sortind = np.argsort(pvals)
         pvals = np.take(pvals, pvals_sortind)
 
+    method = string_like(method, "method", options=("bky", "bh"), lower=False)
     ntests = len(pvals)
     if method == "bky":
         fact = 1.0 + alpha
         alpha_prime = alpha / fact
-    elif method == "bh":
+    else:  # method == "bh"
         fact = 1.0
         alpha_prime = alpha
-    else:
-        raise ValueError("only 'bky' and 'bh' are available as method")
 
     alpha_stages = [alpha_prime]
     rej, pvalscorr = fdrcorrection(
@@ -748,25 +757,25 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     Parameters
     ----------
-    zscores : array_like
+    zscores : ndarray
         A vector of Z-scores
-    null_proportion : float
+    null_proportion : float, optional
         The assumed proportion of true null hypotheses
-    null_pdf : function mapping reals to positive reals
+    null_pdf : callable, optional
         The density of null Z-scores; if None, use standard normal
-    deg : int
+    deg : int, optional
         The maximum exponent in the polynomial expansion of the
         density of non-null Z-scores
-    nbins : int
+    nbins : int, optional
         The number of bins for estimating the marginal density
         of Z-scores.
-    alpha : float
+    alpha : float, optional
         Use Poisson ridge regression with parameter alpha to estimate
         the density of non-null Z-scores.
 
     Returns
     -------
-    fdr : array_like
+    fdr : ndarray
         A vector of FDR values
 
     References
@@ -854,20 +863,20 @@ class NullDistribution:
 
     Parameters
     ----------
-    zscores : array_like
+    zscores : ndarray
         The observed Z-scores.
-    null_lb : float
+    null_lb : float, optional
         Z-scores between `null_lb` and `null_ub` are all considered to be
         true null hypotheses.
-    null_ub : float
+    null_ub : float, optional
         See `null_lb`.
-    estimate_mean : bool
+    estimate_mean : bool, optional
         If True, estimate the mean of the distribution.  If False, the
         mean is fixed at zero.
-    estimate_scale : bool
+    estimate_scale : bool, optional
         If True, estimate the scale of the distribution.  If False, the
         scale parameter is fixed at 1.
-    estimate_null_proportion : bool
+    estimate_null_proportion : bool, optional
         If True, estimate the proportion of true null hypotheses (i.e.
         the proportion of z-scores with expected value zero).  If False,
         this parameter is fixed at 1.
@@ -989,13 +998,13 @@ class NullDistribution:
 
         Parameters
         ----------
-        zscores : scalar or array_like
+        zscores : scalar or ndarray
             The point or points at which the density is to be
             evaluated.
 
         Returns
         -------
-        scalar or array_like
+        scalar or ndarray
             The empirical null Z-score density evaluated at the given
             points.
         """

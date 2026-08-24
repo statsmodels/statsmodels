@@ -393,6 +393,8 @@ class TestStattools:
         x = np.arange(21.0)
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
+        sk_2 = robust_skewness(x, axis=None)
+        assert_almost_equal(np.array(sk_2), np.zeros(4))
 
     def test_robust_skewness_1d_2d(self):
         rs = np.random.RandomState(3283281)
@@ -435,7 +437,9 @@ class TestStattools:
         y = x[:, None]
         kr_x = np.array(robust_kurtosis(x))
         kr_y = np.array(robust_kurtosis(y, axis=None))
+        kr_y_list = np.array(robust_kurtosis(y.tolist(), axis=None))
         assert_almost_equal(kr_x, kr_y)
+        assert_almost_equal(kr_x, kr_y_list)
 
     def test_robust_kurtosis(self):
         x = self.kurtosis_x

@@ -1,8 +1,11 @@
+import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
+import pytest
 
 from statsmodels.iolib.table import (
     SimpleTable,
+    csv2st,
     default_html_fmt,
     default_latex_fmt,
     default_txt_fmt,
@@ -201,9 +204,10 @@ stub R2 C2  40.95038  40.65765
         test_ltx_special_chars(self)
 
     def test_regression_with_tuples(self):
-        i = pd.Series([1, 2, 3, 4] * 10, name="i")
-        y = pd.Series([1, 2, 3, 4, 5] * 8, name="y")
-        x = pd.Series([1, 2, 3, 4, 5, 6, 7, 8] * 5, name="x")
+        rs = np.random.default_rng(312323)
+        i = pd.Series(np.arange(20).tolist() * 10, name="i")
+        y = pd.Series(rs.standard_normal(200), name="y")
+        x = pd.Series(rs.standard_normal(200), name="x")
 
         df = pd.DataFrame(index=i.index)
         df = df.join(i)
@@ -224,8 +228,8 @@ stub R2 C2  40.95038  40.65765
                     interesting_lines.append(line[:38])
 
         desired = ["Dep. Variable:                  x_sum ",
-                   "y_sum          1.4595      0.209      ",
-                   "y_max          0.2432      0.035      "]
+                   "y_sum          0.6380      0.225      ",
+                   "y_max          0.7972      0.367      "]
 
         assert_equal(sorted(desired), sorted(interesting_lines))
 
@@ -266,3 +270,33 @@ stub2 1.95038     2.6
                           txt_fmt=default_txt_fmt)
         actual = f"\n{tbl._repr_latex_()}\n"
         assert_equal(actual, desired)
+
+
+def test_csv2st_roundtrip(tmp_path):
+    # csv2st is exported from statsmodels.iolib.api but had no test coverage.
+    csv_path = tmp_path / "table.csv"
+    csv_path.write_text(
+        "name,value,weight\nfirst,1.5,10\nsecond,2.5,20\nthird,3.5,30\n",
+        encoding="utf-8",
+    )
+
+    tbl = csv2st(str(csv_path), headers=True)
+    text = str(tbl)
+    for token in ["name", "value", "weight", "first", "2.5", "third", "30"]:
+        assert token in text
+
+    tbl_stubs = csv2st(str(csv_path), headers=True, stubs=True)
+    stubbed = str(tbl_stubs)
+    # with stubs=True the first column becomes row labels rather than data
+    assert "first" in stubbed
+    assert "second" in stubbed
+
+    tbl_with_title = csv2st(str(csv_path), headers=True, title="My Table")
+    assert "My Table" in str(tbl_with_title)
+
+
+def test_csv2st_mismatched_row_lengths_raises(tmp_path):
+    csv_path = tmp_path / "bad.csv"
+    csv_path.write_text("a,b\n1,2\n3\n", encoding="utf-8")
+    with pytest.raises(OSError, match="All rows"):
+        csv2st(str(csv_path))

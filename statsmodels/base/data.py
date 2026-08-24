@@ -222,7 +222,7 @@ class ModelData:
         combined : dict
             Dictionary with keys endog, exog and the keys of kwargs, with
             missing rows dropped if `missing` is "drop".
-        missing_idx : list[int]
+        missing_idx : list of str
             The row indices that contained missing values and were
             dropped, or an empty list if there was no missing data.
         """

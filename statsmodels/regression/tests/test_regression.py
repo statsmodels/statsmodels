@@ -34,6 +34,7 @@ from statsmodels.regression.linear_model import (
     burg,
     yule_walker,
 )
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -171,6 +172,11 @@ class CheckRegressionResults:
         hqic1 = self.res1.info_criteria("hqic")
         hqic2 = (self.res1.aic - 2 * k) + 2 * np.log(np.log(nobs)) * k
         assert_allclose(hqic1, hqic2, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("aic"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("AIC"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("bic"), self.res1.bic, rtol=1e-10)
+        with pytest.raises(ValueError, match="crit"):
+            self.res1.info_criteria("not-a-real-criterion")
 
     decimal_bic = DECIMAL_4
 
@@ -287,7 +293,9 @@ class TestOLS(CheckRegressionResults):
         with warnings.catch_warnings(record=True):
             x = rs.randn(5)
             y = rs.randn(5, 6)
-            results = OLS(x, y).fit()
+            with pytest.warns(SingularMatrixWarning, match="The design matrix is rank"):
+                # Intentional to get a nan rsquared_adj
+                results = OLS(x, y).fit()
             rsquared_adj = results.rsquared_adj
             assert_equal(rsquared_adj, np.nan)
 
@@ -802,6 +810,26 @@ class TestWLS_CornerCases:
         with pytest.raises(ValueError):
             WLS(self.endog, self.exog, weights=weights)
 
+    def test_whiten_wrong_ndim(self):
+        mod = WLS(self.endog, self.exog, weights=1)
+        with pytest.raises(ValueError):
+            mod.whiten(np.ones((2, 2, 2)))
+
+    def test_rank_deficient_warning(self):
+        x = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, 6.0],
+            ]
+        )
+        y = np.array([1.0, 2.0, 3.0])
+
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            result = WLS(y, x).fit()
+
+        assert_allclose(result.fittedvalues, y)
+
 
 class TestWLSExogWeights(CheckRegressionResults):
     # Test WLS with Greene's credit card data
@@ -956,7 +984,7 @@ class TestYuleWalker:
 
         data = load()
         cls.rho, cls.sigma = yule_walker(
-            data.endog, order=4, method="mle", use_namedtuple=False
+            data.endog, order=4, method="mle", result_object=False
         )
         cls.R_params = [
             1.2831003105694765,
@@ -969,22 +997,22 @@ class TestYuleWalker:
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
 
 
-def test_yule_walker_use_namedtuple_default_warns():
+def test_yule_walker_result_object_default_warns():
     from statsmodels.datasets.sunspots import load
 
     data = load()
-    with pytest.warns(FutureWarning, match="use_namedtuple"):
+    with pytest.warns(FutureWarning, match="result_object"):
         res = yule_walker(data.endog, order=2)
     assert not isinstance(res, YuleWalkerResult)
 
 
-def test_yule_walker_use_namedtuple_true():
+def test_yule_walker_result_object_true():
     from statsmodels.datasets.sunspots import load
 
     data = load()
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
-        res = yule_walker(data.endog, order=2, use_namedtuple=True)
+        res = yule_walker(data.endog, order=2, result_object=True)
     assert isinstance(res, YuleWalkerResult)
     assert res.Rinv is None
     assert res[0] is res.rho
@@ -992,7 +1020,7 @@ def test_yule_walker_use_namedtuple_true():
 
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
-        res = yule_walker(data.endog, order=2, inv=True, use_namedtuple=True)
+        res = yule_walker(data.endog, order=2, inv=True, result_object=True)
     assert isinstance(res, YuleWalkerResult)
     assert res.Rinv is not None
 
@@ -1015,8 +1043,8 @@ class TestCompareAndElTestNamedTuple:
             warnings.filterwarnings("error", category=FutureWarning)
             res = self.res_full.compare_lr_test(self.res_restr)
         assert isinstance(res, CompareLRTestResult)
-        assert res[0] == res.lr_stat
-        assert res[1] == res.p_value
+        assert res[0] == res.statistic
+        assert res[1] == res.pvalue
         assert res[2] == res.df_diff
 
         with warnings.catch_warnings():
@@ -1026,23 +1054,32 @@ class TestCompareAndElTestNamedTuple:
             )
         assert isinstance(res_large, CompareLRTestResult)
 
-    def test_el_test_use_namedtuple_default_warns(self):
-        with pytest.warns(FutureWarning, match="use_namedtuple"):
+    def test_el_test_invalid_method_raises(self):
+        # An unsupported `method` used to fall through both `if` branches
+        # with no `else`, leaving `llr` unassigned and raising
+        # UnboundLocalError instead of a clear ValueError.
+        with pytest.raises(ValueError):
+            self.res_full.el_test(
+                np.array([0.0]), np.array([1]), method="unknown"
+            )
+
+    def test_el_test_result_object_default_warns(self):
+        with pytest.warns(FutureWarning, match="result_object"):
             res = self.res_full.el_test(np.array([0.0]), np.array([1]))
         assert not isinstance(res, ELTestResult)
 
-    def test_el_test_use_namedtuple_true_full(self):
+    def test_el_test_result_object_true_full(self):
         # len(param_nums) == len(params): no nuisance parameters
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
             res = self.res_restr.el_test(
-                np.array([0.0, 0.0]), np.array([0, 1]), use_namedtuple=True
+                np.array([0.0, 0.0]), np.array([0, 1]), result_object=True
             )
         assert isinstance(res, ELTestResult)
         assert res.weights is None
         assert res.nuisance_params is None
-        assert res[0] == res.llr
-        assert res[1] == res.pval
+        assert res[0] == res.statistic
+        assert res[1] == res.pvalue
 
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
@@ -1050,17 +1087,17 @@ class TestCompareAndElTestNamedTuple:
                 np.array([0.0, 0.0]),
                 np.array([0, 1]),
                 return_weights=True,
-                use_namedtuple=True,
+                result_object=True,
             )
         assert res.weights is not None
         assert res.nuisance_params is None
 
-    def test_el_test_use_namedtuple_true_nuisance(self):
+    def test_el_test_result_object_true_nuisance(self):
         # len(param_nums) < len(params): nuisance parameters present
         with warnings.catch_warnings():
             warnings.filterwarnings("error", category=FutureWarning)
             res = self.res_full.el_test(
-                np.array([0.0]), np.array([1]), use_namedtuple=True
+                np.array([0.0]), np.array([1]), result_object=True
             )
         assert isinstance(res, ELTestResult)
         assert res.weights is None
@@ -1072,7 +1109,7 @@ class TestCompareAndElTestNamedTuple:
                 np.array([0.0]),
                 np.array([1]),
                 ret_params=True,
-                use_namedtuple=True,
+                result_object=True,
             )
         assert res.weights is not None
         assert res.nuisance_params is not None
@@ -1264,6 +1301,28 @@ Notes: \\newline
 
 
 class TestRegularizedFit:
+
+    def test_invalid_method_raises(self):
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        rs = np.random.RandomState(742)
+        n = 100
+        endog = rs.normal(size=n)
+        exog = rs.normal(size=(n, 3))
+        model = OLS(endog, exog)
+
+        # OLS.fit_regularized only exposes "elastic_net"/"sqrt_lasso"
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
+
+        # fit_elasticnet itself also accepts "coord_descent"/"l1_slsqp"
+        with pytest.raises(ValueError, match="method"):
+            fit_elasticnet(model, method="not-a-method")
+
+        with pytest.raises(ValueError, match="trim_mode"):
+            fit_elasticnet(
+                model, method="l1_slsqp", L1_wt=1.0, trim_mode="not-a-trim-mode"
+            )
 
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
@@ -1465,6 +1524,14 @@ def test_fvalue_only_constant():
     assert_(np.isnan(res.fvalue))
     assert_(np.isnan(res.f_pvalue))
     res.summary()
+
+
+def test_fit_invalid_method_raises():
+    rs = np.random.RandomState(89432)
+    exog = add_constant(rs.normal(size=(50, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.normal(size=50)
+    with pytest.raises(ValueError, match="method"):
+        OLS(endog, exog).fit(method="not-a-method")
 
 
 def test_ridge():
@@ -1676,6 +1743,22 @@ def test_condition_number():
     res = OLS(y, x).fit()
     assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
     assert_allclose(res.condition_number, np.linalg.cond(x))
+
+
+def test_condition_number_nonpositive_eigval():
+    # GH 9653
+    rs = np.random.RandomState(323218)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    for smallest_eigval in (0.0, -1e-12):
+        eigvals = res.eigenvals.copy()
+        eigvals[-1] = smallest_eigval
+        res._cache["eigenvals"] = eigvals
+        assert res.condition_number == np.inf
+        del res._cache["condition_number"]
+    del res._cache["eigenvals"]
 
 
 def test_slim_summary():

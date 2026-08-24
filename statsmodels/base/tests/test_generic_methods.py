@@ -34,7 +34,10 @@ import statsmodels.api as sm
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.formula.api import glm, ols
 import statsmodels.tools._testing as smt
-from statsmodels.tools.sm_exceptions import HessianInversionWarning
+from statsmodels.tools.sm_exceptions import (
+    HessianInversionWarning,
+    SingularMatrixWarning,
+)
 
 
 class CheckGenericMixinBase:
@@ -145,11 +148,15 @@ class CheckGenericMixinBase:
         # TODO: Investigate how to resolve unseen warnings for Pyodide
         # Most likely coming from NumPy.linalg + lack of fp exceptions
         # support under WASM
-        warn_cls = (
-            HessianInversionWarning
-            if (isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM)
-            else None
-        )
+        if isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM:
+            warn_cls = HessianInversionWarning
+        elif self.__class__.__name__ == "TestGenericOLSOneExog" and PYTHON_IMPL_WASM:
+            # Workaround for likely bug in WASM
+            warn_cls = None
+        elif isinstance(mod, (sm.WLS, sm.GLS, sm.RLM)):
+            warn_cls = SingularMatrixWarning
+        else:
+            warn_cls = None
 
         cov_types = ["nonrobust", "HC0"]
 
@@ -183,6 +190,9 @@ class CheckGenericMixinBase:
                             cov_type=cov_type, start_params=sp, method=method, disp=0
                         )
             else:
+                # TODO: _fit_collinear is clearly broken with OLS/WLS/GLS/RLM
+                #  Should be fixed in one of these classes.
+                #  For now just skip the test for these classes
                 with pytest_warns(warn_cls):
                     # more special casing RLM
                     if isinstance(self.results.model, (sm.RLM)):
@@ -911,7 +921,9 @@ class TestWaldAnovaRankDeficient:
             "tech0": tech0,
         })
         mod = ols("y ~ C(fertilizer) * C(tech0)", data)
-        self.res = mod._fit_collinear()
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            # Intentionally singular, _fit_collinear doesn't even work
+            self.res = mod._fit_collinear()
 
     def test_df_rank_adjusted(self):
         # The interaction term has 4 columns but only 1 is non-redundant

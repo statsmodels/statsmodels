@@ -180,7 +180,7 @@ def yule_walker_acov(acov, order=1, method="unbiased", df=None, inv=False):
     """
     return yule_walker(
         acov, order=order, method=method, df=df, inv=inv, demean=False,
-        use_namedtuple=False,
+        result_object=False,
     )
 
 
