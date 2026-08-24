@@ -198,7 +198,8 @@ class TestPoissonZi(CompareMixin):
         )
 
         # Note : ZI has one extra parameter
-        cls.res = PoissonZiGMLE(data_endog, data_exog[:, 1:], offset=offset).fit(
+        cls.mod = PoissonZiGMLE(data_endog, data_exog[:, 1:], offset=offset)
+        cls.res = cls.mod.fit(
             start_params=np.r_[0.9 * cls.res_discrete.params, 10], method="bfgs", disp=0
         )
 
@@ -227,3 +228,13 @@ class TestPoissonZi(CompareMixin):
         mod1.data.xnames = mod1.data.xnames * 2
         with pytest.warns(ValueWarning):
             mod1.fit(disp=0)
+
+    def test_offset_array_like(self):
+        offset = list(self.mod.offset)
+        # Check that like works for offset
+        _ = PoissonZiGMLE(self.mod.endog, self.mod.endog, offset=offset)
+        # Check that like works for offset
+        rng = np.random.default_rng(12121)
+        offset = rng.standard_normal((self.mod.endog.shape[0], 2)).tolist()
+        with pytest.raises(ValueError, match="offset is required to have ndim 1"):
+            _ = PoissonZiGMLE(self.mod.endog, self.mod.endog, offset=offset)
