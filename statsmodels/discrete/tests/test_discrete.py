@@ -4005,7 +4005,6 @@ class TestMNLogitScoreTest:
 
         test_result = res_drop.score_test(exog_extra=self.exog_extra)
         lm_stat, lm_pval = test_result
-        lm_df = test_result.k_constraint
 
         # Build restriction matrix for Wald test on full model
         K_full = self.model_full.exog.shape[1]  # 6
