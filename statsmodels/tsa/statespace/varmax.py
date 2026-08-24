@@ -5,7 +5,6 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
-from statsmodels.compat.pandas import Appender
 
 import contextlib
 from warnings import warn
@@ -15,8 +14,10 @@ import pandas as pd
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.vector_ar import var_model
 
 from .initialization import Initialization
@@ -40,15 +41,15 @@ class VARMAX(MLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`, , shaped nobs x k_endog.
+        The observed time-series process :math:`y`, shaped nobs x k_endog.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct'} or iterable, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the non-zero polynomial exponents to include, in
@@ -82,9 +83,9 @@ class VARMAX(MLEModel):
     order : iterable
         The (p,q) order of the model for the number of AR and MA parameters to
         use.
-    trend : str{'n','c','t','ct'} or iterable
+    trend : {'n', 'c', 't', 'ct'} or iterable
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
+        Can be specified as a string where 'c' indicates a constant (i.e., a
         degree zero component of the trend polynomial), 't' indicates a
         linear trend with time, and 'ct' is both. Can also be specified as an
         iterable defining the non-zero polynomial exponents to include, in
@@ -153,9 +154,12 @@ class VARMAX(MLEModel):
         self.k_ma = int(order[1])
 
         # Check for valid model
-        if error_cov_type not in ["diagonal", "unstructured"]:
-            raise ValueError("Invalid error covariance matrix type"
-                             " specification.")
+        self.error_cov_type = string_like(
+            error_cov_type,
+            "error_cov_type",
+            options=("diagonal", "unstructured"),
+            lower=False,
+        )
         if self.k_ar == 0 and self.k_ma == 0:
             raise ValueError("Invalid VARMAX(p,q) specification; at least one"
                              " p,q must be greater than zero.")
@@ -314,6 +318,24 @@ class VARMAX(MLEModel):
                             "enforce_invertibility"] + list(kwargs.keys())
 
     def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : array_like, optional
+            Array of exogenous regressors, shaped nobs x k.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        VARMAX
+        """
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
@@ -463,15 +485,15 @@ class VARMAX(MLEModel):
             for j in range(self.k_endog):
                 for i in self.polynomial_trend.nonzero()[0]:
                     if i == 0:
-                        param_names += ["intercept.%s" % endog_names[j]]
+                        param_names += [f"intercept.{endog_names[j]}"]
                     elif i == 1:
-                        param_names += ["drift.%s" % endog_names[j]]
+                        param_names += [f"drift.{endog_names[j]}"]
                     else:
-                        param_names += ["trend.%d.%s" % (i, endog_names[j])]
+                        param_names += [f"trend.{i:d}.{endog_names[j]}"]
 
         # 2. AR terms
         param_names += [
-            "L%d.%s.%s" % (i+1, endog_names[k], endog_names[j])
+            f"L{i+1:d}.{endog_names[k]}.{endog_names[j]}"
             for j in range(self.k_endog)
             for i in range(self.k_ar)
             for k in range(self.k_endog)
@@ -479,7 +501,7 @@ class VARMAX(MLEModel):
 
         # 3. MA terms
         param_names += [
-            "L%d.e(%s).%s" % (i+1, endog_names[k], endog_names[j])
+            f"L{i+1:d}.e({endog_names[k]}).{endog_names[j]}"
             for j in range(self.k_endog)
             for i in range(self.k_ma)
             for k in range(self.k_endog)
@@ -495,12 +517,12 @@ class VARMAX(MLEModel):
         # 5. State covariance terms
         if self.error_cov_type == "diagonal":
             param_names += [
-                "sigma2.%s" % endog_names[i]
+                f"sigma2.{endog_names[i]}"
                 for i in range(self.k_endog)
             ]
         elif self.error_cov_type == "unstructured":
             param_names += [
-                ("sqrt.var.%s" % endog_names[i] if i == j else
+                (f"sqrt.var.{endog_names[i]}" if i == j else
                  f"sqrt.cov.{endog_names[j]}.{endog_names[i]}")
                 for i in range(self.k_endog)
                 for j in range(i+1)
@@ -509,7 +531,7 @@ class VARMAX(MLEModel):
         # 5. Measurement error variance terms
         if self.measurement_error:
             param_names += [
-                "measurement_variance.%s" % endog_names[i]
+                f"measurement_variance.{endog_names[i]}"
                 for i in range(self.k_endog)
             ]
 
@@ -601,7 +623,7 @@ class VARMAX(MLEModel):
     def untransform_params(self, constrained):
         """
         Transform constrained parameters used in likelihood evaluation
-        to unconstrained parameters used by the optimizer.
+        to unconstrained parameters used by the optimizer
 
         Parameters
         ----------
@@ -707,6 +729,27 @@ class VARMAX(MLEModel):
 
     def update(self, params, transformed=True, includes_fixed=False,
                complex_step=False):
+        """
+        Update the parameters of the model
+
+        Updates the representation matrices to fill in the new parameter
+        values.
+
+        Parameters
+        ----------
+        params : array_like
+            Array of new parameters.
+        transformed : bool, optional
+            Whether or not `params` is already transformed. Default is
+            True.
+        includes_fixed : bool, optional
+            Whether or not `params` includes the fixed parameters in their
+            location in the parameter vector, in addition to the free
+            parameters. Default is False.
+        complex_step : bool, optional
+            Whether or not the current run is because of a complex step
+            differentiation. Default is False.
+        """
         params = self.handle_params(params, transformed=transformed,
                                     includes_fixed=includes_fixed)
 
@@ -783,8 +826,6 @@ class VARMAX(MLEModel):
             Out-of-sample `exog` values, usually produced by
             `_validate_out_of_sample_exog` to ensure the correct shape (this
             method does not do any additional validation of its own).
-        out_of_sample : int
-            Number of out-of-sample periods.
 
         Notes
         -----
@@ -832,7 +873,7 @@ class VARMAX(MLEModel):
 
 class VARMAXResults(MLEResults):
     """
-    Class to hold results from fitting an VARMAX model.
+    Class to hold results from fitting a VARMAX model
 
     Parameters
     ----------
@@ -895,6 +936,24 @@ class VARMAXResults(MLEResults):
             ).reshape(k_endog, k_endog, k_ma).T
 
     def extend(self, endog, exog=None, **kwargs):
+        """
+        Recreate the results object for new data that extends the original data
+
+        Parameters
+        ----------
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        results : VARMAXResults
+        """
         # If we have exog, then the last element of predicted_state and
         # predicted_state_cov are nan (since they depend on the exog associated
         # with the first out-of-sample point), so we need to compute them here
@@ -932,8 +991,6 @@ class VARMAXResults(MLEResults):
             Out-of-sample `exog` values, usually produced by
             `_validate_out_of_sample_exog` to ensure the correct shape (this
             method does not do any additional validation of its own).
-        out_of_sample : int
-            Number of out-of-sample periods.
 
         Notes
         -----
@@ -1008,7 +1065,7 @@ class VARMAXResults(MLEResults):
         if start is None:
             start = 0
 
-        # Handle end (e.g. date)
+        # Handle end (e.g., date)
         _start, _end, out_of_sample, _ = (
             self.model._get_prediction_index(start, end, index, silent=True))
 
@@ -1022,12 +1079,14 @@ class VARMAXResults(MLEResults):
                 self.model.trend_offset + self.nobs)
 
         # Get the prediction
-        with self._set_final_exog(exog):
-            with self._set_final_predicted_state(exog, out_of_sample):
-                out = super().get_prediction(
-                    start=start, end=end, dynamic=dynamic,
-                    information_set=information_set, index=index, exog=exog,
-                    extend_kwargs=extend_kwargs, **kwargs)
+        with (
+            self._set_final_exog(exog),
+            self._set_final_predicted_state(exog, out_of_sample),
+        ):
+            out = super().get_prediction(
+                start=start, end=end, dynamic=dynamic,
+                information_set=information_set, index=index, exog=exog,
+                extend_kwargs=extend_kwargs, **kwargs)
         return out
 
     @Appender(MLEResults.simulate.__doc__)
@@ -1068,7 +1127,7 @@ class VARMAXResults(MLEResults):
                                state_index=None):
         # TODO: tests for:
         # - the model cloning used in `kalman_smoother.news` works when we
-        #   have time-varying exog (i.e. or do we need to somehow explicitly
+        #   have time-varying exog (i.e., or do we need to somehow explicitly
         #   call the _set_final_exog and _set_final_predicted_state methods
         #   on the rev_mod / revision_results)
         # - in the case of revisions to `endog`, should the revised model use
@@ -1103,10 +1162,10 @@ class VARMAXResults(MLEResults):
             order = f"({spec.k_ar},{spec.k_ma})"
         elif spec.k_ar > 0:
             model_name = "VAR"
-            order = "(%s)" % (spec.k_ar)
+            order = f"({spec.k_ar})"
         else:
             model_name = "VMA"
-            order = "(%s)" % (spec.k_ma)
+            order = f"({spec.k_ma})"
         if spec.k_exog > 0:
             model_name += "X"
         model_name = [model_name + order]
@@ -1137,7 +1196,7 @@ class VARMAXResults(MLEResults):
                     else:
                         param_name = name
                     if name in self.fixed_params:
-                        param_name = "%s (fixed)" % param_name
+                        param_name = f"{param_name} (fixed)"
                     param_names.append(param_name)
 
                 return summary_params(res, yname=None, xname=param_names,
@@ -1193,7 +1252,7 @@ class VARMAXResults(MLEResults):
                 endog_names = self.model.endog_names
                 if not isinstance(endog_names, list):
                     endog_names = [endog_names]
-                title = "Results for equation %s" % endog_names[i]
+                title = f"Results for equation {endog_names[i]}"
                 table = make_table(self, mask, title)
                 summary.tables.append(table)
 
@@ -1206,10 +1265,10 @@ class VARMAXResults(MLEResults):
 
             # Add a table for all other parameters
             masks = []
-            for m in (endog_masks, [state_cov_mask]):
-                m = np.array(m).flatten()
-                if len(m) > 0:
-                    masks.append(m)
+            for group in (endog_masks, [state_cov_mask]):
+                flat_mask = np.array(group).flatten()
+                if len(flat_mask) > 0:
+                    masks.append(flat_mask)
             masks = np.concatenate(masks)
             inverse_mask = np.array(list(set(indices).difference(set(masks))))
             if len(inverse_mask) > 0:

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import sys
 import os
-
+import sys
 
 BUILDDIR = sys.argv[-1]
 read_file_path = os.path.join(BUILDDIR,'latex','statsmodels.tex')

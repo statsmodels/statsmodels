@@ -8,6 +8,7 @@ import numpy as np
 
 from statsmodels.graphics import utils
 from statsmodels.graphics.plottools import rainbow
+from statsmodels.tools.validation import string_like
 
 
 def interaction_plot(
@@ -27,12 +28,7 @@ def interaction_plot(
     **kwargs,
 ):
     """
-    Interaction plot for factor level statistics.
-
-    Note. If categorial factors are supplied levels will be internally
-    recoded to integers. This ensures matplotlib compatibility. Uses
-    a DataFrame to calculate an `aggregate` statistic for each level of the
-    factor or group given by `trace`.
+    Interaction plot for factor level statistics
 
     Parameters
     ----------
@@ -44,14 +40,14 @@ def interaction_plot(
         If `trace` is a `pandas.Series` its name will be used as the
         `legendtitle` if `legendtitle` is None.
     response : array_like
-        The reponse or dependent variable. If a `pandas.Series` is given
+        The response or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
-    func : function
+    func : str or callable, optional
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
-    ax : axes, optional
+    ax : AxesSubplot, optional
         Matplotlib axes instance
-    plottype : str {'line', 'scatter', 'both'}, optional
+    plottype : {'b', 'both', 'l', 'line', 's', 'scatter'}, optional
         The type of plot to return. Can be 'l', 's', or 'b'
     xlabel : str, optional
         Label to use for `x`. Default is 'X'. If `x` is a `pandas.Series` it
@@ -65,9 +61,9 @@ def interaction_plot(
         If given, must have length == number of levels in trace
     linestyles : list, optional
         If given, must have length == number of levels in trace.
-    legendloc : {None, str, int}
+    legendloc : str or int, optional
         Location passed to the legend command.
-    legendtitle : {None, str}
+    legendtitle : str, optional
         Title of the legend.
     **kwargs
         These will be passed to the plot command used either plot or scatter.
@@ -77,6 +73,13 @@ def interaction_plot(
     -------
     Figure
         The figure given by `ax.figure` or a new instance.
+
+    Notes
+    -----
+    If categorical factors are supplied levels will be internally
+    recoded to integers. This ensures matplotlib compatibility. Uses
+    a DataFrame to calculate an `aggregate` statistic for each level of the
+    factor or group given by `trace`.
 
     Examples
     --------
@@ -106,6 +109,12 @@ def interaction_plot(
 
     from pandas import DataFrame
 
+    plottype = string_like(
+        plottype,
+        "plottype",
+        options=("b", "both", "l", "line", "s", "scatter"),
+        lower=False,
+    )
     fig, ax = utils.create_mpl_ax(ax)
 
     response_name = ylabel or getattr(response, "name", "response")
@@ -121,7 +130,7 @@ def interaction_plot(
     if isinstance(x[0], str):
         x_levels = np.unique(x).tolist()
         x_values = lrange(len(x_levels))
-        x = _recode(x, dict(zip(x_levels, x_values)))
+        x = _recode(x, dict(zip(x_levels, x_values, strict=True)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(["trace", "x"]).aggregate(func).reset_index()
@@ -166,7 +175,7 @@ def interaction_plot(
                 linestyle=linestyles[i],
                 **kwargs,
             )
-    elif plottype == "scatter" or plottype == "s":
+    else:  # plottype == "scatter" or plottype == "s"
         for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
@@ -179,8 +188,6 @@ def interaction_plot(
                 **kwargs,
             )
 
-    else:
-        raise ValueError("Plot type %s not understood" % plottype)
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(0.1)
 
@@ -191,19 +198,23 @@ def interaction_plot(
 
 
 def _recode(x, levels):
-    """Recode categorial data to int factor.
+    """
+    Recode categorical data to int factor
 
     Parameters
     ----------
-    x : array_like
-        array like object supporting with numpy array methods of categorially
-        coded data.
+    x : ndarray or Series
+        Categorically coded data.  If a `Series`, its values are extracted
+        before recoding; otherwise `x` must already be an `ndarray` (it is
+        accessed via ``x.dtype``).
     levels : dict
-        mapping of labels to integer-codings
+        Mapping of labels to integer codings.
 
     Returns
     -------
-    out : instance numpy.ndarray
+    out : ndarray or Series
+        The recoded data as an ndarray, or as a Series with the same name
+        and index as `x` if `x` was a `pandas.Series`.
     """
     from pandas import Series
 

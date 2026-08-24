@@ -3,13 +3,15 @@ from packaging.version import Version, parse
 import scipy
 
 SP_VERSION = parse(scipy.__version__)
-SP_LT_15 = SP_VERSION < Version("1.4.99")
-SCIPY_GT_14 = not SP_LT_15
-SP_LT_16 = SP_VERSION < Version("1.5.99")
-SP_LT_17 = SP_VERSION < Version("1.6.99")
 SP_LT_19 = SP_VERSION < Version("1.8.99")
+SP_LT_110 = SP_VERSION < Version("1.10.99")
+SP_LT_112 = SP_VERSION < Version("1.12.99")
+SP_LT_114 = SP_VERSION < Version("1.13.99")
 SP_LT_115 = SP_VERSION < Version("1.14.99")
 SP_LT_116 = SP_VERSION < Version("1.15.99")
+SP_LT_118 = SP_VERSION < Version("1.17.99")
+SP_LT_2 = SP_VERSION < Version("1.99.99")
+BASINHOPPING_RNG = "seed" if SP_LT_115 else "rng"
 
 
 def _next_regular(target):
@@ -68,13 +70,6 @@ def _valarray(shape, value=np.nan, typecode=None):
     return out
 
 
-if SP_LT_16:
-    # copied from scipy, added to scipy in 1.6.0
-    from ._scipy_multivariate_t import multivariate_t
-else:
-    from scipy.stats import multivariate_t
-
-
 def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
     cond, args, f1, f2=None, /, *, fill_value=None
 ):
@@ -102,8 +97,6 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
         It does not need to be scalar; it needs however to be broadcastable with
         `cond` and `args`.
         Mutually exclusive with `f2`. You must provide one or the other.
-    xp : array_namespace, optional
-        The standard-compatible namespace for `cond` and `args`. Default: infer.
 
     Returns
     -------
@@ -126,7 +119,11 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
 
     """
     try:
-        import scipy._lib.array_api_extra as xpx
+        try:
+            # From scipy >= 1.18.0
+            import scipy._external.array_api_extra as xpx
+        except (ImportError, AttributeError):
+            import scipy._lib.array_api_extra as xpx
 
         return xpx.apply_where(cond, args, f1, f2, fill_value=fill_value)
     except (ImportError, AttributeError):
@@ -136,14 +133,15 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
 
 
 __all__ = [
-    "SCIPY_GT_14",
-    "SP_LT_15",
-    "SP_LT_16",
-    "SP_LT_17",
+    "BASINHOPPING_RNG",
+    "SP_LT_2",
     "SP_LT_19",
+    "SP_LT_110",
+    "SP_LT_112",
+    "SP_LT_114",
     "SP_LT_115",
     "SP_LT_116",
+    "SP_LT_118",
     "SP_VERSION",
     "apply_where",
-    "multivariate_t",
 ]

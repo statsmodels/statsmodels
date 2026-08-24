@@ -44,7 +44,7 @@ cdef class sCFASimulationSmoother(object):
     cdef void _reinitialize_pointers(self) except *
 
     cpdef int update_sparse_posterior_moments(self) except *
-    cpdef simulate(self, variates=*)
+    cpdef simulate(self, variates=*, rng=*)
 
 cdef class dCFASimulationSmoother(object):
     # Statespace object
@@ -73,7 +73,7 @@ cdef class dCFASimulationSmoother(object):
     cdef void _reinitialize_pointers(self) except *
 
     cpdef int update_sparse_posterior_moments(self) except *
-    cpdef simulate(self, variates=*)
+    cpdef simulate(self, variates=*, rng=*)
 
 
 cdef class cCFASimulationSmoother(object):
@@ -103,7 +103,7 @@ cdef class cCFASimulationSmoother(object):
     cdef void _reinitialize_pointers(self) except *
 
     cpdef int update_sparse_posterior_moments(self) except *
-    cpdef simulate(self, variates=*)
+    cpdef simulate(self, variates=*, rng=*)
 
 
 cdef class zCFASimulationSmoother(object):
@@ -133,4 +133,4 @@ cdef class zCFASimulationSmoother(object):
     cdef void _reinitialize_pointers(self) except *
 
     cpdef int update_sparse_posterior_moments(self) except *
-    cpdef simulate(self, variates=*)
+    cpdef simulate(self, variates=*, rng=*)

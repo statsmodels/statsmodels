@@ -13,26 +13,25 @@ check: instead of bound checking I could use the fill-value of the
 interpolators
 """
 import numpy as np
-from scipy.interpolate import Rbf, interp1d, interp2d
+from scipy.interpolate import Rbf, interp1d
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class TableDist:
     """
     Distribution, critical values and p-values from tables
 
-    currently only 1 extra parameter, e.g. sample size
+    currently only 1 extra parameter, e.g., sample size
 
     Parameters
     ----------
     alpha : array_like, 1d
-        probabiliy in the table, could be either sf (right tail) or cdf (left
+        probability in the table, could be either sf (right tail) or cdf (left
         tail)
     size : array_like, 1d
         The sample sizes for the table
     crit_table : array_like, 2d
-        The sample sizes in the table
         array with critical values for sample size in rows and probability in
         columns
     asymptotic : callable, optional
@@ -95,7 +94,7 @@ class TableDist:
             except Exception as exc:
                 raise type(exc)("Calling asymptotic(self.size+1) failed. The "
                                 "error message was:"
-                                "\n\n{err_msg}".format(err_msg=exc.args[0])) from exc
+                                f"\n\n{exc.args[0]}") from exc
             if len(cv) != len(alpha):
                 raise ValueError("asymptotic does not return len(alpha) "
                                  "values")
@@ -113,13 +112,6 @@ class TableDist:
         polyn = [interp1d(self.size, self.crit_table[:, i])
                  for i in range(self.n_alpha)]
         return polyn
-
-    @cache_readonly
-    def poly2d(self):
-        # check for monotonicity ?
-        # fix this, interp needs increasing
-        poly2d = interp2d(self.size, self.alpha, self.crit_table)
-        return poly2d
 
     @cache_readonly
     def polyrbf(self):
@@ -166,9 +158,10 @@ class TableDist:
 
     def prob(self, x, n):
         """
-        Find pvalues by interpolation, either cdf(x)
+        Find p-values by interpolation, for either cdf(x) or sf(x)
 
-        Returns extreme probabilities, 0.001 and 0.2, for out of range
+        Returns the smallest or largest tabulated probability, alpha[0] or
+        alpha[-1], for x outside of the tabulated range
 
         Parameters
         ----------
@@ -205,7 +198,7 @@ class TableDist:
 
             probs = np.nan * np.ones(x.shape)  # mistake if nan left
             probs[cond_low] = alpha[0]
-            probs[cond_low] = alpha[-1]
+            probs[cond_high] = alpha[-1]
             probs[cond_interior] = interp1d(critv, alpha)(x[cond_interior])
 
             return probs

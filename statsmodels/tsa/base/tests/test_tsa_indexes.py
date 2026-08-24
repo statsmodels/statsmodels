@@ -117,7 +117,7 @@ unsupported_indexes = [
     ([str, 1, "a", -30.1, {}], None),
 ]
 
-# Unsupported date indexes (i.e. those without inferrable frequency)
+# Unsupported date indexes (i.e., those without inferrable frequency)
 unsupported_date_indexes = [
     (["1950", "1952", "1941", "1954", "1991"], None),
     (
@@ -145,7 +145,7 @@ def test_instantiation_valid():
     #
     # Each pandas index (of `endog`, `exog`, or passed to `dates`) can be:
     # 0. None
-    # 1. RangeIndex (if applicable; i.e. if Pandas >= 0.18)
+    # 1. RangeIndex (if applicable; i.e., if Pandas >= 0.18)
     # 2. Integral Indexes with values exactly equal to 0, 1, ..., nobs-1
     # 3. DatetimeIndex with frequency
     # 4. PeriodIndex with frequency
@@ -174,11 +174,11 @@ def test_instantiation_valid():
     #
     # Each test will be denoted by:
     # endog.index:exog.index/date/freq where the corresponding
-    # location is the integer from above; e.g. 1.0:0.0/9/1 corresponds to
+    # location is the integer from above; e.g., 1.0:0.0/9/1 corresponds to
     # - List endog (with no index)
     # - No exog
     # - Series of datetime objects
-    # - Something valid for `pd.to_offset` (e.g. 'D', if that works with
+    # - Something valid for `pd.to_offset` (e.g., 'D', if that works with
     #   dates)
     #
     # Notice that the endog.index:exog.index really collapses to a single
@@ -187,14 +187,14 @@ def test_instantiation_valid():
     # otherwise. **Thus, we will not test `exog` here.**
     #
     # Example valid combinations of row_label/date/freq include:
-    # - */0/0 (i.e. anything is valid if date and freq are not passed)
-    # - */%/% where %/% denotes a valid date/freq combination (i.e. any
+    # - */0/0 (i.e., anything is valid if date and freq are not passed)
+    # - */%/% where %/% denotes a valid date/freq combination (i.e., any
     #   row_label is valid if a valid date/freq combination is given)
     #
     # Example invalid combinations include:
-    # - [1-2],[3-4].4/0/[1-2] (i.e. if have freq, then must have, or
+    # - [1-2],[3-4].4/0/[1-2] (i.e., if have freq, then must have, or
     #   coerce, a date index)
-    # - */[4-10]/0 (i.e. for some types of dates, freq must be passed)
+    # - */[4-10]/0 (i.e., for some types of dates, freq must be passed)
 
     # Baseline: list, numpy endog with no dates, no freq
     for endog in dta[:2]:
@@ -434,7 +434,7 @@ def test_instantiation_valid():
         message = (
             "An unsupported index was provided. As a result, forecasts "
             "cannot be generated. To use the model for forecasting, use "
-            "on the the supported classes of index."
+            "on the supported classes of index."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -458,7 +458,7 @@ def test_instantiation_valid():
         message = (
             "A date index has been provided, but it has no"
             " associated frequency information and so will be"
-            " ignored when e.g. forecasting."
+            " ignored when e.g., forecasting."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -517,9 +517,7 @@ def test_prediction_increment_unsupported():
     # a. Generated from unsupported index
     endog = dta[2].copy()
     endog.index = unsupported_indexes[-2][0]
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("ignore")
-        mod = tsa_model.TimeSeriesModel(endog)
+    mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
     # out-of-sample indexes.
@@ -555,27 +553,8 @@ def test_prediction_increment_unsupported():
     # a warning will be issued
     start_key = 1
     end_key = nobs
-    message = (
-        "No supported index is available. In the next version, calling this "
-        "method in a model without a supported index will result in an "
-        "exception."
-    )
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        (
-            start,
-            end,
-            out_of_sample,
-            prediction_index,
-        ) = mod._get_prediction_index(start_key, end_key)
-
-        assert_equal(str(w[0].message), message)
-
-    assert_equal(start, 1)
-    assert_equal(end, 4)
-    assert_equal(out_of_sample, 1)
-    assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(start_key, end_key)
 
     # Test getting a location that exists in the (internal) index
     loc, index, index_was_expanded = mod._get_index_loc(2)
@@ -1002,9 +981,10 @@ def test_prediction_increment_pandas_dates_nanosecond():
 
 
 def test_range_index():
+    rs = np.random.RandomState(328389218)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5))
+    endog = pd.Series(rs.normal(size=5))
     assert_equal(isinstance(endog.index, pd.RangeIndex), True)
     # Warning should not be given
     with warnings.catch_warnings(record=True) as w:
@@ -1117,12 +1097,13 @@ def test_prediction_rangeindex_withstep():
 
 
 def test_custom_index():
+    rs = np.random.RandomState(328392810)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5), index=["a", "b", "c", "d", "e"])
+    endog = pd.Series(rs.normal(size=5), index=["a", "b", "c", "d", "e"])
     message = (
         "An unsupported index was provided. As a result, forecasts cannot be "
-        "generated. To use the model for forecasting, use on the the "
+        "generated. To use the model for forecasting, use on the "
         "supported classes of index."
     )
     with warnings.catch_warnings(record=True) as w:
@@ -1171,22 +1152,8 @@ def test_custom_index():
     # Test out-of-sample
     start_key = 4
     end_key = 5
-    message = (
-        "No supported index is available. In the next version, calling this "
-        "method in a model without a supported index will result in an "
-        "exception."
-    )
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        (
-            start,
-            end,
-            out_of_sample,
-            prediction_index,
-        ) = mod._get_prediction_index(start_key, end_key)
-        assert_equal(prediction_index.equals(pd.Index([4, 5])), True)
-        assert_equal(str(w[0].message), message)
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(start_key, end_key)
 
     # Test out-of-sample custom index
     start, end, out_of_sample, prediction_index = mod._get_prediction_index(
@@ -1205,7 +1172,7 @@ def test_custom_index():
 
 def test_nonmonotonic_periodindex():
     # Create a nonmonotonic period index
-    tmp = pd.period_range(start=2000, end=2002, freq="Y")
+    tmp = pd.period_range(start="2000", end="2002", freq="Y")
     index = tmp.tolist() + tmp.tolist()
     endog = pd.Series(np.zeros(len(index)), index=index)
 
@@ -1227,10 +1194,9 @@ def test_nonfull_periodindex():
 
 def test_get_index_loc_quarterly():
     # See GH#6339
-
-    ix = pd.date_range("2000Q1", periods=8, freq="QS")
+    ix = pd.period_range("2000Q1", periods=8, freq="Q").to_timestamp()
     endog = pd.Series(np.zeros(8), index=ix)
 
     mod = tsa_model.TimeSeriesModel(endog)
     loc, index, _ = mod._get_index_loc("2003Q2")
-    assert_equal(index[loc], pd.Timestamp("2003Q2"))
+    assert_equal(index[loc], pd.Period("2003Q2").to_timestamp())

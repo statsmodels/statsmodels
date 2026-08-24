@@ -7,8 +7,6 @@ docs:
 http://www.stata.com/manuals13/xtxtgee.pdf
 """
 
-from statsmodels.compat.pandas import Appender
-
 from collections import defaultdict
 import warnings
 
@@ -17,6 +15,8 @@ import pandas as pd
 from scipy import linalg as spl
 
 from statsmodels.stats.correlation_tools import cov_nearest
+from statsmodels.tools.docstring_helpers import Appender
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     NotImplementedWarning,
@@ -40,6 +40,13 @@ class CovStruct:
 
     The default state of a newly-created instance should always be
     the identity correlation matrix.
+
+    Parameters
+    ----------
+    cov_nearest_method : {"clipped", "nearest"}, optional
+        Method for projecting a covariance matrix that is not positive
+        semidefinite to the nearest such matrix. See `cov_nearest` in
+        statsmodels.stats.correlation_tools for more information.
     """
 
     def __init__(self, cov_nearest_method="clipped"):
@@ -74,7 +81,7 @@ class CovStruct:
 
         Parameters
         ----------
-        params : array_like
+        params : sequence of float
             Working values for the regression parameters.
         """
         raise NotImplementedError
@@ -95,7 +102,7 @@ class CovStruct:
 
         Returns
         -------
-        M : matrix
+        M : ndarray
             The covariance or correlation matrix of endog
         is_cor : bool
             True if M is a correlation matrix, False if M is a
@@ -119,13 +126,13 @@ class CovStruct:
         stdev : array_like
             The standard deviation of endog for each observation in
             the group.
-        rhs : list/tuple of array_like
+        rhs : sequence of ndarray
             A set of right-hand sides; each defines a matrix equation
             to be solved.
 
         Returns
         -------
-        soln : list/tuple of array_like
+        soln : list of ndarray
             The solutions to the matrix equations.
 
         Notes
@@ -134,7 +141,7 @@ class CovStruct:
 
         Some dependence structures do not use `expval` and/or `index`
         to determine the correlation matrix.  Some families
-        (e.g. binomial) do not use the `stdev` parameter when forming
+        (e.g., binomial) do not use the `stdev` parameter when forming
         the covariance matrix.
 
         If the covariance matrix is singular or not SPD, it is
@@ -237,6 +244,13 @@ class Unstructured(CovStruct):
     time argument must be of integer dtype, and indicates
     which position in a complete data vector is occupied
     by each observed value.
+
+    Parameters
+    ----------
+    cov_nearest_method : {"clipped", "nearest"}, optional
+        Method for projecting a covariance matrix that is not positive
+        semidefinite to the nearest such matrix. See `cov_nearest` in
+        statsmodels.stats.correlation_tools for more information.
     """
 
     def __init__(self, cov_nearest_method="clipped"):
@@ -396,7 +410,7 @@ class Exchangeable(CovStruct):
     def summary(self):
         return (
             "The correlation between two observations in the "
-            + "same cluster is %.3f" % self.dep_params
+            f"same cluster is {self.dep_params:.3f}"
         )
 
 
@@ -431,7 +445,7 @@ class Nested(CovStruct):
     membership.  The `0 + ` should be included to prevent creation of
     an intercept.  The variable values are interpreted as labels for
     group membership, but the variables should not be explicitly coded
-    as categorical, i.e. use `0 + a` not `0 + C(a)`.
+    as categorical, i.e., use `0 + a` not `0 + C(a)`.
 
     Notes
     -----
@@ -452,6 +466,11 @@ class Nested(CovStruct):
         `designx` is a matrix, with each row containing dummy
         variables indicating which variance components are associated
         with the corresponding element of QY.
+
+        Parameters
+        ----------
+        model : GEE class
+            A reference to the parent GEE class instance.
         """
 
         super().initialize(model)
@@ -570,8 +589,14 @@ class Nested(CovStruct):
 
     def summary(self):
         """
-        Returns a summary string describing the state of the
-        dependence structure.
+        Returns a summary of the state of the dependence structure.
+
+        Returns
+        -------
+        DataFrame
+            A DataFrame with one row per variance component
+            (including the residual), containing the estimated
+            variance of each component.
         """
 
         dep_names = ["Groups"]
@@ -579,7 +604,7 @@ class Nested(CovStruct):
             dep_names.extend(self.model._dep_data_names)
         else:
             dep_names.extend(
-                ["Component %d:" % (k + 1) for k in range(len(self.vcomp_coeff) - 1)]
+                [f"Component {k + 1:d}:" for k in range(len(self.vcomp_coeff) - 1)]
             )
         if hasattr(self.model, "_groups_name"):
             dep_names[0] = self.model._groups_name
@@ -603,12 +628,15 @@ class Stationary(CovStruct):
 
     Parameters
     ----------
-    max_lag : float
+    max_lag : int, optional
         The largest distance that is included in the covariance model.
-    grid : bool
+    grid : None or bool, optional
         If True, the index positions in the data (after dropping missing
         values) are used to define distances, and the `time` variable is
-        ignored.
+        ignored. If False, the `time` variable is used to determine
+        distances. If None (the default), behaves as False and a
+        ``FutureWarning`` is issued because the default will change to
+        True in a future version.
     """
 
     def __init__(self, max_lag=1, grid=None):
@@ -787,9 +815,17 @@ class Autoregressive(CovStruct):
 
     Parameters
     ----------
-    dist_func : function from R^k x R^k to R^+, optional
+    dist_func : callable, optional
         A function that computes the distance between the two
-        observations based on their `time` values.
+        observations based on their `time` values. Takes two
+        array_like arguments of length `k` and returns a
+        non-negative float.
+    grid : None or bool, optional
+        If True, use the grid-based implementation for equally spaced data.
+        If False, estimate the dependence parameter using all available
+        pairs of observations. If None (the default), behaves as False
+        and a ``FutureWarning`` is issued because the default will
+        change to True in a future version.
 
     References
     ----------
@@ -1011,7 +1047,7 @@ class Autoregressive(CovStruct):
 
     def summary(self):
 
-        return "Autoregressive(1) dependence parameter: %.3f\n" % self.dep_params
+        return f"Autoregressive(1) dependence parameter: {self.dep_params:.3f}\n"
 
 
 class CategoricalCovStruct(CovStruct):
@@ -1022,7 +1058,7 @@ class CategoricalCovStruct(CovStruct):
     ----------
     nlevel : int
         The number of distinct levels for the outcome variable.
-    ibd : list
+    ibd : list of ndarray
         A list whose i^th element ibd[i] is an array whose rows
         contain integer pairs (a,b), where endog_li[i][a:b] is the
         subvector of binary indicators derived from the same ordinal
@@ -1054,16 +1090,10 @@ class GlobalOddsRatio(CategoricalCovStruct):
     Estimate the global odds ratio for a GEE with ordinal or nominal
     data.
 
-    References
+    Parameters
     ----------
-    PJ Heagerty and S Zeger. "Marginal Regression Models for Clustered
-    Ordinal Measurements". Journal of the American Statistical
-    Association Vol. 91, Issue 435 (1996).
-
-    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
-    A Note on Working Correlation Structures. Biometrics Vol. 52,
-    No. 1 (Mar., 1996), pp. 354-361
-    http://www.jstor.org/stable/2533173
+    endog_type : {"ordinal", "nominal"}
+        Whether the endog variable is ordinal or nominal.
 
     Notes
     -----
@@ -1076,6 +1106,17 @@ class GlobalOddsRatio(CategoricalCovStruct):
     `cpp` is a dictionary where cpp[group] is a map from cut-point
     pairs (c,c') to the indices of all between-subject pairs derived
     from the given cut points.
+
+    References
+    ----------
+    PJ Heagerty and S Zeger. "Marginal Regression Models for Clustered
+    Ordinal Measurements". Journal of the American Statistical
+    Association Vol. 91, Issue 435 (1996).
+
+    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
+    A Note on Working Correlation Structures. Biometrics Vol. 52,
+    No. 1 (Mar., 1996), pp. 354-361
+    http://www.jstor.org/stable/2533173
     """
 
     def __init__(self, endog_type):
@@ -1147,7 +1188,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
         wts = [1 / v for v in var]
         wtsum = sum(wts)
         wts = [w / wtsum for w in wts]
-        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio)])
+        log_pooled_or = sum([w * e for w, e in zip(wts, log_oddsratio, strict=True)])
 
         return np.exp(log_pooled_or)
 
@@ -1277,7 +1318,7 @@ class GlobalOddsRatio(CategoricalCovStruct):
             )
 
     def summary(self):
-        return "Global odds ratio: %.3f\n" % self.dep_params
+        return f"Global odds ratio: {self.dep_params:.3f}\n"
 
 
 class OrdinalIndependence(CategoricalCovStruct):
@@ -1350,7 +1391,7 @@ class Equivalence(CovStruct):
 
     Parameters
     ----------
-    pairs : dict-like
+    pairs : dict-like, optional
       A dictionary of dictionaries, where `pairs[group][label]`
       provides the indices of all pairs of observations in the group
       that have the same covariance value.  Specifically,
@@ -1360,14 +1401,14 @@ class Equivalence(CovStruct):
       one triangle of each covariance matrix should be included.
       Positions where j1 and j2 have the same value are variance
       parameters.
-    labels : array_like
+    labels : array_like, optional
       An array of labels such that every distinct pair of labels
       defines an equivalence class.  Either `labels` or `pairs` must
       be provided.  When the two labels in a pair are equal two
       equivalence classes are defined: one for the diagonal elements
       (corresponding to variances) and one for the off-diagonal
       elements (corresponding to covariances).
-    return_cov : bool
+    return_cov : bool, optional
       If True, `covariance_matrix` returns an estimate of the
       covariance matrix, otherwise returns an estimate of the
       correlation matrix.
@@ -1396,11 +1437,11 @@ class Equivalence(CovStruct):
     groups, equal variance for all observations, and constant
     covariance for all pairs of observations within each group.
 
-    >> pairs = {0: {}, 1: {}}
-    >> pairs[0][0] = (np.r_[0, 1, 2], np.r_[0, 1, 2])
-    >> pairs[0][1] = np.tril_indices(3, -1)
-    >> pairs[1][0] = (np.r_[3, 4, 5], np.r_[3, 4, 5])
-    >> pairs[1][2] = 3 + np.tril_indices(3, -1)
+    >>> pairs = {0: {}, 1: {}}
+    >>> pairs[0][0] = (np.r_[0, 1, 2], np.r_[0, 1, 2])
+    >>> pairs[0][1] = np.tril_indices(3, -1)
+    >>> pairs[1][0] = (np.r_[3, 4, 5], np.r_[3, 4, 5])
+    >>> pairs[1][2] = 3 + np.tril_indices(3, -1)
     """
 
     def __init__(self, pairs=None, labels=None, return_cov=False):
@@ -1427,7 +1468,7 @@ class Equivalence(CovStruct):
 
         self.return_cov = return_cov
 
-    def _make_pairs(self, i, j):
+    def _make_pairs(self, i, j, rng):
         """
         Create arrays containing all unique ordered pairs of i, j.
 
@@ -1452,14 +1493,13 @@ class Equivalence(CovStruct):
         except TypeError:
             # workaround for old numpy that cannot call unique with complex
             # dtypes
-            rs = np.random.RandomState(4234)
-            bmat = np.dot(mat, rs.uniform(size=mat.shape[1]))
+            bmat = np.dot(mat, rng.uniform(size=mat.shape[1]))
             _, idx = np.unique(bmat, return_index=True)
         mat = mat[idx, :]
 
         return mat[:, 0], mat[:, 1]
 
-    def _pairs_from_labels(self):
+    def _pairs_from_labels(self, rng):
 
         from collections import defaultdict
 
@@ -1487,7 +1527,7 @@ class Equivalence(CovStruct):
                     except KeyError:
                         continue
 
-                    i1, i2 = self._make_pairs(i1, i2)
+                    i1, i2 = self._make_pairs(i1, i2, rng)
 
                     clabel = str(lb1) + "/" + str(lb2)
 
@@ -1506,8 +1546,22 @@ class Equivalence(CovStruct):
 
         self.pairs = pairs
 
-    def initialize(self, model):
+    def initialize(self, model, rng=None):
+        """
+        Called by GEE, used by implementations that need additional
+        setup prior to running `fit`.
 
+        Parameters
+        ----------
+        model : GEE class
+            A reference to the parent GEE class instance.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        """
         super().initialize(model)
 
         if self.model.weights is not None:
@@ -1519,7 +1573,8 @@ class Equivalence(CovStruct):
             )
 
         if not hasattr(self, "pairs"):
-            self._pairs_from_labels()
+            rng = check_random_state(rng)
+            self._pairs_from_labels(rng)
 
         # Initialize so that any equivalence class containing a
         # variance parameter has value 1.

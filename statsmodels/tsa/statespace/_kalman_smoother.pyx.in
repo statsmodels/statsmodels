@@ -52,6 +52,7 @@ cimport cython
 np.import_array()
 
 cimport scipy.linalg.cython_blas as blas
+include "statsmodels/tsa/statespace/_blas_int.pxi"
 
 cdef int FORTRAN = 1
 
@@ -518,7 +519,9 @@ cdef class {{prefix}}KalmanSmoother(object):
         """
         Perform an iteration of the Kalman smoother
         """
-        cdef int t, inc = 1
+        cdef int t
+        cdef blas_int inc = 1
+        cdef blas_int k_states2 = self.kfilter.k_states2
         cdef int diffuse = self.t < self.kfilter.nobs_diffuse
 
         # Get time subscript, and stop the iterator if at the end
@@ -578,9 +581,9 @@ cdef class {{prefix}}KalmanSmoother(object):
 
         # Smoothed state autocovariance matrix
         if diffuse:
-            blas.{{prefix}}copy(&self.kfilter.k_states2, self.kfilter._tmpL0, &inc, self._innovations_transition, &inc)
+            blas.{{prefix}}copy(&k_states2, self.kfilter._tmpL0, &inc, self._innovations_transition, &inc)
         else:
-            blas.{{prefix}}copy(&self.kfilter.k_states2, self._tmpL, &inc, self._innovations_transition, &inc)
+            blas.{{prefix}}copy(&k_states2, self._tmpL, &inc, self._innovations_transition, &inc)
         if self.smoother_output & SMOOTHER_STATE_AUTOCOV:
             if diffuse:
                 {{prefix}}smoothed_state_autocov_univariate_diffuse(self, self.kfilter, self.model)

@@ -88,8 +88,10 @@ Norms
    MQuantileNorm
    RamsayE
    RobustNorm
+   StudentT
    TrimmedMean
    TukeyBiweight
+   TukeyQuartic
    estimate_location
 
 
@@ -104,7 +106,45 @@ Scale
 
     Huber
     HuberScale
+    MScale
     mad
     hubers_scale
     iqr
     qn_scale
+    scale_tau
+    scale_trimmed
+
+
+Deterministic-Start Robust Covariance Estimation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Robust estimators of multivariate location and scatter, including the
+minimum covariance determinant (MCD) and S-estimators with deterministic
+(non-random) starting values.
+
+.. module:: statsmodels.robust.covariance
+.. currentmodule:: statsmodels.robust.covariance
+
+.. autosummary::
+   :toctree: generated/
+
+    CovM
+    CovDetMCD
+    CovDetS
+    CovDetMM
+
+
+Resistant (Deterministic-Start) Regression
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Regression M- and MM-estimators using S-estimator starting values computed
+deterministically, rather than through random resampling.
+
+.. module:: statsmodels.robust.resistant_linear_model
+.. currentmodule:: statsmodels.robust.resistant_linear_model
+
+.. autosummary::
+   :toctree: generated/
+
+    RLMDetS
+    RLMDetSMM

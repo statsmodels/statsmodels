@@ -8,7 +8,8 @@ def test_missing_data_pandas():
     """
     Fixes GH: #144
     """
-    X = np.random.random((10, 5))
+    rs = np.random.RandomState(89099431)
+    X = rs.random((10, 5))
     X[1, 2] = np.nan
     df = pd.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
@@ -16,7 +17,8 @@ def test_missing_data_pandas():
 
 
 def test_dataframe():
-    X = np.random.random((10, 5))
+    rs = np.random.RandomState(89099431)
+    X = rs.random((10, 5))
     df = pd.DataFrame(X)
     vals, cnames, rnames = data.interpret_data(df)
     np.testing.assert_equal(vals, df.values)
@@ -25,9 +27,11 @@ def test_dataframe():
 
 
 def test_formula_engine_use_detection_577():
-    x = np.random.random((10, 2))
+    rs = np.random.RandomState(89099431)
+    x = rs.random((10, 2))
     df = pd.DataFrame(x, columns=["var1", "var2"])
     from statsmodels.formula._manager import FormulaManager
+
     mgr = FormulaManager()
     if mgr.engine == "patsy":
         test_func = data._is_using_patsy

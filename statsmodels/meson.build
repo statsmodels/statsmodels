@@ -7,7 +7,7 @@ import os
 import numpy as np
 try:
     # Check if include directory is inside the dir
-    # e.g. a venv created inside the dir
+    # e.g., a venv created inside the dir
     # If so, convert it to a relative path
     incdir = os.path.relpath(np.get_include())
 except Exception:
@@ -82,7 +82,6 @@ subdirs_list = [
     'graphics',
     'imputation',
     'includes',
-    'interface',
     'iolib',
     'miscmodels',
     'multivariate',

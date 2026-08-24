@@ -1,37 +1,39 @@
 """
+Generic maximum likelihood versions of the Poisson model
+
 Created on Mon Jul 26 08:34:59 2010
 
 Author: josef-pktd
 
-changes:
-added offset and zero-inflated version of Poisson
- - kind of ok, need better test cases,
- - a nan in ZIP bse, need to check hessian calculations
- - found error in ZIP loglike
- - all tests pass with
+Notes
+-----
+Changes: added offset and zero-inflated version of Poisson. Kind of ok,
+need better test cases; a nan appears in the ZIP bse, need to check the
+Hessian calculations; found an error in the ZIP loglike; all tests pass
+with the current implementation.
 
-Issues
-------
-* If true model is not zero-inflated then numerical Hessian for ZIP has zeros
-  for the inflation probability and is not invertible.
-  -> hessian inverts and bse look ok if row and column are dropped, pinv also works
+Known issues:
+
+* If the true model is not zero-inflated then the numerical Hessian for
+  ZIP has zeros for the inflation probability and is not invertible.
+  The Hessian inverts and bse look ok if the corresponding row and
+  column are dropped; pinv also works.
 * GenericMLE: still get somewhere (where?)
-   "CacheWriteWarning: The attribute 'bse' cannot be overwritten"
+  "CacheWriteWarning: The attribute 'bse' cannot be overwritten"
 * bfgs is too fragile, does not come back
 * `nm` is slow but seems to work
-* need good start_params and their use in genericmle needs to be checked for
-  consistency, set as attribute or method (called as attribute)
+* need good start_params and their use in genericmle needs to be checked
+  for consistency, set as attribute or method (called as attribute)
 * numerical hessian needs better scaling
-
-* check taking parts out of the loop, e.g. factorial(endog) could be precalculated
-
-
+* check taking parts out of the loop, e.g., factorial(endog) could be
+  precalculated
 """
 import numpy as np
 from scipy import stats
 from scipy.special import factorial
 
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.validation import array_like
 
 
 def maxabs(arr1, arr2):
@@ -43,7 +45,8 @@ def maxabsrel(arr1, arr2):
 
 
 class PoissonGMLE(GenericLikelihoodModel):
-    """Maximum Likelihood Estimation of Poisson Model
+    """
+    Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson.
@@ -52,7 +55,6 @@ class PoissonGMLE(GenericLikelihoodModel):
     methods and results are generic. Gradients and Hessian
     and all resulting statistics are based on numerical
     differentiation.
-
     """
 
     # copied from discretemod.Poisson
@@ -67,7 +69,9 @@ class PoissonGMLE(GenericLikelihoodModel):
 
         Returns
         -------
-        The log likelihood of the model evaluated at `params`
+        ndarray
+            The negative log likelihood of the model evaluated at `params`
+            for each observation.
 
         Notes
         -----
@@ -78,7 +82,19 @@ class PoissonGMLE(GenericLikelihoodModel):
         return np.exp(XB) - endog*XB + np.log(factorial(endog))
 
     def predict_distribution(self, exog):
-        """return frozen scipy.stats distribution with mu at estimated prediction
+        """
+        Return frozen scipy.stats distribution with mu at estimated prediction
+
+        Parameters
+        ----------
+        exog : array_like
+            Explanatory variables used to construct the predicted mean.
+
+        Returns
+        -------
+        rv_frozen
+            A frozen `scipy.stats.poisson` distribution with `mu` set to
+            the predicted mean at `exog`.
         """
         if not hasattr(self, "result"):
             # TODO: why would this be ValueError instead of AttributeError?
@@ -93,7 +109,8 @@ class PoissonGMLE(GenericLikelihoodModel):
 
 
 class PoissonOffsetGMLE(GenericLikelihoodModel):
-    """Maximum Likelihood Estimation of Poisson Model
+    """
+    Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same
     statistical model as discretemod.Poisson but adds offset
@@ -103,10 +120,26 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
     and all resulting statistics are based on numerical
     differentiation.
 
+    Parameters
+    ----------
+    endog : array_like
+        1-d endogenous response variable. The dependent variable.
+    exog : array_like, optional
+        A nobs x k array where `nobs` is the number of observations and
+        `k` is the number of regressors.
+    offset : ndarray, optional
+        Offset added to the linear predictor before computing the mean.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no
+        nan checking is done. If 'drop', any observations with nans are
+        dropped. If 'raise', an error is raised. Default is 'none'.
+    **kwds
+        Extra keyword arguments passed to the model.
     """
 
     def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
+        offset = array_like(offset, "offset", optional=True)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column
@@ -131,7 +164,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
         Returns
         -------
-        The log likelihood of the model evaluated at `params`
+        ndarray
+            The negative log likelihood of the model evaluated at `params`
+            for each observation.
 
         Notes
         -----
@@ -145,7 +180,8 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
 
 class PoissonZiGMLE(GenericLikelihoodModel):
-    """Maximum Likelihood Estimation of Poisson Model
+    """
+    Maximum Likelihood Estimation of Poisson Model
 
     This is an example for generic MLE which has the same statistical model
     as discretemod.Poisson but adds offset and zero-inflation.
@@ -157,6 +193,22 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
     There are numerical problems if there is no zero-inflation.
 
+    Parameters
+    ----------
+    endog : array_like
+        1-d endogenous response variable. The dependent variable.
+    exog : array_like, optional
+        A nobs x k array where `nobs` is the number of observations and
+        `k` is the number of regressors. If None, a column of ones is
+        used.
+    offset : array_like, optional
+        Offset added to the linear predictor before computing the mean.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no
+        nan checking is done. If 'drop', any observations with nans are
+        dropped. If 'raise', an error is raised. Default is 'none'.
+    **kwds
+        Extra keyword arguments passed to the model.
     """
 
     def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
@@ -165,6 +217,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         super().__init__(
             endog, exog, missing=missing, extra_params_names=["zi"], **kwds
         )
+        offset = array_like(offset, "offset", optional=True, ndim=1)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column
@@ -197,7 +250,9 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
         Returns
         -------
-        The log likelihood of the model evaluated at `params`
+        ndarray
+            The negative log likelihood of the model evaluated at `params`
+            for each observation.
 
         Notes
         -----

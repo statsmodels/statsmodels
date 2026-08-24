@@ -6,20 +6,20 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 
 def bkfilter(x, low=6, high=32, K=12):
     """
-    Filter a time series using the Baxter-King bandpass filter.
+    Filter a time series using the Baxter-King bandpass filter
 
     Parameters
     ----------
     x : array_like
         A 1 or 2d ndarray. If 2d, variables are assumed to be in columns.
-    low : float
-        Minimum period for oscillations, ie., Baxter and King suggest that
+    low : float, optional
+        Minimum period for oscillations, i.e., Baxter and King suggest that
         the Burns-Mitchell U.S. business cycle has 6 for quarterly data and
         1.5 for annual data.
-    high : float
-        Maximum period for oscillations BK suggest that the U.S.
+    high : float, optional
+        Maximum period for oscillations. BK suggest that the U.S.
         business cycle has 32 for quarterly data and 8 for annual data.
-    K : int
+    K : int, optional
         Lead-lag length of the filter. Baxter and King propose a truncation
         length of 12 for quarterly data and 3 for annual data.
 
@@ -32,7 +32,7 @@ def bkfilter(x, low=6, high=32, K=12):
     --------
     statsmodels.tsa.filters.cf_filter.cffilter
         The Christiano Fitzgerald asymmetric, random walk filter.
-    statsmodels.tsa.filters.bk_filter.hpfilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
     statsmodels.tsa.seasonal.seasonal_decompose
         Decompose a time series using moving averages.

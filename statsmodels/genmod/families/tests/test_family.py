@@ -1,8 +1,7 @@
 """
 Test functions for genmod.families.family
 """
-
-from statsmodels.compat.scipy import SP_LT_17
+from statsmodels.compat.platform import PLATFORM_32
 
 import warnings
 
@@ -53,7 +52,7 @@ binomial_links = {
     L.identity,
 }
 inverse_gaussian_links = {L.inverse_squared, L.inverse_power, L.identity, L.Log, L.log}
-negative_bionomial_links = {
+negative_binomial_links = {
     L.Log,
     L.log,
     L.CLogLog,
@@ -71,13 +70,14 @@ link_cases = [
     (F.Gamma, gamma_links),
     (F.Binomial, binomial_links),
     (F.InverseGaussian, inverse_gaussian_links),
-    (F.NegativeBinomial, negative_bionomial_links),
+    (F.NegativeBinomial, negative_binomial_links),
     (F.Tweedie, tweedie_links),
 ]
 
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_invalid_family_link(family, links):
+    """Assert that invalid links for a family raise a ValueError."""
     invalid_links = all_links - links
     with pytest.raises(ValueError):
         with warnings.catch_warnings():
@@ -93,6 +93,7 @@ def test_invalid_family_link(family, links):
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_family_link(family, links):
+    """Assert that valid links for a family do not raise a ValueError."""
     with warnings.catch_warnings():
         msg = (
             "Negative binomial dispersion parameter alpha not set. "
@@ -106,7 +107,8 @@ def test_family_link(family, links):
 
 @pytest.mark.parametrize("family, links", link_cases)
 def test_family_link_check(family, links):
-    # check that we can turn of all link checks
+    """Check that we can turn off all link checks."""
+
     class Hugo:
         pass
 
@@ -119,7 +121,6 @@ def test_family_link_check(family, links):
         assert family(Hugo(), check_link=False)
 
 
-@pytest.mark.skipif(SP_LT_17, reason="Scipy too old, function not available")
 @pytest.mark.parametrize("power", [1.1, 1.5, 1.9])
 def test_tweedie_loglike_obs(power):
     """Test that Tweedie loglike is normalized to 1."""
@@ -143,3 +144,88 @@ def test_binomial_loglike_obs(mu, endog):
     else:
         # For our purposes, -40 is "approximately" -inf
         assert ll < -40
+
+
+def test_binomial_varfunc_deriv():
+    """
+    Regression: Binomial.deriv should return 1 - 2*p where p = _clean(mu/n).
+
+    Prior to the fix, deriv returned 1 - 2*mu (correct only for n=1).
+    For n > 1 the formula was wrong; this test covers the general case.
+    """
+    from statsmodels.genmod.families.varfuncs import Binomial as BinomialVar
+
+    # n=10: deriv(mu) = 1 - 2*_clean(mu/10)
+    bv = BinomialVar(n=10)
+    mu_vals = np.array([1.0, 2.0, 5.0, 8.0])
+    expected = 1 - 2 * bv._clean(mu_vals / 10)
+    assert_allclose(bv.deriv(mu_vals), expected)
+
+    # n=1 (Bernoulli): old and new formula agree
+    bv1 = BinomialVar(n=1)
+    mu_01 = np.array([0.1, 0.3, 0.7, 0.9])
+    assert_allclose(bv1.deriv(mu_01), 1 - 2 * mu_01, rtol=1e-10)
+
+    # Finite-difference numerical check against V'(mu)
+    h = 1e-5
+    mu0 = 3.0
+    numerical = (bv(mu0 + h) - bv(mu0 - h)) / (2 * h)
+    assert_allclose(bv.deriv(mu0), numerical, rtol=1e-4)
+
+
+@pytest.mark.skipif(
+    PLATFORM_32,
+    reason=(
+            "scipy.special.log_wright_bessel does not have sufficient accuracy on "
+            "32-bit platforms"
+    )
+)
+def test_tweedie_log_wright_bessel():
+    """
+    Test the scipy log_wright_bessel function.
+    Values taken from https://github.com/statsmodels/statsmodels/issues/9234.
+    """
+    endog = np.array(
+        [
+            [0, 0, 0, 0],
+            [192.85613765, 7.84301478, 182.15075391, 51.85940469],
+            [39.49500056, 4.07506614, 2.97574021, 92.37706761],
+        ]
+    )
+    endog = endog.ravel()
+    mu = np.array(
+        [
+            [40.8384544, 40.8384544, 7.26705526, 7.26705526],
+            [192.85613765, 7.26705526, 182.15075391, 40.8384544],
+            [40.8384544, 8.33852205, 2.97574021, 8.33852205],
+        ]
+    )
+    mu = mu.ravel()
+    var_weights = np.array(
+        [
+            [6.3831906, 0.47627479, 1.1490363, 5.11229578],
+            [13.72221246, 79.00111743, 15.33762454, 29.44406732],
+            [33.02803322, 12.84154581, 6.17631048, 1.73855041],
+        ]
+    )
+    var_weights = var_weights.ravel()
+    scale = np.array([1.0])
+    p = 1.5
+    tweedie = Tweedie(var_power=p)
+    # results of the new loglike_obs function with the scipy log_wright_bessel function
+
+    loglike_results = tweedie.loglike_obs(
+        endog, mu, var_weights=var_weights, scale=scale
+    )
+
+    # expected results, previously loglike_obs would have had overflow issues with 'inf' values
+    expected_results = np.array(
+        [
+            [-81.58352325, -6.08726542, -6.19502375, -27.56291842],
+            [-3.55638127, -0.92296862, -3.45786323, -8.24816698],
+            [-2.04396817, -7.41592981, -0.83535226, -58.47804978],
+        ]
+    )
+    expected_results = expected_results.ravel()
+
+    assert_allclose(loglike_results, expected_results)

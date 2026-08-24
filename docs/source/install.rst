@@ -2,8 +2,8 @@
 
 .. _install:
 
-Installing statsmodels
-======================
+Installing
+==========
 
 The easiest way to install statsmodels is to install it as part of the `Anaconda <https://docs.continuum.io/anaconda/>`_
 distribution, a cross-platform distribution for data analysis and scientific
@@ -115,7 +115,7 @@ Python has been built using a variety of different Windows C compilers.
 clarify which version of Python uses which compiler by default.
 
 macOS
-^^^
+^^^^^
 
 Installing statsmodels on macOS requires installing `gcc` which provides
 a suitable C compiler. We recommend installing Xcode and the Command Line
@@ -131,7 +131,7 @@ Dependencies
 The current minimum dependencies are:
 
 * `Python <https://www.python.org>`__ >= 3.9
-* `NumPy <https://www.scipy.org/>`__ >= 1.22.3
+* `NumPy <https://www.scipy.org/>`__ >= 1.23.5
 * `SciPy <https://www.scipy.org/>`__ >= 1.8
 * `Pandas <https://pandas.pydata.org/>`__ >= 1.4
 * `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.6

@@ -8,12 +8,14 @@ from scipy.optimize import minimize
 from statsmodels.base.model import Model
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib import summary2
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     EstimationWarning,
     SpecificationWarning,
 )
+from statsmodels.tools.validation import string_like
 
 from .factor_rotation import promax, rotate_factors
 
@@ -21,30 +23,73 @@ _opt_defaults = {"gtol": 1e-7}
 
 
 def _check_args_1(endog, n_factor, corr, nobs):
+    """
+    Validate the arguments provided to Factor before endog is processed
 
-    msg = "Either endog or corr must be provided."
-    if endog is not None and corr is not None:
-        raise ValueError(msg)
+    Parameters
+    ----------
+    endog : array_like or None
+        Variables in columns, observations in rows.
+    n_factor : int
+        The number of factors to extract.
+    corr : array_like or None
+        Directly specified correlation matrix.
+    nobs : int or None
+        The number of observations.
+
+    Raises
+    ------
+    ValueError
+        If neither `endog` nor `corr` is provided, or if `n_factor` is not
+        positive.
+
+    Warns
+    -----
+    SpecificationWarning
+        If both `endog` and `corr` are provided, since `corr` is then
+        ignored.
+    UserWarning
+        If `nobs` is provided together with `endog`, since `nobs` is then
+        taken from `endog`.
+    """
     if endog is None and corr is None:
+        raise ValueError("Either endog or corr must be provided.")
+    if endog is not None and corr is not None:
         warnings.warn(
-            "Both endog and corr are provided, corr will be used for factor analysis.",
+            "Both endog and corr are provided, endog will be used for factor "
+            "analysis.",
             SpecificationWarning,
             stacklevel=2,
         )
 
     if n_factor <= 0:
-        raise ValueError("n_factor must be larger than 0! %d < 0" % (n_factor))
+        raise ValueError(f"n_factor must be larger than 0! {n_factor:d} < 0")
 
     if nobs is not None and endog is not None:
         warnings.warn("nobs is ignored when endog is provided", stacklevel=2)
 
 
 def _check_args_2(endog, n_factor, corr, nobs, k_endog):
+    """
+    Validate the arguments provided to Factor after endog is processed
 
+    Parameters
+    ----------
+    endog : array_like or None
+        Variables in columns, observations in rows.
+    n_factor : int
+        The number of factors to extract.
+    corr : array_like
+        The correlation matrix used for the factor analysis.
+    nobs : int or None
+        The number of observations.
+    k_endog : int
+        The number of variables in the correlation matrix.
+    """
     if n_factor > k_endog:
         raise ValueError(
             "n_factor cannot be greater than the number"
-            " of variables! %d > %d" % (n_factor, k_endog)
+            f" of variables! {n_factor:d} > {k_endog:d}"
         )
 
     if np.max(np.abs(np.diag(corr) - 1)) > 1e-10:
@@ -53,7 +98,7 @@ def _check_args_2(endog, n_factor, corr, nobs, k_endog):
     if corr.shape[0] != corr.shape[1]:
         raise ValueError(
             "Correlation matrix corr must be a square "
-            "(rows %d != cols %d)" % corr.shape
+            "(rows {:d} != cols {:d})".format(*corr.shape)
         )
 
 
@@ -63,32 +108,33 @@ class Factor(Model):
 
     Parameters
     ----------
-    endog : array_like
+    endog : array_like, optional
         Variables in columns, observations in rows.  May be `None` if
         `corr` is not `None`.
-    n_factor : int
+    n_factor : int, optional
         The number of factors to extract
-    corr : array_like
+    corr : array_like, optional
         Directly specify the correlation matrix instead of estimating
-        it from `endog`.  If provided, `endog` is not used for the
-        factor analysis, it may be used in post-estimation.
-    method : str
+        it from `endog`.  Exactly one of `endog` and `corr` is required.
+        If both are provided a ``SpecificationWarning`` is raised and
+        `corr` is ignored in favor of the correlation matrix computed
+        from `endog`.
+    method : {'pa', 'ml'}, optional
         The method to extract factors, currently must be either 'pa'
         for principal axis factor analysis or 'ml' for maximum
         likelihood estimation.
-    smc : True or False
+    smc : bool, optional
         Whether or not to apply squared multiple correlations (method='pa')
-    endog_names : str
+    endog_names : array_like of str, optional
         Names of endogenous variables.  If specified, it will be used
         instead of the column names in endog
-    nobs : int
+    nobs : int, optional
         The number of observations, not used if endog is present. Needs to
         be provided for inference if endog is None.
-    missing : 'none', 'drop', or 'raise'
+    missing : {'none', 'drop', 'raise'}, optional
         Missing value handling for endog, default is row-wise deletion 'drop'
         If 'none', no nan checking is done. If 'drop', any observations with
         nans are dropped. If 'raise', an error is raised.
-
 
     Notes
     -----
@@ -152,6 +198,14 @@ class Factor(Model):
         self.corr = corr
         self.k_endog = k_endog
 
+        # Populated by `fit` (via `_fit_pa`/`_fit_ml`, depending on
+        # `method`); declared here so they exist (as None) even before
+        # `fit` has been called.
+        self.n_comp = None
+        self.eigenvals = None
+        self.uniqueness = None
+        self.mle_retvals = None
+
         if endog_names is None:
             if hasattr(corr, "index"):
                 endog_names = corr.index
@@ -187,27 +241,43 @@ class Factor(Model):
             self._endog_names = None
 
     def fit(
-        self, maxiter=50, tol=1e-8, start=None, opt_method="BFGS", opt=None, em_iter=3
+        self,
+        maxiter=50,
+        tol=1e-8,
+        start=None,
+        opt_method="BFGS",
+        opt=None,
+        em_iter=3,
+        rng=None,
     ):
         """
         Estimate factor model parameters.
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations for iterative estimation algorithms
-        tol : float
+        tol : float, optional
             Stopping criteria (error tolerance) for iterative estimation
             algorithms
-        start : array_like
-            Starting values, currently only used for ML estimation
-        opt_method : str
+        start : tuple of (array_like, array_like), optional
+            Starting values for the loadings and uniquenesses, currently
+            only used for ML estimation. If None, starting values are
+            obtained using the EM algorithm.
+        opt_method : str, optional
             Optimization method for ML estimation
-        opt : dict-like
+        opt : dict, optional
             Keyword arguments passed to optimizer, only used for ML estimation
-        em_iter : int
+        em_iter : int, optional
             The number of EM iterations before starting gradient optimization,
             only used for ML estimation.
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used. Only used for ML estimation to generate
+            starting values when `start` is None.
 
         Returns
         -------
@@ -218,9 +288,10 @@ class Factor(Model):
         if method == "pa":
             return self._fit_pa(maxiter=maxiter, tol=tol)
         elif method == "ml":
-            return self._fit_ml(start, em_iter, opt_method, opt)
+            rng = check_random_state(rng)
+            return self._fit_ml(start, em_iter, opt_method, opt, rng)
         else:
-            msg = "Unknown factor extraction approach '%s'" % self.method
+            msg = f"Unknown factor extraction approach '{self.method}'"
             raise ValueError(msg)
 
     def _fit_pa(self, maxiter=50, tol=1e-8):
@@ -229,15 +300,16 @@ class Factor(Model):
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations for communality estimation
-        tol : float
+        tol : float, optional
             If `norm(communality - last_communality)  < tolerance`,
             estimation stops
 
         Returns
         -------
-        results : FactorResults instance
+        FactorResults
+            Results class instance.
         """
 
         R = self.corr.copy()  # inplace modification below
@@ -247,14 +319,14 @@ class Factor(Model):
         if self.n_factor > self.n_comp:
             raise ValueError(
                 "n_factor must be smaller or equal to the rank"
-                " of endog! %d > %d" % (self.n_factor, self.n_comp)
+                f" of endog! {self.n_factor:d} > {self.n_comp:d}"
             )
         if maxiter <= 0:
-            raise ValueError("n_max_iter must be larger than 0! %d < 0" % (maxiter))
+            raise ValueError(f"n_max_iter must be larger than 0! {maxiter:d} < 0")
         if tol <= 0 or tol > 0.01:
             raise ValueError(
                 "tolerance must be larger than 0 and smaller than"
-                " 0.01! Got %f instead" % (tol)
+                f" 0.01! Got {tol:f} instead"
             )
 
         #  Initial communality estimation
@@ -317,7 +389,7 @@ class Factor(Model):
 
         Parameters
         ----------
-        par : ndarray or tuple of 2 ndarray's
+        par : ndarray or tuple of (ndarray, ndarray)
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
@@ -361,7 +433,7 @@ class Factor(Model):
 
         Parameters
         ----------
-        par : ndarray or tuple of 2 ndarray's
+        par : ndarray or tuple of (ndarray, ndarray)
             The model parameters, either a packed representation of
             the model parameters or a 2-tuple containing a `k_endog x
             n_factor` matrix of factor loadings and a `k_endog` vector
@@ -409,12 +481,40 @@ class Factor(Model):
         return -np.concatenate((du, dl.T.flat)) / (2 * self.k_endog)
 
     # Maximum likelihood factor analysis.
-    def _fit_ml(self, start, em_iter, opt_method, opt):
-        """estimate Factor model using Maximum Likelihood"""
+    def _fit_ml(self, start, em_iter, opt_method, opt, rng):
+        """
+        Estimate Factor model using Maximum Likelihood
+
+        Parameters
+        ----------
+        start : None or tuple of (ndarray, ndarray)
+            Starting values for the loadings and uniquenesses. If None,
+            starting values are obtained using the EM algorithm.
+        em_iter : int
+            The number of EM iterations before starting gradient
+            optimization.
+        opt_method : str
+            Optimization method used by `scipy.optimize.minimize`.
+        opt : dict or None
+            Keyword arguments passed to the optimizer.
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+            Random number generator used to draw starting values when
+            `start` is None. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int or array of ints, a new ``Generator`` is
+            created, seeded with `rng`. If `rng` is already a
+            ``Generator`` or ``RandomState`` instance, that instance is
+            used.
+
+        Returns
+        -------
+        FactorResults
+            Results class instance.
+        """
 
         # Starting values
         if start is None:
-            load, uniq = self._fit_ml_em(em_iter)
+            load, uniq = self._fit_ml_em(em_iter, rng)
             start = self._pack(load, uniq)
         elif len(start) == 2:
             if len(start[1]) != start[0].shape[0]:
@@ -454,12 +554,32 @@ class Factor(Model):
 
         return FactorResults(self)
 
-    def _fit_ml_em(self, iter, random_state=None):
-        """estimate Factor model using EM algorithm"""
+    def _fit_ml_em(self, iter, rng):
+        """
+        Estimate Factor model using EM algorithm
+
+        Parameters
+        ----------
+        iter : int
+            The number of EM iterations to perform.
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+            Random number generator used to draw starting values for the
+            loadings. If `rng` is None, a new ``Generator`` is created
+            using fresh entropy from the operating system. If `rng` is
+            an int or array of ints, a new ``Generator`` is created,
+            seeded with `rng`. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+
+        Returns
+        -------
+        load : ndarray
+            The estimated factor loadings.
+        uniq : ndarray
+            The estimated uniquenesses.
+        """
         # Starting values
-        if random_state is None:
-            random_state = np.random.RandomState(3427)
-        load = 0.1 * random_state.standard_normal(size=(self.k_endog, self.n_factor))
+        rng = check_random_state(rng)
+        load = 0.1 * rng.standard_normal(size=(self.k_endog, self.n_factor))
         uniq = 0.5 * np.ones(self.k_endog)
 
         for _ in range(iter):
@@ -492,7 +612,22 @@ class Factor(Model):
         return load, uniq
 
     def _rotate(self, load, uniq):
-        """rotate loadings for MLE"""
+        """
+        Rotate loadings for MLE
+
+        Parameters
+        ----------
+        load : ndarray
+            The factor loadings.
+        uniq : ndarray
+            The uniquenesses.
+
+        Returns
+        -------
+        ndarray
+            The rotated factor loadings satisfying condition IC3 of Bai
+            and Li (2012).
+        """
         # Rotations used in ML estimation.
         load, s, _ = np.linalg.svd(load, 0)
         load *= s
@@ -536,7 +671,7 @@ class FactorResults:
         principal components; not available under ML estimation.
     n_comp : int
         Number of components (factors)
-    nbs : int
+    nobs : int or None
         Number of observations
     fa_method : str
         The method used to obtain the decomposition, either 'pa' for
@@ -553,15 +688,15 @@ class FactorResults:
     covariance matrix implied by the factor analysis is `GG' +
     diag(U)`.
 
-    Status: experimental, Some refactoring will be necessary when new
-        features are added.
+    Status: experimental. Some refactoring will be necessary when new
+    features are added.
     """
 
     def __init__(self, factor):
         self.model = factor
         self.endog_names = factor.endog_names
         self.loadings_no_rot = factor.loadings
-        if hasattr(factor, "eigenvals"):
+        if factor.eigenvals is not None:
             self.eigenvals = factor.eigenvals
 
         self.communality = factor.communality
@@ -571,7 +706,7 @@ class FactorResults:
         self.n_comp = factor.loadings.shape[1]
         self.nobs = factor.nobs
         self._factor = factor
-        if hasattr(factor, "mle_retvals"):
+        if factor.mle_retvals is not None:
             self.mle_retvals = factor.mle_retvals
 
         p, k = self.loadings_no_rot.shape
@@ -597,8 +732,8 @@ class FactorResults:
 
         Returns
         -------
-        None : nothing returned, modifications are inplace
-
+        None
+            Nothing returned, modifications are made in place.
 
         Notes
         -----
@@ -622,7 +757,7 @@ class FactorResults:
             "biquartimin",
             "promax",
         ]:
-            raise ValueError("Unknown rotation method %s" % (method))
+            raise ValueError(f"Unknown rotation method {method}")
 
         if method in [
             "varimax",
@@ -644,17 +779,20 @@ class FactorResults:
         self.rotation_matrix = T
 
     def _corr_factors(self):
-        """correlation of factors implied by rotation
+        """
+        Correlation of factors implied by rotation
 
         If the rotation is oblique, then the factors are correlated.
-
-        currently not cached
 
         Returns
         -------
         corr_f : ndarray
-            correlation matrix of rotated factors, assuming initial factors are
-            orthogonal
+            Correlation matrix of rotated factors, assuming initial factors
+            are orthogonal.
+
+        Notes
+        -----
+        Currently not cached.
         """
         T = self.rotation_matrix
         corr_f = T.T.dot(T)
@@ -668,9 +806,10 @@ class FactorResults:
 
         Parameters
         ----------
-        method : 'bartlett' or 'regression'
-            Method to use for factor scoring.
-            'regression' can be abbreviated to `reg`
+        method : {'bartlett', 'regression', 'reg', 'ols', 'gls'}, optional
+            Method to use for factor scoring. 'regression' is the same as
+            `reg`. 'ols' and 'gls' are unofficial, unverified methods, see
+            Notes.
 
         Returns
         -------
@@ -692,43 +831,48 @@ class FactorResults:
         L = self.loadings
         # TODO: check row versus column convention for T
         uni = 1 - self.communality  # self.uniqueness
+        method = string_like(
+            method, "method", options=("bartlett", "regression", "reg", "ols", "gls")
+        )
 
         if method == "bartlett":
             s_mat = np.linalg.inv(L.T.dot(L / (uni[:, None]))).dot(L.T / uni).T
-        elif method.startswith("reg"):
+        elif method == "regression" or method == "reg":
             corr = self.model.corr
             corr_f = self._corr_factors()
             # if orthogonal then corr_f is just eye
             s_mat = corr_f.dot(L.T.dot(np.linalg.inv(corr))).T
         elif method == "ols":
             # not verified
-            corr = self.model.corr
             corr_f = self._corr_factors()
             s_mat = corr_f.dot(np.linalg.pinv(L)).T
-        elif method == "gls":
+        else:  # method == "gls"
             # not verified
             # s_mat = np.linalg.inv(1*np.eye(L.shape[1]) + L.T.dot(L/(uni[:,None])))
-            corr = self.model.corr
             corr_f = self._corr_factors()
             s_mat = np.linalg.inv(np.linalg.inv(corr_f) + L.T.dot(L / (uni[:, None])))
             s_mat = s_mat.dot(L.T / uni).T
-        else:
-            raise ValueError('method not available, use "bartlett ' + 'or "regression"')
+
         return s_mat
 
     def factor_scoring(self, endog=None, method="bartlett", transform=True):
         """
-        factor scoring: compute factors for endog
+        Factor scoring: compute factors for endog
 
         If endog was not provided when creating the factor class, then
-        a standarized endog needs to be provided here.
+        a standardized endog needs to be provided here.
 
         Parameters
         ----------
-        method : 'bartlett' or 'regression'
+        endog : array_like, optional
+            Data to be scored using the factor scoring coefficient matrix.
+            If None, the (standardized) endog used to fit the Factor model
+            is used instead.
+        method : {'bartlett', 'regression', 'ols', 'gls'}, optional
             Method to use for factor scoring.
-            'regression' can be abbreviated to `reg`
-        transform : bool
+            'regression' can be abbreviated to `reg`. 'ols' and 'gls' are
+            unofficial, unverified methods, see Notes.
+        transform : bool, optional
             If transform is true and endog is provided, then it will be
             standardized using mean and scale of original data, which has to
             be available in this case.
@@ -739,7 +883,7 @@ class FactorResults:
         Returns
         -------
         factor_score : ndarray
-            estimated factors using scoring matrix s and standarized endog ys
+            estimated factors using scoring matrix s and standardized endog ys
             ``f = ys dot s``
 
         Notes
@@ -781,7 +925,7 @@ class FactorResults:
         summ.add_title("Factor analysis results")
         loadings_no_rot = pd.DataFrame(
             self.loadings_no_rot,
-            columns=["factor %d" % (i) for i in range(self.loadings_no_rot.shape[1])],
+            columns=[f"factor {i:d}" for i in range(self.loadings_no_rot.shape[1])],
             index=self.endog_names,
         )
         if hasattr(self, "eigenvals"):
@@ -804,10 +948,10 @@ class FactorResults:
         if self.rotation_method is not None:
             loadings = pd.DataFrame(
                 self.loadings,
-                columns=["factor %d" % (i) for i in range(self.loadings.shape[1])],
+                columns=[f"factor {i:d}" for i in range(self.loadings.shape[1])],
                 index=self.endog_names,
             )
-            summ.add_dict({"": "%s rotated loadings" % (self.rotation_method)})
+            summ.add_dict({"": f"{self.rotation_method} rotated loadings"})
             summ.add_df(loadings)
         return summ
 
@@ -820,12 +964,13 @@ class FactorResults:
         color_max="yellow",
         decimals=None,
     ):
-        """get loadings matrix as DataFrame or pandas Styler
+        """
+        Get loadings matrix as DataFrame or pandas Styler
 
         Parameters
         ----------
-        style : 'display' (default), 'raw' or 'strings'
-            Style to use for display
+        style : {'display', 'raw', 'strings'}, optional
+            Style to use for display. The default is 'display'.
 
             * 'raw' returns just a DataFrame of the loadings matrix, no options are
                applied
@@ -833,18 +978,18 @@ class FactorResults:
             * 'strings' returns a DataFrame with string elements with optional sorting
                and suppressing small loading coefficients.
 
-        sort_ : bool
+        sort_ : bool, optional
             If True, then the rows of the DataFrame is sorted by contribution of each
             factor. applies if style is either 'display' or 'strings'
-        threshold : float
+        threshold : float, optional
             If the threshold is larger than zero, then loading coefficients are
             either colored white (if style is 'display') or replace by empty
             string (if style is 'strings').
-        highlight_max : bool
+        highlight_max : bool, optional
             This add a background color to the largest coefficient in each row.
-        color_max : html color
+        color_max : str, optional
             default is 'yellow'. color for background of row maximum
-        decimals : None or int
+        decimals : int, optional
             If None, then pandas default precision applies. Otherwise values are
             rounded to the specified decimals. If style is 'display', then the
             underlying dataframe is not changed. If style is 'strings', then
@@ -871,20 +1016,20 @@ class FactorResults:
         Options except for highlighting are available for plain test or Latex
         usage:
 
-        >>> lds = res_u.get_loadings_frame(style='strings', decimals=3,
-        ...                                threshold=0.3)
+        >>> lds = res.get_loadings_frame(style='strings', decimals=3,
+        ...                              threshold=0.3)
         >>> print(lds.to_latex())
         """
 
         loadings_df = pd.DataFrame(
             self.loadings,
-            columns=["factor %d" % (i) for i in range(self.loadings.shape[1])],
+            columns=[f"factor {i:d}" for i in range(self.loadings.shape[1])],
             index=self.endog_names,
         )
 
-        if style not in ["raw", "display", "strings"]:
-            msg = "style has to be one of 'raw', 'display', 'strings'"
-            raise ValueError(msg)
+        style = string_like(
+            style, "style", options=("raw", "display", "strings"), lower=False
+        )
 
         if style == "raw":
             return loadings_df
@@ -913,7 +1058,7 @@ class FactorResults:
                     takes threshold from outer scope
                     """
                     color = "white" if np.abs(val) < threshold else "black"
-                    return "color: %s" % color
+                    return f"color: {color}"
 
                 try:
                     sty = loadings_df.style.map(color_white_small)
@@ -942,7 +1087,7 @@ class FactorResults:
                 if sty is None:
                     sty = loadings_df.style
 
-                sty.format("{:.%sf}" % decimals)
+                sty.format(f"{{:.{decimals}f}}")
 
             if sty is None:
                 return loadings_df
@@ -966,7 +1111,7 @@ class FactorResults:
         ----------
         ncomp : int, optional
             Number of loadings to include in the plot.  If None, will
-            included the same as the number of maximum possible loadings
+            include the same as the number of maximum possible loadings
 
         Returns
         -------
@@ -984,17 +1129,18 @@ class FactorResults:
 
         Parameters
         ----------
-        loading_pairs : None or a list of tuples
+        loading_pairs : list of tuples, optional
             Specify plots. Each tuple (i, j) represent one figure, i and j is
             the loading number for x-axis and y-axis, respectively. If `None`,
             all combinations of the loadings will be plotted.
-        plot_prerotated : True or False
+        plot_prerotated : bool, optional
             If True, the loadings before rotation applied will be plotted. If
             False, rotated loadings will be plotted.
 
         Returns
         -------
-        figs : a list of figure handles
+        list of Figure
+            Handles to the figures.
         """
         _import_mpl()
         from .plots import plot_loadings
@@ -1005,7 +1151,7 @@ class FactorResults:
         if plot_prerotated:
             title = "Prerotated Factor Pattern"
         else:
-            title = "%s Rotated Factor Pattern" % (self.rotation_method)
+            title = f"{self.rotation_method} Rotated Factor Pattern"
         var_explained = self.eigenvals / self.n_comp * 100
 
         return plot_loadings(
@@ -1019,22 +1165,26 @@ class FactorResults:
     @cache_readonly
     def fitted_cov(self):
         """
-        Returns the fitted covariance matrix.
+        Returns the fitted covariance matrix
         """
 
         c = np.dot(self.loadings, self.loadings.T)
         c.flat[:: c.shape[0] + 1] += self.uniqueness
         return c
 
-    @cache_readonly
     def uniq_stderr(self, kurt=0):
         """
-        The standard errors of the uniquenesses.
+        The standard errors of the uniquenesses
 
         Parameters
         ----------
-        kurt : float
+        kurt : float, optional
             Excess kurtosis
+
+        Returns
+        -------
+        ndarray
+            The standard errors of the uniquenesses
 
         Notes
         -----
@@ -1064,7 +1214,7 @@ class FactorResults:
     @cache_readonly
     def load_stderr(self):
         """
-        The standard errors of the loadings.
+        The standard errors of the loadings
 
         Standard errors are only available if the model was fit using
         maximum likelihood.  If `endog` is not provided, `nobs` must be

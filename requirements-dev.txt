@@ -13,12 +13,15 @@ joblib
 # cvxopt; os_name != "win32"
 
 # test
-pytest>=8.4.1,<9
+pytest>=8.4.1,<10
 pytest-randomly
 pytest-run-parallel
 pytest-xdist
 pytest-cov
 coverage[toml]
+jinja2
+polars>=1.0.0; python_version < '3.14' and sys_platform != 'darwin'
+pyarrow>=14.0.0; python_version < '3.14' and sys_platform != 'darwin'
 
 # Pin on Win32
 pywinpty; os_name == "nt"
@@ -26,5 +29,4 @@ pywinpty; os_name == "nt"
 # code quality
 flake8
 flake8-bugbear
-isort
 ruff

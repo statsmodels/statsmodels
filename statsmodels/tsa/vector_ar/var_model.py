@@ -8,6 +8,7 @@ Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 
 from __future__ import annotations
 
+from statsmodels.compat.pandas import deprecate_kwarg
 from statsmodels.compat.python import lrange
 
 from collections import defaultdict
@@ -18,11 +19,13 @@ import pandas as pd
 from scipy import stats
 
 import statsmodels.base.wrapper as wrap
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib.table import SimpleTable
-from statsmodels.tools.decorators import cache_readonly, deprecated_alias
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, string_like
 from statsmodels.tsa.base.tsa_model import (
     TimeSeriesModel,
     TimeSeriesResultsWrapper,
@@ -32,6 +35,8 @@ from statsmodels.tsa.tsatools import duplication_matrix, unvec, vec
 from statsmodels.tsa.vector_ar import output, plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     CausalityTestResults,
+    ErrorBand,
+    ForecastInterval,
     NormalityTestResults,
     WhitenessTestResults,
 )
@@ -49,8 +54,12 @@ def ma_rep(coefs, maxn=10):
     Parameters
     ----------
     coefs : ndarray (p x k x k)
-    maxn : int
+    maxn : int, optional
         Number of MA matrices to compute
+
+    Returns
+    -------
+    phis : ndarray (maxn + 1 x k x k)
 
     Notes
     -----
@@ -62,11 +71,7 @@ def ma_rep(coefs, maxn=10):
 
     .. math:: y_t = \mu + \sum_{i=0}^\infty \Phi_i u_{t-i}
 
-    e.g. can recursively compute the \Phi_i matrices with \Phi_0 = I_k
-
-    Returns
-    -------
-    phis : ndarray (maxn + 1 x k x k)
+    e.g., can recursively compute the \Phi_i matrices with \Phi_0 = I_k
     """
     p, k, _ = coefs.shape
     phis = np.zeros((maxn + 1, k, k))
@@ -91,6 +96,8 @@ def is_stable(coefs, verbose=False):
     Parameters
     ----------
     coefs : ndarray (p x k x k)
+    verbose : bool, optional
+        Print eigenvalues of the VAR(1) representation
 
     Returns
     -------
@@ -121,13 +128,13 @@ def var_acf(coefs, sig_u, nlags=None):
     nlags : int, optional
         Defaults to order p of system
 
-    Notes
-    -----
-    Ref: Lütkepohl p.28-29
-
     Returns
     -------
     acf : ndarray, (p, k, k)
+
+    Notes
+    -----
+    Ref: Lütkepohl p.28-29
     """
     p, k, _ = coefs.shape
     if nlags is None:
@@ -151,6 +158,11 @@ def var_acf(coefs, sig_u, nlags=None):
 def _var_acf(coefs, sig_u):
     """
     Compute autocovariance function ACF_y(h) for h=1,...,p
+
+    Parameters
+    ----------
+    coefs : ndarray (p x k x k)
+    sig_u : ndarray (k x k)
 
     Notes
     -----
@@ -180,16 +192,20 @@ def forecast_cov(ma_coefs, sigma_u, steps):
 
     Parameters
     ----------
+    ma_coefs : ndarray (steps x neqs x neqs)
+        Moving average coefficient matrices.
+    sigma_u : ndarray (neqs x neqs)
+        Covariance of white noise process u_t.
     steps : int
         Number of steps ahead
-
-    Notes
-    -----
-    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
 
     Returns
     -------
     forc_covs : ndarray (steps x neqs x neqs)
+
+    Notes
+    -----
+    .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
     """
     neqs = len(sigma_u)
     forc_covs = np.zeros((steps, neqs, neqs))
@@ -214,10 +230,10 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     Parameters
     ----------
     y : ndarray (k_ar x neqs)
-    coefs : ndarray (k_ar x neqs x neqs)
+    coefs : array_like (k_ar x neqs x neqs)
     trend_coefs : ndarray (1 x neqs) or (neqs)
     steps : int
-    exog : ndarray (trend_coefs.shape[1] x neqs)
+    exog : ndarray (trend_coefs.shape[1] x neqs), optional
 
     Returns
     -------
@@ -253,10 +269,10 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
         for i in range(1, p + 1):
             # slightly hackish
             if h - i <= 0:
-                # e.g. when h=1, h-1 = 0, which is y[-1]
+                # e.g., when h=1, h-1 = 0, which is y[-1]
                 prior_y = y[h - i - 1]
             else:
-                # e.g. when h=2, h-1=1, which is forcs[0]
+                # e.g., when h=2, h-1=1, which is forcs[0]
                 prior_y = forcs[h - i - 1]
 
             # i=1 is coefs[0]
@@ -268,18 +284,22 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
 
 
 def _forecast_vars(steps, ma_coefs, sig_u):
-    """_forecast_vars function used by VECMResults. Note that the definition
-    of the local variable covs is the same as in VARProcess and as such it
-    differs from the one in VARResults!
+    """
+    _forecast_vars function used by VECMResults
+
+    Note that the definition of the local variable covs is the same as in
+    VARProcess and as such it differs from the one in VARResults!
 
     Parameters
     ----------
-    steps
-    ma_coefs
-    sig_u
+    steps : int
+    ma_coefs : ndarray
+    sig_u : ndarray (k x k)
 
     Returns
     -------
+    covs : ndarray (steps x k)
+        Diagonal entries of the forecast error covariance matrices.
     """
     covs = mse(ma_coefs, sig_u, steps)
     # Take diagonal for each cov
@@ -289,6 +309,32 @@ def _forecast_vars(steps, ma_coefs, sig_u):
 
 
 def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1):
+    """
+    Construct forecast interval estimates assuming the y are Gaussian
+
+    Parameters
+    ----------
+    y : ndarray (k_ar x neqs)
+        Initial values used to seed the forecast.
+    coefs : array_like (k_ar x neqs x neqs)
+        Coefficient matrices A_i.
+    trend_coefs : ndarray (1 x neqs) or (neqs)
+        Coefficients for the deterministic terms.
+    sig_u : ndarray (neqs x neqs)
+        Covariance of white noise process u_t.
+    steps : int, optional
+        Number of steps ahead to forecast.
+    alpha : float, optional
+        The significance level for the confidence intervals.
+    exog : ndarray, optional
+        Exogenous variables to use in the forecast.
+
+    Returns
+    -------
+    ForecastInterval
+        A result object with fields ``point_forecast``, ``forc_lower``, and
+        ``forc_upper``.
+    """
     assert 0 < alpha < 1
     q = util.norm_signif_level(alpha)
 
@@ -299,12 +345,12 @@ def forecast_interval(y, coefs, trend_coefs, sig_u, steps=5, alpha=0.05, exog=1)
     forc_lower = point_forecast - q * sigma
     forc_upper = point_forecast + q * sigma
 
-    return point_forecast, forc_lower, forc_upper
+    return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
 
 def var_loglike(resid, omega, nobs):
     r"""
-    Returns the value of the VAR(p) log-likelihood.
+    Returns the value of the VAR(p) log-likelihood
 
     Parameters
     ----------
@@ -386,14 +432,15 @@ def _reordered(self, order):
 
 
 def orth_ma_rep(results, maxn=10, P=None):
-    r"""Compute Orthogonalized MA coefficient matrices using P matrix such
+    r"""
+    Compute Orthogonalized MA coefficient matrices using P matrix such
     that :math:`\Sigma_u = PP^\prime`. P defaults to the Cholesky
     decomposition of :math:`\Sigma_u`
 
     Parameters
     ----------
     results : VARResults or VECMResults
-    maxn : int
+    maxn : int, optional
         Number of coefficient matrices to compute
     P : ndarray (neqs x neqs), optional
         Matrix such that Sigma_u = PP', defaults to the Cholesky decomposition.
@@ -416,17 +463,17 @@ def test_normality(results, signif=0.05):
 
     Parameters
     ----------
-    results : VARResults or statsmodels.tsa.vecm.vecm.VECMResults
-    signif : float
+    results : VARResults or statsmodels.tsa.vector_ar.vecm.VECMResults
+    signif : float, optional
         The test's significance level.
-
-    Notes
-    -----
-    H0 (null) : data are generated by a Gaussian-distributed process
 
     Returns
     -------
     result : NormalityTestResults
+
+    Notes
+    -----
+    H0 (null) : data are generated by a Gaussian-distributed process
 
     References
     ----------
@@ -460,7 +507,7 @@ def test_normality(results, signif=0.05):
 
 class LagOrderResults:
     """
-    Results class for choosing a model's lag order.
+    Results class for choosing a model's lag order
 
     Parameters
     ----------
@@ -472,9 +519,9 @@ class LagOrderResults:
         The keys are the strings ``"aic"``, ``"bic"``, ``"hqic"``, and
         ``"fpe"``. The corresponding value is an integer specifying the number
         of lags chosen according to a given criterion (key).
-    vecm : bool, default: `False`
+    vecm : bool, optional
         `True` indicates that the model is a VECM. In case of a VAR model
-        this argument must be `False`.
+        this argument must be `False`. The default is False.
 
     Notes
     -----
@@ -495,7 +542,7 @@ class LagOrderResults:
     def summary(self):  # basically copied from (now deleted) print_ic_table()
         cols = sorted(self.ics)  # ["aic", "bic", "hqic", "fpe"]
         str_data = np.array(
-            [["%#10.4g" % v for v in self.ics[c]] for c in cols], dtype=object
+            [[f"{v:#10.4g}" for v in self.ics[c]] for c in cols], dtype=object
         ).T
         # mark minimum with an asterisk
         for i, col in enumerate(cols):
@@ -530,17 +577,20 @@ class VAR(TimeSeriesModel):
     ----------
     endog : array_like
         2-d endogenous response variable. The independent variable.
-    exog : array_like
+    exog : array_like, optional
         2-d exogenous variable.
-    dates : array_like
+    dates : array_like, optional
         must match number of rows of endog
+    freq : str, optional
+        See :class:`statsmodels.tsa.base.tsa_model.TimeSeriesModel` for more
+        information.
+    missing : str, optional
+        See :class:`statsmodels.base.model.Model` for more information.
 
     References
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
-
-    y = deprecated_alias("y", "endog", remove_version="0.11.0")
 
     def __init__(self, endog, exog=None, dates=None, freq=None, missing="none"):
         super().__init__(endog, exog, dates, freq, missing=missing)
@@ -548,10 +598,35 @@ class VAR(TimeSeriesModel):
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
         self.n_totobs = len(endog)
+        # Set by fit()/_estimate_var(), once the lag order is known
+        self.nobs = None
+        self.k_trend = None
 
     def predict(self, params, start=None, end=None, lags=1, trend="c"):
         """
         Returns in-sample predictions or forecasts
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameters/coefficients of the VAR model, in the same format
+            as ``VARResults.params``.
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting,
+            i.e., the first forecast is start.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting,
+            i.e., the last forecast is end.
+        lags : int, optional
+            The number of lags used in the model.
+        trend : {"n", "c", "ct", "ctt"}, optional
+            The deterministic trend used in the model.
+
+        Returns
+        -------
+        ndarray
+            Array of in-sample predicted values and/or out-of-sample
+            forecasts.
         """
         params = np.array(params)
 
@@ -609,7 +684,7 @@ class VAR(TimeSeriesModel):
         # todo: this code is only supporting deterministic terms as exog.
         # This means that all exog-variables have lag 0. If dealing with
         # different exogs is necessary, a `lags_exog`-parameter might make
-        # sense (e.g. a sequence of ints specifying lags).
+        # sense (e.g., a sequence of ints specifying lags).
         # Alternatively, leading zeros for exog-variables with smaller number
         # of lags than the maximum number of exog-lags might work.
         """
@@ -617,25 +692,26 @@ class VAR(TimeSeriesModel):
 
         Parameters
         ----------
-        maxlags : {int, None}, default None
+        maxlags : int, optional
             Maximum number of lags to check for order selection, defaults to
             12 * (nobs/100.)**(1./4), see select_order function
-        method : {'ols'}
+        method : {'ols'}, optional
             Estimation method to use
-        ic : {'aic', 'fpe', 'hqic', 'bic', None}
+        ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
             fpe : Final prediction error
             hqic : Hannan-Quinn
             bic : Bayesian a.k.a. Schwarz
-        verbose : bool, default False
-            Print order selection output to the screen
-        trend : str {"c", "ct", "ctt", "n"}
+        trend : {"c", "ct", "ctt", "n"}, optional
             "c" - add constant
             "ct" - constant and trend
             "ctt" - constant, linear and quadratic trend
-            "n" - co constant, no trend
+            "n" - no constant, no trend
             Note that these are prepended to the columns of the dataset.
+        verbose : bool, optional
+            Print order selection output to the screen. The default is
+            False.
 
         Returns
         -------
@@ -647,19 +723,20 @@ class VAR(TimeSeriesModel):
         See Lütkepohl pp. 146-153 for implementation details.
         """
         lags = maxlags
-        if trend not in ["c", "ct", "ctt", "n"]:
-            raise ValueError(f"trend '{trend}' not supported for VAR")
+        trend = string_like(
+            trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
+        )
 
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
                 raise ValueError(
-                    "%s not recognized, must be among %s" % (ic, sorted(selections))
+                    f"{ic} not recognized, must be among {sorted(selections)}"
                 )
             lags = getattr(selections, ic)
             if verbose:
                 print(selections)
-                print("Using %d based on %s criterion" % (lags, ic))
+                print(f"Using {lags:d} based on {ic} criterion")
         elif lags is None:
             lags = 1
 
@@ -674,7 +751,7 @@ class VAR(TimeSeriesModel):
             if orig_exog_names:
                 x_names_to_add = orig_exog_names
             else:
-                x_names_to_add = [("exog%d" % i) for i in range(self.exog.shape[1])]
+                x_names_to_add = [(f"exog{i:d}") for i in range(self.exog.shape[1])]
             self.data.xnames = (
                 self.data.xnames[:k_trend] + x_names_to_add + self.data.xnames[k_trend:]
             )
@@ -685,12 +762,16 @@ class VAR(TimeSeriesModel):
 
     def _estimate_var(self, lags, offset=0, trend="c"):
         """
+        Estimate a VAR model with a given number of lags
+
+        Parameters
+        ----------
         lags : int
             Lags of the endogenous variable.
-        offset : int
+        offset : int, optional
             Periods to drop from beginning-- for order selection so it's an
             apples-to-apples comparison
-        trend : {str, None}
+        trend : {"n", "c", "ct", "ctt"}, optional
             As per above
         """
         # have to do this again because select_order does not call fit
@@ -709,7 +790,6 @@ class VAR(TimeSeriesModel):
             x = util.get_var_endog(exog[-nobs:], 0, trend="n", has_constant="raise")
             x_inst = exog[-nobs:]
             x = np.column_stack((x, x_inst))
-            del x_inst  # free memory
             temp_z = z
             z = np.empty((x.shape[0], x.shape[1] + z.shape[1]))
             z[:, : self.k_trend] = temp_z[:, : self.k_trend]
@@ -770,9 +850,9 @@ class VAR(TimeSeriesModel):
 
         Parameters
         ----------
-        maxlags : int
+        maxlags : int, optional
             if None, defaults to 12 * (nobs/100.)**(1./4)
-        trend : str {"n", "c", "ct", "ctt"}
+        trend : {"n", "c", "ct", "ctt"}, optional
             * "n" - no deterministic terms
             * "c" - constant term
             * "ct" - constant and linear term
@@ -816,9 +896,7 @@ class VAR(TimeSeriesModel):
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
-        """
-        Not implemented. Formulas are not supported for VAR models.
-        """
+        """Not implemented. Formulas are not supported for VAR models"""
         raise NotImplementedError("formulas are not supported for VAR models.")
 
 
@@ -830,12 +908,13 @@ class VARProcess:
     ----------
     coefs : ndarray (p x k x k)
         coefficients for lags of endog, part or params reshaped
-    coefs_exog : ndarray
+    coefs_exog : ndarray or None
         parameters for trend and user provided exog
     sigma_u : ndarray (k x k)
         residual covariance
-    names : sequence (length k)
-    _params_info : dict
+    names : sequence of str, optional
+        length k
+    _params_info : dict, optional
         internal dict to provide information about the composition of `params`,
         specifically `k_trend` (trend order) and `k_exog_user` (the number of
         exog variables provided by the user).
@@ -877,22 +956,25 @@ class VARProcess:
         return util.get_index(self.names, name)
 
     def __str__(self):
-        output = "VAR(%d) process for %d-dimensional response y_t" % (
-            self.k_ar,
-            self.neqs,
-        )
-        output += "\nstable: %s" % self.is_stable()
-        output += "\nmean: %s" % self.mean()
+        output = f"VAR({self.k_ar:d}) process for {self.neqs:d}-dimensional response y_t"
+        output += f"\nstable: {self.is_stable()}"
+        output += f"\nmean: {self.mean()}"
 
         return output
 
     def is_stable(self, verbose=False):
-        """Determine stability based on model coefficients
+        """
+        Determine stability based on model coefficients
 
         Parameters
         ----------
-        verbose : bool
+        verbose : bool, optional
             Print eigenvalues of the VAR(1) companion
+
+        Returns
+        -------
+        bool
+            True if the process is stable, False otherwise.
 
         Notes
         -----
@@ -901,42 +983,54 @@ class VARProcess:
         """
         return is_stable(self.coefs, verbose=verbose)
 
+    @deprecate_kwarg("seed", "rng")
     def simulate_var(
-        self, steps=None, offset=None, seed=None, initial_values=None, nsimulations=None
+        self, steps=None, offset=None, rng=None, initial_values=None, nsimulations=None
     ):
         """
-        simulate the VAR(p) process for the desired number of steps
+        Simulate the VAR(p) process for the desired number of steps
 
         Parameters
         ----------
-        steps : None or int
+        steps : int, optional
             number of observations to simulate, this includes the initial
             observations to start the autoregressive process.
             If offset is not None, then exog of the model are used if they were
             provided in the model
-        offset : None or ndarray (steps, neqs)
+        offset : ndarray or None, optional
             If not None, then offset is added as an observation specific
             intercept to the autoregression. If it is None and either trend
             (including intercept) or exog were used in the VAR model, then
             the linear predictor of those components will be used as offset.
             This should have the same number of rows as steps, and the same
             number of columns as endogenous variables (neqs).
-        seed : {None, int}
-            If seed is not None, then it will be used with for the random
-            variables generated by numpy.random.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the simulation. If `rng` is
+            None, a new ``Generator`` is created using fresh entropy from
+            the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
         initial_values : array_like, optional
             Initial values for use in the simulation. Shape should be
             (nlags, neqs) or (neqs,). Values should be ordered from less to
             most recent. Note that this values will be returned by the
             simulation as the first values of `endog_simulated` and they
             will count for the total number of steps.
-        nsimulations : {None, int}
+        nsimulations : int, optional
             Number of simulations to perform. If `nsimulations` is None it will
             perform one simulation and return value will have shape (steps, neqs).
 
         Returns
         -------
-        endog_simulated : nd_array
+        endog_simulated : ndarray
             Endog of the simulated VAR process. Shape will be (nsimulations, steps, neqs)
             or (steps, neqs) if `nsimulations` is None.
         """
@@ -964,24 +1058,22 @@ class VARProcess:
                 "if exog or offset are used, then steps must"
                 "be equal to their length or None"
             )
-
+        rng = check_random_state(rng, deprecated=True)
         y = util.varsim(
             self.coefs,
             offset,
             self.sigma_u,
             steps=steps,
-            seed=seed,
+            rng=rng,
             initial_values=initial_values,
             nsimulations=nsimulations,
         )
         return y
 
-    def plotsim(self, steps=None, offset=None, seed=None):
-        """
-        Plot a simulation from the VAR(p) process for the desired number of
-        steps
-        """
-        y = self.simulate_var(steps=steps, offset=offset, seed=seed)
+    @deprecate_kwarg("seed", "rng")
+    def plotsim(self, steps=None, offset=None, rng=None):
+        """Plot a simulation from the VAR(p) process for the desired number of steps"""
+        y = self.simulate_var(steps=steps, offset=offset, rng=rng)
         return plotting.plot_mts(y)
 
     def intercept_longrun(self):
@@ -1017,7 +1109,7 @@ class VARProcess:
 
         Parameters
         ----------
-        maxn : int
+        maxn : int, optional
             Number of coefficient matrices to compute
 
         Returns
@@ -1034,10 +1126,10 @@ class VARProcess:
 
         Parameters
         ----------
-        maxn : int
+        maxn : int, optional
             Number of coefficient matrices to compute
         P : ndarray (k x k), optional
-            Matrix such that Sigma_u = PP', defaults to Cholesky descomp
+            Matrix such that Sigma_u = PP', defaults to Cholesky decomposition
 
         Returns
         -------
@@ -1046,7 +1138,8 @@ class VARProcess:
         return orth_ma_rep(self, maxn, P)
 
     def long_run_effects(self):
-        r"""Compute long-run effect of unit impulse
+        r"""
+        Compute long-run effect of unit impulse
 
         .. math::
 
@@ -1064,7 +1157,14 @@ class VARProcess:
         return np.eye(self.neqs) - self.coefs.sum(0)
 
     def acf(self, nlags=None):
-        """Compute theoretical autocovariance function
+        """
+        Compute theoretical autocovariance function
+
+        Parameters
+        ----------
+        nlags : int, optional
+            The number of lags to include in the autocovariance function. The
+            default is the number of lags included in the model.
 
         Returns
         -------
@@ -1078,7 +1178,7 @@ class VARProcess:
 
         Parameters
         ----------
-        nlags : int or None
+        nlags : int, optional
             The number of lags to include in the autocovariance function. The
             default is the number of lags included in the model.
 
@@ -1090,18 +1190,37 @@ class VARProcess:
         return util.acf_to_acorr(self.acf(nlags=nlags))
 
     def plot_acorr(self, nlags=10, linewidth=8):
-        """Plot theoretical autocorrelation function"""
+        """
+        Plot theoretical autocorrelation function
+
+        Parameters
+        ----------
+        nlags : int, optional
+            The number of lags to include in the plot.
+        linewidth : int, optional
+            The linewidth for the plots.
+
+        Returns
+        -------
+        Figure
+            Figure instance containing the plot.
+        """
         fig = plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
         return fig
 
     def forecast(self, y, steps, exog_future=None):
-        """Produce linear minimum MSE forecasts for desired number of steps
+        """
+        Produce linear minimum MSE forecasts for desired number of steps
         ahead, using prior values y
 
         Parameters
         ----------
         y : ndarray (p x k)
         steps : int
+        exog_future : array_like, optional
+            Future values of the exogenous variables, including any trend
+            and constant terms, needed to produce forecasts of `steps`
+            periods ahead.
 
         Returns
         -------
@@ -1157,13 +1276,13 @@ steps ({steps}) observations.
         steps : int
             Number of steps ahead
 
-        Notes
-        -----
-        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
-
         Returns
         -------
         forc_covs : ndarray (steps x neqs x neqs)
+
+        Notes
+        -----
+        .. math:: \mathrm{MSE}(h) = \sum_{i=0}^{h-1} \Phi \Sigma_u \Phi^T
         """
         ma_coefs = self.ma_rep(steps)
 
@@ -1194,7 +1313,7 @@ steps ({steps}) observations.
 
         Parameters
         ----------
-        y : {ndarray, None}
+        y : ndarray or None
             The initial values to use for the forecasts. If None,
             the last k_ar values of the original endogenous variables are
             used.
@@ -1202,18 +1321,22 @@ steps ({steps}) observations.
             Number of steps ahead to forecast
         alpha : float, optional
             The significance level for the confidence intervals.
-        exog_future : ndarray, optional
+        exog_future : array_like, optional
             Forecast values of the exogenous variables. Should include
             constant, trend, etc. as needed, including extrapolating out
             of sample.
+
         Returns
         -------
-        point : ndarray
-            Mean value of forecast
-        lower : ndarray
-            Lower bound of confidence interval
-        upper : ndarray
-            Upper bound of confidence interval
+        ForecastInterval
+            A result object with fields:
+
+            point_forecast : ndarray
+                Mean value of forecast
+            forc_lower : ndarray
+                Lower bound of confidence interval
+            forc_upper : ndarray
+                Upper bound of confidence interval
 
         Notes
         -----
@@ -1229,10 +1352,18 @@ steps ({steps}) observations.
         forc_lower = point_forecast - q * sigma
         forc_upper = point_forecast + q * sigma
 
-        return point_forecast, forc_lower, forc_upper
+        return ForecastInterval(point_forecast, forc_lower, forc_upper)
 
     def to_vecm(self):
-        """to_vecm"""
+        """
+        Convert the VAR(p) representation to a VECM error-correction form
+
+        Returns
+        -------
+        dict
+            A dict with keys ``"Gamma"`` and ``"Pi"`` holding the
+            error-correction coefficient matrices.
+        """
         k = self.coefs.shape[1]
         p = self.coefs.shape[0]
         A = self.coefs
@@ -1249,7 +1380,8 @@ steps ({steps}) observations.
 
 
 class VARResults(VARProcess):
-    """Estimate VAR(p) process with fixed number of lags
+    """
+    Estimate VAR(p) process with fixed number of lags
 
     Parameters
     ----------
@@ -1258,34 +1390,34 @@ class VARResults(VARProcess):
     params : ndarray
     sigma_u : ndarray
     lag_order : int
-    model : VAR model instance
-    trend : str {'n', 'c', 'ct'}
-    names : array_like
+    model : VAR, optional
+        The VAR model instance used to produce the results.
+    trend : {"n", "c", "ct", "ctt"}, optional
+    names : sequence of str, optional
         List of names of the endogenous variables in order of appearance in
         `endog`.
-    dates
-    exog : ndarray
+    dates : array_like, optional
+    exog : ndarray, optional
 
     Attributes
     ----------
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    dates
-    endog
-    endog_lagged
+    dates : array_like
+    endog : ndarray
+    endog_lagged : ndarray
     k_ar : int
         Order of VAR process
     k_trend : int
-    model
-    names
+    model : VAR
+    names : list of str
+        variable names
     neqs : int
         Number of variables (equations)
     nobs : int
     n_totobs : int
-    params : ndarray (Kp + 1) x K
+    params : ndarray ((Kp + 1) x K)
         A_i matrices and intercept in stacked form [int A_1 ... A_p]
-    names : list
-        variables names
     sigma_u : ndarray (K x K)
         Estimate of white noise process variance Var[u_t]
     """
@@ -1360,9 +1492,7 @@ class VARResults(VARProcess):
 
     @property
     def df_model(self):
-        """
-        Number of estimated parameters per variable, including the intercept / trends
-        """
+        """Number of estimated parameters per variable, including the intercept / trends"""
         return self.neqs * self.k_ar + self.k_exog
 
     @property
@@ -1372,24 +1502,46 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def fittedvalues(self):
-        """
-        The predicted insample values of the response variables of the model.
-        """
+        """The predicted insample values of the response variables of the model"""
         return np.dot(self.endog_lagged, self.params)
 
     @cache_readonly
     def resid(self):
-        """
-        Residuals of response variable resulting from estimated coefficients
-        """
+        """Residuals of response variable resulting from estimated coefficients"""
         return self.endog[self.k_ar :] - self.fittedvalues
 
     def sample_acov(self, nlags=1):
-        """Sample acov"""
+        """
+        Compute sample autocovariance (including lag 0)
+
+        Parameters
+        ----------
+        nlags : int, optional
+            The number of lags to include, not counting the zero lag.
+
+        Returns
+        -------
+        acov : ndarray
+            Autocovariances of the endogenous variables, shape
+            (nlags + 1, neqs, neqs).
+        """
         return _compute_acov(self.endog[self.k_ar :], nlags=nlags)
 
     def sample_acorr(self, nlags=1):
-        """Sample acorr"""
+        """
+        Compute sample autocorrelation (including lag 0)
+
+        Parameters
+        ----------
+        nlags : int, optional
+            The number of lags to include, not counting the zero lag.
+
+        Returns
+        -------
+        acorr : ndarray
+            Autocorrelations of the endogenous variables, shape
+            (nlags + 1, neqs, neqs).
+        """
         acovs = self.sample_acov(nlags=nlags)
         return _acovs_to_acorrs(acovs)
 
@@ -1399,10 +1551,10 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        nlags : int
+        nlags : int, optional
             The number of lags to use in compute the autocorrelation. Does
             not count the zero lag, which will be returned.
-        linewidth : int
+        linewidth : int, optional
             The linewidth for the plots.
 
         Returns
@@ -1421,10 +1573,12 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        nlags : int
+        nlags : int, optional
 
         Returns
         -------
+        acov : ndarray
+            Autocovariances of the residuals, shape (nlags + 1, neqs, neqs).
         """
         return _compute_acov(self.resid, nlags=nlags)
 
@@ -1434,10 +1588,12 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        nlags : int
+        nlags : int, optional
 
         Returns
         -------
+        acorr : ndarray
+            Autocorrelations of the residuals, shape (nlags + 1, neqs, neqs).
         """
         acovs = self.resid_acov(nlags=nlags)
         return _acovs_to_acorrs(acovs)
@@ -1572,7 +1728,7 @@ class VARResults(VARProcess):
 
     @cache_readonly
     def pvalues_endog_lagged(self):
-        """pvalues_endog_laggd"""
+        """pvalues_endog_lagged"""
         start = self.k_exog
         return self.pvalues[start:]
 
@@ -1587,10 +1743,27 @@ class VARResults(VARProcess):
     def plot_forecast(self, steps, alpha=0.05, plot_stderr=True):
         """
         Plot forecast
+
+        Parameters
+        ----------
+        steps : int
+            Number of steps ahead to forecast.
+        alpha : float, optional
+            The significance level for the confidence intervals.
+        plot_stderr : bool, optional
+            If True, plot the confidence interval around the forecast.
+
+        Returns
+        -------
+        Figure
+            The figure that contains the plot.
         """
-        mid, lower, upper = self.forecast_interval(
+        _forecast_result = self.forecast_interval(
             self.endog[-self.k_ar :], steps, alpha=alpha
         )
+        mid = _forecast_result.point_forecast
+        lower = _forecast_result.forc_lower
+        upper = _forecast_result.forc_upper
         fig = plotting.plot_var_forc(
             self.endog,
             mid,
@@ -1608,17 +1781,24 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        steps : int
+        steps : int, optional
+            Number of steps ahead to compute forecast covariances for.
+        method : {"mse", "auto"}, optional
+            If "mse", use the forecast MSE, ignoring parameter uncertainty.
+            If "auto", also take parameter uncertainty into account by adding
+            the forecast error covariance due to parameter uncertainty; this
+            is currently only supported if there is no exogenous data and the
+            trend is one of "n" or "c".
+
+        Returns
+        -------
+        covs : ndarray (steps x k x k)
 
         Notes
         -----
         .. math:: \Sigma_{\hat y}(h) = \Sigma_y(h) + \Omega(h) / T
 
         Ref: Lütkepohl pp. 96-97
-
-        Returns
-        -------
-        covs : ndarray (steps x k x k)
         """
         fc_cov = self.mse(steps)
         if method == "mse":
@@ -1640,13 +1820,14 @@ class VARResults(VARProcess):
         return fc_cov
 
     # Monte Carlo irf standard errors
+    @deprecate_kwarg("seed", "rng")
     def irf_errband_mc(
         self,
         orth=False,
         repl=1000,
         steps=10,
         signif=0.05,
-        seed=None,
+        rng=None,
         burn=100,
         cum=False,
     ):
@@ -1656,31 +1837,49 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse response error bands
-        repl : int
-            number of Monte Carlo replications to perform
-        steps : int, default 10
-            number of impulse response periods
-        signif : float (0 < signif <1)
-            Significance level for error bars, defaults to 95% CI
-        seed : int
-            np.random.seed for replications
-        burn : int
-            number of initial observations to discard for simulation
-        cum : bool, default False
-            produce cumulative irf error bands
+        orth : bool, optional
+            Compute orthogonalized impulse response error bands. The default
+            is False.
+        repl : int, optional
+            number of Monte Carlo replications to perform. The default is
+            1000.
+        steps : int, optional
+            number of impulse response periods. The default is 10.
+        signif : float, optional
+            Significance level for error bars, must be between 0 and 1,
+            defaults to 95% CI (0.05).
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            number of initial observations to discard for simulation. The
+            default is 100.
+        cum : bool, optional
+            produce cumulative irf error bands. The default is False.
+
+        Returns
+        -------
+        ErrorBand
+            A result object with fields ``lower`` and ``upper``, arrays of
+            ma_rep Monte Carlo standard errors.
 
         Notes
         -----
         Lütkepohl (2005) Appendix D
-
-        Returns
-        -------
-        Tuple of lower and upper arrays of ma_rep monte carlo standard errors
         """
         ma_coll = self.irf_resim(
-            orth=orth, repl=repl, steps=steps, seed=seed, burn=burn, cum=cum
+            orth=orth, repl=repl, steps=steps, rng=rng, burn=burn, cum=cum
         )
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
@@ -1689,40 +1888,54 @@ class VARResults(VARProcess):
         upp_idx = int(round((1 - signif / 2) * repl) - 1)
         lower = ma_sort[low_idx, :, :, :]
         upper = ma_sort[upp_idx, :, :, :]
-        return lower, upper
+        return ErrorBand(lower, upper)
 
-    def irf_resim(
-        self, orth=False, repl=1000, steps=10, seed=None, burn=100, cum=False
-    ):
+    @deprecate_kwarg("seed", "rng")
+    def irf_resim(self, orth=False, repl=1000, steps=10, rng=None, burn=100, cum=False):
         """
         Simulates impulse response function, returning an array of simulations.
-        Used for Sims-Zha error band calculation.
+
+        Used for Sims-Zha ([SimsZha1999]_) error band calculation.
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse response error bands
-        repl : int
-            number of Monte Carlo replications to perform
-        steps : int, default 10
-            number of impulse response periods
-        signif : float (0 < signif <1)
-            Significance level for error bars, defaults to 95% CI
-        seed : int
-            np.random.seed for replications
-        burn : int
-            number of initial observations to discard for simulation
-        cum : bool, default False
-            produce cumulative irf error bands
+        orth : bool, optional
+            Compute orthogonalized impulse response error bands. The default
+            is False.
+        repl : int, optional
+            number of Monte Carlo replications to perform. The default is
+            1000.
+        steps : int, optional
+            number of impulse response periods. The default is 10.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
 
-        Notes
-        -----
-        .. [*] Sims, Christoper A., and Tao Zha. 1999. "Error Bands for Impulse
-           Response." Econometrica 67: 1113-1155.
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            number of initial observations to discard for simulation. The
+            default is 100.
+        cum : bool, optional
+            produce cumulative irf error bands. The default is False.
 
         Returns
         -------
-        Array of simulated impulse response functions
+        ndarray
+            Array of simulated impulse response functions.
+
+        Notes
+        -----
+        .. [SimsZha1999] Sims, Christoper A., and Tao Zha. 1999. "Error Bands
+           for Impulse Responses". Econometrica 67: 1113-1155.
         """
         neqs = self.neqs
         k_ar = self.k_ar
@@ -1733,6 +1946,12 @@ class VARResults(VARProcess):
         nobs_original = nobs + k_ar
 
         ma_coll = np.zeros((repl, steps + 1, neqs, neqs))
+
+        # Normalize once so that the same generator instance is advanced
+        # across replications instead of being re-seeded from the same
+        # raw seed on every iteration, which would otherwise make every
+        # replication identical.
+        rng = check_random_state(rng, deprecated=True)
 
         def fill_coll(sim):
             ret = VAR(sim, exog=self.exog).fit(maxlags=k_ar, trend=self.trend)
@@ -1745,7 +1964,7 @@ class VARResults(VARProcess):
                 coefs,
                 intercept,
                 sigma_u,
-                seed=seed,
+                rng=rng,
                 steps=nobs_original + burn,
             )
             sim = sim[burn:]
@@ -1821,11 +2040,11 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        periods : int
-        var_decomp : ndarray (k x k), lower triangular
+        periods : int, optional
+        var_decomp : ndarray (k x k), lower triangular, optional
             Must satisfy Omega = P P', where P is the passed matrix. Defaults
             to Cholesky decomposition of Omega
-        var_order : sequence
+        var_order : sequence, optional
             Alternate variable order for Cholesky decomposition
 
         Returns
@@ -1833,15 +2052,21 @@ class VARResults(VARProcess):
         irf : IRAnalysis
         """
         if var_order is not None:
-            raise NotImplementedError(
-                "alternate variable order not implemented (yet)"
-            )
+            raise NotImplementedError("alternate variable order not implemented (yet)")
 
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
     def fevd(self, periods=10, var_decomp=None):
         """
         Compute forecast error variance decomposition ("fevd")
+
+        Parameters
+        ----------
+        periods : int, optional
+            Number of periods to compute the FEVD for.
+        var_decomp : ndarray (k x k), lower triangular, optional
+            Must satisfy Omega = P P', where P is the passed matrix. Defaults
+            to Cholesky decomposition of Omega.
 
         Returns
         -------
@@ -1850,7 +2075,21 @@ class VARResults(VARProcess):
         return FEVD(self, P=var_decomp, periods=periods)
 
     def reorder(self, order):
-        """Reorder variables for structural specification"""
+        """
+        Reorder variables for structural specification
+
+        Parameters
+        ----------
+        order : sequence of int or str
+            The new order of the variables, specified either by integer
+            position or by variable name. Must contain all of the
+            variables exactly once.
+
+        Returns
+        -------
+        VARResults
+            A new results instance with the variables reordered.
+        """
         if len(order) != len(self.params[0, :]):
             raise ValueError(
                 "Reorder specification length should match "
@@ -1881,7 +2120,7 @@ class VARResults(VARProcess):
             If a sequence of int or str, test whether the corresponding
             variables are Granger-caused by the variable(s) specified
             by `causing`.
-        causing : int or str or sequence of int or str or None, default: None
+        causing : int or str or sequence of int or str or None, optional
             If int or str, test whether the variable specified via this index
             (int) or name (str) is Granger-causing the variable(s) specified by
             `caused`.
@@ -1889,11 +2128,15 @@ class VARResults(VARProcess):
             variables are Granger-causing the variable(s) specified by
             `caused`.
             If None, `causing` is assumed to be the complement of `caused`.
-        kind : {'f', 'wald'}
+        kind : {'f', 'wald'}, optional
             Perform F-test or Wald (chi-sq) test
-        signif : float, default 5%
+        signif : float, optional
             Significance level for computing critical values for test,
             defaulting to standard 0.05 level
+
+        Returns
+        -------
+        results : CausalityTestResults
 
         Notes
         -----
@@ -1907,10 +2150,6 @@ class VARResults(VARProcess):
         Test H0: "`causing` does not Granger-cause the remaining variables of
         the system" against  H1: "`causing` is Granger-causal for the
         remaining variables".
-
-        Returns
-        -------
-        results : CausalityTestResults
 
         References
         ----------
@@ -1981,7 +2220,7 @@ class VARResults(VARProcess):
             df = (num_restr, k * self.df_resid)
             dist = stats.f(*df)
         else:
-            raise ValueError("kind %s not recognized" % kind)
+            raise ValueError(f"kind {kind} not recognized")
 
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)
@@ -2004,16 +2243,14 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        causing :
+        causing : int or str or sequence of int or str
             If int or str, test whether the corresponding variable is causing
             the variable(s) specified in caused.
             If sequence of int or str, test whether the corresponding
             variables are causing the variable(s) specified in caused.
-        signif : float between 0 and 1, default 5 %
-            Significance level for computing critical values for test,
-            defaulting to standard 0.05 level
-        verbose : bool
-            If True, print a table with the results.
+        signif : float, optional
+            Significance level, between 0 and 1, for computing critical
+            values for test, defaulting to standard 0.05 level
 
         Returns
         -------
@@ -2046,7 +2283,7 @@ class VARResults(VARProcess):
         against H1: "Instantaneous causality between caused and causing
         exists".
 
-        Instantaneous causality is a symmetric relation (i.e. if causing is
+        Instantaneous causality is a symmetric relation (i.e., if causing is
         "instantaneously causing" caused, then also caused is "instantaneously
         causing" causing), thus the naming of the parameters (which is chosen
         to be in accordance with test_granger_causality()) may be misleading.
@@ -2127,13 +2364,14 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        nlags : int > 0
+        nlags : int, optional
             The number of lags tested must be larger than the number of lags
             included in the VAR model.
-        signif : float, between 0 and 1
-            The significance level of the test.
-        adjusted : bool, default False
-            Flag indicating to apply small-sample adjustments.
+        signif : float, optional
+            The significance level of the test, between 0 and 1.
+        adjusted : bool, optional
+            Flag indicating to apply small-sample adjustments. The default
+            is False.
 
         Returns
         -------
@@ -2185,12 +2423,12 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        nlags : int
+        nlags : int, optional
             number of lags to display (excluding 0)
-        resid : bool
+        resid : bool, optional
             If True, then the autocorrelation of the residuals is plotted
             If False, then the autocorrelation of endog is plotted.
-        linewidth : int
+        linewidth : int, optional
             width of vertical bars
 
         Returns
@@ -2221,7 +2459,7 @@ class VARResults(VARProcess):
 
         Parameters
         ----------
-        signif : float
+        signif : float, optional
             Test significance level.
 
         Returns
@@ -2335,6 +2573,16 @@ class FEVD:
     """
     Compute and plot Forecast error variance decomposition and asymptotic
     standard errors
+
+    Parameters
+    ----------
+    model : VARResults
+        The VAR results used to compute the FEVD.
+    P : ndarray, optional
+        Matrix such that Sigma_u = PP', used to orthogonalize the impulse
+        responses. Defaults to the Cholesky decomposition of Sigma_u.
+    periods : int, optional
+        Number of periods to compute the FEVD for.
     """
 
     def __init__(self, model, P=None, periods=None):
@@ -2369,17 +2617,13 @@ class FEVD:
         for i in range(self.neqs):
             ppm = output.pprint_matrix(self.decomp[i], rng, self.names)
 
-            buf.write("FEVD for %s\n" % self.names[i])
+            buf.write(f"FEVD for {self.names[i]}\n")
             buf.write(ppm + "\n")
 
         print(buf.getvalue())
 
     def cov(self):
-        """Compute asymptotic standard errors
-
-        Returns
-        -------
-        """
+        """Compute asymptotic standard errors"""
         raise NotImplementedError
 
     def plot(self, periods=None, figsize=(10, 10), **plot_kwds):
@@ -2387,10 +2631,15 @@ class FEVD:
 
         Parameters
         ----------
-        periods : int, default None
+        periods : int, optional
             Defaults to number originally specified. Can be at most that number
+        figsize : tuple of float, optional
+            Figure size (width, height in inches), passed to
+            `matplotlib.pyplot.subplots`. The default is (10, 10).
+        **plot_kwds
+            Additional keyword arguments to pass to the bar plotting function.
         """
-        import matplotlib.pyplot as plt
+        plt = _import_mpl()
 
         k = self.neqs
         periods = periods or self.periods

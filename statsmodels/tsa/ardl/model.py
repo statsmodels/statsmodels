@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from statsmodels.compat.pandas import Appender, Substitution, call_cached_func
+from statsmodels.compat.pandas import call_cached_func, deprecate_kwarg
 
 from collections import defaultdict
 from collections.abc import Hashable, Mapping, Sequence
 from itertools import combinations, product
 import textwrap
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple
 import warnings
 
 import numpy as np
@@ -18,22 +18,25 @@ from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import Summary, summary_params
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
+from statsmodels.tools.docstring_helpers import Appender, Substitution
+from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
     float_like,
     int_like,
+    string_like,
 )
 from statsmodels.tsa.ar_model import (
     AROrderSelectionResults,
     AutoReg,
     AutoRegResults,
+    InformationCriteria,
     sumofsq,
 )
-from statsmodels.tsa.ardl import pss_critical_values
 from statsmodels.tsa.arima_process import arma2ma
 from statsmodels.tsa.base import tsa_model
 from statsmodels.tsa.base.prediction import PredictionResults
@@ -64,32 +67,48 @@ __all__ = [
 
 
 class BoundsTestResult(NamedTuple):
-    stat: float
-    crit_vals: pd.DataFrame
-    p_values: pd.Series
+    """
+    Result of :meth:`UECMResults.bounds_test`, the PSS cointegration
+    bounds test.
+
+    Parameters
+    ----------
+    statistic : float
+        The F-type test statistic favored in PSS.
+    critical_values : DataFrame
+        The critical values for the test statistic, with columns "lower"
+        and "upper" indexed by percentile.
+    pvalue : Series
+        The p-values corresponding to the "lower" and "upper" bounds of
+        the test statistic.
+    null : str
+        The null hypothesis, "No Cointegration".
+    alternative : str
+        The alternative hypothesis, "Possible Cointegration".
+    """
+
+    statistic: float
+    critical_values: pd.DataFrame
+    pvalue: pd.Series
     null: str
     alternative: str
 
     def __repr__(self):
         return f"""\
 {self.__class__.__name__}
-Stat: {self.stat:0.5f}
-Upper P-value: {self.p_values["upper"]:0.3g}
-Lower P-value: {self.p_values["lower"]:0.3g}
+Stat: {self.statistic:0.5f}
+Upper P-value: {self.pvalue["upper"]:0.3g}
+Lower P-value: {self.pvalue["lower"]:0.3g}
 Null: {self.null}
 Alternative: {self.alternative}
 """
 
 
-_UECMOrder = Union[None, int, dict[Hashable, Optional[int]]]
+_UECMOrder = int | dict[Hashable, int | None] | None
 
-_ARDLOrder = Union[
-    None,
-    int,
-    _UECMOrder,
-    Sequence[int],
-    dict[Hashable, Union[int, Sequence[int], None]],
-]
+_ARDLOrder = (
+    int | _UECMOrder | Sequence[int] | dict[Hashable, int | Sequence[int] | None] | None
+)
 
 _INT_TYPES = (int, np.integer)
 
@@ -181,31 +200,33 @@ class ARDL(AutoReg):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    lags : {int, list[int]}
+    lags : int, sequence of int, or None
         The number of lags to include in the model if an integer or the
         list of lag indices to include.  For example, [1, 4] will only
         include lags 1 and 4 while lags=4 will include lags 1, 2, 3, and 4.
-    exog : array_like
+        None excludes all AR lags, and behaves identically to 0.
+    exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
-    order : {int, sequence[int], dict}
-        If int, uses lags 0, 1, ..., order  for all exog variables. If
-        sequence[int], uses the ``order`` for all variables. If a dict,
+    order : int, sequence of int, or dict, optional
+        If int, uses lags 0, 1, ..., order for all exog variables. If
+        sequence of int, uses the ``order`` for all variables. If a dict,
         applies the lags series by series. If ``exog`` is anything other
         than a DataFrame, the keys are the column index of exog (e.g., 0,
         1, ...). If a DataFrame, keys are column names.
-    fixed : array_like
+    fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
         Whether to include lag 0 of exog variables.  If True, only includes
         lags 1, 2, ...
-    trend : {'n', 'c', 't', 'ct'}, optional
+    trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
         * 'n' - No trend.
         * 'c' - Constant only.
         * 't' - Time trend only.
         * 'ct' - Constant and time trend.
+        * 'ctt' - Constant, time trend, and quadratic time trend.
 
         The default is 'c'.
 
@@ -216,7 +237,7 @@ class ARDL(AutoReg):
     deterministic : DeterministicProcess, optional
         A deterministic process.  If provided, trend and seasonal are ignored.
         A warning is raised if trend is not "n" and seasonal is not False.
-    hold_back : {None, int}, optional
+    hold_back : int, optional
         Initial observations to exclude from the estimation sample.  If None,
         then hold_back is equal to the maximum lag in the model.  Set to a
         non-zero value to produce comparable models with different lag
@@ -224,14 +245,25 @@ class ARDL(AutoReg):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
-    period : {None, int}, optional
+    period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
-    missing : {"none", "drop", "raise"}, optional
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no NaN
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
+
+    See Also
+    --------
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregressive model estimation with optional exogenous regressors
+    statsmodels.tsa.ardl.UECM
+        Unconstrained Error Correction Model estimation
+    statsmodels.tsa.statespace.sarimax.SARIMAX
+        Seasonal ARIMA model estimation with optional exogenous regressors
+    statsmodels.tsa.arima.model.ARIMA
+        ARIMA model estimation
 
     Notes
     -----
@@ -258,17 +290,6 @@ class ARDL(AutoReg):
     See the notebook `Autoregressive Distributed Lag Models
     <../examples/notebooks/generated/autoregressive_distributed_lag.html>`__
     for an overview.
-
-    See Also
-    --------
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive model estimation with optional exogenous regressors
-    statsmodels.tsa.ardl.UECM
-        Unconstrained Error Correction Model estimation
-    statsmodels.tsa.statespace.sarimax.SARIMAX
-        Seasonal ARIMA model estimation with optional exogenous regressors
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA model estimation
 
     Examples
     --------
@@ -335,7 +356,6 @@ class ARDL(AutoReg):
             period=period,
             missing=missing,
             deterministic=deterministic,
-            old_names=False,
         )
         # Reset hold back which was set in AutoReg.__init__
         self._causal = bool_like(causal, "causal", strict=True)
@@ -403,9 +423,9 @@ class ARDL(AutoReg):
         """The order of the ARDL(p,q)"""
         ar_order = 0 if not self._lags else int(max(self._lags))
         ardl_order = [ar_order]
-        for lags in self._order.values():
-            if lags is not None:
-                ardl_order.append(int(max(lags)))
+        ardl_order.extend(
+            int(max(lags)) for lags in self._order.values() if lags is not None
+        )
         return tuple(ardl_order)
 
     def _setup_regressors(self) -> None:
@@ -446,7 +466,7 @@ class ARDL(AutoReg):
     def _fit(
         self,
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         if self._x.shape[1] == 0:
@@ -467,7 +487,7 @@ class ARDL(AutoReg):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
     ) -> ARDLResults:
         """
@@ -475,7 +495,7 @@ class ARDL(AutoReg):
 
         Parameters
         ----------
-        cov_type : str
+        cov_type : str, optional
             The covariance estimator to use. The most common choices are listed
             below.  Supports all covariance estimators that are available
             in ``OLS.fit``.
@@ -538,7 +558,8 @@ class ARDL(AutoReg):
         """Construct and format model regressors"""
         # TODO: Missing adjustment
         self._maxlag = max(self._lags) if self._lags else 0
-        _endog_reg, _endog = lagmat(self.data.endog, self._maxlag, original="sep")
+        _lagmat_result = lagmat(self.data.endog, self._maxlag, original="sep")
+        _endog_reg, _endog = _lagmat_result.lags, _lagmat_result.leads
         assert isinstance(_endog, np.ndarray)
         assert isinstance(_endog_reg, np.ndarray)
         self._endog_reg, self._endog = _endog_reg, _endog
@@ -684,7 +705,7 @@ class ARDL(AutoReg):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -694,26 +715,26 @@ class ARDL(AutoReg):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
-        dynamic : {bool, int, str, datetime, Timestamp}, optional
+        dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
             will be used for prediction; starting with this observation and
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
-        exog : array_like
+            location of `dynamic` which is then used to compute the offset.
+        exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
-        exog_oos : array_like
+        exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous
             variables. Must have the same number of columns as the exog
             used when the model was created, and at least as many rows as
             the number of out-of-sample forecasts.
-        fixed : array_like
+        fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
-        fixed_oos : array_like
+        fixed_oos : array_like, optional
             An array containing out-of-sample values of the fixed variables.
             Must have the same number of columns as the fixed used when the
             model was created, and at least as many rows as the number of
@@ -721,7 +742,7 @@ class ARDL(AutoReg):
 
         Returns
         -------
-        predictions : {ndarray, Series}
+        predictions : ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
             forecasts.
         """
@@ -853,29 +874,30 @@ class ARDL(AutoReg):
             below.
         data : DataFrame
             DataFrame containing the variables in the formula.
-        lags : {int, list[int]}
+        lags : int, sequence of int, or None, optional
             The number of lags to include in the model if an integer or the
             list of lag indices to include.  For example, [1, 4] will only
             include lags 1 and 4 while lags=4 will include lags 1, 2, 3,
-            and 4.
-        order : {int, sequence[int], dict}
-            If int, uses lags 0, 1, ..., order  for all exog variables. If
-            sequence[int], uses the ``order`` for all variables. If a dict,
+            and 4. None excludes all AR lags, and behaves identically to 0.
+        order : int, sequence of int, or dict, optional
+            If int, uses lags 0, 1, ..., order for all exog variables. If
+            sequence of int, uses the ``order`` for all variables. If a dict,
             applies the lags series by series. If ``exog`` is anything other
             than a DataFrame, the keys are the column index of exog (e.g., 0,
             1, ...). If a DataFrame, keys are column names.
         causal : bool, optional
             Whether to include lag 0 of exog variables.  If True, only
             includes lags 1, 2, ...
-        trend : {'n', 'c', 't', 'ct'}, optional
+        trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
             The trend to include in the model:
 
             * 'n' - No trend.
             * 'c' - Constant only.
             * 't' - Time trend only.
             * 'ct' - Constant and time trend.
+            * 'ctt' - Constant, time trend, and quadratic time trend.
 
-            The default is 'c'.
+            The default is 'n'.
 
         seasonal : bool, optional
             Flag indicating whether to include seasonal dummies in the model.
@@ -885,7 +907,7 @@ class ARDL(AutoReg):
             A deterministic process.  If provided, trend and seasonal are
             ignored. A warning is raised if trend is not "n" and seasonal
             is not False.
-        hold_back : {None, int}, optional
+        hold_back : int, optional
             Initial observations to exclude from the estimation sample.  If
             None, then hold_back is equal to the maximum lag in the model.
             Set to a non-zero value to produce comparable models with
@@ -893,11 +915,11 @@ class ARDL(AutoReg):
             with lags=3 and lags=1, set hold_back=3 which ensures that both
             models are estimated using observations 3,...,nobs. hold_back
             must be >= the maximum lag in the model.
-        period : {None, int}, optional
+        period : int, optional
             The period of the data. Only used if seasonal is True. This
             parameter can be omitted if using a pandas object for endog
             that contains a recognized frequency.
-        missing : {"none", "drop", "raise"}, optional
+        missing : str, optional
             Available options are 'none', 'drop', and 'raise'. If 'none', no
             NaN checking is done. If 'drop', any observations with NaNs are
             dropped. If 'raise', an error is raised. Default is 'none'.
@@ -977,7 +999,7 @@ class ARDLResults(AutoRegResults):
         model.
     scale : float, optional
         An estimate of the scale of the model.
-    use_t : bool
+    use_t : bool, optional
         Whether use_t was set in fit
     """
 
@@ -1038,11 +1060,11 @@ class ARDLResults(AutoRegResults):
 
         Parameters
         ----------
-        steps : {int, str, datetime}, default 1
+        steps : int, str, or datetime, optional
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
-            steps must be an integer.
+            steps must be an integer. The default is 1.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows
@@ -1052,7 +1074,7 @@ class ARDLResults(AutoRegResults):
 
         Returns
         -------
-        array_like
+        ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
             forecasts.
 
@@ -1072,8 +1094,128 @@ class ARDLResults(AutoRegResults):
             start=start, end=end, dynamic=False, exog_oos=exog, fixed_oos=fixed
         )
 
+    def apply(
+        self,
+        endog,
+        exog=None,
+        fixed=None,
+        refit=None,
+        fit_kwargs=None,
+    ):
+        """
+        Apply the fitted parameters to new data unrelated to original data.
+        It creates a new result object by using the current fitted parameters.
+        Applied to a completely new dataset, assumed to be unrelated to the model's original data.
+
+        The new results can then be used for analysis or forecasting.
+
+        Parameters
+        ----------
+
+        endog : array_like
+            New observations from the modeled time-series process.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable. It must supply the same
+            un-lagged columns as the original ``exog``. The lag structure fitting the original data
+            is re-applied automatically.
+        fixed : array_like, optional
+            New observations of fixed regressors, if applicable.
+        refit : bool, optional
+            Whether to re-fit the parameters, using the new dataset. Default is False
+            (so, the parameters from the current results object are used to create the new results
+            object.)
+        fit_kwargs : dict, optional
+            Keyword arguments to pass to `fit` (if `refit=True`)
+
+        Returns
+        -------
+        ARDLResults
+            Updated results object containing results for the new dataset.
+
+        See Also
+        --------
+        ARDLResults.append
+        statsmodels.tsa.ar_model.AutoRegResults.apply
+
+        Notes
+        -----
+        The `endog` argument given to this method should consist of new observations that are
+        not necessarily related to the original model's `endog` dataset.
+
+        One should be careful when using deterministic processes with cyclical components
+        such as seasonal dummies or Fourier series. These deterministic components will align to
+        the first observation in the data and so it is necessary that any new data should have the
+        same initial period.
+        """
+
+        existing = self.model
+        try:
+            deterministic = existing.deterministic
+            if deterministic is not None:
+                if isinstance(endog, (pd.Series, pd.DataFrame)):
+                    index = endog.index
+                else:
+                    index = np.arange(endog.shape[0])
+                deterministic = deterministic.apply(index)
+            mod = ARDL(
+                endog,
+                lags=existing.ar_lags,
+                exog=exog,
+                order=existing._order,
+                trend=existing.trend,
+                fixed=fixed,
+                causal=existing.causal,
+                seasonal=existing.seasonal,
+                deterministic=deterministic,
+                hold_back=existing.hold_back,
+                period=existing.period,
+                missing="none",
+            )
+        except Exception as exc:
+            error = (
+                "An exception occured during the creation of the cloned "
+                "ARDL instance when applying the existing model "
+                "specification to the new data. The original traceback appears below"
+            )
+
+            exc.args = (error, ) + exc.args
+            raise exc.with_traceback(exc.__traceback__) from exc
+
+        if (mod.exog is None) != (existing.exog is None):
+            if existing.exog is not None:
+                raise ValueError(
+                    "exog must be provided when the original model contained "
+                    "exog variables"
+                )
+            raise ValueError(
+                "exog must be None when the original model did not contain "
+                "exog variables"
+            )
+        if existing.exog is not None and existing.exog.shape[1] != mod.exog.shape[1]:
+            raise ValueError(
+                "The number of exog variables passed must match the original "
+                f"Number of exog values ({existing.exog.shape[1]})"
+            )
+        if refit:
+            fit_kwargs = {} if fit_kwargs is None else fit_kwargs
+            return mod.fit(**fit_kwargs)
+        summary_text = (
+            "Parameters and standard errors were estimated using a different "
+            "dataset and then applied to this dataset"
+        )
+        res = ARDLResults(
+            mod,
+            self.params,
+            self.cov_params_default,
+            self.normalized_cov_params,
+            use_t=self.use_t,
+        )
+        res._summary_text = summary_text
+
+        return ARDLResultsWrapper(res)
+
     def _lag_repr(self) -> np.ndarray:
-        """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
+        """Returns poly repr of an AR, (1 -phi1 L -phi2 L^2-...)"""
         ar_lags = self._ar_lags if self._ar_lags is not None else []
         k_ar = len(ar_lags)
         ar_params = np.zeros(self._max_lag + 1)
@@ -1102,7 +1244,7 @@ class ARDLResults(AutoRegResults):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1112,26 +1254,26 @@ class ARDLResults(AutoRegResults):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
-        dynamic : {bool, int, str, datetime, Timestamp}, optional
+        dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
             will be used for prediction; starting with this observation and
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
-        exog : array_like
+            location of `dynamic` which is then used to compute the offset.
+        exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
-        exog_oos : array_like
+        exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous variable.
-            Must has the same number of columns as the exog used when the
+            Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
             out-of-sample forecasts.
-        fixed : array_like
+        fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
-        fixed_oos : array_like
+        fixed_oos : array_like, optional
             An array containing out-of-sample values of the fixed variables.
             Must have the same number of columns as the fixed used when the
             model was created, and at least as many rows as the number of
@@ -1185,18 +1327,18 @@ class ARDLResults(AutoRegResults):
 
         Parameters
         ----------\n%(predict_params)s
-        alpha : {float, None}
+        alpha : float or None, optional
             The tail probability not covered by the confidence interval. Must
             be in (0, 1). Confidence interval is constructed assuming normally
             distributed shocks. If None, figure will not show the confidence
             interval.
-        in_sample : bool
+        in_sample : bool, optional
             Flag indicating whether to include the in-sample period in the
             plot.
-        fig : Figure
+        fig : Figure, optional
             An existing figure handle. If not provided, a new figure is
             created.
-        figsize: tuple[float, float]
+        figsize : tuple of int, optional
             Tuple containing the figure size values.
 
         Returns
@@ -1247,7 +1389,7 @@ class ARDLResults(AutoRegResults):
             sample = [dates[start].strftime("%m-%d-%Y")]
             sample += ["- " + dates[-1].strftime("%m-%d-%Y")]
         else:
-            sample = [str(start), str(len(self.data.orig_endog))]
+            sample = [str(start), str(self._n_totobs)]
         model = self.model.__class__.__name__ + str(self.model.ardl_order)
         if self.model.seasonal:
             model = "Seas. " + model
@@ -1264,12 +1406,12 @@ class ARDLResults(AutoRegResults):
         ]
 
         top_right = [
-            ("No. Observations:", [str(len(self.model.endog))]),
-            ("Log Likelihood", ["%#5.3f" % self.llf]),
+            ("No. Observations:", [str(self._nobs)]),
+            ("Log Likelihood", [f"{self.llf:#5.3f}"]),
             ("S.D. of innovations", ["%#5.3f" % self.sigma2**0.5]),
-            ("AIC", ["%#5.3f" % self.aic]),
-            ("BIC", ["%#5.3f" % self.bic]),
-            ("HQIC", ["%#5.3f" % self.hqic]),
+            ("AIC", [f"{self.aic:#5.3f}"]),
+            ("BIC", [f"{self.bic:#5.3f}"]),
+            ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
         smry = Summary()
@@ -1301,22 +1443,26 @@ class ARDLOrderSelectionResults(AROrderSelectionResults):
     """
 
     def __init__(self, model, ics, trend, seasonal, period):
-        _ics = (((0,), (0, 0, 0)),)
+        _ics = (((0,), InformationCriteria(0, 0, 0)),)
         super().__init__(model, _ics, trend, seasonal, period)
 
         def _to_dict(d):
             return d[0], dict(d[1:])
 
-        self._aic = pd.Series({v[0]: _to_dict(k) for k, v in ics.items()}, dtype=object)
+        self._aic = pd.Series(
+            {v.aic: _to_dict(k) for k, v in ics.items()}, dtype=object
+        )
         self._aic.index.name = self._aic.name = "AIC"
         self._aic = self._aic.sort_index()
 
-        self._bic = pd.Series({v[1]: _to_dict(k) for k, v in ics.items()}, dtype=object)
+        self._bic = pd.Series(
+            {v.bic: _to_dict(k) for k, v in ics.items()}, dtype=object
+        )
         self._bic.index.name = self._bic.name = "BIC"
         self._bic = self._bic.sort_index()
 
         self._hqic = pd.Series(
-            {v[2]: _to_dict(k) for k, v in ics.items()}, dtype=object
+            {v.hqic: _to_dict(k) for k, v in ics.items()}, dtype=object
         )
         self._hqic.index.name = self._hqic.name = "HQIC"
         self._hqic = self._hqic.sort_index()
@@ -1336,7 +1482,7 @@ def ardl_select_order(
     *,
     fixed: ArrayLike2D | None = None,
     causal: bool = False,
-    ic: Literal["aic", "bic"] = "bic",
+    ic: Literal["aic", "bic", "hqic"] = "bic",
     glob: bool = False,
     seasonal: bool = False,
     deterministic: DeterministicProcess | None = None,
@@ -1356,32 +1502,33 @@ def ardl_select_order(
     exog : array_like
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
-    maxorder : {int, dict}
+    maxorder : int or dict
         If int, sets a common max lag length for all exog variables. If
         a dict, then sets individual lag length. They keys are column names
         if exog is a DataFrame or column indices otherwise.
-    trend : {'n', 'c', 't', 'ct'}, optional
+    trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
         * 'n' - No trend.
         * 'c' - Constant only.
         * 't' - Time trend only.
         * 'ct' - Constant and time trend.
+        * 'ctt' - Constant, time trend, and quadratic time trend.
 
         The default is 'c'.
-    fixed : array_like
+    fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
         Whether to include lag 0 of exog variables.  If True, only includes
         lags 1, 2, ...
-    ic : {"aic", "bic", "hqic"}
+    ic : {"aic", "bic", "hqic"}, optional
         The information criterion to use in model selection.
-    glob : bool
+    glob : bool, optional
         Whether to consider all possible submodels of the largest model
         or only if smaller order lags must be included if larger order
         lags are.  If ``True``, the number of model considered is of the
         order 2**(maxlag + k * maxorder) assuming maxorder is an int. This
-        can be very large unless k and maxorder are bot relatively small.
+        can be very large unless k and maxorder are both relatively small.
         If False, the number of model considered is of the order
         maxlag*maxorder**k which may also be substantial when k and maxorder
         are large.
@@ -1392,7 +1539,7 @@ def ardl_select_order(
     deterministic : DeterministicProcess, optional
         A deterministic process.  If provided, trend and seasonal are ignored.
         A warning is raised if trend is not "n" and seasonal is not False.
-    hold_back : {None, int}, optional
+    hold_back : int, optional
         Initial observations to exclude from the estimation sample.  If None,
         then hold_back is equal to the maximum lag in the model.  Set to a
         non-zero value to produce comparable models with different lag
@@ -1400,22 +1547,23 @@ def ardl_select_order(
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
-    period : {None, int}, optional
+    period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
-    missing : {"none", "drop", "raise"}, optional
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no NaN
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
     Returns
     -------
-    ARDLSelectionResults
+    ARDLOrderSelectionResults
         A results holder containing the selected model and the complete set
         of information criteria for all models fit.
     """
     orig_hold_back = int_like(hold_back, "hold_back", optional=True)
+    ic = string_like(ic, "ic", options=("aic", "bic", "hqic"))
 
     def compute_ics(y, x, df):
         if x.shape[1]:
@@ -1433,7 +1581,7 @@ def ardl_select_order(
         bic = call_cached_func(ARDLResults.bic, res)
         hqic = call_cached_func(ARDLResults.hqic, res)
 
-        return aic, bic, hqic
+        return InformationCriteria(aic, bic, hqic)
 
     base = ARDL(
         endog,
@@ -1512,7 +1660,7 @@ def ardl_select_order(
     else:
         for io in product(*iter_orders):
             x = np.column_stack([a[:, : io[i]] for i, a in enumerate(select)])
-            key = [io[0] if io[0] else None]
+            key = [io[0] or None]
             for j, val in enumerate(io[1:]):
                 var = var_names[j]
                 if causal:
@@ -1521,10 +1669,9 @@ def ardl_select_order(
                     key.append((var, val - 1 if val - 1 >= 0 else None))
             key = tuple(key)
             ics[key] = compute_ics(y, x, always_df)
-    index = {"aic": 0, "bic": 1, "hqic": 2}[ic]
     lowest = np.inf
-    for key in ics:
-        val = ics[key][index]
+    for key, value in ics.items():
+        val = getattr(value, ic)
         if val < lowest:
             lowest = val
             selected_order = key
@@ -1552,15 +1699,15 @@ lags_descr = textwrap.wrap(
     "Must be at least 1.",
     71,
 )
-lags_param = Parameter(name="lags", type="int", desc=lags_descr)
+lags_param = Parameter(name="lags", type="int, optional", desc=lags_descr)
 order_descr = textwrap.wrap(
-    "If int, uses lags 0, 1, ..., order  for all exog variables. If a dict, "
+    "If int, uses lags 0, 1, ..., order for all exog variables. If a dict, "
     "applies the lags series by series. If ``exog`` is anything other than a "
     "DataFrame, the keys are the column index of exog (e.g., 0, 1, ...). If "
     "a DataFrame, keys are column names.",
     71,
 )
-order_param = Parameter(name="order", type="int, dict", desc=order_descr)
+order_param = Parameter(name="order", type="int or dict, optional", desc=order_descr)
 
 from_formula_doc = Docstring(ARDL.from_formula.__doc__)
 from_formula_doc.replace_block("Summary", "Construct an UECM from a formula")
@@ -1589,35 +1736,36 @@ if fit_doc._ds is not None:
 
 class UECM(ARDL):
     r"""
-    Unconstrained Error Correlation Model(UECM)
+    Unconstrained Error Correction Model (UECM)
 
     Parameters
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    lags : {int, list[int]}
+    lags : int, sequence of int or None
         The number of lags of the endogenous variable to include in the
         model. Must be at least 1.
-    exog : array_like
+    exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
-    order : {int, sequence[int], dict}
-        If int, uses lags 0, 1, ..., order  for all exog variables. If a
+    order : int, sequence of intdict, or None, optional
+        If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
         other than a DataFrame, the keys are the column index of exog
         (e.g., 0, 1, ...). If a DataFrame, keys are column names.
-    fixed : array_like
+    fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
         Whether to include lag 0 of exog variables.  If True, only includes
         lags 1, 2, ...
-    trend : {'n', 'c', 't', 'ct'}, optional
+    trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
         * 'n' - No trend.
         * 'c' - Constant only.
         * 't' - Time trend only.
         * 'ct' - Constant and time trend.
+        * 'ctt' - Constant, time trend, and quadratic time trend.
 
         The default is 'c'.
 
@@ -1628,7 +1776,7 @@ class UECM(ARDL):
     deterministic : DeterministicProcess, optional
         A deterministic process.  If provided, trend and seasonal are ignored.
         A warning is raised if trend is not "n" and seasonal is not False.
-    hold_back : {None, int}, optional
+    hold_back : int, optional
         Initial observations to exclude from the estimation sample.  If None,
         then hold_back is equal to the maximum lag in the model.  Set to a
         non-zero value to produce comparable models with different lag
@@ -1636,18 +1784,29 @@ class UECM(ARDL):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
-    period : {None, int}, optional
+    period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
         recognized frequency.
-    missing : {"none", "drop", "raise"}, optional
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no NaN
         checking is done. If 'drop', any observations with NaNs are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+    See Also
+    --------
+    statsmodels.tsa.ardl.ARDL
+        Autoregressive distributed lag model estimation
+    statsmodels.tsa.ar_model.AutoReg
+        Autoregressive model estimation with optional exogenous regressors
+    statsmodels.tsa.statespace.sarimax.SARIMAX
+        Seasonal ARIMA model estimation with optional exogenous regressors
+    statsmodels.tsa.arima.model.ARIMA
+        ARIMA model estimation
+
     Notes
     -----
-    The full specification of an UECM is
+    The full specification of a UECM is
 
     .. math ::
 
@@ -1668,17 +1827,6 @@ class UECM(ARDL):
     :math:`\epsilon_t` is a white noise shock. If ``causal`` is ``True``,
     then the 0-th lag of the exogenous variables is not included and the
     sum starts at ``m=1``.
-
-    See Also
-    --------
-    statsmodels.tsa.ardl.ARDL
-        Autoregressive distributed lag model estimation
-    statsmodels.tsa.ar_model.AutoReg
-        Autoregressive model estimation with optional exogenous regressors
-    statsmodels.tsa.statespace.sarimax.SARIMAX
-        Seasonal ARIMA model estimation with optional exogenous regressors
-    statsmodels.tsa.arima.model.ARIMA
-        ARIMA model estimation
 
     Examples
     --------
@@ -1797,8 +1945,7 @@ class UECM(ARDL):
                     x_name = f"x{key}.L1"
                 x_names.append(x_name)
                 lag_base = x_name[:-1]
-                for lag in val[:-1]:
-                    dexog_names.append(f"D.{lag_base}{lag}")
+                dexog_names.extend(f"D.{lag_base}{lag}" for lag in val[:-1])
         # 3. Lagged endog
         y_lags = max(self._lags) if self._lags else 0
         dendog_names = [f"{y_name}.L{lag}" for lag in range(1, y_lags)]
@@ -1816,7 +1963,8 @@ class UECM(ARDL):
         dendog = np.full_like(self.data.endog, np.nan)
         dendog[1:] = np.diff(self.data.endog, axis=0)
         dlag = max(0, self._maxlag - 1)
-        self._endog_reg, self._endog = lagmat(dendog, dlag, original="sep")
+        _lagmat_result = lagmat(dendog, dlag, original="sep")
+        self._endog_reg, self._endog = _lagmat_result.lags, _lagmat_result.leads
         # 2. Deterministics
         self._deterministic_reg = self._deterministics.in_sample()
         # 3. Levels
@@ -1843,8 +1991,8 @@ class UECM(ARDL):
             dexog[1:] = np.diff(orig_exog, axis=0)
         adj_order = {}
         for key, val in self._order.items():
-            val = None if (val is None or val == [1]) else val[:-1]
-            adj_order[key] = val
+            adj_val = None if (val is None or val == [1]) else val[:-1]
+            adj_order[key] = adj_val
         self._exog = self._format_exog(dexog, adj_order)
 
         self._blocks = {
@@ -1859,8 +2007,7 @@ class UECM(ARDL):
             if key != "exog":
                 blocks.append(np.asarray(val))
             else:
-                for subval in val.values():
-                    blocks.append(np.asarray(subval))
+                blocks.extend(np.asarray(subval) for subval in val.values())
         y = blocks[0]
         reg = np.column_stack(blocks[1:])
         exog_maxlag = 0
@@ -1891,7 +2038,7 @@ class UECM(ARDL):
         self,
         *,
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
     ) -> UECMResults:
         params, cov_params, norm_cov_params = self._fit(
@@ -1909,8 +2056,11 @@ class UECM(ARDL):
         ----------
         ardl : ARDL
             The ARDL model instance
-        missing : {"none", "drop", "raise"}, default "none"
-            How to treat missing observations.
+        missing : str, optional
+            How to treat missing observations. Available options are 'none',
+            'drop', and 'raise'. If 'none', no NaN checking is done. If
+            'drop', any observations with NaNs are dropped. If 'raise', an
+            error is raised. The default is 'none'.
 
         Returns
         -------
@@ -1979,7 +2129,7 @@ class UECM(ARDL):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1989,26 +2139,26 @@ class UECM(ARDL):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
-        dynamic : {bool, int, str, datetime, Timestamp}, optional
+        dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
             will be used for prediction; starting with this observation and
             continuing through the end of prediction, forecasted endogenous
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
-            location of `dynamic` which is then used to to compute the offset.
-        exog : array_like
+            location of `dynamic` which is then used to compute the offset.
+        exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
-        exog_oos : array_like
+        exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous
             variables. Must have the same number of columns as the exog
             used when the model was created, and at least as many rows as
             the number of out-of-sample forecasts.
-        fixed : array_like
+        fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
-        fixed_oos : array_like
+        fixed_oos : array_like, optional
             An array containing out-of-sample values of the fixed variables.
             Must have the same number of columns as the fixed used when the
             model was created, and at least as many rows as the number of
@@ -2016,7 +2166,7 @@ class UECM(ARDL):
 
         Returns
         -------
-        predictions : {ndarray, Series}
+        predictions : ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
             forecasts.
         """
@@ -2100,11 +2250,9 @@ class UECMResults(ARDLResults):
             return pd.DataFrame(val, columns=lbls, index=lbls)
         return pd.Series(val, index=lbls, name=name)
 
-    @cache_readonly
+    @property
     def resid(self):
-        """
-        The residuals of the model.
-        """
+        """The residuals of the model"""
         model = self.model
         return model._y - self.fittedvalues
 
@@ -2228,15 +2376,16 @@ class UECMResults(ARDLResults):
         """Returns poly repr of an AR, (1  -phi1 L -phi2 L^2-...)"""
         # TODO
 
+    @deprecate_kwarg("seed", "rng")
     def bounds_test(
         self,
         case: Literal[1, 2, 3, 4, 5],
         cov_type: str = "nonrobust",
-        cov_kwds: dict[str, Any] = None,
+        cov_kwds: dict[str, Any] | None = None,
         use_t: bool = True,
         asymptotic: bool = True,
         nsim: int = 100_000,
-        seed: (
+        rng: (
             int | Sequence[int] | np.random.RandomState | np.random.Generator | None
         ) = None,
     ):
@@ -2247,7 +2396,7 @@ class UECMResults(ARDLResults):
         ----------
         case : {1, 2, 3, 4, 5}
             One of the cases covered in the PSS test.
-        cov_type : str
+        cov_type : str, optional
             The covariance estimator to use. The asymptotic distribution of
             the PSS test has only been established in the homoskedastic case,
             which is the default.
@@ -2277,28 +2426,38 @@ class UECMResults(ARDLResults):
         use_t : bool, optional
             A flag indicating that small-sample corrections should be applied
             to the covariance estimator.
-        asymptotic : bool
+        asymptotic : bool, optional
             Flag indicating whether to use asymptotic critical values which
             were computed by simulation (True, default) or to simulate a
             sample-size specific set of critical values. Tables are only
             available for up to 10 components in the cointegrating
             relationship, so if more variables are included then simulation
-            is always used. The simulation computed the test statistic under
-            and assumption that the residuals are homoskedastic.
-        nsim : int
+            is always used. The simulation computes the test statistic under
+            an assumption that the residuals are homoskedastic.
+        nsim : int, optional
             Number of simulations to run when computing exact critical values.
-            Only used if ``asymptotic`` is ``True``.
-        seed : {None, int, sequence[int], RandomState, Generator}, optional
-            Seed to use when simulating critical values. Must be provided if
-            reproducible critical value and p-values are required when
-            ``asymptotic`` is ``False``.
+            Only used if ``asymptotic`` is ``False``.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Random number generator or seed to use when simulating critical
+            values. Must be provided if reproducible critical value and
+            p-values are required when ``asymptotic`` is ``False``. If
+            `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
         BoundsTestResult
-            Named tuple containing ``stat``, ``crit_vals``, ``p_values``,
-            ``null` and ``alternative``. The statistic is the F-type
-            test statistic favored in PSS.
+            Named tuple containing ``statistic``, ``critical_values``,
+            ``pvalue``, ``null`` and ``alternative``. The statistic is the
+            F-type test statistic favored in PSS.
 
         Notes
         -----
@@ -2338,6 +2497,10 @@ class UECMResults(ARDLResults):
            approaches to the analysis of level relationships. Journal of
            applied econometrics, 16(3), 289-326.
         """
+        # deferred import: pss_critical_values holds large tables that are
+        # only needed when a bounds test is actually run
+        from statsmodels.tsa.ardl import pss_critical_values
+
         model = self.model
         trend: Literal["n", "c", "ct"]
         if case == 1:
@@ -2394,7 +2557,7 @@ class UECMResults(ARDLResults):
         else:
             nobs = res.resid.shape[0]
             crit_vals, p_values = _pss_simulate(
-                stat, k, case, nobs=nobs, nsim=nsim, seed=seed
+                stat, k, case, nobs=nobs, nsim=nsim, rng=rng
             )
 
         return BoundsTestResult(
@@ -2407,6 +2570,10 @@ class UECMResults(ARDLResults):
 
 
 def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
+    # deferred import: pss_critical_values holds large tables that are
+    # only needed when a bounds test is actually run
+    from statsmodels.tsa.ardl import pss_critical_values
+
     key = (k, case, i1)
     large_p = pss_critical_values.large_p[key]
     small_p = pss_critical_values.small_p[key]
@@ -2423,14 +2590,13 @@ def _pss_simulate(
     case: Literal[1, 2, 3, 4, 5],
     nobs: int,
     nsim: int,
-    seed: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
+    rng: int | Sequence[int] | np.random.RandomState | np.random.Generator | None,
 ) -> tuple[pd.DataFrame, pd.Series]:
-    rs: np.random.RandomState | np.random.Generator
-    if not isinstance(seed, np.random.RandomState):
-        rs = np.random.default_rng(seed)
-    else:
-        assert isinstance(seed, np.random.RandomState)
-        rs = seed
+    # deferred import: pss_critical_values holds large tables that are
+    # only needed when a bounds test is actually run
+    from statsmodels.tsa.ardl import pss_critical_values
+
+    rs: np.random.RandomState | np.random.Generator = check_random_state(rng)
 
     def _vectorized_ols_resid(rhs, lhs):
         rhs_t = np.transpose(rhs, [0, 2, 1])

@@ -1,8 +1,11 @@
+import numpy as np
 from numpy.testing import assert_equal
 import pandas as pd
+import pytest
 
 from statsmodels.iolib.table import (
     SimpleTable,
+    csv2st,
     default_html_fmt,
     default_latex_fmt,
     default_txt_fmt,
@@ -29,7 +32,7 @@ stub2 1.95038 2.65765
         test1header = ("header1", "header2")
         actual = SimpleTable(test1data, test1header, test1stubs,
                              txt_fmt=default_txt_fmt)
-        actual = "\n%s\n" % actual.as_text()
+        actual = f"\n{actual.as_text()}\n"
         assert_equal(desired, str(actual))
 
     def test_simple_table_2(self):
@@ -51,7 +54,7 @@ stub R2 C1  90.30312  90.73999 stub R2 C2  40.95038  40.65765
         actual1 = SimpleTable(data1, header1, stubs1, txt_fmt=default_txt_fmt)
         actual2 = SimpleTable(data2, header2, stubs2, txt_fmt=default_txt_fmt)
         actual1.extend_right(actual2)
-        actual = "\n%s\n" % actual1.as_text()
+        actual = f"\n{actual1.as_text()}\n"
         assert_equal(desired, str(actual))
 
     def test_simple_table_3(self):
@@ -77,7 +80,7 @@ stub R2 C2  40.95038  40.65765
         actual1 = SimpleTable(data1, header1, stubs1, txt_fmt=default_txt_fmt)
         actual2 = SimpleTable(data2, header2, stubs2, txt_fmt=default_txt_fmt)
         actual1.extend(actual2)
-        actual = "\n%s\n" % actual1.as_text()
+        actual = f"\n{actual1.as_text()}\n"
         assert_equal(desired, str(actual))
 
     def test_simple_table_4(self):
@@ -121,7 +124,7 @@ stub R2 C2  40.95038  40.65765
 * stub2 *    2.00 *       3 *
 *****************************
 """
-            actual = "\n%s\n" % tbl.as_text()
+            actual = f"\n{tbl.as_text()}\n"
             # print(actual)
             # print(desired)
             assert_equal(actual, desired)
@@ -138,17 +141,17 @@ stub R2 C2  40.95038  40.65765
 \bottomrule
 \end{tabular}
 """
-            actual = "\n%s\n" % tbl.as_latex_tabular(center=False)
+            actual = f"\n{tbl.as_latex_tabular(center=False)}\n"
             # print(actual)
             # print(desired)
             assert_equal(actual, desired)
             # Test "center=True" (the default):
-            desired_centered = r"""
-\begin{center}
-%s
-\end{center}
-""" % desired[1:-1]
-            actual_centered = "\n%s\n" % tbl.as_latex_tabular()
+            desired_centered = rf"""
+\begin{{center}}
+{desired[1:-1]}
+\end{{center}}
+"""
+            actual_centered = f"\n{tbl.as_latex_tabular()}\n"
             assert_equal(actual_centered, desired_centered)
 
         def test_html_fmt1(self):
@@ -196,14 +199,15 @@ stub R2 C2  40.95038  40.65765
 \bottomrule
 \end{tabular}
 """
-            actual = "\n%s\n" % tbl_c.as_latex_tabular(center=False)
+            actual = f"\n{tbl_c.as_latex_tabular(center=False)}\n"
             assert_equal(actual, desired)
         test_ltx_special_chars(self)
 
     def test_regression_with_tuples(self):
-        i = pd.Series([1, 2, 3, 4] * 10, name="i")
-        y = pd.Series([1, 2, 3, 4, 5] * 8, name="y")
-        x = pd.Series([1, 2, 3, 4, 5, 6, 7, 8] * 5, name="x")
+        rs = np.random.default_rng(312323)
+        i = pd.Series(np.arange(20).tolist() * 10, name="i")
+        y = pd.Series(rs.standard_normal(200), name="y")
+        x = pd.Series(rs.standard_normal(200), name="x")
 
         df = pd.DataFrame(index=i.index)
         df = df.join(i)
@@ -224,8 +228,8 @@ stub R2 C2  40.95038  40.65765
                     interesting_lines.append(line[:38])
 
         desired = ["Dep. Variable:                  x_sum ",
-                   "y_sum          1.4595      0.209      ",
-                   "y_max          0.2432      0.035      "]
+                   "y_sum          0.6380      0.225      ",
+                   "y_max          0.7972      0.367      "]
 
         assert_equal(sorted(desired), sorted(interesting_lines))
 
@@ -243,7 +247,7 @@ stub2 1.95038     2.6
         test1header = ("header1", "header2")
         actual = SimpleTable(test1data, test1header, test1stubs,
                              txt_fmt=default_txt_fmt)
-        actual = "\n%s\n" % actual.as_text()
+        actual = f"\n{actual.as_text()}\n"
         assert_equal(desired, str(actual))
 
     def test__repr_latex(self):
@@ -264,5 +268,35 @@ stub2 1.95038     2.6
         testheader = ("header1", "header2")
         tbl = SimpleTable(testdata, testheader, teststubs,
                           txt_fmt=default_txt_fmt)
-        actual = "\n%s\n" % tbl._repr_latex_()
+        actual = f"\n{tbl._repr_latex_()}\n"
         assert_equal(actual, desired)
+
+
+def test_csv2st_roundtrip(tmp_path):
+    # csv2st is exported from statsmodels.iolib.api but had no test coverage.
+    csv_path = tmp_path / "table.csv"
+    csv_path.write_text(
+        "name,value,weight\nfirst,1.5,10\nsecond,2.5,20\nthird,3.5,30\n",
+        encoding="utf-8",
+    )
+
+    tbl = csv2st(str(csv_path), headers=True)
+    text = str(tbl)
+    for token in ["name", "value", "weight", "first", "2.5", "third", "30"]:
+        assert token in text
+
+    tbl_stubs = csv2st(str(csv_path), headers=True, stubs=True)
+    stubbed = str(tbl_stubs)
+    # with stubs=True the first column becomes row labels rather than data
+    assert "first" in stubbed
+    assert "second" in stubbed
+
+    tbl_with_title = csv2st(str(csv_path), headers=True, title="My Table")
+    assert "My Table" in str(tbl_with_title)
+
+
+def test_csv2st_mismatched_row_lengths_raises(tmp_path):
+    csv_path = tmp_path / "bad.csv"
+    csv_path.write_text("a,b\n1,2\n3\n", encoding="utf-8")
+    with pytest.raises(OSError, match="All rows"):
+        csv2st(str(csv_path))

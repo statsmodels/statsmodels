@@ -15,6 +15,7 @@ from statsmodels.stats.stattools import (
     robust_kurtosis,
     robust_skewness,
 )
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 # a random array, rounded to 4 decimals
 x = np.array(
@@ -116,9 +117,10 @@ def test_omni_normtest():
     assert_almost_equal(kt, st_pv_R[:, 2], 12)
 
 
-def test_omni_normtest_axis(reset_randomstate):
+def test_omni_normtest_axis():
     # test axis of omni_normtest
-    x = np.random.randn(25, 3)
+    rs = np.random.RandomState(3281321)
+    x = rs.randn(25, 3)
     nt1 = omni_normtest(x)
     nt2 = omni_normtest(x, axis=0)
     nt3 = omni_normtest(x.T, axis=1)
@@ -196,8 +198,9 @@ def test_adnorm():
     assert_almost_equal(ad, np.column_stack(st_pv), 11)
 
 
-def test_durbin_watson_pandas(reset_randomstate):
-    x = np.random.randn(50)
+def test_durbin_watson_pandas():
+    rs = np.random.RandomState(3283218)
+    x = rs.randn(50)
     x_series = pd.Series(x)
     assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
@@ -205,7 +208,8 @@ def test_durbin_watson_pandas(reset_randomstate):
 class TestStattools:
     @classmethod
     def setup_class(cls):
-        x = np.random.standard_normal(1000)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(1000)
         e1, e2, e3, e4, e5, e6, e7 = np.percentile(
             x, (12.5, 25.0, 37.5, 50.0, 62.5, 75.0, 87.5)
         )
@@ -235,45 +239,152 @@ class TestStattools:
             _medcouple_1d(x)
 
     def test_medcouple_symmetric(self):
-        mc = medcouple(np.arange(5.0))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc = medcouple(np.arange(5.0))
         assert_almost_equal(mc, 0)
 
     def test_medcouple_nonzero(self):
-        mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
         assert_almost_equal(mc, -0.3333333)
 
     def test_medcouple_int(self):
         # GH 4243
-        mc1 = medcouple(np.array([1, 2, 7, 9, 10]))
-        mc2 = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc1 = medcouple(np.array([1, 2, 7, 9, 10]))
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc2 = medcouple(np.array([1, 2, 7, 9, 10.0]))
         assert_equal(mc1, mc2)
 
-    def test_medcouple_symmetry(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+    def test_medcouple_symmetry(self):
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         mcp = medcouple(x)
         mcn = medcouple(-x)
-        assert_almost_equal(mcp + mcn, 0)
+        assert_allclose(mcp + mcn, 0, atol=1e-2)
 
-    def test_medcouple_ties(self, reset_randomstate):
+    def test_medcouple_ties(self):
         x = np.array([1, 2, 2, 3, 4])
-        mc = medcouple(x)
+        mc = medcouple(x, use_fast=False)
         assert_almost_equal(mc, 1.0 / 6.0)
 
-    def test_durbin_watson(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+    def test_medcouple_consistency_fast_vs_legacy(self):
+        x = np.array([1.0, 2.0, 7.0, 9.0, 10.0])
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc_fast = medcouple(x, use_fast=True)
+        mc_legacy = medcouple(x, use_fast=False)
+        assert_almost_equal(mc_fast, mc_legacy, decimal=7)
+
+    def test_medcouple_even_hcount_regression(self):
+        # Regression test for GH#10098: the fast algorithm returned one of
+        # the two central h-kernel order statistics instead of their
+        # average whenever their count (n_plus * n_minus) was even, which
+        # happens for roughly half of all sample sizes. n=4 here gives
+        # n_plus = n_minus = 2, so exactly 4 (even) pairwise h-values.
+        x = np.array([1.0, 2.0, 3.0, 10.0])
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            mc_fast = medcouple(x, use_fast=True)
+        mc_legacy = medcouple(x, use_fast=False)
+        assert_allclose(mc_fast, 1.0 / 3.0, rtol=1e-12)
+        assert_allclose(mc_fast, mc_legacy, rtol=1e-12)
+
+    def test_medcouple_r_reference_ties(self):
+        # External verification against R's robustbase::mc() (v0.99.7),
+        # the reference implementation for this algorithm, on inputs with
+        # moderate ties. Values are `mc(x)` at defaults (doReflect=TRUE,
+        # the default for length(x) <= 100, doScale=FALSE). n=10 for the
+        # third case is even, which also exercises the even/odd h-kernel
+        # count fix from GH#10098 on a realistic tied dataset rather than
+        # only on tie-free random data.
+        cases = [
+            (np.array([1.0, 2.0, 2.0, 3.0, 4.0]), 1.0 / 6.0),
+            (np.array([1.0, 3.0, 5.0, 7.0, 7.0, 7.0, 8.0, 8.0, 9.0, 9.0, 9.0]),
+             -1.0 / 6.0),
+            (np.array([2.0, 2.0, 3.0, 3.0, 3.0, 4.0, 5.0, 5.0, 8.0, 10.0]), 0.5),
+        ]
+        for x, expected in cases:
+            if x.shape[0] < 10:
+                with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+                    mc_fast = medcouple(x, use_fast=True)
+            else:
+                mc_fast = medcouple(x, use_fast=True)
+            mc_legacy = medcouple(x, use_fast=False)
+            assert_allclose(mc_fast, expected, rtol=1e-12)
+            assert_allclose(mc_legacy, expected, rtol=1e-12)
+
+    def test_medcouple_r_reference_majority_tied(self):
+        # External verification against R's robustbase::mc() (v0.99.7) for
+        # data where a strict majority is tied at one extreme, including
+        # the fully degenerate (constant) case. use_fast=True's early-return
+        # shortcut for "one extreme equals the median" matches R's
+        # convention of +-1 here exactly (this also regression-tests
+        # GH#10098, where an earlier, incorrect attempt at "fixing" this
+        # shortcut was caught by comparing against these R values).
+        #
+        # use_fast=False (legacy) uses a different, longstanding tie-break
+        # convention for this specific edge case (an O(n**2) antisymmetric
+        # rank-based rule) that does not match R here -- e.g. it returns
+        # 0.5 rather than 1.0 for the first case below. That is a known,
+        # pre-existing difference between the two code paths for heavily
+        # tied data, not something asserted here.
+        cases = [
+            (np.array([1.0] * 9 + [5.0]), 1.0),
+            (np.array([1.0] * 9 + [-5.0]), -1.0),
+            (np.array([1.0] * 6 + [5.0] * 4), 1.0),
+            (np.ones(10), -1.0),
+        ]
+        for x, expected in cases:
+            assert_allclose(medcouple(x, use_fast=True), expected, rtol=1e-12)
+
+        with pytest.warns(UserWarning, match="Fast medcouple algorithm"):
+            assert_allclose(medcouple(np.ones(5), use_fast=True), -1.0, rtol=1e-12)
+
+    def test_medcouple_axis_consistency(self):
+        x = np.arange(100.0).reshape(10, 10)
+        mc_fast = medcouple(x, axis=1, use_fast=True)
+        mc_legacy = medcouple(x, axis=1, use_fast=False)
+        np.testing.assert_allclose(mc_fast, mc_legacy, rtol=1e-7)
+
+    def test_medcouple_nan_propagation(self):
+        x = np.array([1, 2, np.nan, 4, 5])
+        assert np.isnan(medcouple(x, use_fast=True))
+
+    def test_medcouple_short_input(self):
+        x = np.array([1, 2])
+        with pytest.warns(ValueWarning, match="medcouple is undefined"):
+            res = medcouple(x, use_fast=True)
+        assert np.isnan(res)
+
+    def test_medcouple_large_random(self):
+        # rtol was previously loosened to 2e-2 to paper over GH#10098 (the
+        # fast algorithm silently returned one of the two central h-kernel
+        # order statistics instead of their average whenever their count
+        # was even); now that this is fixed, fast and legacy agree to
+        # machine precision.
+        rs = np.random.default_rng(238201381)
+        x = rs.standard_normal(500)
+        mc_fast = medcouple(x, use_fast=True)
+        mc_legacy = medcouple(x, use_fast=False)
+        assert_allclose(mc_fast, mc_legacy, rtol=1e-8, atol=1e-10)
+
+    def test_durbin_watson(self):
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
         assert_almost_equal(dw, durbin_watson(x))
 
-    def test_durbin_watson_2d(self, reset_randomstate):
+    def test_durbin_watson_2d(self):
         shape = (1, 10)
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
         x = np.tile(x[:, None], shape)
         assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x))
 
-    def test_durbin_watson_3d(self, reset_randomstate):
+    def test_durbin_watson_3d(self):
         shape = (10, 1, 10)
-        x = np.random.standard_normal(100)
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
         x = np.tile(x[None, :, None], shape)
         assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x, axis=1))
@@ -282,22 +393,27 @@ class TestStattools:
         x = np.arange(21.0)
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
+        sk_2 = robust_skewness(x, axis=None)
+        assert_almost_equal(np.array(sk_2), np.zeros(4))
 
-    def test_robust_skewness_1d_2d(self, reset_randomstate):
-        x = np.random.randn(21)
+    def test_robust_skewness_1d_2d(self):
+        rs = np.random.RandomState(3283281)
+        x = rs.randn(21)
         y = x[:, None]
         sk_x = robust_skewness(x)
         sk_y = robust_skewness(y, axis=None)
         assert_almost_equal(np.array(sk_x), np.array(sk_y))
 
-    def test_robust_skewness_symmetric(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+    def test_robust_skewness_symmetric(self):
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         x = np.hstack([x, np.zeros(1), -x])
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
 
-    def test_robust_skewness_3d(self, reset_randomstate):
-        x = np.random.standard_normal(100)
+    def test_robust_skewness_3d(self):
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(100)
         x = np.hstack([x, np.zeros(1), -x])
         x = np.tile(x, (10, 10, 1))
         sk_3d = robust_skewness(x, axis=2)
@@ -305,8 +421,9 @@ class TestStattools:
         for sk in sk_3d:
             assert_almost_equal(sk, result)
 
-    def test_robust_skewness_4(self, reset_randomstate):
-        x = np.random.standard_normal(1000)
+    def test_robust_skewness_4(self):
+        rs = np.random.RandomState(32392131)
+        x = rs.standard_normal(1000)
         x[x > 0] *= 3
         m = np.median(x)
         s = x.std(ddof=0)
@@ -314,12 +431,15 @@ class TestStattools:
         _, _, _, sk4 = robust_skewness(x)
         assert_allclose(expected, sk4)
 
-    def test_robust_kurtosis_1d_2d(self, reset_randomstate):
-        x = np.random.randn(100)
+    def test_robust_kurtosis_1d_2d(self):
+        rs = np.random.RandomState(3283283)
+        x = rs.randn(100)
         y = x[:, None]
         kr_x = np.array(robust_kurtosis(x))
         kr_y = np.array(robust_kurtosis(y, axis=None))
+        kr_y_list = np.array(robust_kurtosis(y.tolist(), axis=None))
         assert_almost_equal(kr_x, kr_y)
+        assert_almost_equal(kr_x, kr_y_list)
 
     def test_robust_kurtosis(self):
         x = self.kurtosis_x

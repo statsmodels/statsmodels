@@ -14,6 +14,23 @@ from .tableformatting import fmt_latex, fmt_txt
 
 
 class Summary:
+    """
+    Result summary
+
+    Construction does not take any parameters. Tables and text can be added
+    with the `add_` methods.
+
+    Attributes
+    ----------
+    tables : list
+        List of tables added with `add_df`, `add_array` or `add_dict`.
+    settings : list of dict
+        Formatting settings associated with each entry in `tables`.
+    extra_txt : list of str
+        Extra lines that are added to the text output.
+    title : str
+        Title of the summary table.
+    """
     def __init__(self):
         self.tables = []
         self.settings = []
@@ -28,11 +45,11 @@ class Summary:
         return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
 
     def _repr_html_(self):
-        """Display as HTML in IPython notebook."""
+        """Display as HTML in IPython notebook"""
         return self.as_html()
 
     def _repr_latex_(self):
-        """Display as LaTeX when converting IPython notebook to PDF."""
+        """Display as LaTeX when converting IPython notebook to PDF"""
         return self.as_latex()
 
     def add_df(self, df, index=True, header=True, float_format="%.4f",
@@ -43,13 +60,14 @@ class Summary:
         Parameters
         ----------
         df : DataFrame
-        header : bool
-            Reproduce the DataFrame column labels in summary table
-        index : bool
+            The DataFrame to add to the summary table.
+        index : bool, optional
             Reproduce the DataFrame row labels in summary table
-        float_format : str
+        header : bool, optional
+            Reproduce the DataFrame column labels in summary table
+        float_format : str, optional
             Formatting to float data columns
-        align : str
+        align : str, optional
             Data alignment (l/c/r)
         """
 
@@ -59,15 +77,17 @@ class Summary:
         self.settings.append(settings)
 
     def add_array(self, array, align="r", float_format="%.4f"):
-        """Add the contents of a Numpy array to summary table
+        """
+        Add the contents of a Numpy array to summary table
 
         Parameters
         ----------
-        array : numpy array (2D)
-        float_format : str
-            Formatting to array if type is float
-        align : str
+        array : array_like
+            A 2D array of values.
+        align : str, optional
             Data alignment (l/c/r)
+        float_format : str, optional
+            Formatting to array if type is float
         """
 
         table = pd.DataFrame(array)
@@ -75,18 +95,19 @@ class Summary:
                     float_format=float_format, align=align)
 
     def add_dict(self, d, ncols=2, align="l", float_format="%.4f"):
-        """Add the contents of a Dict to summary table
+        """
+        Add the contents of a Dict to summary table
 
         Parameters
         ----------
         d : dict
             Keys and values are automatically coerced to strings with str().
             Users are encouraged to format them before using add_dict.
-        ncols : int
+        ncols : int, optional
             Number of columns of the output table
-        align : str
+        align : str, optional
             Data alignment (l/c/r)
-        float_format : str
+        float_format : str, optional
             Formatting to float data columns
         """
 
@@ -103,16 +124,33 @@ class Summary:
         self.add_array(data, align=align)
 
     def add_text(self, string):
-        """Append a note to the bottom of the summary table. In ASCII tables,
-        the note will be wrapped to table width. Notes are not indented.
+        """
+        Append a note to the bottom of the summary table
+
+        Parameters
+        ----------
+        string : str
+            The note to append.
+
+        Notes
+        -----
+        In ASCII tables, the note will be wrapped to table width. Notes are
+        not indented.
         """
         self.extra_txt.append(string)
 
     def add_title(self, title=None, results=None):
-        """Insert a title on top of the summary table. If a string is provided
-        in the title argument, that string is printed. If no title string is
-        provided but a results instance is provided, statsmodels attempts
-        to construct a useful title automatically.
+        """
+        Insert a title on top of the summary table
+
+        Parameters
+        ----------
+        title : str, optional
+            If a string is provided, that string is printed as the title.
+        results : Model results instance, optional
+            If no title string is provided but a results instance is
+            provided, statsmodels attempts to construct a useful title
+            automatically.
         """
         if isinstance(title, str):
             self.title = title
@@ -126,21 +164,24 @@ class Summary:
 
     def add_base(self, results, alpha=0.05, float_format="%.4f", title=None,
                  xname=None, yname=None):
-        """Try to construct a basic summary instance.
+        """
+        Try to construct a basic summary instance
 
         Parameters
         ----------
         results : Model results instance
-        alpha : float
-            significance level for the confidence intervals (optional)
-        float_format: str
-            Float formatting for summary of parameters (optional)
-        title : str
-            Title of the summary table (optional)
-        xname : list[str] of length equal to the number of parameters
-            Names of the independent variables (optional)
-        yname : str
-            Name of the dependent variable (optional)
+            The result instance to summarize.
+        alpha : float, optional
+            Significance level for the confidence intervals.
+        float_format : str, optional
+            Float formatting for summary of parameters.
+        title : str, optional
+            Title of the summary table.
+        xname : list of str, optional
+            Names of the independent variables. Must have length equal to
+            the number of parameters.
+        yname : str, optional
+            Name of the dependent variable.
         """
 
         param = summary_params(results, alpha=alpha, use_t=results.use_t)
@@ -154,8 +195,7 @@ class Summary:
         self.add_title(title=title, results=results)
 
     def as_text(self):
-        """Generate ASCII Summary Table
-        """
+        """Generate ASCII summary table"""
 
         tables = self.tables
         settings = self.settings
@@ -190,8 +230,7 @@ class Summary:
         return out
 
     def as_html(self):
-        """Generate HTML Summary Table
-        """
+        """Generate HTML summary table"""
 
         tables = self.tables
         settings = self.settings
@@ -208,13 +247,14 @@ class Summary:
         return out
 
     def as_latex(self, label=""):
-        """Generate LaTeX Summary Table
+        """
+        Generate LaTeX summary table
 
         Parameters
         ----------
-        label : str
+        label : str, optional
             Label of the summary table that can be referenced
-            in a latex document (optional)
+            in a latex document.
         """
         tables = self.tables
         settings = self.settings
@@ -248,10 +288,28 @@ class Summary:
 
 
 def _measure_tables(tables, settings):
-    """Compare width of ascii tables in a list and calculate padding values.
+    """
+    Compare width of ascii tables in a list and calculate padding values
+
     We add space to each col_sep to get us as close as possible to the
     width of the largest table. Then, we add a few spaces to the first
     column to pad the rest.
+
+    Parameters
+    ----------
+    tables : list of DataFrame
+        The tables that will be rendered.
+    settings : list of dict
+        Formatting settings associated with each entry in `tables`.
+
+    Returns
+    -------
+    pad_sep : list of int
+        Padding to add to the column separator of each table.
+    pad_index : list of int
+        Padding to add to the index column of each table.
+    max_length : int
+        The width, in characters, of the widest table.
     """
 
     simple_tables = _simple_tables(tables, settings)
@@ -286,6 +344,19 @@ _model_types = {"OLS": "Ordinary least squares",
 def summary_model(results):
     """
     Create a dict with information about the model
+
+    Parameters
+    ----------
+    results : Model results instance
+        The result instance to summarize.
+
+    Returns
+    -------
+    dict
+        Dictionary of model information, such as the model class, the
+        dependent variable and the number of observations. Keys that
+        cannot be constructed for the given results instance (for example
+        because the underlying attribute does not exist) are omitted.
     """
 
     def time_now(*args, **kwds):
@@ -294,13 +365,13 @@ def summary_model(results):
 
     info = {}
     info["Model:"] = lambda x: x.model.__class__.__name__
-    info["Model Family:"] = lambda x: x.family.__class.__name__
+    info["Model Family:"] = lambda x: x.family.__class__.__name__
     info["Link Function:"] = lambda x: x.family.link.__class__.__name__
     info["Dependent Variable:"] = lambda x: x.model.endog_names
     info["Date:"] = time_now
-    info["No. Observations:"] = lambda x: "%#6d" % x.nobs
-    info["Df Model:"] = lambda x: "%#6d" % x.df_model
-    info["Df Residuals:"] = lambda x: "%#6d" % x.df_resid
+    info["No. Observations:"] = lambda x: f"{int(x.nobs):#6d}"
+    info["Df Model:"] = lambda x: f"{int(x.df_model):#6d}"
+    info["Df Residuals:"] = lambda x: f"{int(x.df_resid):#6d}"
     info["Converged:"] = lambda x: x.mle_retvals["converged"]
     info["No. Iterations:"] = lambda x: x.mle_retvals["iterations"]
     info["Method:"] = lambda x: x.method
@@ -309,19 +380,19 @@ def summary_model(results):
     info["Cov. Type:"] = lambda x: x.fit_options["cov"]
 
     rsquared_type = "" if results.k_constant else " (uncentered)"
-    info["R-squared" + rsquared_type + ":"] = lambda x: "%#8.3f" % x.rsquared
-    info["Adj. R-squared" + rsquared_type + ":"] = lambda x: "%#8.3f" % x.rsquared_adj
-    info["Pseudo R-squared:"] = lambda x: "%#8.3f" % x.prsquared
-    info["AIC:"] = lambda x: "%8.4f" % x.aic
-    info["BIC:"] = lambda x: "%8.4f" % x.bic
-    info["Log-Likelihood:"] = lambda x: "%#8.5g" % x.llf
-    info["LL-Null:"] = lambda x: "%#8.5g" % x.llnull
-    info["LLR p-value:"] = lambda x: "%#8.5g" % x.llr_pvalue
-    info["Deviance:"] = lambda x: "%#8.5g" % x.deviance
-    info["Pearson chi2:"] = lambda x: "%#6.3g" % x.pearson_chi2
-    info["F-statistic:"] = lambda x: "%#8.4g" % x.fvalue
-    info["Prob (F-statistic):"] = lambda x: "%#6.3g" % x.f_pvalue
-    info["Scale:"] = lambda x: "%#8.5g" % x.scale
+    info["R-squared" + rsquared_type + ":"] = lambda x: f"{x.rsquared:#8.3f}"
+    info["Adj. R-squared" + rsquared_type + ":"] = lambda x: f"{x.rsquared_adj:#8.3f}"
+    info["Pseudo R-squared:"] = lambda x: f"{x.prsquared:#8.3f}"
+    info["AIC:"] = lambda x: f"{x.aic:8.4f}"
+    info["BIC:"] = lambda x: f"{x.bic:8.4f}"
+    info["Log-Likelihood:"] = lambda x: f"{x.llf:#8.5g}"
+    info["LL-Null:"] = lambda x: f"{x.llnull:#8.5g}"
+    info["LLR p-value:"] = lambda x: f"{x.llr_pvalue:#8.5g}"
+    info["Deviance:"] = lambda x: f"{x.deviance:#8.5g}"
+    info["Pearson chi2:"] = lambda x: f"{x.pearson_chi2:#6.3g}"
+    info["F-statistic:"] = lambda x: f"{x.fvalue:#8.4g}"
+    info["Prob (F-statistic):"] = lambda x: f"{x.f_pvalue:#6.3g}"
+    info["Scale:"] = lambda x: f"{x.scale:#8.5g}"
     out = {}
     for key, func in info.items():
         try:
@@ -335,31 +406,36 @@ def summary_model(results):
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                    skip_header=False, float_format="%.4f"):
-    """create a summary table of parameters from results instance
+    """
+    Create a summary table of parameters from results instance
 
     Parameters
     ----------
-    res : results instance
+    results : results instance
         some required information is directly taken from the result
-        instance
-    yname : {str, None}
+        instance. May also be a tuple of
+        (results, params, bse, tvalues, pvalues, conf_int) for
+        multivariate endog.
+    yname : str, optional
         optional name for the endogenous variable, default is "y"
-    xname : {list[str], None}
+    xname : list of str, optional
         optional names for the exogenous variables, default is "var_xx"
-    alpha : float
+    alpha : float, optional
         significance level for the confidence intervals
-    use_t : bool
+    use_t : bool, optional
         indicator whether the p-values are based on the Student-t
         distribution (if True) or on the normal distribution (if False)
-    skip_header : bool
+    skip_header : bool, optional
         If false (default), then the header row is added. If true, then no
         header row is added.
-    float_format : str
-        float formatting options (e.g. ".3g")
+    float_format : str, optional
+        float formatting options (e.g., ".3g")
 
     Returns
     -------
-    params_table : SimpleTable instance
+    params_table : DataFrame
+        DataFrame with the coefficient, standard error, test statistic,
+        p-value and confidence interval columns.
     """
 
     if isinstance(results, tuple):
@@ -395,7 +471,25 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
 # Vertical summary instance for multiple models
 def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
-    """Stack coefficients and standard errors in single column
+    """
+    Stack coefficients and standard errors in single column
+
+    Parameters
+    ----------
+    result : Model results instance
+        The result instance to summarize.
+    float_format : str, optional
+        Formatting to apply to coefficients and standard errors.
+    stars : bool, optional
+        If True, append significance stars to the coefficients.
+    include_r2 : bool, optional
+        If True, include R-squared and adjusted R-squared in the column.
+
+    Returns
+    -------
+    DataFrame
+        Single-column DataFrame with coefficients and standard errors
+        stacked into a single index.
     """
 
     # Extract parameters
@@ -424,7 +518,7 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
         r2 = pd.Series({("R-squared", ""): rsquared,
                         ("R-squared Adj.", ""): rsquared_adj})
 
-        if r2.notnull().any():
+        if r2.notna().any():
             r2 = r2.apply(lambda x: float_format % x)
             res = pd.concat([res, r2], axis=0)
 
@@ -434,7 +528,22 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
 
 
 def _col_info(result, info_dict=None):
-    """Stack model info in a column
+    """
+    Stack model info in a column
+
+    Parameters
+    ----------
+    result : Model results instance
+        The result instance to summarize.
+    info_dict : dict, optional
+        Dict of functions to be applied to `result` to retrieve model
+        info, keyed by the label to use for each row. If None, an empty
+        dict is used and no rows are added.
+
+    Returns
+    -------
+    DataFrame
+        Single-column DataFrame with the computed model info.
     """
 
     if info_dict is None:
@@ -455,6 +564,22 @@ def _col_info(result, info_dict=None):
 
 
 def _make_unique(list_of_names):
+    """
+    Ensure a list of names contains no duplicates
+
+    Parameters
+    ----------
+    list_of_names : list of str
+        The candidate names.
+
+    Returns
+    -------
+    list of str
+        `list_of_names` unchanged if all entries are already unique.
+        Otherwise, a list of the same length where repeated names have
+        had roman-numeral-like "I" suffixes appended to disambiguate them
+        (pandas does not allow duplicate column names when merging).
+    """
     if len(set(list_of_names)) == len(list_of_names):
         return list_of_names
     # pandas does not like it if multiple columns have the same names
@@ -477,15 +602,16 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
+        The results to summarize side-by-side.
     float_format : str, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list[str], optional
+    model_names : list of str, optional
         Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
-    stars : bool
+    stars : bool, optional
         print significance stars
-    info_dict : dict, default None
+    info_dict : dict, optional
         dict of functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
@@ -494,7 +620,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         additionally `N` for all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list[str], optional
+    regressor_order : list of str, optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     drop_omitted : bool, optional
@@ -503,7 +629,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
-    fixed_effects : list[str], optional
+    fixed_effects : list of str, optional
         List of categorical variables for which to indicate presence of
         fixed effects.
     fe_present : str, optional
@@ -511,6 +637,12 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     fe_absent : str, optional
         String to indicate the absence of fixed effects. Default is empty
         string.
+
+    Returns
+    -------
+    Summary
+        Summary instance containing a single table with the coefficients
+        and standard errors of all results, side-by-side.
     """
 
     if not isinstance(results, list):
@@ -590,7 +722,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
     # use unique column names, otherwise the merge will not succeed
-    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols]), strict=True):
         df.columns = [name]
 
     info = reduce(merg, cols)
@@ -627,6 +759,23 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
 
 
 def _formatter(element, float_format="%.4f"):
+    """
+    Format a single element as a string
+
+    Parameters
+    ----------
+    element : object
+        The value to format. Formatted as a float if possible, otherwise
+        converted to a string.
+    float_format : str, optional
+        The format string to apply if `element` can be formatted as a
+        float.
+
+    Returns
+    -------
+    str
+        The formatted, whitespace-stripped value.
+    """
     try:
         out = float_format % element
     except (ValueError, TypeError):
@@ -637,6 +786,37 @@ def _formatter(element, float_format="%.4f"):
 def _df_to_simpletable(df, align="r", float_format="%.4f", header=True,
                        index=True, table_dec_above="-", table_dec_below=None,
                        header_dec_below="-", pad_col=0, pad_index=0):
+    """
+    Convert a DataFrame to a SimpleTable
+
+    Parameters
+    ----------
+    df : DataFrame
+        The DataFrame to convert.
+    align : str, optional
+        Data alignment (l/c/r).
+    float_format : str, optional
+        Formatting to apply to float data columns.
+    header : bool, optional
+        If True, use the DataFrame column labels as the table header.
+    index : bool, optional
+        If True, use the DataFrame row labels as the table stubs.
+    table_dec_above : str, optional
+        Character used for the decoration line above the table.
+    table_dec_below : str, optional
+        Character used for the decoration line below the table.
+    header_dec_below : str, optional
+        Character used for the decoration line below the header.
+    pad_col : int, optional
+        Extra spaces to add to the column separator.
+    pad_index : int, optional
+        Extra spaces to add after each stub.
+
+    Returns
+    -------
+    SimpleTable
+        The formatted table.
+    """
     dat = df.copy()
     try:
         dat = dat.map(lambda x: _formatter(x, float_format))
@@ -665,6 +845,28 @@ def _df_to_simpletable(df, align="r", float_format="%.4f", header=True,
 
 
 def _simple_tables(tables, settings, pad_col=None, pad_index=None):
+    """
+    Convert a list of DataFrames to a list of SimpleTable instances
+
+    Parameters
+    ----------
+    tables : list of DataFrame
+        The tables to convert.
+    settings : list of dict
+        Formatting settings associated with each entry in `tables`, as
+        used by `add_df`.
+    pad_col : list of int, optional
+        Extra spaces to add to the column separator of each table. If
+        None, no extra padding is added.
+    pad_index : list of int, optional
+        Extra spaces to add after each stub of each table. If None, no
+        extra padding is added.
+
+    Returns
+    -------
+    list of SimpleTable
+        The formatted tables.
+    """
     simple_tables = []
     float_format = settings[0]["float_format"] if settings else "%.4f"
     if pad_col is None:
