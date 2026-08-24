@@ -82,16 +82,17 @@ class MANOVA(Model):
         Parameters
         ----------
         %(hypotheses_doc)s
-        skip_intercept_test : bool
+        skip_intercept_test : bool, optional
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns
         -------
-        results: MultivariateTestResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
         Notes
         -----
@@ -102,7 +103,7 @@ class MANOVA(Model):
         where `params` is the regression coefficient matrix for the
         linear model y = x * params
 
-        If the model is not specified using the formula interfact, then the
+        If the model is not specified using the formula interface, then the
         hypotheses test each included exogenous variable, one at a time. In
         most applications with categorical variables, the ``from_formula``
         interface should be preferred when specifying a model since it
@@ -133,7 +134,7 @@ class MANOVA(Model):
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):
-                    name = "x%d" % (i)
+                    name = f"x{i:d}"
                     L = np.zeros([1, self.exog.shape[1]])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])

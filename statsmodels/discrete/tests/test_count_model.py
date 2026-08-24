@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.iolib.summary import Summary
 
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
@@ -137,10 +138,12 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         res2 = RandHIE.zero_inflated_poisson_offset
         cls.res2 = res2
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_exposure(self):
         # This test mostly the equivalence of offset and exposure = exp(offset)
         # use data arrays from class model
-        model1 = self.res1.model
+        res1 = self.res1
+        model1 = res1.model
         offset = model1.offset
         model3 = sm.ZeroInflatedPoisson(
             model1.endog,
@@ -149,20 +152,18 @@ class TestZeroInflatedModel_offset(CheckGeneric):
             exposure=np.exp(offset),
         )
         res3 = model3.fit(
-            start_params=self.res1.params, method="newton", maxiter=500, disp=False
+            start_params=res1.params, method="newton", maxiter=500, disp=False
         )
 
-        assert_allclose(res3.params, self.res1.params, atol=1e-6, rtol=1e-6)
-        fitted1 = self.res1.predict()
+        assert_allclose(res3.params, res1.params, atol=1e-6, rtol=1e-6)
+        fitted1 = res1.predict()
         fitted3 = res3.predict()
         assert_allclose(fitted3, fitted1, atol=1e-6, rtol=1e-6)
 
         ex = model1.exog
         ex_infl = model1.exog_infl
         offset = model1.offset
-        fitted1_0 = self.res1.predict(
-            exog=ex, exog_infl=ex_infl, offset=offset.tolist()
-        )
+        fitted1_0 = res1.predict(exog=ex, exog_infl=ex_infl, offset=offset.tolist())
         fitted3_0 = res3.predict(exog=ex, exog_infl=ex_infl, exposure=np.exp(offset))
         assert_allclose(fitted3_0, fitted1_0, atol=1e-6, rtol=1e-6)
 
@@ -170,20 +171,20 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         ex_infl = model1.exog_infl[:10:2]
         offset = offset[:10:2]
         # # TODO: this raises with shape mismatch,
-        # # i.e. uses offset or exposure from model -> fix it or not?
+        # # i.e., uses offset or exposure from model -> fix it or not?
         # GLM.predict to setting offset and exposure to zero
         # fitted1_1 = self.res1.predict(exog=ex, exog_infl=ex_infl)
         # fitted3_1 = res3.predict(exog=ex, exog_infl=ex_infl)
         # assert_allclose(fitted3_1, fitted1_1, atol=1e-6, rtol=1e-6)
 
-        fitted1_2 = self.res1.predict(exog=ex, exog_infl=ex_infl, offset=offset)
+        fitted1_2 = res1.predict(exog=ex, exog_infl=ex_infl, offset=offset)
         fitted3_2 = res3.predict(exog=ex, exog_infl=ex_infl, exposure=np.exp(offset))
         assert_allclose(fitted3_2, fitted1_2, atol=1e-6, rtol=1e-6)
         assert_allclose(fitted1_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
         assert_allclose(fitted3_2, fitted1[:10:2], atol=1e-6, rtol=1e-6)
 
         # without specifying offset and exposure
-        fitted1_3 = self.res1.predict(exog=ex, exog_infl=ex_infl)
+        fitted1_3 = res1.predict(exog=ex, exog_infl=ex_infl)
         fitted3_3 = res3.predict(exog=ex, exog_infl=ex_infl)
         assert_allclose(fitted3_3, fitted1_3, atol=1e-6, rtol=1e-6)
 
@@ -253,17 +254,20 @@ class TestZeroInflatedPoisson_predict:
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5]
-        np.random.seed(999)
+        rs = np.random.RandomState(999)
         nobs = 2000
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = exog.dot(expected_params)
-        cls.endog = sm.distributions.zipoisson.rvs(mu_true, 0.05, size=mu_true.shape)
+        cls.endog = sm.distributions.zipoisson.rvs(
+            mu_true, 0.05, size=mu_true.shape, random_state=rs
+        )
         model = sm.ZeroInflatedPoisson(cls.endog, exog)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
 
         cls.params_true = [mu_true, 0.05, nobs]
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
         def compute_conf_interval_95(mu, prob_infl, nobs):
             dispersion_factor = 1 + prob_infl * mu
@@ -278,10 +282,13 @@ class TestZeroInflatedPoisson_predict:
             return conf_intv_95
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
+        # Use a local results class for thread safety
+        res = self.res
         assert_allclose(
-            self.res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
+            res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
         )
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_var(self):
         def compute_mixture_var(dispersion_factor, prob_main, mu):
             # the variance of the mixture is the mixture of the variances plus
@@ -303,6 +310,7 @@ class TestZeroInflatedPoisson_predict:
 
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=5e-2, rtol=5e-2)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_prob(self):
         res = self.res
 
@@ -312,6 +320,7 @@ class TestZeroInflatedPoisson_predict:
         ).T
         assert_allclose(pr, pr2, rtol=0.05, atol=0.05)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_options(self):
         # check default exog_infl, see #4757
         res = self.res
@@ -358,7 +367,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         t_test = self.res1.t_test(unit_matrix)
         assert_allclose(self.res1.tvalues, t_test.tvalue)
 
-    def test_minimize(self, reset_randomstate):
+    def test_minimize(self):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -399,7 +408,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
             niter_success=None,
             disp=False,
             interval=1,
-            **seed
+            **seed,
         )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=1e-4)
@@ -412,19 +421,20 @@ class TestZeroInflatedGeneralizedPoisson_predict:
     @classmethod
     def setup_class(cls):
         expected_params = [1, 0.5, 0.5]
-        np.random.seed(999)
+        rs = np.random.RandomState(999)
         nobs = 2000
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = exog.dot(expected_params[:-1])
         cls.endog = sm.distributions.zigenpoisson.rvs(
-            mu_true, expected_params[-1], 2, 0.5, size=mu_true.shape
+            mu_true, expected_params[-1], 2, 0.5, size=mu_true.shape, random_state=rs
         )
         model = sm.ZeroInflatedGeneralizedPoisson(cls.endog, exog, p=2)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
 
         cls.params_true = [mu_true, expected_params[-1], 2, 0.5, nobs]
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
         def compute_conf_interval_95(mu, alpha, p, prob_infl, nobs):
             p = p - 1
@@ -440,10 +450,12 @@ class TestZeroInflatedGeneralizedPoisson_predict:
             return conf_intv_95
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
+        res = self.res
         assert_allclose(
-            self.res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
+            res.predict().mean(), self.endog.mean(), atol=conf_interval_95, rtol=0
         )
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_var(self):
         def compute_mixture_var(dispersion_factor, prob_main, mu):
             prob_infl = 1 - prob_main
@@ -461,6 +473,7 @@ class TestZeroInflatedGeneralizedPoisson_predict:
 
         assert_allclose(var_fitted.mean(), self.endog.var(), atol=0.05, rtol=0.1)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_prob(self):
         res = self.res
 
@@ -511,7 +524,7 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_allclose(res_reg.params[2:], self.res1.params[2:], atol=1e-1, rtol=1e-1)
 
     # possibly slow, adds 25 seconds
-    def test_minimize(self, reset_randomstate):
+    def test_minimize(self):
         # check additional optimizers using the `minimize` option
         model = self.res1.model
         # use the same start_params, but avoid recomputing
@@ -541,12 +554,14 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_allclose(res_dog.bse, self.res2.bse, atol=1e-3, rtol=7e-3)
         assert_(res_dog.mle_retvals["converged"] is True)
 
+        rs = np.random.RandomState(328390219)
         res_bh = model.fit(
             start_params=start_params,
             method="basinhopping",
             maxiter=500,
             niter_success=3,
             disp=False,
+            seed=rs,
         )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=3e-4)
@@ -560,7 +575,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
     def setup_class(cls):
 
         expected_params = [1, 1, 0.5]
-        np.random.seed(999)
+        rs = np.random.RandomState(999)
         nobs = 5000
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 0
@@ -568,7 +583,12 @@ class TestZeroInflatedNegativeBinomialP_predict:
         prob_infl = 0.15
         mu_true = np.exp(exog.dot(expected_params[:-1]))
         cls.endog = sm.distributions.zinegbin.rvs(
-            mu_true, expected_params[-1], 2, prob_infl, size=mu_true.shape
+            mu_true,
+            expected_params[-1],
+            2,
+            prob_infl,
+            size=mu_true.shape,
+            random_state=rs,
         )
         model = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, p=2)
         cls.res = model.fit(method="bfgs", maxiter=5000, disp=False)
@@ -577,6 +597,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
         cls.prob_infl = prob_infl
         cls.params_true = [mu_true, expected_params[-1], 2, prob_infl, nobs]
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
         def compute_conf_interval_95(mu, alpha, p, prob_infl, nobs):
             dispersion_factor = 1 + alpha * mu ** (p - 1) + prob_infl * mu
@@ -592,10 +613,11 @@ class TestZeroInflatedNegativeBinomialP_predict:
 
         conf_interval_95 = compute_conf_interval_95(*self.params_true)
         mean_true = ((1 - self.prob_infl) * self.params_true[0]).mean()
-        assert_allclose(
-            self.res.predict().mean(), mean_true, atol=conf_interval_95, rtol=0
-        )
+        # Use a local results class for thread safety
+        res = self.res
+        assert_allclose(res.predict().mean(), mean_true, atol=conf_interval_95, rtol=0)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_var(self):
         # todo check precision
         def compute_mixture_var(dispersion_factor, prob_main, mu):
@@ -614,6 +636,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
 
         assert_allclose(var_fitted.mean(), self.endog.var(), rtol=0.2)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_prob(self):
         res = self.res
         endog = res.model.endog
@@ -629,6 +652,7 @@ class TestZeroInflatedNegativeBinomialP_predict:
         assert_allclose(((pr2m - prm) ** 2).mean(), 0, rtol=1e-10, atol=5e-4)
         assert_allclose(((prm - freq) ** 2).mean(), 0, rtol=1e-10, atol=1e-4)
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_predict_generic_zi(self):
         # These tests do not use numbers from other packages.
         # Tests are on closeness of estimated to true/DGP values
@@ -736,11 +760,12 @@ class TestZeroInflatedNegativeBinomialP_predict2:
         res = mod.fit(
             start_params=start_params, method="bfgs", maxiter=1000, disp=False
         )
-
         cls.res = res
 
+    @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_mean(self):
-        assert_allclose(self.res.predict().mean(), self.endog.mean(), atol=0.02)
+        res = self.res
+        assert_allclose(res.predict().mean(), self.endog.mean(), atol=0.02)
 
     def test_zero_nonzero_mean(self):
         mean1 = self.endog.mean()
@@ -765,3 +790,60 @@ class TestPandasOffset:
             sm.ZeroInflatedPoisson(
                 endog=endog, exog=exog["I"], exposure=exposure, inflation=inflation
             ).fit()
+
+
+def _fit_zero_inflated_poisson_for_summary():
+    data = sm.datasets.randhie.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog_infl = sm.add_constant(exog[:, 0], prepend=False)
+    exog = sm.add_constant(exog[:, 1:4], prepend=False)
+    return sm.ZeroInflatedPoisson(
+        endog, exog, exog_infl=exog_infl, inflation="logit"
+    ).fit(method="newton", maxiter=500, disp=False)
+
+
+def _fit_zero_inflated_generalized_poisson_for_summary():
+    data = sm.datasets.randhie.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog_infl = sm.add_constant(exog[:, 0], prepend=False)
+    exog = sm.add_constant(exog[:, 1:4], prepend=False)
+    return sm.ZeroInflatedGeneralizedPoisson(
+        endog, exog, exog_infl=exog_infl, p=1
+    ).fit(method="newton", maxiter=500, disp=False)
+
+
+def _fit_zero_inflated_negative_binomial_for_summary():
+    data = sm.datasets.randhie.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog_infl = sm.add_constant(exog[:, 0], prepend=False)
+    exog = sm.add_constant(exog[:, 1], prepend=False)
+    # cheating for now, parameters are not well identified in this dataset
+    # see https://github.com/statsmodels/statsmodels/pull/3928#issuecomment-331724022
+    sp = np.array([1.88, -10.28, -0.20, 1.14, 1.34])
+    return sm.ZeroInflatedNegativeBinomialP(
+        endog, exog, exog_infl=exog_infl, p=2
+    ).fit(start_params=sp, method="nm", xtol=1e-6, maxiter=5000, disp=False)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_zero_inflated_poisson_for_summary,
+        _fit_zero_inflated_generalized_poisson_for_summary,
+        _fit_zero_inflated_negative_binomial_for_summary,
+    ],
+    ids=[
+        "ZeroInflatedPoisson",
+        "ZeroInflatedGeneralizedPoisson",
+        "ZeroInflatedNegativeBinomialP",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

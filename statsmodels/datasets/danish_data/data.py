@@ -8,8 +8,8 @@ __docformat__ = "restructuredtext"
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
 SOURCE = """
-Danish data used in S. Johansen and K. Juselius.  For estimating
-estimating a money demand function::
+Danish data used in S. Johansen and K. Juselius for estimating
+a money demand function::
 
     [1] Johansen, S. and Juselius, K. (1990), Maximum Likelihood Estimation
         and Inference on Cointegration - with Applications to the Demand
@@ -37,6 +37,18 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the Danish money demand data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     data.index.freq = "QS-JAN"
     return du.Dataset(data=data, names=list(data.columns))
@@ -44,12 +56,12 @@ def load_pandas():
 
 def load():
     """
-    Load the US macro data and return a Dataset class.
+    Load the Danish money demand data and return a Dataset class.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----

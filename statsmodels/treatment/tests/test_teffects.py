@@ -4,8 +4,7 @@ Created on Feb 3, 2022 1:04:22 PM
 Author: Josef Perktold
 License: BSD-3
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -18,10 +17,10 @@ from statsmodels.treatment.treatment_effects import TreatmentEffect
 
 from .results import results_teffects as res_st
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "cataneo2.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 
 dta_cat = pd.read_csv(file_path)
 
@@ -36,8 +35,16 @@ methods = [
     ("ipw_ra", res_st.results_ipwra),
     ]
 
+method_labels = [
+    ("ra", "RA"),
+    ("ipw", "IPW"),
+    ("aipw", "AIPW"),
+    ("aipw_wls", "AIPW-WLS"),
+    ("ipw_ra", "IPW-RA"),
+    ]
 
-class TestTEffects():
+
+class TestTEffects:
 
     @classmethod
     def setup_class(cls):
@@ -49,6 +56,13 @@ class TestTEffects():
     def test_aux(self):
         prob = res_probit.predict()
         assert prob.shape == (4642,)
+
+    @pytest.mark.parametrize("case", method_labels)
+    def test_method_label(self, case):
+        # each estimator must label its own results, not report "IPW"
+        meth, label = case
+        res = getattr(self.teff, meth)(return_results=True)
+        assert res.method == label
 
     @pytest.mark.parametrize("case", methods)
     def test_effects(self, case):

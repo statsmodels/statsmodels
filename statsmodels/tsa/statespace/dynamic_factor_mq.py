@@ -1,5 +1,5 @@
 """
-Dynamic factor model.
+Dynamic factor model
 
 Author: Chad Fulton
 License: BSD-3
@@ -20,8 +20,8 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.multivariate.pca import PCA
 from statsmodels.regression.linear_model import OLS
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import int_like, string_like
@@ -47,7 +47,7 @@ from statsmodels.tsa.vector_ar.var_model import VAR
 
 class FactorBlock(dict):
     """
-    Helper class for describing and indexing a block of factors.
+    Helper class for describing and indexing a block of factors
 
     Parameters
     ----------
@@ -56,12 +56,12 @@ class FactorBlock(dict):
         in the state vector).
     factor_order : int
         Order of the vector autoregression governing the factor block dynamics.
-    endog_factor_map : pd.DataFrame
+    endog_factor_map : DataFrame
         Mapping from endog variable names to factor names.
     state_offset : int
         Offset of this factor block in the state vector.
-    has_endog_Q : bool
-        Flag if the model contains quarterly data.
+    k_endog_Q : int
+        Number of quarterly variables.
 
     Notes
     -----
@@ -71,7 +71,7 @@ class FactorBlock(dict):
 
     - `factors_ix` is a matrix of indices, with rows corresponding to factors
       in the block and columns corresponding to lags
-    - `factors` is vec(factors_ix) (i.e. it stacks columns, so that it is
+    - `factors` is vec(factors_ix) (i.e., it stacks columns, so that it is
       `factors_ix.ravel(order='F')`). Thinking about a VAR system, the first
        k*p elements correspond to the equation for the first variable. The next
        k*p elements correspond to the equation for the second variable, and so
@@ -106,8 +106,8 @@ class FactorBlock(dict):
 
     @property
     def factors_ix(self):
-        """Factor state index array, shaped (k_factors, lags)."""
-        # i.e. the position in the state vector of the second lag of the third
+        """Factor state index array, shaped (k_factors, lags)"""
+        # i.e., the position in the state vector of the second lag of the third
         # factor is factors_ix[2, 1]
         # ravel(order='F') gives e.g (f0.L1, f1.L1, f0.L2, f1.L2, f0.L3, ...)
         # while
@@ -118,33 +118,33 @@ class FactorBlock(dict):
 
     @property
     def factors(self):
-        """Factors and all lags in the state vector (max(5, p))."""
+        """Factors and all lags in the state vector (max(5, p))"""
         # Note that this is equivalent to factors_ix with ravel(order='F')
         o = self.state_offset
         return np.s_[o:o + self.k_factors * self._factor_order]
 
     @property
     def factors_ar(self):
-        """Factors and all lags used in the factor autoregression (p)."""
+        """Factors and all lags used in the factor autoregression (p)"""
         o = self.state_offset
         return np.s_[o:o + self.k_factors * self.factor_order]
 
     @property
     def factors_L1(self):
-        """Factors (first block / lag only)."""
+        """Factors (first block / lag only)"""
         o = self.state_offset
         return np.s_[o:o + self.k_factors]
 
     @property
     def factors_L1_5(self):
-        """Factors plus four lags."""
+        """Factors plus four lags"""
         o = self.state_offset
         return np.s_[o:o + self.k_factors * 5]
 
 
 class DynamicFactorMQStates(dict):
     """
-    Helper class for describing and indexing the state vector.
+    Helper class for describing and indexing the state vector
 
     Parameters
     ----------
@@ -152,9 +152,9 @@ class DynamicFactorMQStates(dict):
         Number of monthly (or non-time-specific, if k_endog_Q=0) variables.
     k_endog_Q : int
         Number of quarterly variables.
-    endog_names : list
+    endog_names : list of str
         Names of the endogenous variables.
-    factors : int, list, or dict
+    factors : int, list of str, or dict
         Integer giving the number of (global) factors, a list with the names of
         (global) factors, or a dictionary with:
 
@@ -262,7 +262,7 @@ class DynamicFactorMQStates(dict):
         Note that factor multiplicities will have already been expanded.
     max_factor_order : int
         Maximum autoregression order across all factor blocks.
-    factor_block_orders : pd.Series
+    factor_block_orders : Series
         Series containing lag orders, with the factor block (a tuple of factor
         names) as the index.
     factor_multiplicities : dict
@@ -276,7 +276,7 @@ class DynamicFactorMQStates(dict):
 
         - keys : endog name
         - values : list of factor names
-    loading_counts : pd.Series
+    loading_counts : Series
         Series containing number of endogenous variables loading on each
         factor, with the factor name as the index.
     block_loading_counts : dict
@@ -311,14 +311,14 @@ class DynamicFactorMQStates(dict):
       `idiosyncratic_ar1 = False`.
     - `idio_ar_Q` is a slice with the indexes of the idiosyncratic disturbance
       states and all lags, for the quarterly variables. It is an empty slice if
-      there are no quarterly variable.
+      there are no quarterly variables.
     - `idio_ar_Q_ix` is an array shaped (k_endog_Q, 5) with the indexes of the
       first - fifth lags of the idiosyncratic disturbance states for the
       quarterly variables.
     - `endog_factor_iloc` is a list of lists, with entries for each endogenous
       variable. The entry for variable `i`, `endog_factor_iloc[i]` is a list of
       indexes of the factors that variable `i` loads on. This does not include
-      any lags, but it can be used with e.g. `factors_L1_5_ix` to get lags.
+      any lags, but it can be used with e.g., `factors_L1_5_ix` to get lags.
 
     """
 
@@ -406,7 +406,7 @@ class DynamicFactorMQStates(dict):
         block_loading_counts = {
             block: np.atleast_1d(
                 self.loading_counts.loc[list(block), "count"]).mean(axis=0)
-            for block in factor_orders.keys()}
+            for block in factor_orders}
         ix = pd.Index(block_loading_counts.keys(), tupleize_cols=False,
                       name="block")
         self.block_loading_counts = pd.Series(
@@ -423,7 +423,7 @@ class DynamicFactorMQStates(dict):
 
         # If the `factor_orders` variable was an integer, then it did not
         # define an ordering for the factor blocks. In this case, we use the
-        # loading counts to do so. This ensures that e.g. global factors are
+        # loading counts to do so. This ensures that e.g., global factors are
         # listed first.
         if orders_is_int:
             keys = self.block_loading_counts.keys()
@@ -497,7 +497,7 @@ class DynamicFactorMQStates(dict):
     def _apply_factor_multiplicities(self, factors, factor_orders,
                                      factor_multiplicities):
         """
-        Expand `factors` and `factor_orders` to account for factor multiplity.
+        Expand `factors` and `factor_orders` to account for factor multiplicity
 
         For example, if there is a `global` factor with multiplicity 2, then
         this method expands that into `global.1` and `global.2` in both the
@@ -517,7 +517,7 @@ class DynamicFactorMQStates(dict):
         new_factors : dict
             Dictionary of {endog_name: list of factor names}, with factor names
             expanded to incorporate multiplicities.
-        new_factors : dict
+        new_factor_orders : dict
             Dictionary of {tuple of factor names: factor order}, with factor
             names in each tuple expanded to incorporate multiplicities.
         """
@@ -537,10 +537,9 @@ class DynamicFactorMQStates(dict):
         # Expand the factor orders to account for the multiplicities
         new_factor_orders = {}
         for block, factor_order in factor_orders.items():
-            if not isinstance(block, tuple):
-                block = (block,)
+            block_tuple = block if isinstance(block, tuple) else (block,)
             new_block = []
-            for factor_name in block:
+            for factor_name in block_tuple:
                 n = factor_multiplicities.get(factor_name, 1)
                 if n > 1:
                     new_block += [f"{factor_name}.{i + 1}"
@@ -553,7 +552,7 @@ class DynamicFactorMQStates(dict):
 
     def _construct_endog_factor_map(self, factors, endog_names):
         """
-        Construct mapping of observed variables to factors.
+        Construct mapping of observed variables to factors
 
         Parameters
         ----------
@@ -564,7 +563,7 @@ class DynamicFactorMQStates(dict):
 
         Returns
         -------
-        endog_factor_map : pd.DataFrame
+        endog_factor_map : DataFrame
             Boolean dataframe with `endog_names` as the index and the factor
             names (computed from the `factors` input) as the columns. Each cell
             is True if the associated factor is allowed to load on the
@@ -614,23 +613,24 @@ class DynamicFactorMQStates(dict):
 
     @property
     def factors_L1(self):
-        """Factors."""
+        """Factors"""
         ix = np.arange(self.k_states_factors)
         iloc = tuple(ix[block.factors_L1] for block in self.factor_blocks)
         return np.concatenate(iloc)
 
     @property
     def factors_L1_5_ix(self):
-        """Factors plus any lags, index shaped (5, k_factors)."""
+        """Factors plus any lags, index shaped (5, k_factors)"""
         ix = np.arange(self.k_states_factors)
-        iloc = []
-        for block in self.factor_blocks:
-            iloc.append(ix[block.factors_L1_5].reshape(5, block.k_factors))
+        iloc = [
+            ix[block.factors_L1_5].reshape(5, block.k_factors)
+            for block in self.factor_blocks
+        ]
         return np.concatenate(iloc, axis=1)
 
     @property
     def idio_ar_L1(self):
-        """Idiosyncratic AR states, (first block / lag only)."""
+        """Idiosyncratic AR states, (first block / lag only)"""
         ix1 = self.k_states_factors
         if self.idiosyncratic_ar1:
             ix2 = ix1 + self.k_endog
@@ -640,7 +640,7 @@ class DynamicFactorMQStates(dict):
 
     @property
     def idio_ar_M(self):
-        """Idiosyncratic AR states for monthly variables."""
+        """Idiosyncratic AR states for monthly variables"""
         ix1 = self.k_states_factors
         ix2 = ix1
         if self.idiosyncratic_ar1:
@@ -649,7 +649,7 @@ class DynamicFactorMQStates(dict):
 
     @property
     def idio_ar_Q(self):
-        """Idiosyncratic AR states and all lags for quarterly variables."""
+        """Idiosyncratic AR states and all lags for quarterly variables"""
         # Note that this is equivalent to idio_ar_Q_ix with ravel(order='F')
         ix1 = self.k_states_factors
         if self.idiosyncratic_ar1:
@@ -659,8 +659,8 @@ class DynamicFactorMQStates(dict):
 
     @property
     def idio_ar_Q_ix(self):
-        """Idiosyncratic AR (quarterly) state index, (k_endog_Q, lags)."""
-        # i.e. the position in the state vector of the second lag of the third
+        """Idiosyncratic AR (quarterly) state index, (k_endog_Q, lags)"""
+        # i.e., the position in the state vector of the second lag of the third
         # quarterly variable is idio_ar_Q_ix[2, 1]
         # ravel(order='F') gives e.g (y1.L1, y2.L1, y1.L2, y2.L3, y1.L3, ...)
         # while
@@ -673,19 +673,20 @@ class DynamicFactorMQStates(dict):
 
     @property
     def endog_factor_iloc(self):
-        """List of list of int, factor indexes for each observed variable."""
-        # i.e. endog_factor_iloc[i] is a list of integer locations of the
+        """List of list of int, factor indexes for each observed variable"""
+        # i.e., endog_factor_iloc[i] is a list of integer locations of the
         # factors that load on the ith observed variable
         if self._endog_factor_iloc is None:
-            ilocs = []
-            for i in range(self.k_endog):
-                ilocs.append(np.where(self.endog_factor_map.iloc[i])[0])
+            ilocs = [
+                np.where(self.endog_factor_map.iloc[i])[0]
+                for i in range(self.k_endog)
+            ]
             self._endog_factor_iloc = ilocs
         return self._endog_factor_iloc
 
     def __getitem__(self, key):
         """
-        Use square brackets to access index / slice elements.
+        Use square brackets to access index / slice elements
 
         This is convenient in highlighting the indexing / slice quality of
         these attributes in the code below.
@@ -699,7 +700,7 @@ class DynamicFactorMQStates(dict):
 
 class DynamicFactorMQ(mlemodel.MLEModel):
     r"""
-    Dynamic factor model with EM algorithm; option for monthly/quarterly data.
+    Dynamic factor model with EM algorithm; option for monthly/quarterly data
 
     Implementation of the dynamic factor model of Bańbura and Modugno (2014)
     ([1]_) and Bańbura, Giannone, and Reichlin (2011) ([2]_). Uses the EM
@@ -727,7 +728,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         the columns with quarterly variables should come afterwards. See the
         "Notes" section for details on how to set up a model with
         monthly/quarterly mixed frequency data.
-    factors : int, list, or dict, optional
+    factors : int, list of str, or dict, optional
         Integer giving the number of (global) factors, a list with the names of
         (global) factors, or a dictionary with:
 
@@ -764,7 +765,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         - values : integer describing the factor multiplicity for the factors
           in the given block
 
-    idiosyncratic_ar1 : bool
+    idiosyncratic_ar1 : bool, optional
         Whether or not to model the idiosyncratic component for each series as
         an AR(1) process. If False, the idiosyncratic component is instead
         modeled as white noise.
@@ -777,7 +778,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         equal to the names of the endogenous variables. The first element
         should contain the mean values and the second element should contain
         the standard deviations. Default is True.
-    endog_quarterly : pandas.Series or pandas.DataFrame
+    endog_quarterly : pandas.Series or pandas.DataFrame, optional
         Observed quarterly variables. If provided, must be a Pandas Series or
         DataFrame with a DatetimeIndex or PeriodIndex at the quarterly
         frequency. See the "Notes" section for details on how to set up a model
@@ -923,7 +924,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     By default, if standardization is applied prior to estimation, results such
     as in-sample predictions, out-of-sample forecasts, and the computation of
-    the "news"  are reported in the scale of the original data (i.e. the model
+    the "news"  are reported in the scale of the original data (i.e., the model
     output has the reverse transformation applied before it is returned to the
     user).
 
@@ -935,7 +936,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     The estimated factors and the factor loadings in this model are only
     identified up to an invertible transformation. As described in (the working
     paper version of) [2]_, while it is possible to impose normalizations to
-    achieve identification, the EM algorithm does will converge regardless.
+    achieve identification, the EM algorithm will converge regardless.
     Moreover, for nowcasting and forecasting purposes, identification is not
     required. This model does not impose any normalization to identify the
     factors and the factor loadings.
@@ -956,6 +957,24 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     - `obs_cov_diag`: the state space form in [1]_ incorporates non-zero (but
       very small) diagonal elements for the observation disturbance covariance
       matrix.
+
+    References
+    ----------
+    .. [1] Bańbura, Marta, and Michele Modugno.
+           "Maximum likelihood estimation of factor models on datasets with
+           arbitrary pattern of missing data."
+           Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
+    .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
+           "Nowcasting."
+           The Oxford Handbook of Economic Forecasting. July 8, 2011.
+    .. [3] Bok, Brandyn, Daniele Caratelli, Domenico Giannone,
+           Argia M. Sbordone, and Andrea Tambalotti. 2018.
+           "Macroeconomic Nowcasting and Forecasting with Big Data."
+           Annual Review of Economics 10 (1): 615-43.
+           https://doi.org/10.1146/annurev-economics-080217-053214.
+    .. [4] Mariano, Roberto S., and Yasutomo Murasawa.
+           "A coincident index, common factors, and monthly real GDP."
+           Oxford Bulletin of Economics and Statistics 72, no. 1 (2010): 27-46.
 
     Examples
     --------
@@ -1085,9 +1104,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     **Serial correlation in the idiosyncratic disturbances**
 
-    By default, the model allows each idiosyncratic disturbance terms to evolve
+    By default, the model allows each idiosyncratic disturbance term to evolve
     according to an AR(1) process. If preferred, they can instead be specified
-    to be serially independent by passing `ididosyncratic_ar1=False`.
+    to be serially independent by passing `idiosyncratic_ar1=False`.
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog, idiosyncratic_ar1=False)
     >>> print(mod.summary())
@@ -1143,7 +1162,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     *Customize observed variable / factor loadings*
 
-    To specify that certain that certain observed variables only load on
+    To specify that certain observed variables only load on
     certain factors, it is possible to pass a dictionary to the `factors`
     argument.
 
@@ -1231,7 +1250,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     **Results: forecasting, impulse responses, and more**
 
-    One the model is fitted, there are a number of methods available from the
+    Once the model is fitted, there are a number of methods available from the
     results object. Some examples include:
 
     *Forecasting*
@@ -1262,24 +1281,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     For other available methods (including in-sample prediction, simulation of
     time series, extending the results to incorporate new data, and the news),
     see the documentation for state space models.
-
-    References
-    ----------
-    .. [1] Bańbura, Marta, and Michele Modugno.
-           "Maximum likelihood estimation of factor models on datasets with
-           arbitrary pattern of missing data."
-           Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
-    .. [2] Bańbura, Marta, Domenico Giannone, and Lucrezia Reichlin.
-           "Nowcasting."
-           The Oxford Handbook of Economic Forecasting. July 8, 2011.
-    .. [3] Bok, Brandyn, Daniele Caratelli, Domenico Giannone,
-           Argia M. Sbordone, and Andrea Tambalotti. 2018.
-           "Macroeconomic Nowcasting and Forecasting with Big Data."
-           Annual Review of Economics 10 (1): 615-43.
-           https://doi.org/10.1146/annurev-economics-080217-053214.
-    .. [4] Mariano, Roberto S., and Yasutomo Murasawa.
-           "A coincident index, common factors, and monthly real GDP."
-           Oxford Bulletin of Economics and Statistics 72, no. 1 (2010): 27-46.
 
     """
 
@@ -1483,12 +1484,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # Parameter slices
         ix = np.split(np.arange(self.k_params),
                       np.cumsum(list(self.params.values()))[:-1])
-        self._p = dict(zip(self.params.keys(), ix))
+        self._p = dict(zip(self.params.keys(), ix, strict=True))
 
         # Cache
         self._loading_constraints = {}
 
-        # Initialization kwarg keys, e.g. for cloning
+        # Initialization kwarg keys, e.g., for cloning
         self._init_keys += [
             "factors", "factor_orders", "factor_multiplicities",
             "idiosyncratic_ar1", "standardize", "init_t0",
@@ -1497,7 +1498,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     @classmethod
     def construct_endog(cls, endog_monthly, endog_quarterly):
         """
-        Construct a combined dataset from separate monthly and quarterly data.
+        Construct a combined dataset from separate monthly and quarterly data
 
         Parameters
         ----------
@@ -1599,7 +1600,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     def clone(self, endog, k_endog_monthly=None, endog_quarterly=None,
               retain_standardization=False, **kwargs):
         """
-        Clone state space model with new data and optionally new specification.
+        Clone state space model with new data and optionally new specification
 
         Parameters
         ----------
@@ -1614,6 +1615,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Observations of quarterly variables. If provided, must be a
             Pandas Series or DataFrame with a DatetimeIndex or PeriodIndex at
             the quarterly frequency.
+        retain_standardization : bool, optional
+            Whether or not to use the mean and standard deviation from the
+            original model to standardize the new data. Default is False.
         kwargs
             Keyword arguments to pass to the new model class to change the
             model specification.
@@ -1684,7 +1688,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     def summary(self, truncate_endog_names=None):
         """
-        Create a summary table describing the model.
+        Create a summary table describing the model
 
         Parameters
         ----------
@@ -1702,9 +1706,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         if self._index_dates:
             ix = self._index
             d = ix[0]
-            sample = ["%s" % d]
+            sample = [f"{d}"]
             d = ix[-1]
-            sample += ["- " + "%s" % d]
+            sample += ["- " + f"{d}"]
         else:
             sample = [str(0), " - " + str(self.nobs)]
 
@@ -1712,10 +1716,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         model_name = self._model_name
 
         # - Top summary table ------------------------------------------------
-        top_left = []
-        top_left.append(("Model:", [model_name[0]]))
-        for i in range(1, len(model_name)):
-            top_left.append(("", ["+ " + model_name[i]]))
+        top_left = [("Model:", [model_name[0]])]
+        top_left.extend(
+            ("", ["+ " + model_name[i]]) for i in range(1, len(model_name))
+        )
         top_left += [
             ("Sample:", [sample[0]]),
             ("", [sample[1]])]
@@ -1745,12 +1749,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # - Endog / factor map -----------------------------------------------
         data = self.endog_factor_map.replace({True: "X", False: ""})
         data.index = endog_names
-        try:
-            items = data.items()
-        except AttributeError:
-            # Remove after pandas 1.5 is minimum
-            items = data.iteritems()
-        for name, _ in items:
+        for name, _ in data.items():
             data[name] = data[name] + (" " * (len(name) // 2))
         data.index.name = "Dep. variable"
         data = data.reset_index()
@@ -1790,12 +1789,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         return summary
 
     def __str__(self):
-        """Summary tables showing model specification."""
+        """Summary tables showing model specification"""
         return str(self.summary())
 
     @property
     def state_names(self):
-        """(list of str) List of human readable names for unobserved states."""
+        """(list of str) List of human readable names for unobserved states"""
         # Factors
         state_names = []
         for block in self._s.factor_blocks:
@@ -1819,7 +1818,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     @property
     def param_names(self):
-        """(list of str) List of human readable parameter names."""
+        """(list of str) List of human readable parameter names"""
         param_names = []
         # Loadings
         # So that Lambda = params[ix].reshape(self.k_endog, self.k_factors)
@@ -1827,10 +1826,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         endog_names = self._get_endog_names(as_string=False)
         for endog_name in endog_names:
             for block in self._s.factor_blocks:
-                for factor_name in block.factor_names:
-                    if self.endog_factor_map.loc[endog_name, factor_name]:
-                        param_names.append(
-                            f"loading.{factor_name}->{endog_name}")
+                param_names.extend(
+                    f"loading.{factor_name}->{endog_name}"
+                    for factor_name in block.factor_names
+                    if self.endog_factor_map.loc[endog_name, factor_name]
+                )
 
         # Factor VAR
         for block in self._s.factor_blocks:
@@ -1861,7 +1861,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     @property
     def start_params(self):
-        """(array) Starting parameters for maximum likelihood estimation."""
+        """(array) Starting parameters for maximum likelihood estimation"""
         params = np.zeros(self.k_params, dtype=np.float64)
 
         # (1) estimate factors one at a time, where the first step uses
@@ -2001,7 +2001,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     def transform_params(self, unconstrained):
         """
-        Transform parameters from optimizer space to model space.
+        Transform parameters from optimizer space to model space
 
         Transform unconstrained parameters used by the optimizer to constrained
         parameters used in likelihood evaluation.
@@ -2051,7 +2051,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     def untransform_params(self, constrained):
         """
-        Transform parameters from model space to optimizer space.
+        Transform parameters from model space to optimizer space
 
         Transform constrained parameters used in likelihood evaluation
         to unconstrained parameters used by the optimizer.
@@ -2100,7 +2100,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     def update(self, params, **kwargs):
         """
-        Update the parameters of the model.
+        Update the parameters of the model
 
         Parameters
         ----------
@@ -2180,7 +2180,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     @property
     def loglike_constant(self):
         """
-        Constant term in the joint log-likelihood function.
+        Constant term in the joint log-likelihood function
 
         Useful in facilitating comparisons to other packages that exclude the
         constant from the log-likelihood computation.
@@ -2189,7 +2189,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     def loading_constraints(self, i):
         r"""
-        Matrix formulation of quarterly variables' factor loading constraints.
+        Matrix formulation of quarterly variables' factor loading constraints
 
         Parameters
         ----------
@@ -2198,8 +2198,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         Returns
         -------
-        R : array (k_constraints, k_factors * 5)
-        q : array (k_constraints,)
+        R : ndarray
+            Constraint matrix, shaped `(k_constraints, k_factors * 5)`.
+        q : ndarray
+            Constraint values, shaped `(k_constraints,)`.
 
         Notes
         -----
@@ -2281,7 +2283,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             flags=None, low_memory=False, llf_decrease_action="revert",
             llf_decrease_tolerance=1e-4, **kwargs):
         """
-        Fits the model by maximum likelihood via Kalman filter.
+        Fits the model by maximum likelihood via Kalman filter
 
         Parameters
         ----------
@@ -2315,7 +2317,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
             Default is 'none', since computing this matrix can be very slow
             when there are a large number of parameters.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
 
             **opg, oim, approx, robust, robust_approx**
@@ -2353,6 +2355,16 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Tolerance to use for convergence checking when using the EM
             algorithm. To set the tolerance for other methods, pass
             the optimizer-specific keyword argument(s).
+        em_initialization : bool, optional
+            Whether or not to also update the Kalman filter initialization
+            using the EM algorithm, if the EM algorithm is used for fitting.
+            Default is True.
+        mstep_method : {None, 'missing', 'nonmissing'}, optional
+            The EM algorithm maximization step, if the EM algorithm is used
+            for fitting. If there are no NaN values in the dataset, this can
+            be set to "nonmissing" (which is slightly faster) or "missing",
+            otherwise it must be "missing". Default is "nonmissing" if there
+            are no NaN values or "missing" if there are.
         full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
@@ -2383,6 +2395,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             matrix formula from Harvey (1989), and 'approx' uses numerical
             approximation. This keyword is only relevant if the
             optimization method uses the Hessian matrix.
+        flags : dict, optional
+            A dictionary of method flags to pass to the loglikelihood, score,
+            and Hessian functions used during optimization (for example
+            `transformed`, `includes_fixed`, `score_method`, and
+            `approx_complex_step`). These are constructed automatically from
+            the other arguments to `fit`, so this keyword is not typically
+            used directly. Default is None.
         low_memory : bool, optional
             If set to True, techniques are applied to substantially reduce
             memory usage. If used, some features of the results object will
@@ -2394,7 +2413,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Action to take if the log-likelihood decreases in an EM iteration.
             'ignore' continues the iterations, 'warn' issues a warning but
             continues the iterations, while 'revert' ends the iterations and
-            returns the result from the last good iteration. Default is 'warn'.
+            returns the result from the last good iteration. Default is 'revert'.
         llf_decrease_tolerance : float, optional
             Minimum size of the log-likelihood decrease required to trigger a
             warning or to end the EM iterations. Setting this value slightly
@@ -2440,7 +2459,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                return_params=False, low_memory=False,
                llf_decrease_action="revert", llf_decrease_tolerance=1e-4):
         """
-        Fits the model by maximum likelihood via the EM algorithm.
+        Fits the model by maximum likelihood via the EM algorithm
 
         Parameters
         ----------
@@ -2469,7 +2488,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
             Default is 'none', since computing this matrix can be very slow
             when there are a large number of parameters.
-        cov_kwds : dict or None, optional
+        cov_kwds : dict, optional
             A dictionary of arguments affecting covariance matrix computation.
 
             **opg, oim, approx, robust, robust_approx**
@@ -2515,7 +2534,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Action to take if the log-likelihood decreases in an EM iteration.
             'ignore' continues the iterations, 'warn' issues a warning but
             continues the iterations, while 'revert' ends the iterations and
-            returns the result from the last good iteration. Default is 'warn'.
+            returns the result from the last good iteration. Default is 'revert'.
         llf_decrease_tolerance : float, optional
             Minimum size of the log-likelihood decrease required to trigger a
             warning or to end the EM iterations. Setting this value slightly
@@ -2751,7 +2770,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         return result
 
     def _em_iteration(self, params0, init=None, mstep_method=None):
-        """EM iteration."""
+        """EM iteration"""
         # (E)xpectation step
         res = self._em_expectation_step(params0, init=init)
 
@@ -2762,7 +2781,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         return res, params1
 
     def _em_expectation_step(self, params0, init=None):
-        """EM expectation step."""
+        """EM expectation step"""
         # (E)xpectation step
         self.update(params0)
         # Re-initialize state, if new initialization is given
@@ -2782,7 +2801,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         return res
 
     def _em_maximization_step(self, res, params0, mstep_method=None):
-        """EM maximization step."""
+        """EM maximization step"""
         s = self._s
 
         a = res.smoothed_state.T[..., None]
@@ -2798,18 +2817,17 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         has_missing = np.any(res.nmissing)
         if mstep_method is None:
             mstep_method = "missing" if has_missing else "nonmissing"
-        mstep_method = mstep_method.lower()
+        mstep_method = string_like(
+            mstep_method, "mstep_method", options=("missing", "nonmissing")
+        )
         if mstep_method == "nonmissing" and has_missing:
             raise ValueError('Cannot use EM algorithm option'
                              ' `mstep_method="nonmissing"` with missing data.')
 
         if mstep_method == "nonmissing":
             func = self._em_maximization_obs_nonmissing
-        elif mstep_method == "missing":
+        else:  # mstep_method == "missing"
             func = self._em_maximization_obs_missing
-        else:
-            raise ValueError('Invalid maximization step method: "%s".'
-                             % mstep_method)
         # TODO: compute H is pretty slow
         Lambda, H = func(res, Eaa, a, compute_H=(not self.idiosyncratic_ar1))
 
@@ -2869,7 +2887,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         return params1
 
     def _em_maximization_obs_nonmissing(self, res, Eaa, a, compute_H=False):
-        """EM maximization step, observation equation without missing data."""
+        """EM maximization step, observation equation without missing data"""
         s = self._s
         dtype = Eaa.dtype
 
@@ -2919,7 +2937,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         return Lambda, H
 
     def _em_maximization_obs_missing(self, res, Eaa, a, compute_H=False):
-        """EM maximization step, observation equation with missing data."""
+        """EM maximization step, observation equation with missing data"""
         s = self._s
         dtype = Eaa.dtype
 
@@ -3006,7 +3024,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         # Compute new obs cov
         # Note: this is unnecessary if `idiosyncratic_ar1=True`.
         # See Banbura and Modugno (2014), equation (12)
-        # This does not literally follow their formula, e.g. multiplying by the
+        # This does not literally follow their formula, e.g., multiplying by the
         # W_t selection matrices, because those formulas require loops that are
         # relatively slow. The formulation here is vectorized.
         if compute_H:
@@ -3038,7 +3056,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                return_ssm=False, results_class=None,
                results_wrapper_class=None, **kwargs):
         """
-        Kalman smoothing.
+        Kalman smoothing
 
         Parameters
         ----------
@@ -3047,15 +3065,29 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
-        return_ssm : bool,optional
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the smoothed output using complex step
+            differentiation. Default is False.
+        return_ssm : bool, optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object. Default is None.
-        cov_kwds : dict or None, optional
-            See `MLEResults.get_robustcov_results` for a description required
+        cov_kwds : dict, optional
+            See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
+        results_class : type, optional
+            A results class to use for results object. Default is
+            `MLEResults`.
+        results_wrapper_class : type, optional
+            A results wrapper class to use for the results object. Default is
+            `MLEResultsWrapper`.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -3071,7 +3103,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                return_ssm=False, results_class=None,
                results_wrapper_class=None, low_memory=False, **kwargs):
         """
-        Kalman filtering.
+        Kalman filtering
 
         Parameters
         ----------
@@ -3080,15 +3112,29 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             function.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is True.
-        return_ssm : bool,optional
+        includes_fixed : bool, optional
+            If parameters were previously fixed with the `fix_params` method,
+            this argument describes whether or not `params` also includes
+            the fixed parameters, in addition to the free parameters. Default
+            is False.
+        complex_step : bool, optional
+            Whether or not to compute the filtered output using complex step
+            differentiation. Default is False.
+        return_ssm : bool, optional
             Whether or not to return only the state space output or a full
             results object. Default is to return a full results object.
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object. Default is 'none'.
-        cov_kwds : dict or None, optional
-            See `MLEResults.get_robustcov_results` for a description required
+        cov_kwds : dict, optional
+            See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
+        results_class : type, optional
+            A results class to use for results object. Default is
+            `MLEResults`.
+        results_wrapper_class : type, optional
+            A results wrapper class to use for the results object. Default is
+            `MLEResultsWrapper`.
         low_memory : bool, optional
             If set to True, techniques are applied to substantially reduce
             memory usage. If used, some features of the results object will
@@ -3110,7 +3156,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                  extend_kwargs=None, transformed=True, includes_fixed=False,
                  original_scale=True, **kwargs):
         r"""
-        Simulate a new time series following the state space model.
+        Simulate a new time series following the state space model
 
         Parameters
         ----------
@@ -3157,6 +3203,15 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Number of simulated paths to generate. Default is 1 simulated path.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate simulating
+            periods outside of the sample. Default is to extend the model if
+            a new `exog` array is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument during extension.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is
             True.
@@ -3209,10 +3264,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     sim = (sim.multiply(self._endog_std, axis=1, level=0)
                               .add(self._endog_mean, axis=1, level=0))
             # 1-dim array (k_endog=1, replications=None)
-            elif len(shape) == 1:
-                sim = sim * self._endog_std + self._endog_mean
-            # 2-dim array (k_endog > 1, replications=None)
-            elif len(shape) == 2:
+            elif len(shape) == 1 or len(shape) == 2:
                 sim = sim * self._endog_std + self._endog_mean
             # 3-dim array with MultiIndex (replications > 0)
             else:
@@ -3230,7 +3282,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                           transformed=True, includes_fixed=False,
                           original_scale=True, **kwargs):
         """
-        Impulse response function.
+        Impulse response function
 
         Parameters
         ----------
@@ -3241,10 +3293,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Default is 1. Note that for time-invariant models, the initial
             impulse is not counted as a step, so if `steps=1`, the output will
             have 2 entries.
-        impulse : int or array_like
+        impulse : int or array_like, optional
             If an integer, the state innovation to pulse; must be between 0
             and `k_posdef-1`. Alternatively, a custom impulse vector may be
-            provided; must be shaped `k_posdef x 1`.
+            provided; must be shaped `k_posdef x 1`. Default is 0.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -3262,8 +3314,18 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             to the model, then this argument can be a date string to parse or a
             datetime type. Default is 'start'.
         exog : array_like, optional
-            New observations of exogenous regressors for our-of-sample periods,
+            New observations of exogenous regressors for out-of-sample periods,
             if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate calculating
+            impulse responses in periods outside of the sample. Default is to
+            extend the model if a new `exog` array is provided or if the model
+            is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument during extension.
         transformed : bool, optional
             Whether or not `params` is already transformed. Default is
             True.
@@ -3321,10 +3383,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 elif len(shape) == 2:
                     irfs = irfs.multiply(self._endog_std, axis=1, level=0)
             # 1-dim array (k_endog=1)
-            elif len(shape) == 1:
-                irfs = irfs * self._endog_std
-            # 2-dim array (k_endog > 1)
-            elif len(shape) == 2:
+            elif len(shape) == 1 or len(shape) == 2:
                 irfs = irfs * self._endog_std
 
         return irfs
@@ -3341,27 +3400,23 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     @property
     def factors(self):
         """
-        Estimates of unobserved factors.
+        Estimates of unobserved factors
 
         Returns
         -------
         out : Bunch
-            Has the following attributes shown in Notes.
+            A bunch with the following attributes:
 
-        Notes
-        -----
-        The output is a bunch of the following format:
-
-        - `filtered`: a time series array with the filtered estimate of
-          the component
-        - `filtered_cov`: a time series array with the filtered estimate of
-          the variance/covariance of the component
-        - `smoothed`: a time series array with the smoothed estimate of
-          the component
-        - `smoothed_cov`: a time series array with the smoothed estimate of
-          the variance/covariance of the component
-        - `offset`: an integer giving the offset in the state vector where
-          this component begins
+            - `filtered`: a time series array with the filtered estimate of
+              the component
+            - `filtered_cov`: a time series array with the filtered estimate
+              of the variance/covariance of the component
+            - `smoothed`: a time series array with the smoothed estimate of
+              the component
+            - `smoothed_cov`: a time series array with the smoothed estimate
+              of the variance/covariance of the component
+            - `offset`: an integer giving the offset in the state vector
+              where this component begins
         """
         out = None
         if self.model.k_factors > 0:
@@ -3381,7 +3436,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     def get_coefficients_of_determination(self, method="individual",
                                           which=None):
         """
-        Get coefficients of determination (R-squared) for variables / factors.
+        Get coefficients of determination (R-squared) for variables / factors
 
         Parameters
         ----------
@@ -3392,14 +3447,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             "cumulative" plots the successive R-squared values as each
             additional factor is added to the regression, for each variable.
             Default is 'individual'.
-        which: {None, 'filtered', 'smoothed'}, optional
+        which : {None, 'filtered', 'smoothed'}, optional
             Whether to compute R-squared values based on filtered or smoothed
             estimates of the factors. Default is 'smoothed' if smoothed results
             are available and 'filtered' otherwise.
 
         Returns
         -------
-        rsquared : pd.DataFrame or pd.Series
+        rsquared : DataFrame or Series
             The R-squared values from regressions of observed variables on
             one or more of the factors. If method='individual' or
             method='cumulative', this will be a Pandas DataFrame with observed
@@ -3418,6 +3473,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                                         "cumulative"])
         if which is None:
             which = "filtered" if self.smoothed_state is None else "smoothed"
+        which = string_like(which, "which", options=("filtered", "smoothed"))
 
         k_endog = self.model.k_endog
         k_factors = self.model.k_factors
@@ -3473,7 +3529,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     @cache_readonly
     def coefficients_of_determination(self):
         """
-        Individual coefficients of determination (:math:`R^2`).
+        Individual coefficients of determination (:math:`R^2`)
 
         Coefficients of determination (:math:`R^2`) from regressions of
         endogenous variables on individual estimated factors.
@@ -3486,17 +3542,6 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             value from a regression of factor `j` and a constant on endogenous
             variable `i`.
 
-        Notes
-        -----
-        Although it can be difficult to interpret the estimated factor loadings
-        and factors, it is often helpful to use the coefficients of
-        determination from univariate regressions to assess the importance of
-        each factor in explaining the variation in each endogenous variable.
-
-        In models with many variables and factors, this can sometimes lend
-        interpretation to the factors (for example sometimes one factor will
-        load primarily on real variables and another on nominal variables).
-
         See Also
         --------
         get_coefficients_of_determination
@@ -3508,7 +3553,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                                            which=None, endog_labels=None,
                                            fig=None, figsize=None):
         """
-        Plot coefficients of determination (R-squared) for variables / factors.
+        Plot coefficients of determination (R-squared) for variables / factors
 
         Parameters
         ----------
@@ -3519,7 +3564,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             "cumulative" plots the successive R-squared values as each
             additional factor is added to the regression, for each variable.
             Default is 'individual'.
-        which: {None, 'filtered', 'smoothed'}, optional
+        which : {None, 'filtered', 'smoothed'}, optional
             Whether to compute R-squared values based on filtered or smoothed
             estimates of the factors. Default is 'smoothed' if smoothed results
             are available and 'filtered' otherwise.
@@ -3535,14 +3580,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
 
+        See Also
+        --------
+        get_coefficients_of_determination
+
         Notes
         -----
         The endogenous variables are arranged along the x-axis according to
         their position in the model's `endog` array.
-
-        See Also
-        --------
-        get_coefficients_of_determination
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
         _import_mpl()
@@ -3588,14 +3633,14 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                        original_scale=True, index=None, exog=None,
                        extend_model=None, extend_kwargs=None, **kwargs):
         r"""
-        In-sample prediction and out-of-sample forecasting.
+        In-sample prediction and out-of-sample forecasting
 
         Parameters
         ----------
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -3634,6 +3679,20 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             If the model specification standardized the data, whether or not
             to return predictions in the original scale of the data (i.e.
             before it was standardized by the model). Default is True.
+        index : array_like, optional
+            Optional index to use for the new results object.
+        exog : array_like, optional
+            New observations of exogenous regressors, if applicable.
+        extend_model : bool, optional
+            Whether or not to extend the model to accommodate out-of-sample
+            forecasting. Default is to extend the model if a new `exog` array
+            is provided or if the model is time-varying.
+        extend_kwargs : dict, optional
+            Dictionary of keyword arguments to pass to the state space model
+            constructor. For example, for an SARIMAX state space model, this
+            could be used to pass the `concentrate_scale=True` keyword
+            argument. Any arguments that are not explicitly set in this
+            dictionary will be copied from the current model instance.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3681,7 +3740,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
              state_index=None, return_raw=False, tolerance=1e-10,
              endog_quarterly=None, original_scale=True, **kwargs):
         """
-        Compute impacts from updated data (news and revisions).
+        Compute impacts from updated data (news and revisions)
 
         Parameters
         ----------
@@ -3714,11 +3773,18 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.
-        comparison_type : {None, 'previous', 'updated'}
+        comparison_type : {None, 'previous', 'updated'}, optional
             This denotes whether the `comparison` argument represents a
             *previous* results object or dataset or an *updated* results object
             or dataset. If not specified, then an attempt is made to determine
             the comparison type.
+        revisions_details_start : bool, int, str, or datetime, optional
+            The period at which to begin computing the detailed impacts of
+            data revisions. Any revisions prior to this period will have their
+            impacts grouped together. If a negative integer, interpreted as
+            an offset from the end of the dataset. If set to True, detailed
+            impacts are computed for all revisions, while if set to False, all
+            revisions are grouped together. Default is False.
         state_index : array_like or "common", optional
             An optional index specifying a subset of states to use when
             constructing the impacts of revisions and news. For example, if
@@ -3738,6 +3804,13 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             provided as an updated monthly dataset. If this argument is
             provided, it must be a Pandas Series or DataFrame with a
             DatetimeIndex or PeriodIndex at the quarterly frequency.
+        original_scale : bool, optional
+            If the model specification standardized the data, whether or not
+            to return impacts in the original scale of the data (i.e., before
+            it was standardized by the model). Default is True.
+        **kwargs
+            Keyword arguments to pass to the base `news` method, and/or to
+            construct `comparison` if it is not already a results object.
 
         References
         ----------
@@ -3841,7 +3914,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Parameters
         ----------
-        decomposition_of : {"smoothed_state", "smoothed_signal"}
+        decomposition_of : {"smoothed_state", "smoothed_signal"}, optional
             The object to perform a decomposition of. If it is set to
             "smoothed_state", then the elements of the smoothed state vector
             are decomposed into the contributions of each observation. If it
@@ -3863,7 +3936,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        data_contributions : pd.DataFrame
+        data_contributions : DataFrame
             Contributions of observations to the decomposed object. If the
             smoothed state is being decomposed, then `data_contributions` is
             shaped `(k_states x nobs, k_endog x nobs)` with a `pd.MultiIndex`
@@ -3873,7 +3946,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             shaped `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `variable_from x date_from`.
-        obs_intercept_contributions : pd.DataFrame
+        obs_intercept_contributions : DataFrame
             Contributions of the observation intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `obs_intercept_contributions` is
@@ -3885,7 +3958,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             `(k_endog x nobs, k_endog x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `obs_intercept_from x date_from`.
-        state_intercept_contributions : pd.DataFrame
+        state_intercept_contributions : DataFrame
             Contributions of the state intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `state_intercept_contributions` is
@@ -3897,7 +3970,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             `(k_endog x nobs, k_states x nobs)` with `pd.MultiIndex`-es
             corresponding to `variable_to x date_to` and
             `state_intercept_from x date_from`.
-        prior_contributions : pd.DataFrame
+        prior_contributions : DataFrame
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` is
             shaped `(nobs x k_states, k_states)`, with a `pd.MultiIndex`
@@ -3956,7 +4029,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                copy_initialization=True, retain_standardization=True,
                **kwargs):
         """
-        Recreate the results object with new data appended to original data.
+        Recreate the results object with new data appended to original data
 
         Creates a new result object applied to a dataset that is created by
         appending new data to the end of the model's original data. The new
@@ -3986,7 +4059,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             Default is True.
         **kwargs
             Keyword arguments may be used to modify model specification
-            arguments when created the new model object.
+            arguments when creating the new model object.
 
         Returns
         -------
@@ -3994,10 +4067,15 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             Updated Results object, that includes results from both the
             original dataset and the new dataset.
 
+        See Also
+        --------
+        extend
+        apply
+
         Notes
         -----
         The `endog` and `exog` arguments to this method must be formatted in
-        the same way (e.g. Pandas Series versus Numpy array) as were the
+        the same way (e.g., Pandas Series versus Numpy array) as were the
         `endog` and `exog` arrays passed to the original model.
 
         The `endog` (and, if applicable, `endog_quarterly`) arguments to this
@@ -4009,11 +4087,6 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         as to the new data. To apply filtering only to the new data (which
         can be much faster if the original dataset is large), see the `extend`
         method.
-
-        See Also
-        --------
-        extend
-        apply
         """
         # Construct the combined dataset, if necessary
         endog, k_endog_monthly = DynamicFactorMQ.construct_endog(
@@ -4036,7 +4109,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
     def extend(self, endog, endog_quarterly=None, fit_kwargs=None,
                retain_standardization=True, **kwargs):
         """
-        Recreate the results object for new data that extends original data.
+        Recreate the results object for new data that extends original data
 
         Creates a new result object applied to a new dataset that is assumed to
         follow directly from the end of the model's original data. The new
@@ -4058,7 +4131,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             Default is True.
         **kwargs
             Keyword arguments may be used to modify model specification
-            arguments when created the new model object.
+            arguments when creating the new model object.
 
         Returns
         -------
@@ -4103,7 +4176,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
               refit=False, fit_kwargs=None, copy_initialization=False,
               retain_standardization=True, **kwargs):
         """
-        Apply the fitted parameters to new data unrelated to the original data.
+        Apply the fitted parameters to new data unrelated to the original data
 
         Creates a new result object using the current fitted parameters,
         applied to a completely new dataset that is assumed to be unrelated to
@@ -4139,7 +4212,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             Default is True.
         **kwargs
             Keyword arguments may be used to modify model specification
-            arguments when created the new model object.
+            arguments when creating the new model object.
 
         Returns
         -------
@@ -4177,7 +4250,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                 display_params_as_list=False, truncate_endog_names=None,
                 display_max_endog=3):
         """
-        Summarize the Model.
+        Summarize the Model
 
         Parameters
         ----------
@@ -4189,6 +4262,23 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             The title used for the summary table.
         model_name : str, optional
             The name of the model used. Default is to use model class name.
+        display_params : bool, optional
+            Whether or not to display the estimated parameters. Default is
+            True.
+        display_diagnostics : bool, optional
+            Whether or not to display the standard set of diagnostic tests.
+            Default is False.
+        display_params_as_list : bool, optional
+            Whether or not to display the estimated parameters in a single
+            list, rather than in the model-specific tables of factor loadings
+            and factor transitions. Default is False.
+        truncate_endog_names : int, optional
+            The number of characters to show for names of observed variables.
+            Default is 24 if there is more than one observed variable, or
+            an unlimited number if there is only one.
+        display_max_endog : int, optional
+            The maximum number of endogenous variables to display when using
+            the model-specific tables. Default is 3.
 
         Returns
         -------
@@ -4234,13 +4324,15 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         if not display_params_as_list:
 
             # Observation equation table
-            data = pd.DataFrame(
-                self.filter_results.design[:, mod._s["factors_L1"], 0],
-                index=endog_names, columns=mod.factor_names)
+            design = self._summary_cache(
+                "design",
+                lambda: self.filter_results.design[:, mod._s["factors_L1"], 0]
+            )
+            data = pd.DataFrame(design, index=endog_names, columns=mod.factor_names)
             try:
-                data = data.map(lambda s: "%.2f" % s)
+                data = data.map(lambda s: f"{s:.2f}")
             except AttributeError:
-                data = data.applymap(lambda s: "%.2f" % s)
+                data = data.applymap(lambda s: f"{s:.2f}")
 
             # Idiosyncratic terms
             # data['   '] = '   '
@@ -4286,26 +4378,33 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             # Factor transitions
             ix1 = 0
             ix2 = 0
+
+            # Both T and Q are looped over and so must be retained
+            # to ensure that summary works after remove data
+            T = self._summary_cache(
+                "transition", lambda: self.filter_results.transition
+            )
+            Q = self._summary_cache(
+                "state_cov", lambda: self.filter_results.state_cov
+            )
             for i in range(len(mod._s.factor_blocks)):
                 block = mod._s.factor_blocks[i]
                 ix2 += block.k_factors
-
-                T = self.filter_results.transition
                 lag_names = []
                 for j in range(block.factor_order):
                     lag_names += [f"L{j + 1}.{name}"
                                   for name in block.factor_names]
-                data = pd.DataFrame(T[block.factors_L1, block.factors_ar, 0],
-                                    index=block.factor_names,
-                                    columns=lag_names)
+                data = pd.DataFrame(
+                    T[block.factors_L1, block.factors_ar, 0],
+                    index=block.factor_names,
+                    columns=lag_names
+                )
                 data.index.name = ""
                 try:
-                    data = data.map(lambda s: "%.2f" % s)
+                    data = data.map(lambda s: f"{s:.2f}")
                 except AttributeError:
-                    data = data.applymap(lambda s: "%.2f" % s)
+                    data = data.applymap(lambda s: f"{s:.2f}")
 
-                Q = self.filter_results.state_cov
-                # data[' '] = ''
                 if block.k_factors == 1:
                     data["   error variance"] = Q[ix1, ix1]
                 else:

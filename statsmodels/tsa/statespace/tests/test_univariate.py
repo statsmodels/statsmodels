@@ -5,14 +5,14 @@ TODO skips the tests for measurement disturbance and measurement disturbance
 covariance, which do not pass. The univariate smoother *appears* to be
 correctly implemented against Durbin and Koopman (2012) chapter 6, yet still
 gives a different answer from the conventional smoother. It's not clear if
-this is intended (i.e. it has to be at least slightly different, since the
+this is intended (i.e., it has to be at least slightly different, since the
 conventional smoother can return a non-diagonal covariance matrix whereas the
 univariate smoother must return a diagonal covariance matrix).
 
 Author: Chad Fulton
 License: Simplified-BSD
 """
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
@@ -24,7 +24,7 @@ from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class TestClark1989:
@@ -117,7 +117,7 @@ class TestClark1989:
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
-        # used the univariate Kalman filtering approach (i.e. that the flag
+        # used the univariate Kalman filtering approach (i.e., that the flag
         # being set actually caused the filter to not use the conventional
         # filter)
         assert not self.conventional_results.filter_univariate
@@ -251,8 +251,7 @@ class MultivariateMissingGeneralObsCov:
     @classmethod
     def setup_class(cls, which, dtype=float, alternate_timing=False, **kwargs):
         # Results
-        path = os.path.join(current_path, "results",
-                            "results_smoothing_generalobscov_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing_generalobscov_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -306,7 +305,7 @@ class MultivariateMissingGeneralObsCov:
 
     def test_using_univariate(self):
         # Regression test to make sure the univariate_results actually
-        # used the univariate Kalman filtering approach (i.e. that the flag
+        # used the univariate Kalman filtering approach (i.e., that the flag
         # being set actually caused the filter to not use the conventional
         # filter)
         assert not self.conventional_results.filter_univariate
@@ -510,8 +509,7 @@ class TestMultivariateVAR:
     @classmethod
     def setup_class(cls, which="none", **kwargs):
         # Results
-        path = os.path.join(current_path, "results",
-                            "results_smoothing_generalobscov_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing_generalobscov_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data

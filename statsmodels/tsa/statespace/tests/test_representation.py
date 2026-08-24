@@ -12,8 +12,7 @@ Kim, Chang-Jin, and Charles R. Nelson. 1999.
 Classical and Gibbs-Sampling Approaches with Applications".
 MIT Press Books. The MIT Press.
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -36,10 +35,10 @@ from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
 
 from .results import results_kalman_filter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-clark1989_path = os.path.join("results", "results_clark1989_R.csv")
-clark1989_results = pd.read_csv(os.path.join(current_path, clark1989_path))
+clark1989_path = Path("results").joinpath("results_clark1989_R.csv")
+clark1989_results = pd.read_csv(Path(current_path).joinpath(clark1989_path))
 
 
 class Clark1987:
@@ -78,7 +77,7 @@ class Clark1987:
         cls.model.selection = np.eye(cls.model.k_states)
 
         # Update matrices with given parameters
-        (sigma_v, sigma_e, sigma_w, phi_1, phi_2) = np.array(cls.true["parameters"])
+        sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(cls.true["parameters"])
         cls.model.transition[([1, 1], [1, 2], [0, 0])] = [phi_1, phi_2]
         cls.model.state_cov[
             np.diag_indices(k_states) + (np.zeros(k_states, dtype=int),)
@@ -859,7 +858,7 @@ def test_cython():
         # Test that the default returned _kalman_filter is the above instance
         assert_equal(mod._kalman_filter, kf)
 
-    # Check that upcasting datatypes / ?KalmanFilter works (e.g. d -> z)
+    # Check that upcasting datatypes / ?KalmanFilter works (e.g., d -> z)
     mod = KalmanFilter(k_endog=1, k_states=1)
 
     # Default dtype is float
@@ -1099,7 +1098,8 @@ def test_simulate():
     nsimulations = 10
     sigma2 = 2
     measurement_shocks = np.zeros(nsimulations)
-    state_shocks = np.random.normal(scale=sigma2**0.5, size=nsimulations)
+    rs = np.random.RandomState(9991617)
+    state_shocks = rs.normal(scale=sigma2**0.5, size=nsimulations)
 
     # Random walk model, so simulated series is just the cumulative sum of
     # the shocks
@@ -1218,7 +1218,7 @@ def test_simulate():
 def test_impulse_responses():
     # Test for impulse response functions
 
-    # Random walk: 1-unit impulse response (i.e. non-orthogonalized irf) is 1
+    # Random walk: 1-unit impulse response (i.e., non-orthogonalized irf) is 1
     # for all periods
     mod = SimulationSmoother(k_endog=1, k_states=1, initialization="diffuse")
     mod["design", 0, 0] = 1.0
@@ -1231,7 +1231,7 @@ def test_impulse_responses():
 
     assert_allclose(actual, desired)
 
-    # Random walk: 2-unit impulse response (i.e. non-orthogonalized irf) is 2
+    # Random walk: 2-unit impulse response (i.e., non-orthogonalized irf) is 2
     # for all periods
     mod = SimulationSmoother(k_endog=1, k_states=1, initialization="diffuse")
     mod["design", 0, 0] = 1.0
@@ -1244,7 +1244,7 @@ def test_impulse_responses():
 
     assert_allclose(actual, desired)
 
-    # Random walk: 1-standard-deviation response (i.e. orthogonalized irf) is
+    # Random walk: 1-standard-deviation response (i.e., orthogonalized irf) is
     # sigma for all periods (here sigma^2 = 2)
     mod = SimulationSmoother(k_endog=1, k_states=1, initialization="diffuse")
     mod["design", 0, 0] = 1.0
@@ -1257,7 +1257,7 @@ def test_impulse_responses():
 
     assert_allclose(actual, desired)
 
-    # Random walk: 1-standard-deviation cumulative response (i.e. cumulative
+    # Random walk: 1-standard-deviation cumulative response (i.e., cumulative
     # orthogonalized irf)
     mod = SimulationSmoother(k_endog=1, k_states=1, initialization="diffuse")
     mod["design", 0, 0] = 1.0
@@ -1275,7 +1275,7 @@ def test_impulse_responses():
 
     assert_allclose(actual, desired)
 
-    # Random walk: 1-unit impulse response (i.e. non-orthogonalized irf) is 1
+    # Random walk: 1-unit impulse response (i.e., non-orthogonalized irf) is 1
     # for all periods, even when intercepts are present
     mod = SimulationSmoother(k_endog=1, k_states=1, initialization="diffuse")
     mod["state_intercept", 0] = 100.0
@@ -1340,14 +1340,14 @@ def test_impulse_responses():
 
     desired = np.ones((11, 1))
 
-    # Non-orthogonalized (i.e. 1-unit) impulses still just generate 1's
+    # Non-orthogonalized (i.e., 1-unit) impulses still just generate 1's
     actual = mod.impulse_responses(steps=10, impulse=0)
     assert_allclose(actual, desired)
 
     actual = mod.impulse_responses(steps=10, impulse=1)
     assert_allclose(actual, desired)
 
-    # Orthogonalized (i.e. 1-std-dev) impulses now generate different responses
+    # Orthogonalized (i.e., 1-std-dev) impulses now generate different responses
     actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
     assert_allclose(actual, desired + desired * 0.5)
 
@@ -1364,7 +1364,7 @@ def test_impulse_responses():
     ones = np.ones((11, 1))
     zeros = np.zeros((11, 1))
 
-    # Non-orthogonalized (i.e. 1-unit) impulses still just generate 1's, but
+    # Non-orthogonalized (i.e., 1-unit) impulses still just generate 1's, but
     # only for the appropriate series
     actual = mod.impulse_responses(steps=10, impulse=0)
     assert_allclose(actual, np.c_[ones, zeros])
@@ -1372,7 +1372,7 @@ def test_impulse_responses():
     actual = mod.impulse_responses(steps=10, impulse=1)
     assert_allclose(actual, np.c_[zeros, ones])
 
-    # Orthogonalized (i.e. 1-std-dev) impulses now generate different
+    # Orthogonalized (i.e., 1-std-dev) impulses now generate different
     # responses, and only for the appropriate series
     actual = mod.impulse_responses(steps=10, impulse=0, orthogonalized=True)
     assert_allclose(actual, np.c_[ones, ones * 0.5])

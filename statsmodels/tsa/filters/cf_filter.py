@@ -1,6 +1,7 @@
 import numpy as np
 
 from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 # the data is sampled quarterly, so cut-off frequency of 18
 
@@ -14,37 +15,40 @@ from statsmodels.tools.validation import PandasWrapper, array_like
 # NOTE: uses a loop, could probably be sped-up for very large datasets
 def cffilter(x, low=6, high=32, drift=True):
     """
-    Christiano Fitzgerald asymmetric, random walk filter.
+    Christiano Fitzgerald asymmetric, random walk filter
 
     Parameters
     ----------
     x : array_like
         The 1 or 2d array to filter. If 2d, variables are assumed to be in
         columns.
-    low : float
+    low : float, optional
         Minimum period of oscillations. Features below low periodicity are
         filtered out. Default is 6 for quarterly data, giving a 1.5 year
         periodicity.
-    high : float
+    high : float, optional
         Maximum period of oscillations. Features above high periodicity are
         filtered out. Default is 32 for quarterly data, giving an 8 year
         periodicity.
-    drift : bool
+    drift : bool, optional
         Whether or not to remove a trend from the data. The trend is estimated
         as np.arange(nobs)*(x[-1] - x[0])/(len(x)-1).
 
     Returns
     -------
-    cycle : array_like
-        The features of x between the periodicities low and high.
-    trend : array_like
-        The trend in the data with the cycles removed.
+    CycleTrendResult
+        A result object with fields:
+
+        cycle : ndarray, Series, or DataFrame
+            The features of x between the periodicities low and high.
+        trend : ndarray, Series, or DataFrame
+            The trend in the data with the cycles removed.
 
     See Also
     --------
     statsmodels.tsa.filters.bk_filter.bkfilter
         Baxter-King filter.
-    statsmodels.tsa.filters.bk_filter.hpfilter
+    statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
     statsmodels.tsa.seasonal.seasonal_decompose
         Decompose a time series using moving averages.
@@ -101,12 +105,6 @@ def cffilter(x, low=6, high=32, drift=True):
 
     cycle, trend = y.squeeze(), x.squeeze() - y
 
-    return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
-
-
-if __name__ == "__main__":
-    import statsmodels as sm
-    dta = sm.datasets.macrodata.load().data[["infl", "tbilrate"]].view((float, 2))[1:]
-    cycle, trend = cffilter(dta, 6, 32, drift=True)
-    dta = sm.datasets.macrodata.load().data["tbilrate"][1:]
-    cycle2, trend2 = cffilter(dta, 6, 32, drift=True)
+    return CycleTrendResult(
+        pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    )

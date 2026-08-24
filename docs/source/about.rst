@@ -147,5 +147,5 @@ Monochrome (Light)
 .. |light-vertical| image:: images/statsmodels-logo-v2-light.svg
    :width: 14%
 
-.. |light-notext| image:: images/statsmodels-logo-v2-no-text-light.svg
+.. |light-notext| image:: images/statsmodels-logo-v3-no-text-light.svg
    :width: 9%

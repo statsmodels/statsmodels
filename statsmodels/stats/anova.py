@@ -22,33 +22,48 @@ def _get_covariance(model, robust):
     elif robust == "hc3":
         return model.cov_HC3
     else:  # pragma: no cover
-        raise ValueError("robust options %s not understood" % robust)
+        raise ValueError(f"robust options {robust} not understood")
 
 
 # NOTE: these need to take into account weights !
 
+
 def anova_single(model, **kwargs):
     """
-    Anova table for one fitted linear model.
+    Anova table for one fitted linear model
 
     Parameters
     ----------
     model : fitted linear model results instance
         A fitted linear model
-    typ : int or str {1,2,3} or {"I","II","III"}
-        Type of sum of squares to use.
-
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
+    **kwargs
+        typ : {1, 2, 3, "I", "II", "III"}, optional
+            Type of sum of squares to use.
+        test : {"F", "Chisq", "Cp", None}, optional
+            Test statistics to provide. Default is "F".
+        robust : {None, "hc0", "hc1", "hc2", "hc3"}, optional
+            Use heteroscedasticity-corrected coefficient covariance matrix.
+            If robust covariance is desired, it is recommended to use `hc3`.
 
     Notes
     -----
     Use of this function is discouraged. Use anova_lm instead.
+
+    **Type I**: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
+
+    **Type II**: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
+
+    **Type III**: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
     """
     test = kwargs.get("test", "F")
     typ = kwargs.get("typ", 1)
@@ -63,49 +78,71 @@ def anova_single(model, **kwargs):
     model_spec = model.model.data.model_spec
     # +1 for resids
     mgr = FormulaManager()
-    n_rows = (len(model_spec.terms) - mgr.has_intercept(model_spec) + 1)
+    n_rows = len(model_spec.terms) - mgr.has_intercept(model_spec) + 1
 
-    pr_test = "PR(>%s)" % test
+    pr_test = f"PR(>{test})"
     names = ["df", "sum_sq", "mean_sq", test, pr_test]
 
     table = DataFrame(np.zeros((n_rows, 5)), columns=names)
 
     if typ in [1, "I"]:
-        return anova1_lm_single(model, endog, exog, nobs, model_spec, table,
-                                n_rows, test, pr_test, robust)
+        return anova1_lm_single(
+            model, endog, exog, nobs, model_spec, table, n_rows, test, pr_test, robust
+        )
     elif typ in [2, "II"]:
-        return anova2_lm_single(model, model_spec, n_rows, test, pr_test,
-                                robust)
+        return anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust)
     elif typ in [3, "III"]:
-        return anova3_lm_single(model, model_spec, n_rows, test, pr_test,
-                                robust)
+        return anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust)
     elif typ in [4, "IV"]:
         raise NotImplementedError("Type IV not yet implemented")
     else:  # pragma: no cover
-        raise ValueError("Type %s not understood" % str(typ))
+        raise ValueError(f"Type {typ!s} not understood")
 
 
-def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
-                     pr_test, robust):
+def anova1_lm_single(
+    model, endog, exog, nobs, model_spec, table, n_rows, test, pr_test, robust
+):
     """
-    Anova table for one fitted linear model.
+    Anova type I table for one fitted linear model
 
     Parameters
     ----------
     model : fitted linear model results instance
         A fitted linear model
+    endog : ndarray
+        The dependent variable array from `model`.
+    exog : ndarray
+        The design (independent variable) array from `model`.
+    nobs : int
+        Number of observations in `model`.
+    model_spec : ModelSpec
+        The model specification describing the terms of `model`.
+    table : DataFrame
+        Preallocated DataFrame to be filled in with the Anova results.
+    n_rows : int
+        Number of rows, including the residual row, in `table`.
+    test : {"F", "Chisq", "Cp", None}
+        Test statistic to provide.
+    pr_test : str
+        Name of the column holding the p-value for `test`, e.g., "PR(>F)".
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+        Type of heteroscedasticity-robust covariance estimator; accepted
+        for interface consistency but not used for Type I sums of squares.
 
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
+    Returns
+    -------
+    table : DataFrame
+        The Anova table with sum of squares, degrees of freedom, mean
+        squares and, if requested, the test statistic and p-value for
+        each term.
 
     Notes
     -----
     Use of this function is discouraged. Use anova_lm instead.
+
+    Type I: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
     """
     # maybe we should rethink using pinv > qr in OLS/linear models?
     mgr = FormulaManager()
@@ -130,46 +167,57 @@ def anova1_lm_single(model, endog, exog, nobs, model_spec, table, n_rows, test,
     term_names = term_names[~idx]
 
     index = term_names.tolist()
-    table.index = Index(index + ["Residual"])
+    table.index = Index([*index, "Residual"])
     table.loc[index, ["df", "sum_sq"]] = np.c_[arr[~idx].sum(1), sum_sq]
     # fill in residual
     table.loc["Residual", ["sum_sq", "df"]] = model.ssr, model.df_resid
     if test == "F":
-        table[test] = ((table["sum_sq"] / table["df"]) /
-                       (model.ssr / model.df_resid))
-        table[pr_test] = stats.f.sf(table["F"], table["df"],
-                                    model.df_resid)
+        table[test] = (table["sum_sq"] / table["df"]) / (model.ssr / model.df_resid)
+        table[pr_test] = stats.f.sf(table["F"], table["df"], model.df_resid)
         table.loc["Residual", [test, pr_test]] = np.nan, np.nan
     table["mean_sq"] = table["sum_sq"] / table["df"]
     return table
+
 
 # NOTE: the below is not agnostic about formula...
 
 
 def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     """
-    Anova type II table for one fitted linear model.
+    Anova type II table for one fitted linear model
 
     Parameters
     ----------
     model : fitted linear model results instance
         A fitted linear model
+    model_spec : ModelSpec
+        The model specification describing the terms of `model`.
+    n_rows : int
+        Number of rows, including the residual row, in the returned table.
+    test : {"F", "Chisq", "Cp", None}
+        Test statistic to provide.
+    pr_test : str
+        Name of the column holding the p-value for `test`, e.g., "PR(>F)".
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+        Type of heteroscedasticity-robust covariance estimator to use, if
+        any.
 
-    **kwargs**
-
-    scale : float
-        Estimate of variance, If None, will be estimated from the largest
-    model. Default is None.
-        test : str {"F", "Chisq", "Cp"} or None
-        Test statistics to provide. Default is "F".
+    Returns
+    -------
+    table : DataFrame
+        The Anova table with sum of squares, degrees of freedom, and, if
+        requested, the test statistic and p-value for each term.
 
     Notes
     -----
     Use of this function is discouraged. Use anova_lm instead.
 
-    Type II
-    Sum of Squares compares marginal contribution of terms. Thus, it is
-    not particularly useful for models with significant interaction terms.
+    Type II: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
+
     """
     mgr = FormulaManager()
     terms_info = model_spec.terms[:]  # copy
@@ -225,8 +273,8 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         table.loc[table.index[i], "df"] = r
         col_order.append(cols.start)
         index.append(mgr.get_term_name(term))
-    table.index = Index(index + ["Residual"])
-    table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1] + 1])]
+    table.index = Index([*index, "Residual"])
+    table = table.iloc[np.argsort([*col_order, model.model.exog.shape[1] + 1])]
     # back out sum of squares from f_test
 
     ssr = table[test] * table["df"] * model.ssr / model.df_resid
@@ -244,6 +292,15 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
 
 
 def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
+    """
+    Notes
+    -----
+    Type III: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
+    """
     mgr = FormulaManager()
     n_rows += mgr.has_intercept(model_spec)
     terms_info = model_spec.terms
@@ -271,7 +328,7 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
         # col_order.append(cols.start)
 
         index.append(mgr.get_term_name(term))
-    table.index = Index(index + ["Residual"])
+    table.index = Index([*index, "Residual"])
     # NOTE: Do not need to sort because terms are an ordered dict now
     # table = table.iloc[np.argsort(col_order + [model.model.exog.shape[1]+1])]
     # back out sum of squares from f_test
@@ -291,20 +348,20 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
 
 def anova_lm(*args, **kwargs):
     """
-    Anova table for one or more fitted linear models.
+    Anova table for one or more fitted linear models
 
     Parameters
     ----------
-    args : fitted linear model results instance
+    *args : fitted linear model results instance
         One or more fitted linear models
-    scale : float
+    scale : float or None, optional
         Estimate of variance, If None, will be estimated from the largest
         model. Default is None.
-    test : str {"F", "Chisq", "Cp"} or None
+    test : {"F", "Chisq", "Cp", None}, optional
         Test statistics to provide. Default is "F".
-    typ : str or int {"I","II","III"} or {1,2,3}
-        The type of Anova test to perform. See notes.
-    robust : {None, "hc0", "hc1", "hc2", "hc3"}
+    typ : {1, 2, 3, "I", "II", "III"}, optional
+        The type of Anova test to perform. Default is I, more see notes.
+    robust : {None, "hc0", "hc1", "hc2", "hc3"}, optional
         Use heteroscedasticity-corrected coefficient covariance matrix.
         If robust covariance is desired, it is recommended to use `hc3`.
 
@@ -342,9 +399,28 @@ def anova_lm(*args, **kwargs):
     Model statistics are given in the order of args. Models must have been fit
     using the formula api.
 
+    **Type I**: Sequential sums of squares. Each term is tested after the
+    terms that precede it in the model. Consequently, the results depend
+    on the order of the terms when the design is unbalanced.
+
+    **Type II**: Each term is tested after all other terms except higher-order
+    terms that contain it. Thus, main effects are not adjusted for
+    interactions involving them. Type II tests respect the principle of
+    marginality and are generally most appropriate when interactions are
+    absent or are not of primary interest.
+
+    **Type III**: Each term is tested after all other terms in the model,
+    including higher-order terms that contain it. This permits testing
+    main effects in models containing interactions, but such tests can be
+    difficult to interpret and may depend on the contrast coding used for
+    categorical factors.
+
     See Also
     --------
-    model_results.compare_f_test, model_results.compare_lm_test
+    statsmodels.regression.linear_model.RegressionResults.compare_f_test
+        Nested model comparrison using an F-test
+    statsmodels.regression.linear_model.RegressionResults.compare_lm_test
+        Nested model comparrison using an LM test
 
     Examples
     --------
@@ -368,13 +444,14 @@ def anova_lm(*args, **kwargs):
         return anova_single(model, **kwargs)
 
     if typ not in [1, "I"]:
-        raise ValueError("Multiple models only supported for type I. "
-                         "Got type %s" % str(typ))
+        raise ValueError(
+            f"Multiple models only supported for type I. Got type {typ!s}"
+        )
 
     test = kwargs.get("test", "F")
     scale = kwargs.get("scale", None)
     n_models = len(args)
-    pr_test = "Pr(>%s)" % test
+    pr_test = f"Pr(>{test})"
     names = ["df_resid", "ssr", "df_diff", "ss_diff", test, pr_test]
     table = DataFrame(np.zeros((n_models, 6)), columns=names)
 
@@ -384,19 +461,24 @@ def anova_lm(*args, **kwargs):
     table["ssr"] = [mdl.ssr for mdl in args]
     table["df_resid"] = [mdl.df_resid for mdl in args]
     table.loc[table.index[1:], "df_diff"] = -np.diff(table["df_resid"].values)
+    if np.any(table["df_diff"].dropna() < 0):
+        raise ValueError(
+            "Models must be passed in order of increasing complexity "
+            "(decreasing residual degrees of freedom). "
+            "Ensure the most restricted model is passed first."
+        )
     table["ss_diff"] = -table["ssr"].diff()
     if test == "F":
         table["F"] = table["ss_diff"] / table["df_diff"] / scale
-        table[pr_test] = stats.f.sf(table["F"], table["df_diff"],
-                                    table["df_resid"])
+        table[pr_test] = stats.f.sf(table["F"], table["df_diff"], table["df_resid"])
         # for earlier scipy - stats.f.sf(np.nan, 10, 2) -> 0 not nan
-        table.loc[table["F"].isnull(), pr_test] = np.nan
+        table.loc[table["F"].isna(), pr_test] = np.nan
 
     return table
 
 
 def _not_slice(slices, slices_to_exclude, n):
-    ind = np.array([True]*n)
+    ind = np.array([True] * n)
     for term in slices_to_exclude:
         s = slices[term]
         ind[s] = False
@@ -406,6 +488,7 @@ def _not_slice(slices, slices_to_exclude, n):
 def _ssr_reduced_model(y, x, term_slices, params, keys):
     """
     Residual sum of squares of OLS model excluding factors in `keys`
+
     Assumes x matrix is orthogonal
 
     Parameters
@@ -443,7 +526,7 @@ class AnovaRM:
 
     The full model regression residual sum of squares is
     used to compare with the reduced model for calculating the
-    within-subject effect sum of squares [1].
+    within-subject effect sum of squares [1]_.
 
     Currently, only fully balanced within-subject designs are supported.
     Calculation of between-subject effects and corrections for violation of
@@ -452,6 +535,7 @@ class AnovaRM:
     Parameters
     ----------
     data : DataFrame
+        The data for the model.
     depvar : str
         The dependent variable in `data`
     subject : str
@@ -460,11 +544,11 @@ class AnovaRM:
         The within-subject factors
     between : list[str]
         The between-subject factors, this is not yet implemented
-    aggregate_func : {None, 'mean', callable}
+    aggregate_func : {None, 'mean', callable}, optional
         If the data set contains more than a single observation per subject
         and cell of the specified model, this function will be used to
         aggregate the data before running the Anova. `None` (the default) will
-        not perform any aggregation; 'mean' is s shortcut to `numpy.mean`.
+        not perform any aggregation; 'mean' is a shortcut to `numpy.mean`.
         An exception will be raised if aggregation is required, but no
         aggregation function was specified.
 
@@ -490,21 +574,23 @@ class AnovaRM:
 
     References
     ----------
-    .. [*] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
+    .. [1] Rutherford, Andrew. Anova and ANCOVA: a GLM approach. John Wiley & Sons, 2011.
     """
 
-    def __init__(self, data, depvar, subject, within=None, between=None,
-                 aggregate_func=None):
+    def __init__(
+        self, data, depvar, subject, within=None, between=None, aggregate_func=None
+    ):
         self.data = data
         self.depvar = depvar
         self.within = within
         if "C" in within:
-            raise ValueError("Factor name cannot be 'C'! This is in conflict "
-                             "with patsy's contrast function name.")
+            raise ValueError(
+                "Factor name cannot be 'C'! This is in conflict "
+                "with patsy's contrast function name."
+            )
         self.between = between
         if between is not None:
-            raise NotImplementedError("Between subject effect not "
-                                      "yet supported!")
+            raise NotImplementedError("Between subject effect not yet supported!")
         self.subject = subject
 
         if aggregate_func == "mean":
@@ -512,30 +598,37 @@ class AnovaRM:
         else:
             self.aggregate_func = aggregate_func
 
-        if not data.equals(data.drop_duplicates(subset=[subject] + within)):
+        if not data.equals(data.drop_duplicates(subset=[subject, *within])):
             if self.aggregate_func is not None:
                 self._aggregate()
             else:
-                msg = ("The data set contains more than one observation per "
-                       "subject and cell. Either aggregate the data manually, "
-                       "or pass the `aggregate_func` parameter.")
+                msg = (
+                    "The data set contains more than one observation per "
+                    "subject and cell. Either aggregate the data manually, "
+                    "or pass the `aggregate_func` parameter."
+                )
                 raise ValueError(msg)
 
         self._check_data_balanced()
 
     def _aggregate(self):
-        self.data = (self.data
-                     .groupby([self.subject] + self.within,
-                              as_index=False)[self.depvar]
-                     .agg(self.aggregate_func))
+        self.data = self.data.groupby([self.subject, *self.within], as_index=False)[
+            self.depvar
+        ].agg(self.aggregate_func)
 
     def _check_data_balanced(self):
-        """raise if data is not balanced
+        """
+        Raise if data is not balanced
 
         This raises a ValueError if the data is not balanced, and
-        returns None if it is balance
+        returns None if it is balanced.
 
         Return might change
+
+        Raises
+        ------
+        ValueError
+            If the data is not balanced.
         """
         factor_levels = 1
         for wi in self.within:
@@ -543,10 +636,7 @@ class AnovaRM:
 
         cell_count = {}
         for index in range(self.data.shape[0]):
-            key = []
-            for col in self.within:
-                key.append(self.data[col].iloc[index])
-            key = tuple(key)
+            key = tuple(self.data[col].iloc[index] for col in self.within)
             if key in cell_count:
                 cell_count[key] = cell_count[key] + 1
             else:
@@ -559,27 +649,30 @@ class AnovaRM:
             if count != cell_value:
                 raise ValueError(error_message)
         if self.data.shape[0] > count * factor_levels:
-            raise ValueError("There are more than 1 element in a cell! Missing"
-                             " factors?")
+            raise ValueError(
+                "There are more than 1 element in a cell! Missing factors?"
+            )
 
     def fit(self):
-        """estimate the model and compute the Anova table
+        """
+        Estimate the model and compute the Anova table
 
         Returns
         -------
-        AnovaResults instance
+        AnovaResults
+            The results of the repeated measures Anova.
         """
         y = self.data[self.depvar].values
 
         # Construct OLS endog and exog from string using patsy
-        within = ["C(%s, Sum)" % i for i in self.within]
-        subject = "C(%s, Sum)" % self.subject
-        factors = within + [subject]
+        within = [f"C({i}, Sum)" for i in self.within]
+        subject = f"C({self.subject}, Sum)"
+        factors = [*within, subject]
         mgr = FormulaManager()
         x = mgr.get_matrices("*".join(factors), data=self.data, pandas=False)
         term_slices = mgr.get_term_name_slices(x)
         for key in term_slices:
-            ind = np.array([False]*x.shape[1])
+            ind = np.array([False] * x.shape[1])
             ind[term_slices[key]] = True
             term_slices[key] = np.array(ind)
         term_exclude = [":".join(factors)]
@@ -605,18 +698,18 @@ class AnovaRM:
         for key in term_slices:
             if self.subject not in str(key) and str(key) not in ("Intercept", "1"):
                 #  Independent variables are orthogonal
-                ssr1, df_resid1 = _ssr_reduced_model(
-                    y, x, term_slices, params, [key])
+                ssr1, df_resid1 = _ssr_reduced_model(y, x, term_slices, params, [key])
                 df1 = df_resid1 - df_resid
                 msm = (ssr1 - ssr) / df1
-                if (str(key) == ":".join(factors[:-1]) or
-                        (str(key) + ":" + subject not in term_slices)):
+                if str(key) == ":".join(factors[:-1]) or (
+                    str(key) + ":" + subject not in term_slices
+                ):
                     mse = ssr / df_resid
                     df2 = df_resid
                 else:
                     ssr1, df_resid1 = _ssr_reduced_model(
-                        y, x, term_slices, params,
-                        [str(key) + ":" + subject])
+                        y, x, term_slices, params, [str(key) + ":" + subject]
+                    )
                     df2 = df_resid1 - df_resid
                     mse = (ssr1 - ssr) / df2
                 F = msm / mse
@@ -637,7 +730,9 @@ class AnovaResults:
     Attributes
     ----------
     anova_table : DataFrame
+        The Anova table.
     """
+
     def __init__(self, anova_table):
         self.anova_table = anova_table
 
@@ -645,43 +740,16 @@ class AnovaResults:
         return self.summary().__str__()
 
     def summary(self):
-        """create summary results
+        """
+        Create summary results
 
         Returns
         -------
-        summary : summary2.Summary instance
+        summary2.Summary
+            Summary instance containing the Anova table.
         """
         summ = summary2.Summary()
         summ.add_title("Anova")
         summ.add_df(self.anova_table)
 
         return summ
-
-
-if __name__ == "__main__":
-    from statsmodels.formula.api import ols
-
-    # in R
-    # library(car)
-    # write.csv(Moore, "moore.csv", row.names=FALSE)
-
-    moore = pd.read_csv(
-        "moore.csv",
-        skiprows=1,
-        names=["partner_status", "conformity", "fcategory", "fscore"],
-    )
-    moore_lm = ols(
-        "conformity ~ C(fcategory, Sum)*C(partner_status, Sum)", data=moore
-    ).fit()
-
-    mooreB = ols("conformity ~ C(partner_status, Sum)", data=moore).fit()
-
-    # for each term you just want to test vs the model without its
-    # higher-order terms
-
-    # using Monette-Fox slides and Marden class notes for linear algebra /
-    # Reference for Orthogonal Projections/complement in ANOVA:
-    # https://people.math.aau.dk/~rw/Undervisning/MM_BI/
-# Handouts/anova_orthog.pdf
-
-    table = anova_lm(moore_lm, typ=2)

@@ -1,4 +1,6 @@
 import numpy as np
+from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.tsa.interp import dentonm
 
@@ -32,6 +34,33 @@ def test_denton_quarterly2():
     np.testing.assert_almost_equal(x_denton, x_stata, 5)
 
 
-if __name__ == "__main__":
-    import pytest
-    pytest.main([__file__, "-vvs", "-x", "--pdb"])
+def test_denton_freq_qm_matches_benchmark_sums():
+    # Denton benchmarking preserves the low-frequency totals: each block of
+    # k consecutive high-frequency values must sum to its benchmark value.
+    indicator = np.array([10.0, 12.0, 11.0, 9.0, 13.0, 14.0])
+    benchmark = np.array([300.0, 360.0])
+    x = dentonm(indicator, benchmark, freq="qm")
+    assert_allclose(x[0:3].sum(), benchmark[0])
+    assert_allclose(x[3:6].sum(), benchmark[1])
+
+
+def test_denton_freq_other_matches_benchmark_sums():
+    indicator = np.array([10.0, 12.0, 11.0, 9.0, 13.0, 14.0, 15.0, 16.0])
+    benchmark = np.array([300.0, 360.0])
+    x = dentonm(indicator, benchmark, freq="other", k=4)
+    assert_allclose(x[0:4].sum(), benchmark[0])
+    assert_allclose(x[4:8].sum(), benchmark[1])
+
+
+def test_denton_freq_other_requires_k():
+    indicator = np.array([10.0, 12.0, 11.0, 9.0])
+    benchmark = np.array([50.0])
+    with pytest.raises(ValueError, match='k must be supplied'):
+        dentonm(indicator, benchmark, freq="other")
+
+
+def test_denton_invalid_freq_raises():
+    indicator = np.array([10.0, 12.0, 11.0, 9.0])
+    benchmark = np.array([50.0])
+    with pytest.raises(ValueError, match="freq"):
+        dentonm(indicator, benchmark, freq="not-a-freq")

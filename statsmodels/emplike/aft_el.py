@@ -1,21 +1,16 @@
 """
-
-Accelerated Failure Time (AFT) Model with empirical likelihood inference.
+Accelerated Failure Time (AFT) Model with empirical likelihood inference
 
 AFT regression analysis is applicable when the researcher has access
 to a randomly right censored dependent variable, a matrix of exogenous
-variables and an indicatior variable (delta) that takes a value of 0 if the
+variables and an indicator variable (delta) that takes a value of 0 if the
 observation is censored and 1 otherwise.
 
-AFT References
---------------
-
+References
+----------
 Stute, W. (1993). "Consistent Estimation Under Random Censorship when
 Covariables are Present." Journal of Multivariate Analysis.
 Vol. 45. Iss. 1. 89-103
-
-EL and AFT References
----------------------
 
 Zhou, Kim And Bathke. "Empirical Likelihood Analysis for the Heteroskedastic
 Accelerated Failure Time Model." Manuscript:
@@ -24,8 +19,6 @@ URL: www.ms.uky.edu/~mai/research/CasewiseEL20080724.pdf
 Zhou, M. (2005). Empirical Likelihood Ratio with Arbitrarily Censored/
 Truncated Data by EM Algorithm.  Journal of Computational and Graphical
 Statistics. 14:3, 643-656.
-
-
 """
 
 import warnings
@@ -46,17 +39,16 @@ from .descriptive import _OptFuncts
 class OptAFT(_OptFuncts):
     """
     Provides optimization functions used in estimating and conducting
-    inference in an AFT model.
+    inference in an AFT model
 
     Methods
-    ------
-
-    _opt_wtd_nuis_regress:
+    -------
+    _opt_wtd_nuis_regress
         Function optimized over nuisance parameters to compute
         the profile likelihood
 
-    _EM_test:
-        Uses the modified Em algorithm of Zhou 2005 to maximize the
+    _EM_test
+        Uses the modified EM algorithm of Zhou 2005 to maximize the
         likelihood of a parameter vector.
     """
 
@@ -70,10 +62,9 @@ class OptAFT(_OptFuncts):
 
         Parameters
         ----------
-
-        params: 1d array
-            The regression coefficients of the model.  This includes the
-            nuisance and parameters of interests.
+        test_vals : ndarray
+            The regression coefficients of the model, as a 1d array.  This
+            includes the nuisance and parameters of interest.
 
         Returns
         -------
@@ -113,17 +104,45 @@ class OptAFT(_OptFuncts):
 
         Parameters
         ----------
-
         nuisance_params : ndarray
             Vector of values to be used as nuisance params.
-
-        maxiter : int
-            Number of iterations in the EM algorithm for a parameter vector
+        params : ndarray, optional
+            Full vector of regression parameters.  The elements at
+            ``param_nums`` are replaced by ``b0_vals`` and the remaining
+            elements are replaced by ``nuisance_params``.
+        param_nums : list, optional
+            Indices of the parameters being tested at ``b0_vals``.
+        b0_vals : list, optional
+            Hypothesized values for the parameters at ``param_nums``.
+        F : ndarray, optional
+            Kaplan-Meier type weights for the uncensored observations used
+            to initialize the E-step.
+        survidx : ndarray, optional
+            Index array used to select the survival probabilities that
+            correspond to censored observations.
+        uncens_nobs : int, optional
+            Number of uncensored observations.
+        numcensbelow : ndarray, optional
+            Cumulative number of censored observations at or below each
+            observation.
+        km : ndarray, optional
+            Kaplan-Meier estimator for all observations, used to compute the
+            unconstrained (maximum) likelihood.
+        uncensored : ndarray, optional
+            Boolean array indicating which observations are uncensored.
+        censored : ndarray, optional
+            Boolean array indicating which observations are censored.
+        maxiter : int, optional
+            Number of iterations in the EM algorithm for a parameter vector.
+        ftol : float, optional
+            Function tolerance used to determine convergence of the EM
+            algorithm.
 
         Returns
         -------
-        -2 ''*'' log likelihood ratio at hypothesized values and
-        nuisance params
+        llr : float
+            -2 times the log likelihood ratio at the hypothesized values and
+            nuisance params.
 
         Notes
         -----
@@ -176,49 +195,53 @@ class OptAFT(_OptFuncts):
     def _ci_limits_beta(self, b0, param_num=None):
         """
         Returns the difference between the log likelihood for a
-        parameter and some critical value.
+        parameter and some critical value
 
         Parameters
         ----------
-        b0: float
+        b0 : float
             Value of a regression parameter
-        param_num : int
+        param_num : int, optional
             Parameter index of b0
+
+        Returns
+        -------
+        diff : float
+            The difference between the log likelihood ratio at b0 and a
+            pre-specified value.
         """
         return self.test_beta([b0], [param_num])[0] - self.r0
 
 
 class emplikeAFT:
     """
-
-    Class for estimating and conducting inference in an AFT model.
+    Class for estimating and conducting inference in an AFT model
 
     Parameters
     ----------
-
-    endog: nx1 array
+    endog : ndarray
         Response variables that are subject to random censoring
 
-    exog: nxk array
+    exog : ndarray
         Matrix of covariates
 
-    censors: nx1 array
-        array with entries 0 or 1.  0 indicates a response was
+    censors : array_like
+        Array with entries 0 or 1.  0 indicates a response was
         censored.
 
     Attributes
     ----------
-    nobs : float
+    nobs : int
         Number of observations
     endog : ndarray
-        Endog attay
+        Endog array
     exog : ndarray
         Exogenous variable matrix
-    censors
+    censors : ndarray
         Censors array but sets the max(endog) to uncensored
-    nvar : float
+    nvar : int
         Number of exogenous variables
-    uncens_nobs : float
+    uncens_nobs : int
         Number of uncensored observations
     uncens_endog : ndarray
         Uncensored response variables
@@ -227,16 +250,16 @@ class emplikeAFT:
 
     Methods
     -------
+    fit
+        Fits the model and returns an AFTResults instance, whose
+        ``params`` and ``test_beta`` methods fit model parameters and
+        test if beta = b0 for any vector b0, respectively.
 
-    params:
-        Fits model parameters
-
-    test_beta:
-        Tests if beta = b0 for any vector b0.
+    predict
+        Returns the linear predictor, params multiplied by endog.
 
     Notes
     -----
-
     The data is immediately sorted in order of increasing endogenous
     variables
 
@@ -262,15 +285,15 @@ class emplikeAFT:
 
     def _is_tied(self, endog, censors):
         """
-        Indicated if an observation takes the same value as the next
-        ordered observation.
+        Indicate if an observation takes the same value as the next
+        ordered observation
 
         Parameters
         ----------
         endog : ndarray
-            Models endogenous variable
+            Model's endogenous variable
         censors : ndarray
-            arrat indicating a censored array
+            Array indicating censored observations
 
         Returns
         -------
@@ -286,15 +309,21 @@ class emplikeAFT:
 
     def _km_w_ties(self, tie_indic, untied_km):
         """
-        Computes KM estimator value at each observation, taking into acocunt
-        ties in the data.
+        Computes KM estimator value at each observation, taking into account
+        ties in the data
 
         Parameters
         ----------
-        tie_indic: 1d array
+        tie_indic : ndarray
             Indicates if the i'th observation is the same as the ith +1
-        untied_km: 1d array
+        untied_km : ndarray
             Km estimates at each observation assuming no ties.
+
+        Returns
+        -------
+        km : ndarray
+            The Kaplan-Meier estimates at each observation, adjusted so
+            that tied observations share the same estimate.
         """
         # TODO: Vectorize, even though it is only 1 pass through for any
         # function call
@@ -315,26 +344,26 @@ class emplikeAFT:
 
     def _make_km(self, endog, censors):
         """
-
         Computes the Kaplan-Meier estimate for the weights in the AFT model
 
         Parameters
         ----------
-        endog: nx1 array
+        endog : ndarray
             Array of response variables
-        censors: nx1 array
+        censors : ndarray
             Censor-indicating variable
 
         Returns
         -------
-        Kaplan Meier estimate for each observation
+        weights : ndarray
+            The Kaplan-Meier estimate for each observation
 
         Notes
         -----
-
         This function makes calls to _is_tied and km_w_ties to handle ties in
-        the data.If a censored observation and an uncensored observation has
-        the same value, it is assumed that the uncensored happened first.
+        the data. If a censored observation and an uncensored observation
+        have the same value, it is assumed that the uncensored observation
+        happened first.
         """
         nobs = self.nobs
         num = nobs - (np.arange(nobs) + 1.0)
@@ -348,17 +377,12 @@ class emplikeAFT:
 
     def fit(self):
         """
-
         Fits an AFT model and returns results instance
-
-        Parameters
-        ----------
-        None
-
 
         Returns
         -------
-        Results instance.
+        AFTResults
+            Results instance for the fitted AFT model.
 
         Notes
         -----
@@ -367,28 +391,55 @@ class emplikeAFT:
         return AFTResults(self)
 
     def predict(self, params, endog=None):
+        """
+        Return the linear predictor, params multiplied by endog
+
+        Parameters
+        ----------
+        params : ndarray
+            Regression coefficients used to form the prediction.
+        endog : ndarray, optional
+            Values of the response variable at which to form the
+            prediction.  If None, the model's endog is used.  Default is
+            None.
+
+        Returns
+        -------
+        ndarray
+            The predicted values, endog dot params.
+        """
         if endog is None:
             endog = self.endog
         return np.dot(endog, params)
 
 
 class AFTResults(OptAFT):
+    """
+    Results class for an accelerated failure time model fit via
+    empirical likelihood.
+
+    Parameters
+    ----------
+    model : emplikeAFT
+        The fitted AFT model.
+
+    Attributes
+    ----------
+    model : emplikeAFT
+        The AFT model used to compute the results.
+    """
+
     def __init__(self, model):
         self.model = model
 
     def params(self):
         """
-
-        Fits an AFT model and returns parameters.
-
-        Parameters
-        ----------
-        None
-
+        Fits an AFT model and returns parameters
 
         Returns
         -------
-        Fitted params
+        ndarray
+            The fitted regression parameters.
 
         Notes
         -----
@@ -401,46 +452,40 @@ class AFTResults(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30, print_weights=1):
+    def test_beta(self, b0_vals, param_nums, ftol=10**-5, maxiter=30):
         """
         Returns the profile log likelihood for regression parameters
-        'param_num' at 'b0_vals.'
+        'param_nums' at 'b0_vals'
 
         Parameters
         ----------
-        b0_vals : list
+        b0_vals : list of float
             The value of parameters to be tested
-        param_num : list
+        param_nums : list of int
             Which parameters to be tested
         maxiter : int, optional
             How many iterations to use in the EM algorithm.  Default is 30
         ftol : float, optional
             The function tolerance for the EM optimization.
-            Default is 10''**''-5
-        print_weights : bool
-            If true, returns the weights tate maximize the profile
-            log likelihood. Default is False
+            Default is ``10**-5``
 
         Returns
         -------
-
-        test_results : tuple
-            The log-likelihood and p-pvalue of the test.
+        test_results : tuple of float
+            The log-likelihood and p-value of the test.
 
         Notes
         -----
-
         The function will warn if the EM reaches the maxiter.  However, when
         optimizing over nuisance parameters, it is possible to reach a
         maximum number of inner iterations for a specific value for the
-        nuisance parameters while the resultsof the function are still valid.
-        This usually occurs when the optimization over the nuisance parameters
-        selects parameter values that yield a log-likihood ratio close to
-        infinity.
+        nuisance parameters while the results of the function are still
+        valid.  This usually occurs when the optimization over the nuisance
+        parameters selects parameter values that yield a log-likelihood
+        ratio close to infinity.
 
         Examples
         --------
-
         >>> import statsmodels.api as sm
         >>> import numpy as np
 
@@ -454,7 +499,7 @@ class AFTResults(OptAFT):
         >>> res
         (1.4657739632606308, 0.22601365256959183)
 
-        #Test slope is 0 in  model with intercept
+        # Test slope is 0 in a model with intercept
 
         >>> data=sm.datasets.heart.load()
         >>> y = np.log10(data.endog)
@@ -474,7 +519,7 @@ class AFTResults(OptAFT):
         uncens_exog = exog[uncensored, :]
         reg_model = OLS(uncens_endog, uncens_exog).fit()
         llr, pval, new_weights = reg_model.el_test(
-            b0_vals, param_nums, return_weights=True
+            b0_vals, param_nums, return_weights=True, result_object=False
         )  # Needs to be changed
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs
@@ -546,19 +591,24 @@ class AFTResults(OptAFT):
         sig : float, optional
             Significance level.  Default is .05
 
+        Returns
+        -------
+        Interval : tuple of float
+            Lower and upper confidence limit
+
         Notes
         -----
         If the function returns f(a) and f(b) must have different signs,
         consider widening the search area by adjusting beta_low and
         beta_high.
 
-        Also note that this process is computational intensive.  There
+        Also note that this process is computationally intensive.  There
         are 4 levels of optimization/solving.  From outer to inner:
 
         1) Solving so that llr-critical value = 0
         2) maximizing over nuisance parameters
-        3) Using  EM at each value of nuisamce parameters
-        4) Using the _modified_Newton optimizer at each iteration
+        3) Using EM at each value of nuisance parameters
+        4) Using the _modif_newton optimizer at each iteration
            of the EM algorithm.
 
         Also, for very unlikely nuisance parameters, it is possible for

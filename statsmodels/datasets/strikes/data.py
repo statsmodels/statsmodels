@@ -12,7 +12,7 @@ published by the Bureau of Labor Statistics.
 ::
 
     Kennan, J. 1985. "The duration of contract strikes in US manufacturing.
-        `Journal of Econometrics` 28.1, 5-28.
+        *Journal of Econometrics* 28.1, 5-28.
 """
 
 DESCRSHORT = """Contains data on the length of strikes in US manufacturing and
@@ -44,7 +44,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0)
@@ -57,7 +58,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 

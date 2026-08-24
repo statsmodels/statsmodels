@@ -8,9 +8,35 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose
 
+from statsmodels.tools.validation import string_like
+
 
 def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
     """
+    Compute a MOVER confidence interval for a contrast of two statistics
+
+    The "Method of Variance Estimates Recovery" (MOVER) combines the
+    confidence intervals of two statistics to obtain a confidence
+    interval for their difference, sum or ratio.
+
+    Parameters
+    ----------
+    stat1 : float
+        First statistic.
+    stat2 : float
+        Second statistic.
+    ci1 : tuple
+        Lower and upper confidence limits for `stat1`.
+    ci2 : tuple
+        Lower and upper confidence limits for `stat2`.
+    contrast : {"diff", "sum", "ratio"}, optional
+        The contrast between `stat1` and `stat2` for which the
+        confidence interval is computed.
+
+    Returns
+    -------
+    ci : tuple
+        Lower and upper confidence limits for the contrast.
 
     References
     ----------
@@ -30,6 +56,9 @@ def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
        about Effect Measures: A General Approach.” Statistics in Medicine 27
        (10): 1693-1702. https://doi.org/10.1002/sim.3095.
     """
+    contrast = string_like(
+        contrast, "contrast", options=("diff", "sum", "ratio"), lower=False
+    )
 
     if contrast == "diff":
         stat = stat1 - stat2
@@ -43,7 +72,7 @@ def _mover_confint(stat1, stat2, ci1, ci2, contrast="diff"):
         upp_half = np.sqrt((stat1 - ci1[1])**2 + (stat2 - ci2[1])**2)
         ci = (stat - low_half, stat + upp_half)
 
-    elif contrast == "ratio":
+    else:  # contrast == "ratio"
         # stat = stat1 / stat2
         prod = stat1 * stat2
         term1 = stat2**2 - (ci2[1] - stat2)**2

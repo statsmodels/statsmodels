@@ -11,36 +11,38 @@ from statsmodels.compat.python import lzip
 import numpy as np
 
 descriptions = {
-    "HC0": "Standard Errors are heteroscedasticity robust (HC0)",
-    "HC1": "Standard Errors are heteroscedasticity robust (HC1)",
-    "HC2": "Standard Errors are heteroscedasticity robust (HC2)",
-    "HC3": "Standard Errors are heteroscedasticity robust (HC3)",
-    "HAC": "Standard Errors are heteroscedasticity and autocorrelation "
-           "robust (HAC) using {maxlags} lags and "
-           "{correction} small sample correction",
-    "fixed_scale": "Standard Errors are based on fixed scale",
-    "cluster": "Standard Errors are robust to cluster correlation (cluster)",
-    "HAC-Panel": "Standard Errors are robust to "
-                 "cluster correlation (HAC-Panel)",
-    "HAC-Groupsum": "Driscoll and Kraay Standard Errors are robust to "
-                    "cluster correlation (HAC-Groupsum)",
-    "none": "Covariance matrix not calculated.",
-    "approx": "Covariance matrix calculated using numerical ({approx_type}) "
-              "differentiation.",
-    "OPG": "Covariance matrix calculated using the outer product of "
-           "gradients ({approx_type}).",
-    "OIM": "Covariance matrix calculated using the observed information "
-           "matrix ({approx_type}) described in Harvey (1989).",
-    "robust": "Quasi-maximum likelihood covariance matrix used for "
-              "robustness to some misspecifications; calculated using "
-              "numerical ({approx_type}) differentiation.",
-    "robust-OIM": "Quasi-maximum likelihood covariance matrix used for "
-                  "robustness to some misspecifications; calculated using the "
-                  "observed information matrix ({approx_type}) described in "
-                  "Harvey (1989).",
-    "robust-approx": "Quasi-maximum likelihood covariance matrix used for "
-                     "robustness to some misspecifications; calculated using "
-                     "numerical ({approx_type}) differentiation.",
+    'HC0': 'Standard Errors are heteroscedasticity robust (HC0)',
+    'HC1': 'Standard Errors are heteroscedasticity robust (HC1)',
+    'HC2': 'Standard Errors are heteroscedasticity robust (HC2)',
+    'HC3': 'Standard Errors are heteroscedasticity robust (HC3)',
+    'HAC': 'Standard Errors are heteroscedasticity and autocorrelation '
+           'robust (HAC) using {maxlags} lags and '
+           '{correction} small sample correction',
+    'fixed_scale': 'Standard Errors are based on fixed scale',
+    'cluster': 'Standard Errors are robust to cluster correlation (CRV1)',
+    'cluster-crv3': 'Standard Errors are robust to cluster correlation (CRV3)',
+    'cluster-jk': 'Standard Errors are robust to cluster correlation',
+    'HAC-Panel': 'Standard Errors are robust to '
+                 'cluster correlation (HAC-Panel)',
+    'HAC-Groupsum': 'Driscoll and Kraay Standard Errors are robust to '
+                    'cluster correlation (HAC-Groupsum)',
+    'none': 'Covariance matrix not calculated.',
+    'approx': 'Covariance matrix calculated using numerical ({approx_type}) '
+              'differentiation.',
+    'OPG': 'Covariance matrix calculated using the outer product of '
+           'gradients ({approx_type}).',
+    'OIM': 'Covariance matrix calculated using the observed information '
+           'matrix ({approx_type}) described in Harvey (1989).',
+    'robust': 'Quasi-maximum likelihood covariance matrix used for '
+              'robustness to some misspecifications; calculated using '
+              'numerical ({approx_type}) differentiation.',
+    'robust-OIM': 'Quasi-maximum likelihood covariance matrix used for '
+                  'robustness to some misspecifications; calculated using the '
+                  'observed information matrix ({approx_type}) described in '
+                  'Harvey (1989).',
+    'robust-approx': 'Quasi-maximum likelihood covariance matrix used for '
+                     'robustness to some misspecifications; calculated using '
+                     'numerical ({approx_type}) differentiation.',
 }
 
 
@@ -51,10 +53,12 @@ def normalize_cov_type(cov_type):
     Parameters
     ----------
     cov_type : str
+        The covariance type to normalize.
 
     Returns
     -------
-    normalized_cov_type : str
+    str
+        The normalized covariance type.
     """
     if cov_type == "nw-panel":
         cov_type = "hac-panel"
@@ -64,18 +68,18 @@ def normalize_cov_type(cov_type):
 
 
 def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
-    """create new results instance with robust covariance as default
+    """Create new results instance with robust covariance as default
 
     Parameters
     ----------
-    cov_type : str
-        the type of robust sandwich estimator to use. see Notes below
-    use_t : bool
+    cov_type : str, optional
+        The type of robust sandwich estimator to use. See Notes below.
+    use_t : bool, optional
         If true, then the t distribution is used for inference.
         If false, then the normal distribution is used.
     kwds : depends on cov_type
         Required or optional arguments for robust covariance calculation.
-        see Notes below
+        See Notes below.
 
     Returns
     -------
@@ -108,19 +112,19 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
     - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
-      ``maxlags`` :  integer, required
+      ``maxlags`` : int, required
         number of lags to use
 
-      ``kernel`` : {callable, str}, optional
-        kernels currently available kernels are ['bartlett', 'uniform'],
+      ``kernel`` : callable or str, optional
+        currently available kernels are ['bartlett', 'uniform'],
         default is Bartlett
 
       ``use_correction``: bool, optional
         If true, use small sample correction
 
-    - 'cluster': clustered covariance estimator
+    - 'cluster': clustered covariance estimator (CRV1)
 
-      ``groups`` : array_like[int], required :
+      ``groups`` : array_like of int, required
         Integer-valued index of clusters or groups.
 
       ``use_correction``: bool, optional
@@ -139,11 +143,70 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
         adjusted. When `use_t` is also True, then pvalues are
         computed using the Student's t distribution using the
         corrected values. These may differ substantially from
-        p-values based on the normal is the number of groups is
+        p-values based on the normal if the number of groups is
         small.
         If False, then `df_resid` of the results instance is not
         adjusted.
 
+    - 'cluster-crv3': clustered covariance estimator (CRV3)
+
+      ``groups`` : array_like of int, required
+        Integer-valued index of clusters or groups.
+
+      ``use_correction``: bool, optional
+        If True the sandwich covariance is calculated with a small
+        sample correction.
+        If False the sandwich covariance is calculated without
+        small sample correction.
+
+      ``df_correction``: bool, optional
+        If True (default), then the degrees of freedom for the
+        inferential statistics and hypothesis tests, such as
+        pvalues, f_pvalue, conf_int, and t_test and f_test, are
+        based on the number of groups minus one instead of the
+        total number of observations minus the number of explanatory
+        variables. `df_resid` of the results instance is also
+        adjusted. When `use_t` is also True, then pvalues are
+        computed using the Student's t distribution using the
+        corrected values. These may differ substantially from
+        p-values based on the normal if the number of groups is
+        small.
+        If False, then `df_resid` of the results instance is not
+        adjusted.
+
+      Currently only supported for linear regression models (OLS, WLS)
+      that expose `wexog`/`wendog`; not available for GLM or discrete
+      models.
+
+    - 'cluster-jk': clustered covariance estimator via the cluster-jk
+
+      ``groups`` : array_like of int, required
+        Integer-valued index of clusters or groups.
+
+      ``use_correction``: bool, optional
+        If True the sandwich covariance is calculated with a small
+        sample correction.
+        If False the sandwich covariance is calculated without
+        small sample correction.
+
+      ``df_correction``: bool, optional
+        If True (default), then the degrees of freedom for the
+        inferential statistics and hypothesis tests, such as
+        pvalues, f_pvalue, conf_int, and t_test and f_test, are
+        based on the number of groups minus one instead of the
+        total number of observations minus the number of explanatory
+        variables. `df_resid` of the results instance is also
+        adjusted. When `use_t` is also True, then pvalues are
+        computed using the Student's t distribution using the
+        corrected values. These may differ substantially from
+        p-values based on the normal if the number of groups is
+        small.
+        If False, then `df_resid` of the results instance is not
+        adjusted.
+
+      Currently only supported for linear regression models (OLS, WLS)
+      that expose `wexog`/`wendog`; not available for GLM or discrete
+      models.
 
     - 'hac-groupsum': Driscoll and Kraay, heteroscedasticity and
       autocorrelation robust covariance for panel data
@@ -151,13 +214,13 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
       ``time`` : array_like, required
         index of time periods
-      ``maxlags`` : integer, required
+      ``maxlags`` : int, required
         number of lags to use
-      ``kernel`` : {callable, str}, optional
+      ``kernel`` : callable or str, optional
         The available kernels are ['bartlett', 'uniform']. The default is
         Bartlett.
       ``use_correction`` : {False, 'hac', 'cluster'}, optional
-        If False the the sandwich covariance is calculated without small
+        If False the sandwich covariance is calculated without small
         sample correction. If `use_correction = 'cluster'` (default),
         then the same small sample correction as in the case of
         `covtype='cluster'` is used.
@@ -171,13 +234,13 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
       specified by group indicators or by increasing time periods. One of
       ``groups`` or ``time`` is required. # TODO: we need more options here
 
-      ``groups`` : array_like[int]
+      ``groups`` : array_like of int
         indicator for groups
-      ``time`` : array_like[int]
+      ``time`` : array_like
         index of time periods
       ``maxlags`` : int, required
         number of lags to use
-      ``kernel`` : {callable, str}, optional
+      ``kernel`` : callable or str, optional
         Available kernels are ['bartlett', 'uniform'], default
         is Bartlett
       ``use_correction`` : {False, 'hac', 'cluster'}, optional
@@ -228,12 +291,14 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
     res.use_t = use_t
 
     adjust_df = False
-    if cov_type in ["cluster", "hac-panel", "hac-groupsum"]:
+    if cov_type.lower() in [
+        "cluster", "cluster-crv3", "cluster-jk", "hac-panel", "hac-groupsum"
+    ]:
         df_correction = kwds.get("df_correction", None)
         # TODO: check also use_correction, do I need all combinations?
 
-        if df_correction is not False:  # i.e. in [None, True]:
-            # user did not explicitely set it to False
+        if df_correction is not False:  # i.e., in [None, True]:
+            # user did not explicitly set it to False
 
             adjust_df = True
     res.cov_kwds["adjust_df"] = adjust_df
@@ -272,11 +337,14 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
             weights_func=weights_func,
             use_correction=use_correction,
         )
-    elif cov_type.lower() == "cluster":
+    elif cov_type.lower() in ("cluster", "cluster-crv3", "cluster-jk"):
         # cluster robust standard errors, one- or two-way
+
+        crv_type = cov_type.lower()
 
         groups = kwds["groups"]
         if not hasattr(groups, "shape"):
+            groups = [np.squeeze(np.asarray(group)) for group in groups]
             groups = np.asarray(groups).T
         if groups.ndim >= 2:
             groups = groups.squeeze()
@@ -290,7 +358,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
 
                 self.n_groups = n_groups = len(np.unique(groups))
             res.cov_params_default = sw.cov_cluster(
-                self, groups, use_correction=use_correction
+                self, groups, use_correction=use_correction, crv_type=crv_type
             )
         elif groups.ndim == 2:
             if hasattr(groups, "values"):
@@ -306,11 +374,11 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
             # Note: sw.cov_cluster_2groups has 3 returns
 
             res.cov_params_default = sw.cov_cluster_2groups(
-                self, groups, use_correction=use_correction
+                self, groups, use_correction=use_correction, crv_type=crv_type
             )[0]
         else:
             raise ValueError("only two groups are supported")
-        res.cov_kwds["description"] = descriptions["cluster"]
+        res.cov_kwds["description"] = descriptions[crv_type]
     elif cov_type.lower() == "hac-panel":
         # cluster robust standard errors
 

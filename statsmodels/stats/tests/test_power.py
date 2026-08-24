@@ -104,6 +104,7 @@ class CheckPowerMixin:
             # yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
 
+    @pytest.mark.thread_unsafe(reason="Uses matplotlib")
     @pytest.mark.matplotlib
     def test_power_plot(self, close_figures):
         if self.cls in [smp.FTestPower, smp.FTestPowerF2]:
@@ -919,6 +920,139 @@ def test_power_solver():
             )
 
 
+def test_solve_power_no_solution_returns_nan():
+    # GH#9378: when the power equation has no solution the root finder
+    # cannot converge. Previously solve_power still returned the last value
+    # the solver evaluated -- a bracket bound such as 10 -- which
+    # masqueraded as a valid sample size. It should return nan instead,
+    # while still warning that it failed to converge.
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+    tt = smp.TTestPower()
+
+    # 'smaller' alternative with a positive effect size and a target power
+    # below alpha is not intercepted by the up-front sign check, but the
+    # target exceeds the attainable maximum (about 0.018 at nobs=2), so
+    # the root finder fails.
+    with pytest.warns(
+        ConvergenceWarning,
+        match=r"last value evaluated by the root finder was \[?\d",
+    ):
+        val = tt.solve_power(
+            effect_size=0.5,
+            nobs=None,
+            alpha=0.05,
+            power=0.03,
+            alternative="smaller",
+        )
+    assert np.isnan(val)
+    assert_equal(tt.cache_fit_res[0], 0)
+
+    # a solvable case is unaffected and still returns a finite sample size
+    val = tt.solve_power(
+        effect_size=0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.8,
+        alternative="larger",
+    )
+    assert np.isfinite(val)
+
+
+def test_solve_power_impossible_one_sided_raises():
+    # GH#9378: a one-sided alternative with an effect size of the opposite
+    # sign keeps the attained power below alpha for any sample size, so
+    # solving for a sample size with power >= alpha is impossible. Such
+    # requests are intercepted up front with an informative error instead
+    # of a ConvergenceWarning and nan from the root finder.
+    tt = smp.TTestPower()
+    ttind = smp.TTestIndPower()
+    nip = smp.NormalIndPower()
+
+    match = "No solution exists"
+    with pytest.raises(ValueError, match=match):
+        tt.solve_power(
+            effect_size=0.5,
+            nobs=None,
+            alpha=0.05,
+            power=0.8,
+            alternative="smaller",
+        )
+    with pytest.raises(ValueError, match=match):
+        tt.solve_power(
+            effect_size=-0.5,
+            nobs=None,
+            alpha=0.05,
+            power=0.8,
+            alternative="larger",
+        )
+    with pytest.raises(ValueError, match=match):
+        ttind.solve_power(
+            effect_size=0.5,
+            nobs1=None,
+            alpha=0.05,
+            power=0.8,
+            ratio=1,
+            alternative="smaller",
+        )
+    with pytest.raises(ValueError, match=match):
+        nip.solve_power(
+            effect_size=0.5,
+            nobs1=None,
+            alpha=0.05,
+            power=0.8,
+            ratio=1,
+            alternative="smaller",
+        )
+    with pytest.raises(ValueError, match=match):
+        ttind.solve_power(
+            effect_size=0.5,
+            nobs1=10,
+            alpha=0.05,
+            power=0.8,
+            ratio=None,
+            alternative="smaller",
+        )
+
+    # matching signs still solve
+    res = tt.solve_power(
+        effect_size=0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.8,
+        alternative="larger",
+    )
+    assert_almost_equal(res, 26.1375, decimal=3)
+    res = tt.solve_power(
+        effect_size=-0.5, nobs=None, alpha=0.05, power=0.8,
+        alternative="smaller",
+    )
+    assert_almost_equal(res, 26.1375, decimal=3)
+
+    # a wrong-signed effect size with target power below alpha can have a
+    # valid solution and is not intercepted
+    res = tt.solve_power(
+        effect_size=0.5, nobs=None, alpha=0.05, power=0.01,
+        alternative="smaller",
+    )
+    roundtrip = tt.power(
+        effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller"
+    )
+    assert_almost_equal(roundtrip, 0.01, decimal=6)
+
+    # solving for other parameters is not affected by the sign check
+    res = tt.solve_power(
+        effect_size=0.5, nobs=25, alpha=None, power=0.8,
+        alternative="smaller",
+    )
+    assert np.isfinite(res)
+    res = tt.solve_power(
+        effect_size=None, nobs=25, alpha=0.05, power=0.8,
+        alternative="smaller",
+    )
+    assert res < 0
+
+
 # TODO: can something useful be made from this?
 @pytest.mark.xfail(reason="Known failure on modern SciPy >= 0.10", strict=True)
 def test_power_solver_warn():
@@ -977,3 +1111,24 @@ def test_normal_sample_size_one_tail():
     nobs_with_zeros = smp.normal_sample_size_one_tail(5, powers, alphas, 2, 2)
     # check_nans = np.isnan(zero_mask) == np.isnan(nobs_with_nans)
     assert_array_equal(nobs_with_zeros[powers <= alphas], 0)
+
+
+@pytest.mark.parametrize(
+    "power_func",
+    [
+        lambda alternative: smp.ttest_power(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power_het(0.5, 20, 0.05, alternative=alternative),
+    ],
+    ids=["ttest_power", "normal_power", "normal_power_het"],
+)
+def test_alternative_deprecated_alias(power_func):
+    # the undocumented "2s" short form still works but warns, and is
+    # equivalent to spelling out "two-sided"
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        power_alias = power_func("2s")
+    power_canonical = power_func("two-sided")
+    assert power_alias == power_canonical
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        power_func("bogus")

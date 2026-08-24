@@ -21,16 +21,23 @@ class UnivariateGamPenalty(Penalty):
     ----------
     univariate_smoother : instance
         instance of univariate smoother or spline class
-    alpha : float
+    alpha : float, optional
         default penalty weight, alpha can be provided to each method
-    weights:
-        TODO: not used and verified, might be removed
+    weights : array_like, optional
+        Not used and not verified, might be removed.
 
     Attributes
     ----------
-    Parameters are stored, additionally
-    nob s: The number of samples used during the estimation
-    n_columns : number of columns in smoother basis
+    univariate_smoother : instance
+        instance of univariate smoother or spline class
+    alpha : float
+        default penalty weight, alpha can be provided to each method
+    weights : array_like
+        Not used and not verified, might be removed.
+    nobs : int
+        The number of samples used during the estimation.
+    n_columns : int
+        Number of columns in smoother basis.
     """
 
     def __init__(self, univariate_smoother, alpha=1, weights=1):
@@ -41,13 +48,14 @@ class UnivariateGamPenalty(Penalty):
         self.n_columns = self.univariate_smoother.dim_basis
 
     def func(self, params, alpha=None):
-        """evaluate penalization at params
+        """
+        Evaluate penalization at params
 
         Parameters
         ----------
         params : ndarray
             coefficients for the spline basis in the regression model
-        alpha : float
+        alpha : float, optional
             default penalty weight
 
         Returns
@@ -62,13 +70,14 @@ class UnivariateGamPenalty(Penalty):
         return alpha * f / self.nobs
 
     def deriv(self, params, alpha=None):
-        """evaluate derivative of penalty with respect to params
+        """
+        Evaluate derivative of penalty with respect to params
 
         Parameters
         ----------
         params : ndarray
             coefficients for the spline basis in the regression model
-        alpha : float
+        alpha : float, optional
             default penalty weight
 
         Returns
@@ -84,13 +93,14 @@ class UnivariateGamPenalty(Penalty):
         return d
 
     def deriv2(self, params, alpha=None):
-        """evaluate second derivative of penalty with respect to params
+        """
+        Evaluate second derivative of penalty with respect to params
 
         Parameters
         ----------
         params : ndarray
             coefficients for the spline basis in the regression model
-        alpha : float
+        alpha : float, optional
             default penalty weight
 
         Returns
@@ -106,19 +116,20 @@ class UnivariateGamPenalty(Penalty):
         return d2
 
     def penalty_matrix(self, alpha=None):
-        """penalty matrix for the smooth term of a GAM
+        """
+        Penalty matrix for the smooth term of a GAM
 
         Parameters
         ----------
-        alpha : list of floats or None
-            penalty weights
+        alpha : float, optional
+            penalty weight
 
         Returns
         -------
-        penalty matrix
+        penalty_matrix : ndarray
             square penalty matrix for quadratic penalization. The number
             of rows and columns are equal to the number of columns in the
-            smooth terms, i.e. the number of parameters for this smooth
+            smooth terms, i.e., the number of parameters for this smooth
             term in the regression model
         """
         if alpha is None:
@@ -138,25 +149,36 @@ class MultivariateGamPenalty(Penalty):
     alpha : list of float
         default penalty weight, list with length equal to the number of smooth
         terms. ``alpha`` can also be provided to each method.
-    weights : array_like
+    weights : array_like, optional
         currently not used
         is a list of doubles of the same length as alpha or a list
         of ndarrays where each component has the length equal to the number
         of columns in that component
-    start_idx : int
+    start_idx : int, optional
         number of parameters that come before the smooth terms. If the model
         has a linear component, then the parameters for the smooth components
         start at ``start_index``.
 
     Attributes
     ----------
-    Parameters are stored, additionally
-    nob s: The number of samples used during the estimation
-
-    dim_basis : number of columns of additive smoother. Number of columns
+    multivariate_smoother : instance
+        instance of additive smoother or spline class
+    alpha : list of float
+        default penalty weight, list with length equal to the number of smooth
+        terms
+    weights : array_like
+        currently not used
+    start_idx : int
+        number of parameters that come before the smooth terms
+    nobs : int
+        The number of samples used during the estimation.
+    dim_basis : int
+        number of columns of additive smoother. Number of columns
         in all smoothers.
-    k_variables : number of smooth terms
-    k_params : total number of parameters in the regression model
+    k_variables : int
+        number of smooth terms
+    k_params : int
+        total number of parameters in the regression model
     """
 
     def __init__(self, multivariate_smoother, alpha, weights=None, start_idx=0):
@@ -164,8 +186,8 @@ class MultivariateGamPenalty(Penalty):
         if len(multivariate_smoother.smoothers) != len(alpha):
             msg = (
                 "all the input values should be of the same length."
-                " len(smoothers)=%d, len(alphas)=%d"
-            ) % (len(multivariate_smoother.smoothers), len(alpha))
+                f" len(smoothers)={len(multivariate_smoother.smoothers):d}, len(alphas)={len(alpha):d}"
+            )
             raise ValueError(msg)
 
         self.multivariate_smoother = multivariate_smoother
@@ -207,13 +229,14 @@ class MultivariateGamPenalty(Penalty):
             self.gp.append(gp)
 
     def func(self, params, alpha=None):
-        """evaluate penalization at params
+        """
+        Evaluate penalization at params
 
         Parameters
         ----------
         params : ndarray
             coefficients in the regression model
-        alpha : float or list of floats
+        alpha : list of float, optional
             penalty weights
 
         Returns
@@ -232,13 +255,14 @@ class MultivariateGamPenalty(Penalty):
         return cost
 
     def deriv(self, params, alpha=None):
-        """evaluate derivative of penalty with respect to params
+        """
+        Evaluate derivative of penalty with respect to params
 
         Parameters
         ----------
         params : ndarray
             coefficients in the regression model
-        alpha : list of floats or None
+        alpha : list of float, optional
             penalty weights
 
         Returns
@@ -257,13 +281,14 @@ class MultivariateGamPenalty(Penalty):
         return np.concatenate(grad)
 
     def deriv2(self, params, alpha=None):
-        """evaluate second derivative of penalty with respect to params
+        """
+        Evaluate second derivative of penalty with respect to params
 
         Parameters
         ----------
         params : ndarray
             coefficients in the regression model
-        alpha : list of floats or None
+        alpha : list of float, optional
             penalty weights
 
         Returns
@@ -282,16 +307,17 @@ class MultivariateGamPenalty(Penalty):
         return block_diag(*deriv2)
 
     def penalty_matrix(self, alpha=None):
-        """penalty matrix for generalized additive model
+        """
+        Penalty matrix for generalized additive model
 
         Parameters
         ----------
-        alpha : list of floats or None
+        alpha : list of float, optional
             penalty weights
 
         Returns
         -------
-        penalty matrix
+        penalty_matrix : ndarray
             block diagonal, square penalty matrix for quadratic penalization.
             The number of rows and columns are equal to the number of
             parameters in the regression model ``k_params``.

@@ -10,10 +10,12 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from statsmodels.tools.validation import string_like
+
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted
 class PredictionResultsBase:
-    """Based class for get_prediction results"""
+    """Base class for get_prediction results"""
 
     def __init__(
         self,
@@ -57,32 +59,41 @@ class PredictionResultsBase:
 
         Parameters
         ----------
-        value : array_like
-            value under the null hypothesis
-        alternative : str
-            'two-sided', 'larger', 'smaller'
+        value : array_like, optional
+            Value under the null hypothesis.
+        alternative : str, optional
+            'two-sided', 'larger', 'smaller'.
 
         Returns
         -------
         stat : ndarray
-            test statistic
+            The test statistic.
         pvalue : ndarray
-            p-value of the hypothesis test, the distribution is given by
+            The p-value of the hypothesis test, the distribution is given by
             the attribute of the instance, specified in `__init__`. Default
             if not specified is the normal distribution.
-
         """
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated={
+                "2-sided": "two-sided",
+                "2s": "two-sided",
+                "l": "larger",
+                "s": "smaller",
+            },
+        )
         # assumes symmetric distribution
         stat = (self.predicted - value) / self.se
 
-        if alternative in ["two-sided", "2-sided", "2s"]:
+        if alternative == "two-sided":
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args) * 2
-        elif alternative in ["larger", "l"]:
+        elif alternative == "larger":
             pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative in ["smaller", "s"]:
+        elif alternative == "smaller":
             pvalue = self.dist.cdf(stat, *self.dist_args)
-        else:
-            raise ValueError("invalid alternative")
         return stat, pvalue
 
     def _conf_int_generic(self, center, se, alpha, dist_args=None):
@@ -99,17 +110,16 @@ class PredictionResultsBase:
         return ci
 
     def conf_int(self, *, alpha=0.05, **kwds):
-        """Confidence interval for the predicted value.
+        """Confidence interval for the predicted value
 
         Parameters
         ----------
         alpha : float, optional
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
-
         kwds : extra keyword arguments
             Ignored in base class, only for compatibility, consistent signature
-            with subclasses
+            with subclasses.
 
         Returns
         -------
@@ -134,7 +144,8 @@ class PredictionResultsBase:
 
         Returns
         -------
-        pandas DataFrame with columns 'predicted', 'se', 'ci_lower', 'ci_upper'
+        DataFrame
+            A DataFrame with columns 'predicted', 'se', 'ci_lower', 'ci_upper'.
         """
         ci = self.conf_int(alpha=alpha)
         to_include = {}
@@ -199,14 +210,14 @@ class PredictionResultsMonotonic(PredictionResultsBase):
         return ci
 
     def conf_int(self, method="endpoint", alpha=0.05, **kwds):
-        """Confidence interval for the predicted value.
+        """Confidence interval for the predicted value
 
         This is currently only available for t and z tests.
 
         Parameters
         ----------
-        method : {"endpoint", "delta"}
-            Method for confidence interval, "m
+        method : {"endpoint", "delta"}, optional
+            Method for confidence interval.
             If method is "endpoint", then the confidence interval of the
             linear predictor is transformed by the prediction function.
             If method is "delta", then the delta-method is used. The confidence
@@ -217,7 +228,7 @@ class PredictionResultsMonotonic(PredictionResultsBase):
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
         kwds : extra keyword arguments
-            currently ignored, only for compatibility, consistent signature
+            Currently ignored, only for compatibility, consistent signature.
 
         Returns
         -------
@@ -225,6 +236,9 @@ class PredictionResultsMonotonic(PredictionResultsBase):
             The array has the lower and the upper limit of the confidence
             interval in the columns.
         """
+        method = string_like(
+            method, "method", options=("endpoint", "delta"), lower=False
+        )
         tmp = np.linspace(0, 1, 6)
         # TODO: drop check?
         is_linear = (self.func(tmp) == tmp).all()
@@ -253,7 +267,7 @@ class PredictionResultsDelta(PredictionResultsBase):
 
 
 class PredictionResultsMean(PredictionResultsBase):
-    """Prediction results for GLM.
+    """Prediction results for GLM
 
     This results class is used for backwards compatibility for
     `get_prediction` with GLM. The new PredictionResults classes dropped the
@@ -306,14 +320,14 @@ class PredictionResultsMean(PredictionResultsBase):
         return self.se
 
     def conf_int(self, method="endpoint", alpha=0.05, **kwds):
-        """Confidence interval for the predicted value.
+        """Confidence interval for the predicted value
 
         This is currently only available for t and z tests.
 
         Parameters
         ----------
-        method : {"endpoint", "delta"}
-            Method for confidence interval, "m
+        method : {"endpoint", "delta"}, optional
+            Method for confidence interval.
             If method is "endpoint", then the confidence interval of the
             linear predictor is transformed by the prediction function.
             If method is "delta", then the delta-method is used. The confidence
@@ -324,7 +338,7 @@ class PredictionResultsMean(PredictionResultsBase):
             The significance level for the confidence interval.
             ie., The default `alpha` = .05 returns a 95% confidence interval.
         kwds : extra keyword arguments
-            currently ignored, only for compatibility, consistent signature
+            Currently ignored, only for compatibility, consistent signature.
 
         Returns
         -------
@@ -332,6 +346,9 @@ class PredictionResultsMean(PredictionResultsBase):
             The array has the lower and the upper limit of the confidence
             interval in the columns.
         """
+        method = string_like(
+            method, "method", options=("endpoint", "delta"), lower=False
+        )
         tmp = np.linspace(0, 1, 6)
         is_linear = (self.link.inverse(tmp) == tmp).all()
         if method == "endpoint" and not is_linear:
@@ -359,8 +376,9 @@ class PredictionResultsMean(PredictionResultsBase):
 
         Returns
         -------
-        pandas DataFrame with columns
-        'mean', 'mean_se', 'mean_ci_lower', 'mean_ci_upper'.
+        DataFrame
+            A DataFrame with columns 'mean', 'mean_se', 'mean_ci_lower',
+            'mean_ci_upper'.
         """
         # TODO: finish and cleanup
         ci_mean = self.conf_int(alpha=alpha)
@@ -392,15 +410,15 @@ def _get_exog_predict(self, exog=None, transform=True, row_labels=None):
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
-        If row_lables are provided, then they will replace the generated
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
         labels.
 
     Returns
     -------
     exog : ndarray
         Prediction exog
-    row_labels : list of str
+    row_labels : list of str or None
         Labels or pandas index for rows of prediction
     """
 
@@ -456,22 +474,22 @@ def get_prediction_glm(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
-        If row_lables are provided, then they will replace the generated
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
         labels.
-    linpred : linear prediction instance
+    linpred : linear prediction instance, optional
         Instance of linear prediction results used for confidence intervals
         based on endpoint transformation.
-    link : instance of link function
+    link : instance of link function, optional
         If no link function is provided, then the `model.family.link` is used.
-    pred_kwds : dict
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models. See the predict method of the
         model for the details.
 
     Returns
     -------
-    prediction_results : generalized_linear_model.PredictionResults
+    prediction_results : PredictionResultsMean
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
@@ -502,6 +520,11 @@ def get_prediction_glm(
         var_resid = self.cov_kwds["scale"]
 
     dist = ["norm", "t"][self.use_t]
+    if linpred is None:
+        linpred = self.get_prediction_linear(
+            exog=exog, transform=transform, row_labels=row_labels, pred_kwds=pred_kwds
+        )
+
     return PredictionResultsMean(
         predicted_mean,
         var_pred_mean,
@@ -531,20 +554,20 @@ def get_prediction_linear(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
-        If row_lables are provided, then they will replace the generated
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
         labels.
-    pred_kwargs :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
-    index : slice or array-index
+    index : slice or array-index, optional
         Is used to select rows and columns of cov_params, if the prediction
         function only depends on a subset of parameters.
 
     Returns
     -------
-    prediction_results : PredictionResults
+    prediction_results : PredictionResultsBase
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction.
@@ -604,23 +627,23 @@ def get_prediction_monotonic(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
-        If row_lables are provided, then they will replace the generated
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
         labels.
-    link : instance of link function
-        If no link function is provided, then the ``mmodel.family.link` is
+    link : instance of link function, optional
+        If no link function is provided, then the `model.family.link` is
         used.
-    pred_kwargs :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
-    index : slice or array-index
+    index : slice or array-index, optional
         Is used to select rows and columns of cov_params, if the prediction
         function only depends on a subset of parameters.
 
     Returns
     -------
-    prediction_results : PredictionResults
+    prediction_results : PredictionResultsMonotonic
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction.
@@ -679,21 +702,21 @@ def get_prediction_delta(
     pred_kwds=None,
 ):
     """
-    compute prediction results
+    Compute prediction results
 
     Parameters
     ----------
     exog : array_like, optional
         The values for which you want to predict.
-    which : str
+    which : str, optional
         The statistic that is prediction. Which statistics are available
         depends on the model.predict method.
-    average : bool
+    average : bool, optional
         If average is True, then the mean prediction is computed, that is,
         predictions are computed for individual exog and then them mean over
         observation is used.
         If average is False, then the results are the predictions for all
-        observations, i.e. same length as ``exog``.
+        observations, i.e., same length as ``exog``.
     agg_weights : ndarray, optional
         Aggregation weights, only used if average is True.
         The weights are not normalized.
@@ -704,17 +727,17 @@ def get_prediction_delta(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    row_labels : list of str or None
-        If row_lables are provided, then they will replace the generated
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
         labels.
-    pred_kwargs :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset or
         additional exog in multi-part models.
         See the predict method of the model for the details.
 
     Returns
     -------
-    prediction_results : generalized_linear_model.PredictionResults
+    prediction_results : PredictionResultsDelta
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
@@ -768,28 +791,23 @@ def get_prediction(
         you can pass a data structure that contains x1 and x2 in
         their original form. Otherwise, you'd need to log the data
         first.
-    which : str
+    which : str, optional
         Which statistic is to be predicted. Default is "mean".
         The available statistics and options depend on the model.
-        see the model.predict docstring
-    linear : bool
-        Linear has been replaced by the `which` keyword and will be
-        deprecated.
-        If linear is True, then `which` is ignored and the linear
-        prediction is returned.
-    row_labels : list of str or None
-        If row_lables are provided, then they will replace the generated
+        See the model.predict docstring.
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
         labels.
-    average : bool
+    average : bool, optional
         If average is True, then the mean prediction is computed, that is,
         predictions are computed for individual exog and then the average
         over observation is used.
         If average is False, then the results are the predictions for all
-        observations, i.e. same length as ``exog``.
+        observations, i.e., same length as ``exog``.
     agg_weights : ndarray, optional
         Aggregation weights, only used if average is True.
         The weights are not normalized.
-    **kwargs :
+    pred_kwds : dict, optional
         Some models can take additional keyword arguments, such as offset,
         exposure or additional exog in multi-part models like zero inflated
         models.
@@ -797,7 +815,7 @@ def get_prediction(
 
     Returns
     -------
-    prediction_results : PredictionResults
+    prediction_results : PredictionResultsBase
         The prediction results instance contains prediction and prediction
         variance and can on demand calculate confidence intervals and
         summary dataframe for the prediction.
@@ -869,12 +887,33 @@ def params_transform_univariate(
     params, cov_params, link=None, transform=None, row_labels=None
 ):
     """
-    results for univariate, nonlinear, monotonicaly transformed parameters
+    Results for univariate, nonlinear, monotonically transformed parameters
 
     This provides transformed values, standard errors and confidence interval
     for transformations of parameters, for example in calculating rates with
     `exp(params)` in the case of Poisson or other models with exponential
     mean function.
+
+    Parameters
+    ----------
+    params : array_like
+        Estimated model parameters.
+    cov_params : ndarray
+        Covariance matrix of the parameter estimates.
+    link : instance of link function, optional
+        The link function used to transform the parameters. If neither
+        link nor transform are provided, the log link is used.
+    transform : instance of link function, optional
+        Alias for `link`. Not used if `link` is provided.
+    row_labels : list of str, optional
+        If row_labels are provided, then they will replace the generated
+        labels.
+
+    Returns
+    -------
+    PredictionResultsMean
+        The transformed prediction results instance that can be used to
+        calculate confidence intervals for the transformed parameters.
     """
 
     from statsmodels.genmod.families import links

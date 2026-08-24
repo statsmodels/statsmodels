@@ -1,28 +1,43 @@
-"""Multivariate Normal Model with full covariance matrix
+"""
+Multivariate Normal Model with full covariance matrix
 
 toeplitz structure is not exploited, need cholesky or inv for toeplitz
 
 Author: josef-pktd
 """
 
+import warnings
+
 import numpy as np
 from scipy import linalg
 from scipy.linalg import toeplitz
 
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.datasets import sunspots
 from statsmodels.tsa.arima_process import (
     ArmaProcess,
     arma_acovf,
-    arma_generate_sample,
 )
 
 
 def mvn_loglike_sum(x, sigma):
-    """loglike multivariate normal
+    """
+    Loglikelihood of multivariate normal, concentrated version
 
-    copied from GLS and adjusted names
-    not sure why this differes from mvn_loglike
+    Copied from GLS and adjusted names. Not sure why this differs from
+    `mvn_loglike`.
+
+    Parameters
+    ----------
+    x : ndarray
+        1-d array of residuals or observations, shape (nobs,).
+    sigma : ndarray
+        Covariance matrix, shape (nobs, nobs), or a scalar/array
+        indicating a diagonal or scalar covariance.
+
+    Returns
+    -------
+    float
+        The concentrated log likelihood.
     """
     nobs = len(x)
     nobs2 = nobs / 2.0
@@ -36,13 +51,25 @@ def mvn_loglike_sum(x, sigma):
 
 
 def mvn_loglike(x, sigma):
-    """loglike multivariate normal
+    """
+    Loglikelihood of multivariate normal
 
-    assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
+    Assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs).
 
-    brute force from formula
-    no checking of correct inputs
-    use of inv and log-det should be replace with something more efficient
+    Brute force from formula, no checking of correct inputs. Use of inv
+    and log-det should be replaced with something more efficient.
+
+    Parameters
+    ----------
+    x : ndarray
+        1-d array of residuals or observations, shape (nobs,).
+    sigma : ndarray
+        Covariance matrix, shape (nobs, nobs).
+
+    Returns
+    -------
+    float
+        The log likelihood.
     """
     # see numpy thread
     # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
@@ -58,13 +85,30 @@ def mvn_loglike(x, sigma):
 
 
 def mvn_loglike_chol(x, sigma):
-    """loglike multivariate normal
+    """
+    Loglikelihood of multivariate normal, using a Cholesky factor
 
-    assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
+    Assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs).
 
-    brute force from formula
-    no checking of correct inputs
-    use of inv and log-det should be replace with something more efficient
+    Brute force from formula, no checking of correct inputs. Use of inv
+    and log-det should be replaced with something more efficient.
+
+    Parameters
+    ----------
+    x : ndarray
+        1-d array of residuals or observations, shape (nobs,).
+    sigma : ndarray
+        Covariance matrix, shape (nobs, nobs).
+
+    Returns
+    -------
+    llf : float
+        The log likelihood.
+    logdetsigma : float
+        The log of the determinant of `sigma`.
+    logdet_cholsigmainv : float
+        Twice the sum of the log of the diagonal of the Cholesky factor
+        of the inverse of `sigma`.
     """
     # see numpy thread
     # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
@@ -87,13 +131,26 @@ def mvn_loglike_chol(x, sigma):
 
 
 def mvn_nloglike_obs(x, sigma):
-    """loglike multivariate normal
+    """
+    Negative loglikelihood of multivariate normal for each observation
 
-    assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs)
+    Assumes x is 1d, (nobs,) and sigma is 2d (nobs, nobs).
 
-    brute force from formula
-    no checking of correct inputs
-    use of inv and log-det should be replace with something more efficient
+    Brute force from formula, no checking of correct inputs. Use of inv
+    and log-det should be replaced with something more efficient.
+
+    Parameters
+    ----------
+    x : ndarray
+        1-d array of residuals or observations, shape (nobs,).
+    sigma : ndarray
+        Covariance matrix, shape (nobs, nobs).
+
+    Returns
+    -------
+    ndarray
+        The negative log likelihood contribution of each observation,
+        shape (nobs,).
     """
     # see numpy thread
     # Sturla: sqmahal = (cx*cho_solve(cho_factor(S),cx.T).T).sum(axis=1)
@@ -123,11 +180,44 @@ def mvn_nloglike_obs(x, sigma):
 
 
 def invertibleroots(ma):
+    """
+    Return an invertible MA polynomial and whether the input was invertible
+
+    Parameters
+    ----------
+    ma : array_like
+        Moving average lag polynomial coefficients.
+
+    Returns
+    -------
+    ndarray
+        The invertible MA lag polynomial coefficients.
+    bool
+        Whether the original `ma` polynomial was already invertible.
+    """
     proc = ArmaProcess(ma=ma)
     return proc.invertroots(retnew=False)
 
 
 def getpoly(self, params):
+    """
+    Return the AR and MA lag polynomials for a model instance
+
+    Parameters
+    ----------
+    self : MLEGLS
+        A model instance (or object) with `nar` and `nma` attributes
+        giving the AR and MA order.
+    params : ndarray
+        The AR and MA parameters, with the AR parameters first.
+
+    Returns
+    -------
+    numpy.polynomial.Polynomial
+        The AR lag polynomial.
+    numpy.polynomial.Polynomial
+        The MA lag polynomial.
+    """
     ar = np.r_[[1], -params[:self.nar]]
     ma = np.r_[[1], params[-self.nma:]]
     import numpy.polynomial as poly
@@ -135,26 +225,51 @@ def getpoly(self, params):
 
 
 class MLEGLS(GenericLikelihoodModel):
-    """ARMA model with exact loglikelhood for short time series
+    """
+    ARMA model with exact loglikelihood for short time series
 
     Inverts (nobs, nobs) matrix, use only for nobs <= 200 or so.
 
     This class is a pattern for small sample GLS-like models. Intended use
     for loglikelihood of initial observations for ARMA.
 
-
-
-    TODO:
+    Notes
+    -----
     This might be missing the error variance. Does it assume error is
-       distributed N(0,1)
-    Maybe extend to mean handling, or assume it is already removed.
+    distributed N(0,1)? Maybe extend to mean handling, or assume it is
+    already removed.
     """
 
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "MLEGLS is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
     def _params2cov(self, params, nobs):
-        """get autocovariance matrix from ARMA regression parameter
+        """
+        Get autocovariance matrix from ARMA regression parameter
 
-        ar parameters are assumed to have rhs parameterization
+        AR parameters are assumed to have rhs parameterization.
 
+        Parameters
+        ----------
+        params : ndarray
+            The AR and MA parameters, with the AR parameters first.
+        nobs : int
+            Number of observations, used to determine the size of the
+            autocovariance matrix.
+
+        Returns
+        -------
+        ndarray
+            The (nobs, nobs) Toeplitz autocovariance matrix.
         """
         ar = np.r_[[1], -params[:self.nar]]
         ma = np.r_[[1], params[-self.nma:]]
@@ -170,12 +285,43 @@ class MLEGLS(GenericLikelihoodModel):
         return sigma
 
     def loglike(self, params):
+        """
+        Loglikelihood evaluated at params
+
+        Parameters
+        ----------
+        params : ndarray
+            The AR and MA parameters, followed by the error standard
+            deviation as the last element.
+
+        Returns
+        -------
+        float
+            The log likelihood of the model evaluated at `params`.
+        """
         sig = self._params2cov(params[:-1], self.nobs)
         sig = sig * params[-1]**2
         loglik = mvn_loglike(self.endog, sig)
         return loglik
 
     def fit_invertible(self, *args, **kwds):
+        """
+        Fit the model, re-fitting with invertible MA starting values if needed
+
+        Parameters
+        ----------
+        *args
+            Positional arguments passed to `fit`.
+        **kwds
+            Keyword arguments passed to `fit`.
+
+        Returns
+        -------
+        GenericLikelihoodModelResults
+            The fitted model results, refit with an invertible MA
+            polynomial as starting values if the initial fit was not
+            invertible.
+        """
         res = self.fit(*args, **kwds)
         ma = np.r_[[1], res.params[self.nar: self.nar+self.nma]]
         mainv, wasinvertible = invertibleroots(ma)
@@ -185,44 +331,3 @@ class MLEGLS(GenericLikelihoodModel):
             # need to add args kwds
             res = self.fit(start_params=start_params)
         return res
-
-
-if __name__ == "__main__":
-    nobs = 50
-    ar = [1.0, -0.8, 0.1]
-    ma = [1.0,  0.1,  0.2]
-    # ma = [1]
-    np.random.seed(9875789)
-    y = arma_generate_sample(ar, ma, nobs, 2)
-    y -= y.mean()  # I have not checked treatment of mean yet, so remove
-    mod = MLEGLS(y)
-    mod.nar, mod.nma = 2, 2   # needs to be added, no init method
-    mod.nobs = len(y)
-    res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
-    print("DGP", ar, ma)
-    print(res.params)
-    from statsmodels.regression import yule_walker
-    print(yule_walker(y, 2))
-    # resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
-
-    arpoly, mapoly = getpoly(mod, res.params[:-1])
-
-    data = sunspots.load()
-    # ys = data.endog[-100:]
-    # ys = data.endog[12:]-data.endog[:-12]
-    # ys -= ys.mean()
-    # mods = MLEGLS(ys)
-    # mods.nar, mods.nma = 13, 1   # needs to be added, no init method
-    # mods.nobs = len(ys)
-    # ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
-    # print(ress.params
-    # import matplotlib.pyplot as plt
-    # plt.plot(data.endog[1])
-    # # plt.show()
-
-    sigma = mod._params2cov(res.params[:-1], nobs) * res.params[-1]**2
-    print(mvn_loglike(y, sigma))
-    llo = mvn_nloglike_obs(y, sigma)
-    print(llo.sum(), llo.shape)
-    print(mvn_loglike_chol(y, sigma))
-    print(mvn_loglike_sum(y, sigma))

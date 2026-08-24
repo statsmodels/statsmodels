@@ -1,12 +1,13 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+import warnings
 
 import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
 
-from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tools.validation import PandasWrapper, array_like, string_like
 from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -21,6 +22,21 @@ def _extrapolate_trend(trend, npoints):
     """
     Replace nan values on trend's end-points with least-squares extrapolated
     values with regression considering npoints closest defined points.
+
+    Parameters
+    ----------
+    trend : ndarray
+        The trend series, which may contain NaN values at the start and/or
+        end that will be replaced.
+    npoints : int
+        The number of closest defined points on each end to use in the
+        extrapolating least-squares regression.
+
+    Returns
+    -------
+    ndarray
+        The trend array with NaN values at the endpoints replaced by
+        extrapolated values.
     """
     front = next(i for i, vals in enumerate(trend) if not np.any(np.isnan(vals)))
     back = (
@@ -56,9 +72,19 @@ def _extrapolate_trend(trend, npoints):
 
 def seasonal_mean(x, period):
     """
-    Return means for each period in x. period is an int that gives the
-    number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
-    in the mean.
+    Return means for each period in x
+
+    Parameters
+    ----------
+    x : array_like
+        Time series values.
+    period : int
+        The number of periods per cycle, e.g., 12 for monthly data.
+
+    Returns
+    -------
+    ndarray
+        The mean value for each period, ignoring NaNs.
     """
     return np.array([pd_nanmean(x[i::period], axis=0) for i in range(period)])
 
@@ -80,7 +106,7 @@ def seasonal_decompose(
         Time series. If 2d, individual series are in columns. x must contain 2
         complete cycles.
     model : {"additive", "multiplicative"}, optional
-        Type of seasonal component. Abbreviations are accepted.
+        Type of seasonal component. The abbreviations "add" and "mul" are accepted.
     filt : array_like, optional
         The filter coefficients for filtering out the seasonal component.
         The concrete moving average method used in filtering is determined by
@@ -94,17 +120,21 @@ def seasonal_decompose(
         The moving average method used in filtering.
         If True (default), a centered moving average is computed using the
         filt. If False, the filter coefficients are for past values only.
-    extrapolate_trend : int or 'freq', optional
+    extrapolate_trend : int or 'period', optional
         If set to > 0, the trend resulting from the convolution is
         linear least-squares extrapolated on both ends (or the single one
         if two_sided is False) considering this many (+1) closest points.
-        If set to 'freq', use `freq` closest points. Setting this parameter
-        results in no NaN values in trend or resid components.
+        If set to 'period', use `period` closest points. Setting this parameter
+        results in no NaN values in trend or resid components. The default is 0.
+
+        .. deprecated: 0.14
+            `extrapolate_trend="freq"` is deprecated and will be removed,
+            use `extrapolate_trend=period` instead.
 
     Returns
     -------
     DecomposeResult
-        A object with seasonal, trend, and resid attributes.
+        An object with seasonal, trend, and resid attributes.
 
     See Also
     --------
@@ -114,6 +144,8 @@ def seasonal_decompose(
         Christiano-Fitzgerald asymmetric, random walk filter.
     statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
+    statsmodels.tsa.filters.hamilton_filter.hamilton_filter
+        Hanilton's autoregression-based filter.
     statsmodels.tsa.filters.convolution_filter
         Linear filtering via convolution.
     statsmodels.tsa.seasonal.STL
@@ -150,7 +182,9 @@ def seasonal_decompose(
 
     if not np.all(np.isfinite(x)):
         raise ValueError("This function does not handle missing values")
-    if model.startswith("m"):
+    model = string_like(model, "model", options=("additive", "multiplicative", "add", "mul"), lower=True)
+    model = "additive" if model in ("additive", "add") else "multiplicative"
+    if model == "multiplicative":
         if np.any(x <= 0):
             raise ValueError(
                 "Multiplicative seasonality is not appropriate "
@@ -181,34 +215,51 @@ def seasonal_decompose(
     nsides = int(two_sided) + 1
     trend = convolution_filter(x, filt, nsides)
 
+    if isinstance(extrapolate_trend, str):
+        extrapolate_trend = string_like(
+            extrapolate_trend,
+            "extrapolate_trend",
+            options=("period", "freq"),
+            lower=False,
+        )
+
     if extrapolate_trend == "freq":
+        warnings.warn(
+            "`extrapolate_trend='freq'` is deprecated and will be "
+            "removed in 0.16, use `extrapolate_trend='period'` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        extrapolate_trend = "period"
+
+    if extrapolate_trend == "period":
         extrapolate_trend = period - 1
 
     if extrapolate_trend > 0:
         trend = _extrapolate_trend(trend, extrapolate_trend + 1)
 
-    if model.startswith("m"):
+    if model == "multiplicative":
         detrended = x / trend
     else:
         detrended = x - trend
 
     period_averages = seasonal_mean(detrended, period)
 
-    if model.startswith("m"):
+    if model == "multiplicative":
         period_averages /= np.mean(period_averages, axis=0)
     else:
         period_averages -= np.mean(period_averages, axis=0)
 
     seasonal = np.tile(period_averages.T, nobs // period + 1).T[:nobs]
 
-    if model.startswith("m"):
+    if model == "multiplicative":
         resid = x / seasonal / trend
     else:
         resid = detrended - seasonal
 
     results = []
     for s, name in zip(
-        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None),
+        (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None), strict=True,
     ):
         results.append(pw.wrap(s.squeeze(), columns=name))
     return DecomposeResult(
@@ -225,15 +276,15 @@ class DecomposeResult:
 
     Parameters
     ----------
-    observed : array_like
+    observed : ndarray, Series, or DataFrame
         The data series that has been decomposed.
-    seasonal : array_like
+    seasonal : ndarray, Series, or DataFrame
         The seasonal component of the data series.
-    trend : array_like
+    trend : ndarray, Series, or DataFrame
         The trend component of the data series.
-    resid : array_like
+    resid : ndarray, Series, or DataFrame
         The residual component of the data series.
-    weights : array_like, optional
+    weights : ndarray, Series, or DataFrame, optional
         The weights used to reduce outlier influence.
     """
 
@@ -291,21 +342,21 @@ class DecomposeResult:
 
         Parameters
         ----------
-        observed : bool
+        observed : bool, optional
             Include the observed series in the plot
-        seasonal : bool
+        seasonal : bool, optional
             Include the seasonal component in the plot
-        trend : bool
+        trend : bool, optional
             Include the trend component in the plot
-        resid : bool
+        resid : bool, optional
             Include the residual in the plot
-        weights : bool
+        weights : bool, optional
             Include the weights in the plot (if any)
 
         Returns
         -------
         matplotlib.figure.Figure
-            The figure instance that containing the plot.
+            The figure instance containing the plot.
         """
         from pandas.plotting import register_matplotlib_converters
 
@@ -336,7 +387,7 @@ class DecomposeResult:
             xlim = (0, self._observed.shape[0] - 1)
 
         fig, axs = plt.subplots(len(series), 1, sharex=True)
-        for i, (ax, (series, def_name)) in enumerate(zip(axs, series)):  # noqa: B020
+        for i, (ax, (series, def_name)) in enumerate(zip(axs, series, strict=True)):  # noqa: B020
             if def_name != "residual":
                 ax.plot(series)
             else:

@@ -23,7 +23,6 @@ LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 
-from statsmodels.compat.pandas import Appender
 from statsmodels.compat.python import lzip
 
 from collections import defaultdict
@@ -60,7 +59,8 @@ from statsmodels.graphics._regressionplots_doc import (
 
 # used for wrapper:
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     DomainWarning,
@@ -135,11 +135,6 @@ class ParameterConstraint:
         """
         Returns a vector that should be added to the offset vector to
         accommodate the constraint.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogeneous data for the model.
         """
 
         return self._offset_increment
@@ -148,11 +143,6 @@ class ParameterConstraint:
         """
         Returns a linearly transformed exog matrix whose columns span
         the constrained model space.
-
-        Parameters
-        ----------
-        exog : array_like
-           The exogeneous data for the model.
         """
         return self.exog_fulltrans[:, 0 : self.lhs0.shape[1]]
 
@@ -190,10 +180,10 @@ _gee_init_doc = """
     Parameters
     ----------
     endog : array_like
-        1d array of endogenous values (i.e. responses, outcomes,
+        1d array of endogenous values (i.e., responses, outcomes,
         dependent variables, or 'Y' values).
     exog : array_like
-        2d array of exogeneous values (i.e. covariates, predictors,
+        2d array of exogenous values (i.e., covariates, predictors,
         independent variables, regressors, or 'X' values). A `nobs x
         k` array where `nobs` is the number of observations and `k` is
         the number of regressors. An intercept is not included by
@@ -201,33 +191,33 @@ _gee_init_doc = """
         `statsmodels.tools.add_constant`.
     groups : array_like
         A 1d array of length `nobs` containing the group labels.
-    time : array_like
+    time : array_like, optional
         A 2d array of time (or other index) values, used by some
         dependence structures to define similarity relationships among
         observations within a cluster.
-    family : family class instance
+    family : family class instance, optional
 %(family_doc)s
-    cov_struct : CovStruct class instance
+    cov_struct : CovStruct class instance, optional
         The default is Independence.  To specify an exchangeable
         structure use cov_struct = Exchangeable().  See
         statsmodels.genmod.cov_struct.CovStruct for more
         information.
-    offset : array_like
+    offset : array_like, optional
         An offset to be included in the fit.  If provided, must be
         an array whose length is the number of rows in exog.
-    dep_data : array_like
+    dep_data : array_like, optional
         Additional data passed to the dependence structure.
-    constraint : (ndarray, ndarray)
+    constraint : tuple of ndarray, optional
         If provided, the constraint is a tuple (L, R) such that the
         model parameters are estimated under the constraint L *
         param = R, where L is a q x p matrix and R is a
         q-dimensional vector.  If constraint is provided, a score
         test is performed to compare the constrained model to the
         unconstrained model.
-    update_dep : bool
+    update_dep : bool, optional
         If true, the dependence parameters are optimized, otherwise
         they are held fixed at their starting values.
-    weights : array_like
+    weights : array_like, optional
         An array of case weights to use in the analysis.
     %(extra_params)s
 
@@ -256,7 +246,7 @@ _gee_init_doc = """
     exog will change.
 
     The "robust" covariance type is the standard "sandwich estimator"
-    (e.g. Liang and Zeger (1986)).  It is the default here and in most
+    (e.g., Liang and Zeger (1986)).  It is the default here and in most
     other packages.  The "naive" estimator gives smaller standard
     errors, but is only correct if the working correlation structure
     is correctly specified.  The "bias reduced" estimator of Mancl and
@@ -300,30 +290,30 @@ _gee_fit_doc = """
 
     Parameters
     ----------
-    maxiter : int
+    maxiter : int, optional
         The maximum number of iterations
-    ctol : float
+    ctol : float, optional
         The convergence criterion for stopping the Gauss-Seidel
         iterations
-    start_params : array_like
+    start_params : array_like, optional
         A vector of starting values for the regression
         coefficients.  If None, a default is chosen.
-    params_niter : int
+    params_niter : int, optional
         The number of Gauss-Seidel updates of the mean structure
         parameters that take place prior to each update of the
         dependence structure.
-    first_dep_update : int
+    first_dep_update : int, optional
         No dependence structure updates occur before this
         iteration number.
-    cov_type : str
+    cov_type : str, optional
         One of "robust", "naive", or "bias_reduced".
-    ddof_scale : scalar or None
+    ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
         is the total sample size.  If `ddof_scale` is None, the
         number of covariates (including an intercept if present)
         is used.
-    scaling_factor : scalar
+    scaling_factor : float, optional
         The estimated covariance of the parameter estimates is
         scaled by this value.  Default is 1, Stata uses N / (N - g),
         where N is the total sample size and g is the average group
@@ -337,13 +327,14 @@ _gee_fit_doc = """
 
     Returns
     -------
-    An instance of the GEEResults class or subclass
+    results : GEEResultsWrapper
+        An instance of the GEEResults class or subclass.
 
     Notes
     -----
     If convergence difficulties occur, increase the values of
     `first_dep_update` and/or `params_niter`.  Setting
-    `first_dep_update` to a greater value (e.g. ~10-20) causes the
+    `first_dep_update` to a greater value (e.g., ~10-20) causes the
     algorithm to move close to the GLM solution before attempting
     to identify the dependence structure.
 
@@ -701,6 +692,7 @@ class GEE(GLM):
     # Override to allow groups and time to be passed as variable
     # names.
     @classmethod
+    @Substitution(missing_param_doc=base._missing_param_doc)
     def from_formula(
         cls,
         formula,
@@ -720,25 +712,25 @@ class GEE(GLM):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        groups : array_like or string
+        groups : array_like or str
             Array of grouping labels.  If a string, this is the name
             of a variable in `data` that contains the grouping labels.
         data : array_like
             The data for the model.
-        subset : array_like
+        subset : array_like, optional
             An array-like object of booleans, integers, or index
             values that indicate the subset of the data to used when
             fitting the model.
-        time : array_like or string
+        time : array_like or str, optional
             The time values, used for dependence structures involving
             distances between observations.  If a string, this is the
             name of a variable in `data` that contains the time
             values.
-        offset : array_like or string
+        offset : array_like or str, optional
             The offset values, added to the linear predictor.  If a
             string, this is the name of a variable in `data` that
             contains the offset values.
-        exposure : array_like or string
+        exposure : array_like or str, optional
             The exposure values, only used if the link function is the
             logarithm function, in which case the log of `exposure`
             is added to the offset (if any).  If a string, this is the
@@ -755,12 +747,9 @@ class GEE(GLM):
             indicating the depth of the namespace to use. For example, the
             default ``eval_env=0`` uses the calling namespace.
             If you wish to use a "clean" environment set ``eval_env=-1``.
-
-        Optional arguments
-        ------------------
-        dep_data : str or array_like
+        dep_data : str or array_like, optional
             Data used for estimating the dependence structure.  See
-            specific dependence structure classes (e.g. Nested) for
+            specific dependence structure classes (e.g., Nested) for
             details.  If `dep_data` is a string, it is interpreted as
             a formula that is applied to `data`. If it is an array, it
             must be an array of strings corresponding to column names in
@@ -777,9 +766,7 @@ class GEE(GLM):
         terms args and kwargs are passed on to the model
         instantiation. E.g., a numpy structured or rec array, a
         dictionary, or a pandas DataFrame.
-        """.format(
-            missing_param_doc=base._missing_param_doc
-        )
+        """
 
         groups_name = "Groups"
         if isinstance(groups, str):
@@ -1045,7 +1032,7 @@ class GEE(GLM):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed.
+           The exogenous data at which the derivative is computed.
         lin_pred : array_like
            The values of the linear predictor.
 
@@ -1095,10 +1082,10 @@ class GEE(GLM):
         """
         Returns
         -------
-        update : array_like
+        update : ndarray
             The update vector such that params + update is the next
             iterate when solving the score equations.
-        score : array_like
+        score : ndarray
             The current value of the score equations, not
             incorporating the scale parameter.  If desired,
             multiply this vector by the scale parameter to
@@ -1183,15 +1170,15 @@ class GEE(GLM):
 
         Returns
         -------
-        cov_robust : array_like
+        cov_robust : ndarray
            The robust, or sandwich estimate of the covariance, which
            is meaningful even if the working covariance structure is
            incorrectly specified.
-        cov_naive : array_like
+        cov_naive : ndarray
            The model-based estimate of the covariance, which is
            meaningful if the covariance structure is correctly
            specified.
-        cmat : array_like
+        cmat : ndarray
            The center matrix of the sandwich expression, used in
            obtaining score test results.
         """
@@ -1567,30 +1554,30 @@ class GEE(GLM):
         ----------
         pen_wt : float
             The penalty weight (a non-negative scalar).
-        scad_param : float
+        scad_param : float, optional
             Non-negative scalar determining the shape of the Scad
             penalty.
-        maxiter : int
+        maxiter : int, optional
             The maximum number of iterations.
-        ddof_scale : int
+        ddof_scale : int, optional
             Value to subtract from `nobs` when calculating the
             denominator degrees of freedom for t-statistics, defaults
             to the number of columns in `exog`.
-        update_assoc : int
+        update_assoc : int, optional
             The dependence parameters are updated every `update_assoc`
             iterations of the mean structure parameter updates.
-        ctol : float
+        ctol : float, optional
             Convergence criterion, default is one order of magnitude
             smaller than proposed in section 3.1 of Wang et al.
-        ztol : float
+        ztol : float, optional
             Coefficients smaller than this value are treated as
             being zero, default is based on section 5 of Wang et al.
-        eps : non-negative scalar
-            Numerical constant, see section 3.2 of Wang et al.
-        scale : float or string
+        eps : float, optional
+            Non-negative numerical constant, see section 3.2 of Wang et al.
+        scale : float or str, optional
             If a float, this value is used as the scale parameter.
             If "X2", the scale parameter is always estimated using
-            Pearson's chi-square method (e.g. as in a quasi-Poisson
+            Pearson's chi-square method (e.g., as in a quasi-Poisson
             analysis).  If None, the default approach for the family
             is used to estimate the scale parameter.
 
@@ -1687,10 +1674,10 @@ class GEE(GLM):
 
         Returns
         -------
-        mean_params : array_like
+        mean_params : ndarray
             The input parameter vector mean_params, expanded to the
             coordinate system of the full model
-        bcov : array_like
+        bcov : ndarray
             The input covariance matrix bcov, expanded to the
             coordinate system of the full model
         """
@@ -1816,24 +1803,24 @@ class GEE(GLM):
         ----------
         params : array_like
             The GEE estimates of the regression parameters.
-        scale : scalar
+        scale : float
             Estimated scale parameter
         cov_params : array_like
             An estimate of the covariance matrix for the
             model parameters.  Conventionally this is the robust
             covariance matrix.
-        n_step : integer
+        n_step : int, optional
             The number of points in the trapezoidal approximation
             to the quasi-likelihood function.
 
         Returns
         -------
-        ql : scalar
+        ql : float
             The quasi-likelihood value
-        qic : scalar
+        qic : float
             A QIC that can be used to compare the mean and covariance
             structures of the model.
-        qicu : scalar
+        qicu : float
             A simplified QIC that can be used to compare mean structures
             but not covariance structures
 
@@ -1849,14 +1836,14 @@ class GEE(GLM):
         will differ from the values reported by other packages.  However only
         the differences between two QIC values calculated for different models
         using the same data are meaningful.  Our QIC should produce the same
-        QIC differences as other software.
+        QIC differences as other software. See [Pan2001]_ for details.
 
         When using the QIC for models with unknown scale parameter, use a
         common estimate of the scale parameter for all models being compared.
 
         References
         ----------
-        .. [*] W. Pan (2001).  Akaike's information criterion in generalized
+        .. [Pan2001] W. Pan (2001).  Akaike's information criterion in generalized
                estimating equations.  Biometrics (57) 1.
         """
 
@@ -1886,11 +1873,8 @@ class GEE(GLM):
             qv[i] = -np.sum(du**2 * (g + 1) / vu)
         qv /= 4 * scale
 
-        try:
-            from scipy.integrate import trapezoid
-        except ImportError:
-            # Remove after minimum is SciPy 1.7
-            from scipy.integrate import trapz as trapezoid
+        from scipy.integrate import trapezoid
+
         ql = trapezoid(qv, dx=xv[1] - xv[0])
 
         qicu = -2 * ql + 2 * self.exog.shape[1]
@@ -1968,7 +1952,7 @@ class GEEResults(GLMResults):
 
         Parameters
         ----------
-        cov_type : str
+        cov_type : str, optional
             One of "robust", "naive", or "bias_reduced".  Determines
             the covariance used to compute standard errors.  Defaults
             to "robust".
@@ -2003,7 +1987,7 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        Adictionary containing the p-value, the test statistic,
+        A dictionary containing the p-value, the test statistic,
         and the degrees of freedom for the score test.
 
         Notes
@@ -2031,7 +2015,7 @@ class GEEResults(GLMResults):
     @cache_readonly
     def resid_split(self):
         """
-        Returns the residuals, the endogeneous data minus the fitted
+        Returns the residuals, the endogenous data minus the fitted
         values from the model.  The residuals are returned as a list
         of arrays containing the residuals for each cluster.
         """
@@ -2135,7 +2119,7 @@ class GEEResults(GLMResults):
             self, focus_exog, frac, cond_means=cond_means, ax=ax
         )
 
-    def conf_int(self, alpha=0.05, cols=None, cov_type=None):
+    def conf_int(self, alpha=0.05, cov_type=None):
         """
         Returns confidence intervals for the fitted parameters.
 
@@ -2144,9 +2128,7 @@ class GEEResults(GLMResults):
         alpha : float, optional
              The `alpha` level for the confidence interval.  i.e., The
              default `alpha` = .05 returns a 95% confidence interval.
-        cols : array_like, optional
-             `cols` specifies which confidence intervals to return
-        cov_type : str
+        cov_type : str, optional
              The covariance type used for computing standard errors;
              must be one of 'robust', 'naive', and 'bias reduced'.
              See `GEE` for details.
@@ -2166,13 +2148,8 @@ class GEEResults(GLMResults):
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
 
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
+        lower = params - q * bse
+        upper = params + q * bse
         return np.asarray(lzip(lower, upper))
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
@@ -2183,21 +2160,15 @@ class GEEResults(GLMResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is `var_#` for ## in
             the number of regressors. Must match the number of parameters in
             the model
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
-        cov_type : str
-            The covariance type used to compute the standard errors;
-            one of 'robust' (the usual robust sandwich-type covariance
-            estimate), 'naive' (ignores dependence), and 'bias
-            reduced' (the Mancl/DeRouen estimate).
-
         Returns
         -------
         smry : Summary instance
@@ -2232,9 +2203,9 @@ class GEEResults(GLMResults):
             ("No. clusters:", [len(self.model.endog_li)]),
             ("Min. cluster size:", [min(NY)]),
             ("Max. cluster size:", [max(NY)]),
-            ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-            ("Num. iterations:", ["%d" % len(self.fit_history["params"])]),
-            ("Scale:", ["%.3f" % self.scale]),
+            ("Mean cluster size:", [f"{np.mean(NY):.1f}"]),
+            ("Num. iterations:", ["{:d}".format(len(self.fit_history["params"]))]),
+            ("Scale:", [f"{self.scale:.3f}"]),
             ("Time:", None),
         ]
 
@@ -2245,13 +2216,13 @@ class GEEResults(GLMResults):
         kurt2 = stats.kurtosis(self.centered_resid)
 
         diagn_left = [
-            ("Skew:", ["%12.4f" % skew1]),
-            ("Centered skew:", ["%12.4f" % skew2]),
+            ("Skew:", [f"{skew1:12.4f}"]),
+            ("Centered skew:", [f"{skew2:12.4f}"]),
         ]
 
         diagn_right = [
-            ("Kurtosis:", ["%12.4f" % kurt1]),
-            ("Centered kurtosis:", ["%12.4f" % kurt2]),
+            ("Kurtosis:", [f"{kurt1:12.4f}"]),
+            ("Centered kurtosis:", [f"{kurt2:12.4f}"]),
         ]
 
         if title is None:
@@ -2292,7 +2263,8 @@ class GEEResults(GLMResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Parameters
         ----------
@@ -2320,7 +2292,7 @@ class GEEResults(GLMResults):
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
@@ -2342,8 +2314,8 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        effects : ndarray
-            the marginal effect corresponding to the input options
+        GEEMargins
+            The marginal effects instance corresponding to the input options.
 
         Notes
         -----
@@ -2367,15 +2339,15 @@ class GEEResults(GLMResults):
 
         Parameters
         ----------
-        ax : AxesSubplot
+        ax : AxesSubplot, optional
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
-        xpoints : scalar or array_like
+        xpoints : int or array_like, optional
             If scalar, the number of points equally spaced points on
             the time difference axis used to define bins for
             calculating local means.  If an array, the specific points
             that define the bins.
-        min_n : int
+        min_n : int, optional
             The minimum sample size in a bin for the mean residual
             product to be included on the plot.
         """
@@ -2388,7 +2360,7 @@ class GEEResults(GLMResults):
         # All within-group pairwise time distances (xdt) and the
         # corresponding products of scaled residuals (xre).
         xre, xdt = [], []
-        for re, ti in zip(resid, time):
+        for re, ti in zip(resid, time, strict=True):
             ix = np.tril_indices(re.shape[0], 0)
             re = re[ix[0]] * re[ix[1]] / self.scale**2
             xre.append(re)
@@ -2443,7 +2415,7 @@ class GEEResults(GLMResults):
 
         Returns
         -------
-        results : array_like
+        results : list of GEEResultsWrapper
             The GEEResults objects resulting from the fits.
         """
 
@@ -2586,7 +2558,7 @@ class OrdinalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset)
+        zipper = zip(exog, endog, groups, time, offset, strict=True)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2603,11 +2575,11 @@ class OrdinalGEE(GEE):
         exog_out = np.concatenate((intercepts, exog_out), axis=1)
 
         # exog column names, including intercepts
-        xnames = ["I(y>%.1f)" % v for v in endog_cuts]
+        xnames = [f"I(y>{v:.1f})" for v in endog_cuts]
         if type(self.exog_orig) is pd.DataFrame:
             xnames.extend(self.exog_orig.columns)
         else:
-            xnames.extend(["x%d" % k for k in range(1, exog.shape[1] + 1)])
+            xnames.extend([f"x{k:d}" for k in range(1, exog.shape[1] + 1)])
         exog_out = pd.DataFrame(exog_out, columns=xnames)
 
         # Preserve the endog name if there is one
@@ -2682,10 +2654,10 @@ class OrdinalGEEResults(GEEResults):
 
         Parameters
         ----------
-        ax : AxesSubplot
+        ax : AxesSubplot, optional
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
-        exog_values : array_like
+        exog_values : list of dict, optional
             A list of dictionaries, with each dictionary mapping
             variable names to values at which the variable is held
             fixed.  The values P(endog=y | exog) are plotted for all
@@ -2693,7 +2665,7 @@ class OrdinalGEEResults(GEEResults):
             not included in a dictionary are held fixed at the mean
             value.
 
-        Example:
+        Examples
         --------
         We have a model with covariates 'age' and 'sex', and wish to
         plot the probabilities P(endog=y | exog) for males (sex=0) and
@@ -2728,7 +2700,7 @@ class OrdinalGEEResults(GEEResults):
 
             for k in ev.keys():
                 if k not in self.model.exog_names:
-                    raise ValueError("%s is not a variable in the model" % k)
+                    raise ValueError(f"{k} is not a variable in the model")
 
             # Get the fitted probability for each level, at the given
             # covariate values.
@@ -2777,10 +2749,10 @@ def _score_test_submodel(par, sub):
 
     Returns
     -------
-    qm : array_like
+    qm : ndarray
         Matrix mapping the design matrix of the parent to the design matrix
         for the sub-model.
-    qc : array_like
+    qc : ndarray
         Matrix mapping the design matrix of the parent to the orthogonal
         complement of the columnspace of the submodel in the columnspace
         of the parent.
@@ -2929,7 +2901,7 @@ class NominalGEE(GEE):
         offset_out = np.zeros(nrows, dtype=np.float64)
 
         jrow = 0
-        zipper = zip(exog, endog, groups, time, offset)
+        zipper = zip(exog, endog, groups, time, offset, strict=True)
         for exog_row, endog_value, group_value, time_value, offset_value in zipper:
 
             # Loop over thresholds for the indicators
@@ -2948,7 +2920,7 @@ class NominalGEE(GEE):
         if isinstance(self.exog_orig, pd.DataFrame):
             xnames_in = self.exog_orig.columns
         else:
-            xnames_in = ["x%d" % k for k in range(1, exog.shape[1] + 1)]
+            xnames_in = [f"x{k:d}" for k in range(1, exog.shape[1] + 1)]
         xnames = []
         for tr in endog_cuts:
             xnames.extend([f"{v}[{tr:.1f}]" for v in xnames_in])
@@ -2968,7 +2940,7 @@ class NominalGEE(GEE):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed,
+           The exogenous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
         lin_pred : array_like
            The values of the linear predictor, length must be multiple
@@ -3011,11 +2983,12 @@ class NominalGEE(GEE):
         Parameters
         ----------
         exog : array_like
-           The exogeneous data at which the derivative is computed,
+           The exogenous data at which the derivative is computed,
            number of rows must be a multiple of `ncut`.
-        lpr : array_like
-           The linear predictor values, length must be multiple of
-           `ncut`.
+        params : array_like
+           Parameter values at which the derivative is computed.
+        offset_exposure : None
+           Offset and exposure are ignored for the multinomial family.
 
         Returns
         -------
@@ -3120,10 +3093,10 @@ class NominalGEEResults(GEEResults):
 
         Parameters
         ----------
-        ax : AxesSubplot
+        ax : AxesSubplot, optional
             An axes on which to draw the graph.  If None, new
             figure and axes objects are created
-        exog_values : array_like
+        exog_values : list of dict, optional
             A list of dictionaries, with each dictionary mapping
             variable names to values at which the variable is held
             fixed.  The values P(endog=y | exog) are plotted for all
@@ -3131,7 +3104,7 @@ class NominalGEEResults(GEEResults):
             not included in a dictionary are held fixed at the mean
             value.
 
-        Example:
+        Examples
         --------
         We have a model with covariates 'age' and 'sex', and wish to
         plot the probabilities P(endog=y | exog) for males (sex=0) and
@@ -3173,7 +3146,7 @@ class NominalGEEResults(GEEResults):
 
             for k in ev.keys():
                 if k not in exog_names:
-                    raise ValueError("%s is not a variable in the model" % k)
+                    raise ValueError(f"{k} is not a variable in the model")
 
                 ii = exog_names.index(k)
                 exog[ii] = ev[k]
@@ -3229,8 +3202,8 @@ class _MultinomialLogit(Link):
 
         Parameters
         ----------
-        lpr : array_like (length must be divisible by `ncut`)
-            The linear predictors
+        lpr : array_like
+            The linear predictors.  Length must be divisible by `ncut`.
 
         Returns
         -------
@@ -3269,6 +3242,10 @@ class _Multinomial(families.Family):
         nlevels : int
             The number of distinct categories for the multinomial
             distribution.
+        check_link : bool, optional
+            If True (default), then an exception is raised if the link is
+            invalid for the family.
+            If False, then the link is not checked.
         """
         self._check_link = check_link
         self.initialize(nlevels)
@@ -3289,7 +3266,7 @@ class GEEMargins:
     args : tuple
         Args are passed to `get_margeff`. This is the same as
         results.get_margeff. See there for more information.
-    kwargs : dict
+    kwargs : dict, optional
         Keyword args are passed to `get_margeff`. This is the same as
         results.get_margeff. See there for more information.
     """
@@ -3314,13 +3291,13 @@ class GEEMargins:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Number between 0 and 1. The confidence intervals have the
             probability 1-alpha.
 
         Returns
         -------
-        frame : DataFrames
+        frame : DataFrame
             A DataFrame summarizing the marginal effects.
         """
         _check_at_is_all(self.margeff_options)
@@ -3359,7 +3336,7 @@ class GEEMargins:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Number between 0 and 1. The confidence intervals have the
             probability 1-alpha.
 
@@ -3382,14 +3359,14 @@ class GEEMargins:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Number between 0 and 1. The confidence intervals have the
             probability 1-alpha.
 
         Returns
         -------
-        Summary : SummaryTable
-            A SummaryTable instance
+        smry : Summary
+            A Summary instance.
         """
         _check_at_is_all(self.margeff_options)
         results = self.results
@@ -3463,7 +3440,7 @@ class GEEMargins:
                     "std err",
                     "z",
                     "P>|z|",
-                    "[%3.1f%% Conf. Int.]" % (100 - alpha * 100),
+                    f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
                 ]
                 tble.insert_header_row(0, header)
                 # from IPython.core.debugger import Pdb; Pdb().set_trace()
@@ -3486,7 +3463,7 @@ class GEEMargins:
                 "std err",
                 "z",
                 "P>|z|",
-                "[%3.1f%% Conf. Int.]" % (100 - alpha * 100),
+                f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
             ]
             table.insert_header_row(0, header)
 

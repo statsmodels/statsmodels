@@ -19,20 +19,20 @@ jobs:
     permissions:
       contents: read  # to fetch code (actions/checkout)
     name: Pyodide test
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     # To enable this workflow on a fork, comment out:
     if: github.repository == 'statsmodels/statsmodels'
     steps:
       - name: Checkout statsmodels
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           submodules: recursive
           fetch-tags: true
           persist-credentials: false
 
-      - uses: pypa/cibuildwheel@v3.4.1
+      - uses: pypa/cibuildwheel@1828c10ab37f080699c7b81cea34097c684a7074 #v4.2.0
         env:
           CIBW_PLATFORM: pyodide
-          CIBW_BUILD: cp312-*
-          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['-sra', '--skip-examples', '--skip-slow'], exit=True)"
-          CIBW_TEST_REQUIRES: pytest pytest-cov matplotlib
+          CIBW_BUILD: "cp313-*"
+          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['-ra', '--skip-examples', '--skip-slow'], exit=True)"
+          CIBW_TEST_REQUIRES: pytest pytest-cov pytest-run-parallel pytest-randomly matplotlib
