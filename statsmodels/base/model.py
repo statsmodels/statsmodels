@@ -585,21 +585,11 @@ class LikelihoodModel(Model):
         def f(params, *args):
             return -self.loglike(params, *args) / nobs
 
-        if method == "newton":
-            # TODO: why are score and hess positive?
-            def score(params, *args):
-                return self.score(params, *args) / nobs
+        def score(params, *args):
+            return -self.score(params, *args) / nobs
 
-            def hess(params, *args):
-                return self.hessian(params, *args) / nobs
-
-        else:
-
-            def score(params, *args):
-                return -self.score(params, *args) / nobs
-
-            def hess(params, *args):
-                return -self.hessian(params, *args) / nobs
+        def hess(params, *args):
+            return -self.hessian(params, *args) / nobs
 
         warn_convergence = kwargs.pop("warn_convergence", True)
 
