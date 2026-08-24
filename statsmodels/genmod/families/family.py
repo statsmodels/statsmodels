@@ -6,15 +6,15 @@ The one parameter exponential family distributions used by GLM.
 # see
 # http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
+from statsmodels.compat.platform import PLATFORM_32
+
 import inspect
 import warnings
 
 import numpy as np
 from scipy import special, stats
 
-from statsmodels.tools.sm_exceptions import (
-    ValueWarning,
-)
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 from . import links as L, varfuncs as V
 
@@ -1781,8 +1781,11 @@ class Tweedie(Family):
                     scale = scale[idx]
                 x = ((p - 1) * scale / endog) ** alpha
                 x /= (2 - p) * scale
-                wb = special.wright_bessel(-alpha, 0, x)
-                ll_obs[idx] += np.log(1 / endog * wb)
+                if not PLATFORM_32:
+                    ll_obs[idx] += np.log(1 / endog) + special.log_wright_bessel(-alpha, 0, x)
+                else:
+                    wb = special.wright_bessel(-alpha, 0, x)
+                    ll_obs[idx] += np.log(1 / endog * wb)
             return ll_obs
         else:
             # Equations 4 of Kaas
