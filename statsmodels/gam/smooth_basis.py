@@ -315,7 +315,13 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
             # Need to compute inner knots
             grid = np.linspace(0, 1, n_inner_knots + 2)[1:-1]
             inner_knots = x_min + grid * (x_max - x_min)
-            diff_knots = inner_knots[1] - inner_knots[0]
+            # The n_inner_knots + 1 segments spanning [x_min, x_max] all
+            # have this width by construction of the uniform grid above, so
+            # this is equivalent to inner_knots[1] - inner_knots[0]) whenever
+            # that difference exists, and (unlike that difference) remains
+            # well-defined for n_inner_knots in (0, 1), where there are too
+            # few inner knots to take a difference between two of them.
+            diff_knots = (x_max - x_min) / (n_inner_knots + 1)
     if knots is not None:
         inner_knots = knots
     if lower_bound is None:
@@ -337,8 +343,12 @@ def get_knots_bsplines(x=None, df=None, knots=None, degree=3,
 
     if spacing == "equal":
         diffs = np.arange(1, order + 1) * diff_knots
-        lower_knots = inner_knots[0] - diffs[::-1]
-        upper_knots = inner_knots[-1] + diffs
+        # Anchor on x_min/x_max + / - diff_knots rather than inner_knots[0]
+        # and inner_knots[-1]: equal to those when there is at least one
+        # inner knot (by construction of the grid above), but also
+        # well-defined when n_inner_knots == 0 and inner_knots is empty.
+        lower_knots = (x_min + diff_knots) - diffs[::-1]
+        upper_knots = (x_max - diff_knots) + diffs
         all_knots = np.concatenate((lower_knots, inner_knots, upper_knots))
     else:
         all_knots = np.concatenate(([lower_bound, upper_bound] * order,
