@@ -8,7 +8,7 @@ Release summary
 ===============
 
 This note covers all changes merged into ``main`` between the ``v0.15.0.dev0``
-tag (2023-05-05) and the current development head (2026-08-11).
+tag (2023-05-05) and the current development head (2026-08-24).
 
 statsmodels is using github to store the updated documentation. Two versions
 are available:
@@ -28,11 +28,11 @@ docstrings.
 Release Statistics
 -------------------
 
-- **Issues closed**: 333
-- **Pull requests merged**: 526
-- **Non-merge commits**: 1420
-- **Contributors** (by git log author, unique names): 153
-- **Time span**: 2023-05-05 through 2026-08-11
+- **Issues closed**: 351
+- **Pull requests merged**: 617
+- **Non-merge commits**: 1647
+- **Contributors** (by git log author, unique names): 162
+- **Time span**: 2023-05-05 through 2026-08-24
 
 The Highlights
 ===============
@@ -249,6 +249,58 @@ Platform and packaging compatibility
 - Free-threaded (no-GIL) CPython compatibility work, including
   free-threading-compatible Cython modules and CI coverage. :pr:`9717`
 
+Stricter input validation for string-valued options
+---------------------------------------------------------
+
+Late in the release cycle, essentially every string-valued parameter that
+accepts a fixed set of options (``method``, ``alternative``, ``trend``, and
+similar) was audited and, where it wasn't already, routed through
+:func:`statsmodels.tools.validation.string_like` with an explicit
+``options=`` tuple (:pr:`10161`, plus follow-ups :pr:`10167`, :pr:`10173`).
+This is the largest single change in this release by number of call sites
+touched, and it changes behavior in two distinct ways:
+
+- **Previously-silent bad input now raises a clean, documented**
+  ``ValueError``. A number of functions had validation gaps where an
+  unrecognized string either silently fell through to a default branch (for
+  example ``VECM``'s ``deterministic``, ``seasonal_decompose``'s ``model``,
+  and ``oneway``'s ``use_var`` family) or produced a confusing
+  ``KeyError``/``NameError`` instead of the documented error (for example
+  :func:`~statsmodels.tsa.arima.specification.SARIMAXSpecification.validate_estimator`).
+  Code that was accidentally relying on one of these fallback paths, rather
+  than passing a value from the documented ``{...}`` set, will now see a
+  ``ValueError`` where it previously ran (possibly incorrectly) without
+  complaint.
+- **Undocumented short-form aliases now emit a** ``FutureWarning``
+  **instead of working silently.** The most widespread example is the
+  ``alternative`` parameter used throughout ``stats`` and ``tsa`` for
+  hypothesis-test direction (``"two-sided"``/``"larger"``/``"smaller"``, or
+  ``"increasing"``/``"decreasing"``/``"two-sided"`` for heteroskedasticity
+  tests): informal short forms such as ``"2s"``, ``"l"``, ``"s"``, ``"i"``,
+  ``"inc"``, ``"d"``, ``"dec"``, or ``"2"`` were accepted but never
+  documented. These still work today, but now raise a ``FutureWarning``
+  naming the documented spelling to switch to, and will stop being accepted
+  after statsmodels 0.16 (:pr:`10170`). This affects, among others,
+  :class:`~statsmodels.stats.weightstats.DescrStatsW`/
+  :class:`~statsmodels.stats.weightstats.CompareMeans` and the module-level
+  ``ztest``/``zconfint``/``ztost``/``ttest_ind``/``ttost_ind`` functions in
+  :mod:`statsmodels.stats.weightstats`, :func:`~statsmodels.stats.diagnostic.het_goldfeldquandt`,
+  :func:`~statsmodels.tsa.stattools.breakvar_heteroskedasticity_test` (and the
+  state space/ETS ``test_heteroskedasticity`` methods built on it),
+  ``PredictionResults.t_test``/``PredictionResultsBase.t_test``, most of
+  :mod:`statsmodels.stats.power`, several functions in
+  :mod:`statsmodels.stats.proportion` and :mod:`statsmodels.stats.rates`,
+  :func:`~statsmodels.stats.oneway.confint_noncentrality`,
+  :func:`~statsmodels.stats.meta_analysis.effectsize_2proportions` (whose
+  ``statistic`` parameter separately gained ``"rd"``/``"rr"``/``"or"``/
+  ``"arcsine"`` as deprecated aliases for ``"diff"``/``"risk-ratio"``/
+  ``"odds-ratio"``/``"arcsin"``), and
+  :func:`~statsmodels.stats._lilliefors.ksstat` (whose ``alternative`` gained
+  deprecated aliases for the ``scipy.stats.kstest``-style spellings
+  ``"two_sided"``/``"less"``/``"greater"``). Pass the documented spelling to
+  silence the warning; the deprecated forms will be removed, not just
+  undocumented, starting after statsmodels 0.16.
+
 A few consequential bug fixes
 ---------------------------------
 
@@ -270,6 +322,18 @@ A few of the more consequential correctness fixes in this release (see
 - The adjusted (unbiased) ``ccovf``/``acovf`` normalized by ``len(x) - k``
   rather than by the actual number of overlapping observation pairs, which
   is only the same thing when the two series are equal length. :pr:`9916`
+- ``breakvar_heteroskedasticity_test`` (and the state space/ETS
+  ``test_heteroskedasticity`` methods built on it) referred the ratio of two
+  sums of squares directly to ``F(numer_dof, denom_dof)``; that ratio is only
+  ``F``-distributed after rescaling by ``denom_dof / numer_dof``, so p-values
+  were wrong whenever missing observations left the two subsets with
+  different numbers of usable residuals. Balanced samples were unaffected.
+  :pr:`10171`
+- Every ``TreatmentEffectResults`` produced by
+  :class:`~statsmodels.treatment.treatment_effects.TreatmentEffect`'s
+  ``ra``/``aipw``/``aipw_wls``/``ipw_ra`` methods was labeled ``.method =
+  "IPW"``, regardless of which method actually produced it. Each method now
+  labels its own result correctly. :pr:`10164`
 
 
 Breaking Changes and Deprecations
@@ -337,6 +401,50 @@ constructed anywhere internally. Code that checked
 2-tuple-unpacking behaviour should switch to the documented ``NamedTuple``
 result class and named attribute access (e.g. ``result.statistic``,
 ``result.pvalue``) instead. :pr:`10072`
+
+Undocumented ``alternative`` short forms deprecated
+--------------------------------------------------------
+
+As described above (*Stricter input validation for string-valued options*),
+short, undocumented spellings of the ``alternative`` hypothesis-direction
+parameter (``"2s"``, ``"l"``, ``"s"``, ``"i"``, ``"inc"``, ``"d"``, ``"dec"``,
+``"2"``, and a few compare/statistic aliases in
+:mod:`~statsmodels.stats.meta_analysis` and
+:mod:`~statsmodels.stats._lilliefors`) now raise a ``FutureWarning`` naming
+the documented replacement instead of working silently, and will be removed
+after statsmodels 0.16. :pr:`10170`, :pr:`10173`
+
+Several previously-undocumented, silently-accepted string values elsewhere
+were similarly tightened to raise ``ValueError`` for anything outside the
+documented set -- this is a validation fix, not a deprecation, so there is no
+warning period; code passing a value outside the documented ``{...}`` set
+needs to be corrected directly. :pr:`10161`, :pr:`10167`
+
+Unused estimator classes deprecated
+-----------------------------------------
+
+The following classes and one function were found, during a systematic
+coverage audit, to have no callers anywhere in the codebase and no test
+coverage. They now raise a ``FutureWarning`` on construction/use and will be
+removed after statsmodels 0.16: ``NonlinearLS``, ``MLEGLS``, ``TSMLEModel``,
+``GLSHet``, ``GLSHet2``, ``TsaDescriptive``, and the ``_Var`` class in
+``tsa.varma_process`` (whose own docstring already called it "Obsolete").
+``nonparametric.smoothers_lowess_old.lowess`` gets the same treatment as a
+function -- its own docstring examples already point at the actively
+maintained :func:`statsmodels.nonparametric.lowess`. If you rely on any of
+these, please open an issue. :pr:`10156`
+
+``FactorResults.uniq_stderr`` is now a method, not a property
+--------------------------------------------------------------------
+
+``FactorResults.uniq_stderr`` previously accepted a documented ``kurt``
+argument that could never actually be supplied, because the method was
+wrapped in ``@cache_readonly`` and so was only ever accessed as a bare
+attribute (``result.uniq_stderr``). The ``cache_readonly`` wrapper has been
+removed so ``kurt`` is usable as documented; this means existing code must
+change ``result.uniq_stderr`` to ``result.uniq_stderr()``. There is no
+deprecation period for this one, since the old attribute-style access could
+never have supplied ``kurt`` correctly in the first place. :pr:`10175`
 
 Minimum dependency versions raised
 --------------------------------------
@@ -456,6 +564,14 @@ New Features and Enhancements
 - Add local false discovery rate estimation (``local_fdr_correction``). :pr:`10069`
 - Add ``LocalProjections``, a Jordà (2005) local-projections estimator for
   impulse response functions with Newey-West HAC standard errors. :pr:`9871`
+- Implement an L1-penalized solver for GLM. :pr:`10101`
+- Add CRV3 (cluster-jackknife) cluster-robust inference for ``OLS``/
+  ``WLS``. :pr:`10103`
+- Warn when ``exog`` is (numerically) singular in the ``*LS`` model
+  family, instead of silently returning an unreliable fit. :pr:`10140`
+- Make the ``ndim`` check in ``array_like`` orthogonal to ``maxdim``, so
+  the two can be combined instead of one silently overriding the
+  other. :pr:`10090`
 
 .. rubric:: Performance
 
@@ -593,6 +709,54 @@ Notable Bug Fixes
   multiplier and its degrees of freedom interchanged, and the ``decreasing``
   alternative did not swap the degrees of freedom when it inverted the
   statistic.  Balanced samples, which is the usual case, are unaffected.
+- Fix edge cases in the :math:`O(N \log N)` ``medcouple`` path. :pr:`10084`
+- Check the sign of the smallest eigenvalue before taking its square root
+  when forming a condition number, instead of letting a tiny negative
+  value (floating-point noise) raise. :pr:`10088`
+- Fix ``MNLogit.resid_response`` raising ``ValueError`` instead of
+  returning residuals. :pr:`10089`
+- Forward a kwarg that ``MixedLM.from_formula`` was silently dropping
+  instead of passing to the superclass constructor. :pr:`10105`
+- Pivot the QR factorization used in ``tools.matrix_rank``, so rank is
+  computed correctly for matrices that need pivoting for numerical
+  stability. :pr:`10106`
+- Fix numerous small bugs in ``robust.norms``, ``RLM``, and
+  ``stats.stattools``. :pr:`10113`
+- Add a missing ``self`` in an ``ETSModel`` update path. :pr:`10120`
+- Correct the ``distargs`` usage in ``robust.scale.scale_trimmed``. :pr:`10130`
+- Fix a line-style bug in the Bland-Altman agreement plot. :pr:`10131`
+- Enable the ``percentile`` option in ``_select_sigma`` for kernel
+  bandwidth selection. :pr:`10132`
+- Fix a sign/orientation bug (``factor.py`` reversed the intended
+  direction). :pr:`10133`
+- Only initialize the trend component in exponential smoothing when the
+  model actually has one. :pr:`10134`
+- Correct the Hessian choice in ``othermod.betareg``. :pr:`10135`
+- Ensure the bar gap size is computed correctly in ``mosaic_plot``. :pr:`10136`
+- Ensure ``SVAR`` raises for options it does not actually implement,
+  instead of silently ignoring them. :pr:`10137`
+- Fix several bugs found in a systematic full-codebase scan, including in
+  ``MixedLM`` and ``stats.multivariate_tools``. :pr:`10139`
+- Fix additional small bugs, including in ``iolib.table``. :pr:`10141`
+- Correct the shape of the values returned by ``CanCorr``. :pr:`10143`
+- Fix ``OLSInfluence._ols_xnoti`` crashing on every call. :pr:`10152`
+- Fix ``RLMDetSMM.fit`` crashing with its own documented ``h=None``
+  default. :pr:`10154`
+- Fix ``MICEData`` using the observed-row index instead of the full index
+  when building ``predict_miss_kwds``. :pr:`10163`
+- Guard against ``zero_kwds=None`` in ``effectsize_2proportions``. :pr:`10165`
+- Fix a crash in SARIMAX time-varying regression when the state vector
+  also includes differencing. :pr:`10172`
+- Coerce the ``offset`` argument with ``array_like`` in
+  ``PoissonZiGMLE``, instead of failing on plain Python
+  sequences. :pr:`10174`
+- Coerce ``cov_null`` with ``array_like`` in ``stats.multivariate``
+  instead of requiring a NumPy array. :pr:`10176`
+- ``get_prediction`` for GLM-like models now always has a linear
+  predictor available when one is requested. :pr:`10178`
+- Correct the knot-centering computation in ``get_knots_bsplines`` for
+  splines with few interior knots, where it previously produced
+  incorrect (non-equally-spaced) knots or raised. :pr:`10177`
 
 
 Build, Packaging, and Infrastructure
@@ -629,6 +793,8 @@ Build, Packaging, and Infrastructure
 - Remove the coveralls integration. :pr:`10080`
 - Routine dependabot bumps for ``pypa/cibuildwheel`` and
   ``actions/github-script``. :pr:`10070`, :pr:`10071`
+- Also look for ``.exe``-suffixed binaries when locating the X-13ARIMA-SEATS
+  executable on Windows. :pr:`10087`
 
 
 Documentation
@@ -642,7 +808,19 @@ bring docstrings across the codebase in line with the numpydoc standard
 ``imputation``/``multivariate``/``nonparametric``, ``emplike``/``duration``,
 ``treatment``/``gam``, ``tools``, ``othermod``/``regression``/``robust``,
 and more), plus a documentation theme change to ``pydata-sphinx-theme`` and
-a pass over example notebooks to fix formatting and broken links.
+a pass over example notebooks to fix formatting and broken links. A second,
+final pass in the closing weeks of the cycle brought the remaining modules
+up to the same standard and fixed up the stragglers it turned up along the
+way: tools (:pr:`10107`), robust (:pr:`10108`), stats (:pr:`10110`),
+othermod/treatment/multivariate (:pr:`10111`), base/datasets/compat
+(:pr:`10112`), regression (:pr:`10114`), formula/graphics/imputation
+(:pr:`10116`), core ``tsa`` routines (:pr:`10117`),
+discrete/duration/gam/genmod (:pr:`10119`),
+distributions/emplike/iolib/miscmodels (:pr:`10121`), nonparametric
+(:pr:`10123`), vector_ar (:pr:`10124`), statespace (:pr:`10127`), and
+dataset docstrings (:pr:`10128`), plus general clean-up of ``numpy``/
+``pandas`` usage (:pr:`10115`), ``rng`` parameter docstrings (:pr:`10145`),
+and the ``AGENTS.md`` guidance used to drive this pass (:pr:`10125`).
 
 - Correct links to notebooks. :pr:`8886`
 - Correct a typo in the ``WLS.loglike`` docstring. :pr:`8900`
@@ -727,6 +905,19 @@ a pass over example notebooks to fix formatting and broken links.
 - Various small documentation and rst fixes. :pr:`10033`, :pr:`10034`,
   :pr:`10036`, :pr:`10037`, :pr:`10038`, :pr:`10040`, :pr:`10041`,
   :pr:`10046`, :pr:`10053`, :pr:`10057`, :pr:`10062`, :pr:`10063`
+- Clarify how to access ``TukeyHSD`` rejection decisions and
+  p-values. :pr:`9956`
+- Improve the ``yule_walker`` documentation. :pr:`10076`
+- Reduce Sphinx cross-reference noise/warnings. :pr:`10097`
+- Fix a typo in the WLS example notebook's row labels, and remove an
+  unused ``scipy`` import and cell left over from
+  it. :pr:`10099`, :pr:`10100`
+- Fix incorrect parameter types recorded in the regression
+  docstrings. :pr:`10104`
+- Fix the ``UECM`` docstring. :pr:`10118`
+- Replace broken OECD glossary links in the ``endog``/``exog``
+  documentation. :pr:`10122`
+- Improve the ``pacf`` docstring. :pr:`10169`
 
 
 Testing, Linting, and Maintenance
@@ -737,8 +928,15 @@ suite green against upstream changes in NumPy, SciPy, and pandas (including
 pandas copy-on-write and preparation for pandas 3), adopting ``ruff`` for
 linting in addition to ``flake8``, running ``isort``/``pyupgrade`` across
 the codebase, relaxing overly tight test tolerances, and improving thread
-safety of the test suite ahead of free-threaded CPython support. Selected
-items:
+safety of the test suite ahead of free-threaded CPython support.
+
+In the final weeks of the cycle, a systematic coverage audit went through
+results-class attributes and methods, computational code paths, and
+summary/table content that had no test asserting on it, adding regression
+tests and turning up several of the bug fixes listed above.
+:pr:`10150`, :pr:`10151`, :pr:`10153`, :pr:`10155`
+
+Selected items:
 
 - Reduce direct use of the global ``np.random`` state in the library and in
   tests. :pr:`9878`, :pr:`9879`, :pr:`9737`
@@ -784,6 +982,25 @@ items:
 - Protect against pandas 4 changes. :pr:`10058`, :pr:`10065`
 - Improve the issue and pull-request templates. :pr:`10050`, :pr:`10060`
 - Assorted small maintenance ahead of the release. :pr:`10056`
+- Test the remaining edge cases in the Jonckheere-Terpstra
+  test. :pr:`10083`
+- Move the ``NamedTuple`` result classes away from a shared limited-iteration
+  mixin, standardize field names, and simplify the mix of ``NamedTuple`` and
+  ``dataclass`` usage introduced earlier in the
+  cycle. :pr:`10093`, :pr:`10095`, :pr:`10096`, :pr:`10098`
+- Restore a behavior change that had been introduced
+  accidentally. :pr:`10094`
+- Improve import performance in some cases. :pr:`10102`
+- Move non-core code out of the main package. :pr:`10168`
+- Re-enable a previously-skipped test, and change the warning class expected
+  from ``fit_collinear`` and from tests running under
+  WASM. :pr:`10138`, :pr:`10142`, :pr:`10144`
+- Silence expected-but-noisy singularity warnings in the test
+  suite. :pr:`10146`
+- Add tests for the ``rng`` argument selector. :pr:`10147`
+- Add a marker for matplotlib-dependent tests. :pr:`10166`
+- CI: work around a Cython/conda incompatibility that intermittently broke
+  the legacy conda test job. :pr:`10158`, :pr:`10160`, :pr:`10162`
 
 
 Major Bugs Fixed
@@ -805,24 +1022,26 @@ development head, and may not be complete or fully deduplicated across
 differently-configured git identities:
 
 Achraf Ez, Aditi Juneja, Adrian Ross, Agriya Khetarpal, Alex Alborghetti,
-Andrés, Andrés López, Anh Trinh, Aniket, Aniket Singh Yadav, Anselm Hahn,
-Antoine Mayerowitz, Anton Karpov, Anuraag Pandhi, Artem Glebov, Ayush Gupta,
-Ben, Benjamin Leff, Bortlesboat, Caleb Lindgren, Chad Fulton, Christine P.
-Chai, Clément Fauchereau, Daan Knoope, David Ivanov, Deshan, Dhairya Motta,
-Dhruvil Darji, Eden Rochman, Elton Chang, Erich Morisse, Eugen Goebel, Evan
-Lyall, Evgeni Burovski, FuturMix, Hadi Dayekh, Harish Bhavandla, Hood
-Chatham, IsaacP, IntegralIndefinida, Illia Polovnikov, Iman, Jake Soloff,
-Jesse W. Collins, Jim Varanelli,
+Alexander Fischer, Andrés, Andrés López, Anh Trinh, Aniket, Aniket Singh
+Yadav, Anselm Hahn, Antoine Mayerowitz, Anton Karpov, Anuraag Pandhi, Artem
+Glebov, Ayush Gupta, Ben, Benjamin Leff, Bortlesboat, Caleb Lindgren, Chad
+Fulton, Christine P. Chai, Clément Fauchereau, Daan Knoope, David Ivanov,
+Deshan, Dhairya Motta, Dhruvil Darji, Eden Rochman, Elton Chang, Erich
+Morisse, Eugen Goebel, Evan Lyall, Evgeni Burovski, FuturMix, Hadi Dayekh,
+Harish Bhavandla, Hood Chatham, IsaacP, IntegralIndefinida, Illia
+Polovnikov, Iman, Jake Soloff, Jesse W. Collins, Jim Varanelli,
 Joey Scanga, Josef Perktold, Joshua Markovic, Justin Mahlik, Kaif,
-Kakarot35, Kevin Sheppard, Kevin Gregory, Kumar Aditya, Lakshmi786, Loi
-Nguyen, Luke J, Maciej Skorski, Manlai Amar, Marc Bresson, Mathias Hauser,
-Maxime Gourguechon, Melissa Wu, Michał Górny, Michel de Ruiter, Naimish
-Machchhar, Pranav Achar, Puneet Dixit, Rahul Rathnavel K, Ralf Gommers,
-Rebecca N. Palmer, Ritika shrestha, RoyS, Sebastian Pölsterl, Shamus,
-Solaris-star, Sreekant Baheti, Tartopohm, Vedant Madane, Vikram Kumar,
-Viktor, Vitaliy, Vladimir Saraikin, Wali Reheman, Will Tirone, YangWu1227,
-Zbigniew Jędrzejewski-Szmek, Zhengbo Wang, adarshsm, alekracicot, camaramm,
-chuenchen309, genrichez, hass-nation, libokai, uttam12331, whn, and many
+Kakarot35, Kayvan Zahiri, Kevin Sheppard, Kevin Gregory, Kumar Aditya,
+Lakshmi786, Loi Nguyen, Luke J, Maciej Skorski, Manlai Amar, Marc Bresson,
+Mathias Hauser, Maxime Gourguechon, Melissa Wu, Michał Górny, Michel de
+Ruiter, Naimish Machchhar, Pranav Achar, Puneet Dixit, Rahul Rathnavel K,
+Ralf Gommers, Rebecca N. Palmer, Ritika shrestha, RoyS, Seaic Mac
+Murchadha, Sebastian Pölsterl, Shamus, Solaris-star, Sreekant Baheti,
+Tartopohm, Vedant Madane, Vikram Kumar, Viktor, Vitaliy, Vladimir
+Saraikin, Wali Reheman, Will Tirone, YangWu1227, Zbigniew
+Jędrzejewski-Szmek, Zhang Hong, Zhengbo Wang, adarshsm, alekracicot,
+camaramm, chuenchen309, cjck944084735-dot, genrichez, hass-nation, lev,
+libokai, louisabraham, mkzung, star1327p, uttam12331, whn, and many
 others.
 
 These lists are automatically generated based on ``git log`` and may not be
@@ -1360,3 +1579,94 @@ The following Pull Requests were merged since the last release:
 - :pr:`10080`: DOC: Remove coveralls
 - :pr:`10081`: BUG: Finish move from README.rst to README.md
 - :pr:`10082`: CLN: Fix lint issues
+- :pr:`9956`: docs(stats): clarify TukeyHSD reject and pvalues access
+- :pr:`10076`: DOC: Improve documentation for yule_walker
+- :pr:`10083`: TST: Test remaining edge cases in jonckheere_terpstra
+- :pr:`10084`: BUG: Correct edge cases in n log n medcouple path
+- :pr:`10085`: DOC: Update release note
+- :pr:`10087`: ENH: Also check binaries with .exe
+- :pr:`10088`: BUG: Check for positivity of eigval in condition number
+- :pr:`10089`: BUG: fix MNLogit resid_response raising ValueError (closes #7096)
+- :pr:`10090`: ENH: Make ndim more orthogonal to maxdim
+- :pr:`10091`: Add LocalProjections estimator for impulse response functions (Jordà…)
+- :pr:`10092`: ENH: Modify the approach to use dataclasses to limit unpack
+- :pr:`10093`: REF: Move away from limited iter NamedTuple
+- :pr:`10094`: MAINT: Restore accidental behavior change
+- :pr:`10095`: TST: Add tests for limited iteration superclass
+- :pr:`10096`: CLN: Standardize names in new objects
+- :pr:`10097`: DOC: Reduce reference noise in sphinx
+- :pr:`10098`: CLN/DOC: Simplify NamedTuple and dataclasses
+- :pr:`10099`: DOC: Fix typo in WLS example notebook row labels
+- :pr:`10100`: REF: Remove unused scipy import and cell from wls.ipynb
+- :pr:`10101`: ENH: Implement L1 solver for GLM Extended #9430
+- :pr:`10102`: PERF: Improve import performan in some cases
+- :pr:`10103`: ENH: add crv3 cluster robust inference via the cluster jackknife for OLS/WLS
+- :pr:`10104`: Docstring types regression
+- :pr:`10105`: BUG: Forward missing kwarg from MixedLM.from_formula to superclass
+- :pr:`10106`: BUG: Pivot the QR factorization in tools.matrix_rank
+- :pr:`10107`: DOC: Standardized docstrings in tools
+- :pr:`10108`: DOC: Standardized docstrings in robust
+- :pr:`10110`: DOC: Standardized docstrings in stats
+- :pr:`10111`: DOC: Standardized docstrings in othermod, treatment and multivariate
+- :pr:`10112`: DOC: Standardized docstrings in base, datasets and compat
+- :pr:`10113`: BUG: Fix numerous small bugs
+- :pr:`10114`: DOC: Fix small remaining issues in regression
+- :pr:`10115`: DOC: Fix small remaining issues around use of np and pd
+- :pr:`10116`: DOC: Documentation cleaning pass for formula, graphics and imputation
+- :pr:`10117`: DOC: Documentation cleaning pass core routines in tsa
+- :pr:`10118`: DOC: Fix UECM
+- :pr:`10119`: DOC: Clean docstrings in discrete, duration gam and genmod
+- :pr:`10120`: BUG: Add missing self to update
+- :pr:`10121`: DOC: Docstring clean in dist, emplike, iolib and mismodel
+- :pr:`10122`: DOC: Replace broken OECD glossary links in endog_exog docs
+- :pr:`10123`: DOC: Docstring clean in nonparametric
+- :pr:`10124`: DOC: Docstring clean in vector_ar
+- :pr:`10125`: DOC: Update agents to improve docstrings
+- :pr:`10127`: DOC: Clean docstrings in statespace
+- :pr:`10128`: DOC: Improve dataset docstrings
+- :pr:`10129`: BUG: Rename variable to SUNACTIVITY
+- :pr:`10130`: BUG: Correct distargs usage in scale_trimmed
+- :pr:`10131`: BUG: Fix bug in line-style application
+- :pr:`10132`: BUG: Enable percentile in _select_sigma
+- :pr:`10133`: BUG: Fix factor reverse intent
+- :pr:`10134`: BUG: Only initialize trend when required
+- :pr:`10135`: BUG: Correct hess choice in betareg
+- :pr:`10136`: BUG: Ensure gap size is correct in mosaic_plot
+- :pr:`10137`: BUG: Ensure not implemented options raise
+- :pr:`10138`: TST: Re-enable test
+- :pr:`10139`: BUG: Fix bugs found in full scan
+- :pr:`10140`: ENH: Warn users if exog is singular in *LS
+- :pr:`10141`: BUG: Fix small bugs
+- :pr:`10142`: TST: Change warning class on fit_collinear
+- :pr:`10143`: BUG: Correct size of cancorr returns
+- :pr:`10144`: TST: Change warning on WASM
+- :pr:`10145`: DOC: Standard docstrings for rng
+- :pr:`10146`: TST: Silence singular warnings
+- :pr:`10147`: TST: Add tests for rng selector
+- :pr:`10150`: TST: Cover results-class surface gaps
+- :pr:`10151`: TST: Cover dead computational methods on live estimators
+- :pr:`10152`: BUG: Fix OLSInfluence._ols_xnoti crashing on every call
+- :pr:`10153`: TST: Cover margins and diagnostics gaps
+- :pr:`10154`: BUG: Fix RLMDetSMM.fit crashing with its documented h=None default
+- :pr:`10155`: TST: Verify NewsResults summary content, not just non-emptiness (Phase…)
+- :pr:`10156`: MAINT: Deprecate estimator classes with no callers and no test coverage
+- :pr:`10158`: CI: Disable failing conda run
+- :pr:`10160`: CI: Re-enable conda with different cython
+- :pr:`10161`: ENH: Enforce string like validation
+- :pr:`10162`: CI: Revery cython for legacy conda test
+- :pr:`10163`: BUG: Fix MICEData using observed-row index for predict_miss_kwds
+- :pr:`10164`: BUG: Fix TreatmentEffectResults mislabeling every method as IPW
+- :pr:`10165`: BUG: Guard against None zero_kwds in effectsize_2proportions
+- :pr:`10166`: TST: Add marker for matplotlib tests
+- :pr:`10167`: ENH: Add validation to from_string methods
+- :pr:`10168`: CLN: Move non-core code our of package
+- :pr:`10169`: DOC: Improve docstring for pacf
+- :pr:`10170`: ENH: Simplify aliases
+- :pr:`10171`: REF: Delegate ETS breakvar test to the shared implementation
+- :pr:`10172`: BUG: fix SARIMAX time-varying regression with differencing in the state vector
+- :pr:`10173`: ENH: Improve string checking
+- :pr:`10174`: BUG: Add array_like for offset
+- :pr:`10175`: BUG: Remove cache_readonly the presented parameter
+- :pr:`10176`: BUG: Ensure array_like covnull is coerced
+- :pr:`10177`: BUG: Correct bug in knot centereing
+- :pr:`10178`: BUG: Ensure linepred is always available
