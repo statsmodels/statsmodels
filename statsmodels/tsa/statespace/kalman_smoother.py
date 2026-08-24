@@ -6,9 +6,11 @@ License: Simplified-BSD
 """
 
 from types import SimpleNamespace
+import warnings
 
 import numpy as np
 
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import string_like
 from statsmodels.tsa.statespace import initialization, tools
 from statsmodels.tsa.statespace.kalman_filter import FilterResults, KalmanFilter
@@ -573,7 +575,10 @@ class SmootherResults(FilterResults):
         The smoothed state disturbance at each time period.
     smoothed_measurement_disturbance_cov : ndarray
         The smoothed measurement disturbance covariance matrices at each time
-        period.
+        period. If a non-diagonal observation covariance was diagonalized as
+        :math:`H_t = C_t D_t C_t'` for the univariate filtering approach, then
+        these are the (diagonal) covariance matrices of
+        :math:`C_t^{-1} \varepsilon_t` rather than of :math:`\varepsilon_t`.
     smoothed_state_disturbance_cov : ndarray
         The smoothed state disturbance covariance matrices at each time period.
     """
@@ -618,6 +623,24 @@ class SmootherResults(FilterResults):
         self._smoothed_forecasts = None
         self._smoothed_forecasts_error = None
         self._smoothed_forecasts_error_cov = None
+
+    def _diagonalized_obs_cov(self):
+        """
+        Whether a non-diagonal observation covariance matrix was diagonalized
+
+        The univariate filtering approach replaces a non-diagonal
+        :math:`H_t` by the diagonal :math:`D_t` of its LDL decomposition
+        :math:`H_t = C_t D_t C_t'`; the diffuse periods always use it.
+        """
+        if self.k_endog == 1:
+            return False
+        # univariate_filter also covers a per-period fallback, but it is only
+        # available if the filter results were updated
+        univariate = getattr(self, "univariate_filter", self.filter_univariate)
+        if not (self.nobs_diffuse > 0 or np.any(univariate)):
+            return False
+        offdiag = ~np.eye(self.k_endog, dtype=bool)
+        return bool(np.any(np.abs(self.obs_cov[offdiag, :]) > 1e-9))
 
     def update_smoother(self, smoother):
         """
@@ -698,6 +721,17 @@ class SmootherResults(FilterResults):
 
         self.innovations_transition = (
             np.array(smoother.innovations_transition, copy=True))
+
+        if self.smoother_disturbance_cov and self._diagonalized_obs_cov():
+            # H_t was replaced by D_t, and only the diagonal of the transformed
+            # covariance is available, so it cannot be transformed back
+            warnings.warn(
+                "The univariate filtering approach diagonalized the"
+                " observation covariance matrix, so"
+                " `smoothed_measurement_disturbance_cov` describes the"
+                " transformed disturbances C_t^{-1} eps_t rather than eps_t."
+                " `smoothed_measurement_disturbance` is unaffected.",
+                OutputWarning, stacklevel=2)
 
         # Diffuse objects
         self.scaled_smoothed_diffuse_estimator = None
