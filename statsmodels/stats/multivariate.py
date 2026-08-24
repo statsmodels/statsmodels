@@ -13,7 +13,7 @@ from scipy import stats
 
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.moment_helpers import cov2corr
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, int_like
 
 
 # shortcut function
@@ -385,9 +385,12 @@ def test_cov(cov, nobs, cov_null):
     """
     # using Stata formulas where cov_sample use nobs in denominator
     # Bartlett 1954 has fewer terms
+    cov = array_like(cov, "cov", ndim=2)
+    nobs = int_like(nobs, "nobs")
+    cov_null = array_like(cov_null, "cov_null", ndim=2)
 
-    S = np.asarray(cov) * (nobs - 1) / nobs
-    S0 = np.asarray(cov_null)
+    S = cov * (nobs - 1) / nobs
+    S0 = cov_null
     k = cov.shape[0]
     n = nobs
 
