@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 Created on Monday April 1st 2013
@@ -12,14 +11,13 @@ Author: Padarn Wilson
 
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 import statsmodels.api as sm
 
 data = sm.datasets.statecrime.load_pandas().data
-murder = data['murder']
-X = data[['poverty', 'hs_grad']].copy()
-X['constant'] = 1
+murder = data["murder"]
+X = data[["poverty", "hs_grad"]].copy()
+X["constant"] = 1
 
 y = murder
 model = sm.OLS(y, X)

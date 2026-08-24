@@ -1,12 +1,10 @@
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 import pandas as pd
 from scipy.special import inv_boxcox
-from scipy.stats import (
-    _distn_infrastructure,
-    boxcox,
-    rv_continuous,
-    rv_discrete,
-)
+from scipy.stats import boxcox, rv_continuous, rv_discrete
+from scipy.stats.distributions import rv_frozen
 
 from statsmodels.base.data import PandasData
 from statsmodels.base.model import Results
@@ -15,11 +13,13 @@ from statsmodels.base.wrapper import (
     populate_wrapper,
     union_dicts,
 )
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 
 class HoltWintersResults(Results):
     """
-    Results from fitting Exponential Smoothing models.
+    Results from fitting Exponential Smoothing models
 
     Parameters
     ----------
@@ -35,16 +35,16 @@ class HoltWintersResults(Results):
         AIC with a correction for finite sample sizes.
     bic : float
         The Bayesian information criterion.
-    optimized : bool
-        Flag indicating whether the model parameters were optimized to fit
-        the data.
+    optimized : ndarray of bool
+        Flags indicating whether each parameter was optimized to fit the
+        data.
     level : ndarray
         An array of the levels values that make up the fitted values.
     trend : ndarray
         An array of the trend values that make up the fitted values.
     season : ndarray
         An array of the seasonal values that make up the fitted values.
-    params_formatted : pd.DataFrame
+    params_formatted : DataFrame
         DataFrame containing all parameters, their short names and a flag
         indicating whether the parameter's value was optimized to fit the data.
     resid : ndarray
@@ -59,7 +59,7 @@ class HoltWintersResults(Results):
     fcastvalues : ndarray
         An array of the forecast values forecast by the Exponential Smoothing
         model.
-    mle_retvals : {None, scipy.optimize.optimize.OptimizeResult}
+    mle_retvals : scipy.optimize.OptimizeResult or None
         Optimization results if the parameters were optimized to fit the data.
     """
 
@@ -84,7 +84,7 @@ class HoltWintersResults(Results):
         mle_retvals=None,
     ):
         self.data = model.data
-        super(HoltWintersResults, self).__init__(model, params)
+        super().__init__(model, params)
         self._model = model
         self._sse = sse
         self._aic = aic
@@ -104,37 +104,27 @@ class HoltWintersResults(Results):
 
     @property
     def aic(self):
-        """
-        The Akaike information criterion.
-        """
+        """The Akaike information criterion"""
         return self._aic
 
     @property
     def aicc(self):
-        """
-        AIC with a correction for finite sample sizes.
-        """
+        """AIC with a correction for finite sample sizes"""
         return self._aicc
 
     @property
     def bic(self):
-        """
-        The Bayesian information criterion.
-        """
+        """The Bayesian information criterion"""
         return self._bic
 
     @property
     def sse(self):
-        """
-        The sum of squared errors between the data and the fittted value.
-        """
+        """The sum of squared errors between the data and the fitted value"""
         return self._sse
 
     @property
     def model(self):
-        """
-        The model used to produce the results instance.
-        """
+        """The model used to produce the results instance"""
         return self._model
 
     @model.setter
@@ -143,46 +133,22 @@ class HoltWintersResults(Results):
 
     @property
     def level(self):
-        """
-        An array of the levels values that make up the fitted values.
-        """
+        """An array of the level values that make up the fitted values"""
         return self._level
 
     @property
     def optimized(self):
-        """
-        Flag indicating if model parameters were optimized to fit the data.
-        """
+        """Flag indicating if model parameters were optimized to fit the data"""
         return self._optimized
 
     @property
-    def slope(self):
-        """
-        An array of the slope values that make up the fitted values.
-
-        .. deprecated:: 0.12
-
-           Use the trend property instead.
-        """
-        import warnings
-
-        warnings.warn(
-            "slope is deprecated and will be removed after 0.13", FutureWarning
-        )
-        return self._trend
-
-    @property
     def trend(self):
-        """
-        An array of the trend values that make up the fitted values.
-        """
+        """An array of the trend values that make up the fitted values"""
         return self._trend
 
     @property
     def season(self):
-        """
-        An array of the seasonal values that make up the fitted values.
-        """
+        """An array of the seasonal values that make up the fitted values"""
         return self._season
 
     @property
@@ -197,44 +163,32 @@ class HoltWintersResults(Results):
 
     @property
     def fittedvalues(self):
-        """
-        An array of the fitted values
-        """
+        """An array of the fitted values"""
         return self._fittedvalues
 
     @property
     def fittedfcast(self):
-        """
-        An array of both the fitted values and forecast values.
-        """
+        """An array of both the fitted values and forecast values"""
         return self._fittedfcast
 
     @property
     def fcastvalues(self):
-        """
-        An array of the forecast values
-        """
+        """An array of the forecast values"""
         return self._fcastvalues
 
     @property
     def resid(self):
-        """
-        An array of the residuals of the fittedvalues and actual values.
-        """
+        """An array of the residuals of the fittedvalues and actual values"""
         return self._resid
 
     @property
     def k(self):
-        """
-        The k parameter used to remove the bias in AIC, BIC etc.
-        """
+        """The k parameter used to remove the bias in AIC, BIC etc"""
         return self._k
 
     @property
     def mle_retvals(self):
-        """
-        Optimization results if the parameters were optimized to fit the data.
-        """
+        """Optimization results if the parameters were optimized to fit the data"""
         return self._mle_retvals
 
     @mle_retvals.setter
@@ -248,12 +202,12 @@ class HoltWintersResults(Results):
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
+            Zero-indexed observation number at which to start forecasting, i.e.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
@@ -272,7 +226,7 @@ class HoltWintersResults(Results):
 
         Parameters
         ----------
-        steps : int
+        steps : int, optional
             The number of out of sample forecasts from the end of the
             sample.
 
@@ -283,20 +237,22 @@ class HoltWintersResults(Results):
         """
         try:
             freq = getattr(self.model._index, "freq", 1)
-            if isinstance(freq, int):
-                start = self.model._index.shape[0]
-                end = start + steps - 1
-            else:
+            if not isinstance(freq, int) and isinstance(
+                self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
+            ):
                 start = self.model._index[-1] + freq
                 end = self.model._index[-1] + steps * freq
+            else:
+                start = self.model._index.shape[0]
+                end = start + steps - 1
             return self.model.predict(self.params, start=start, end=end)
-        except (AttributeError, ValueError):
+        except AttributeError:
             # May occur when the index does not have a freq
             return self.model._predict(h=steps, **self.params).fcastvalues
 
     def summary(self):
         """
-        Summarize the fitted Model
+        Summarize the fitted model
 
         Returns
         -------
@@ -321,9 +277,7 @@ class HoltWintersResults(Results):
         elif isinstance(orig_endog, pd.Series):
             dep_variable = orig_endog.name
         seasonal_periods = (
-            None
-            if self.model.seasonal is None
-            else self.model.seasonal_periods
+            None if self.model.seasonal is None else self.model.seasonal_periods
         )
         lookup = {
             "add": "Additive",
@@ -333,12 +287,12 @@ class HoltWintersResults(Results):
             None: "None",
         }
         transform = self.params["use_boxcox"]
-        box_cox_transform = True if transform else False
+        box_cox_transform = bool(transform)
         box_cox_coeff = (
             transform if isinstance(transform, str) else self.params["lamda"]
         )
         if isinstance(box_cox_coeff, float):
-            box_cox_coeff = "{:>10.5f}".format(box_cox_coeff)
+            box_cox_coeff = f"{box_cox_coeff:>10.5f}"
         top_left = [
             ("Dep. Variable:", [dep_variable]),
             ("Model:", [model.__class__.__name__]),
@@ -352,29 +306,29 @@ class HoltWintersResults(Results):
 
         top_right = [
             ("No. Observations:", [str(len(self.model.endog))]),
-            ("SSE", ["{:5.3f}".format(self.sse)]),
-            ("AIC", ["{:5.3f}".format(self.aic)]),
-            ("BIC", ["{:5.3f}".format(self.bic)]),
-            ("AICC", ["{:5.3f}".format(self.aicc)]),
+            ("SSE", [f"{self.sse:5.3f}"]),
+            ("AIC", [f"{self.aic:5.3f}"]),
+            ("BIC", [f"{self.bic:5.3f}"]),
+            ("AICC", [f"{self.aicc:5.3f}"]),
             ("Date:", None),
             ("Time:", None),
         ]
 
         smry = Summary()
-        smry.add_table_2cols(
-            self, gleft=top_left, gright=top_right, title=title
-        )
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
         formatted = self.params_formatted  # type: pd.DataFrame
 
         def _fmt(x):
             abs_x = np.abs(x)
             scale = 1
+            if np.isnan(x):
+                return f"{x!s:>20}"
             if abs_x != 0:
                 scale = int(np.log10(abs_x))
             if scale > 4 or scale < -3:
-                return "{:>20.5g}".format(x)
+                return f"{x:>20.5g}"
             dec = min(7 - scale, 7)
-            fmt = "{{:>20.{0}f}}".format(dec)
+            fmt = f"{{:>20.{dec}f}}"
             return fmt.format(x)
 
         tab = []
@@ -382,8 +336,8 @@ class HoltWintersResults(Results):
             tab.append(
                 [
                     _fmt(vals.iloc[1]),
-                    "{0:>20}".format(vals.iloc[0]),
-                    "{0:>20}".format(str(bool(vals.iloc[2]))),
+                    f"{vals.iloc[0]:>20}",
+                    f"{bool(vals.iloc[2])!s:>20}",
                 ]
             )
         params_table = SimpleTable(
@@ -397,6 +351,7 @@ class HoltWintersResults(Results):
 
         return smry
 
+    @deprecate_kwarg("random_state", "rng")
     def simulate(
         self,
         nsimulations,
@@ -404,10 +359,11 @@ class HoltWintersResults(Results):
         repetitions=1,
         error="add",
         random_errors=None,
-        random_state=None,
+        *,
+        rng=None,
     ):
         r"""
-        Random simulations using the state space formulation.
+        Random simulations using the state space formulation
 
         Parameters
         ----------
@@ -428,43 +384,54 @@ class HoltWintersResults(Results):
             Number of simulated paths to generate. Default is 1 simulated path.
         error : {"add", "mul", "additive", "multiplicative"}, optional
             Error model for state space formulation. Default is ``"add"``.
-        random_errors : optional
+        random_errors : ndarray, rv_continuous, rv_discrete, rv_frozen, or "bootstrap", optional
             Specifies how the random errors should be obtained. Can be one of
             the following:
 
             * ``None``: Random normally distributed values with variance
               estimated from the fit errors drawn from numpy's standard
-              RNG (can be seeded with the `random_state` argument). This is the
+              RNG (can be seeded with the `rng` argument). This is the
               default option.
             * A distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm``: Fits the distribution function to the fit
               errors and draws from the fitted distribution.
               Note the difference between ``scipy.stats.norm`` and
               ``scipy.stats.norm()``, the latter one is a frozen distribution
-              function.
+              function. The method ``rvs`` is called on the distribution function
+              to draw the random errors.
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
-              function.
-            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+              function. The method ``rvs`` is called on the distribution function
+              to draw the random errors.
+            * A ndarray with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        random_state : int or np.random.RandomState, optional
-            A seed for the random number generator or a
-            ``np.random.RandomState`` object. Only used if `random_errors` is
-            ``None``. Default is ``None``.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used. Only used if `random_errors` is ``None`` or
+            ``"bootstrap"``.
+
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
 
         Returns
         -------
-        sim : pd.Series, pd.DataFrame or np.ndarray
-            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
-            values.
-            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
-            will be a ``pd.Series`` if `repetitions` is 1, and a
-            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
-            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
+        sim : Series, DataFrame or ndarray
+            An ndarray, Series, or DataFrame of simulated values.
+            If the original data was a Series or DataFrame, `sim`
+            will be a Series if `repetitions` is 1, and a
+            DataFrame of shape (`nsimulations`, `repetitions`) else.
+            Otherwise, if `repetitions` is 1, a ndarray of shape
             (`nsimulations`,) is returned, and if `repetitions` is not 1 a
-            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
+            ndarray of shape (`nsimulations`, `repetitions`) is
             returned.
 
         Notes
@@ -575,10 +542,10 @@ class HoltWintersResults(Results):
         """
 
         # check inputs
-        if error in ["additive", "multiplicative"]:
-            error = {"additive": "add", "multiplicative": "mul"}[error]
-        if error not in ["add", "mul"]:
-            raise ValueError("error must be 'add' or 'mul'!")
+        error = string_like(
+            error, "error", options=("add", "mul", "additive", "multiplicative")
+        )
+        error = {"additive": "add", "multiplicative": "mul"}.get(error, error)
 
         # Get the starting location
         if anchor is None or anchor == "end":
@@ -607,10 +574,7 @@ class HoltWintersResults(Results):
         # if model has no seasonal component, use 1 as period length
         m = max(self.model.seasonal_periods, 1)
         n_params = (
-            2
-            + 2 * self.model.has_trend
-            + (m + 1) * self.model.has_seasonal
-            + damped
+            2 + 2 * self.model.has_trend + (m + 1) * self.model.has_seasonal + damped
         )
         mul_seasonal = seasonal == "mul"
         mul_trend = trend == "mul"
@@ -649,16 +613,12 @@ class HoltWintersResults(Results):
         else:
             lvl[-1, :] = level[start_idx - 1]
             b[-1, :] = _trend[start_idx - 1]
-        if 0 <= start_idx and start_idx <= m:
+        if 0 <= start_idx <= m:
             initial_seasons = self.params["initial_seasons"]
-            _s = np.concatenate(
-                (initial_seasons[start_idx:], season[:start_idx])
-            )
+            _s = np.concatenate((initial_seasons[start_idx:], season[:start_idx]))
             s[-m:, :] = np.tile(_s, (repetitions, 1)).T
         else:
-            s[-m:, :] = np.tile(
-                season[start_idx - m : start_idx], (repetitions, 1)
-            ).T
+            s[-m:, :] = np.tile(season[start_idx - m : start_idx], (repetitions, 1)).T
 
         # set neutral values for unused features
         if trend is None:
@@ -680,7 +640,7 @@ class HoltWintersResults(Results):
             resid = self.model._y - fitted
         else:
             resid = (self.model._y - fitted) / fitted
-        sigma = np.sqrt(np.sum(resid ** 2) / (len(resid) - n_params))
+        sigma = np.sqrt(np.sum(resid**2) / (len(resid) - n_params))
 
         # get random error eps
         if isinstance(random_errors, np.ndarray):
@@ -690,30 +650,35 @@ class HoltWintersResults(Results):
                     "(nsimulations, repetitions)"
                 )
             eps = random_errors
-        elif random_errors == "bootstrap":
-            eps = np.random.choice(
-                resid, size=(nsimulations, repetitions), replace=True
-            )
-        elif random_errors is None:
-            if random_state is None:
-                eps = np.random.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, int):
-                rng = np.random.RandomState(random_state)
-                eps = rng.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, np.random.RandomState):
-                eps = random_state.randn(nsimulations, repetitions) * sigma
-            else:
-                raise ValueError(
-                    "Argument random_state must be None, an integer, "
-                    "or an instance of np.random.RandomState"
-                )
-        elif isinstance(random_errors, (rv_continuous, rv_discrete)):
-            params = random_errors.fit(resid)
-            eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
-        elif isinstance(random_errors, _distn_infrastructure.rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions))
         else:
-            raise ValueError("Argument random_errors has unexpected value!")
+            rng = check_random_state(rng, deprecated=True)
+            if isinstance(random_errors, str):
+                random_errors = string_like(
+                    random_errors, "random_errors", options=("bootstrap",)
+                )
+            if random_errors == "bootstrap":
+                eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
+            elif random_errors is None:
+                eps = rng.standard_normal((nsimulations, repetitions)) * sigma
+            elif isinstance(random_errors, (rv_continuous, rv_discrete)):
+                params = random_errors.fit(resid)
+                try:
+                    eps = random_errors.rvs(
+                        *params, size=(nsimulations, repetitions), rng=rng
+                    )
+                except TypeError:
+                    eps = random_errors.rvs(
+                        *params, size=(nsimulations, repetitions), random_state=rng
+                    )
+            elif isinstance(random_errors, rv_frozen):
+                try:
+                    eps = random_errors.rvs(size=(nsimulations, repetitions), rng=rng)
+                except TypeError:
+                    eps = random_errors.rvs(
+                        size=(nsimulations, repetitions), random_state=rng
+                    )
+            else:
+                raise ValueError("Argument random_errors has unexpected value!")
 
         for t in range(nsimulations):
             b0 = op_d(b[t - 1, :], phi)
@@ -729,9 +694,7 @@ class HoltWintersResults(Results):
                 eta = y0
                 kappa_l = 0 if mul_seasonal else s0
                 kappa_b = (
-                    kappa_l / lvl[t - 1, :]
-                    if mul_trend
-                    else kappa_l + lvl[t - 1, :]
+                    kappa_l / lvl[t - 1, :] if mul_trend else kappa_l + lvl[t - 1, :]
                 )
                 kappa_s = 0 if mul_seasonal else l0
 

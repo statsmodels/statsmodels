@@ -1,10 +1,9 @@
 import numpy as np
-import statsmodels.api as sm
 
 
-class RegressionEffects(object):
+class RegressionEffects:
     """
-    Base class for regression effects used in RegressionFDR.
+    Base class for regression effects used in RegressionFDR
 
     Any implementation of the class must provide a method called
     'stats' that takes a RegressionFDR object and returns effect sizes
@@ -27,7 +26,7 @@ class RegressionEffects(object):
 
 class CorrelationEffects(RegressionEffects):
     """
-    Marginal correlation effect sizes for FDR control.
+    Marginal correlation effect sizes for FDR control
 
     Parameters
     ----------
@@ -51,7 +50,7 @@ class CorrelationEffects(RegressionEffects):
 
 class ForwardEffects(RegressionEffects):
     """
-    Forward selection effect sizes for FDR control.
+    Forward selection effect sizes for FDR control
 
     Parameters
     ----------
@@ -61,10 +60,10 @@ class ForwardEffects(RegressionEffects):
     pursuit : bool
         If True, 'basis pursuit' is used, which amounts to performing
         a full regression at each selection step to adjust the working
-        residual vector.  If False (the default), the residual is
-        adjusted by regressing out each selected variable marginally.
-        Setting pursuit=True will be considerably slower, but may give
-        better results when exog is not orthogonal.
+        residual vector.  If False, the residual is adjusted by
+        regressing out each selected variable marginally. Setting
+        pursuit=True will be considerably slower, but may give better
+        results when exog is not orthogonal.
 
     Notes
     -----
@@ -93,7 +92,7 @@ class ForwardEffects(RegressionEffects):
                 for v in past:
                     x -= np.dot(x, v)*v
                 past.append(x)
-            rv -= np.dot(rv, x) * x
+            rv = rv - np.dot(rv, x) * x
         z1 = z[0:nvar//2]
         z2 = z[nvar//2:]
         st = np.where(z1 > z2, z1, z2) * np.sign(z1 - z2)
@@ -102,7 +101,7 @@ class ForwardEffects(RegressionEffects):
 
 class OLSEffects(RegressionEffects):
     """
-    OLS regression for knockoff analysis.
+    OLS regression for knockoff analysis
 
     Parameters
     ----------
@@ -119,7 +118,9 @@ class OLSEffects(RegressionEffects):
     """
 
     def stats(self, parent):
-        model = sm.OLS(parent.endog, parent.exog)
+        from statsmodels.regression.linear_model import OLS
+
+        model = OLS(parent.endog, parent.exog)
         result = model.fit()
         q = len(result.params) // 2
         stats = np.abs(result.params[0:q]) - np.abs(result.params[q:])
@@ -128,7 +129,7 @@ class OLSEffects(RegressionEffects):
 
 class RegModelEffects(RegressionEffects):
     """
-    Use any regression model for Regression FDR analysis.
+    Use any regression model for Regression FDR analysis
 
     Parameters
     ----------
@@ -137,13 +138,13 @@ class RegModelEffects(RegressionEffects):
         applied.
     model_cls : class
         Any model with appropriate fit or fit_regularized
-        functions
-    regularized : bool
-        If True, use fit_regularized to fit the model
-    model_kws : dict
-        Keywords passed to model initializer
-    fit_kws : dict
-        Dictionary of keyword arguments for fit or fit_regularized
+        functions.
+    regularized : bool, optional
+        If True, use fit_regularized to fit the model.
+    model_kws : dict, optional
+        Keywords passed to model initializer.
+    fit_kws : dict, optional
+        Dictionary of keyword arguments for fit or fit_regularized.
     """
 
     def __init__(self, model_cls, regularized=False, model_kws=None,

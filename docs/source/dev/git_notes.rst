@@ -62,8 +62,8 @@ Create a Branch
 
 All changes to the code should be made in a feature branch. To create a branch, type::
 
-    git checkout master
-    git rebase upstream/master
+    git checkout main
+    git rebase upstream/main
     git checkout -b shiny-new-feature
 
 The first two lines ensure you are starting from an up-to-date version of the upstream
@@ -76,7 +76,7 @@ Doing::
 will give something like::
 
     * shiny-new-feature
-      master
+      main
 
 to indicate that you are now on the `shiny-new-feature` branch.
 
@@ -173,7 +173,7 @@ this by using `compare view
 #. Navigate to your repository on github.
 #. Click on `Branch List`
 #. Click on the `Compare` button for your feature branch, `shiny-new-feature`.
-#. Select the `base` and `compare` branches, if necessary. This will be `master` and
+#. Select the `base` and `compare` branches, if necessary. This will be `main` and
    `shiny-new-feature`, respectively.
 #. From here you will see a nice overview of your changes. If anything is amiss, you can fix it.
 
@@ -189,7 +189,7 @@ Your request will then be reviewed. If you need to go back and make more
 changes, you can make them in your branch and push them to github and the pull
 request will be automatically updated.
 
-One last thing to note. If there has been a lot of work in upstream/master
+One last thing to note. If there has been a lot of work in upstream/main
 since you started your patch, you might want to rebase. However, you can
 probably get away with not rebasing if these changes are unrelated to the work
 you have done in the `shiny-new-feature` branch. If you can avoid it, then
@@ -212,7 +212,7 @@ should be preferred.
 
 A rebase replays commits from one branch on top of another branch to preserve a
 linear history. Recall that your commits were tested against a (possibly) older
-version of master from which you started your branch, so if you rebase, you
+version of main from which you started your branch, so if you rebase, you
 could introduce bugs. However, if you have only a few commits, this might not
 be such a concern. One great place to start learning about rebase is
 :ref:`rebasing without tears <pydagogue:actual-rebase>`.  In particular, `heed
@@ -226,19 +226,19 @@ work, do not rebase!!
 As for merging, **never merge from trunk into your feature branch**. You will,
 however, want to check that your work will merge cleanly into trunk. This will
 help out the reviewers. You can do this in your local repository by merging
-your work into your master (or any branch that tracks remote master) and
+your work into your main branch (or any branch that tracks the remote main branch) and
 :ref:`run-tests`.
 
 Deleting Branches
 ~~~~~~~~~~~~~~~~~
 
 Once your feature branch is accepted into upstream, you might want to get rid
-of it. First you'll want to merge upstream master into your branch. That way
+of it. First you'll want to merge upstream main into your branch. That way
 git will know that it can safely delete your branch::
 
     git fetch upstream
-    git checkout master
-    git merge upstream/master
+    git checkout main
+    git merge upstream/main
 
 Then you can just do::
 

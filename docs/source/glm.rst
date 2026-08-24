@@ -1,6 +1,6 @@
 .. currentmodule:: statsmodels.genmod.generalized_linear_model
 
-.. _glm:
+.. _glm_ref:
 
 Generalized Linear Models
 =========================
@@ -18,7 +18,7 @@ Examples
 
    # Load modules and data
    import statsmodels.api as sm
-   data = sm.datasets.scotland.load(as_pandas=False)
+   data = sm.datasets.scotland.load()
    data.exog = sm.add_constant(data.exog)
 
    # Instantiate a gamma family model with the default link function.
@@ -28,8 +28,8 @@ Examples
 
 Detailed examples can be found here:
 
-* `GLM <examples/notebooks/generated/glm.html>`__
-* `Formula <examples/notebooks/generated/glm_formula.html>`__
+* `GLM <examples/notebooks/generated/glm.ipynb>`_
+* `Formula <examples/notebooks/generated/glm_formula.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -72,9 +72,9 @@ Distribution                                      Domain                        
 ================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
 Binomial :math:`B(n,p)`                           :math:`0,1,\ldots,n`           :math:`np`                     :math:`\mu-\frac{\mu^2}{n}`              :math:`\log\frac{p}{1-p}`                   :math:`n\log(1+e^\theta)`                                                    1
 Poisson :math:`P(\mu)`                            :math:`0,1,\ldots,\infty`      :math:`\mu`                    :math:`\mu`                              :math:`\log(\mu)`                           :math:`e^\theta`                                                             1
-Neg. Binom. :math:`NB(\mu,\alpha)`                :math:`0,1,\ldots,\infty`      :math:`\mu`                    :math:`\mu+\alpha\mu^2`                  :math:`\log(\frac{\alpha\mu}{1+\alpha\mu})` :math:`-\frac{1}{\alpha}\log(1-\alpha e^\theta)`                             1
+Neg. Binom. :math:`NB(\mu,\alpha)`                :math:`0,1,\ldots,\infty`      :math:`\mu`                    :math:`\mu+\alpha\mu^2`                  :math:`\log(\frac{\alpha\mu}{1+\alpha\mu})` :math:`-\frac{1}{\alpha}\log(1-e^\theta)`                                    1
 Gaussian/Normal :math:`N(\mu,\sigma^2)`           :math:`(-\infty,\infty)`       :math:`\mu`                    :math:`1`                                :math:`\mu`                                 :math:`\frac{1}{2}\theta^2`                                                  :math:`\sigma^2`
-Gamma :math:`N(\mu,\nu)`                          :math:`(0,\infty)`             :math:`\mu`                    :math:`\mu^2`                            :math:`-\frac{1}{\mu}`                      :math:`-\log(-\theta)`                                                       :math:`\frac{1}{\nu}`
+Gamma :math:`G(\mu,\nu)`                          :math:`(0,\infty)`             :math:`\mu`                    :math:`\mu^2`                            :math:`-\frac{1}{\mu}`                      :math:`-\log(-\theta)`                                                       :math:`\frac{1}{\nu}`
 Inv. Gauss. :math:`IG(\mu,\sigma^2)`              :math:`(0,\infty)`             :math:`\mu`                    :math:`\mu^3`                            :math:`-\frac{1}{2\mu^2}`                   :math:`-\sqrt{-2\theta}`                                                     :math:`\sigma^2`
 Tweedie :math:`p\geq 1`                           depends on :math:`p`           :math:`\mu`                    :math:`\mu^p`                            :math:`\frac{\mu^{1-p}}{1-p}`               :math:`\frac{\alpha-1}{\alpha}\left(\frac{\theta}{\alpha-1}\right)^{\alpha}` :math:`\phi`
 ================================================= ============================== ============================== ======================================== =========================================== ============================================================================ =====================
@@ -132,7 +132,7 @@ Results Class
    :toctree: generated/
 
    GLMResults
-   PredictionResults
+   PredictionResultsMean
 
 .. _families:
 
@@ -162,6 +162,9 @@ The distribution families currently implemented are
 Link Functions
 ^^^^^^^^^^^^^^
 
+Note: The lower case link classes have been deprecated and will be removed in
+future. Link classes now follow the Python class name convention.
+
 The link functions currently implemented are the following. Not all link
 functions are available for each distribution family. The list of
 available link functions can be obtained by
@@ -179,19 +182,17 @@ available link functions can be obtained by
    Link
    CDFLink
    CLogLog
+   LogLog
+   LogC
    Log
    Logit
    NegativeBinomial
    Power
-   cauchy
-   cloglog
-   identity
-   inverse_power
-   inverse_squared
-   log
-   logit
-   nbinom
-   probit
+   Cauchy
+   Identity
+   InversePower
+   InverseSquared
+   Probit
 
 .. _varfuncs:
 

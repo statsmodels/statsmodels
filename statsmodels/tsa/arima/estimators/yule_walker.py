@@ -4,15 +4,13 @@ Yule-Walker method for estimating AR(p) model parameters.
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import deprecate_kwarg
-
 from statsmodels.regression import linear_model
 from statsmodels.tools.tools import Bunch
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
 
 
-@deprecate_kwarg("unbiased", "adjusted")
 def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     """
     Estimate AR parameters using Yule-Walker equations.
@@ -29,16 +27,20 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     adjusted : bool, optional
         Whether to use the adjusted autocovariance estimator, which uses
         n - h degrees of freedom rather than n. For some processes this option
-        may  result in a non-positive definite autocovariance matrix. Default
+        may result in a non-positive definite autocovariance matrix. Default
         is False.
 
     Returns
     -------
-    parameters : SARIMAXParams object
-        Contains the parameter estimates from the final iteration.
-    other_results : Bunch
-        Includes one component, `spec`, which is the `SARIMAXSpecification`
-        instance corresponding to the input arguments.
+    ARMAEstimationResult
+        A result object with fields:
+
+        parameters : SARIMAXParams object
+            Contains the parameter estimates from the final iteration.
+        other_results : Bunch
+            Includes one component, `spec`, which is the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments.
 
     Notes
     -----
@@ -59,18 +61,19 @@ def yule_walker(endog, ar_order=0, demean=True, adjusted=False):
     p = SARIMAXParams(spec=spec)
 
     if not spec.is_ar_consecutive:
-        raise ValueError('Yule-Walker estimation unavailable for models with'
-                         ' seasonal or non-consecutive AR orders.')
+        raise ValueError("Yule-Walker estimation unavailable for models with"
+                         " seasonal or non-consecutive AR orders.")
 
     # Estimate parameters
-    method = 'adjusted' if adjusted else 'mle'
+    method = "adjusted" if adjusted else "mle"
     p.ar_params, sigma = linear_model.yule_walker(
-        endog, order=ar_order, demean=demean, method=method)
+        endog, order=ar_order, demean=demean, method=method,
+        result_object=False)
     p.sigma2 = sigma**2
 
     # Construct other results
     other_results = Bunch({
-        'spec': spec,
+        "spec": spec,
     })
 
-    return p, other_results
+    return ARMAEstimationResult(p, other_results)

@@ -1,8 +1,10 @@
 __all__ = [
-    "StataReader", "StataWriter", "SimpleTable",
-    "genfromdta", "savetxt", "csv2st",
-    "save_pickle", "load_pickle"
+    "SimpleTable",
+    "csv2st",
+    "load_pickle",
+    "save_pickle",
+    "savetxt"
 ]
-from .foreign import StataReader, genfromdta, savetxt, StataWriter
+from .foreign import savetxt
+from .smpickle import load_pickle, save_pickle
 from .table import SimpleTable, csv2st
-from .smpickle import save_pickle, load_pickle

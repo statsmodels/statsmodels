@@ -17,7 +17,7 @@ Examples
 
     # Load modules and data
     import statsmodels.api as sm
-    data = sm.datasets.stackloss.load(as_pandas=False)
+    data = sm.datasets.stackloss.load()
     data.exog = sm.add_constant(data.exog)
 
     # Fit model and print summary
@@ -27,8 +27,8 @@ Examples
 
 Detailed examples can be found here:
 
-* `Robust Models 1 <examples/notebooks/generated/robust_models_0.html>`__
-* `Robust Models 2 <examples/notebooks/generated/robust_models_1.html>`__
+* `Robust Models 1 <examples/notebooks/generated/robust_models_0.ipynb>`_
+* `Robust Models 2 <examples/notebooks/generated/robust_models_1.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -85,10 +85,13 @@ Norms
    Hampel
    HuberT
    LeastSquares
+   MQuantileNorm
    RamsayE
    RobustNorm
+   StudentT
    TrimmedMean
    TukeyBiweight
+   TukeyQuartic
    estimate_location
 
 
@@ -103,7 +106,45 @@ Scale
 
     Huber
     HuberScale
+    MScale
     mad
     hubers_scale
     iqr
     qn_scale
+    scale_tau
+    scale_trimmed
+
+
+Deterministic-Start Robust Covariance Estimation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Robust estimators of multivariate location and scatter, including the
+minimum covariance determinant (MCD) and S-estimators with deterministic
+(non-random) starting values.
+
+.. module:: statsmodels.robust.covariance
+.. currentmodule:: statsmodels.robust.covariance
+
+.. autosummary::
+   :toctree: generated/
+
+    CovM
+    CovDetMCD
+    CovDetS
+    CovDetMM
+
+
+Resistant (Deterministic-Start) Regression
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Regression M- and MM-estimators using S-estimator starting values computed
+deterministically, rather than through random resampling.
+
+.. module:: statsmodels.robust.resistant_linear_model
+.. currentmodule:: statsmodels.robust.resistant_linear_model
+
+.. autosummary::
+   :toctree: generated/
+
+    RLMDetS
+    RLMDetSMM

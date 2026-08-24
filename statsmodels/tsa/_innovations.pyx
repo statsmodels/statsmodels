@@ -1,16 +1,15 @@
 #cython: language_level=3, wraparound=False, cdivision=True, boundscheck=False
 import numpy as np
 
-
-from statsmodels.tools.validation import (array_like, PandasWrapper,
-                                          int_like, float_like)
+from statsmodels.tools.validation import PandasWrapper, array_like, float_like, int_like
 
 
 def innovations_algo(acov, nobs=None, rtol=None):
     """
     innovations_algo(acov, nobs=None, rtol=None)
 
-    Innovations algorithm to convert autocovariances to MA parameters.
+    Innovations algorithm to convert autocovariances to MA parameters. The
+    implementation is based on the description in [BrockwellDavis2016]_.
 
     Parameters
     ----------
@@ -42,8 +41,8 @@ def innovations_algo(acov, nobs=None, rtol=None):
 
     References
     ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
-        and forecasting. Springer.
+    .. [BrockwellDavis2016] Brockwell, P.J. and Davis, R.A., 2016. Introduction
+       to time series and forecasting. Springer.
 
     Examples
     --------
@@ -99,9 +98,9 @@ def innovations_algo(acov, nobs=None, rtol=None):
 
 def innovations_filter(endog, theta):
     """
-    innovations_filter(endog, theta)
-
     Filter observations using the innovations algorithm.
+
+    The implementation is based on the description in [BrockwellDavis2016]_.
 
     Parameters
     ----------
@@ -118,12 +117,13 @@ def innovations_filter(endog, theta):
 
     See Also
     --------
-    innovations_algo : Convert autocovariances to MA parameters.
+    innovations_algo
+        Convert autocovariances to MA parameters.
 
     References
     ----------
-    .. [*] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
-        and forecasting. Springer.
+    .. [BrockwellDavis2016] Brockwell, P.J. and Davis, R.A., 2016. Introduction
+       to time series and forecasting. Springer.
 
     Examples
     --------

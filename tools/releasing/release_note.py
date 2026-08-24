@@ -8,29 +8,31 @@ current release begin.
 
 Requires PyGitHub, dateparser and jinja2
 """
-
 from collections import defaultdict
 import datetime as dt
 import os
+from pathlib import Path
 
 import dateparser
-from github import Github
+from github import Github, GithubException
 from jinja2 import Template
 
 # Full release version
-RELEASE = "0.12.0"
+RELEASE = "0.14.1"
 # The current milestone and short version
-VERSION = MILESTONE = "0.12"
+VERSION = MILESTONE = "0.14"
 # This is the final commit from the previous release
-LAST_COMMIT_SHA = "e11c4e45037cfe931f8d3ca4df06e2ec818175b1"
-# Branch, usually master but can be a maintenance branch as well
-BRANCH = "master"
+LAST_COMMIT_SHA = "cc924783be1d46fd9802f8d559f6dfe7fb071ffa"
+# Branch, usually main but can be a maintenance branch as well
+BRANCH = "main"
 # Provide access token using command line to keep out of repo
 ACCESS_TOKEN = os.environ.get("GITHUB_ACCESS_TOKEN", None)
 if not ACCESS_TOKEN:
-    raise RuntimeError("Must set environment variable GITHUB_ACCESS_TOKEN "
-                       "containing a valid GitHub access token before running"
-                       "this program.")
+    raise RuntimeError(
+        "Must set environment variable GITHUB_ACCESS_TOKEN "
+        "containing a valid GitHub access token before running"
+        "this program."
+    )
 
 # Using an access token
 g = Github(ACCESS_TOKEN)
@@ -44,11 +46,13 @@ first_commit_time = last_modified + dt.timedelta(seconds=1)
 first_commit_time_iso = first_commit_time.isoformat()
 
 # General search for sm/sm, PR, merged, merged> first commit time and branch
-query_parts = ("repo:statsmodels/statsmodels",
-               "is:pr",
-               "is:merged",
-               "merged:>{}".format(first_commit_time_iso),
-               "base:{}".format(BRANCH))
+query_parts = (
+    "repo:statsmodels/statsmodels",
+    "is:pr",
+    "is:merged",
+    f"merged:>{first_commit_time_iso}",
+    f"base:{BRANCH}",
+)
 query = " ".join(query_parts)
 merged_pull_data = []
 merged_pulls = g.search_issues(query)
@@ -59,18 +63,22 @@ for ms in statsmodels.get_milestones():
     if ms.title == MILESTONE:
         milestone = ms
 if milestone is None:
-    description = "Release {} issues and pull requests".format(MILESTONE)
-    milestone = statsmodels.create_milestone(MILESTONE, state="open",
-                                             description=description)
+    description = f"Release {MILESTONE} issues and pull requests"
+    milestone = statsmodels.create_milestone(
+        MILESTONE, state="open", description=description
+    )
 
 # Get PR data and set the milestone if needed
 for pull in merged_pulls:
-    merged_pull_data.append({"number": pull.number,
-                             "title": pull.title,
-                             "login": pull.user.login,
-                             "labels": pull.labels,
-                             "milestone": pull.milestone}
-                            )
+    merged_pull_data.append(
+        {
+            "number": pull.number,
+            "title": pull.title,
+            "login": pull.user.login,
+            "labels": pull.labels,
+            "milestone": pull.milestone,
+        }
+    )
     if pull.milestone is None or pull.milestone != milestone:
         pull.edit(milestone=milestone)
 
@@ -85,7 +93,10 @@ for pull in merged_pull_data:
     for commit in pr.get_commits():
         name = commit.commit.author.name
         if name and commit.author:
-            names[commit.author.login].update([name])
+            try:
+                names[commit.author.login].update([name])
+            except GithubException:
+                pass
         elif name:
             extra_names.update([name])
 
@@ -97,7 +108,7 @@ for login in names:
 # Continue trying to resolve to human names
 contributors = []
 for login in names:
-    print("Reading user data for {}".format(login))
+    print(f"Reading user data for {login}")
     user_names = list(names[login])
     if len(user_names) == 1:
         name = user_names[0]
@@ -114,10 +125,12 @@ for login in names:
 contributors = sorted(set(contributors))
 
 # Get all issues closed since first_commit_time_iso
-query_parts = ("repo:statsmodels/statsmodels",
-               "is:issue",
-               "is:closed",
-               "closed:>{}".format(first_commit_time_iso))
+query_parts = (
+    "repo:statsmodels/statsmodels",
+    "is:issue",
+    "is:closed",
+    f"closed:>{first_commit_time_iso}",
+)
 query = " ".join(query_parts)
 closed_issues = g.search_issues(query)
 # Set the milestone for these issues if needed
@@ -132,8 +145,12 @@ issues_closed = closed_issues.totalCount
 whats_new = defaultdict(dict)
 for pull in merged_pull_data:
     if pull["labels"]:
-        labels = [lab.name for lab in pull["labels"] if
-                  not lab.name.startswith("type")]
+        labels = [
+            lab.name
+            for lab in pull["labels"]
+            if not (lab.name.startswith("type") or lab.name.startswith("prio"))
+        ]
+        labels = sorted(labels)
         if "maintenance" in labels and len(labels) > 1:
             labels.remove("maintenance")
         elif "comp-docs" in labels and len(labels) > 1:
@@ -150,21 +167,22 @@ for pull in merged_pull_data:
 whats_new = {key: whats_new[key] for key in sorted(whats_new)}
 
 # Variables for the template
-variables = {"milestone": MILESTONE,
-             "release": RELEASE,
-             "version": VERSION,
-             "issues_closed": issues_closed,
-             "pulls_merged": len(merged_pull_data),
-             "contributors": contributors,
-             "pulls": merged_pull_data,
-             "whats_new": whats_new,
-             }
+variables = {
+    "milestone": MILESTONE,
+    "release": RELEASE,
+    "version": VERSION,
+    "issues_closed": issues_closed,
+    "pulls_merged": len(merged_pull_data),
+    "contributors": contributors,
+    "pulls": merged_pull_data,
+    "whats_new": whats_new,
+}
 
 # Read the template and generate the output
-with open("release_note.tmpl", encoding="utf-8") as tmpl:
+with Path("release_note.tmpl").open(encoding="utf-8") as tmpl:
     tmpl_data = tmpl.read()
     t = Template(tmpl_data)
     rendered = t.render(**variables)
-    file_name = "version{}.rst".format(VERSION)
-    with open(file_name, encoding="utf-8", mode="w") as out:
+    file_name = f"version{VERSION}.rst"
+    with Path(file_name).open(encoding="utf-8", mode="w") as out:
         out.write(rendered)

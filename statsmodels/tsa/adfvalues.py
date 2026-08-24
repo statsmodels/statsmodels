@@ -1,7 +1,9 @@
+from numpy import array, asarray, inf, polyval
 from scipy.stats import norm
-from numpy import array, polyval, inf, asarray
 
-__all__ = ['mackinnonp', 'mackinnoncrit']
+from statsmodels.tools.validation import string_like
+
+__all__ = ["mackinnoncrit", "mackinnonp"]
 
 # These are the cut-off values for the left-tail vs. the rest of the
 # tau distribution, for getting the p-values
@@ -20,19 +22,19 @@ tau_min_ctt = [-17.17, -21.1, -24.33, -24.03, -24.33, -28.22]
 tau_max_ctt = [0.54, 0.79, 1.08, 1.43, 3.49, 1.92]
 
 _tau_maxs = {
-    "nc": tau_max_nc,
+    "n": tau_max_nc,
     "c": tau_max_c,
     "ct": tau_max_ct,
     "ctt": tau_max_ctt,
 }
 _tau_mins = {
-    "nc": tau_min_nc,
+    "n": tau_min_nc,
     "c": tau_min_c,
     "ct": tau_min_ct,
     "ctt": tau_min_ctt,
 }
 _tau_stars = {
-    "nc": tau_star_nc,
+    "n": tau_star_nc,
     "c": tau_star_c,
     "ct": tau_star_ct,
     "ctt": tau_star_ctt,
@@ -77,7 +79,7 @@ tau_ctt_smallp = [
 tau_ctt_smallp = asarray(tau_ctt_smallp)*small_scaling
 
 _tau_smallps = {
-    "nc": tau_nc_smallp,
+    "n": tau_nc_smallp,
     "c": tau_c_smallp,
     "ct": tau_ct_smallp,
     "ctt": tau_ctt_smallp,
@@ -122,7 +124,7 @@ tau_ctt_largep = [
 tau_ctt_largep = asarray(tau_ctt_largep)*large_scaling
 
 _tau_largeps = {
-    "nc": tau_nc_largep,
+    "n": tau_nc_largep,
     "c": tau_c_largep,
     "ct": tau_ct_largep,
     "ctt": tau_ctt_largep,
@@ -222,37 +224,42 @@ z_ctt_largep *= z_large_scaling
 # TODO: finish this and then integrate them into adf function
 def mackinnonp(teststat, regression="c", N=1, lags=None):
     """
-    Returns MacKinnon's approximate p-value for teststat.
+    Return MacKinnon's approximate p-value for teststat
 
     Parameters
     ----------
     teststat : float
         "T-value" from an Augmented Dickey-Fuller regression.
-    regression : str {"c", "nc", "ct", "ctt"}
+    regression : {"c", "n", "ct", "ctt"}, optional
         This is the method of regression that was used.  Following MacKinnon's
-        notation, this can be "c" for constant, "nc" for no constant, "ct" for
+        notation, this can be "c" for constant, "n" for no constant, "ct" for
         constant and trend, and "ctt" for constant, trend, and trend-squared.
-    N : int
+    N : int, optional
         The number of series believed to be I(1).  For (Augmented) Dickey-
         Fuller N = 1.
+    lags : int, optional
+        The number of lags used in the regression.  Not currently used.
 
     Returns
     -------
-    p-value : float
+    pvalue : float
         The p-value for the ADF statistic estimated using MacKinnon 1994.
-
-    References
-    ----------
-    .. [*] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
-        for Unit-Root and Cointegration Tests." Journal of Business & Economics
-        Statistics, 12.2, 167-76.
 
     Notes
     -----
     For (A)DF
     H_0: AR coefficient = 1
     H_a: AR coefficient < 1
+
+    References
+    ----------
+    .. [*] MacKinnon, J.G. 1994  "Approximate Asymptotic Distribution Functions
+        for Unit-Root and Cointegration Tests." Journal of Business & Economics
+        Statistics, 12.2, 167-76.
     """
+    regression = string_like(
+        regression, "regression", options=("c", "n", "ct", "ctt"), lower=False
+    )
     maxstat = _tau_maxs[regression]
     minstat = _tau_mins[regression]
     starstat = _tau_stars[regression]
@@ -265,7 +272,7 @@ def mackinnonp(teststat, regression="c", N=1, lags=None):
     else:
         # Note: above is only for z stats
         tau_coef = _tau_largeps[regression][N-1]
-    return norm.cdf(polyval(tau_coef[::-1], teststat))
+    return float(norm.cdf(polyval(tau_coef[::-1], teststat)))
 
 
 # These are the new estimates from MacKinnon 2010
@@ -397,7 +404,7 @@ tau_ctt_2010 = [
 tau_ctt_2010 = asarray(tau_ctt_2010)
 
 tau_2010s = {
-    "nc": tau_nc_2010,
+    "n": tau_nc_2010,
     "c": tau_c_2010,
     "ct": tau_ct_2010,
     "ctt": tau_ctt_2010,
@@ -406,7 +413,7 @@ tau_2010s = {
 
 def mackinnoncrit(N=1, regression="c", nobs=inf):
     """
-    Returns the critical values for cointegrating and the ADF test.
+    Return the critical values for cointegrating and the ADF test
 
     In 2010 MacKinnon updated the values of his 1994 paper with critical values
     for the augmented Dickey-Fuller tests.  These new values are to be
@@ -414,21 +421,26 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
 
     Parameters
     ----------
-    N : int
-        The number of series of I(1) series for which the null of
+    N : int, optional
+        The number of series of I(1) variables for which the null of
         non-cointegration is being tested.  For N > 12, the critical values
         are linearly interpolated (not yet implemented).  For the ADF test,
         N = 1.
-    reg : str {'c', 'tc', 'ctt', 'nc'}
+    regression : {'c', 'ct', 'ctt', 'n'}, optional
         Following MacKinnon (1996), these stand for the type of regression run.
-        'c' for constant and no trend, 'tc' for constant with a linear trend,
-        'ctt' for constant with a linear and quadratic trend, and 'nc' for
+        'c' for constant and no trend, 'ct' for constant with a linear trend,
+        'ctt' for constant with a linear and quadratic trend, and 'n' for
         no constant.  The values for the no constant case are taken from the
         1996 paper, as they were not updated for 2010 due to the unrealistic
         assumptions that would underlie such a case.
-    nobs : int or np.inf
+    nobs : int or float, optional
         This is the sample size.  If the sample size is numpy.inf, then the
         asymptotic critical values are returned.
+
+    Returns
+    -------
+    ndarray
+        The critical values at the 1%, 5%, and 10% levels.
 
     References
     ----------
@@ -439,9 +451,9 @@ def mackinnoncrit(N=1, regression="c", nobs=inf):
         Queen's University, Dept of Economics Working Papers 1227.
         http://ideas.repec.org/p/qed/wpaper/1227.html
     """
-    reg = regression
-    if reg not in ['c', 'ct', 'nc', 'ctt']:
-        raise ValueError("regression keyword %s not understood" % reg)
+    reg = string_like(
+        regression, "regression", options=("c", "ct", "n", "ctt"), lower=False
+    )
     tau = tau_2010s[reg]
     if nobs is inf:
         return tau[N-1, :, 0]

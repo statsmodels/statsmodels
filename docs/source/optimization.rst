@@ -9,7 +9,7 @@ of a model.
 
   1. Basic linear models such as :ref:`WLS and OLS <regression>` are directly
      estimated using appropriate linear algebra.
-  2. :ref:`RLM <rlm>` and :ref:`GLM <glm>`, use iteratively re-weighted
+  2. :ref:`RLM <rlm>` and :ref:`GLM <glm_ref>`, use iteratively re-weighted
      least squares. However, you can optionally select one of the scipy
      optimizers discussed below.
   3. For all other models, we use
@@ -47,7 +47,7 @@ associated with that specific optimizer:
       gtol : float
           Stop when norm of gradient is less than gtol.
       norm : float
-          Order of norm (np.Inf is max, -np.Inf is min)
+          Order of norm (np.inf is max, -np.inf is min)
       epsilon
           If fprime is approximated, use this value for the step
           size. Only relevant if LikelihoodModel.score is None.
@@ -87,7 +87,7 @@ associated with that specific optimizer:
       gtol : float
           Stop when norm of gradient is less than gtol.
       norm : float
-          Order of norm (np.Inf is max, -np.Inf is min)
+          Order of norm (np.inf is max, -np.inf is min)
       epsilon : float
           If fprime is approximated, use this value for the step
           size. Can be scalar or vector.  Only relevant if

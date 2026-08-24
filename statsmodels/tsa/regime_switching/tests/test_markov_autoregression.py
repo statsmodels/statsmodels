@@ -4,19 +4,18 @@ Tests for Markov Autoregression models
 Author: Chad Fulton
 License: BSD-3
 """
-
+from pathlib import Path
 import warnings
-import os
 
 import numpy as np
-from numpy.testing import assert_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 rgnp = [2.59316421, 2.20217133, 0.45827562, 0.9687438,
@@ -65,8 +64,14 @@ rec = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 def test_predict():
     # AR(1) without mean, k_regimes=2
     endog = np.ones(10)
+    markov_autoregression.MarkovAutoregression(
+        endog,
+        k_regimes=2,
+        order=1,
+        trend="n"
+    )
     mod = markov_autoregression.MarkovAutoregression(
-        endog, k_regimes=2, order=1, trend='nc')
+        endog, k_regimes=2, order=1, trend="n")
     assert_equal(mod.nobs, 9)
     assert_equal(mod.endog, np.ones(9))
 
@@ -213,17 +218,17 @@ def test_conditional_loglikelihoods():
                     np.log(conditional_likelihoods[2, :, :]))
 
 
-class MarkovAutoregression(object):
+class MarkovAutoregression:
     @classmethod
     def setup_class(cls, true, endog, atol=1e-5, rtol=1e-7, **kwargs):
         cls.model = markov_autoregression.MarkovAutoregression(endog, **kwargs)
         cls.true = true
-        cls.result = cls.model.smooth(cls.true['params'])
+        cls.result = cls.model.smooth(cls.true["params"])
         cls.atol = atol
         cls.rtol = rtol
 
     def test_llf(self):
-        assert_allclose(self.result.llf, self.true['llf'], atol=self.atol,
+        assert_allclose(self.result.llf, self.true["llf"], atol=self.atol,
                         rtol=self.rtol)
 
     def test_fit(self, **kwargs):
@@ -231,14 +236,14 @@ class MarkovAutoregression(object):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             res = self.model.fit(disp=False, **kwargs)
-        assert_allclose(res.llf, self.true['llf_fit'], atol=self.atol,
+        assert_allclose(res.llf, self.true["llf_fit"], atol=self.atol,
                         rtol=self.rtol)
 
     @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
         res_em = self.model._fit_em(**kwargs)
-        assert_allclose(res_em.llf, self.true['llf_fit_em'], atol=self.atol,
+        assert_allclose(res_em.llf, self.true["llf_fit_em"], atol=self.atol,
                         rtol=self.rtol)
 
 
@@ -371,19 +376,19 @@ class TestHamiltonAR2Short(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
         true = {
-            'params': np.r_[0.754673, 0.095915, -0.358811, 1.163516,
+            "params": np.r_[0.754673, 0.095915, -0.358811, 1.163516,
                             np.exp(-0.262658)**2, 0.013486, -0.057521],
-            'llf': -10.14066,
-            'llf_fit': -4.0523073,
-            'llf_fit_em': -8.885836
+            "llf": -10.14066,
+            "llf_fit": -4.0523073,
+            "llf_fit_em": -8.885836
         }
-        super(TestHamiltonAR2Short, cls).setup_class(
+        super().setup_class(
             true, rgnp[-10:], k_regimes=2, order=2, switching_ar=False)
 
     def test_fit_em(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            super(TestHamiltonAR2Short, self).test_fit_em()
+            super().test_fit_em()
 
     def test_filter_output(self, **kwargs):
         res = self.result
@@ -491,16 +496,16 @@ class TestHamiltonAR4(MarkovAutoregression):
         # Method SWITCHREG
         # Sample 1951q1 1984q4
         true = {
-            'params': np.r_[0.754673, 0.095915, -0.358811, 1.163516,
+            "params": np.r_[0.754673, 0.095915, -0.358811, 1.163516,
                             np.exp(-0.262658)**2, 0.013486, -0.057521,
                             -0.246983, -0.212923],
-            'llf': -181.26339,
-            'llf_fit': -181.26339,
-            'llf_fit_em': -183.85444,
-            'bse_oim': np.r_[.0965189, .0377362, .2645396, .0745187, np.nan,
+            "llf": -181.26339,
+            "llf_fit": -181.26339,
+            "llf_fit_em": -183.85444,
+            "bse_oim": np.r_[.0965189, .0377362, .2645396, .0745187, np.nan,
                              .1199942, .137663, .1069103, .1105311, ]
         }
-        super(TestHamiltonAR4, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=4, switching_ar=False)
 
     def test_filtered_regimes(self):
@@ -521,64 +526,63 @@ class TestHamiltonAR4(MarkovAutoregression):
         # Cannot compare middle element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
-        assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-6)
-        assert_allclose(bse[6:], self.true['bse_oim'][6:], atol=1e-6)
+        assert_allclose(bse[:4], self.true["bse_oim"][:4], atol=1e-6)
+        assert_allclose(bse[6:], self.true["bse_oim"][6:], atol=1e-6)
 
 
 class TestHamiltonAR2Switch(MarkovAutoregression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, 'results',
-                            'results_predict_rgnp.csv')
+        path = Path(current_path).joinpath("results", "results_predict_rgnp.csv")
         results = pd.read_csv(path)
 
         true = {
-            'params': np.r_[.3812383, .3564492, -.0055216, 1.195482,
+            "params": np.r_[.3812383, .3564492, -.0055216, 1.195482,
                             .6677098**2, .3710719, .4621503, .7002937,
                             -.3206652],
-            'llf': -179.32354,
-            'llf_fit': -179.38684,
-            'llf_fit_em': -184.99606,
-            'bse_oim': np.r_[.1424841, .0994742, .2057086, .1225987, np.nan,
+            "llf": -179.32354,
+            "llf_fit": -179.38684,
+            "llf_fit_em": -184.99606,
+            "bse_oim": np.r_[.1424841, .0994742, .2057086, .1225987, np.nan,
                              .1754383, .1652473, .187409, .1295937],
-            'smoothed0': results.iloc[3:]['switchar2_sm1'],
-            'smoothed1': results.iloc[3:]['switchar2_sm2'],
-            'predict0': results.iloc[3:]['switchar2_yhat1'],
-            'predict1': results.iloc[3:]['switchar2_yhat2'],
-            'predict_predicted': results.iloc[3:]['switchar2_pyhat'],
-            'predict_filtered': results.iloc[3:]['switchar2_fyhat'],
-            'predict_smoothed': results.iloc[3:]['switchar2_syhat'],
+            "smoothed0": results.iloc[3:]["switchar2_sm1"],
+            "smoothed1": results.iloc[3:]["switchar2_sm2"],
+            "predict0": results.iloc[3:]["switchar2_yhat1"],
+            "predict1": results.iloc[3:]["switchar2_yhat2"],
+            "predict_predicted": results.iloc[3:]["switchar2_pyhat"],
+            "predict_filtered": results.iloc[3:]["switchar2_fyhat"],
+            "predict_smoothed": results.iloc[3:]["switchar2_syhat"],
         }
-        super(TestHamiltonAR2Switch, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=2)
 
     def test_smoothed_marginal_probabilities(self):
         assert_allclose(self.result.smoothed_marginal_probabilities[:, 0],
-                        self.true['smoothed0'], atol=1e-6)
+                        self.true["smoothed0"], atol=1e-6)
         assert_allclose(self.result.smoothed_marginal_probabilities[:, 1],
-                        self.true['smoothed1'], atol=1e-6)
+                        self.true["smoothed1"], atol=1e-6)
 
     def test_predict(self):
         # Smoothed
         actual = self.model.predict(
-            self.true['params'], probabilities='smoothed')
-        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+            self.true["params"], probabilities="smoothed")
+        assert_allclose(actual, self.true["predict_smoothed"], atol=1e-6)
         actual = self.model.predict(
-            self.true['params'], probabilities=None)
-        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+            self.true["params"], probabilities=None)
+        assert_allclose(actual, self.true["predict_smoothed"], atol=1e-6)
 
-        actual = self.result.predict(probabilities='smoothed')
-        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+        actual = self.result.predict(probabilities="smoothed")
+        assert_allclose(actual, self.true["predict_smoothed"], atol=1e-6)
         actual = self.result.predict(probabilities=None)
-        assert_allclose(actual, self.true['predict_smoothed'], atol=1e-6)
+        assert_allclose(actual, self.true["predict_smoothed"], atol=1e-6)
 
     def test_bse(self):
         # Cannot compare middle element of bse because we estimate sigma^2
         # rather than sigma
         bse = self.result.cov_params_approx.diagonal()**0.5
-        assert_allclose(bse[:4], self.true['bse_oim'][:4], atol=1e-7)
-        assert_allclose(bse[6:], self.true['bse_oim'][6:], atol=1e-7)
+        assert_allclose(bse[:4], self.true["bse_oim"][:4], atol=1e-7)
+        assert_allclose(bse[6:], self.true["bse_oim"][6:], atol=1e-7)
 
 
 hamilton_ar1_switch_filtered = [
@@ -647,13 +651,13 @@ class TestHamiltonAR1Switch(MarkovAutoregression):
         # Method SWITCHREG
         # Sample 1951q1 1984q4
         true = {
-            'params': np.r_[0.85472458, 0.53662099, 1.041419, -0.479157,
+            "params": np.r_[0.85472458, 0.53662099, 1.041419, -0.479157,
                             np.exp(-0.231404)**2, 0.243128, 0.713029],
-            'llf': -186.7575,
-            'llf_fit': -186.7575,
-            'llf_fit_em': -189.25446
+            "llf": -186.7575,
+            "llf_fit": -186.7575,
+            "llf_fit_em": -189.25446
         }
-        super(TestHamiltonAR1Switch, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=1)
 
     def test_filtered_regimes(self):
@@ -783,15 +787,15 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
         # Method SWITCHREG
         # Sample 1951q1 1984q4
         true = {
-            'params': np.r_[6.564923, 7.846371, -8.064123, -15.37636,
+            "params": np.r_[6.564923, 7.846371, -8.064123, -15.37636,
                             1.027190, -0.719760,
                             np.exp(-0.217003)**2, 0.161489, 0.022536],
-            'llf': -163.914049,
-            'llf_fit': -161.786477,
-            'llf_fit_em': -163.914049
+            "llf": -163.914049,
+            "llf_fit": -161.786477,
+            "llf_fit_em": -163.914049
         }
         exog_tvtp = np.c_[np.ones(len(rgnp)), rec]
-        super(TestHamiltonAR1SwitchTVTP, cls).setup_class(
+        super().setup_class(
             true, rgnp, k_regimes=2, order=1, exog_tvtp=exog_tvtp)
 
     @pytest.mark.skip  # TODO(ChadFulton): give reason for skip
@@ -814,21 +818,21 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
 class TestFilardo(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, 'results', 'mar_filardo.csv')
+        path = Path(current_path).joinpath("results", "mar_filardo.csv")
         cls.mar_filardo = pd.read_csv(path)
         true = {
-            'params': np.r_[4.35941747, -1.6493936, 1.7702123, 0.9945672,
+            "params": np.r_[4.35941747, -1.6493936, 1.7702123, 0.9945672,
                             0.517298, -0.865888,
                             np.exp(-0.362469)**2,
                             0.189474, 0.079344, 0.110944, 0.122251],
-            'llf': -586.5718,
-            'llf_fit': -586.5718,
-            'llf_fit_em': -586.5718
+            "llf": -586.5718,
+            "llf_fit": -586.5718,
+            "llf_fit_em": -586.5718
         }
-        endog = cls.mar_filardo['dlip'].iloc[1:].values
+        endog = cls.mar_filardo["dlip"].iloc[1:].values
         exog_tvtp = add_constant(
-            cls.mar_filardo['dmdlleading'].iloc[:-1].values)
-        super(TestFilardo, cls).setup_class(
+            cls.mar_filardo["dmdlleading"].iloc[:-1].values)
+        super().setup_class(
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
@@ -842,38 +846,38 @@ class TestFilardo(MarkovAutoregression):
 
     def test_filtered_regimes(self):
         assert_allclose(self.result.filtered_marginal_probabilities[:, 0],
-                        self.mar_filardo['filtered_0'].iloc[5:], atol=1e-5)
+                        self.mar_filardo["filtered_0"].iloc[5:], atol=1e-5)
 
     def test_smoothed_regimes(self):
         assert_allclose(self.result.smoothed_marginal_probabilities[:, 0],
-                        self.mar_filardo['smoothed_0'].iloc[5:], atol=1e-5)
+                        self.mar_filardo["smoothed_0"].iloc[5:], atol=1e-5)
 
     def test_expected_durations(self):
         assert_allclose(self.result.expected_durations,
-                        self.mar_filardo[['duration0', 'duration1']].iloc[5:],
+                        self.mar_filardo[["duration0", "duration1"]].iloc[5:],
                         rtol=1e-5, atol=1e-7)
 
 
 class TestFilardoPandas(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, 'results', 'mar_filardo.csv')
+        path = Path(current_path).joinpath("results", "mar_filardo.csv")
         cls.mar_filardo = pd.read_csv(path)
-        cls.mar_filardo.index = pd.date_range('1948-02-01', '1991-04-01',
-                                              freq='MS')
+        cls.mar_filardo.index = pd.date_range("1948-02-01", "1991-04-01",
+                                              freq="MS")
         true = {
-            'params': np.r_[4.35941747, -1.6493936, 1.7702123, 0.9945672,
+            "params": np.r_[4.35941747, -1.6493936, 1.7702123, 0.9945672,
                             0.517298, -0.865888,
                             np.exp(-0.362469)**2,
                             0.189474, 0.079344, 0.110944, 0.122251],
-            'llf': -586.5718,
-            'llf_fit': -586.5718,
-            'llf_fit_em': -586.5718
+            "llf": -586.5718,
+            "llf_fit": -586.5718,
+            "llf_fit_em": -586.5718
         }
-        endog = cls.mar_filardo['dlip'].iloc[1:]
+        endog = cls.mar_filardo["dlip"].iloc[1:]
         exog_tvtp = add_constant(
-            cls.mar_filardo['dmdlleading'].iloc[:-1])
-        super(TestFilardoPandas, cls).setup_class(
+            cls.mar_filardo["dmdlleading"].iloc[:-1])
+        super().setup_class(
             true, endog, k_regimes=2, order=4, switching_ar=False,
             exog_tvtp=exog_tvtp)
 
@@ -887,13 +891,13 @@ class TestFilardoPandas(MarkovAutoregression):
 
     def test_filtered_regimes(self):
         assert_allclose(self.result.filtered_marginal_probabilities[0],
-                        self.mar_filardo['filtered_0'].iloc[5:], atol=1e-5)
+                        self.mar_filardo["filtered_0"].iloc[5:], atol=1e-5)
 
     def test_smoothed_regimes(self):
         assert_allclose(self.result.smoothed_marginal_probabilities[0],
-                        self.mar_filardo['smoothed_0'].iloc[5:], atol=1e-5)
+                        self.mar_filardo["smoothed_0"].iloc[5:], atol=1e-5)
 
     def test_expected_durations(self):
         assert_allclose(self.result.expected_durations,
-                        self.mar_filardo[['duration0', 'duration1']].iloc[5:],
+                        self.mar_filardo[["duration0", "duration1"]].iloc[5:],
                         rtol=1e-5, atol=1e-7)

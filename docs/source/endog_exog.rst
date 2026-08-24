@@ -40,11 +40,11 @@ Some informal definitions of the terms are
 
 *Endogenous variables designates variables in an economic/econometric model
 that are explained, or predicted, by that model.*
-http://stats.oecd.org/glossary/detail.asp?ID=794
+`Endogenous and exogenous variables <https://en.wikipedia.org/wiki/Endogenous_and_exogenous_variables>`_
 
 *Exogenous variables designates variables that appear in an
 economic/econometric model, but are not explained by that model (i.e. they are
-taken as given by the model).*  http://stats.oecd.org/glossary/detail.asp?ID=890
+taken as given by the model).*  See `Endogenous and exogenous variables <https://en.wikipedia.org/wiki/Endogenous_and_exogenous_variables>`_.
 
 In econometrics and statistics the terms are defined more formally, and
 different definitions of exogeneity (weak, strong, strict) are used depending
@@ -79,8 +79,9 @@ It is up to the user to know (or to consult a text book to find out) what the
 underlying statistical assumptions for the models are. As an example, ``exog``
 in ``OLS`` can have lagged dependent variables if the error or noise term is
 independently distributed over time (or uncorrelated over time). However, if
-the error terms are autocorrelated, then OLS does not have good statistical
-properties (is inconsistent) and the correct model will be ARMAX.
-``statsmodels`` has functions for regression diagnostics to test whether some of
-the assumptions are justified or not.
+the error terms are autocorrelated in the presense of lagged dependent
+variables, then OLS does not have good statistical properties (is inconsistent)
+and the correct model will be ARMAX. ``statsmodels`` has functions for
+regression diagnostics to test whether some of the assumptions are justified or
+not.
 

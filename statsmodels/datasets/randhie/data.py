@@ -1,11 +1,11 @@
 """RAND Health Insurance Experiment Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is in the public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is in the public domain."""
+TITLE = __doc__
+SOURCE = """
 The data was collected by the RAND corporation as part of the Health
 Insurance Experiment (HIE).
 
@@ -13,8 +13,8 @@ http://www.rand.org/health/projects/hie.html
 
 This data was used in::
 
-    Cameron, A.C. amd Trivedi, P.K. 2005.  `Microeconometrics: Methods
-        and Applications,` Cambridge: New York.
+    Cameron, A.C. and Trivedi, P.K. 2005.  *Microeconometrics: Methods
+        and Applications*, Cambridge: New York.
 
 And was obtained from: <http://cameron.econ.ucdavis.edu/mmabook/mmadata.html>
 
@@ -23,11 +23,11 @@ here contains only a subset of the original data.  The data varies slightly
 compared to that reported in Cameron and Trivedi.
 """
 
-DESCRSHORT  = """The RAND Co. Health Insurance Experiment Data"""
+DESCRSHORT = """The RAND Co. Health Insurance Experiment Data"""
 
-DESCRLONG   = """"""
+DESCRLONG = """"""
 
-NOTE        = """::
+NOTE = """::
 
     Number of observations - 20,190
     Number of variables - 10
@@ -47,27 +47,22 @@ NOTE        = """::
 """
 
 
-def load(as_pandas=None):
+def load():
     """
     Loads the RAND HIE data and returns a Dataset class.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
 
     Notes
     -----
     endog - response variable, mdvis
     exog - design
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def load_pandas():
@@ -77,7 +72,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
 
     Notes
     -----
@@ -88,4 +84,4 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'randhie.csv')
+    return du.load_csv(__file__, "randhie.csv")

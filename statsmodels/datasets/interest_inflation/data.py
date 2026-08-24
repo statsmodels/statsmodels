@@ -1,7 +1,7 @@
 """(West) German interest and inflation rate 1972-1998"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """..."""  # TODO
 TITLE = __doc__
@@ -33,30 +33,37 @@ variable_names = ["Dp", "R"]
 first_season = 1  # 1 stands for: first observation in Q2 (0 would mean Q1)
 
 
-def load(as_pandas=None):
+def load():
     """
     Load the West German interest/inflation data and return a Dataset class.
-
-    Parameters
-    ----------
-    as_pandas : bool
-        Flag indicating whether to return pandas DataFrames and Series
-        or numpy recarrays and arrays.  If True, returns pandas.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----
     The interest_inflation Dataset instance does not contain endog and exog
     attributes.
     """
-    return du.as_numpy_dataset(load_pandas(), as_pandas=as_pandas)
+    return load_pandas()
 
 
 def load_pandas():
+    """
+    Load the West German interest/inflation data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The interest_inflation Dataset instance does not contain endog and exog
+    attributes.
+    """
     data = _get_data()
     names = data.columns
     dataset = du.Dataset(data=data, names=names)
@@ -64,7 +71,8 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'E6.csv', convert_float=True)
+    return du.load_csv(__file__, "E6.csv", convert_float=True)
+
 
 def __str__():
     return "e6"

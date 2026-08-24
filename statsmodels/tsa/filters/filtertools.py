@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""Linear Filters for time series analysis and testing
+"""
+Linear Filters for time series analysis and testing
 
 
 TODO:
@@ -12,12 +12,40 @@ Author: Josef-pktd
 # not original copied from various experimental scripts
 # version control history is there
 
-import numpy as np
-import scipy.fftpack as fft
-from scipy import signal
-from scipy.signal.signaltools import _centered as trim_centered
+from __future__ import annotations
 
-from statsmodels.tools.validation import array_like, PandasWrapper
+from typing import TYPE_CHECKING, NamedTuple
+
+import numpy as np
+from scipy import signal
+import scipy.fftpack as fft
+from scipy.signal._signaltools import _centered as trim_centered
+
+from statsmodels.tools.validation import PandasWrapper, array_like
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import ArrayLike1D, ArrayLike2D
+
+
+class CycleTrendResult(NamedTuple):
+    """
+    Result of :func:`cffilter`, :func:`hamilton_filter`, and
+    :func:`hpfilter`: a cycle/trend decomposition.
+
+    Parameters
+    ----------
+    cycle : ndarray, Series, or DataFrame
+        The estimated cyclical component. See the docstring of the
+        function that produced this result for the precise definition
+        (e.g., :func:`hamilton_filter` leaves the first ``p + h - 1``
+        values as ``NaN``).
+    trend : ndarray, Series, or DataFrame
+        The estimated trend component, matching ``cycle`` in shape.
+    """
+
+    cycle: ArrayLike1D | ArrayLike2D
+    trend: ArrayLike1D | ArrayLike2D
+
 
 def _pad_nans(x, head=None, tail=None):
     if np.ndim(x) == 1:
@@ -42,20 +70,36 @@ def _pad_nans(x, head=None, tail=None):
     else:
         raise ValueError("Nan-padding for ndim > 2 not implemented")
 
-#original changes and examples in sandbox.tsa.try_var_convolve
+# original changes and examples in sandbox.tsa.try_var_convolve
 
 # do not do these imports, here just for copied fftconvolve
-#get rid of these imports
-#from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
+# get rid of these imports
+# from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
 #     ifftn, fftfreq
-#from numpy import product,array
+# from numpy import product,array
 
 
 # previous location in sandbox.tsa.try_var_convolve
 def fftconvolveinv(in1, in2, mode="full"):
     """
-    Convolve two N-dimensional arrays using FFT. See convolve.
+    Convolve two N-dimensional arrays using FFT. See convolve
 
+    Parameters
+    ----------
+    in1 : array_like
+        First input array.
+    in2 : array_like
+        Second input array, used as the inverse filter.
+    mode : str, optional
+        Convolution mode, one of 'full', 'same', or 'valid'.
+
+    Returns
+    -------
+    ndarray
+        The convolved array.
+
+    Notes
+    -----
     copied from scipy.signal.signaltools, but here used to try out inverse
     filter. does not work or I cannot get it to work
 
@@ -67,15 +111,15 @@ def fftconvolveinv(in1, in2, mode="full"):
     """
     s1 = np.array(in1.shape)
     s2 = np.array(in2.shape)
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
+    complex_result = (np.issubdtype(in1.dtype, np.complexfloating) or
+                      np.issubdtype(in2.dtype, np.complexfloating))
     size = s1+s2-1
 
     # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
-    IN1 = fft.fftn(in1,fsize)
-    #IN1 *= fftn(in2,fsize) #JP: this looks like the only change I made
-    IN1 /= fft.fftn(in2,fsize)  # use inverse filter
+    fsize = (2 ** np.ceil(np.log2(size))).astype(int)
+    IN1 = fft.fftn(in1, fsize)
+    # IN1 *= fftn(in2,fsize) # JP: this looks like the only change I made
+    IN1 /= fft.fftn(in2, fsize)  # use inverse filter
     # note the inverse is elementwise not matrix inverse
     # is this correct, NO  does not seem to work for VARMA
     fslice = tuple([slice(0, int(sz)) for sz in size])
@@ -86,21 +130,39 @@ def fftconvolveinv(in1, in2, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1,axis=0) > np.product(s2,axis=0):
+        if np.prod(s1, axis=0) > np.prod(s2, axis=0):
             osize = s1
         else:
             osize = s2
-        return trim_centered(ret,osize)
+        return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret,abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2-s1)+1)
 
 
-#code duplication with fftconvolveinv
+# code duplication with fftconvolveinv
 def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """
-    Convolve two N-dimensional arrays using FFT. See convolve.
+    Convolve two N-dimensional arrays using FFT. See convolve
 
-    For use with arma  (old version: in1=num in2=den in3=data
+    Parameters
+    ----------
+    in1 : array_like
+        First input array.
+    in2 : array_like, optional
+        Second input array. At least one of `in2` and `in3` must be given.
+    in3 : array_like, optional
+        Third input array. At least one of `in2` and `in3` must be given.
+    mode : str, optional
+        Convolution mode, one of 'full', 'same', or 'valid'.
+
+    Returns
+    -------
+    ndarray
+        The convolved array.
+
+    Notes
+    -----
+    For use with arma  (old version: in1=num in2=den in3=data)
 
     * better for consistency with other functions in1=data in2=num in3=den
     * note in2 and in3 need to have consistent dimension/shape
@@ -116,7 +178,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     original signal.fftconvolve also uses fftn
     """
     if (in2 is None) and (in3 is None):
-        raise ValueError('at least one of in2 and in3 needs to be given')
+        raise ValueError("at least one of in2 and in3 needs to be given")
     s1 = np.array(in1.shape)
     if in2 is not None:
         s2 = np.array(in2.shape)
@@ -124,16 +186,17 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         s2 = 0
     if in3 is not None:
         s3 = np.array(in3.shape)
-        s2 = max(s2, s3) # try this looks reasonable for ARMA
-        #s2 = s3
+        s2 = max(s2, s3)  # try this looks reasonable for ARMA
+        # s2 = s3
 
-    complex_result = (np.issubdtype(in1.dtype, np.complex) or
-                      np.issubdtype(in2.dtype, np.complex))
+    complex_result = (np.issubdtype(in1.dtype, np.complexfloating) or
+                      np.issubdtype(in2.dtype, np.complexfloating))
     size = s1+s2-1
 
     # Always use 2**n-sized FFT
-    fsize = 2**np.ceil(np.log2(size))
-    #convolve shorter ones first, not sure if it matters
+    fsize = (2 ** np.ceil(np.log2(size))).astype(int)
+    # convolve shorter ones first, not sure if it matters
+    IN1 = in1.copy()  # TODO: Is this correct?
     if in2 is not None:
         IN1 = fft.fftn(in2, fsize)
     if in3 is not None:
@@ -149,17 +212,17 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     if mode == "full":
         return ret
     elif mode == "same":
-        if np.product(s1,axis=0) > np.product(s2,axis=0):
+        if np.prod(s1, axis=0) > np.prod(s2, axis=0):
             osize = s1
         else:
             osize = s2
-        return trim_centered(ret,osize)
+        return trim_centered(ret, osize)
     elif mode == "valid":
-        return trim_centered(ret,abs(s2-s1)+1)
+        return trim_centered(ret, abs(s2-s1)+1)
 
 
-#original changes and examples in sandbox.tsa.try_var_convolve
-#examples and tests are there
+# original changes and examples in sandbox.tsa.try_var_convolve
+# examples and tests are there
 def recursive_filter(x, ar_coeff, init=None):
     """
     Autoregressive, or recursive, filtering.
@@ -170,13 +233,13 @@ def recursive_filter(x, ar_coeff, init=None):
         Time-series data. Should be 1d or n x 1.
     ar_coeff : array_like
         AR coefficients in reverse time order. See Notes for details.
-    init : array_like
+    init : array_like, optional
         Initial values of the time-series prior to the first value of y.
         The default is zero.
 
     Returns
     -------
-    array_like
+    ndarray or Series
         Filtered array, number of columns determined by x and ar_coeff. If x
         is a pandas object than a Series is returned.
 
@@ -187,14 +250,14 @@ def recursive_filter(x, ar_coeff, init=None):
         y[n] = ar_coeff[0] * y[n-1] + ...
                 + ar_coeff[n_coeff - 1] * y[n - n_coeff] + x[n]
 
-    where n_coeff = len(n_coeff).
+    where n_coeff = len(ar_coeff).
     """
     pw = PandasWrapper(x)
-    x = array_like(x, 'x')
-    ar_coeff = array_like(ar_coeff, 'ar_coeff')
+    x = array_like(x, "x")
+    ar_coeff = array_like(ar_coeff, "ar_coeff")
 
     if init is not None:  # integer init are treated differently in lfiltic
-        init = array_like(init, 'init')
+        init = array_like(init, "init")
         if len(init) != len(ar_coeff):
             raise ValueError("ar_coeff must be the same length as init")
 
@@ -211,7 +274,6 @@ def recursive_filter(x, ar_coeff, init=None):
         result = y
 
     return pw.wrap(result)
-
 
 
 def convolution_filter(x, filt, nsides=2):
@@ -276,12 +338,12 @@ def convolution_filter(x, filt, nsides=2):
         raise ValueError("nsides must be 1 or 2")
 
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', maxdim=2)
-    filt = array_like(filt, 'filt', ndim=x.ndim)
+    x = array_like(x, "x", maxdim=2)
+    filt = array_like(filt, "filt", ndim=x.ndim)
 
     if filt.ndim == 1 or min(filt.shape) == 1:
-        result = signal.convolve(x, filt, mode='valid')
-    elif filt.ndim == 2:
+        result = signal.convolve(x, filt, mode="valid")
+    else:  # filt.ndim == 2
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
@@ -289,11 +351,11 @@ def convolution_filter(x, filt, nsides=2):
             for i in range(nvar):
                 # could also use np.convolve, but easier for swiching to fft
                 result[:, i] = signal.convolve(x[:, i], filt[:, i],
-                                               mode='valid')
+                                               mode="valid")
         elif nsides == 1:
             for i in range(nvar):
                 result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
-                                               mode='valid')
+                                               mode="valid")
     result = _pad_nans(result, trim_head, trim_tail)
     return pw.wrap(result)
 
@@ -310,12 +372,13 @@ def miso_lfilter(ar, ma, x, useic=False):
     ar : array_like
         The coefficients of autoregressive lag polynomial including lag zero,
         ar(L) in the expression ar(L)y_t.
-    ma : array_like, same ndim as x, currently 2d
+    ma : array_like
         The coefficient of the moving average lag polynomial, ma(L) in
-        ma(L)x_t.
+        ma(L)x_t. Must have the same number of dimensions as ``x``;
+        currently only 2d is supported.
     x : array_like
         The 2-d input data series, time in rows, variables in columns.
-    useic : bool
+    useic : bool, optional
         Flag indicating whether to use initial conditions.
 
     Returns
@@ -332,15 +395,15 @@ def miso_lfilter(ar, ma, x, useic=False):
     floating point numbers
     does not cut off invalid starting and final values
 
-    miso_lfilter find array y such that:
+    miso_lfilter finds array y such that:
 
             ar(L)y_t = ma(L)x_t
 
     with shapes y (nobs,), x (nobs, nvars), ar (narlags,), and
     ma (narlags, nvars).
     """
-    ma = array_like(ma, 'ma')
-    ar = array_like(ar, 'ar')
+    ma = array_like(ma, "ma")
+    ar = array_like(ar, "ar")
     inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
     # for testing 2d equivalence between convolve and correlate
     #  inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]

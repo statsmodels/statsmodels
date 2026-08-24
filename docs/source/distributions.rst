@@ -24,8 +24,114 @@ Empirical Distributions
    :toctree: generated/
 
    ECDF
+   ECDFDiscrete
    StepFunction
    monotone_fn_inverter
+
+Count Distributions
+-------------------
+
+The `discrete` module contains classes for count distributions that are based
+on discretizing a continuous distribution, and specific count distributions
+that are not available in scipy.distributions like generalized poisson and
+zero-inflated count models.
+
+The latter are mainly in support of the corresponding models in
+`statsmodels.discrete`. Some methods are not specifically implemented and will
+use potentially slow inherited generic methods.
+
+.. module:: statsmodels.distributions.discrete
+   :synopsis: Support for count distributions
+
+.. currentmodule:: statsmodels.distributions.discrete
+
+.. autosummary::
+   :toctree: generated/
+
+   DiscretizedCount
+   DiscretizedModel
+   genpoisson_p
+   zigenpoisson
+   zinegbin
+   zipoisson
+
+Copula
+------
+
+The `copula` sub-module provides classes to model the dependence between
+parameters. Copulae are used to construct a multivariate joint distribution and
+provide a set of functions like sampling, PDF, CDF.
+
+.. module:: statsmodels.distributions.copula.api
+   :synopsis: Copula for modeling parameter dependence
+
+.. currentmodule:: statsmodels.distributions.copula.api
+
+.. autosummary::
+   :toctree: generated/
+
+   CopulaDistribution
+   ArchimedeanCopula
+   FrankCopula
+   ClaytonCopula
+   GumbelCopula
+   GaussianCopula
+   StudentTCopula
+   ExtremeValueCopula
+   IndependenceCopula
+   rvs_kernel
+
+The Archimedean generator transforms used by ``ArchimedeanCopula`` and the
+Pickands dependence functions used by ``ExtremeValueCopula`` are in
+
+.. module:: statsmodels.distributions.copula.transforms
+   :synopsis: Archimedean copula generator transforms
+.. currentmodule:: statsmodels.distributions.copula.transforms
+
+and
+
+.. module:: statsmodels.distributions.copula.depfunc_ev
+   :synopsis: Pickands dependence functions for extreme value copulas
+.. currentmodule:: statsmodels.distributions.copula.depfunc_ev
+
+respectively.
+
+Bernstein Distribution
+-----------------------
+
+Univariate and bivariate distributions estimated nonparametrically on the
+unit hypercube using Bernstein polynomials, e.g. for use as the marginal or
+copula component of a semiparametric model.
+
+.. module:: statsmodels.distributions.bernstein
+   :synopsis: Distributions based on Bernstein polynomials
+
+.. currentmodule:: statsmodels.distributions.bernstein
+
+.. autosummary::
+   :toctree: generated/
+
+   BernsteinDistribution
+   BernsteinDistributionUV
+   BernsteinDistributionBV
+
+Mixture of Distributions
+--------------------------
+
+Tools for combining component distributions into a mixture and generating
+random samples from the mixture.
+
+.. module:: statsmodels.distributions.mixture_rvs
+   :synopsis: Mixtures of distributions
+
+.. currentmodule:: statsmodels.distributions.mixture_rvs
+
+.. autosummary::
+   :toctree: generated/
+
+   MixtureDistribution
+   mixture_rvs
+   mv_mixture_rvs
 
 Distribution Extras
 -------------------
@@ -65,36 +171,16 @@ Distribution Extras
    mvstdnormcdf
    mvnormcdf
 
-Univariate Distributions by non-linear Transformations
-------------------------------------------------------
 
-Univariate distributions can be generated from a non-linear transformation of an
-existing univariate distribution. `Transf_gen` is a class that can generate a new
-distribution from a monotonic transformation, `TransfTwo_gen` can use hump-shaped
-or u-shaped transformation, such as abs or square. The remaining objects are
-special cases.
+Helper Functions
+----------------
 
-.. module:: statsmodels.sandbox.distributions.transformed
-   :synopsis: Experimental probability distributions and random number generators
+.. module:: statsmodels.tools.rng_qrng
+   :synopsis: Tools for working with random variable generation
 
-.. currentmodule:: statsmodels.sandbox.distributions.transformed
+.. currentmodule:: statsmodels.tools.rng_qrng
 
 .. autosummary::
    :toctree: generated/
 
-   TransfTwo_gen
-   Transf_gen
-
-   ExpTransf_gen
-   LogTransf_gen
-   SquareFunc
-
-   absnormalg
-   invdnormalg
-
-   loggammaexpg
-   lognormalg
-   negsquarenormalg
-
-   squarenormalg
-   squaretg
+   check_random_state

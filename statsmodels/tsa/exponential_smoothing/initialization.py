@@ -1,6 +1,4 @@
-"""
-Initialization methods for states of exponential smoothing models
-"""
+"""Initialization methods for states of exponential smoothing models"""
 
 import numpy as np
 import pandas as pd
@@ -8,6 +6,52 @@ import pandas as pd
 
 def _initialization_simple(endog, trend=False, seasonal=False,
                            seasonal_periods=None):
+    """
+    Compute simple initial values for level, trend, and seasonal components
+
+    Parameters
+    ----------
+    endog : array_like
+        The observed time-series process :math:`y`.
+    trend : {'add', 'mul'} or None, optional
+        The type of trend component. If not 'add' or 'mul', no initial
+        trend value is computed. Default is False, which is treated the
+        same as None.
+    seasonal : {'add', 'mul'} or None, optional
+        The type of seasonal component. If not 'add' or 'mul', the
+        non-seasonal branch is used and no initial seasonal values are
+        computed. Default is False, which is treated the same as None.
+    seasonal_periods : int, optional
+        The number of periods in a complete seasonal cycle. Required if
+        `seasonal` is 'add' or 'mul'.
+
+    Returns
+    -------
+    initial_level : float
+        The initial value for the level component.
+    initial_trend : float or None
+        The initial value for the trend component, or None if `trend` is
+        not 'add' or 'mul'.
+    initial_seasonal : ndarray or None
+        The initial values for the seasonal component, or None if
+        `seasonal` is not 'add' or 'mul'.
+
+    Raises
+    ------
+    ValueError
+        If `seasonal` is 'add' or 'mul' and `endog` does not contain at
+        least two full seasonal cycles.
+
+    Notes
+    -----
+    See Section 7.6 of Hyndman and Athanasopoulos [1]_.
+
+    References
+    ----------
+    .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+       principles and practice*, 3rd edition, OTexts: Melbourne,
+       Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
+    """
     # See Section 7.6 of Hyndman and Athanasopoulos
     nobs = len(endog)
     initial_trend = None
@@ -16,26 +60,26 @@ def _initialization_simple(endog, trend=False, seasonal=False,
     # Non-seasonal
     if seasonal is None or not seasonal:
         initial_level = endog[0]
-        if trend == 'add':
+        if trend == "add":
             initial_trend = endog[1] - endog[0]
-        elif trend == 'mul':
+        elif trend == "mul":
             initial_trend = endog[1] / endog[0]
     # Seasonal
     else:
         if nobs < 2 * seasonal_periods:
-            raise ValueError('Cannot compute initial seasonals using'
-                             ' heuristic method with less than two full'
-                             ' seasonal cycles in the data.')
+            raise ValueError("Cannot compute initial seasonals using"
+                             " heuristic method with less than two full"
+                             " seasonal cycles in the data.")
 
         initial_level = np.mean(endog[:seasonal_periods])
         m = seasonal_periods
 
-        if trend is not None:
+        if trend in ("add", "mul"):
             initial_trend = (pd.Series(endog).diff(m)[m:2 * m] / m).mean()
 
-        if seasonal == 'add':
+        if seasonal == "add":
             initial_seasonal = endog[:m] - initial_level
-        elif seasonal == 'mul':
+        elif seasonal == "mul":
             initial_seasonal = endog[:m] / initial_level
 
     return initial_level, initial_trend, initial_seasonal
@@ -43,32 +87,79 @@ def _initialization_simple(endog, trend=False, seasonal=False,
 
 def _initialization_heuristic(endog, trend=False, seasonal=False,
                               seasonal_periods=None):
+    """
+    Compute heuristic initial values for level, trend, and seasonal components
+
+    Parameters
+    ----------
+    endog : ndarray
+        The observed time-series process :math:`y`.
+    trend : {'add', 'mul'} or None, optional
+        The type of trend component. If not 'add' or 'mul', no initial
+        trend value is computed. Default is False, which is treated the
+        same as None.
+    seasonal : {'add', 'mul'} or None, optional
+        The type of seasonal component. If not 'add' or 'mul', the
+        non-seasonal branch is used and no initial seasonal values are
+        computed. Default is False, which is treated the same as None.
+    seasonal_periods : int, optional
+        The number of periods in a complete seasonal cycle. Required if
+        `seasonal` is 'add' or 'mul'.
+
+    Returns
+    -------
+    initial_level : float
+        The initial value for the level component.
+    initial_trend : float or None
+        The initial value for the trend component, or None if `trend` is
+        not 'add' or 'mul'.
+    initial_seasonal : ndarray or None
+        The initial values for the seasonal component, or None if
+        `seasonal` is not 'add' or 'mul'.
+
+    Raises
+    ------
+    ValueError
+        If `endog` has fewer than 10 observations, or if `seasonal` is
+        'add' or 'mul' and `endog` does not contain enough observations
+        to compute the seasonally adjusted level.
+
+    Notes
+    -----
+    See Section 2.6 of Hyndman et al. [1]_.
+
+    References
+    ----------
+    .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+       principles and practice*, 3rd edition, OTexts: Melbourne,
+       Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
+    """
     # See Section 2.6 of Hyndman et al.
     endog = endog.copy()
     nobs = len(endog)
 
     if nobs < 10:
-        raise ValueError('Cannot use heuristic method with less than 10'
-                         ' observations.')
+        raise ValueError("Cannot use heuristic method with less than 10"
+                         " observations.")
 
     # Seasonal component
     initial_seasonal = None
     if seasonal:
         # Calculate the number of full cycles to use
         if nobs < 2 * seasonal_periods:
-            raise ValueError('Cannot compute initial seasonals using'
-                             ' heuristic method with less than two full'
-                             ' seasonal cycles in the data.')
+            raise ValueError("Cannot compute initial seasonals using"
+                             " heuristic method with less than two full"
+                             " seasonal cycles in the data.")
         # We need at least 10 periods for the level initialization
         # and we will lose self.seasonal_periods // 2 values at the
         # beginning and end of the sample, so we need at least
         # 10 + 2 * (self.seasonal_periods // 2) values
         min_obs = 10 + 2 * (seasonal_periods // 2)
         if nobs < min_obs:
-            raise ValueError('Cannot use heuristic method to compute'
-                             ' initial seasonal and levels with less'
-                             ' than 10 + 2 * (seasonal_periods // 2)'
-                             ' datapoints.')
+            raise ValueError("Cannot use heuristic method to compute"
+                             " initial seasonal and levels with less"
+                             " than 10 + 2 * (seasonal_periods // 2)"
+                             " datapoints.")
         # In some datasets we may only have 2 full cycles (but this may
         # still satisfy the above restriction that we will end up with
         # 10 seasonally adjusted observations)
@@ -84,9 +175,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
             initial_trend = initial_trend.shift(-1).rolling(2).mean()
 
         # Detrend
-        if seasonal == 'add':
+        if seasonal == "add":
             detrended = series - initial_trend
-        elif seasonal == 'mul':
+        elif seasonal == "mul":
             detrended = series / initial_trend
 
         # Average seasonal effect
@@ -96,9 +187,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
             tmp.reshape(k_cycles, seasonal_periods).T, axis=1)
 
         # Normalize the seasonals
-        if seasonal == 'add':
+        if seasonal == "add":
             initial_seasonal -= np.mean(initial_seasonal)
-        elif seasonal == 'mul':
+        elif seasonal == "mul":
             initial_seasonal /= np.mean(initial_seasonal)
 
         # Replace the data with the trend
@@ -112,9 +203,9 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
     initial_level = beta[0]
 
     initial_trend = None
-    if trend == 'add':
+    if trend == "add":
         initial_trend = beta[1]
-    elif trend == 'mul':
+    elif trend == "mul":
         initial_trend = 1 + beta[1] / beta[0]
 
     return initial_level, initial_trend, initial_seasonal

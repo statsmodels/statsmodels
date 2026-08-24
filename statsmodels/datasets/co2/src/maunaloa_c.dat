@@ -1,9 +1,9 @@
 *******************************************************************
-*** Weekly averages derived from continuous air samples         *** 
+*** Weekly averages derived from continuous air samples         ***
 *** for the Mauna Loa Observatory, Hawaii, U.S.A.               ***
 ***                                                             ***
 ***                                                             ***
-*** September 2004                                              *** 
+*** September 2004                                              ***
 ***                                                             ***
 *** Source: Carbon Dioxide Research Group                       ***
 ***         Scripps Institution of Oceanography                 ***
@@ -11,15 +11,15 @@
 ***         La Jolla, California, USA 92023-0444                ***
 *******************************************************************
 
-These weekly averages are ultimately based on measurements of 4 air 
-samples per hour taken atop intake lines on several towers during 
-steady periods of CO2 concentration of not less than 6 hours per day; 
-if no such periods are available on a given day, then no data are 
-used for that day. The "Weight" column gives the number of days used 
-in each weekly average. Flag codes are explained in the NDP writeup, available 
-electronically from the home page of this data set. CO2 concentrations 
-are in terms of the 1999 calibration scale (Keeling et al., 2002) 
-available electronically from the references in the NDP writeup which 
+These weekly averages are ultimately based on measurements of 4 air
+samples per hour taken atop intake lines on several towers during
+steady periods of CO2 concentration of not less than 6 hours per day;
+if no such periods are available on a given day, then no data are
+used for that day. The "Weight" column gives the number of days used
+in each weekly average. Flag codes are explained in the NDP writeup, available
+electronically from the home page of this data set. CO2 concentrations
+are in terms of the 1999 calibration scale (Keeling et al., 2002)
+available electronically from the references in the NDP writeup which
 can be accessed from the home page of this data set.
 
 Station Sample Weight Flag  CO2 concentration

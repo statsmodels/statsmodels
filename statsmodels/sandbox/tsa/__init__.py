@@ -1,4 +1,4 @@
-'''functions and classes time series analysis
+"""functions and classes time series analysis
 
 
 Status
@@ -44,9 +44,9 @@ movvar
 
 
 
-'''
+"""
 
+# from arima import *
+from .movstat import movmean, movmoment, movorder, movvar  # noqa:F401
 
-#from arima import *
-from .movstat import movorder, movmean, movvar, movmoment  # noqa:F401
-#from stattools import *
+# from stattools import *

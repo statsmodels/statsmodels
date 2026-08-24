@@ -1,9 +1,10 @@
 import numpy as np
+from scipy.linalg.blas import find_best_blas_type
 
+from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
 from statsmodels.tsa import arima_process
 from statsmodels.tsa.statespace.tools import prefix_dtype_map
-from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
-from scipy.linalg.blas import find_best_blas_type
+
 from . import _arma_innovations
 
 NON_STATIONARY_ERROR = """\
@@ -15,17 +16,17 @@ The model's autoregressive parameters (ar_params) indicate that the process
 def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
                      normalize=False, prefix=None):
     """
-    Compute innovations using a given ARMA process.
+    Compute innovations using a given ARMA process
 
     Parameters
     ----------
-    endog : ndarray
+    endog : array_like
         The observed time-series process, may be univariate or multivariate.
-    ar_params : ndarray, optional
+    ar_params : array_like, optional
         Autoregressive parameters.
-    ma_params : ndarray, optional
+    ma_params : array_like, optional
         Moving average parameters.
-    sigma2 : ndarray, optional
+    sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     normalize : bool, optional
         Whether or not to normalize the returned innovations. Default is False.
@@ -45,7 +46,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
         Mean square error for the innovations.
     """
     # Parameters
-    endog = np.array(endog)
+    endog = np.require(endog,  requirements="W")
     squeezed = endog.ndim == 1
     if squeezed:
         endog = endog[:, None]
@@ -71,11 +72,11 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
     # Get the appropriate functions
     arma_transformed_acovf_fast = getattr(
-        _arma_innovations, prefix + 'arma_transformed_acovf_fast')
+        _arma_innovations, prefix + "arma_transformed_acovf_fast")
     arma_innovations_algo_fast = getattr(
-        _arma_innovations, prefix + 'arma_innovations_algo_fast')
+        _arma_innovations, prefix + "arma_innovations_algo_fast")
     arma_innovations_filter = getattr(
-        _arma_innovations, prefix + 'arma_innovations_filter')
+        _arma_innovations, prefix + "arma_innovations_filter")
 
     # Run the innovations algorithm for ARMA coefficients
     arma_acovf = arima_process.arma_acovf(ar, ma,
@@ -109,17 +110,17 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
 def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
     """
-    Compute the log-likelihood of the given data assuming an ARMA process.
+    Compute the log-likelihood of the given data assuming an ARMA process
 
     Parameters
     ----------
-    endog : ndarray
+    endog : array_like
         The observed time-series process.
-    ar_params : ndarray, optional
+    ar_params : array_like, optional
         Autoregressive parameters.
-    ma_params : ndarray, optional
+    ma_params : array_like, optional
         Moving average parameters.
-    sigma2 : ndarray, optional
+    sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
         The BLAS prefix associated with the datatype. Default is to find the
@@ -139,17 +140,17 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
 def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
                     prefix=None):
     """
-    Compute the log-likelihood for each observation assuming an ARMA process.
+    Compute the log-likelihood for each observation assuming an ARMA process
 
     Parameters
     ----------
-    endog : ndarray
+    endog : array_like
         The observed time-series process.
-    ar_params : ndarray, optional
+    ar_params : array_like, optional
         Autoregressive parameters.
-    ma_params : ndarray, optional
+    ma_params : array_like, optional
         Moving average parameters.
-    sigma2 : ndarray, optional
+    sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
         The BLAS prefix associated with the datatype. Default is to find the
@@ -175,28 +176,28 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params = np.asfortranarray(ma_params, dtype=dtype)
     sigma2 = dtype(sigma2).item()
 
-    func = getattr(_arma_innovations, prefix + 'arma_loglikeobs_fast')
+    func = getattr(_arma_innovations, prefix + "arma_loglikeobs_fast")
     return func(endog, ar_params, ma_params, sigma2)
 
 
 def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
                prefix=None):
     """
-    Compute the score (gradient of the log-likelihood function).
+    Compute the score (gradient of the log-likelihood function)
 
     Parameters
     ----------
-    endog : ndarray
+    endog : array_like
         The observed time-series process.
-    ar_params : ndarray, optional
+    ar_params : array_like, optional
         Autoregressive coefficients, not including the zero lag.
-    ma_params : ndarray, optional
+    ma_params : array_like, optional
         Moving average coefficients, not including the zero lag, where the sign
         convention assumes the coefficients are part of the lag polynomial on
-        the right-hand-side of the ARMA definition (i.e. they have the same
+        the right-hand-side of the ARMA definition (i.e., they have the same
         sign from the usual econometrics convention in which the coefficients
         are on the right-hand-side of the ARMA definition).
-    sigma2 : ndarray, optional
+    sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
         The BLAS prefix associated with the datatype. Default is to find the
@@ -204,7 +205,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
         used internally.
 
     Returns
-    ---------
+    -------
     ndarray
         Score, evaluated at the given parameters.
 
@@ -230,21 +231,21 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
 def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
                   prefix=None):
     """
-    Compute the score (gradient) per observation.
+    Compute the score (gradient) per observation
 
     Parameters
     ----------
-    endog : ndarray
+    endog : array_like
         The observed time-series process.
-    ar_params : ndarray, optional
+    ar_params : array_like, optional
         Autoregressive coefficients, not including the zero lag.
-    ma_params : ndarray, optional
+    ma_params : array_like, optional
         Moving average coefficients, not including the zero lag, where the sign
         convention assumes the coefficients are part of the lag polynomial on
-        the right-hand-side of the ARMA definition (i.e. they have the same
+        the right-hand-side of the ARMA definition (i.e., they have the same
         sign from the usual econometrics convention in which the coefficients
         are on the right-hand-side of the ARMA definition).
-    sigma2 : ndarray, optional
+    sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
         The BLAS prefix associated with the datatype. Default is to find the
@@ -252,7 +253,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
         used internally.
 
     Returns
-    ---------
+    -------
     ndarray
         Score per observation, evaluated at the given parameters.
 
