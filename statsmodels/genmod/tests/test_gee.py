@@ -236,7 +236,8 @@ class TestGEE:
         assert_allclose(marg.margeff, np.r_[11.0928], rtol=1e-6)
         assert_allclose(marg.margeff_se, np.r_[3.269015], rtol=1e-6)
 
-    def test_multinomial(self):
+    @pytest.mark.parametrize("dtype", [int, str])
+    def test_multinomial_input_type(self, dtype):
         """
         Check the 2-class multinomial (nominal) GEE fit against
         logistic regression.
@@ -251,8 +252,11 @@ class TestGEE:
         model = gee.NominalGEE(endog, exog, groups)
         results = model.fit(cov_type="naive", start_params=[3.295837, -2.197225])
 
+        # Ensure the correct type is used
+        groups = groups.astype(dtype)
+        # Check that groups can be strings
         logit_model = gee.GEE(endog, exog, groups, family=families.Binomial())
-        logit_results = logit_model.fit(cov_type="naive")
+        logit_results = logit_model.fit(cov_type='naive')
 
         assert_allclose(results.params, -logit_results.params, rtol=1e-5)
         assert_allclose(results.bse, logit_results.bse, rtol=1e-5)
