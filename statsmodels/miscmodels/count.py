@@ -201,7 +201,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         A nobs x k array where `nobs` is the number of observations and
         `k` is the number of regressors. If None, a column of ones is
         used.
-    offset : ndarray, optional
+    offset : array_like, optional
         Offset added to the linear predictor before computing the mean.
     missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
@@ -217,6 +217,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         super().__init__(
             endog, exog, missing=missing, extra_params_names=["zi"], **kwds
         )
+        offset = array_like(offset, "offset", optional=True, ndim=1)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column
