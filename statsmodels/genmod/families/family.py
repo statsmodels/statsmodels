@@ -7,6 +7,7 @@ The one parameter exponential family distributions used by GLM.
 # http://www.biostat.jhsph.edu/~qli/biostatistics_r_doc/library/stats/html/family.html
 # for comparison to R, and McCullagh and Nelder
 from statsmodels.compat.platform import PLATFORM_32
+from statsmodels.compat.scipy import SP_LT_114
 
 import inspect
 import warnings
@@ -1781,11 +1782,12 @@ class Tweedie(Family):
                     scale = scale[idx]
                 x = ((p - 1) * scale / endog) ** alpha
                 x /= (2 - p) * scale
-                if not PLATFORM_32:
-                    ll_obs[idx] += np.log(1 / endog) + special.log_wright_bessel(-alpha, 0, x)
-                else:
+                if PLATFORM_32 or SP_LT_114:
+                    # In accurate on WASM/32 bit and first available in SciPy 1.14.0
                     wb = special.wright_bessel(-alpha, 0, x)
                     ll_obs[idx] += np.log(1 / endog * wb)
+                else:
+                    ll_obs[idx] += np.log(1 / endog) + special.log_wright_bessel(-alpha, 0, x)
             return ll_obs
         else:
             # Equations 4 of Kaas
