@@ -21,7 +21,7 @@ def bunch_factory(attribute, columns):
     ----------
     attribute : str
         Attribute to access when splitting
-    columns : List[str]
+    columns : list of str
         List of names to use when splitting the columns of attribute
 
     Notes
@@ -35,8 +35,8 @@ def bunch_factory(attribute, columns):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             if not hasattr(self, attribute):
-                raise AttributeError("{} is required and must be passed to "
-                                     "the constructor".format(attribute))
+                raise AttributeError(f"{attribute} is required and must be passed to "
+                                     "the constructor")
             for i, att in enumerate(columns):
                 self[att] = getattr(self, attribute)[:, i]
 
@@ -92,10 +92,10 @@ def assert_equal(actual, desired, err_msg="", verbose=True, **kwds):
         when `desired` is a pandas Index, Series, or DataFrame.
     """
     if isinstance(desired, pd.Index):
-        pdt.assert_index_equal(actual, desired)
+        pdt.assert_index_equal(actual, desired, **kwds)
     elif isinstance(desired, pd.Series):
         pdt.assert_series_equal(actual, desired, **kwds)
     elif isinstance(desired, pd.DataFrame):
         pdt.assert_frame_equal(actual, desired, **kwds)
     else:
-        npt.assert_equal(actual, desired, err_msg="", verbose=True)
+        npt.assert_equal(actual, desired, err_msg=err_msg, verbose=verbose)

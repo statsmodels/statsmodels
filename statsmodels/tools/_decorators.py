@@ -68,7 +68,7 @@ def deprecated_alias(
     if msg is None:
         msg = f"{old_name} is a deprecated alias for {new_name}"
         if remove_version is not None:
-            msg += ", will be removed in version %s" % remove_version
+            msg += f", will be removed in version {remove_version}"
 
     def fget(self):
         warnings.warn(msg, warning, stacklevel=2)
@@ -109,7 +109,7 @@ class CachedAttribute:
         return _cachedval
 
     def __set__(self, obj, value):
-        errmsg = "The attribute '%s' cannot be overwritten" % self.name
+        errmsg = f"The attribute '{self.name}' cannot be overwritten"
         warnings.warn(errmsg, CacheWriteWarning, stacklevel=2)
 
 

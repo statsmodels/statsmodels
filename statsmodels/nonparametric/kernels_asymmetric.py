@@ -48,16 +48,18 @@ from scipy import special, stats
 doc_params = """\
 Parameters
     ----------
-    x : array_like, float
-        Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kde is computed.
+    x : float or array_like
+        Points at which the kernel is evaluated. ``x`` can be scalar or
+        1-dim.
+    sample : array_like
+        1-d sample from which the kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
     Returns
     -------
-    Components for kernel estimation"""
+    ndarray
+        Kernel values evaluated at `x` for each point in `sample`."""
 
 
 def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
@@ -65,10 +67,10 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
     kernel_type : str or callable
@@ -76,7 +78,7 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         Currently supported kernel names are "beta", "beta2", "gamma",
         "gamma2", "bs", "invgamma", "invgauss", "lognorm", "recipinvgauss" and
         "weibull".
-    weights : None or ndarray, optional
+    weights : None or array_like, optional
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
@@ -133,10 +135,10 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
 
     Parameters
     ----------
-    x : array_like, float
-        Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    x : float or array_like
+        Points for which cdf is evaluated. ``x`` can be scalar or 1-dim.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
     kernel_type : str or callable
@@ -144,7 +146,7 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         Currently supported kernel names are "beta", "beta2", "gamma",
         "gamma2", "bs", "invgamma", "invgauss", "lognorm", "recipinvgauss" and
         "weibull".
-    weights : None or ndarray, optional
+    weights : None or array_like, optional
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
@@ -201,7 +203,7 @@ def kernel_pdf_beta(x, sample, bw):
     return stats.beta.pdf(sample, x / bw + 1, (1 - x) / bw + 1)
 
 
-kernel_pdf_beta.__doc__ = """\
+kernel_pdf_beta.__doc__ = f"""\
     Beta kernel for density, pdf, estimation
 
     {doc_params}
@@ -215,9 +217,7 @@ kernel_pdf_beta.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_beta(x, sample, bw):
@@ -225,7 +225,7 @@ def kernel_cdf_beta(x, sample, bw):
     return stats.beta.sf(sample, x / bw + 1, (1 - x) / bw + 1)
 
 
-kernel_cdf_beta.__doc__ = """\
+kernel_cdf_beta.__doc__ = f"""\
     Beta kernel for cumulative distribution, cdf, estimation
 
     {doc_params}
@@ -239,9 +239,7 @@ kernel_cdf_beta.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_beta2(x, sample, bw):
@@ -281,7 +279,7 @@ def kernel_pdf_beta2(x, sample, bw):
     return pdf
 
 
-kernel_pdf_beta2.__doc__ = """\
+kernel_pdf_beta2.__doc__ = f"""\
     Beta kernel for density, pdf, estimation with boundary corrections
 
     {doc_params}
@@ -295,9 +293,7 @@ kernel_pdf_beta2.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_beta2(x, sample, bw):
@@ -337,7 +333,7 @@ def kernel_cdf_beta2(x, sample, bw):
     return pdf
 
 
-kernel_cdf_beta2.__doc__ = """\
+kernel_cdf_beta2.__doc__ = f"""\
     Beta kernel for cdf estimation with boundary correction
 
     {doc_params}
@@ -351,9 +347,7 @@ kernel_cdf_beta2.__doc__ = """\
     .. [2] Chen, Song Xi. 1999. “Beta Kernel Estimators for Density Functions.”
        Computational Statistics & Data Analysis 31 (2): 131-45.
        https://doi.org/10.1016/S0167-9473(99)00010-9.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_gamma(x, sample, bw):
@@ -362,7 +356,7 @@ def kernel_pdf_gamma(x, sample, bw):
     return pdfi
 
 
-kernel_pdf_gamma.__doc__ = """\
+kernel_pdf_gamma.__doc__ = f"""\
     Gamma kernel for density, pdf, estimation
 
     {doc_params}
@@ -377,9 +371,7 @@ kernel_pdf_gamma.__doc__ = """\
        Gamma Kernels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_gamma(x, sample, bw):
@@ -389,7 +381,7 @@ def kernel_cdf_gamma(x, sample, bw):
     return cdfi
 
 
-kernel_cdf_gamma.__doc__ = """\
+kernel_cdf_gamma.__doc__ = f"""\
     Gamma kernel for cumulative distribution, cdf, estimation
 
     {doc_params}
@@ -404,9 +396,7 @@ kernel_cdf_gamma.__doc__ = """\
        Gamma Kernels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def _kernel_pdf_gamma(x, sample, bw):
@@ -419,10 +409,10 @@ def _kernel_pdf_gamma(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -444,10 +434,10 @@ def _kernel_cdf_gamma(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -476,7 +466,7 @@ def kernel_pdf_gamma2(x, sample, bw):
     return pdf
 
 
-kernel_pdf_gamma2.__doc__ = """\
+kernel_pdf_gamma2.__doc__ = f"""\
     Gamma kernel for density, pdf, estimation with boundary correction
 
     {doc_params}
@@ -491,9 +481,7 @@ kernel_pdf_gamma2.__doc__ = """\
        Gamma Kernels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_gamma2(x, sample, bw):
@@ -513,7 +501,7 @@ def kernel_cdf_gamma2(x, sample, bw):
     return pdf
 
 
-kernel_cdf_gamma2.__doc__ = """\
+kernel_cdf_gamma2.__doc__ = f"""\
     Gamma kernel for cdf estimation with boundary correction
 
     {doc_params}
@@ -528,9 +516,7 @@ kernel_cdf_gamma2.__doc__ = """\
        Gamma Kernels.”
        Annals of the Institute of Statistical Mathematics 52 (3): 471-80.
        https://doi.org/10.1023/A:1004165218295.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_invgamma(x, sample, bw):
@@ -538,7 +524,7 @@ def kernel_pdf_invgamma(x, sample, bw):
     return stats.invgamma.pdf(sample, 1 / bw + 1, scale=x / bw)
 
 
-kernel_pdf_invgamma.__doc__ = """\
+kernel_pdf_invgamma.__doc__ = f"""\
     Inverse gamma kernel for density, pdf, estimation
 
     Based on cdf kernel by Micheaux and Ouimet (2020)
@@ -550,9 +536,7 @@ kernel_pdf_invgamma.__doc__ = """\
     .. [1] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of
        Seven Asymmetric Kernels for the Estimation of Cumulative Distribution
        Functions,” November. https://arxiv.org/abs/2011.14893v1.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_invgamma(x, sample, bw):
@@ -560,7 +544,7 @@ def kernel_cdf_invgamma(x, sample, bw):
     return stats.invgamma.sf(sample, 1 / bw + 1, scale=x / bw)
 
 
-kernel_cdf_invgamma.__doc__ = """\
+kernel_cdf_invgamma.__doc__ = f"""\
     Inverse gamma kernel for cumulative distribution, cdf, estimation
 
     {doc_params}
@@ -570,9 +554,7 @@ kernel_cdf_invgamma.__doc__ = """\
     .. [1] Micheaux, Pierre Lafaye de, and Frédéric Ouimet. 2020. “A Study of
        Seven Asymmetric Kernels for the Estimation of Cumulative Distribution
        Functions,” November. https://arxiv.org/abs/2011.14893v1.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_invgauss(x, sample, bw):
@@ -582,7 +564,7 @@ def kernel_pdf_invgauss(x, sample, bw):
     return stats.invgauss.pdf(sample, m / lam, scale=lam)
 
 
-kernel_pdf_invgauss.__doc__ = """\
+kernel_pdf_invgauss.__doc__ = f"""\
     Inverse gaussian kernel for density, pdf, estimation
 
     {doc_params}
@@ -593,9 +575,7 @@ kernel_pdf_invgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_invgauss_(x, sample, bw):
@@ -605,10 +585,10 @@ def kernel_pdf_invgauss_(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -632,7 +612,7 @@ def kernel_cdf_invgauss(x, sample, bw):
     return stats.invgauss.sf(sample, m / lam, scale=lam)
 
 
-kernel_cdf_invgauss.__doc__ = """\
+kernel_cdf_invgauss.__doc__ = f"""\
     Inverse gaussian kernel for cumulative distribution, cdf, estimation
 
     {doc_params}
@@ -643,9 +623,7 @@ kernel_cdf_invgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_recipinvgauss(x, sample, bw):
@@ -658,7 +636,7 @@ def kernel_pdf_recipinvgauss(x, sample, bw):
     return stats.recipinvgauss.pdf(sample, m / lam, scale=1 / lam)
 
 
-kernel_pdf_recipinvgauss.__doc__ = """\
+kernel_pdf_recipinvgauss.__doc__ = f"""\
     Reciprocal inverse gaussian kernel for density, pdf, estimation
 
     {doc_params}
@@ -669,9 +647,7 @@ kernel_pdf_recipinvgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_recipinvgauss_(x, sample, bw):
@@ -681,10 +657,10 @@ def kernel_pdf_recipinvgauss_(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -713,7 +689,7 @@ def kernel_cdf_recipinvgauss(x, sample, bw):
     return stats.recipinvgauss.sf(sample, m / lam, scale=1 / lam)
 
 
-kernel_cdf_recipinvgauss.__doc__ = """\
+kernel_cdf_recipinvgauss.__doc__ = f"""\
     Reciprocal inverse gaussian kernel for cdf estimation
 
     {doc_params}
@@ -724,9 +700,7 @@ kernel_cdf_recipinvgauss.__doc__ = """\
        Inverse Gaussian Kernels.”
        Journal of Nonparametric Statistics 16 (1-2): 217-26.
        https://doi.org/10.1080/10485250310001624819.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_bs(x, sample, bw):
@@ -734,7 +708,7 @@ def kernel_pdf_bs(x, sample, bw):
     return stats.fatiguelife.pdf(sample, bw, scale=x)
 
 
-kernel_pdf_bs.__doc__ = """\
+kernel_pdf_bs.__doc__ = f"""\
     Birnbaum Saunders (normal) kernel for density, pdf, estimation
 
     {doc_params}
@@ -744,9 +718,7 @@ kernel_pdf_bs.__doc__ = """\
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
        Financial Data.” Annals of Economics and Finance 4: 103-24.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_bs(x, sample, bw):
@@ -754,7 +726,7 @@ def kernel_cdf_bs(x, sample, bw):
     return stats.fatiguelife.sf(sample, bw, scale=x)
 
 
-kernel_cdf_bs.__doc__ = """\
+kernel_cdf_bs.__doc__ = f"""\
     Birnbaum Saunders (normal) kernel for cdf estimation
 
     {doc_params}
@@ -767,9 +739,7 @@ kernel_cdf_bs.__doc__ = """\
     .. [2] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
        Estimation.” REVSTAT, 1-27.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_lognorm(x, sample, bw):
@@ -785,7 +755,7 @@ def kernel_pdf_lognorm(x, sample, bw):
     return stats.lognorm.pdf(sample, bw_, scale=x)
 
 
-kernel_pdf_lognorm.__doc__ = """\
+kernel_pdf_lognorm.__doc__ = f"""\
     Log-normal kernel for density, pdf, estimation
 
     {doc_params}
@@ -799,9 +769,7 @@ kernel_pdf_lognorm.__doc__ = """\
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
        Financial Data.” Annals of Economics and Finance 4: 103-24.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_lognorm(x, sample, bw):
@@ -817,7 +785,7 @@ def kernel_cdf_lognorm(x, sample, bw):
     return stats.lognorm.sf(sample, bw_, scale=x)
 
 
-kernel_cdf_lognorm.__doc__ = """\
+kernel_cdf_lognorm.__doc__ = f"""\
     Log-normal kernel for cumulative distribution, cdf, estimation
 
     {doc_params}
@@ -831,9 +799,7 @@ kernel_cdf_lognorm.__doc__ = """\
     .. [1] Jin, Xiaodong, and Janusz Kawczak. 2003. “Birnbaum-Saunders and
        Lognormal Kernel Estimators for Modelling Durations in High Frequency
        Financial Data.” Annals of Economics and Finance 4: 103-24.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_pdf_lognorm_(x, sample, bw):
@@ -843,10 +809,10 @@ def kernel_pdf_lognorm_(x, sample, bw):
 
     Parameters
     ----------
-    x : array_like, float
+    x : float or array_like
         Points for which density is evaluated. ``x`` can be scalar or 1-dim.
-    sample : ndarray, 1-d
-        Sample from which kernel estimate is computed.
+    sample : array_like
+        1-d sample from which kernel estimate is computed.
     bw : float
         Bandwidth parameter, there is currently no default value for it.
 
@@ -873,7 +839,7 @@ def kernel_pdf_weibull(x, sample, bw):
     return stats.weibull_min.pdf(sample, 1 / bw, scale=x / special.gamma(1 + bw))
 
 
-kernel_pdf_weibull.__doc__ = """\
+kernel_pdf_weibull.__doc__ = f"""\
     Weibull kernel for density, pdf, estimation
 
     Based on cdf kernel by Mombeni et al. (2019)
@@ -885,9 +851,7 @@ kernel_pdf_weibull.__doc__ = """\
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
        Estimation.” REVSTAT, 1-27.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 def kernel_cdf_weibull(x, sample, bw):
@@ -898,7 +862,7 @@ def kernel_cdf_weibull(x, sample, bw):
     return stats.weibull_min.sf(sample, 1 / bw, scale=x / special.gamma(1 + bw))
 
 
-kernel_cdf_weibull.__doc__ = """\
+kernel_cdf_weibull.__doc__ = f"""\
     Weibull kernel for cumulative distribution, cdf, estimation
 
     {doc_params}
@@ -908,9 +872,7 @@ kernel_cdf_weibull.__doc__ = """\
     .. [1] Mombeni, Habib Allah, B Masouri, and Mohammad Reza Akhoond. 2019.
        “Asymmetric Kernels for Boundary Modification in Distribution Function
        Estimation.” REVSTAT, 1-27.
-    """.format(
-    doc_params=doc_params
-)
+    """
 
 
 # produced wth

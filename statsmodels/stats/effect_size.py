@@ -5,10 +5,41 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from typing import NamedTuple
+
 import numpy as np
 from scipy import special
 
-from statsmodels.stats.base import Holder
+
+class NoncentralityChisquareResult(NamedTuple):
+    """
+    Result of :func:`_noncentrality_chisquare`.
+
+    Parameters
+    ----------
+    nc : float
+        Zero-truncated UMVUE estimate of the noncentrality parameter.
+    confint : ndarray
+        Lower and upper bound of the confidence interval for `nc`.
+    nc_umvue : float
+        Unbiased (UMVUE), possibly negative, estimate of `nc`.
+    nc_lzd : float
+        Estimate of `nc` following Li, Zhang and Dai (2009).
+    nc_krs : float
+        Estimate of `nc` following Kubokawa, Robert and Saleh (1993).
+    nc_median : float
+        Estimate of `nc` as the median-unbiased estimator.
+    name : str
+        Description of the random variable that `nc` applies to.
+    """
+
+    nc: float
+    confint: np.ndarray
+    nc_umvue: float
+    nc_lzd: float
+    nc_krs: float
+    nc_median: float
+    name: str
 
 
 def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
@@ -23,12 +54,12 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
         Chisquare-statistic, for example from a hypothesis test.
     df : int or float
         Degrees of freedom.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
     -------
-    HolderTuple
+    NoncentralityChisquareResult
         The main attributes are
 
         - ``nc`` : estimate of noncentrality parameter
@@ -58,15 +89,44 @@ def _noncentrality_chisquare(chi2_stat, df, alpha=0.05):
     nc_median = special.chndtrinc(chi2_stat, df, 0.5)
     ci = special.chndtrinc(chi2_stat, df, [1 - alpha_half, alpha_half])
 
-    res = Holder(nc=nc,
-                 confint=ci,
-                 nc_umvue=nc_umvue,
-                 nc_lzd=nc_lzd,
-                 nc_krs=nc_krs,
-                 nc_median=nc_median,
-                 name="Noncentrality for chisquare-distributed random variable"
-                 )
+    res = NoncentralityChisquareResult(
+        nc=nc,
+        confint=ci,
+        nc_umvue=nc_umvue,
+        nc_lzd=nc_lzd,
+        nc_krs=nc_krs,
+        nc_median=nc_median,
+        name="Noncentrality for chisquare-distributed random variable",
+    )
     return res
+
+
+class NoncentralityFResult(NamedTuple):
+    """
+    Result of :func:`_noncentrality_f`.
+
+    Parameters
+    ----------
+    nc : float
+        Zero-truncated UMVUE estimate of the noncentrality parameter.
+    confint : ndarray
+        Lower and upper bound of the confidence interval for `nc`.
+    nc_umvue : float
+        Unbiased (UMVUE), possibly negative, estimate of `nc`.
+    nc_krs : float
+        Estimate of `nc` following Kubokawa, Robert and Saleh (1993).
+    nc_median : float
+        Estimate of `nc` as the median-unbiased estimator.
+    name : str
+        Description of the random variable that `nc` applies to.
+    """
+
+    nc: float
+    confint: np.ndarray
+    nc_umvue: float
+    nc_krs: float
+    nc_median: float
+    name: str
 
 
 def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
@@ -83,12 +143,12 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
         Numerator degrees of freedom.
     df2 : int or float
         Denominator degrees of freedom.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
     -------
-    HolderTuple
+    NoncentralityFResult
         The main attributes are
 
         - ``nc`` : estimate of noncentrality parameter
@@ -111,14 +171,37 @@ def _noncentrality_f(f_stat, df1, df2, alpha=0.05):
     nc_median = special.ncfdtrinc(df1, df2, 0.5, f_stat)
     ci = special.ncfdtrinc(df1, df2, [1 - alpha_half, alpha_half], f_stat)
 
-    res = Holder(nc=nc,
-                 confint=ci,
-                 nc_umvue=nc_umvue,
-                 nc_krs=nc_krs,
-                 nc_median=nc_median,
-                 name="Noncentrality for F-distributed random variable"
-                 )
+    res = NoncentralityFResult(
+        nc=nc,
+        confint=ci,
+        nc_umvue=nc_umvue,
+        nc_krs=nc_krs,
+        nc_median=nc_median,
+        name="Noncentrality for F-distributed random variable",
+    )
     return res
+
+
+class NoncentralityTResult(NamedTuple):
+    """
+    Result of :func:`_noncentrality_t`.
+
+    Parameters
+    ----------
+    nc : float
+        Estimate of the noncentrality parameter.
+    confint : ndarray
+        Lower and upper bound of the confidence interval for `nc`.
+    nc_median : float
+        Estimate of `nc` as the median-unbiased estimator.
+    name : str
+        Description of the random variable that `nc` applies to.
+    """
+
+    nc: float
+    confint: np.ndarray
+    nc_median: float
+    name: str
 
 
 def _noncentrality_t(t_stat, df, alpha=0.05):
@@ -131,12 +214,12 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
         t-statistic, for example from a hypothesis test.
     df : int or float
         Degrees of freedom.
-    alpha : float in (0, 1)
+    alpha : float in (0, 1), optional
         Significance level for the confidence interval, coverage is 1 - alpha.
 
     Returns
     -------
-    HolderTuple
+    NoncentralityTResult
         The main attributes are
 
         - ``nc`` : estimate of noncentrality parameter
@@ -160,9 +243,10 @@ def _noncentrality_t(t_stat, df, alpha=0.05):
     nc_median = special.nctdtrinc(df, 0.5, t_stat)
     ci = special.nctdtrinc(df, [1 - alpha_half, alpha_half], t_stat)
 
-    res = Holder(nc=nc,
-                 confint=ci,
-                 nc_median=nc_median,
-                 name="Noncentrality for t-distributed random variable"
-                 )
+    res = NoncentralityTResult(
+        nc=nc,
+        confint=ci,
+        nc_median=nc_median,
+        name="Noncentrality for t-distributed random variable",
+    )
     return res

@@ -7,7 +7,6 @@ License: BSD-3
 """
 
 from statsmodels.compat.pytest import pytest_warns
-from statsmodels.compat.scipy import SP_LT_15
 
 import warnings
 
@@ -609,8 +608,6 @@ class CheckModernCopula(CheckCopula):
 
     @pytest.mark.parametrize("seed", ["random_state", "generator", "qmc", 0])
     def test_seed(self, seed):
-        if SP_LT_15 and seed in ("generator", 0):
-            pytest.xfail(reason="Generator not supported for SciPy <= 1.3")
         if seed == "random_state":
             seed1 = np.random.RandomState(0)
             seed2 = np.random.RandomState(0)
@@ -697,7 +694,7 @@ class CheckRvsDim:
             self.copula.rvs(nobs, random_state=rng)
 
 
-class TestGaussianCopula(CheckCopula):
+class TestGaussianCopula(CheckModernCopula):
     copula = GaussianCopula(corr=[[1.0, 0.8], [0.8, 1.0]])
     dim = 2
     pdf_u = [
@@ -750,7 +747,7 @@ class TestGaussianCopula3d(CheckRvsDim):
     use_pdf = False
 
 
-class TestStudentTCopula(CheckCopula):
+class TestStudentTCopula(CheckModernCopula):
     copula = StudentTCopula(corr=[[1.0, 0.8], [0.8, 1.0]], df=2)
     dim = 2
     pdf_u = [

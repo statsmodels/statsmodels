@@ -12,12 +12,12 @@ Pointwise Kernel Confidence Bounds
 http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 """
 
+from statsmodels.compat.python import lzip
+
 # pylint: disable-msg=C0103
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-from statsmodels.compat.python import lzip
-
 import numpy as np
 from numpy import divide, exp, inf, multiply, square, subtract
 import scipy.integrate
@@ -25,7 +25,16 @@ from scipy.special import factorial
 
 
 class NdKernel:
-    """Generic N-dimensial kernel
+    """Generic N-dimensional kernel
+
+    Can be constructed from either
+    a) a list of n kernels which will be treated as
+    independent marginals on a gaussian copula (specified by H)
+    or b) a single univariate kernel which will be applied radially to the
+    mahalanobis distance defined by H.
+
+    In the case of the Gaussian these are both equivalent, and the second construction
+    is preferred.
 
     Parameters
     ----------
@@ -33,15 +42,9 @@ class NdKernel:
         The number of series for kernel estimates
     kernels : list
         kernels
-
-    Can be constructed from either
-    a) a list of n kernels which will be treated as
-    indepent marginals on a gaussian copula (specified by H)
-    or b) a single univariate kernel which will be applied radially to the
-    mahalanobis distance defined by H.
-
-    In the case of the Gaussian these are both equivalent, and the second constructiong
-    is preferred.
+    H : ndarray, optional
+        Kernel bandwidth matrix. If None, defaults to the (n, n) identity
+        matrix.
     """
 
     def __init__(self, n, kernels=None, H=None):
@@ -251,6 +254,9 @@ class CustomKernel:
             pdf of the kernel density
         nobs : int
             number of observations used in the KDE estimation
+        alpha : float
+            confidence level for the confidence interval, the default
+            alpha=0.05 corresponds to a 95% confidence interval.
 
         Returns
         -------
@@ -282,7 +288,7 @@ class CustomKernel:
         if len(xs) > 0:
             w = np.sum(self((xs - x) / self.h))
             # TODO: change the below to broadcasting when shape is sorted
-            v = np.sum([yy * self((xx - x) / self.h) for xx, yy in zip(xs, ys)])
+            v = np.sum([yy * self((xx - x) / self.h) for xx, yy in zip(xs, ys, strict=True)])
             return v / w
         else:
             return np.nan
@@ -295,7 +301,7 @@ class CustomKernel:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square(subtract(ys, fittedvals))
             w = np.sum(self((xs - x) / self.h))
-            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid)])
+            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid, strict=True)])
             return v / w
         else:
             return np.nan
@@ -310,7 +316,7 @@ class CustomKernel:
             sqresid = square(subtract(ys, fittedvals))
             w = np.sum(self((xs - x) / self.h))
             # var = sqresid.sum() / (len(sqresid) - 0)  # nonlocal var ? JP just trying
-            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid)])
+            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid, strict=True)])
             var = v / w
             sd = np.sqrt(var)
             K = self.L2Norm

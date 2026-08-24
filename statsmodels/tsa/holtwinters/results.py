@@ -14,6 +14,7 @@ from statsmodels.base.wrapper import (
     union_dicts,
 )
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 
 class HoltWintersResults(Results):
@@ -34,16 +35,16 @@ class HoltWintersResults(Results):
         AIC with a correction for finite sample sizes.
     bic : float
         The Bayesian information criterion.
-    optimized : bool
-        Flag indicating whether the model parameters were optimized to fit
-        the data.
+    optimized : ndarray of bool
+        Flags indicating whether each parameter was optimized to fit the
+        data.
     level : ndarray
         An array of the levels values that make up the fitted values.
     trend : ndarray
         An array of the trend values that make up the fitted values.
     season : ndarray
         An array of the seasonal values that make up the fitted values.
-    params_formatted : pd.DataFrame
+    params_formatted : DataFrame
         DataFrame containing all parameters, their short names and a flag
         indicating whether the parameter's value was optimized to fit the data.
     resid : ndarray
@@ -58,7 +59,7 @@ class HoltWintersResults(Results):
     fcastvalues : ndarray
         An array of the forecast values forecast by the Exponential Smoothing
         model.
-    mle_retvals : {None, scipy.optimize.optimize.OptimizeResult}
+    mle_retvals : scipy.optimize.OptimizeResult or None
         Optimization results if the parameters were optimized to fit the data.
     """
 
@@ -201,12 +202,12 @@ class HoltWintersResults(Results):
         Parameters
         ----------
         start : int, str, or datetime, optional
-            Zero-indexed observation number at which to start forecasting, ie.,
+            Zero-indexed observation number at which to start forecasting, i.e.,
             the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
+            Zero-indexed observation number at which to end forecasting, i.e.,
+            the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
             want out of sample prediction. Default is the last observation in
@@ -225,7 +226,7 @@ class HoltWintersResults(Results):
 
         Parameters
         ----------
-        steps : int
+        steps : int, optional
             The number of out of sample forecasts from the end of the
             sample.
 
@@ -286,7 +287,7 @@ class HoltWintersResults(Results):
             None: "None",
         }
         transform = self.params["use_boxcox"]
-        box_cox_transform = True if transform else False
+        box_cox_transform = bool(transform)
         box_cox_coeff = (
             transform if isinstance(transform, str) else self.params["lamda"]
         )
@@ -383,7 +384,7 @@ class HoltWintersResults(Results):
             Number of simulated paths to generate. Default is 1 simulated path.
         error : {"add", "mul", "additive", "multiplicative"}, optional
             Error model for state space formulation. Default is ``"add"``.
-        random_errors : optional
+        random_errors : ndarray, rv_continuous, rv_discrete, rv_frozen, or "bootstrap", optional
             Specifies how the random errors should be obtained. Can be one of
             the following:
 
@@ -402,11 +403,11 @@ class HoltWintersResults(Results):
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function. The method ``rvs`` is called on the distribution function
               to draw the random errors.
-            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+            * A ndarray with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int, a new
             ``RandomState`` instance is created, seeded with `rng`; this
@@ -415,7 +416,7 @@ class HoltWintersResults(Results):
             already a ``Generator`` or ``RandomState`` instance, that
             instance is used. Only used if `random_errors` is ``None`` or
             ``"bootstrap"``.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -423,15 +424,14 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        sim : pd.Series, pd.DataFrame or np.ndarray
-            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
-            values.
-            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
-            will be a ``pd.Series`` if `repetitions` is 1, and a
-            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
-            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
+        sim : Series, DataFrame or ndarray
+            An ndarray, Series, or DataFrame of simulated values.
+            If the original data was a Series or DataFrame, `sim`
+            will be a Series if `repetitions` is 1, and a
+            DataFrame of shape (`nsimulations`, `repetitions`) else.
+            Otherwise, if `repetitions` is 1, a ndarray of shape
             (`nsimulations`,) is returned, and if `repetitions` is not 1 a
-            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
+            ndarray of shape (`nsimulations`, `repetitions`) is
             returned.
 
         Notes
@@ -542,10 +542,10 @@ class HoltWintersResults(Results):
         """
 
         # check inputs
-        if error in ["additive", "multiplicative"]:
-            error = {"additive": "add", "multiplicative": "mul"}[error]
-        if error not in ["add", "mul"]:
-            raise ValueError("error must be 'add' or 'mul'!")
+        error = string_like(
+            error, "error", options=("add", "mul", "additive", "multiplicative")
+        )
+        error = {"additive": "add", "multiplicative": "mul"}.get(error, error)
 
         # Get the starting location
         if anchor is None or anchor == "end":
@@ -652,6 +652,10 @@ class HoltWintersResults(Results):
             eps = random_errors
         else:
             rng = check_random_state(rng, deprecated=True)
+            if isinstance(random_errors, str):
+                random_errors = string_like(
+                    random_errors, "random_errors", options=("bootstrap",)
+                )
             if random_errors == "bootstrap":
                 eps = rng.choice(resid, size=(nsimulations, repetitions), replace=True)
             elif random_errors is None:

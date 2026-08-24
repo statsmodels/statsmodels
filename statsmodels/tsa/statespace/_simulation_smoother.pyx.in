@@ -82,7 +82,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                  int simulation_output=SIMULATE_ALL,
                  int nobs=-1):
         cdef blas_int inc = 1
-        # If nobs != 1, then we are only simulating a new series (i.e. we are
+        # If nobs != 1, then we are only simulating a new series (i.e., we are
         # not simulation smoothing)
         self.simulate_only = (nobs != -1)
         cdef:
@@ -443,7 +443,7 @@ cdef class {{prefix}}SimulationSmoother(object):
 
             state_idx += k_posdef
 
-            # If we are just generating new series (i.e. all we want is
+            # If we are just generating new series (i.e., all we want is
             # generated_obs, generated_state), go to the next iteration
             if self.simulation_output == 0 or self.simulate_only:
                 continue
@@ -468,7 +468,7 @@ cdef class {{prefix}}SimulationSmoother(object):
                 #      to get alpha_t+1
                 next(self.secondary_simulated_kfilter)
 
-        # If we are just generating new series (i.e. all we want is
+        # If we are just generating new series (i.e., all we want is
         # generated_obs, generated_state), return now
         if self.simulation_output == 0:
             return
@@ -575,7 +575,7 @@ cdef class {{prefix}}SimulationSmoother(object):
         # Note that this would be problematic if simulating a
         # time-varying system if the number of simulated observations was
         # greater than the number of observations in the model (because then
-        # e.g. self.model.design[0,0,design_t] would be an invalid memory
+        # e.g., self.model.design[0,0,design_t] would be an invalid memory
         # location).
         # However, this problem is ruled out in the constructor since for
         # time-varying systems, the number of simulated observations must be

@@ -27,7 +27,7 @@ class Initialization:
         be one of 'known', 'diffuse', 'approximate_diffuse', or 'stationary'.
         If not specified, no global initialization is performed and blocks of
         states must instead be initialized using the `set` method.
-    initialization_classes : dict, optional
+    initialization_classes : dict of str to type, optional
         Dictionary with BLAS prefixes as keys and the associated Cython
         initialization classes as values. If not specified, the default
         mapping is used.
@@ -212,7 +212,7 @@ class Initialization:
         self.blocks = {}
 
         # Attributes handling initialization of the entire set of states
-        # `constant` is a vector of constant values (i.e. it is the vector
+        # `constant` is a vector of constant values (i.e., it is the vector
         # a from DK)
         self.initialization_type = None
         self.constant = np.zeros(self.k_states)
@@ -246,6 +246,8 @@ class Initialization:
 
         Parameters
         ----------
+        k_states : int
+            Number of states in the time series process.
         a : array_like, optional
             Vector of constant values describing the mean of the stationary
             component of the initial state.
@@ -286,7 +288,7 @@ class Initialization:
 
         Returns
         -------
-        initialization
+        Initialization
             Initialization object.
 
         Notes
@@ -298,7 +300,7 @@ class Initialization:
 
         References
         ----------
-        .. [*] Durbin, James, and Siem Jan Koopman. 2012.
+        .. [1] Durbin, James, and Siem Jan Koopman. 2012.
            Time Series Analysis by State Space Methods: Second Edition.
            Oxford University Press.
         """
@@ -383,6 +385,20 @@ class Initialization:
 
     @classmethod
     def from_results(cls, filter_results):
+        """
+        Construct initialization object from filter results
+
+        Parameters
+        ----------
+        filter_results : FilterResults
+            Filter results object from which to take the initial state and
+            initial state covariance matrices.
+
+        Returns
+        -------
+        Initialization
+            Initialization object.
+        """
         a = filter_results.initial_state
         Pstar = filter_results.initial_state_cov
         Pinf = filter_results.initial_diffuse_state_cov
@@ -450,10 +466,13 @@ class Initialization:
             `(start, stop)` (note that for `slice`, stop is not inclusive), or
             an integer (to select a specific state), or None (to select all the
             states).
-        initialization_type : str
+        initialization_type : str or Initialization
             The type of initialization used for the states selected by `index`.
-            Must be one of 'known', 'diffuse', 'approximate_diffuse', or
-            'stationary'.
+            If a string, must be one of 'known', 'diffuse',
+            'approximate_diffuse', or 'stationary'. Alternatively, a
+            previously created `Initialization` object may be given, in which
+            case it is used directly as the initialization for the selected
+            block of states.
         constant : array_like, optional
             A vector of constant values, denoted :math:`a`. Most often used
             with 'known' initialization, but may also be used with
@@ -494,23 +513,23 @@ class Initialization:
         if self.initialization_type is not None and not index == self._states:
             raise ValueError(
                 "Cannot set initialization for the block of"
-                "  states %s because initialization was"
+                f"  states {index!s} because initialization was"
                 " previously performed globally. You must either"
                 " re-initialize globally or"
                 " else unset the global initialization before"
-                " initializing specific blocks of states." % str(index)
+                " initializing specific blocks of states."
             )
         # Make sure that we are not setting a block that *overlaps* with
         # another block (although we are free to *replace* an entire block)
         uninitialized = np.equal(self._initialization[index,], None)
         if index not in self.blocks and not np.all(uninitialized):
             raise ValueError(
-                "Cannot set initialization for the state(s) %s"
+                f"Cannot set initialization for the state(s) {np.array(index)[~uninitialized]!s}"
                 " because they are a subset of a previously"
                 " initialized block. You must either"
                 " re-initialize the entire block as a whole or"
                 " else unset the entire block before"
-                " re-initializing the subset." % str(np.array(index)[~uninitialized])
+                " re-initializing the subset."
             )
 
         # If setting for all states, set this object's initialization
@@ -555,8 +574,7 @@ class Initialization:
                 if not stationary_cov.shape == (k_states, k_states):
                     raise ValueError(
                         "Invalid stationary covariance matrix;"
-                        " given shape %s but require shape %s."
-                        % (str(stationary_cov.shape), str((k_states, k_states)))
+                        f" given shape {stationary_cov.shape!s} but require shape {(k_states, k_states)!s}."
                     )
 
                 # Set values
@@ -588,8 +606,8 @@ class Initialization:
                 constant = np.array(constant)
             if not constant.shape == (k_states,):
                 raise ValueError(
-                    "Invalid constant vector; given shape %s"
-                    " but require shape %s." % (str(constant.shape), str((k_states,)))
+                    f"Invalid constant vector; given shape {constant.shape!s}"
+                    f" but require shape {(k_states,)!s}."
                 )
             self.constant = constant
         # Otherwise, if setting a sub-block, construct the new initialization
@@ -704,13 +722,13 @@ class Initialization:
 
         Parameters
         ----------
-        index : ndarray, optional
+        index : array_like of int, optional
             The base index of the block of states being initialized within the
             full state vector. If not specified, all states are used.
         model : Representation, optional
-            A state space model representation object, optional if 'stationary'
-            initialization is used and ignored otherwise. See notes for
-            details in the stationary initialization case.
+            A state space model representation object. Required if
+            'stationary' initialization is used (either globally or for any
+            block of states); ignored otherwise. See Notes for details.
         initial_state_mean : ndarray, optional
             An array (or more usually view) in which to place the initial state
             mean.
@@ -739,8 +757,7 @@ class Initialization:
         Notes
         -----
         If stationary initialization is used either globally or for any block
-        of states, then either `model` or all of `state_intercept`,
-        `transition`, `selection`, and `state_cov` must be provided.
+        of states, then `model` must be provided.
         """
         # Check that all states are initialized somehow
         if self.initialization_type is None and np.any(

@@ -222,7 +222,7 @@ class ModelData:
         combined : dict
             Dictionary with keys endog, exog and the keys of kwargs, with
             missing rows dropped if `missing` is "drop".
-        missing_idx : list[int]
+        missing_idx : list of str
             The row indices that contained missing values and were
             dropped, or an empty list if there was no missing data.
         """
@@ -302,9 +302,9 @@ class ModelData:
                 nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
         if not np.any(nan_mask):  # no missing do not do anything
-            combined = dict(zip(combined_names, combined))
+            combined = dict(zip(combined_names, combined, strict=True))
             if combined_2d:
-                combined.update(dict(zip(combined_2d_names, combined_2d)))
+                combined.update(dict(zip(combined_2d_names, combined_2d, strict=True)))
             if none_array_names:
                 combined.update({k: kwargs.get(k, None) for k in none_array_names})
 
@@ -327,7 +327,7 @@ class ModelData:
             def drop_nans_2d(x):
                 return cls._drop_nans_2d(x, nan_mask)
 
-            combined = dict(zip(combined_names, lmap(drop_nans, combined)))
+            combined = dict(zip(combined_names, lmap(drop_nans, combined), strict=True))
 
             if missing_idx is not None:
                 if updated_row_mask is not None:
@@ -343,14 +343,14 @@ class ModelData:
 
             if combined_2d:
                 combined.update(
-                    dict(zip(combined_2d_names, lmap(drop_nans_2d, combined_2d)))
+                    dict(zip(combined_2d_names, lmap(drop_nans_2d, combined_2d), strict=True))
                 )
             if none_array_names:
                 combined.update({k: kwargs.get(k, None) for k in none_array_names})
 
             return combined, np.where(~nan_mask)[0].tolist()
         else:
-            raise ValueError("missing option %s not understood" % missing)
+            raise ValueError(f"missing option {missing} not understood")
 
     def _convert_endog_exog(self, endog, exog):
 
@@ -665,7 +665,7 @@ def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:
         ynames = ["y"]
     else:  # for VAR
-        ynames = ["y%d" % (i + 1) for i in range(endog.shape[1])]
+        ynames = [f"y{i + 1:d}" for i in range(endog.shape[1])]
 
     return ynames
 
@@ -676,10 +676,10 @@ def _make_exog_names(exog):
         # assumes one constant in first or last position
         # avoid exception if more than one constant
         const_idx = exog_var.argmin()
-        exog_names = ["x%d" % i for i in range(1, exog.shape[1])]
+        exog_names = [f"x{i:d}" for i in range(1, exog.shape[1])]
         exog_names.insert(const_idx, "const")
     else:
-        exog_names = ["x%d" % i for i in range(1, exog.shape[1] + 1)]
+        exog_names = [f"x{i:d}" for i in range(1, exog.shape[1] + 1)]
 
     return exog_names
 
@@ -708,7 +708,7 @@ def handle_data_class_factory(endog, exog):
     -------
     ModelData
         The data handling class appropriate for the type of `endog` and
-        `exog`, e.g. `PandasData` if either is a pandas object.
+        `exog`, e.g., `PandasData` if either is a pandas object.
     """
     if data_util._is_using_ndarray_type(endog, exog):
         klass = ModelData
@@ -727,12 +727,16 @@ def handle_data_class_factory(endog, exog):
         klass = ModelData
     else:
         raise ValueError(
-            "unrecognized data structures: {} / {}".format(type(endog), type(exog))
+            f"unrecognized data structures: {type(endog)} / {type(exog)}"
         )
     return klass
 
 
 def handle_data(endog, exog, missing="none", hasconst=None, **kwargs):
+    # Convert Polars objects to pandas
+    endog = data_util._to_pandas(endog)
+    exog = data_util._to_pandas(exog)
+
     # deal with lists and tuples up-front
     if isinstance(endog, (list, tuple)):
         endog = np.asarray(endog)

@@ -225,6 +225,8 @@ method of :class:`VARResults`.
    CausalityTestResults
    NormalityTestResults
    WhitenessTestResults
+   ForecastInterval
+   ErrorBand
 
 Impulse Response Analysis
 -------------------------
@@ -437,6 +439,40 @@ V     :math:`\neq 0`                   :math:`\neq 0`                       ``"c
    VECMResults
    CointRankResults
 
+.. _local_projections:
+
+Local Projections
+------------------
+
+*Local projections* (:class:`LocalProjections`) are a nonparametric
+alternative to VAR-based impulse response estimation. Rather than fitting
+a single VAR and inverting it into its MA(:math:`\infty`) representation,
+a separate OLS regression is estimated for each horizon :math:`h`:
+
+.. math::
+
+    y_{t+h} = \alpha_h + \beta_h z_t + \Gamma_h x_t + \varepsilon_{t+h}
+
+where :math:`z_t` is the (contemporaneous) shock variable and :math:`x_t`
+contains lagged controls. Because each horizon is estimated separately
+rather than propagated through a single fitted lag structure, local
+projections are more robust to VAR misspecification and are often used
+as a check on VAR-based impulse responses, at some cost in efficiency.
+Standard errors are Newey-West HAC-corrected to account for the induced
+MA(:math:`h`) serial correlation in the :math:`h`-step-ahead residuals.
+
+See Jordà (2005) [3]_ for details, and the :doc:`Local Projections example
+notebook <examples/notebooks/generated/local_projections>` for a full
+worked application estimating a fiscal-multiplier-style impulse response
+and comparing it against a VAR.
+
+.. currentmodule:: statsmodels.tsa.vector_ar.local_proj
+.. autosummary::
+   :toctree: generated/
+
+   LocalProjections
+   LocalProjectionsResults
+
 
 References
 ----------
@@ -444,3 +480,6 @@ References
 
 .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *
        *Vector Autoregressive Models*. Oxford University Press.
+
+.. [3] Jordà, Ò. 2005. "Estimation and Inference of Impulse Responses by
+       Local Projections." *American Economic Review*, 95(1): 161-182.

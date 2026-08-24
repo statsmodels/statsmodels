@@ -65,7 +65,7 @@ class _MinimalWLS:
 
         Parameters
         ----------
-        method : str, optional
+        method : {'pinv', 'qr', 'lstsq'}, optional
             Method to use to estimate parameters.  "pinv", "qr" or "lstsq"
 
               * "pinv" uses the Moore-Penrose pseudoinverse
@@ -75,7 +75,7 @@ class _MinimalWLS:
 
         Returns
         -------
-        results : namedtuple
+        results : Bunch
             Named tuple containing the fewest terms needed to implement
             iterative estimation in models. Currently
 

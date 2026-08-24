@@ -1,6 +1,6 @@
 from statsmodels.compat.pandas import MONTH_END
 
-import os
+from pathlib import Path
 import pickle
 
 import numpy as np
@@ -11,8 +11,8 @@ import pytest
 from statsmodels.datasets import co2
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(cur_dir, "results", "stl_test_results.csv")
+cur_dir = Path(__file__).resolve().parent
+file_path = Path(cur_dir).joinpath("results", "stl_test_results.csv")
 results = pd.read_csv(file_path)
 results.columns = [c.strip() for c in results.columns]
 results.scenario = results.scenario.apply(str.strip)
@@ -25,7 +25,7 @@ def robust(request):
 
 
 def default_kwargs_base():
-    file_path = os.path.join(cur_dir, "results", "stl_co2.csv")
+    file_path = Path(cur_dir).joinpath("results", "stl_co2.csv")
     co2 = np.asarray(pd.read_csv(file_path, header=None).iloc[:, 0])
     y = co2
     nobs = y.shape[0]

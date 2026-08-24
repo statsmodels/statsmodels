@@ -8,8 +8,9 @@ other correlation structures, the details of the correlation
 estimation differ among implementations and the results will not agree
 exactly.
 """
+from statsmodels.compat import lrange
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -25,10 +26,10 @@ import pytest
 from scipy.stats.distributions import norm
 
 from statsmodels import tools
-from statsmodels.compat import lrange
 import statsmodels.discrete.discrete_model as discrete
 from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
+from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 
@@ -46,8 +47,8 @@ def load_data(fname, icept=True):
     variables.
     """
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    Z = np.genfromtxt(os.path.join(cur_dir, "results", fname), delimiter=",")
+    cur_dir = Path(__file__).resolve().parent
+    Z = pd.read_csv(Path(cur_dir).joinpath("results", fname), header=None).values
 
     group = Z[:, 0]
     endog = Z[:, 1]
@@ -96,6 +97,34 @@ class TestGEE:
 
         # smoke test
         marg.summary()
+
+        # summary_frame: its columns must reproduce the marginal-effects
+        # arrays exactly, in the documented column order
+        frame = marg.summary_frame()
+        assert_allclose(frame.iloc[:, 0].values, marg.margeff)
+        assert_allclose(frame.iloc[:, 1].values, marg.margeff_se)
+        assert_allclose(frame.iloc[:, 2].values, marg.tvalues)
+        assert_allclose(frame.iloc[:, 3].values, marg.pvalues)
+        assert_allclose(frame.iloc[:, 4:6].values, marg.conf_int())
+        # only non-constant exog columns are included
+        assert list(frame.index) == ["x1", "x2"]
+
+    def test_summary_after_remove_data(self):
+        # summary() must still work after remove_data() has been called
+        n = 40
+        rs = np.random.RandomState(34234)
+        exog = rs.normal(size=(n, 3))
+        exog[:, 0] = 1
+
+        groups = np.kron(np.arange(n / 4), np.r_[1, 1, 1, 1])
+        endog = exog[:, 1] + rs.normal(size=n)
+
+        model = gee.GEE(endog, exog, groups)
+        res = model.fit(start_params=[-4.88085602e-04, 1.18501903, 4.78820100e-02])
+
+        assert isinstance(res.summary(), Summary)
+        res.remove_data()
+        assert isinstance(res.summary(), Summary)
 
     def test_margins_gaussian_lists_tuples(self):
         # Check marginal effects for a Gaussian GEE fit using lists and
@@ -274,8 +303,8 @@ class TestGEE:
     # This is in the release announcement for version 0.6.
     def test_poisson_epil(self):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        fname = os.path.join(cur_dir, "results", "epil.csv")
+        cur_dir = Path(__file__).resolve().parent
+        fname = Path(cur_dir).joinpath("results", "epil.csv")
         data = pd.read_csv(fname)
 
         fam = families.Poisson()
@@ -524,7 +553,7 @@ class TestGEE:
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula(
                 "Y ~ X1 + X2 + X3", "Id", D, family=family, cov_struct=v
@@ -840,7 +869,7 @@ class TestGEE:
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula(
                 "Y ~ X1 + X2 + X3", "Id", D, family=family, cov_struct=v
@@ -1182,7 +1211,7 @@ class TestGEE:
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
         for j, v in enumerate((vi, ve)):
             md = gee.GEE.from_formula(
                 "Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, family=family, cov_struct=v
@@ -1568,7 +1597,7 @@ class TestGEE:
         exposure = list(rs.uniform(1, 2, size=n))
         endog = [
             rs.poisson(0.1 * (exog_i[1] + exog_i[2]) + offset_i + np.log(exposure_i))
-            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure)
+            for exog_i, offset_i, exposure_i in zip(exog, offset, exposure, strict=True)
         ]
 
         model = gee.GEE(
@@ -1776,7 +1805,7 @@ class TestGEE:
         ixs = set()
         for g in model1.group_labels:
             for v in eq.pairs[g].values():
-                for a, b in zip(v[0], v[1]):
+                for a, b in zip(v[0], v[1], strict=True):
                     ky = (a, b)
                     assert ky not in ixs
                     ixs.add(ky)
@@ -1887,7 +1916,7 @@ class TestGEEPoissonFormulaCovType(CheckConsistency):
         D.columns = [
             "Y",
             "Id",
-        ] + ["X%d" % (k + 1) for k in range(exog.shape[1] - 1)]
+        ] + [f"X{k + 1:d}" for k in range(exog.shape[1] - 1)]
 
         cls.mod = gee.GEE.from_formula(
             "Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, family=family, cov_struct=vi
@@ -2413,6 +2442,30 @@ def test_ex_covsolve():
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
 
 
+def test_gee_results_resid_split():
+    rs = np.random.RandomState(872341)
+    n_groups, n_per_group = 15, 6
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack([np.ones(n), rs.standard_normal(n)])
+    endog = exog @ [0.5, 1.0] + rs.standard_normal(n)
+
+    mod = gee.GEE(endog, exog, groups=groups,
+                  cov_struct=cov_struct.Independence())
+    res = mod.fit()
+
+    split = res.resid_split
+    assert len(split) == n_groups
+    for v, part in zip(mod.group_labels, split, strict=True):
+        assert_allclose(part, res.resid[mod.group_indices[v]])
+
+    centered_split = res.resid_centered_split
+    assert len(centered_split) == n_groups
+    for v, part in zip(mod.group_labels, centered_split, strict=True):
+        assert_allclose(part, res.centered_resid[mod.group_indices[v]])
+        assert_allclose(part.mean(), 0, atol=1e-10)
+
+
 def test_stationary_covsolve():
 
     rs = np.random.RandomState(123)
@@ -2440,3 +2493,34 @@ def test_stationary_covsolve():
             )
 
             assert_allclose(z1, z2[0], rtol=1e-5, atol=1e-5)
+
+
+def test_autoregressive_covariance_matrix_and_summary():
+    rs = np.random.RandomState(20260821)
+    c = cov_struct.Autoregressive(grid=False)
+    c.dep_params = 0.6
+    d = 5
+    index = np.arange(d, dtype=int)
+
+    cmat, is_cor = c.covariance_matrix(np.zeros(d), index)
+    assert is_cor is True
+    expected = 0.6 ** np.abs(np.subtract.outer(index, index))
+    assert_allclose(cmat, expected)
+
+    # covariance_matrix agrees with the already-tested fast tridiagonal
+    # solve: applying the explicit matrix inverse must give the same
+    # answer as covariance_matrix_solve for the same (dep_params, stdev)
+    sd = rs.uniform(0.5, 2, d)
+    z = rs.normal(size=d)
+    scaled_cov = np.diag(sd) @ cmat @ np.diag(sd)
+    z1 = np.linalg.solve(scaled_cov, z)
+    z2 = c.covariance_matrix_solve(np.zeros(d), index, sd, [z])
+    assert_allclose(z1, z2[0], rtol=1e-8)
+
+    # dep_params == 0 special-cases to the identity
+    c0 = cov_struct.Autoregressive(grid=False)
+    c0.dep_params = 0
+    cmat0, _ = c0.covariance_matrix(np.zeros(d), index)
+    assert_allclose(cmat0, np.eye(d))
+
+    assert c.summary() == "Autoregressive(1) dependence parameter: 0.600\n"

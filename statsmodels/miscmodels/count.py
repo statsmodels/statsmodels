@@ -25,7 +25,7 @@ Known issues:
 * need good start_params and their use in genericmle needs to be checked
   for consistency, set as attribute or method (called as attribute)
 * numerical hessian needs better scaling
-* check taking parts out of the loop, e.g. factorial(endog) could be
+* check taking parts out of the loop, e.g., factorial(endog) could be
   precalculated
 """
 import numpy as np
@@ -33,6 +33,7 @@ from scipy import stats
 from scipy.special import factorial
 
 from statsmodels.base.model import GenericLikelihoodModel
+from statsmodels.tools.validation import array_like
 
 
 def maxabs(arr1, arr2):
@@ -126,9 +127,9 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
     exog : array_like, optional
         A nobs x k array where `nobs` is the number of observations and
         `k` is the number of regressors.
-    offset : array_like, optional
+    offset : ndarray, optional
         Offset added to the linear predictor before computing the mean.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
         nan checking is done. If 'drop', any observations with nans are
         dropped. If 'raise', an error is raised. Default is 'none'.
@@ -138,6 +139,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
     def __init__(self, endog, exog=None, offset=None, missing="none", **kwds):
         # let them be none in case user wants to use inheritance
+        offset = array_like(offset, "offset", optional=True)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column
@@ -201,7 +203,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         used.
     offset : array_like, optional
         Offset added to the linear predictor before computing the mean.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no
         nan checking is done. If 'drop', any observations with nans are
         dropped. If 'raise', an error is raised. Default is 'none'.
@@ -215,6 +217,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         super().__init__(
             endog, exog, missing=missing, extra_params_names=["zi"], **kwds
         )
+        offset = array_like(offset, "offset", optional=True, ndim=1)
         if offset is not None:
             if offset.ndim == 1:
                 offset = offset[:, None]  # need column

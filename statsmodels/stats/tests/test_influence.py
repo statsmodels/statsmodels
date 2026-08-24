@@ -3,10 +3,9 @@ Created on Tue Jun 12 13:18:12 2018
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.pandas import testing as pdt
 
-import os.path
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -23,14 +22,14 @@ from statsmodels.stats.outliers_influence import (
     variance_inflation_factor,
 )
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "binary_constrict.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 data_bin = pd.read_csv(file_path, index_col=0)
 
 file_name = "results_influence_logit.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 results_sas_df = pd.read_csv(file_path, index_col=0)
 
 
@@ -267,7 +266,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
 
     def test_basics(self):
         # needs to override attributes that are not equivalent,
-        # i.e. not available or different definition like external vs internal
+        # i.e., not available or different definition like external vs internal
         infl1 = self.infl1
         infl0 = self.infl0
 
@@ -281,7 +280,7 @@ class TestInfluenceGaussianGLMOLS(InfluenceCompareExact):
         assert_allclose(infl0.dfbetas, infl1.dfbetas, rtol=0.1)  # changed
         # OLSInfluence only has looo dfbeta/d_params
         assert_allclose(infl0.d_params, infl1.dfbeta, rtol=1e-9, atol=1e-14)
-        # d_fittedvalues is not available in OLSInfluence, i.e. only scaled dffits
+        # d_fittedvalues is not available in OLSInfluence, i.e., only scaled dffits
         # assert_allclose(infl0.d_fittedvalues, infl1.d_fittedvalues, rtol=1e-9)
         assert_allclose(
             infl0.d_fittedvalues_scaled, infl1.dffits_internal[0], rtol=1e-9
@@ -411,3 +410,63 @@ def test_vif_instability():
     vif_true = variance_inflation_factor(clean_exog, 1, standardize=True)
     vif_false = variance_inflation_factor(clean_exog, 1, standardize=False)
     assert_allclose(vif_true, vif_false, rtol=1e-7)
+
+
+def test_olsinfluence_closed_form_measures():
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    rs = np.random.RandomState(20260821)
+    n = 60
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
+    res = OLS(endog, exog).fit()
+    infl = OLSInfluence(res)
+
+    hii = infl.hat_matrix_diag
+    assert_allclose(infl.resid_press, infl.resid / (1 - hii))
+    assert_allclose(infl.hat_diag_factor, hii / (1 - hii))
+    assert_allclose(infl.ess_press, np.dot(infl.resid_press, infl.resid_press))
+    assert_allclose(infl.resid_var, infl.scale * (1 - hii))
+    assert_allclose(infl.resid_std, np.sqrt(infl.resid_var))
+
+
+def test_olsinfluence_ols_xnoti_and_get_drop_vari():
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    rs = np.random.RandomState(20260822)
+    n = 50
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 3))])
+    endog = exog @ [1.0, 0.5, -0.5, 0.2] + rs.standard_normal(n)
+    res = OLS(endog, exog).fit()
+    infl = OLSInfluence(res)
+
+    # _ols_xnoti: exog[:, endog_idx] regressed on the other exog columns
+    drop_idx, endog_idx = 1, 2
+    aux = infl._ols_xnoti(drop_idx, endog_idx=endog_idx)
+    mask = np.arange(exog.shape[1]) != drop_idx
+    expected = OLS(exog[:, endog_idx], exog[:, mask]).fit()
+    assert_allclose(aux.params, expected.params)
+
+    # cached on repeated calls with store=True, and the cache actually
+    # persists on the instance (this used to silently discard it: see the
+    # BUG commit removing a stray `stored = {}` and a broken `hasattr`
+    # check that made this method crash on every call)
+    assert infl.aux_regression_exog[endog_idx][drop_idx] is aux
+    aux2 = infl._ols_xnoti(drop_idx, endog_idx=endog_idx)
+    assert aux2 is aux
+
+    # endog_idx="endog": original endog regressed on exog minus drop_idx
+    aux_endog = infl._ols_xnoti(drop_idx)
+    expected_endog = OLS(endog, exog[:, mask]).fit()
+    assert_allclose(aux_endog.params, expected_endog.params)
+    assert infl.aux_regression_endog[drop_idx] is aux_endog
+    assert infl._ols_xnoti(drop_idx) is aux_endog
+
+    # _get_drop_vari: leave-one-*variable*-out loop, collecting the
+    # requested attribute from each k_vars-1 auxiliary fit
+    res_loo = infl._get_drop_vari(["params"])
+    assert len(res_loo["params"]) == infl.k_vars
+    for j, params_j in enumerate(res_loo["params"]):
+        mask_j = np.arange(infl.k_vars) != j
+        expected_j = OLS(endog, exog[:, mask_j]).fit().params
+        assert_allclose(params_j, expected_j)

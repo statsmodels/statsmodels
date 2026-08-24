@@ -64,7 +64,7 @@
     text: Ordinal Regression
   - img: ../_static/images/count_hurdle.png
     target: notebooks/generated/count_hurdle.html
-    text: Hurdel count Models
+    text: Hurdle Count Models
   - img: ../_static/images/post_estimation.png
     target: notebooks/generated/postestimation_poisson.html
     text: Post-estimation for Poisson Regression
@@ -182,6 +182,9 @@
   - img: ../_static/images/stationarity_detrending_adf_kpss.png
     target: notebooks/generated/stationarity_detrending_adf_kpss.html
     text: Stationarity and detrending (ADF/KPSS)
+  - img: ../_static/images/local_projections.png
+    target: notebooks/generated/local_projections.html
+    text: Local Projections
 - header: State space models
   id: statespace
   links:

@@ -11,9 +11,9 @@ def _calc_nodewise_row(exog, idx, alpha):
 
     Parameters
     ----------
-    exog : array_like
+    exog : ndarray
         The weighted design matrix for the current partition.
-    idx : scalar
+    idx : int
         Index of the current variable.
     alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
@@ -23,8 +23,8 @@ def _calc_nodewise_row(exog, idx, alpha):
 
     Returns
     -------
-    array_like
-        An array-like object of length p-1.
+    ndarray
+        An array of length p-1.
 
     Notes
     -----
@@ -55,11 +55,11 @@ def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
 
     Parameters
     ----------
-    exog : array_like
+    exog : ndarray
         The weighted design matrix for the current partition.
     nodewise_row : array_like
         The nodewise_row values for the current variable.
-    idx : scalar
+    idx : int
         Index of the current variable.
     alpha : scalar or array_like
         The penalty weight.  If a scalar, the same penalty weight
@@ -86,7 +86,7 @@ def _calc_nodewise_weight(exog, nodewise_row, idx, alpha):
     if not np.isscalar(alpha):
         alpha = alpha[ind]
 
-    d = np.linalg.norm(exog[:, idx] - exog[:, ind].dot(nodewise_row))**2
+    d = np.linalg.norm(exog[:, idx] - exog[:, ind].dot(nodewise_row)) ** 2
     d = np.sqrt(d / n + alpha * np.linalg.norm(nodewise_row, 1))
     return d
 
@@ -101,13 +101,13 @@ def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l):
         A list of array-like object where each object corresponds to
         the nodewise_row values for the corresponding variable, should
         be length p.
-    nodewise_weight_l : list
-        A list of scalars where each scalar corresponds to the nodewise_weight
+    nodewise_weight_l : ndarray
+        An array of scalars where each scalar corresponds to the nodewise_weight
         value for the corresponding variable, should be length p.
 
     Returns
     -------
-    array_like
+    ndarray
         A p x p matrix.
 
     Notes
@@ -125,7 +125,7 @@ def _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l):
         ind = list(range(p))
         ind.pop(idx)
         approx_inv_cov[idx, ind] = nodewise_row_l[idx]
-    approx_inv_cov *= -1 / nodewise_weight_l[:, None]**2
+    approx_inv_cov *= -1 / nodewise_weight_l[:, None] ** 2
 
     return approx_inv_cov
 
@@ -136,20 +136,21 @@ class RegularizedInvCovariance:
 
     Parameters
     ----------
-    exog : array_like
+    exog : ndarray
         A weighted design matrix for covariance.
 
     Attributes
     ----------
-    exog : array_like
+    exog : ndarray
         A weighted design matrix for covariance.
-    alpha : scalar
-        Regularizing constant.
     """
 
     def __init__(self, exog):
 
         self.exog = exog
+        # Populated by `fit`; declared here so it exists (as None) even
+        # before `fit` has been called.
+        self._approx_inv_cov = None
 
     def fit(self, alpha=0):
         """
@@ -157,7 +158,7 @@ class RegularizedInvCovariance:
 
         Parameters
         ----------
-        alpha : scalar
+        alpha : scalar, optional
             Regularizing constant.
         """
 
@@ -170,17 +171,23 @@ class RegularizedInvCovariance:
             nodewise_row = _calc_nodewise_row(self.exog, idx, alpha)
             nodewise_row_l.append(nodewise_row)
 
-            nodewise_weight = _calc_nodewise_weight(self.exog, nodewise_row,
-                                                    idx, alpha)
+            nodewise_weight = _calc_nodewise_weight(self.exog, nodewise_row, idx, alpha)
             nodewise_weight_l.append(nodewise_weight)
 
         nodewise_row_l = np.array(nodewise_row_l)
         nodewise_weight_l = np.array(nodewise_weight_l)
 
-        approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l,
-                                              nodewise_weight_l)
+        approx_inv_cov = _calc_approx_inv_cov(nodewise_row_l, nodewise_weight_l)
 
         self._approx_inv_cov = approx_inv_cov
 
     def approx_inv_cov(self):
+        """
+        Returns the approximate inverse covariance matrix
+
+        Returns
+        -------
+        ndarray
+            A p x p matrix.
+        """
         return self._approx_inv_cov

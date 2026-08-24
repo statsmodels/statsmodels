@@ -41,7 +41,7 @@ class RecursiveLS(MLEModel):
         The observed time-series process :math:`y`
     exog : array_like
         Array of exogenous regressors, shaped nobs x k.
-    constraints : array_like, str, or tuple
+    constraints : {None, array_like, str, tuple}, optional
         - array : An r x k array where r is the number of restrictions to
           test and k is the number of regressors. It is assumed that the
           linear combination is equal to zero.
@@ -150,6 +150,26 @@ class RecursiveLS(MLEModel):
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, constraints=None):
+        """
+        Create a `RecursiveLS` model instance from a formula and dataframe.
+
+        Parameters
+        ----------
+        formula : str or generic Formula object
+            The formula specifying the model.
+        data : array_like
+            The data for the model. See Notes.
+        subset : array_like, optional
+            An array-like object of booleans, integers, or index values that
+            indicate the subset of df to use in the model. Assumes df is a
+            `pandas.DataFrame`.
+        constraints : {None, array_like, str, tuple}, optional
+            See `RecursiveLS` for details.
+
+        Returns
+        -------
+        model : RecursiveLS instance
+        """
         return super(MLEModel, cls).from_formula(formula, data, subset,
                                                  constraints=constraints)
 
@@ -157,7 +177,7 @@ class RecursiveLS(MLEModel):
         raise ValueError("Linear constraints on coefficients should be given"
                          " using the `constraints` argument in constructing."
                          " the model. Other parameter constraints are not"
-                         " available in the resursive least squares model.")
+                         " available in the recursive least squares model.")
 
     def fit(self):
         """
@@ -240,24 +260,17 @@ class RecursiveLS(MLEModel):
         """
         Update the parameters of the model
 
-        Updates the representation matrices to fill in the new parameter
-        values.
+        This model has no estimable parameters, since the regression
+        coefficients are recursively estimated as part of the Kalman
+        filter state vector rather than through a `params` vector.
+        Consequently, this method is a no-op.
 
         Parameters
         ----------
         params : array_like
-            Array of new parameters.
-        transformed : bool, optional
-            Whether or not `params` is already transformed. If set to False,
-            `transform_params` is called. Default is True.
+            Array of new parameters. Always empty for this model.
         **kwargs
-            Additional keyword arguments passed to the state space update method.
-
-        Returns
-        -------
-        params : array_like
-            Array of parameters.
-
+            Additional keyword arguments. Not used.
         """
 
 
@@ -353,12 +366,10 @@ class RecursiveLSResults(MLEResults):
 
         Returns
         -------
-        resid_recursive : array_like
+        resid_recursive : ndarray
             An array of length `nobs` holding the recursive
             residuals.
 
-        Notes
-        -----
         These quantities are defined in, for example, Harvey (1989)
         section 5.4. In fact, there he defines the standardized innovations in
         equation 5.4.1, but in his version they have non-unit variance, whereas
@@ -381,14 +392,7 @@ class RecursiveLSResults(MLEResults):
         r"""
         Cumulative sum of standardized recursive residuals statistics
 
-        Returns
-        -------
-        cusum : array_like
-            An array of length `nobs - k_exog` holding the
-            CUSUM statistics.
-
-        Notes
-        -----
+        An array of length `nobs - k_exog` holding the CUSUM statistics.
         The CUSUM statistic takes the form:
 
         .. math::
@@ -428,12 +432,10 @@ class RecursiveLSResults(MLEResults):
 
         Returns
         -------
-        cusum_squares : array_like
+        cusum_squares : ndarray
             An array of length `nobs - k_exog` holding the
             CUSUM of squares statistics.
 
-        Notes
-        -----
         The CUSUM of squares statistic takes the form:
 
         .. math::
@@ -445,14 +447,13 @@ class RecursiveLSResults(MLEResults):
 
         Excludes the first `k_exog` datapoints.
 
-        References
-        ----------
-        .. [*] Brown, R. L., J. Durbin, and J. M. Evans. 1975.
+        Based on the work of:
+
+        Brown, R. L., J. Durbin, and J. M. Evans. 1975.
            "Techniques for Testing the Constancy of
            Regression Relationships over Time."
            Journal of the Royal Statistical Society.
            Series B (Methodological) 37 (2): 149-92.
-
         """
         d = max(self.nobs_diffuse, self.loglikelihood_burn)
         numer = np.cumsum(self.resid_recursive[d:]**2)
@@ -569,7 +570,7 @@ class RecursiveLSResults(MLEResults):
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
-        alpha : float, optional
+        alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
         legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
@@ -619,7 +620,7 @@ class RecursiveLSResults(MLEResults):
             # Plot the coefficient
             coef = self.recursive_coefficients
             ax.plot(dates[d:], coef.filtered[variable, d:],
-                    label="Recursive estimates: %s" % exog_names[variable])
+                    label=f"Recursive estimates: {exog_names[variable]}")
 
             # Legend
             handles, labels = ax.get_legend_handles_labels()
@@ -637,8 +638,7 @@ class RecursiveLSResults(MLEResults):
                 ci_poly = ax.fill_between(
                     dates[d:], ci_lower[d:], ci_upper[d:], alpha=0.2
                 )
-                ci_label = ("$%.3g \\%%$ confidence interval"
-                            % ((1 - alpha)*100))
+                ci_label = (f"${(1 - alpha)*100:.3g} \\%$ confidence interval")
 
                 # Only add CI to legend for the first plot
                 if i == 0:
@@ -672,7 +672,7 @@ class RecursiveLSResults(MLEResults):
             The number of periods additional to `k_exog` to exclude in
             constructing the bounds. Default is zero. This is usually used
             only for testing purposes.
-        points : iterable, optional
+        points : array_like, optional
             The points at which to evaluate the significance bounds. Default is
             two points, beginning and end of the sample.
 
@@ -765,7 +765,7 @@ class RecursiveLSResults(MLEResults):
         # Plot significance bounds
         lower_line, upper_line = self._cusum_significance_bounds(alpha)
         ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+                label=f"{int(alpha * 100):d}% significance")
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)
@@ -780,7 +780,7 @@ class RecursiveLSResults(MLEResults):
         ----------
         alpha : float
             The significance level, taken from {0.1, 0.05, 0.025, 0.01, 0.005}.
-        points : iterable, optional
+        points : array_like, optional
             The points at which to evaluate the significance bounds. Default is
             two points, beginning and end of the sample.
 
@@ -877,7 +877,7 @@ class RecursiveLSResults(MLEResults):
         # Plot significance bounds
         lower_line, upper_line = self._cusum_squares_significance_bounds(alpha)
         ax.plot([dates[d], dates[-1]], upper_line, "k--",
-                label="%d%% significance" % (alpha * 100))
+                label=f"{int(alpha * 100):d}% significance")
         ax.plot([dates[d], dates[-1]], lower_line, "k--")
 
         ax.legend(loc=legend_loc)

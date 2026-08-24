@@ -59,14 +59,14 @@ _hessian_docs = """
     ----------
     x : array_like
        value at which function derivative is evaluated
-    f : function
+    f : callable
        function of one array f(x, `*args`, `**kwargs`)
     epsilon : float or array_like, optional
        Stepsize used, if None, then stepsize is automatically chosen
        according to EPS**(1/%(scale)s)*x.
-    args : tuple
+    args : tuple, optional
         Arguments for function `f`.
-    kwargs : dict
+    kwargs : dict, optional
         Keyword arguments for function `f`.
     %(extra_params)s
 
@@ -129,9 +129,7 @@ def _get_epsilon(x, s, epsilon, n):
     else:  # pragma : no cover
         h = np.asarray(epsilon)
         if h.shape != x.shape:
-            raise ValueError(
-                "If h is not a scalar it must have the same shape as x."
-            )
+            raise ValueError("If h is not a scalar it must have the same shape as x.")
     return np.asarray(h)
 
 
@@ -143,16 +141,16 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs=None, centered=False):
     ----------
     x : ndarray
         parameters at which the derivative is evaluated
-    f : function
+    f : callable
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array
     epsilon : float, optional
         Stepsize, if None, optimal stepsize is used. This is EPS**(1/2)*x for
         `centered` == False and EPS**(1/3)*x for `centered` == True.
-    args : tuple
+    args : tuple, optional
         Tuple of additional arguments for function `f`.
-    kwargs : dict
+    kwargs : dict, optional
         Dictionary of additional keyword arguments for function `f`.
-    centered : bool
+    centered : bool, optional
         Whether central difference should be returned. If not, does forward
         differencing.
 
@@ -171,22 +169,22 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs=None, centered=False):
     """
     n = len(x)
     kwargs = {} if kwargs is None else kwargs
-    f0 = f(*((x,) + args), **kwargs)
+    f0 = f(*((x, *args)), **kwargs)
     dim = np.atleast_1d(f0).shape  # it could be a scalar
-    grad = np.zeros((n,) + dim, np.promote_types(float, x.dtype))
+    grad = np.zeros((n, *dim), np.promote_types(float, x.dtype))
     ei = np.zeros((n,), float)
     if not centered:
         epsilon = _get_epsilon(x, 2, epsilon, n)
         for k in range(n):
             ei[k] = epsilon[k]
-            grad[k, :] = (f(*((x + ei,) + args), **kwargs) - f0) / epsilon[k]
+            grad[k, :] = (f(*((x + ei, *args)), **kwargs) - f0) / epsilon[k]
             ei[k] = 0.0
     else:
         epsilon = _get_epsilon(x, 3, epsilon, n) / 2.0
         for k in range(n):
             ei[k] = epsilon[k]
             grad[k, :] = (
-                f(*((x + ei,) + args), **kwargs) - f(*((x - ei,) + args), **kwargs)
+                f(*((x + ei, *args)), **kwargs) - f(*((x - ei, *args)), **kwargs)
             ) / (2 * epsilon[k])
             ei[k] = 0.0
 
@@ -206,18 +204,18 @@ def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs=None, centered=Fal
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
         Parameters at which the derivative is evaluated.
-    f : function
+    f : callable
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array
     epsilon : float, optional
         Stepsize, if None, optimal stepsize is used. This is EPS**(1/2)*x for
         `centered` == False and EPS**(1/3)*x for `centered` == True.
-    args : tuple
+    args : tuple, optional
         Tuple of additional arguments for function `f`.
-    kwargs : dict
+    kwargs : dict, optional
         Dictionary of additional keyword arguments for function `f`.
-    centered : bool
+    centered : bool, optional
         Whether central difference should be returned. If not, does forward
         differencing.
 
@@ -230,15 +228,15 @@ def _approx_fprime_scalar(x, f, epsilon=None, args=(), kwargs=None, centered=Fal
     x = np.asarray(x)
     n = 1
     kwargs = {} if kwargs is None else kwargs
-    f0 = f(*((x,) + args), **kwargs)
+    f0 = f(*((x, *args)), **kwargs)
     if not centered:
         eps = _get_epsilon(x, 2, epsilon, n)
-        grad = (f(*((x + eps,) + args), **kwargs) - f0) / eps
+        grad = (f(*((x + eps, *args)), **kwargs) - f0) / eps
     else:
         eps = _get_epsilon(x, 3, epsilon, n) / 2.0
-        grad = (
-            f(*((x + eps,) + args), **kwargs) - f(*((x - eps,) + args), **kwargs)
-        ) / (2 * eps)
+        grad = (f(*((x + eps, *args)), **kwargs) - f(*((x - eps, *args)), **kwargs)) / (
+            2 * eps
+        )
 
     return grad
 
@@ -251,14 +249,14 @@ def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs=None):
     ----------
     x : ndarray
         parameters at which the derivative is evaluated
-    f : function
+    f : callable
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array
     epsilon : float, optional
         Stepsize, if None, optimal stepsize is used. Optimal step-size is
         EPS*x. See note.
-    args : tuple
+    args : tuple, optional
         Tuple of additional arguments for function `f`.
-    kwargs : dict
+    kwargs : dict, optional
         Dictionary of additional keyword arguments for function `f`.
 
     Returns
@@ -300,16 +298,16 @@ def _approx_fprime_cs_scalar(x, f, epsilon=None, args=(), kwargs=None):
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
         Parameters at which the derivative is evaluated.
-    f : function
+    f : callable
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array.
     epsilon : float, optional
         Stepsize, if None, optimal stepsize is used. Optimal step-size is
         EPS*x. See note.
-    args : tuple
+    args : tuple, optional
         Tuple of additional arguments for function `f`.
-    kwargs : dict
+    kwargs : dict, optional
         Dictionary of additional keyword arguments for function `f`.
 
     Returns
@@ -347,13 +345,13 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
     ----------
     x : array_like
        value at which function derivative is evaluated
-    f : function
+    f : callable
        function of one array f(x)
-    epsilon : float
+    epsilon : float, optional
        stepsize, if None, then stepsize is automatically chosen
-    args : tuple
+    args : tuple, optional
         Arguments for function `f`.
-    kwargs : dict
+    kwargs : dict, optional
         Keyword arguments for function `f`.
 
     Returns
@@ -383,8 +381,8 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
         for j in range(i, n):
             hess[i, j] = np.squeeze(
                 (
-                    f(*((x + 1j * ee[i, :] + ee[j, :],) + args), **kwargs)
-                    - f(*((x + 1j * ee[i, :] - ee[j, :],) + args), **kwargs)
+                    f(*((x + 1j * ee[i, :] + ee[j, :], *args)), **kwargs)
+                    - f(*((x + 1j * ee[i, :] - ee[j, :], *args)), **kwargs)
                 ).imag
                 / 2.0
                 / hess[i, j]
@@ -396,7 +394,7 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs=None):
 
 @Substitution(
     scale="3",
-    extra_params="""return_grad : bool
+    extra_params="""return_grad : bool, optional
         Whether or not to also return the gradient
 """,
     extra_returns="""grad : ndarray
@@ -414,18 +412,18 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
     h = _get_epsilon(x, 3, epsilon, n)
     ee = np.diag(h)
 
-    f0 = f(*((x,) + args), **kwargs)
+    f0 = f(*((x, *args)), **kwargs)
     # Compute forward step
     g = np.zeros(n)
     for i in range(n):
-        g[i] = f(*((x + ee[i, :],) + args), **kwargs)
+        g[i] = f(*((x + ee[i, :], *args)), **kwargs)
 
     hess = np.outer(h, h)  # this is now epsilon**2
     # Compute "double" forward step
     for i in range(n):
         for j in range(i, n):
             hess[i, j] = (
-                f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs) - g[i] - g[j] + f0
+                f(*((x + ee[i, :] + ee[j, :], *args)), **kwargs) - g[i] - g[j] + f0
             ) / hess[i, j]
             hess[j, i] = hess[i, j]
     if return_grad:
@@ -437,7 +435,7 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
 
 @Substitution(
     scale="3",
-    extra_params="""return_grad : bool
+    extra_params="""return_grad : bool, optional
         Whether or not to also return the gradient
 """,
     extra_returns="""grad : ndarray
@@ -457,24 +455,24 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
     # NOTE: ridout suggesting using eps**(1/4)*theta
     h = _get_epsilon(x, 3, epsilon, n)
     ee = np.diag(h)
-    f0 = f(*((x,) + args), **kwargs)
+    f0 = f(*((x, *args)), **kwargs)
     # Compute forward step
     g = np.zeros(n)
     gg = np.zeros(n)
     for i in range(n):
-        g[i] = f(*((x + ee[i, :],) + args), **kwargs)
-        gg[i] = f(*((x - ee[i, :],) + args), **kwargs)
+        g[i] = f(*((x + ee[i, :], *args)), **kwargs)
+        gg[i] = f(*((x - ee[i, :], *args)), **kwargs)
 
     hess = np.outer(h, h)  # this is now epsilon**2
     # Compute "double" forward step
     for i in range(n):
         for j in range(i, n):
             hess[i, j] = (
-                f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
+                f(*((x + ee[i, :] + ee[j, :], *args)), **kwargs)
                 - g[i]
                 - g[j]
                 + f0
-                + f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs)
+                + f(*((x - ee[i, :] - ee[j, :], *args)), **kwargs)
                 - gg[i]
                 - gg[j]
                 + f0
@@ -495,7 +493,7 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs=None, return_grad=False):
     equation="""1/(4*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j]
                                                      - d[k]*e[k])) -
                  (f(x - d[j]*e[j] + d[k]*e[k]) - f(x - d[j]*e[j]
-                                                     - d[k]*e[k]))""",
+                                                     - d[k]*e[k])))""",
 )
 @Appender(_hessian_docs)
 def approx_hess3(x, f, epsilon=None, args=(), kwargs=None):
@@ -509,11 +507,11 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs=None):
         for j in range(i, n):
             hess[i, j] = np.squeeze(
                 (
-                    f(*((x + ee[i, :] + ee[j, :],) + args), **kwargs)
-                    - f(*((x + ee[i, :] - ee[j, :],) + args), **kwargs)
+                    f(*((x + ee[i, :] + ee[j, :], *args)), **kwargs)
+                    - f(*((x + ee[i, :] - ee[j, :], *args)), **kwargs)
                     - (
-                        f(*((x - ee[i, :] + ee[j, :],) + args), **kwargs)
-                        - f(*((x - ee[i, :] - ee[j, :],) + args), **kwargs)
+                        f(*((x - ee[i, :] + ee[j, :], *args)), **kwargs)
+                        - f(*((x - ee[i, :] - ee[j, :], *args)), **kwargs)
                     )
                 )
                 / (4.0 * hess[i, j])
@@ -522,5 +520,8 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs=None):
     return hess
 
 
-approx_hess = approx_hess3
-approx_hess.__doc__ += "\n    This is an alias for approx_hess3"
+def approx_hess(x, f, epsilon=None, args=(), kwargs=None):
+    return approx_hess3(x, f, epsilon=epsilon, args=args, kwargs=kwargs)
+
+
+approx_hess.__doc__ = approx_hess3.__doc__ + "\n    This is an alias for approx_hess3"

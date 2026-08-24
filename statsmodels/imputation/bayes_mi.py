@@ -20,21 +20,21 @@ class BayesGaussMI:
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         The array of data to be imputed.  Values in the array equal to
         NaN are imputed.
-    mean_prior : ndarray, optional
+    mean_prior : array_like, optional
         The covariance matrix of the Gaussian prior distribution for
         the mean vector.  If not provided, the identity matrix is
         used.
-    cov_prior : ndarray, optional
+    cov_prior : array_like, optional
         The center matrix for the inverse Wishart prior distribution
         for the covariance matrix.  If not provided, the identity
         matrix is used.
-    cov_prior_df : positive float
+    cov_prior_df : positive float, optional
         The degrees of freedom of the inverse Wishart prior
         distribution for the covariance matrix.  Defaults to 1.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -95,7 +95,7 @@ class BayesGaussMI:
             v = self._data[:, i]
             v = v[np.isfinite(v)]
             if len(v) == 0:
-                msg = "Column %d has no observed values" % i
+                msg = f"Column {i:d} has no observed values"
                 raise ValueError(msg)
             mean.append(v.mean())
         self.mean = np.asarray(mean)
@@ -203,29 +203,31 @@ class MI:
         An imputer class, such as BayesGaussMI.
     model : model class
         Any statsmodels model class.
-    model_args_fn : function
+    model_args_fn : callable, optional
         A function taking an imputed dataset as input and returning
         endog, exog.  If the model is fit using a formula, returns
         a DataFrame used to build the model.  Optional when a formula
         is used.
-    model_kwds_fn : function, optional
+    model_kwds_fn : callable, optional
         A function taking an imputed dataset as input and returning
         a dictionary of model keyword arguments.
     formula : str, optional
         If provided, the model is constructed using the `from_formula`
         class method, otherwise the `__init__` method is used.
-    fit_args : list-like, optional
-        List of arguments to be passed to the fit method
-    fit_kwds : dict-like, optional
-        Keyword arguments to be passed to the fit method
-    xfunc : function mapping ndarray to ndarray
+    fit_args : callable, optional
+        A function taking an imputed dataset as input and returning a
+        list of arguments to be passed to the fit method.
+    fit_kwds : callable, optional
+        A function taking an imputed dataset as input and returning a
+        dictionary of keyword arguments to be passed to the fit method.
+    xfunc : callable, optional
         A function that is applied to the complete data matrix
         prior to fitting the model
-    burn : int
+    burn : int, optional
         Number of burn-in iterations
-    nrep : int
+    nrep : int, optional
         Number of imputed data sets to use in the analysis
-    skip : int
+    skip : int, optional
         Number of Gibbs iterations to skip between successive
         multiple imputation fits.
 
@@ -234,7 +236,7 @@ class MI:
     The imputer object must have an 'update' method, and a 'data'
     attribute that contains the current imputed dataset.
 
-    xfunc can be used to introduce domain constraints, e.g. when
+    xfunc can be used to introduce domain constraints, e.g., when
     imputing binary data the imputed continuous values can be rounded
     to 0/1.
     """
@@ -311,7 +313,7 @@ class MI:
 
         Parameters
         ----------
-        results_cb : function, optional
+        results_cb : callable, optional
             If provided, each results instance r is passed through `results_cb`,
             then appended to the `results` attribute of the MIResults object.
             To save complete results, use `results_cb=lambda x: x`.  The default
@@ -402,7 +404,7 @@ class MIResults(LikelihoodModelResults):
         and data values are not used.
     params : array_like
         The overall multiple imputation parameter estimates.
-    normalized_cov_params : array_like (2d)
+    normalized_cov_params : ndarray
         The overall variance covariance matrix of the estimates.
     """
 
@@ -421,8 +423,9 @@ class MIResults(LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
-            Significance level for the confidence intervals
+        alpha : float, optional
+            Significance level for the confidence intervals.  Default is
+            0.05.
 
         Returns
         -------
@@ -440,8 +443,8 @@ class MIResults(LikelihoodModelResults):
         info["Method:"] = "MI"
         info["Model:"] = self.mi.model.__name__
         info["Dependent variable:"] = self._model.endog_names
-        info["Sample size:"] = "%d" % self.mi.imp.data.shape[0]
-        info["Num. imputations"] = "%d" % self.mi.nrep
+        info["Sample size:"] = f"{self.mi.imp.data.shape[0]:d}"
+        info["Num. imputations"] = f"{self.mi.nrep:d}"
 
         smry.add_dict(info, align="l", float_format=float_format)
 

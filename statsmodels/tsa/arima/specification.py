@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.arima.tools import standardize_lag_order, validate_basic
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 from statsmodels.tsa.statespace.tools import (
@@ -42,43 +43,44 @@ class SARIMAXSpecification:
         may either be integers or lists of positive integers. May not be used
         in combination with the arguments `seasonal_ar_order`, `seasonal_diff`,
         or `seasonal_ma_order`.
-    ar_order : int or list of int
+    ar_order : int or list of int, optional
         The autoregressive order of the model. May be an integer, in which case
         all autoregressive lags up to and including it will be included.
         Alternatively, may be a list of integers specifying which lag orders
         are included. May not be used in combination with `order`.
-    diff : int
+    diff : int, optional
         The order of integration of the model. May not be used in combination
         with `order`.
-    ma_order : int or list of int
+    ma_order : int or list of int, optional
         The moving average order of the model. May be an integer or
         list of integers. See the documentation for `ar_order` for details.
         May not be used in combination with `order`.
-    seasonal_ar_order : int or list of int
+    seasonal_ar_order : int or list of int, optional
         The seasonal autoregressive order of the model. May be an integer or
         list of integers. See the documentation for `ar_order` for examples.
         Note that if `seasonal_periods = 4` and `seasonal_ar_order = 2`, then
         this implies that the overall model will include lags 4 and 8.
         May not be used in combination with `seasonal_order`.
-    seasonal_diff : int
+    seasonal_diff : int, optional
         The order of seasonal integration of the model. May not be used in
         combination with `seasonal_order`.
-    seasonal_ma_order : int or list of int
+    seasonal_ma_order : int or list of int, optional
         The moving average order of the model. May be an integer or
         list of integers. See the documentation for `ar_order` and
         `seasonal_ar_order` for additional details. May not be used in
         combination with `seasonal_order`.
-    seasonal_periods : int
+    seasonal_periods : int, optional
         Number of periods in a season. May not be used in combination with
         `seasonal_order`.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct', 'ctt'} or array_like, optional
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
-        degree zero component of the trend polynomial), 't' indicates a
-        linear trend with time, and 'ct' is both. Can also be specified as an
-        iterable defining the polynomial as in `numpy.poly1d`, where
-        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
-        include a trend component.
+        Can be specified as a string where 'n' indicates no trend, 'c'
+        indicates a constant (i.e., a degree zero component of the trend
+        polynomial), 't' indicates a linear trend with time, 'ct' includes
+        both, and 'ctt' includes a constant, linear trend, and squared time
+        trend. Can also be specified as an array_like defining the polynomial
+        as in `numpy.poly1d`, where `[1,1,0,1]` would denote
+        :math:`a + bt + ct^3`. Default is to not include a trend component.
     enforce_stationarity : bool, optional
         Whether or not to require the autoregressive parameters to correspond
         to a stationarity process. This is only possible in estimation by
@@ -102,24 +104,30 @@ class SARIMAXSpecification:
     freq : str, optional
         If no index is given by `endog` or `exog`, the frequency of the
         time-series may be specified here as a Pandas offset or offset string.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
     validate_specification : bool, optional
-        Whether or not to validate the model specification, e.g. that there
+        Whether or not to validate the model specification, e.g., that there
         is no overlap between the given AR and seasonal AR terms, that the
         differencing orders and seasonal periodicity are not invalid, and
         that the trend does not duplicate a constant column already present
         in `exog`. Default is True.
+    validate_exog : bool, optional
+        Whether or not to check that `exog` does not contain a constant column
+        that duplicates a constant trend. Has no effect unless
+        `validate_specification` is True. This is separated out so that it can
+        be disabled when extending an already-validated model with data that is
+        constant only over the extension window. Default is True.
 
     Attributes
     ----------
-    order : tuple, optional
+    order : tuple
         The (p,d,q) order of the model for the autoregressive, differences, and
         moving average components. d is always an integer, while p and q may
         either be integers or lists of integers.
-    seasonal_order : tuple, optional
+    seasonal_order : tuple
         The (P,D,Q,s) order of the seasonal component of the model for the
         AR parameters, differences, MA parameters, and periodicity. Default
         is (0, 0, 0, 0). D and s are always integers, while P and Q
@@ -149,14 +157,15 @@ class SARIMAXSpecification:
         `seasonal_ar_order` for additional details.
     seasonal_periods : int
         Number of periods in a season.
-    trend : str{'n','c','t','ct'} or iterable, optional
+    trend : {'n', 'c', 't', 'ct', 'ctt'} or array_like
         Parameter controlling the deterministic trend polynomial :math:`A(t)`.
-        Can be specified as a string where 'c' indicates a constant (i.e. a
-        degree zero component of the trend polynomial), 't' indicates a
-        linear trend with time, and 'ct' is both. Can also be specified as an
-        iterable defining the polynomial as in `numpy.poly1d`, where
-        `[1,1,0,1]` would denote :math:`a + bt + ct^3`. Default is to not
-        include a trend component.
+        Can be specified as a string where 'n' indicates no trend, 'c'
+        indicates a constant (i.e., a degree zero component of the trend
+        polynomial), 't' indicates a linear trend with time, 'ct' includes
+        both, and 'ctt' includes a constant, linear trend, and squared time
+        trend. Can also be specified as an array_like defining the polynomial
+        as in `numpy.poly1d`, where `[1,1,0,1]` would denote
+        :math:`a + bt + ct^3`. Default is to not include a trend component.
     ar_lags : list of int
         List of included autoregressive lags. If `ar_order` is a list, then
         `ar_lags == ar_order`. If `ar_lags = [1, 2]`, then the overall model
@@ -220,13 +229,13 @@ class SARIMAXSpecification:
     Examples
     --------
     >>> SARIMAXSpecification(order=(1, 0, 2))
-    SARIMAXSpecification(endog=y, order=(1, 0, 2))
+    SARIMAXSpecification(order=(1, 0, 2))
 
-    >>> spec = SARIMAXSpecification(ar_order=1, ma_order=2)
-    SARIMAXSpecification(endog=y, order=(1, 0, 2))
+    >>> SARIMAXSpecification(ar_order=1, ma_order=2)
+    SARIMAXSpecification(order=(1, 0, 2))
 
-    >>> spec = SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
-    SARIMAXSpecification(endog=y, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
+    >>> SARIMAXSpecification(ar_order=1, seasonal_order=(1, 0, 0, 4))
+    SARIMAXSpecification(order=(1, 0, 0), seasonal_order=(1, 0, 0, 4))
     """
 
     def __init__(self, endog=None, exog=None, order=None,
@@ -235,7 +244,8 @@ class SARIMAXSpecification:
                  seasonal_ma_order=None, seasonal_periods=None, trend=None,
                  enforce_stationarity=None, enforce_invertibility=None,
                  concentrate_scale=None, trend_offset=1, dates=None, freq=None,
-                 missing="none", validate_specification=True):
+                 missing="none", validate_specification=True, *,
+                 validate_exog=True):
 
         # Basic parameters
         self.enforce_stationarity = enforce_stationarity
@@ -381,20 +391,18 @@ class SARIMAXSpecification:
                                * self.seasonal_periods)
         duplicate_ar_lags = ar_lags.intersection(seasonal_ar_lags)
         if validate_specification and len(duplicate_ar_lags) > 0:
-            raise ValueError("Invalid model: autoregressive lag(s) %s are"
+            raise ValueError(f"Invalid model: autoregressive lag(s) {duplicate_ar_lags} are"
                              " in both the seasonal and non-seasonal"
-                             " autoregressive components."
-                             % duplicate_ar_lags)
+                             " autoregressive components.")
 
         ma_lags = set(self.ma_lags)
         seasonal_ma_lags = set(np.array(self.seasonal_ma_lags)
                                * self.seasonal_periods)
         duplicate_ma_lags = ma_lags.intersection(seasonal_ma_lags)
         if validate_specification and len(duplicate_ma_lags) > 0:
-            raise ValueError("Invalid model: moving average lag(s) %s are"
+            raise ValueError(f"Invalid model: moving average lag(s) {duplicate_ma_lags} are"
                              " in both the seasonal and non-seasonal"
-                             " moving average components."
-                             % duplicate_ma_lags)
+                             " moving average components.")
 
         # Handle trend
         self.trend = trend
@@ -402,7 +410,7 @@ class SARIMAXSpecification:
 
         # Check for a constant column in the provided exog
         exog_is_pandas = _is_using_pandas(exog, None)
-        if (validate_specification and exog is not None and
+        if (validate_specification and validate_exog and exog is not None and
                 len(self.trend_poly) > 0 and self.trend_poly[0] == 1):
             # Figure out if we have any constant columns
             x = np.asanyarray(exog)
@@ -418,13 +426,13 @@ class SARIMAXSpecification:
                                  " contains a column of constants.")
 
         # This contains the included exponents of the trend polynomial,
-        # where e.g. the constant term has exponent 0, a linear trend has
+        # where e.g., the constant term has exponent 0, a linear trend has
         # exponent 1, etc.
         self.trend_terms = np.where(self.trend_poly == 1)[0]
         # Trend order is either the degree of the trend polynomial, if all
         # exponents are included, or a list of included exponents. Here we need
-        # to make a distinction between a degree zero polynomial (i.e. a
-        # constant) and the zero polynomial (i.e. not even a constant). The
+        # to make a distinction between a degree zero polynomial (i.e., a
+        # constant) and the zero polynomial (i.e., not even a constant). The
         # former has `trend_order = 0`, while the latter has
         # `trend_order = None`.
         self.k_trend = len(self.trend_terms)
@@ -473,7 +481,7 @@ class SARIMAXSpecification:
         if (validate_specification and not faux_endog and
                 self.endog.ndim > 1 and self.endog.shape[1] > 1):
             raise ValueError("SARIMAX models require univariate `endog`. Got"
-                             " shape %s." % str(self.endog.shape))
+                             f" shape {self.endog.shape!s}.")
 
         self._has_missing = (
             None if faux_endog else np.any(np.isnan(self.endog)))
@@ -483,7 +491,7 @@ class SARIMAXSpecification:
         """
         (bool) Is autoregressive lag polynomial consecutive
 
-        I.e. does it include all lags up to and including the maximum lag.
+        i.e., does it include all lags up to and including the maximum lag.
         """
         return (self.max_seasonal_ar_order == 0 and
                 not isinstance(self.ar_order, list))
@@ -493,7 +501,7 @@ class SARIMAXSpecification:
         """
         (bool) Is moving average lag polynomial consecutive
 
-        I.e. does it include all lags up to and including the maximum lag.
+        i.e., does it include all lags up to and including the maximum lag.
         """
         return (self.max_seasonal_ma_order == 0 and
                 not isinstance(self.ma_order, list))
@@ -503,7 +511,7 @@ class SARIMAXSpecification:
         """
         (bool) Is the model integrated
 
-        I.e. does it have a nonzero `diff` or `seasonal_diff`.
+        i.e., does it have a nonzero `diff` or `seasonal_diff`.
         """
         return self.diff > 0 or self.seasonal_diff > 0
 
@@ -555,24 +563,24 @@ class SARIMAXSpecification:
     @property
     def ar_names(self):
         """(list of str) Names of (non-seasonal) autoregressive parameters"""
-        return ["ar.L%d" % i for i in self.ar_lags]
+        return [f"ar.L{i:d}" for i in self.ar_lags]
 
     @property
     def ma_names(self):
         """(list of str) Names of (non-seasonal) moving average parameters"""
-        return ["ma.L%d" % i for i in self.ma_lags]
+        return [f"ma.L{i:d}" for i in self.ma_lags]
 
     @property
     def seasonal_ar_names(self):
         """(list of str) Names of seasonal autoregressive parameters"""
         s = self.seasonal_periods
-        return ["ar.S.L%d" % (i * s) for i in self.seasonal_ar_lags]
+        return [f"ar.S.L{i * s:d}" for i in self.seasonal_ar_lags]
 
     @property
     def seasonal_ma_names(self):
         """(list of str) Names of seasonal moving average parameters"""
         s = self.seasonal_periods
-        return ["ma.S.L%d" % (i * s) for i in self.seasonal_ma_lags]
+        return [f"ma.S.L{i * s:d}" for i in self.seasonal_ma_lags]
 
     @property
     def param_names(self):
@@ -669,15 +677,30 @@ class SARIMAXSpecification:
         ValueError: Burg estimator does not support moving average components.
 
         >>> spec.validate_estimator('innovations')
-        ValueError: Burg estimator does not support autoregressive components.
+        ValueError: Innovations estimator does not support autoregressive
+                    components.
 
         >>> spec.validate_estimator('hannan_rissanen')  # returns None
         >>> spec.validate_estimator('innovations_mle')  # returns None
         >>> spec.validate_estimator('statespace')       # returns None
 
         >>> spec.validate_estimator('not_an_estimator')
-        ValueError: "not_an_estimator" is not a valid estimator.
+        ValueError: estimator must be one of: 'yule_walker', 'burg', \
+'innovations', 'hannan_rissanen', 'innovations_mle', 'statespace'
         """
+        estimator = string_like(
+            estimator,
+            "estimator",
+            options=(
+                "yule_walker",
+                "burg",
+                "innovations",
+                "hannan_rissanen",
+                "innovations_mle",
+                "statespace",
+            ),
+            lower=False,
+        )
         has_ar = self.max_ar_order != 0
         has_ma = self.max_ma_order != 0
         has_missing = self._has_missing
@@ -694,20 +717,18 @@ class SARIMAXSpecification:
         # Only state space form can support missing data
         if estimator != "statespace":
             if has_missing:
-                raise ValueError("%s estimator does not support missing"
-                                 " values in `endog`." % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support missing"
+                                 " values in `endog`.")
 
         # Only state space and innovations MLE can enforce parameter
         # restrictions
         if estimator not in ["innovations_mle", "statespace"]:
             if self.max_ar_order > 0 and self.enforce_stationarity:
-                raise ValueError("%s estimator cannot enforce a stationary"
-                                 " autoregressive lag polynomial."
-                                 % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator cannot enforce a stationary"
+                                 " autoregressive lag polynomial.")
             if self.max_ma_order > 0 and self.enforce_invertibility:
-                raise ValueError("%s estimator cannot enforce an invertible"
-                                 " moving average lag polynomial."
-                                 % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator cannot enforce an invertible"
+                                 " moving average lag polynomial.")
 
         # Now go through specific disqualifications for each estimator
         has_seasonal_ar_or_ma = (self.max_seasonal_ar_order > 0
@@ -715,15 +736,14 @@ class SARIMAXSpecification:
 
         if estimator in ["yule_walker", "burg"]:
             if has_seasonal_ar_or_ma:
-                raise ValueError("%s estimator does not support seasonal"
-                                 " AR or MA components." % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support seasonal"
+                                 " AR or MA components.")
             if not self.is_ar_consecutive:
-                raise ValueError("%s estimator does not support"
-                                 " non-consecutive autoregressive lags."
-                                 % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support"
+                                 " non-consecutive autoregressive lags.")
             if has_ma:
-                raise ValueError("%s estimator does not support moving average"
-                                 " components." % titles[estimator])
+                raise ValueError(f"{titles[estimator]} estimator does not support moving average"
+                                 " components.")
         elif estimator == "innovations":
             if has_seasonal_ar_or_ma:
                 raise ValueError("Innovations estimator does not support"
@@ -747,11 +767,9 @@ class SARIMAXSpecification:
                 raise ValueError("Innovations MLE estimator does not support"
                                  " concentrating the scale out of the"
                                  " log-likelihood function")
-        elif estimator == "statespace":
+        else:  # estimator == "statespace"
             # State space form supports all variations of SARIMAX.
             pass
-        else:
-            raise ValueError('"%s" is not a valid estimator.' % estimator)
 
     def split_params(self, params, allow_infnan=False):
         """
@@ -796,8 +814,9 @@ class SARIMAXSpecification:
             ix.append(1)
             names.append("sigma2")
         ix = np.cumsum(ix)
-
-        out = dict(zip(names, np.split(params, ix)))
+        # Bug: was creating an extra split, discard the final
+        split_params = np.split(params, ix)
+        out = dict(zip(names, split_params[:-1], strict=True))
         if "sigma2" in out:
             out["sigma2"] = out["sigma2"].item()
 
@@ -856,16 +875,15 @@ class SARIMAXSpecification:
             if k > 0:
                 # Validate
                 if params is None:
-                    raise ValueError("Specification includes %s, but no"
-                                     " parameters were provided." % title)
-                params = np.atleast_1d(np.squeeze(params))
-                if not params.shape == (k,):
-                    raise ValueError("Specification included %d %s, but"
-                                     " parameters with shape %s were provided."
-                                     % (k, title, params.shape))
+                    raise ValueError(f"Specification includes {title}, but no"
+                                     " parameters were provided.")
+                params_arr = np.atleast_1d(np.squeeze(params))
+                if not params_arr.shape == (k,):
+                    raise ValueError(f"Specification included {k:d} {title}, but"
+                                     f" parameters with shape {params_arr.shape} were provided.")
 
                 # Otherwise add to the list
-                params_list.append(params)
+                params_list.append(params_arr)
 
         return np.concatenate(params_list)
 
@@ -889,7 +907,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.validate_params([-0.5, 4.])  # returns None
         >>> spec.validate_params([-0.5, -2])
         ValueError: Non-positive variance term.
@@ -952,7 +970,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.constrain_params([10, -2])
         array([-0.99504,  4.     ])
         """
@@ -1012,7 +1030,7 @@ class SARIMAXSpecification:
 
         Examples
         --------
-        >>> spec = SARIMAXSpecification(ar_order=1)
+        >>> spec = SARIMAXSpecification(ar_order=1, enforce_stationarity=True)
         >>> spec.unconstrain_params([-0.5, 4.])
         array([0.57735, 2.     ])
         """
@@ -1051,6 +1069,25 @@ class SARIMAXSpecification:
         return self.join_params(**params)
 
     def construct_trend_data(self, nobs, offset=1):
+        """
+        Construct the trend data array implied by the trend specification
+
+        Parameters
+        ----------
+        nobs : int
+            Number of observations for which to construct trend data.
+        offset : int, optional
+            The offset at which to start time trend values. Default is 1,
+            so that if the specification includes a linear trend, the
+            trend values are 1, 2, ..., nobs.
+
+        Returns
+        -------
+        trend_data : ndarray or None
+            Array shaped ``(nobs, k_trend)`` containing the trend
+            regressors implied by `trend_poly`, or None if the
+            specification does not include a trend component.
+        """
         if self.trend_order is None:
             trend_data = None
         else:
@@ -1060,6 +1097,16 @@ class SARIMAXSpecification:
         return trend_data
 
     def construct_trend_names(self):
+        """
+        Construct names for the trend terms included in the specification
+
+        Returns
+        -------
+        names : list of str
+            Names of the included trend terms, using 'const' for a
+            constant term, 'drift' for a linear trend, and 'trend.<i>'
+            for a higher order term of degree `i`.
+        """
         names = []
         for i in self.trend_terms:
             if i == 0:
@@ -1067,25 +1114,23 @@ class SARIMAXSpecification:
             elif i == 1:
                 names.append("drift")
             else:
-                names.append("trend.%d" % i)
+                names.append(f"trend.{i:d}")
         return names
 
     def __repr__(self):
         """Represent SARIMAXSpecification object as a string"""
         components = []
         if self.endog is not None:
-            components.append("endog=%s" % self._model.endog_names)
+            components.append(f"endog={self._model.endog_names}")
         if self.k_exog_params:
-            components.append("exog=%s" % self.exog_names)
-        components.append("order=%s" % str(self.order))
+            components.append(f"exog={self.exog_names}")
+        components.append(f"order={self.order!s}")
         if self.seasonal_periods > 0:
-            components.append("seasonal_order=%s" % str(self.seasonal_order))
+            components.append(f"seasonal_order={self.seasonal_order!s}")
         if self.enforce_stationarity is not None:
-            components.append("enforce_stationarity=%s"
-                              % self.enforce_stationarity)
+            components.append(f"enforce_stationarity={self.enforce_stationarity}")
         if self.enforce_invertibility is not None:
-            components.append("enforce_invertibility=%s"
-                              % self.enforce_invertibility)
+            components.append(f"enforce_invertibility={self.enforce_invertibility}")
         if self.concentrate_scale is not None:
-            components.append("concentrate_scale=%s" % self.concentrate_scale)
-        return "SARIMAXSpecification(%s)" % ", ".join(components)
+            components.append(f"concentrate_scale={self.concentrate_scale}")
+        return "SARIMAXSpecification({})".format(", ".join(components))

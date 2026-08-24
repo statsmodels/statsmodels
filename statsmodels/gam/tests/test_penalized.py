@@ -4,10 +4,9 @@ unit test for GAM
 Author: Josef Perktold
 
 """
-
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -48,12 +47,12 @@ class GLMPenalized(PenalizedMixin, GLM):
     pass
 
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
-file_path = os.path.join(cur_dir, "results", "motorcycle.csv")
+file_path = Path(cur_dir).joinpath("results", "motorcycle.csv")
 data_mcycle = pd.read_csv(file_path)
 
-file_path = os.path.join(cur_dir, "results", "autos.csv")
+file_path = Path(cur_dir).joinpath("results", "autos.csv")
 df_autos_ = pd.read_csv(file_path)
 df_autos = df_autos_[["city_mpg", "fuel", "drive", "weight", "hp"]].dropna()
 
@@ -530,7 +529,7 @@ class TestGAMMPG:
         cls.res1b = gam_cc.fit(method="newton")
 
     def test_exog(self):
-        file_path = os.path.join(cur_dir, "results", "autos_exog.csv")
+        file_path = Path(cur_dir).joinpath("results", "autos_exog.csv")
         df_exog = pd.read_csv(file_path)
         res2_exog = df_exog.values
         for res1 in [self.res1a, self.res1b]:
@@ -539,7 +538,7 @@ class TestGAMMPG:
             assert_allclose(exog, res2_exog, atol=1e-14)
 
     def test_fitted(self):
-        file_path = os.path.join(cur_dir, "results", "autos_predict.csv")
+        file_path = Path(cur_dir).joinpath("results", "autos_predict.csv")
         df_pred = pd.read_csv(file_path, index_col="Row.names")
         df_pred.index = df_pred.index - 1
         res2_fittedvalues = df_pred["fit"].values

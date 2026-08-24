@@ -36,7 +36,6 @@ import numpy as np
 from scipy import special, stats
 
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.tsa.arma_mle import Arma
 
 # redefine some shortcuts
 np_log = np.log
@@ -96,7 +95,7 @@ class TLinearModel(GenericLikelihoodModel):
         start_params : array_like, optional
             Starting values to use directly. If None, starting values are
             constructed from an OLS fit of `endog` on `exog`.
-        use_kurtosis : bool
+        use_kurtosis : bool, optional
             If True and `start_params` is None and `df` is not fixed, use
             the kurtosis of the OLS residuals to construct a starting
             value for the degrees of freedom parameter. Otherwise a
@@ -210,121 +209,3 @@ class TLinearModel(GenericLikelihoodModel):
         if exog is None:
             exog = self.exog
         return np.dot(exog, params[:self.exog.shape[1]])
-
-
-class TArma(Arma):
-    """
-    Univariate Arma Model with t-distributed errors
-
-    This inherits all methods except loglike from tsa.arma_mle.Arma.
-
-    This uses the standard t-distribution, the implied variance of
-    the error is not equal to scale, but ::
-
-        error_variance = df/(df-2)*scale**2
-
-    Notes
-    -----
-    This might be replaced by a standardized t-distribution with scale**2
-    equal to variance
-    """
-
-    def loglike(self, params):
-        """
-        Loglikelihood of the model evaluated at params
-
-        Parameters
-        ----------
-        params : ndarray
-            The ARMA and t-distribution parameters. The last 2 elements
-            are degrees of freedom and scale.
-
-        Returns
-        -------
-        float
-            The log likelihood of the model evaluated at `params`, summed
-            over all observations.
-        """
-        return -self.nloglikeobs(params).sum(0)
-
-    # add for Jacobian calculation  bsejac in GenericMLE, copied from loglike
-
-    def nloglikeobs(self, params):
-        """
-        Negative loglikelihood for arma model for each observation, t-distributed
-
-        Parameters
-        ----------
-        params : ndarray
-            The ARMA and t-distribution parameters. The last 2 elements
-            are degrees of freedom and scale.
-
-        Returns
-        -------
-        ndarray
-            The negative log likelihood evaluated at `params` for each
-            observation.
-
-        Notes
-        -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
-        """
-
-        errorsest = self.geterrors(params[:-2])
-        # sigma2 = np.maximum(params[-1]**2, 1e-6)  # do I need this
-        # axis = 0
-        # nobs = len(errorsest)
-
-        df = params[-2]
-        scale = np.abs(params[-1])
-        llike = -stats.t._logpdf(errorsest / scale, df) + np_log(scale)
-        return llike
-
-    # TODO rename fit_mle -> fit, fit -> fit_ls
-    def fit_mle(
-        self, order, start_params=None, method="nm", maxiter=5000, tol=1e-08, **kwds
-    ):
-        """
-        Estimate the model parameters by maximum likelihood
-
-        Parameters
-        ----------
-        order : tuple
-            The (nar, nma) order of the ARMA model.
-        start_params : array_like, optional
-            Starting values for the optimization. Must have
-            ``nar + nma + 2`` elements. If None, default starting values
-            are constructed.
-        method : str
-            The optimization method passed to the underlying optimizer.
-        maxiter : int
-            The maximum number of iterations to perform.
-        tol : float
-            The convergence tolerance for the optimizer.
-        **kwds
-            Additional keyword arguments passed to the parent
-            `fit_mle` method.
-
-        Returns
-        -------
-        GenericLikelihoodModelResults
-            The fitted model results.
-        """
-        nar, nma = order
-        if start_params is not None:
-            if len(start_params) != nar + nma + 2:
-                raise ValueError("start_param need sum(order) + 2 elements")
-        else:
-            start_params = np.concatenate((0.05 * np.ones(nar + nma), [5, 1]))
-
-        res = super().fit_mle(
-            order=order,
-            start_params=start_params,
-            method=method,
-            maxiter=maxiter,
-            tol=tol,
-            **kwds,
-        )
-
-        return res

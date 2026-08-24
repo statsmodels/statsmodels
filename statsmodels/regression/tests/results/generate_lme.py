@@ -4,8 +4,7 @@ Generate test data sets for lme.
 After running this script, run lme_results.R with R
 to update the output.
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 
@@ -66,14 +65,13 @@ for pr in [1, 2]:
 
             header = (
                 ["groups,endog"]
-                + ["exog_fe_%d" % k for k in range(pf)]
-                + ["exog_re_%d" % k for k in range(pr)]
+                + [f"exog_fe_{k:d}" for k in range(pf)]
+                + [f"exog_re_{k:d}" for k in range(pr)]
             )
             header = ",".join(header)
 
-            cur_dir = os.path.dirname(os.path.abspath(__file__))
-
-            fname = os.path.join(cur_dir, "lme%02d.csv" % dsix)
+            cur_dir = Path(__file__).resolve().parent
+            fname = Path(cur_dir).joinpath(f"lme{dsix:02d}.csv")
             np.savetxt(
                 fname, data, fmt="%.3f", header=header, delimiter=",", comments=""
             )

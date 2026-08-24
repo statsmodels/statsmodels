@@ -23,11 +23,11 @@ class _KalmanSmoother:
 
     Parameters
     ----------
-    model : Representation
+    model : KalmanFilter
         The state space model.
-    kfilter : KalmanFilter
-        The Cython Kalman filter object with which filtering has already
-        been performed.
+    kfilter : FilterResults
+        The Cython Kalman filter results object with which filtering has
+        already been performed.
     smoother_output : int
         Bitmask value to indicate what smoother output to compute. See
         `SMOOTHER_STATE`, `SMOOTHER_STATE_COV`, `SMOOTHER_DISTURBANCE`,
@@ -46,6 +46,7 @@ class _KalmanSmoother:
         self.kfilter = kfilter
         self._kfilter = model._kalman_filter
         self.smoother_output = smoother_output
+        self.t = -1
 
         # Create storage
         self.scaled_smoothed_estimator = None

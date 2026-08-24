@@ -8,12 +8,11 @@ Created on Sun Oct 10 15:00:47 2010
 Author: josef-pktd
 License: BSD
 """
+import contextlib
+import warnings
 
-
-try:
+with contextlib.suppress(ImportError):
     import numdifftools as ndt
-except ImportError:
-    pass
 
 from statsmodels.base.model import LikelihoodModel
 
@@ -31,6 +30,17 @@ class TSMLEModel(LikelihoodModel):
     """
 
     def __init__(self, endog, exog=None):
+        warnings.warn(
+            "TSMLEModel is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage, its docstring "
+            "says \"This is not working yet\", and it has been superseded "
+            "by statsmodels.tsa.statespace. It will be removed after "
+            "statsmodels 0.16 is released. If you rely on this class, "
+            "please open an issue at "
+            "https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         # need to override p,q (nar,nma) correctly
         super().__init__(endog, exog)
         # set default arma(1,1)

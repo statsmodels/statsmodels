@@ -1,19 +1,27 @@
 """
 Inter Rater Agreement
 
-contains
---------
-fleiss_kappa
-cohens_kappa
+Created on Thu Dec 06 22:57:56 2012
+Author: Josef Perktold
+License: BSD-3
+
+Notes
+-----
+Contains fleiss_kappa and cohens_kappa.
 
 aggregate_raters:
     helper function to get data into fleiss_kappa format
 to_table:
     helper function to create contingency table, can be used for cohens_kappa
 
-Created on Thu Dec 06 22:57:56 2012
-Author: Josef Perktold
-License: BSD-3
+TODO:
+standard errors and hypothesis tests for fleiss_kappa
+other statistics and tests,
+   in R package irr, SAS has more
+inconsistent internal naming, changed variable names as I added more
+   functionality
+convenience functions to create required data format from raw data
+   DONE
 
 References
 ----------
@@ -22,16 +30,6 @@ Wikipedia: kappa's initially based on these two pages
     https://en.wikipedia.org/wiki/Cohen's_kappa
 SAS-Manual : formulas for cohens_kappa, especially variances
 see also R package irr
-
-TODO
-----
-standard errors and hypothesis tests for fleiss_kappa
-other statistics and tests,
-   in R package irr, SAS has more
-inconsistent internal naming, changed variable names as I added more
-   functionality
-convenience functions to create required data format from raw data
-   DONE
 """
 
 import numpy as np
@@ -64,9 +62,9 @@ def _int_ifclose(x, dec=1, width=4):
     ----------
     x : int or float
         Value to format.
-    dec : int
+    dec : int, optional
         Number of decimals to print if x is not an integer.
-    width : int
+    width : int, optional
         Width of string.
 
     Returns
@@ -78,9 +76,9 @@ def _int_ifclose(x, dec=1, width=4):
     """
     xint = round(x)
     if np.max(np.abs(xint - x)) < 1e-14:
-        return xint, "%4d" % xint
+        return xint, f"{xint:4d}"
     else:
-        return x, "%4.1f" % x
+        return x, f"{x:4.1f}"
 
 
 def aggregate_raters(data, n_cat=None):
@@ -96,7 +94,7 @@ def aggregate_raters(data, n_cat=None):
     data : array_like, 2-Dim
         Data containing category assignment with subjects in rows and raters
         in columns.
-    n_cat : None or int
+    n_cat : None or int, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
@@ -143,7 +141,7 @@ def to_table(data, bins=None):
     data : array_like, 2-Dim
         Data containing category assignment with subjects in rows and raters
         in columns.
-    bins : None, int or tuple of array_like
+    bins : None, int or tuple of array_like, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
@@ -160,6 +158,8 @@ def to_table(data, bins=None):
     arr : ndarray, (n_cat, n_cat)
         Contingency table that contains counts of category level with rater1
         in rows and rater2 in columns.
+    bins : ndarray
+        The bin edges used to construct the contingency table.
 
     Notes
     -----
@@ -204,7 +204,7 @@ def fleiss_kappa(table, method="fleiss"):
         Assumes subjects in rows, and categories in columns. Convert raw
         data into this format by using
         :func:`statsmodels.stats.inter_rater.aggregate_raters`.
-    method : str
+    method : str, optional
         Method 'fleiss' returns Fleiss' kappa which uses the sample margin
         to define the chance outcome.
         Method 'randolph' or 'uniform' (only first 4 letters are needed)
@@ -281,7 +281,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     table : array_like, 2-Dim
         Square array with results of two raters, one rater in rows, second
         rater in columns.
-    weights : array_like
+    weights : array_like, optional
         The interpretation of weights depends on the wt argument.
         If both are None, then the simple kappa is computed.
         See wt for the case when wt is not None.
@@ -289,10 +289,10 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
         TODO: fix conflicting definitions in the 2-Dim case for.
-    return_results : bool
+    return_results : bool, optional
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
-    wt : {None, str}
+    wt : {None, 'ca', 'linear', 'fc', 'quadratic', 'toeplitz'}, optional
         If wt and weights are None, then the simple kappa is computed.
         If wt is given, but weights is None, then the weights are set to
         be [0, 1, 2, ..., k].
@@ -301,7 +301,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
         wt in ['linear', 'ca' or None] : use linear weights, Cicchetti-Allison
             actual weights are linear in the score "weights" difference
-        wt in ['quadratic', 'fc'] : use linear weights, Fleiss-Cohen
+        wt in ['quadratic', 'fc'] : use quadratic weights, Fleiss-Cohen
             actual weights are squared in the score "weights" difference
         wt = 'toeplitz' : weight matrix is constructed as a toeplitz matrix
             from the one dimensional weights.
@@ -334,7 +334,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     weights = '0, 0, 1, 1' and wt = 'linear' means that the first two levels
     are zero distance apart and the same for the last two levels. This is
-    the sample as forming two aggregated levels by merging the first two and
+    the same as forming two aggregated levels by merging the first two and
     the last two levels, respectively.
 
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
@@ -480,8 +480,17 @@ class KappaResults(ResultsBunch):
 
     Attributes
     ----------
+    kind : str
+        "Simple" for the unweighted kappa, or "Weighted" if a weight
+        matrix was used.
     kappa : float
         Cohen's kappa.
+    kappa_max : float
+        Maximum value that kappa can attain given the observed marginal
+        frequencies.
+    weights : ndarray or None
+        The weight matrix used to compute the weighted kappa. ``None``
+        for the simple, unweighted kappa.
     var_kappa : float
         Variance of kappa.
     std_kappa : float

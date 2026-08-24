@@ -3,10 +3,9 @@ Created on Mon May 05 17:29:56 2014
 
 Author: Josef Perktold
 """
-
 from statsmodels.compat.scipy import SP_LT_116
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -15,6 +14,7 @@ import pytest
 
 from statsmodels.regression.linear_model import GLS, OLS
 from statsmodels.sandbox.regression.penalized import TheilGLS
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 
 class TestTheilTextile:
@@ -22,8 +22,8 @@ class TestTheilTextile:
     @classmethod
     def setup_class(cls):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        filepath = os.path.join(cur_dir, "results", "theil_textile_predict.csv")
+        cur_dir = Path(__file__).resolve().parent
+        filepath = Path(cur_dir).joinpath("results", "theil_textile_predict.csv")
         cls.res_predict = pd.read_csv(filepath, sep=",")
 
         # Data col names:
@@ -213,7 +213,9 @@ class TestTheil3(CheckEquivalenceMixin):
         # sp = np.zeros(5), np.ones(5)
         r_matrix = np.eye(5, 10, 5)
         mod1 = TheilGLS(y, xd, r_matrix=r_matrix)  # sigma_prior=[0, 0, 1., 1.])
-        cls.res1 = mod1.fit(0.001, cov_type="data-prior")
+        with pytest.warns(SingularMatrixWarning, match="The design matrix is rank-deficient"):
+            # x is intentionally repeated
+            cls.res1 = mod1.fit(0.001, cov_type="data-prior")
         cls.res2 = OLS(y, x).fit()
 
 

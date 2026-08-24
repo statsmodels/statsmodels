@@ -40,9 +40,9 @@ class SlicedInverseReg(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array_like (1d)
+    endog : array_like, 1d
         The dependent variable
-    exog : array_like (2d)
+    exog : array_like, 2d
         The covariates
 
     References
@@ -174,19 +174,19 @@ class SlicedInverseReg(_DimReductionRegression):
 
         Parameters
         ----------
-        ndim : int
+        ndim : int, optional
             The number of EDR directions to estimate
-        pen_mat : array_like
+        pen_mat : None or array_like
             A 2d array such that the squared Frobenius norm of
             ``dot(pen_mat, dirs)`` is added to the objective function,
             where `dirs` is an orthogonal array whose columns span
             the estimated EDR space.
         slice_n : int, optional
             Target number of observations per slice
-        maxiter : int
+        maxiter : int, optional
             The maximum number of iterations for estimating the EDR
             space.
-        gtol : float
+        gtol : float, optional
             If the norm of the gradient of the objective function
             falls below this value, the algorithm has converged.
         **kwargs
@@ -221,9 +221,6 @@ class SlicedInverseReg(_DimReductionRegression):
             raise ValueError("pen_mat is a required argument")
 
         start_params = kwargs.get("start_params", None)
-
-        # Sample size per slice
-        slice_n = kwargs.get("slice_n", 20)
 
         # Number of slices
         n_slice = self.exog.shape[0] // slice_n
@@ -266,7 +263,7 @@ class SlicedInverseReg(_DimReductionRegression):
         if not cnvrg:
             g = self._regularized_grad(params.ravel())
             gn = np.sqrt(np.dot(g, g))
-            msg = "SIR.fit_regularized did not converge, |g|=%f" % gn
+            msg = f"SIR.fit_regularized did not converge, |g|={gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = DimReductionResults(self, params, eigs=None)
@@ -279,9 +276,9 @@ class PrincipalHessianDirections(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array_like (1d)
+    endog : array_like, 1d
         The dependent variable
-    exog : array_like (2d)
+    exog : array_like, 2d
         The covariates
 
     Notes
@@ -347,9 +344,9 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
 
     Parameters
     ----------
-    endog : array_like (1d)
+    endog : array_like, 1d
         The dependent variable
-    exog : array_like (2d)
+    exog : array_like, 2d
         The covariates
     bc : bool, optional
         If True, use the bias-corrected CSAVE method of Li and Zhu.
@@ -378,7 +375,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
 
         Parameters
         ----------
-        slice_n : int
+        slice_n : int, optional
             Number of observations per slice
         **kwargs
             Additional keyword arguments. May include ``slice_n``.
@@ -405,7 +402,7 @@ class SlicedAverageVarianceEstimation(_DimReductionRegression):
         if not self.bc:
             # Cook's original approach
             vm = 0
-            for w, cvx in zip(ns, cv):
+            for w, cvx in zip(ns, cv, strict=True):
                 icv = np.eye(p) - cvx
                 vm += w * np.dot(icv, icv)
             vm /= len(cv)
@@ -481,11 +478,11 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
     Parameters
     ----------
-    params : array_like
+    params : ndarray
         Starting value for the optimization.
-    fun : function
+    fun : callable
         The function to be minimized.
-    grad : function
+    grad : callable
         The gradient of fun.
     maxiter : int
         The maximum number of iterations.
@@ -494,7 +491,7 @@ def _grass_opt(params, fun, grad, maxiter, gtol):
 
     Returns
     -------
-    params : array_like
+    params : ndarray
         The minimizing value for the objective function.
     fval : float
         The smallest achieved value of the objective function.
@@ -622,7 +619,7 @@ class CovarianceReduction(_DimReductionRegression):
 
         Parameters
         ----------
-        params : array_like
+        params : ndarray
             The projection matrix used to reduce the covariances, flattened
             to 1d.
 
@@ -651,7 +648,7 @@ class CovarianceReduction(_DimReductionRegression):
 
         Parameters
         ----------
-        params : array_like
+        params : ndarray
             The projection matrix used to reduce the covariances,
             flattened to 1d.
 
@@ -680,13 +677,13 @@ class CovarianceReduction(_DimReductionRegression):
 
         Parameters
         ----------
-        start_params : array_like, optional
+        start_params : ndarray, optional
             Starting value for the projection matrix. May be
             rectangular, or flattened. If None, an identity-based
             starting value is used.
-        maxiter : int
+        maxiter : int, optional
             The maximum number of gradient steps to take.
-        gtol : float
+        gtol : float, optional
             Convergence criterion for the gradient norm.
 
         Returns
@@ -714,7 +711,7 @@ class CovarianceReduction(_DimReductionRegression):
         if not cnvrg:
             g = self.score(params.ravel())
             gn = np.sqrt(np.sum(g * g))
-            msg = "CovReduce optimization did not converge, |g|=%f" % gn
+            msg = f"CovReduce optimization did not converge, |g|={gn:f}"
             warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
         results = DimReductionResults(self, params, eigs=None)

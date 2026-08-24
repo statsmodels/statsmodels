@@ -24,7 +24,7 @@ set_cow = "SM_TEST_COPY_ON_WRITE" in os.environ
 cow_flag = os.environ.get("SM_TEST_COPY_ON_WRITE", "").lower() in ("true", "1")
 if set_cow and parse(pd.__version__) < Version("2.99.99"):
     pd.options.mode.copy_on_write = cow_flag
-    logger.critical(f"TEST CONFIGURATION: Copy on Write {cow_flag}")
+    logger.critical("TEST CONFIGURATION: Copy on Write %s", cow_flag)
 
 formula_engine = os.environ.get("SM_FORMULA_ENGINE", "patsy")
 if formula_engine == "formulaic":

@@ -6,6 +6,7 @@ from collections import defaultdict
 import datetime as dt
 import gzip
 import logging
+from pathlib import Path
 import pickle
 
 import numpy as np
@@ -14,6 +15,8 @@ from scipy import stats
 from yapf.yapflib.yapf_api import FormatCode
 
 import statsmodels.api as sm
+
+logger = logging.getLogger(__name__)
 
 NUM_SIM = 10000000
 MAX_MEMORY = 2 ** 28
@@ -62,13 +65,12 @@ def simulations(sim_type, save=False):
             d_minus = (cdf - minus[:, None]).max(0)
             d = np.max(np.abs(np.c_[d_plus, d_minus]), 1)
             results[ss].append(d)
-        logging.log(logging.INFO,
-                    "Completed {}, remaining {}".format(NUM_SIM - remaining,
-                                                        remaining))
+        logger.info(
+            "Completed %s, remaining %s", NUM_SIM - remaining, remaining
+        )
         elapsed = dt.datetime.now() - start
         rem = elapsed.total_seconds() / (NUM_SIM - remaining) * remaining
-        logging.log(logging.INFO,
-                    f"({sim_type}) Time remaining {rem:0.1f}s")
+        logger.info("(%s) Time remaining %0.1fs", sim_type, rem)
 
     for key in results:
         results[key] = np.concatenate(results[key])
@@ -143,7 +145,7 @@ asymp_critical_values = {'normal': normal_asymp_crit_vals,
 
 """
     cv_filename = "../../_lilliefors_critical_values.py"
-    with open(cv_filename, "w", newline="\n", encoding="utf-8") as cv:
+    with Path(cv_filename).open("w", newline="\n", encoding="utf-8") as cv:
         cv.write(FormatCode(header)[0])
         cv.write(FormatCode(normal)[0])
         cv.write("\n\n")

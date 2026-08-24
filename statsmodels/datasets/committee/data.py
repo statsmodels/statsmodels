@@ -48,18 +48,28 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the committee data and returns a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
+    """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0)
 
 
 def load():
     """
-    Load the committee data and returns a data class.
+    Load the committee data and returns a Dataset class.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 

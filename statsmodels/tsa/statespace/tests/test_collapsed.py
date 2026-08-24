@@ -7,8 +7,7 @@ observations (2) is smaller than the number of states (6).
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -26,7 +25,7 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 from statsmodels.tsa.statespace.tests.results import results_kalman_filter
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class Trivariate:
@@ -68,7 +67,7 @@ class Trivariate:
 
     def test_using_collapsed(self):
         # Test to make sure the results_b actually used a collapsed Kalman
-        # filtering approach (i.e. that the flag being set actually caused the
+        # filtering approach (i.e., that the flag being set actually caused the
         # filter to not use the conventional filter)
 
         assert not self.results_a.filter_collapsed
@@ -529,7 +528,7 @@ class TestDFM:
 
     def test_using_collapsed(self):
         # Test to make sure the results_b actually used a collapsed Kalman
-        # filtering approach (i.e. that the flag being set actually caused the
+        # filtering approach (i.e., that the flag being set actually caused the
         # filter to not use the conventional filter)
 
         assert not self.results_a.filter_collapsed

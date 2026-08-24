@@ -12,17 +12,15 @@ python enumerate-api.py --diff statsmodels-legacy.json
 
 which produces a RST file that can be included in the docs or edited.
 """
+from setuptools import find_packages
 
 import argparse
 import importlib
 import inspect
 import json
 import logging
-import os
+from pathlib import Path
 from pkgutil import iter_modules
-import sys
-
-from setuptools import find_packages
 
 
 def find_modules(path):
@@ -30,16 +28,9 @@ def find_modules(path):
     for pkg in find_packages(path):
         modules.add(pkg)
         pkgpath = path + "/" + pkg.replace(".", "/")
-        if sys.version_info.major == 2 or (
-            sys.version_info.major == 3 and sys.version_info.minor < 6
-        ):
-            for _, name, ispkg in iter_modules([pkgpath]):
-                if not ispkg:
-                    modules.add(pkg + "." + name)
-        else:
-            for info in iter_modules([pkgpath]):
-                if not info.ispkg:
-                    modules.add(pkg + "." + info.name)
+        for info in iter_modules([pkgpath]):
+            if not info.ispkg:
+                modules.add(pkg + "." + info.name)
     return modules
 
 
@@ -106,7 +97,7 @@ def walk_modules(path):
                 d[name] = tuple()
             if inspect.isclass(func):
                 update_class(func, api["classes"], v, name)
-            logger.info(f"{module}.{v}")
+            logger.info("%s.%s", module, v)
     return api
 
 
@@ -165,25 +156,21 @@ def generate_diff(api, other):
     def header(v, first=False):
         return "\n\n" * (not first) + f"\n{v}\n" + "-" * len(v) + "\n"
 
-    with open("api-differences.rst", "w", encoding="utf-8") as rst:
+    with Path("api-differences.rst").open("w", encoding="utf-8") as rst:
         rst.write(header("New Classes", first=True))
-        for val in sorted(new_classes):
-            rst.write(f"* :class:`{val}`\n")
+        rst.writelines(f"* :class:`{val}`\n" for val in sorted(new_classes))
         rst.write(header("Removed Classes"))
-        for val in sorted(removed_classes):
-            rst.write(f"* ``{val}``\n")
+        rst.writelines(f"* ``{val}``\n" for val in sorted(removed_classes))
 
         rst.write(header("New Methods"))
-        for val in sorted(new_methods):
-            rst.write(f"* :meth:`{val}`\n")
+        rst.writelines(f"* :meth:`{val}`\n" for val in sorted(new_methods))
 
         rst.write(header("Removed Methods"))
-        for val in sorted(removed_methods):
-            rst.write(f"* ``{val}``\n")
+        rst.writelines(f"* ``{val}``\n" for val in sorted(removed_methods))
 
         rst.write(header("Methods with New Arguments"))
         for val in sorted(expanded_methods):
-            args = map(lambda v: f"``{v}``", expanded_methods[val])
+            args = (f"``{v}``" for v in expanded_methods[val])
             rst.write(f"* :meth:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Methods with Changed Arguments"))
@@ -193,14 +180,12 @@ def generate_diff(api, other):
             args = ", ".join(changed_methods[val]["current"])
             if args.startswith("self"):
                 args = args[4:]
-                if args.startswith(", "):
-                    args = args[2:]
+                args = args.removeprefix(", ")
             rst.write(f"   * New: ``{name}({args})``\n")
             args = ", ".join(changed_methods[val]["other"])
             if args.startswith("self"):
                 args = args[4:]
-                if args.startswith(", "):
-                    args = args[2:]
+                args = args.removeprefix(", ")
             rst.write(f"   * Old: ``{name}({args})``\n")
 
         rst.write(header("New Functions"))
@@ -212,7 +197,7 @@ def generate_diff(api, other):
 
         rst.write(header("Functions with New Arguments"))
         for val in sorted(expanded_funcs):
-            args = map(lambda v: f"``{v}``", expanded_funcs[val])
+            args = (f"``{v}``" for v in expanded_funcs[val])
             rst.write(f"* :func:`{val}`: " + ", ".join(args) + "\n")
 
         rst.write(header("Functions with Changed Arguments"))
@@ -263,17 +248,17 @@ def main():
     if file_path is None:
         import statsmodels
 
-        file_path = os.path.dirname(statsmodels.__file__)
+        file_path = Path(statsmodels.__file__).parent
     current_api = walk_modules(file_path)
     out_file = args.out_file
     if out_file is None:
         import statsmodels
 
         out_file = f"statsmodels-{statsmodels.__version__}-api.json"
-    with open(out_file, "w", encoding="utf-8") as api:
+    with Path(out_file).open("w", encoding="utf-8") as api:
         json.dump(current_api, api, indent=2, sort_keys=True)
     if args.diff is not None:
-        with open(args.diff, encoding="utf-8") as other:
+        with Path(args.diff).open(encoding="utf-8") as other:
             other_api = json.load(other)
         generate_diff(current_api, other_api)
 

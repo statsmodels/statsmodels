@@ -67,6 +67,7 @@ class Link:
         Parameters
         ----------
         p : array_like
+            Probabilities
 
         Returns
         -------
@@ -267,13 +268,13 @@ class Power(Link):
 
     Parameters
     ----------
-    power : float
+    power : float, optional
         The exponent of the power transform
 
     Notes
     -----
     Aliases of Power:
-    Inverse = Power(power=-1)
+    InversePower = Power(power=-1)
     Sqrt = Power(power=.5)
     InverseSquared = Power(power=-2.)
     Identity = Power(power=1.)
@@ -311,12 +312,12 @@ class Power(Link):
 
         Parameters
         ----------
-        `z` : array_like
+        z : array_like
             Value of the transformed mean parameters at `p`
 
         Returns
         -------
-        `p` : ndarray
+        p : ndarray
             Mean parameters
 
         Notes
@@ -427,7 +428,7 @@ class InversePower(Power):
     -----
     g(p) = 1/p
 
-    Alias of statsmodels.family.links.Power(power=-1.)
+    Alias of statsmodels.genmod.families.links.Power(power=-1.)
     """
 
     def __init__(self):
@@ -442,7 +443,7 @@ class Sqrt(Power):
     -----
     g(`p`) = sqrt(`p`)
 
-    Alias of statsmodels.family.links.Power(power=.5)
+    Alias of statsmodels.genmod.families.links.Power(power=.5)
     """
 
     def __init__(self):
@@ -457,7 +458,7 @@ class InverseSquared(Power):
     -----
     g(`p`) = 1/(`p`\*\*2)
 
-    Alias of statsmodels.family.links.Power(power=2.)
+    Alias of statsmodels.genmod.families.links.Power(power=2.)
     """
 
     def __init__(self):
@@ -472,7 +473,7 @@ class Identity(Power):
     -----
     g(`p`) = `p`
 
-    Alias of statsmodels.family.links.Power(power=1.)
+    Alias of statsmodels.genmod.families.links.Power(power=1.)
     """
 
     def __init__(self):
@@ -519,7 +520,7 @@ class Log(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -581,7 +582,7 @@ class Log(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -633,7 +634,7 @@ class LogC(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -696,7 +697,7 @@ class LogC(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -735,7 +736,7 @@ class CDFLink(Logit):
 
     Parameters
     ----------
-    dbn : scipy.stats distribution
+    dbn : scipy.stats distribution, optional
         Default is dbn=scipy.stats.norm
 
     Notes
@@ -836,7 +837,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -891,8 +892,20 @@ class Probit(CDFLink):
         """
         Second derivative of the inverse link function
 
-        This is the derivative of the pdf in a CDFLink
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
 
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            probit link function
+
+        Notes
+        -----
+        This is the derivative of the pdf in a CDFLink
         """
         return -z * self.dbn.pdf(z)
 
@@ -900,6 +913,16 @@ class Probit(CDFLink):
         """
         Second derivative of the link function g''(p)
 
+        Parameters
+        ----------
+        p : array_like
+            Probabilities
+
+        Returns
+        -------
+        g''(p) : ndarray
+            The value of the second derivative of the probit link
+            function
         """
         p = self._clean(p)
         linpred = self.dbn.ppf(p)
@@ -940,6 +963,20 @@ class Cauchy(CDFLink):
         return d2
 
     def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the Cauchy transform
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            Cauchy link function
+        """
         return -2 * z / (np.pi * (z**2 + 1) ** 2)
 
 
@@ -961,7 +998,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : ndarray
+        p : array_like
             Mean parameters
 
         Returns
@@ -1069,7 +1106,7 @@ class LogLog(Logit):
 
         Parameters
         ----------
-        p : ndarray
+        p : array_like
             Mean parameters
 
         Returns
@@ -1303,7 +1340,7 @@ class logit(Logit):
     """
     Alias of Logit
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Logit instead.
     """
@@ -1317,7 +1354,7 @@ class inverse_power(InversePower):
     """
     Deprecated alias of InversePower.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use InversePower instead.
     """
@@ -1331,7 +1368,7 @@ class sqrt(Sqrt):
     """
     Deprecated alias of Sqrt.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use Sqrt instead.
     """
@@ -1345,7 +1382,7 @@ class inverse_squared(InverseSquared):
     """
     Deprecated alias of InverseSquared.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use InverseSquared instead.
     """
@@ -1359,7 +1396,7 @@ class identity(Identity):
     """
     Deprecated alias of Identity.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use Identity instead.
     """
@@ -1373,7 +1410,7 @@ class log(Log):
     """
     The log transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Log instead.
 
@@ -1391,7 +1428,7 @@ class logc(LogC):
     """
     The log-complement transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use LogC instead.
 
@@ -1409,7 +1446,7 @@ class probit(Probit):
     """
     The probit (standard normal CDF) transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Probit instead.
 
@@ -1427,7 +1464,7 @@ class cauchy(Cauchy):
     """
     The Cauchy (standard Cauchy CDF) transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Cauchy instead.
 
@@ -1445,7 +1482,7 @@ class cloglog(CLogLog):
     """
     The CLogLog transform link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use CLogLog instead.
 
@@ -1466,7 +1503,7 @@ class loglog(LogLog):
     """
     The LogLog transform link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use LogLog instead.
 
@@ -1487,7 +1524,7 @@ class nbinom(NegativeBinomial):
     """
     The negative binomial link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use NegativeBinomial instead.
 

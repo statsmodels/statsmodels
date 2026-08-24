@@ -23,6 +23,19 @@ def df():
     return pd.DataFrame({"a": a, "b": b})
 
 
+def test_sign_test_no_observation_differs_from_mu0():
+    # When every observation ties with mu0 it is discarded, leaving no
+    # observations, so the test is undefined. This used to surface as an
+    # opaque "n must be an integer not less than 1" error raised from
+    # scipy's binomtest rather than explaining the cause.
+    with pytest.raises(ValueError, match="no observation differs from"):
+        sign_test([5.0, 5.0, 5.0], mu0=5.0)
+
+    # an empty sample hits the same degenerate case
+    with pytest.raises(ValueError, match="no observation differs from"):
+        sign_test([], mu0=0.0)
+
+
 def test_sign_test():
     x = [7.8, 6.6, 6.5, 7.4, 7.3, 7.0, 6.4, 7.1, 6.7, 7.6, 6.8]
     M, p = sign_test(x, mu0=6.5)
@@ -157,6 +170,19 @@ def test_odd_percentiles(df):
 def test_large_ntop(df):
     res = Description(df, ntop=15)
     assert "top_15" in res.frame.index
+
+
+def test_categorical_ntop_freq_length():
+    # The categorical `freq` rows used a hardcoded 5 instead of `ntop`, so a
+    # categorical column with at least `ntop` distinct values raised a
+    # ValueError ("Length of values (5) does not match length of index") for
+    # any ntop != 5.
+    s = pd.Series(list("aabbccddee")).astype("category")  # 5 distinct values
+    res = Description(pd.DataFrame({"x": s}), ntop=3)
+    for i in range(1, 4):
+        assert f"freq_{i}" in res.frame.index
+    # frequencies are relative; each of the 5 categories occurs 2/10 of the time
+    assert res.frame.loc["freq_1", "x"] == pytest.approx(0.2)
 
 
 def test_use_t(df):

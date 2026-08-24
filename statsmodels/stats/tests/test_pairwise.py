@@ -741,3 +741,11 @@ def test_plot(close_figures):
     resgh = mc.tukeyhsd(alpha=alpha, use_var="unequal")
     resth.plot_simultaneous()
     resgh.plot_simultaneous()
+
+
+def test_tukeyhsd_invalid_use_var_raises():
+    cylinders_adj = cylinders.astype(float)
+    cylinders_adj[[10, 28]] += 0.05
+    mc = MultiComparison(cylinders_adj, cyl_labels)
+    with pytest.raises(ValueError, match="use_var"):
+        mc.tukeyhsd(use_var="not-a-use-var")

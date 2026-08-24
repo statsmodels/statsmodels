@@ -44,22 +44,22 @@ class Mediation:
         and the second integer is the position of the exposure variable
         in the mediator model.  If a string is given, it must be the name
         of the exposure variable in both regression models.
-    mediator : {str, int}
+    mediator : {None, str, int}, optional
         The name or column position of the mediator variable in the
         outcome regression model.  If None, infer the name from the
         mediator model formula (if present).
-    moderators : dict
+    moderators : dict, optional
         Map from variable names or index positions to values of
         moderator variables that are held fixed when calculating
         mediation effects.  If the keys are index position they must
         be tuples `(i, j)` where `i` is the index in the outcome model
         and `j` is the index in the mediator model.  Otherwise the
         keys must be variable names.
-    outcome_fit_kwargs : dict-like
+    outcome_fit_kwargs : dict-like, optional
         Keyword arguments to use when fitting the outcome model.
-    mediator_fit_kwargs : dict-like
+    mediator_fit_kwargs : dict-like, optional
         Keyword arguments to use when fitting the mediator model.
-    outcome_predict_kwargs : dict-like
+    outcome_predict_kwargs : dict-like, optional
         Keyword arguments to use when calling predict on the outcome
         model.
 
@@ -91,8 +91,8 @@ class Mediation:
     >>> outcome = np.asarray(data["cong_mesg"])
     >>> outcome_exog = patsy.dmatrix("emo + treat + age + educ + gender + income", data,
     ...                              return_type='dataframe')
-    >>> probit = sm.families.links.probit
-    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=Probit()))
+    >>> probit = sm.families.links.probit()
+    >>> outcome_model = sm.GLM(outcome, outcome_exog, family=sm.families.Binomial(link=probit))
     >>> mediator = np.asarray(data["emo"])
     >>> mediator_exog = patsy.dmatrix("treat + age + educ + gender + income", data,
     ...                               return_type='dataframe')
@@ -106,7 +106,7 @@ class Mediation:
     A moderated mediation analysis.  The mediation effect is computed
     for people of age 20.
 
-    >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income",
+    >>> fml = "cong_mesg ~ emo + treat*age + emo*age + educ + gender + income"
     >>> outcome_model = sm.GLM.from_formula(fml, data,
     ...                                      family=sm.families.Binomial())
     >>> mediator_model = sm.OLS.from_formula("emo ~ treat*age + educ + gender + income", data)
@@ -170,6 +170,11 @@ class Mediation:
         # Position of the mediator variable in the outcome model.
         self._med_pos_outcome = self._variable_pos("mediator", "outcome")
 
+        # Populated by `fit`; declared here so they exist (as None) even
+        # before `fit` has been called.
+        self.indirect_effects = None
+        self.direct_effects = None
+
     def _variable_pos(self, var, model):
         if model == "mediator":
             mod = self.mediator_model
@@ -194,7 +199,7 @@ class Mediation:
         if hasattr(model, "formula"):
             return model.formula.split("~")[0].strip()
         else:
-            raise ValueError("cannot infer %s name without formula" % typ)
+            raise ValueError(f"cannot infer {typ} name without formula")
 
     def _simulate_params(self, result, rng):
         """
@@ -321,11 +326,11 @@ class Mediation:
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             Either 'parametric' or 'bootstrap'.
-        n_rep : int
+        n_rep : int, optional
             The number of simulation replications.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -338,9 +343,10 @@ class Mediation:
             Results of the mediation analysis.
         """
 
+        rng = check_random_state(rng)
+
         if method.startswith("para"):
             # Initial fit to unperturbed data.
-            rng = check_random_state(rng)
             outcome_result = self._fit_model(
                 self.outcome_model, self._outcome_fit_kwargs, rng
             )
@@ -356,13 +362,12 @@ class Mediation:
         for _ in range(n_rep):
 
             if method == "parametric":
-                rng = check_random_state(rng)
                 # Realization of outcome model parameters from sampling distribution
                 outcome_params = self._simulate_params(outcome_result, rng)
 
                 # Realization of mediation model parameters from sampling distribution
                 mediation_params = self._simulate_params(mediator_result, rng)
-            else:
+            else:  # method == "bootstrap"
                 outcome_result = self._fit_model(
                     self.outcome_model, self._outcome_fit_kwargs, rng, boot=True
                 )
@@ -469,7 +474,7 @@ class MediationResults:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals in the
             summary table. The default produces (1 - alpha) confidence
             intervals.

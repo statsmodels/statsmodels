@@ -94,10 +94,10 @@ def test_pandas_dates():
     dates = ["2016-01-01 12:00:00", "2016-02-01 12:00:00", "2016-03-01 12:00:00"]
 
     datetime_dates = pd.to_datetime(dates)
-
     result = pd.Series(data=data, index=datetime_dates, name="price")
-    df = pd.DataFrame(data={"price": data}, index=pd.DatetimeIndex(dates, freq="MS"))
+    result = result.asfreq("MS")
 
+    df = pd.DataFrame(data={"price": data}, index=pd.DatetimeIndex(dates, freq="MS"))
     model = TimeSeriesModel(df["price"])
 
     assert_equal(model.data.dates, result.index)

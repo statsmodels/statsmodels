@@ -7,6 +7,7 @@ from statsmodels.distributions import ECDF
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.validation import string_like
 
 from . import utils
 
@@ -252,7 +253,7 @@ class ProbPlot:
                     "Initializing the distribution failed.  This "
                     "can occur if distargs contains loc or scale. "
                     "The distribution initialization command "
-                    "is:\n{cmd}".format(cmd=cmd)
+                    f"is:\n{cmd}"
                 ) from exc
             self.loc = loc
             self.scale = scale
@@ -318,10 +319,10 @@ class ProbPlot:
 
         Parameters
         ----------
-        xlabel : str or None, optional
+        xlabel : str, optional
             User-provided labels for the x-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        ylabel : str or None, optional
+        ylabel : str, optional
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : {None, "45", "s", "r", "q"}, optional
@@ -411,10 +412,10 @@ class ProbPlot:
 
         Parameters
         ----------
-        xlabel : {None, str}, optional
+        xlabel : str, optional
             User-provided labels for the x-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        ylabel : {None, str}, optional
+        ylabel : str, optional
             User-provided labels for the y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : {None, "45", "s", "r", "q"}, optional
@@ -428,7 +429,7 @@ class ProbPlot:
             - "q" - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
 
-        other : {ProbPlot, array_like, None}, optional
+        other : ProbPlot, array_like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. Sample size of `other` must be equal or larger than
@@ -517,11 +518,11 @@ class ProbPlot:
 
         Parameters
         ----------
-        xlabel : {None, str}, optional
+        xlabel : str, optional
             User-provided labels for the x-axis. If None (default),
             "Non-exceedance Probability (%)" or "Probability of Exceedance
             (%)" is used, depending on `exceed`.
-        ylabel : {None, str}, optional
+        ylabel : str, optional
             User-provided labels for the y-axis. If None (default),
             "Sample Quantiles" is used.
         line : {None, "45", "s", "r", "q"}, optional
@@ -714,17 +715,17 @@ def qqplot_2samples(
 
     Parameters
     ----------
-    data1 : {array_like, ProbPlot}
+    data1 : array_like or ProbPlot
         Data to plot along x axis. If the sample sizes are unequal, the longer
         series is always plotted along the x-axis.
-    data2 : {array_like, ProbPlot}
+    data2 : array_like or ProbPlot
         Data to plot along y axis. Does not need to have the same number of
         observations as data 1. If the sample sizes are unequal, the longer
         series is always plotted along the x-axis.
-    xlabel : {None, str}, optional
+    xlabel : str, optional
         User-provided labels for the x-axis. If None (default),
         other values are used.
-    ylabel : {None, str}, optional
+    ylabel : str, optional
         User-provided labels for the y-axis. If None (default),
         other values are used.
     line : {None, "45", "s", "r", "q"}, optional
@@ -809,7 +810,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
 
     Parameters
     ----------
-    ax : matplotlib axes instance
+    ax : AxesSubplot
         The axes on which to plot the line
     line : {"45", "r", "s", "q"}
         Options for the reference line to which the data is compared:
@@ -821,9 +822,9 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
         - "r"  - A regression line is fit
         - "q"  - A line is fit through the quartiles.
 
-    x : ndarray, optional
+    x : array_like, optional
         X data for plot. Not needed if line is "45".
-    y : ndarray, optional
+    y : array_like, optional
         Y data for plot. Not needed if line is "45".
     dist : scipy.stats.distribution, optional
         A scipy.stats distribution, needed if line is "q".
@@ -859,6 +860,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
 
     .. plot:: plots/graphics_gofplots_qqplot_qqline.py
     """
+    line = string_like(line, "line", options=("45", "r", "s", "q"), lower=False)
     lineoptions = lineoptions.copy()
     for ls in ("-", "--", "-.", ":"):
         if ls in fmt:
@@ -920,7 +922,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt="r-", **lineoptions):
         m, b = np.std(y), np.mean(y)
         ref_line = x * m + b
         ax.plot(x, ref_line, **lineoptions)
-    elif line == "q":
+    else:  # line == "q"
         _check_for(dist, "ppf")
         q25 = stats.scoreatpercentile(y, 25)
         q75 = stats.scoreatpercentile(y, 75)
@@ -939,10 +941,10 @@ def plotting_pos(nobs, a=0.0, b=None):
     ----------
     nobs : int
         Number of probability points to plot
-    a : float, default 0.0
+    a : float, optional
         alpha parameter for the plotting position of an expected order
         statistic
-    b : float, default None
+    b : float, optional
         beta parameter for the plotting position of an expected order
         statistic. If None, then b is set to a.
 
@@ -977,7 +979,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
     dist : scipy.stats.distribution
         A scipy.stats distribution sufficiently specified to implement its
         ppf() method.
-    nobs : scalar
+    nobs : int
         Number of observations in the sample.
 
     Notes
@@ -1016,15 +1018,18 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
         X-axis data to be plotted
     y : array_like
         Y-axis data to be plotted
-    dist : scipy.stats.distribution
+    dist : scipy.stats.distribution, optional
         A scipy.stats distribution, needed if `line` is "q".
-    line : {"45", "s", "r", "q", None}, default None
+    line : {None, "45", "s", "r", "q"}, optional
         Options for the reference line to which the data is compared.
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
     fmt : str, optional
         matplotlib-compatible formatting string for the data markers
+    step : bool, optional
+        If True, plot with `ax.step` instead of `ax.plot`, connecting points
+        with a step function.
     **kwargs
         These are passed to matplotlib.plot
 
@@ -1061,7 +1066,7 @@ def _do_plot(x, y, dist=None, line=None, ax=None, fmt="b", step=False, **kwargs)
         ax.plot(*args, **plot_style)
     if line:
         if line not in ["r", "q", "45", "s"]:
-            msg = "%s option for line not understood" % line
+            msg = f"{line} option for line not understood"
             raise ValueError(msg)
 
         qqline(ax, line, x=x, y=y, dist=dist)

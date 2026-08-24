@@ -2,8 +2,8 @@ from statsmodels.compat.pandas import PD_LT_3_1_0
 from statsmodels.compat.python import lrange
 
 from io import StringIO
-from os import environ, makedirs
-from os.path import abspath, dirname, exists, expanduser, join
+from os import environ
+from pathlib import Path
 import shutil
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
@@ -21,9 +21,9 @@ def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
     ----------
     data : str
         Name of dataset to fetch.
-    baseurl : str
+    baseurl : str, optional
         The base URL to the stata datasets.
-    as_df : bool
+    as_df : bool, optional
         Deprecated. Always returns a DataFrame
 
     Returns
@@ -45,6 +45,26 @@ def webuse(data, baseurl="https://www.stata-press.com/data/r11/", as_df=True):
 
 
 class Dataset(dict):
+    """
+    Container for a statsmodels dataset.
+
+    A dict subclass whose keys are also exposed as attributes. Instances
+    are constructed by dataset loading functions such as `process_pandas`
+    and `get_rdataset`, which determine which keys/attributes are set.
+    Datasets returned by ``load_pandas`` functions typically define
+    ``data``, ``endog``, ``exog``, ``names``, ``endog_name`` and
+    ``exog_name``; datasets returned by `get_rdataset` additionally
+    define ``title``, ``package`` and ``from_cache``. When ``data`` can
+    be cast to float, a ``raw_data`` attribute holding that numeric
+    version is set automatically.
+
+    Parameters
+    ----------
+    **kw
+        Keyword arguments used to populate the dataset's keys and
+        attributes.
+    """
+
     def __init__(self, **kw):
         # define some default attributes, so pylint can find them
         self.endog = None
@@ -67,6 +87,28 @@ class Dataset(dict):
 
 
 def process_pandas(data, endog_idx=0, exog_idx=None, index_idx=None):
+    """
+    Split a DataFrame into a Dataset with endog and exog components.
+
+    Parameters
+    ----------
+    data : DataFrame
+        The full dataset, with variables as columns.
+    endog_idx : int or array_like, optional
+        The column index (or indices) of the endogenous variable(s).
+    exog_idx : int or array_like, optional
+        The column index (or indices) of the exogenous variable(s). If
+        None, all columns other than `endog_idx` are used.
+    index_idx : int, optional
+        The column index to use as the index of `data`, `endog` and
+        `exog`. If None, the existing index is preserved.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``,
+        ``exog``, ``endog_name`` and ``exog_name`` attributes.
+    """
     names = data.columns
 
     if isinstance(endog_idx, int):
@@ -132,7 +174,7 @@ def _get_cache(cache):
 
 def _cache_it(data, cache_path):
     import zlib
-    with open(cache_path, "wb") as zf:
+    with Path(cache_path).open("wb") as zf:
         zf.write(zlib.compress(data))
 
 
@@ -140,7 +182,7 @@ def _open_cache(cache_path):
     import zlib
 
     # return as bytes object encoded in utf-8 for cross-compat of cached
-    with open(cache_path, "rb") as zf:
+    with Path(cache_path).open("rb") as zf:
         return zlib.decompress(zf.read())
 
 
@@ -173,7 +215,7 @@ def _urlopen_cached(url, cache):
         else:
             file_name[0] += "-v2"
         file_name = ".".join(file_name) + ".zip"
-        cache_path = join(cache, file_name)
+        cache_path = Path(cache) / file_name
         try:
             data = _open_cache(cache_path)
             from_cache = True
@@ -195,7 +237,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
         data, from_cache = _urlopen_cached(url, cache)
     except HTTPError as err:
         if "404" in str(err):
-            raise ValueError("Dataset %s was not found." % dataname) from err
+            raise ValueError(f"Dataset {dataname} was not found.") from err
         else:
             raise err
 
@@ -228,10 +270,10 @@ def get_rdataset(dataname, package="datasets", cache=False):
     ----------
     dataname : str
         The name of the dataset you want to download
-    package : str
+    package : str, optional
         The package in which the dataset is found. The default is the core
         'datasets' package.
-    cache : bool or str
+    cache : bool or str, optional
         If True, will download this data into the STATSMODELS_DATA folder.
         The default location is a folder called statsmodels_data in the
         user home folder. Otherwise, you can specify a path to a folder to
@@ -240,7 +282,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     Returns
     -------
     dataset : Dataset
-        A `statsmodels.data.utils.Dataset` instance. This objects has
+        A `statsmodels.datasets.utils.Dataset` instance. This object has
         attributes:
 
         * data - A pandas DataFrame containing the data
@@ -305,11 +347,12 @@ def get_data_home(data_home=None):
         The path of the statsmodels data dir.
     """
     if data_home is None:
-        data_home = environ.get("STATSMODELS_DATA",
-                                join("~", "statsmodels_data"))
-    data_home = expanduser(data_home)
-    if not exists(data_home):
-        makedirs(data_home)
+        data_home = environ.get(
+            "STATSMODELS_DATA", str(Path("~") / "statsmodels_data")
+        )
+    data_home = str(Path(data_home).expanduser())
+    if not Path(data_home).exists():
+        Path(data_home).mkdir(parents=True)
     return data_home
 
 
@@ -392,9 +435,9 @@ def load_csv(base_file, csv_name, sep=",", convert_float=False):
         The CSV file is assumed to live in the same directory.
     csv_name : str
         The name of the CSV file to load.
-    sep : str
+    sep : str, optional
         The delimiter used to separate fields in the CSV file.
-    convert_float : bool
+    convert_float : bool, optional
         If True, convert all columns to float.
 
     Returns
@@ -402,8 +445,8 @@ def load_csv(base_file, csv_name, sep=",", convert_float=False):
     DataFrame
         The data read from the CSV file.
     """
-    filepath = dirname(abspath(base_file))
-    filename = join(filepath, csv_name)
+    filepath = Path(base_file).resolve().parent
+    filename = filepath / csv_name
     engine = "python" if sep != "," else "c"
     kwargs = {"float_precision": "high"} if (engine == "c" and PD_LT_3_1_0) else {}
     data = read_csv(filename, sep=sep, engine=engine, **kwargs)

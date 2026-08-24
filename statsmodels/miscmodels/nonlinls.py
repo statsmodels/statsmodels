@@ -4,6 +4,8 @@ Non-linear least squares
 Author: Josef Perktold based on scipy.optimize.curve_fit
 """
 
+import warnings
+
 import numpy as np
 from scipy import optimize
 
@@ -94,7 +96,7 @@ class NonlinearLS(Model):  # or subclass a model
     sigma : array_like, optional
         1-d array of standard deviations used to construct `weights` as
         ``1 / sigma``. Correlated errors (2-d `sigma`) are not supported.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. Currently not
         used in `__init__`.
 
@@ -128,6 +130,15 @@ class NonlinearLS(Model):  # or subclass a model
 
     # NOTE: This needs to call super for data checking
     def __init__(self, endog=None, exog=None, weights=None, sigma=None, missing="none"):
+        warnings.warn(
+            "NonlinearLS is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.endog = endog
         self.exog = exog
         if sigma is not None:
@@ -340,7 +351,7 @@ class NonlinearLS(Model):  # or subclass a model
 
         Parameters
         ----------
-        ntries : int
+        ntries : int, optional
             Number of random starting values to try.
         rvs_generator : callable, optional
             Function to generate random starting values given a `size`
@@ -408,38 +419,3 @@ class Myfunc(NonlinearLS):
         x = self.exog
         a, b, c = params
         return a * np.exp(-b * x) + c
-
-
-if __name__ == "__main__":
-
-    def func0(x, a, b, c):
-        return a * np.exp(-b * x) + c
-
-    def func(params, x):
-        a, b, c = params
-        return a * np.exp(-b * x) + c
-
-    def error(params, x, y):
-        return y - func(params, x)
-
-    def error2(params, x, y):
-        return (y - func(params, x)) ** 2
-
-    x = np.linspace(0, 4, 50)
-    params = np.array([2.5, 1.3, 0.5])
-    y0 = func(params, x)
-    y = y0 + 0.2 * np.random.normal(size=len(x))
-
-    res = optimize.leastsq(error, params, args=(x, y), full_output=True)
-    #    r, R, c = getjaccov(res[1:], 3)
-
-    mod = Myfunc(y, x)
-    resmy = mod.fit(nparams=3)
-
-    cf_params, cf_pcov = optimize.curve_fit(func0, x, y)
-    cf_bse = np.sqrt(np.diag(cf_pcov))
-    print(res[0])
-    print(cf_params)
-    print(resmy.params)
-    print(cf_bse)
-    print(resmy.bse)

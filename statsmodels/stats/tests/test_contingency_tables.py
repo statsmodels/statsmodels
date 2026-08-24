@@ -1,20 +1,20 @@
 """
 Tests for contingency table analyses.
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+import pytest
 
 import statsmodels.api as sm
 import statsmodels.stats.contingency_tables as ctab
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 fname = "contingency_table_r_results.csv"
-fpath = os.path.join(cur_dir, "results", fname)
+fpath = Path(cur_dir).joinpath("results", fname)
 r_results = pd.read_csv(fpath)
 
 
@@ -241,6 +241,24 @@ def test_mcnemar():
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
 
+def test_mcnemar_non_2x2():
+    # GH#9485: mcnemar only uses the [0, 1] and [1, 0] cells, so a table
+    # that is not 2x2 must raise instead of silently ignoring the rest.
+    table = np.asarray([[10, 5, 1], [3, 12, 2], [4, 6, 20]])
+    with pytest.raises(ValueError, match="2x2"):
+        ctab.mcnemar(table)
+    with pytest.raises(ValueError, match="2x2"):
+        ctab.mcnemar(table, exact=False)
+
+    table_3d = np.ones((2, 2, 2))
+    with pytest.raises(ValueError, match="two-dimensional"):
+        ctab.mcnemar(table_3d)
+
+    # A genuine 2x2 table must still work.
+    b = ctab.mcnemar(tables[0], exact=False, correction=False)
+    assert np.isfinite(b.statistic)
+
+
 def test_from_data_stratified():
 
     df = pd.DataFrame(
@@ -307,7 +325,7 @@ def test_cochranq():
     ]
     table = np.asarray(table)
 
-    stat, pvalue, df = ctab.cochrans_q(table, return_object=False)
+    stat, pvalue, df = ctab.cochrans_q(table)
     assert_allclose(stat, 4.2)
     assert_allclose(df, 3)
 
@@ -324,20 +342,35 @@ def test_cochranq():
     ]
     table = np.asarray(table)
 
-    stat, pvalue, df = ctab.cochrans_q(table, return_object=False)
+    stat, pvalue, df = ctab.cochrans_q(table)
     assert_allclose(stat, 1.2174, rtol=1e-4)
     assert_allclose(df, 4)
 
     # Cochran's q and Mcnemar are equivalent for 2x2 tables
     data = table[:, 0:2]
     xtab = np.asarray(pd.crosstab(data[:, 0], data[:, 1]))
-    b1 = ctab.cochrans_q(data, return_object=True)
+    b1 = ctab.cochrans_q(data)
     b2 = ctab.mcnemar(xtab, exact=False, correction=False)
     assert_allclose(b1.statistic, b2.statistic)
     assert_allclose(b1.pvalue, b2.pvalue)
 
-    # Test for printing bunch
-    assert_equal(str(b1).startswith("df          1\npvalue      0.65"), True)
+    # The single result supports both attribute access and unpacking
+    assert isinstance(b1, ctab.CochransQResult)
+    assert_equal(len(b1), 3)
+    assert_allclose(tuple(b1), (b1.statistic, b1.pvalue, b1.df))
+    assert_equal(b1.df, 1)
+
+
+def test_cochrans_q_return_object_deprecated():
+    # return_object no longer changes the result, but still warns
+    rs = np.random.RandomState(12345)
+    data = rs.randint(0, 2, size=(30, 4))
+
+    expected = ctab.cochrans_q(data)
+    for value in (True, False):
+        with pytest.warns(FutureWarning, match="return_object"):
+            res = ctab.cochrans_q(data, return_object=value)
+        assert_equal(res, expected)
 
 
 class CheckStratifiedMixin:
@@ -389,7 +422,8 @@ class CheckStratifiedMixin:
         assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
 
     def test_pandas(self):
-
+        self.rslt_pandas.summary().as_text()
+        self.rslt.summary().as_text()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             assert_equal(

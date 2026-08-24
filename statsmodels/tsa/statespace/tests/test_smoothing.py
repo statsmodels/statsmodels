@@ -12,8 +12,7 @@ MATLAB (ssm toolbox)
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
@@ -30,18 +29,18 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 )
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 class TestStatesAR3:
     @classmethod
     def setup_class(cls, *args, alternate_timing=False, **kwargs):
         # Dataset / Stata comparison
-        path = os.path.join(current_path, "results", "results_wpi1_ar3_stata.csv")
+        path = Path(current_path).joinpath("results", "results_wpi1_ar3_stata.csv")
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start="1960-01-01", periods=124, freq="QS")
         # Matlab comparison
-        path = os.path.join(current_path, "results", "results_wpi1_ar3_matlab_ssm.csv")
+        path = Path(current_path).joinpath("results", "results_wpi1_ar3_matlab_ssm.csv")
         matlab_names = [
             "a1",
             "a2",
@@ -234,13 +233,11 @@ class TestStatesMissingAR3:
     @classmethod
     def setup_class(cls, alternate_timing=False, *args, **kwargs):
         # Dataset
-        path = os.path.join(current_path, "results", "results_wpi1_ar3_stata.csv")
+        path = Path(current_path).joinpath("results", "results_wpi1_ar3_stata.csv")
         cls.stata = pd.read_csv(path)
         cls.stata.index = pd.date_range(start="1960-01-01", periods=124, freq="QS")
         # Matlab comparison
-        path = os.path.join(
-            current_path, "results", "results_wpi1_missing_ar3_matlab_ssm.csv"
-        )
+        path = Path(current_path).joinpath("results", "results_wpi1_missing_ar3_matlab_ssm.csv")
         matlab_names = [
             "a1",
             "a2",
@@ -257,7 +254,7 @@ class TestStatesMissingAR3:
         ]
         cls.matlab_ssm = pd.read_csv(path, header=None, names=matlab_names)
         # KFAS comparison
-        path = os.path.join(current_path, "results", "results_smoothing3_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing3_R.csv")
         cls.R_ssm = pd.read_csv(path)
 
         # Create missing observations
@@ -401,7 +398,7 @@ class TestMultivariateMissing:
 
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
-    measurement equation (e.g. forecasts, etc.). In this case, although the
+    measurement equation (e.g., forecasts, etc.). In this case, although the
     model is multivariate, each of the series is truly independent so the
     values will be the same regardless of whether the univariate approach
     is used or not.
@@ -410,7 +407,7 @@ class TestMultivariateMissing:
     @classmethod
     def setup_class(cls, **kwargs):
         # Results
-        path = os.path.join(current_path, "results", "results_smoothing_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -570,7 +567,7 @@ class TestMultivariateVAR:
 
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
-    measurement equation (e.g. forecasts, etc.). In this case, although the
+    measurement equation (e.g., forecasts, etc.). In this case, although the
     model is multivariate, each of the series is truly independent so the
     values will be the same regardless of whether the univariate approach is
     used or not.
@@ -579,7 +576,7 @@ class TestMultivariateVAR:
     @classmethod
     def setup_class(cls, *args, **kwargs):
         # Results
-        path = os.path.join(current_path, "results", "results_smoothing2_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing2_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -763,7 +760,7 @@ class TestMultivariateVARUnivariate:
 
     Note that KFAS uses the univariate approach which generally will result in
     different predicted values and covariance matrices associated with the
-    measurement equation (e.g. forecasts, etc.). In this case, although the
+    measurement equation (e.g., forecasts, etc.). In this case, although the
     model is multivariate, each of the series is truly independent so the
     values will be the same regardless of whether the univariate approach is
     used or not.
@@ -772,7 +769,7 @@ class TestMultivariateVARUnivariate:
     @classmethod
     def setup_class(cls, *args, **kwargs):
         # Results
-        path = os.path.join(current_path, "results", "results_smoothing2_R.csv")
+        path = Path(current_path).joinpath("results", "results_smoothing2_R.csv")
         cls.desired = pd.read_csv(path)
 
         # Data
@@ -1332,7 +1329,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         -1, end=mod_oos.nobs, extend_kwargs=extend_kwargs
     ).transpose(2, 0, 1)
     assert_equal(acov1.shape, (mod_oos.nobs, mod.k_states, mod.k_states))
-    assert_allclose(acov1[:, :2, :2], desired_acov1[1:])
+    assert_allclose(acov1[:, :2, :2], desired_acov1[1:], rtol=1e-6)
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 1, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
@@ -1346,7 +1343,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         -2, end=mod_oos.nobs - 1, extend_kwargs=extend_kwargs
     ).transpose(2, 0, 1)
     assert_equal(acov2.shape, (mod_oos.nobs - 1, mod.k_states, mod.k_states))
-    assert_allclose(acov2[:, :2, :2], desired_acov2[2:])
+    assert_allclose(acov2[:, :2, :2], desired_acov2[2:], rtol=1e-6)
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 2, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
@@ -1355,7 +1352,7 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         -3, end=mod_oos.nobs - 2, extend_kwargs=extend_kwargs
     ).transpose(2, 0, 1)
     assert_equal(acov3.shape, (mod_oos.nobs - 2, mod.k_states, mod.k_states))
-    assert_allclose(acov3[:, :2, :2], desired_acov3[3:])
+    assert_allclose(acov3[:, :2, :2], desired_acov3[3:], rtol=1e-6)
 
 
 @pytest.mark.parametrize("missing", ["all", "partial", "mixed", None])

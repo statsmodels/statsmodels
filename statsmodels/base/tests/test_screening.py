@@ -56,7 +56,7 @@ def test_poisson_screening():
     y, x, idx_nonzero_true, beta = _get_poisson_data()
     nobs = len(y)
 
-    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true = [f"var{ii:4d}" for ii in idx_nonzero_true]
     xnames_true[0] = "const"
     parameters = pd.DataFrame(
         beta[idx_nonzero_true], index=xnames_true, columns=["true"]
@@ -74,7 +74,7 @@ def test_poisson_screening():
 
     assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames = [f"var{ii:4d}" for ii in res_screen.idx_nonzero]
     xnames[0] = "const"
 
     # smoke test
@@ -144,7 +144,7 @@ def test_glmpoisson_screening():
     y, x, idx_nonzero_true, beta = _get_poisson_data()
     nobs = len(y)
 
-    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true = [f"var{ii:4d}" for ii in idx_nonzero_true]
     xnames_true[0] = "const"
     parameters = pd.DataFrame(
         beta[idx_nonzero_true], index=xnames_true, columns=["true"]
@@ -162,7 +162,7 @@ def test_glmpoisson_screening():
 
     assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames = [f"var{ii:4d}" for ii in res_screen.idx_nonzero]
     xnames[0] = "const"
 
     # smoke test
@@ -203,7 +203,7 @@ def test_logit_screening():
     # test uses
     screener_kwds = dict(pen_weight=nobs * 0.7, threshold_trim=1e-3)
 
-    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true = [f"var{ii:4d}" for ii in idx_nonzero_true]
     xnames_true[0] = "const"
     parameters = pd.DataFrame(
         beta[idx_nonzero_true], index=xnames_true, columns=["true"]
@@ -226,7 +226,7 @@ def test_logit_screening():
     idx_r = np.array([0, 74, 100, 163, 300, 400, 411])
     assert_equal(np.sort(res_screen.idx_nonzero), idx_r)
 
-    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames = [f"var{ii:4d}" for ii in res_screen.idx_nonzero]
     xnames[0] = "const"
 
     # smoke test
@@ -252,7 +252,7 @@ def test_glmlogit_screening():
         pen_weight=nobs * 0.75, threshold_trim=1e-3, ranking_attr="model.score_factor"
     )
 
-    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true = [f"var{ii:4d}" for ii in idx_nonzero_true]
     xnames_true[0] = "const"
     parameters = pd.DataFrame(
         beta[idx_nonzero_true], index=xnames_true, columns=["true"]
@@ -274,7 +274,7 @@ def test_glmlogit_screening():
 
     assert isinstance(res_screen.results_final.params, np.ndarray)
 
-    xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+    xnames = [f"var{ii:4d}" for ii in res_screen.idx_nonzero]
     xnames[0] = "const"
 
     # smoke test
@@ -323,7 +323,7 @@ def test_glmgaussian_screening():
         pen_weight=nobs * 0.75, threshold_trim=1e-3, ranking_attr="model.score_factor"
     )
 
-    xnames_true = ["var%4d" % ii for ii in idx_nonzero_true]
+    xnames_true = [f"var{ii:4d}" for ii in idx_nonzero_true]
     xnames_true[0] = "const"
     parameters = pd.DataFrame(
         beta[idx_nonzero_true], index=xnames_true, columns=["true"]
@@ -341,7 +341,7 @@ def test_glmgaussian_screening():
 
         assert_equal(np.sort(res_screen.idx_nonzero), idx_nonzero_true)
 
-        xnames = ["var%4d" % ii for ii in res_screen.idx_nonzero]
+        xnames = [f"var{ii:4d}" for ii in res_screen.idx_nonzero]
         xnames[0] = "const"
 
         # smoke test

@@ -54,12 +54,28 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with a ``data`` attribute.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
     """
     return load_pandas()
 
 
 def load_pandas():
+    """
+    Load the data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with a ``data`` attribute.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     return du.Dataset(data=data)
 

@@ -4,8 +4,7 @@ Created on Thu Aug 30 21:51:08 2012
 Author: Josef Perktold
 
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -16,10 +15,9 @@ import pytest
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-dta_path = os.path.join(current_path, "Matlab_results", "test_coint.csv")
-with open(dta_path, "rb") as fd:
-    dta = np.genfromtxt(fd)
+current_path = Path(__file__).resolve().parent
+dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
+dta = pd.read_csv(dta_path, header=None, delimiter=r"\s+").values
 
 
 class CheckCointJoh:
@@ -477,3 +475,17 @@ def test_coint_johansen_0lag():
     data = pd.concat([x, y], axis=1)
     result = coint_johansen(data, det_order=-1, k_ar_diff=0)
     assert result.eig.shape == (2,)
+
+
+def test_johansen_result_aliases_and_rkt_meth():
+    # trace_stat/max_eig_stat/*_crit_vals are documented aliases for
+    # lr1/lr2/cvt/cvm; rkt and meth have no alias and were never touched
+    # by any existing test.
+    res = coint_johansen(dta, 1, 2)
+
+    assert res.trace_stat is res.lr1
+    assert res.max_eig_stat is res.lr2
+    assert res.trace_stat_crit_vals is res.cvt
+    assert res.max_eig_stat_crit_vals is res.cvm
+    assert res.meth == "johansen"
+    assert res.rkt.shape == res.r0t.shape

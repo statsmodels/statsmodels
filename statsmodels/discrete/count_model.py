@@ -32,25 +32,25 @@ from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 _doc_zi_params = """
-    exog_infl : array_like or None
-        Explanatory variables for the binary inflation model, i.e. for
+    exog_infl : array_like or None, optional
+        Explanatory variables for the binary inflation model, i.e., for
         mixing probability model. If None, then a constant is used.
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    inflation : {'logit', 'probit'}
+    inflation : {'logit', 'probit'}, optional
         The model for zero inflation, either Logit (default) or Probit.
     """
 
 
 class GenericZeroInflated(CountModel):
-    __doc__ = """
+    __doc__ = f"""
     Generic Zero-Inflated Model
 
-    {params}
-    {extra_params}
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -60,10 +60,7 @@ class GenericZeroInflated(CountModel):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=_doc_zi_params + base._missing_param_doc,
-    )
+    """
 
     def __init__(
         self,
@@ -100,7 +97,7 @@ class GenericZeroInflated(CountModel):
             self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]), self.exog_infl)
             self._hessian_inflate = self._hessian_probit
         else:
-            raise ValueError("inflation == %s, which is not handled" % inflation)
+            raise ValueError(f"inflation == {inflation}, which is not handled")
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
@@ -109,7 +106,7 @@ class GenericZeroInflated(CountModel):
             raise ValueError("exog and exog_infl have different number of"
                              "observation. `missing` handling is not supported")
 
-        infl_names = ["inflate_%s" % i for i in self.model_infl.data.param_names]
+        infl_names = [f"inflate_{i}" for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
@@ -307,7 +304,7 @@ class GenericZeroInflated(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         params_infl = params[: self.k_inflate]
@@ -349,6 +346,20 @@ class GenericZeroInflated(CountModel):
         return np.hstack((dldw, dldp))
 
     def score(self, params):
+        """
+        Generic Zero-Inflated model score (gradient) vector of the log-likelihood.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
+        """
         return self.score_obs(params).sum(0)
 
     def _hessian_main(self, params):
@@ -428,9 +439,6 @@ class GenericZeroInflated(CountModel):
         hess : ndarray, (k_vars, k_vars)
             The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
-
-        Notes
-        -----
         """
         hess_arr_main = self._hessian_main(params)
         hess_arr_infl = self._hessian_inflate(params)
@@ -459,25 +467,25 @@ class GenericZeroInflated(CountModel):
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        exog_infl : ndarray, optional
+        exog_infl : array_like, optional
             Explanatory variables for the zero-inflation model.
             ``exog_infl`` has to be provided if ``exog`` was provided unless
             ``exog_infl`` in the model is only a constant.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
+        exposure : array_like, optional
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
             Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
+        which : str, optional
             Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x). This
@@ -487,7 +495,7 @@ class GenericZeroInflated(CountModel):
               model.
             - 'mean-main' : mean of the main count model
             - 'prob-main' : probability of selecting the main model.
-                The probability of zero inflation is ``1 - prob-main``.
+              The probability of zero inflation is ``1 - prob-main``.
             - 'mean-nonzero' : expected value conditional on having observation
               larger than zero, E(y | X, y>0)
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
@@ -495,9 +503,14 @@ class GenericZeroInflated(CountModel):
               for y_values if those are provided. This is a multivariate
               return (2-dim when predicting for several observations).
 
-        y_values : array_like
+        y_values : array_like, optional
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
+
+        Returns
+        -------
+        ndarray
+            The predicted values, whose interpretation depends on `which`.
         """
         no_exog = False
         if exog is None:
@@ -583,7 +596,7 @@ class GenericZeroInflated(CountModel):
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
         else:
-            raise ValueError("which = %s is not available" % which)
+            raise ValueError(f"which = {which} is not available")
 
     def _derivative_predict(self, params, exog=None, transform="dydx"):
         """NotImplemented"""
@@ -600,13 +613,14 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        The value of the derivative of the expected endog with respect
-        to the parameter vector.
+        ndarray
+            The value of the derivative of the expected endog with respect
+            to the parameter vector.
         """
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
@@ -630,12 +644,12 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray, 2-D
             The derivative of the score_obs with respect to endog.
         """
         raise NotImplementedError
@@ -661,11 +675,11 @@ class GenericZeroInflated(CountModel):
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
-    __doc__ = """
+    __doc__ = f"""
     Poisson Zero-Inflated Model
 
-    {params}
-    {extra_params}
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -675,10 +689,7 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=_doc_zi_params + base._missing_param_doc,
-    )
+    """
 
     def __init__(
         self,
@@ -786,7 +797,8 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         Returns
         -------
-        Predicted conditional variance.
+        ndarray
+            Predicted conditional variance.
         """
         w = prob_infl
         var_ = (1 - w) * mu * (1 + w * mu)
@@ -809,19 +821,19 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        exog_infl : ndarray, optional
+        exog_infl : array_like, optional
             Explanatory variables for the zero-inflation model.
             ``exog_infl`` has to be provided if ``exog`` was provided unless
             ``exog_infl`` in the model is only a constant.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
+        exposure : array_like, optional
             Log(exposure) is added to the linear predictor of the mean
             function with coefficient equal to 1. If exposure is specified,
             then it will be logged by the method. The user does not need to
@@ -831,7 +843,9 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         Returns
         -------
-        Instance of frozen scipy distribution subclass.
+        scipy.stats.distributions.rv_frozen
+            Frozen random variable instance representing the distribution
+            implied by the model and the given parameters.
         """
         mu = self.predict(
             params,
@@ -870,14 +884,12 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    p : scalar
-        P denotes parameterizations for ZIGP regression.
     """.format(
         params=base._model_params_doc,
         extra_params=_doc_zi_params
-        + """p : float
-        dispersion power parameter for the GeneralizedPoisson model.  p=1 for
-        ZIGP-1 and p=2 for ZIGP-2. Default is p=2
+        + """p : int, optional
+        Dispersion power parameter for the GeneralizedPoisson model. p=1
+        for ZIGP-1 and p=2 for ZIGP-2. Default is p=2.
     """
         + base._missing_param_doc,
     )
@@ -962,7 +974,8 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
         Returns
         -------
-        Predicted conditional variance.
+        ndarray
+            Predicted conditional variance.
         """
         alpha = params[-1]
         w = prob_infl
@@ -1010,15 +1023,12 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    p : scalar
-        P denotes parameterizations for ZINB regression. p=1 for ZINB-1 and
-    p=2 for ZINB-2. Default is p=2
     """.format(
         params=base._model_params_doc,
         extra_params=_doc_zi_params
-        + """p : float
-        dispersion power parameter for the NegativeBinomialP model.  p=1 for
-        ZINB-1 and p=2 for ZINM-2. Default is p=2
+        + """p : int, optional
+        Dispersion power parameter for the NegativeBinomialP model. p=1
+        for ZINB-1 and p=2 for ZINB-2. Default is p=2.
     """
         + base._missing_param_doc,
     )
@@ -1100,7 +1110,8 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
         Returns
         -------
-        Predicted conditional variance.
+        ndarray
+            Predicted conditional variance.
         """
         alpha = params[-1]
         w = prob_infl
@@ -1136,7 +1147,56 @@ class ZeroInflatedResults(CountResults):
                        offset=None, which="mean", average=False,
                        agg_weights=None, y_values=None,
                        transform=True, row_labels=None):
+        """
+        Compute prediction results for zero-inflated model.
 
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        exog_infl : array_like, optional
+            Explanatory variables for the zero-inflation model.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear predictor of the mean
+            function with coefficient equal to 1.
+        offset : array_like, optional
+            Offset is added to the linear predictor of the mean function
+            with coefficient equal to 1.
+        which : str, optional
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            See the model.predict docstring.
+        average : bool, optional
+            If average is True, then the mean prediction is computed, that
+            is, predictions are computed for individual exog and then the
+            average over observation is used.
+            If average is False, then the results are the predictions for
+            all observations, i.e., same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
+        y_values : array_like, optional
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        row_labels : list of str, optional
+            If row_labels are provided, then they will replace the
+            generated labels.
+
+        Returns
+        -------
+        PredictionResultsDelta
+            The prediction results instance contains prediction and
+            prediction variance and can on demand calculate confidence
+            intervals and summary tables for the prediction of the mean
+            and of new observations.
+        """
         import statsmodels.base._prediction_inference as pred
 
         pred_kwds = {
@@ -1182,7 +1242,7 @@ class ZeroInflatedResults(CountResults):
         for OLS. This is a measure for exog outliers but does not take
         specific features of the model into account.
         """
-        # same as sumper in DiscreteResults, only added for docstring
+        # same as super in DiscreteResults, only added for docstring
         from statsmodels.stats.outliers_influence import MLEInfluence
         return MLEInfluence(self)
 

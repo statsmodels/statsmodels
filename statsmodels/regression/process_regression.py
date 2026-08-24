@@ -239,18 +239,18 @@ class ProcessMLE(base.LikelihoodModel):
         The design matrix for the scaling structure
     exog_smooth : array_like
         The design matrix for the smoothness structure
-    exog_noise : array_like
+    exog_noise : None or array_like
         The design matrix for the additive white noise. The
         linear predictor is the log of the white noise standard
         deviation.  If None, there is no additive noise (the
         process is observed directly).
-    time : array_like (1-dimensional)
+    time : array_like, 1d
         The univariate index values, used to calculate distances
         between observations in the same group, which determines
         their correlations.
-    groups : array_like (1-dimensional)
+    groups : array_like, 1d
         The group values.
-    cov : a ProcessCovariance instance
+    cov : ProcessCovariance instance, optional
         Defaults to GaussianCovariance.
     **kwargs
         Additional keyword arguments passed to the model constructor.
@@ -288,17 +288,17 @@ class ProcessMLE(base.LikelihoodModel):
         if hasattr(exog, "columns"):
             xnames = list(exog.columns)
         else:
-            xnames = ["Mean%d" % j for j in range(exog.shape[1])]
+            xnames = [f"Mean{j:d}" for j in range(exog.shape[1])]
 
         if hasattr(exog_scale, "columns"):
             xnames += list(exog_scale.columns)
         else:
-            xnames += ["Scale%d" % j for j in range(exog_scale.shape[1])]
+            xnames += [f"Scale{j:d}" for j in range(exog_scale.shape[1])]
 
         if hasattr(exog_smooth, "columns"):
             xnames += list(exog_smooth.columns)
         else:
-            xnames += ["Smooth%d" % j for j in range(exog_smooth.shape[1])]
+            xnames += [f"Smooth{j:d}" for j in range(exog_smooth.shape[1])]
 
         if self._has_noise:
             if hasattr(exog_noise, "columns"):
@@ -306,7 +306,7 @@ class ProcessMLE(base.LikelihoodModel):
                 xnames += list(exog_noise.columns)
             else:
                 # If numpy-like, create default names
-                xnames += ["Noise%d" % j for j in range(exog_noise.shape[1])]
+                xnames += [f"Noise{j:d}" for j in range(exog_noise.shape[1])]
 
         self.data.param_names = xnames
 
@@ -349,6 +349,45 @@ class ProcessMLE(base.LikelihoodModel):
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
+        """
+        Create a ProcessMLE model instance using a formula.
+
+        Parameters
+        ----------
+        formula : str
+            The formula for the mean structure, used to construct
+            `exog`.
+        data : array_like
+            The data to which the formulas are applied.
+        subset : array_like, optional
+            Not currently supported, must be None if provided.
+        drop_cols : array_like, optional
+            Not currently supported, must be None if provided.
+        scale_formula : str
+            The formula for the scaling structure (required keyword
+            argument).
+        smooth_formula : str
+            The formula for the smoothness structure (required
+            keyword argument).
+        noise_formula : None or str, optional
+            The formula for the (log) standard deviation of the
+            additive white noise (optional keyword argument). If not
+            provided, the model does not include additive white
+            noise.
+        time : array_like or str
+            The univariate index values used to calculate distances
+            between observations in the same group (required keyword
+            argument). If a string, this is the name of a column in
+            `data`.
+        groups : array_like or str
+            The group values (required keyword argument). If a
+            string, this is the name of a column in `data`.
+
+        Returns
+        -------
+        ProcessMLE
+            The model instance.
+        """
 
         if "scale_formula" in kwargs:
             scale_formula = kwargs["scale_formula"]
@@ -637,11 +676,11 @@ class ProcessMLE(base.LikelihoodModel):
 
         Parameters
         ----------
-        start_params : array_like
+        start_params : array_like, optional
             Optional starting values.
-        method : str or array of str
+        method : str or list[str], optional
             Method or sequence of methods for scipy optimize.
-        maxiter : int
+        maxiter : int or array_like, optional
             The maximum number of iterations in the optimization.
         **kwargs
             Additional keyword arguments passed to the optimizer.
@@ -668,7 +707,7 @@ class ProcessMLE(base.LikelihoodModel):
 
         for j, meth in enumerate(method):
 
-            if meth not in ("powell",):
+            if meth != "powell":
 
                 def jac(x):
                     return -self.score(x)
@@ -693,9 +732,9 @@ class ProcessMLE(base.LikelihoodModel):
             if not f.success:
                 msg = "Fitting did not converge"
                 if jac is not None:
-                    msg += ", |gradient|=%.6f" % np.sqrt(np.sum(f.jac**2))
+                    msg += f", |gradient|={np.sqrt(np.sum(f.jac**2)):.6f}"
                 if j < len(method) - 1:
-                    msg += ", trying %s next..." % method[j + 1]
+                    msg += f", trying {method[j + 1]} next..."
                 warnings.warn(msg, ConvergenceWarning, stacklevel=2)
 
             if np.isfinite(f.x).all():
@@ -735,10 +774,10 @@ class ProcessMLE(base.LikelihoodModel):
         smooth_params : array_like
             The regression parameters for the smoothing part
             of the covariance structure.
-        scale_data : DataFrame
+        scale_data : array_like
             The data used to determine the scale parameter,
             must have len(time) rows.
-        smooth_data : DataFrame
+        smooth_data : array_like
             The data used to determine the smoothness parameter,
             must have len(time) rows.
 
@@ -782,7 +821,7 @@ class ProcessMLE(base.LikelihoodModel):
         params : array_like
             The model parameters, may be truncated to include only mean
             parameters.
-        exog : array_like
+        exog : array_like, optional
             The design matrix for the mean structure.  If not provided,
             the model's design matrix is used.
         *args
@@ -833,7 +872,29 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
             self.k_noise = self.model.exog_noise.shape[1]
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
+        """
+        Return predicted values for the mean structure.
 
+        Parameters
+        ----------
+        exog : array_like, optional
+            The design matrix for the mean structure. If None, the
+            model's design matrix is used.
+        transform : bool, optional
+            Not used, retained for compatibility with the parent
+            class. A warning is issued if set to False.
+        *args
+            Additional positional arguments, accepted for API
+            compatibility, but ignored.
+        **kwargs
+            Additional keyword arguments, accepted for API
+            compatibility, but ignored.
+
+        Returns
+        -------
+        ndarray
+            The predicted values of the mean structure.
+        """
         if not transform:
             warnings.warn(
                 "'transform=False' is ignored in predict", ValueWarning, stacklevel=2
@@ -881,12 +942,32 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         )
 
     def covariance_group(self, group):
+        """
+        Returns the fitted covariance matrix for a group.
 
+        Parameters
+        ----------
+        group : object
+            The group label, as it appears in the `groups` array or
+            column that was used to fit the model.
+
+        Returns
+        -------
+        ndarray
+            The fitted covariance matrix for the observations
+            belonging to `group`.
+
+        Raises
+        ------
+        ValueError
+            If `group` is not one of the group labels used to fit the
+            model.
+        """
         # Check if the group exists, since _groups_ix is a
         # DefaultDict use len instead of catching a KeyError.
         ix = self.model._groups_ix[group]
         if len(ix) == 0:
-            msg = "Group '%s' does not exist" % str(group)
+            msg = f"Group '{group!s}' does not exist"
             raise ValueError(msg)
 
         scale_data = self.model.exog_scale[ix, :]
@@ -903,7 +984,30 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         )
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
+        """
+        Summarize the fitted Gaussian process regression model.
 
+        Parameters
+        ----------
+        yname : str, optional
+            Not used, retained for compatibility with other summary
+            methods.
+        xname : list[str], optional
+            Not used, retained for compatibility with other summary
+            methods.
+        title : str, optional
+            Title for the summary. If not None, this replaces the
+            default title.
+        alpha : float, optional
+            Significance level for the confidence intervals.
+
+        Returns
+        -------
+        Summary
+            A summary instance that holds the summary tables and
+            text, which can be printed or converted to various output
+            formats.
+        """
         df = pd.DataFrame()
 
         typ = (
@@ -928,8 +1032,8 @@ class ProcessMLEResults(base.GenericLikelihoodModelResults):
         df["P>|t|"] = 2 * norm.sf(np.abs(df.tvalues))
 
         f = norm.ppf(1 - alpha / 2)
-        df["[%.3f" % (alpha / 2)] = df.coef - f * df["std err"]
-        df["%.3f]" % (1 - alpha / 2)] = df.coef + f * df["std err"]
+        df[f"[{alpha / 2:.3f}"] = df.coef - f * df["std err"]
+        df[f"{1 - alpha / 2:.3f}]"] = df.coef + f * df["std err"]
 
         df.index = self.model.data.param_names
 

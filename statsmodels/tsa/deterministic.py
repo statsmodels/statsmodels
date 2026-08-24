@@ -10,7 +10,7 @@ from statsmodels.compat.pandas import (
 
 from abc import ABC, abstractmethod
 import datetime as dt
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -29,8 +29,8 @@ from statsmodels.tsa.tsatools import freq_to_period
 if TYPE_CHECKING:
     from collections.abc import Hashable, Sequence
 
-DateLike = Union[dt.datetime, pd.Timestamp, np.datetime64]
-IntLike = Union[int, np.integer]
+DateLike = dt.datetime | pd.Timestamp | np.datetime64
+IntLike = int | np.integer
 
 
 START_BEFORE_INDEX_ERR = """\
@@ -84,7 +84,7 @@ class DeterministicTerm(ABC):
         index : index_like
             An index-like object. If not an index, it is converted to an
             index.
-        forecast_index : index_like
+        forecast_index : index_like, optional
             An Index or index-like object to use for the forecasts. If
             provided must have steps elements.
 
@@ -138,14 +138,8 @@ class DeterministicTerm(ABC):
             next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
             return pd.date_range(next_obs, freq=index.freq, periods=steps)
         elif isinstance(index, pd.RangeIndex):
-            assert isinstance(index, pd.RangeIndex)
-            try:
-                step = index.step
-                start = index.stop
-            except AttributeError:
-                # TODO: Remove after pandas min ver is 1.0.0+
-                step = index[-1] - index[-2] if len(index) > 1 else 1
-                start = index[-1] + step
+            step = index.step
+            start = index.stop
             stop = start + step * steps
             return pd.RangeIndex(start, stop, step=step)
         elif is_int_index(index) and np.all(np.diff(index) == 1):
@@ -174,7 +168,7 @@ class DeterministicTerm(ABC):
             oth_attr = other._eq_attr
             if len(own_attr) != len(oth_attr):
                 return False
-            return all(a == b for a, b in zip(own_attr, oth_attr))
+            return all(a == b for a, b in zip(own_attr, oth_attr, strict=True))
         else:
             return False
 
@@ -235,9 +229,9 @@ class TimeTrend(TimeTrendDeterministicTerm):
 
     Parameters
     ----------
-    constant : bool
+    constant : bool, optional
         Flag indicating whether a constant should be included.
-    order : int
+    order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
 
     See Also
@@ -282,6 +276,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
         TimeTrend
             The TimeTrend instance.
         """
+        trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
         constant = trend.startswith("c")
         order = 0
         if "tt" in trend:
@@ -325,7 +320,7 @@ class Seasonality(DeterministicTerm):
     ----------
     period : int
         The length of a full cycle. Must be >= 2.
-    initial_period : int
+    initial_period : int, optional
         The seasonal index of the first observation. 1-indexed so must
         be in {1, 2, ..., period}.
 
@@ -381,7 +376,7 @@ class Seasonality(DeterministicTerm):
 
         Parameters
         ----------
-        index : {DatetimeIndex, PeriodIndex}
+        index : DatetimeIndex or PeriodIndex
             An index with its frequency (`freq`) set.
 
         Returns
@@ -394,7 +389,7 @@ class Seasonality(DeterministicTerm):
             freq = index.freq
         elif isinstance(index, pd.DatetimeIndex):
             with _infer_freq_returns_offset():
-                freq = index.freq if index.freq else index.inferred_freq
+                freq = index.freq or index.inferred_freq
         else:
             raise TypeError("index must be a DatetimeIndex or PeriodIndex")
         if freq is None:
@@ -412,9 +407,7 @@ class Seasonality(DeterministicTerm):
     @property
     def _columns(self) -> list[str]:
         period = self._period
-        columns = []
-        for i in range(1, period + 1):
-            columns.append(f"s({i},{period})")
+        columns = [f"s({i},{period})" for i in range(1, period + 1)]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -474,7 +467,7 @@ class Fourier(FourierDeterministicTerm):
 
     Parameters
     ----------
-    period : int
+    period : float
         The length of a full cycle. Must be >= 2.
     order : int
         The number of Fourier components to include. Must be <= 2*period.
@@ -525,10 +518,11 @@ class Fourier(FourierDeterministicTerm):
     def _columns(self) -> list[str]:
         period = self._period
         fmt_period = d_or_f(period).strip()
-        columns = []
-        for i in range(1, self._order + 1):
-            for typ in ("sin", "cos"):
-                columns.append(f"{typ}({i},{fmt_period})")
+        columns = [
+            f"{typ}({i},{fmt_period})"
+            for i in range(1, self._order + 1)
+            for typ in ("sin", "cos")
+        ]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -667,10 +661,11 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
 
     @property
     def _columns(self) -> list[str]:
-        columns = []
-        for i in range(1, self._order + 1):
-            for typ in ("sin", "cos"):
-                columns.append(f"{typ}({i},freq={self._freq.freqstr})")
+        columns = [
+            f"{typ}({i},freq={self._freq.freqstr})"
+            for i in range(1, self._order + 1)
+            for typ in ("sin", "cos")
+        ]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -842,10 +837,11 @@ class CalendarSeasonality(CalendarDeterministicTerm):
 
     @property
     def _columns(self) -> list[str]:
-        columns = []
         count = self._supported[self._period][self._freq_str]
-        for i in range(count):
-            columns.append(f"s({self._freq_str}={i + 1}, period={self._period})")
+        columns = [
+            f"s({self._freq_str}={i + 1}, period={self._period})"
+            for i in range(count)
+        ]
         return columns
 
     @Appender(DeterministicTerm.in_sample.__doc__)
@@ -886,11 +882,11 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     ----------
     freq : str
         A string convertible to a pandas frequency.
-    constant : bool
+    constant : bool, optional
         Flag indicating whether a constant should be included.
-    order : int
+    order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
-    base_period : {str, pd.Timestamp}, default None
+    base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
         The base period to use when computing the time stamps. This value is
         treated as 1 and so all other time indices are defined as the number
         of periods since or before this time stamp. If not provided, defaults
@@ -977,7 +973,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             * "t": Linear time trend only
             * "ct": A constant and a time trend
             * "ctt": A constant, a time trend and a quadratic time trend
-        base_period : {str, pd.Timestamp}, default None
+        base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
             The base period to use when computing the time stamps. This value
             is treated as 1 and so all other time indices are defined as the
             number of periods since or before this time stamp. If not
@@ -985,9 +981,10 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
 
         Returns
         -------
-        TimeTrend
-            The TimeTrend instance.
+        CalendarTimeTrend
+            The CalendarTimeTrend instance.
         """
+        trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
         constant = trend.startswith("c")
         order = 0
         if "tt" in trend:
@@ -1060,25 +1057,25 @@ class DeterministicProcess:
 
     Parameters
     ----------
-    index : {Sequence[Hashable], pd.Index}
+    index : index_like
         The index of the process. Should usually be the "in-sample" index when
         used in forecasting applications.
-    period : {float, int}, default None
+    period : float or int, optional
         The period of the seasonal or fourier components. Must be an int for
         seasonal dummies. If not provided, freq is read from index if
         available.
-    constant : bool, default False
+    constant : bool, optional
         Whether to include a constant.
-    order : int, default 0
-        The order of the tim trend to include. For example, 2 will include
-        both linear and quadratic terms. 0 exclude time trend terms.
-    seasonal : bool = False
+    order : int, optional
+        The order of the time trend to include. For example, 2 will include
+        both linear and quadratic terms. 0 excludes time trend terms.
+    seasonal : bool, optional
         Whether to include seasonal dummies
-    fourier : int = 0
+    fourier : int, optional
         The order of the fourier terms to included.
-    additional_terms : Sequence[DeterministicTerm]
+    additional_terms : sequence of DeterministicTerm, optional
         A sequence of additional deterministic terms to include in the process.
-    drop : bool, default False
+    drop : bool, optional
         A flag indicating to check for perfect collinearity and to drop any
         linearly dependent terms.
 
@@ -1251,9 +1248,7 @@ you can pass additional components using the additional_terms input.""")
         index = self._index
         if not self._deterministic_terms:
             return pd.DataFrame(np.empty((index.shape[0], 0)), index=index)
-        raw_terms = []
-        for term in self._deterministic_terms:
-            raw_terms.append(term.in_sample(index))
+        raw_terms = [term.in_sample(index) for term in self._deterministic_terms]
 
         raw_terms = self._adjust_dummies(raw_terms)
         terms: pd.DataFrame = pd.concat(raw_terms, axis=1)
@@ -1297,9 +1292,10 @@ you can pass additional components using the additional_terms input.""")
         index = self._index
         if not self._deterministic_terms:
             return pd.DataFrame(np.empty((index.shape[0], 0)), index=index)
-        raw_terms = []
-        for term in self._deterministic_terms:
-            raw_terms.append(term.out_of_sample(steps, index, forecast_index))
+        raw_terms = [
+            term.out_of_sample(steps, index, forecast_index)
+            for term in self._deterministic_terms
+        ]
         terms: pd.DataFrame = pd.concat(raw_terms, axis=1)
         assert self._retain_cols is not None
         if terms.shape[1] != len(self._retain_cols):
@@ -1402,9 +1398,9 @@ you can pass additional components using the additional_terms input.""")
 
         Parameters
         ----------
-        start : {int, str, dt.datetime, pd.Timestamp, np.datetime64}
+        start : int, str, dt.datetime, pd.Timestamp, or np.datetime64
             The first observation.
-        stop : {int, str, dt.datetime, pd.Timestamp, np.datetime64}
+        stop : int, str, dt.datetime, pd.Timestamp, or np.datetime64
             The final observation. Inclusive to match most prediction
             function in statsmodels.
 
@@ -1419,7 +1415,7 @@ support extension. Only PeriodIndex, DatetimeIndex with a frequency, \
 RangeIndex, and integral Indexes that start at 0 and have only unit \
 differences can be extended when producing out-of-sample forecasts.
 """)
-        if type(self._index) in (pd.RangeIndex,) or is_int_index(self._index):
+        if type(self._index) is pd.RangeIndex or is_int_index(self._index):
             start = required_int_like(start, "start")
             stop = required_int_like(stop, "stop")
             # Add 1 to ensure that the end point is inclusive

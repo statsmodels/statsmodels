@@ -82,7 +82,7 @@ class MANOVA(Model):
         Parameters
         ----------
         %(hypotheses_doc)s
-        skip_intercept_test : bool
+        skip_intercept_test : bool, optional
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
@@ -134,7 +134,7 @@ class MANOVA(Model):
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):
-                    name = "x%d" % (i)
+                    name = f"x{i:d}"
                     L = np.zeros([1, self.exog.shape[1]])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])

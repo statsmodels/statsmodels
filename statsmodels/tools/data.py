@@ -6,6 +6,12 @@ from statsmodels.compat.pandas import infer_freq
 import numpy as np
 import pandas as pd
 
+try:
+    import polars as pl
+    _POLARS_TYPES = (pl.DataFrame, pl.Series)
+except ImportError:
+    _POLARS_TYPES = ()
+
 
 def _check_period_index(x, freq="M"):
     from pandas import DatetimeIndex, PeriodIndex
@@ -65,22 +71,26 @@ def interpret_data(data, colnames=None, rownames=None):
     ----------
     data : array_like
         Data to convert.
-    colnames : sequence or None
+    colnames : sequence or None, optional
         Column names. May be part of the data structure.
-    rownames : sequence or None
+    rownames : sequence or None, optional
         Row names. May be part of the data structure.
 
     Returns
     -------
-    (values, colnames, rownames) : (homogeneous ndarray, list)
-        Converted values, column names, and row names.
+    values : ndarray
+        Converted, homogeneous data values.
+    colnames : list
+        Column names.
+    rownames : sequence or None
+        Row names, if available.
 
     """
     if isinstance(data, np.ndarray):
         values = np.asarray(data)
 
         if colnames is None:
-            colnames = ["Y_%d" % i for i in range(values.shape[1])]
+            colnames = [f"Y_{i:d}" for i in range(values.shape[1])]
     elif is_data_frame(data):
         # XXX: hack
         data = data.dropna()
@@ -163,15 +173,35 @@ def _as_array_with_name(obj, default_name):
     obj : array_like
         Array, or pandas Series, to convert to an array.
     default_name : str
-        The default name to return in case the object isn't a pd.Series or has
+        The default name to return in case the object isn't a Series or has
         no name attribute.
 
     Returns
     -------
-    array_and_name : tuple[np.ndarray, str]
+    array_and_name : tuple (ndarray, str)
         The data cast to an ndarray and the series name or None.
 
     """
     if is_series(obj):
         return (np.asarray(obj), obj.name)
     return (np.asarray(obj), default_name)
+
+
+def _to_pandas(obj):
+    """
+    Convert a Polars DataFrame/Series to a pandas object via .to_pandas().
+
+    Parameters
+    ----------
+    obj : array_like
+        Input object to potentially convert
+
+    Returns
+    -------
+    obj_converted : object
+        Returns a pandas DataFrame/Series if obj is a Polars DataFrame/Series.
+        Returns the original object unchanged otherwise.
+    """
+    if _POLARS_TYPES and isinstance(obj, _POLARS_TYPES):
+        return obj.to_pandas()
+    return obj

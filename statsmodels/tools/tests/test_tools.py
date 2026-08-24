@@ -5,6 +5,7 @@ Test functions for models.tools
 from statsmodels.compat.pandas import assert_frame_equal, assert_series_equal
 from statsmodels.compat.python import lrange
 
+import itertools
 import string
 
 import numpy as np
@@ -110,6 +111,36 @@ class TestTools:
         dfc.insert(0, "const", np.ones(3))
         assert_frame_equal(dfc, output)
 
+    def test_drop_missing(self):
+        _y = np.array([[1.0, 2.0, np.nan], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
+        # axis=1 looks for missing values across the columns of each row, so
+        # the row holding the nan is dropped
+        assert_almost_equal(
+            tools.drop_missing(_y, axis=1),
+            np.array([[4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]),
+        )
+        # axis=0 looks across the rows of each column, so the column holding
+        # the nan is dropped instead
+        assert_almost_equal(
+            tools.drop_missing(_y, axis=0),
+            np.array([[1.0, 2.0], [4.0, 5.0], [7.0, 8.0]]),
+        )
+
+    def test_drop_missing_x(self):
+        _y = np.array([[1.0, 2.0], [3.0, np.nan], [5.0, 6.0]])
+        _x = np.array([[1.0, np.nan], [1.0, 1.0], [1.0, 1.0]])
+        y, x = tools.drop_missing(_y, _x, axis=0)
+        assert_almost_equal(y, np.array([[1.0], [3.0], [5.0]]))
+        assert_almost_equal(x, np.array([[1.0], [1.0], [1.0]]))
+
+        # axis=1 with two variables: a row is dropped if either _y or _x
+        # is missing anywhere in that row
+        _y = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        _x = np.array([[1.0, 1.0], [1.0, np.nan], [1.0, 1.0]])
+        y, x = tools.drop_missing(_y, _x, axis=1)
+        assert_almost_equal(y, np.array([[1.0, 2.0], [5.0, 6.0]]))
+        assert_almost_equal(x, np.array([[1.0, 1.0], [1.0, 1.0]]))
+
     def test_recipr(self):
         X = np.array([[2, 1], [-1, 0]])
         Y = tools.recipr(X)
@@ -187,6 +218,21 @@ def test_estimable():
             isestimable(np.ones((n,)), X)
     with pytest.raises(ValueError):
         isestimable(np.eye(4), X)
+
+
+@pytest.mark.parametrize("method", ["ip", "qr", "svd"])
+def test_matrix_rank_column_order(method):
+    # the rank of a matrix is a property of its column space, so it does not
+    # depend on the order the columns are given in. The regressor here is
+    # measured on a much larger scale than the intercept, which is the case
+    # that separates a tolerance taken from the leading diagonal element of
+    # the R matrix from one taken from the largest.
+    x = 1e3 * np.arange(1.0, 41.0) / 7.0
+    exog = np.column_stack((np.ones(40), x, 2.0 * x))
+
+    for cols in itertools.permutations(range(exog.shape[1])):
+        rank = tools.matrix_rank(exog[:, list(cols)], method=method)
+        assert_equal(rank, 2, err_msg=f"column order {cols}")
 
 
 def test_pandas_const_series():

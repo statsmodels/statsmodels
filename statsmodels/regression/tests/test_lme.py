@@ -1,9 +1,8 @@
 """Tests for linear mixed effects models."""
-
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -18,6 +17,7 @@ import pytest
 from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
+from statsmodels.iolib.summary2 import Summary
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
@@ -51,7 +51,7 @@ class R_Results:
 
     def __init__(self, meth, irfs, ds_ix):
 
-        bname = "_%s_%s_%d" % (meth, irfs, ds_ix)
+        bname = f"_{meth}_{irfs}_{ds_ix:d}"
 
         self.coef = getattr(lme_r_results, "coef" + bname)
         self.vcov_r = getattr(lme_r_results, "vcov" + bname)
@@ -65,10 +65,10 @@ class R_Results:
             self.ranef_condvar = np.atleast_2d(self.ranef_condvar)
 
         # Load the data file
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        with open(fname, encoding="utf-8") as fid:
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath(f"lme{ds_ix:02d}.csv")
+        with Path(fname).open(encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]
@@ -237,6 +237,8 @@ class TestMixedLM:
         rslt.profile_re(
             "b", vtype="vc", dist_low=0.5, num_low=3, dist_high=0.5, num_high=3
         )
+        with pytest.raises(ValueError, match="vtype"):
+            rslt.profile_re(0, vtype="not-a-vtype")
 
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and
@@ -379,9 +381,9 @@ class TestMixedLM:
 
     def test_sparse(self):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
 
         # Dense
         data = pd.read_csv(fname)
@@ -417,9 +419,9 @@ class TestMixedLM:
         # Comments below are R code used to extract the numbers used
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -473,9 +475,9 @@ class TestMixedLM:
         # Comments below are the R code used to extract the constants
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -538,9 +540,9 @@ class TestMixedLM:
         # r = lmer(strength ~ (1|batch) + (1|batch:cask), data=data,
         #          reml=FALSE)
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
         data = pd.read_csv(fname)
         vcf = {"cask": "0 + cask"}
 
@@ -677,7 +679,7 @@ class TestMixedLM:
         # Fit with a formula, passing groups as the actual values.
         df = pd.DataFrame({"endog": endog})
         for k in range(exog.shape[1]):
-            df["exog%d" % k] = exog[:, k]
+            df[f"exog{k:d}"] = exog[:, k]
         df["exog_re"] = exog_re
         fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
         re_fml = "0 + exog_re"
@@ -886,9 +888,9 @@ def do1(reml, irf, ds_ix):
 # ------------------------------------------------------------------
 
 # Run all the tests against R
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, "results")
-fnames = os.listdir(rdir)
+cur_dir = Path(__file__).resolve().parent
+rdir = Path(cur_dir).joinpath("results")
+fnames = [p.name for p in rdir.iterdir()]
 fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
 
@@ -916,7 +918,7 @@ def test_mixed_lm_wrapper():
     # Fit with a formula, passing groups as the actual values.
     df = pd.DataFrame({"endog": endog})
     for k in range(exog.shape[1]):
-        df["exog%d" % k] = exog[:, k]
+        df[f"exog{k:d}"] = exog[:, k]
     df["exog_re"] = exog_re
     fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
     re_fml = "~ exog_re"
@@ -1057,6 +1059,40 @@ def test_handle_missing():
                 assert_equal(len(result1.fittedvalues), result1.nobs)
 
 
+def test_from_formula_missing_kwarg_forwarded():
+    # GH: MixedLM.from_formula captured its own `missing` argument but
+    # never forwarded it to Model.from_formula's **kwargs. That meant the
+    # parent class's own default ("drop") was silently used regardless of
+    # what the caller passed, which desynced the already-computed `groups`
+    # array (built from the un-dropped data) from the row-dropped
+    # exog/endog and crashed with a confusing, unrelated IndexError during
+    # fit() instead of raising a clear error about the missing data.
+    rs = np.random.RandomState(23423)
+    n = 50
+    df = pd.DataFrame(
+        {
+            "y": rs.normal(size=n),
+            "x": rs.normal(size=n),
+            "g": np.repeat(np.arange(10), 5),
+        }
+    )
+    df.loc[0, "y"] = np.nan
+
+    for kwargs in ({}, {"missing": "none"}, {"missing": "raise"}):
+        with pytest.raises(Exception) as excinfo:
+            MixedLM.from_formula("y ~ x", groups="g", data=df, **kwargs)
+        # Before the fix this raised IndexError from misaligned groups vs.
+        # exog/endog instead of a clear missing-data error.
+        assert not isinstance(excinfo.value, IndexError)
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df, missing="drop")
+    assert model.exog.shape[0] == n - 1
+    assert model.endog.shape[0] == n - 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.fit()
+
+
 def test_summary_col():
     from statsmodels.iolib.summary2 import summary_col
 
@@ -1156,7 +1192,7 @@ def test_random_effects_getters():
         y.append(yy)
         x.append(xx)
         z.append(zz)
-        g.append(["g%d" % i] * m)
+        g.append([f"g{i:d}"] * m)
 
     y = np.concatenate(y)
     x = np.concatenate(x)
@@ -1192,12 +1228,12 @@ def test_random_effects_getters():
     result = model.fit()
 
     ref = result.random_effects
-    b0 = [ref["g%d" % k][0:2] for k in range(ng)]
+    b0 = [ref[f"g{k:d}"][0:2] for k in range(ng)]
     b0 = np.asarray(b0)
     assert np.corrcoef(b0[:, 0], b[:, 0])[0, 1] > 0.8
     assert np.corrcoef(b0[:, 1], b[:, 1])[0, 1] > 0.8
 
-    cf0 = [ref["g%d" % k][2:6] for k in range(ng)]
+    cf0 = [ref[f"g{k:d}"][2:6] for k in range(ng)]
     cf0 = np.asarray(cf0)
     for k in range(4):
         assert np.corrcoef(cf0[:, k], cc[:, k])[0, 1] > 0.8
@@ -1232,7 +1268,10 @@ def check_smw_solver(p, q, r, s):
     y1 = f(x)
     assert_allclose(y1, y2)
 
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
+    A_sp = sparse.csr_array(A)
+    AtA_sp = sparse.csr_array(AtA)
+
+    f = _smw_solver(s, A_sp, AtA_sp, Qi, di)
     y1 = f(x)
     assert_allclose(y1, y2)
 
@@ -1408,3 +1447,87 @@ def test_fit_unsupported_kwargs_warns():
     runtime_warnings = [x for x in w if issubclass(x.category, RuntimeWarning)]
     assert len(runtime_warnings) == 1
     assert "not used by MixedLM.fit" in str(runtime_warnings[0].message)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    pid = np.repeat([0, 1], 5)
+    x0 = np.repeat([1], 10)
+    x1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]
+    x2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]
+    y = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    df = pd.DataFrame({"y": y, "pid": pid, "x0": x0, "x1": x1, "x2": x2})
+    endog = df["y"].values
+    exog = df[["x0", "x1", "x2"]].values
+    groups = df["pid"].values
+    res = MixedLM(endog, exog, groups=groups).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_mixedlm_t_test():
+    # MixedLMResults.t_test overrides the base implementation to restrict
+    # t-tests to fixed-effects parameters (padding the random-effects
+    # covariance parameters with zero restrictions internally), but this
+    # override had no test coverage.
+    rs = np.random.RandomState(12345)
+    n_groups, group_size = 30, 10
+    n = n_groups * group_size
+    groups = np.repeat(np.arange(n_groups), group_size)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    res = MixedLM(endog, exog, groups).fit()
+
+    # An identity r_matrix over the fixed effects reproduces fe_params and
+    # bse_fe exactly.
+    tt = res.t_test(np.eye(res.k_fe))
+    assert_allclose(tt.effect, res.fe_params)
+    assert_allclose(tt.sd, res.bse_fe)
+    assert_allclose(tt.tvalue, res.fe_params / res.bse_fe)
+
+    # A contrast that is a linear combination of fixed effects should match
+    # a manual computation.
+    contrast = np.array([[1.0, -1.0, 0.0]])
+    tt_contrast = res.t_test(contrast)
+    expected_effect = res.fe_params[0] - res.fe_params[1]
+    assert_allclose(tt_contrast.effect, [expected_effect])
+
+    # r_matrix must have exactly k_fe columns.
+    with pytest.raises(ValueError, match=f"should have {res.k_fe:d} columns"):
+        res.t_test(np.eye(res.k_fe + 1))
+
+
+def test_predict_reflects_only_fixed_effects():
+    rs = np.random.RandomState(2024)
+    n_groups, n_per_group = 8, 12
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    mod = MixedLM(endog, exog, groups)
+    res = mod.fit()
+
+    # predict() is documented to reflect only the fixed-effects mean
+    # structure: exog @ fe_params, closed form.
+    assert_allclose(mod.predict(res.params), exog @ res.fe_params)
+    assert_allclose(mod.predict(res.params), mod.predict(res.params_object))
+
+    # a MixedLMParams instance and custom exog are both accepted
+    new_exog = rs.standard_normal((5, 3))
+    assert_allclose(mod.predict(res.params_object, exog=new_exog),
+                    new_exog @ res.fe_params)
+
+    packed = np.concatenate([res.fe_params, [999.0]])
+    assert_allclose(mod.predict(packed), exog @ res.fe_params)

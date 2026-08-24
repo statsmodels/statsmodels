@@ -6,11 +6,10 @@ License: Simplified-BSD
 """
 from statsmodels.compat.pandas import deprecate_kwarg
 
-import warnings
-
 import numpy as np
 
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 from . import tools
 from .cfa_simulation_smoother import CFASimulationSmoother
@@ -28,7 +27,7 @@ class SimulationSmoother(KalmanSmoother):
 
     Parameters
     ----------
-    k_endog : {array_like, int}
+    k_endog : ndarray or int
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -37,7 +36,7 @@ class SimulationSmoother(KalmanSmoother):
         The dimension of a guaranteed positive definite covariance matrix
         describing the shocks in the measurement equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
-    simulation_smooth_results_class : class, optional
+    simulation_smooth_results_class : type, optional
         Default results class to use to save output of simulation smoothing.
         Default is `SimulationSmoothResults`. If specified, class must extend
         from `SimulationSmoothResults`.
@@ -164,11 +163,13 @@ class SimulationSmoother(KalmanSmoother):
         simulator : SimulationSmoothResults, optional
             An existing simulator to reuse. If not specified, a new
             simulator is created using `rng`.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used. Only used if `simulator` is not provided.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used. Only used if `simulator` is
+            not provided.
         return_simulator : bool, optional
             Whether or not to also return the underlying simulator instance.
             Default is False.
@@ -200,11 +201,12 @@ class SimulationSmoother(KalmanSmoother):
         ----------
         nsimulations : int
             The number of observations to simulate.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
 
         Returns
         -------
@@ -244,7 +246,7 @@ class SimulationSmoother(KalmanSmoother):
             based on the Cholesky Factor Algorithm (CFA) approach. The CFA
             approach is not applicable to all state space models, but can be
             faster for the cases in which it is supported.
-        results_class : class, optional
+        results_class : type, optional
             Default results class to use to save output of simulation
             smoothing. Default is `SimulationSmoothResults`. If specified,
             class must extend from `SimulationSmoothResults`.
@@ -252,30 +254,31 @@ class SimulationSmoother(KalmanSmoother):
             The prefix of the datatype. Usually only used internally.
         nobs : int, optional
             The number of observations to simulate. If set to anything other
-            than -1, only simulation will be performed (i.e. simulation
+            than -1, only simulation will be performed (i.e., simulation
             smoothing will not be performed), so that only the `generated_obs`
             and `generated_state` attributes will be available. Default is -1,
             which uses the number of observations in the model.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
         **kwargs
             Additional keyword arguments, used to set the simulation output.
-            See `set_simulation_output` for more details.
+            See `get_simulation_output` for more details.
 
         Returns
         -------
         SimulationSmoothResults
             Object holding the output of the simulation smoother.
         """
-        method = method.lower()
+        method = string_like(method, "method", options=("kfs", "cfa"))
 
         # Short-circuit for CFA
         if method == "cfa":
@@ -285,11 +288,6 @@ class SimulationSmoother(KalmanSmoother):
                     " vector using the CFA simulation smoother."
                 )
             return CFASimulationSmoother(self)
-        elif method != "kfs":
-            raise ValueError(
-                'Invalid simulation smoother method "%s". Valid'
-                ' methods are "kfs" or "cfa".' % method
-            )
 
         # Set the class to be the default results class, if None provided
         if results_class is None:
@@ -352,12 +350,13 @@ class SimulationSmoothResults:
         A Statespace representation
     simulation_smoother : {{prefix}}SimulationSmoother object
         The Cython simulation smoother object with which to simulation smooth.
-    rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-        If `rng` is None or an int, a new ``Generator`` is created
-        (seeded with `rng` if an int is given). If `rng` is already a
-        ``Generator`` or ``RandomState`` instance, that instance is
-        used.
-    random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         .. deprecated:: 0.15
 
            random_state has been deprecated. In-line with SPEC-007, use
@@ -415,7 +414,6 @@ class SimulationSmoothResults:
         self._simulated_state = None
         self._simulated_measurement_disturbance = None
         self._simulated_state_disturbance = None
-        self._simulated_state_disturbance = None
 
     @property
     def simulation_output(self):
@@ -465,9 +463,6 @@ class SimulationSmoothResults:
 
         Used to construct `generated_obs`.
 
-        Notes
-        -----
-
         .. math::
 
            \varepsilon_t^+ ~ N(0, H_t)
@@ -487,9 +482,6 @@ class SimulationSmoothResults:
         r"""
         Randomly drawn state disturbance variates, used to construct
         `generated_state` and `generated_obs`.
-
-        Notes
-        -----
 
         .. math::
 
@@ -512,9 +504,6 @@ class SimulationSmoothResults:
         transition equations, given a random initial state draw and random
         disturbance draws.
 
-        Notes
-        -----
-
         .. math::
 
             y_t^+ = d_t + Z_t \alpha_t^+ + \varepsilon_t^+
@@ -531,9 +520,6 @@ class SimulationSmoothResults:
         Generated vector of states by iterating on the transition equation,
         given a random initial state draw and random disturbance draws.
 
-        Notes
-        -----
-
         .. math::
 
             \alpha_{t+1}^+ = c_t + T_t \alpha_t^+ + \eta_t^+
@@ -548,9 +534,6 @@ class SimulationSmoothResults:
     def simulated_state(self):
         r"""
         Random draw of the state vector from its conditional distribution.
-
-        Notes
-        -----
 
         .. math::
 
@@ -568,9 +551,6 @@ class SimulationSmoothResults:
         Random draw of the measurement disturbance vector from its conditional
         distribution.
 
-        Notes
-        -----
-
         .. math::
 
             \varepsilon ~ N(\hat \varepsilon, Var(\hat \varepsilon \mid Y_n))
@@ -587,9 +567,6 @@ class SimulationSmoothResults:
         Random draw of the state disturbance vector from its conditional
         distribution.
 
-        Notes
-        -----
-
         .. math::
 
             \eta ~ N(\hat \eta, Var(\hat \eta \mid Y_n))
@@ -604,11 +581,9 @@ class SimulationSmoothResults:
     def simulate(
         self,
         simulation_output=-1,
-        disturbance_variates=None,
         measurement_disturbance_variates=None,
         state_disturbance_variates=None,
         initial_state_variates=None,
-        pretransformed=None,
         pretransformed_measurement_disturbance_variates=None,
         pretransformed_state_disturbance_variates=None,
         pretransformed_initial_state_variates=False,
@@ -642,7 +617,7 @@ class SimulationSmoothResults:
             be shaped (`k_states` x 1), where `k_states` is the same as in the
             state space model. If unspecified, but the model has been
             initialized, then that initialization is used. Usually only
-            specified if results are to be replicated (e.g. to enforce a seed)
+            specified if results are to be replicated (e.g., to enforce a seed)
             or for testing; if not specified, random variates are drawn.
         pretransformed_measurement_disturbance_variates : bool, optional
             If `measurement_disturbance_variates` is provided, this flag
@@ -662,77 +637,18 @@ class SimulationSmoothResults:
             then it is assumed to contain draws from the standard Normal
             distribution that must be transformed using the `initial_state_cov`
             covariance matrix. Default is False.
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
-            If `rng` is None or an int, a new ``Generator`` is created
-            (seeded with `rng` if an int is given). If `rng` is already a
-            ``Generator`` or ``RandomState`` instance, that instance is
-            used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
                rng for passing a random number generator or seed.
-        disturbance_variates : bool, optional
-            Deprecated, please use pretransformed_measurement_shocks and
-            pretransformed_state_shocks instead.
-
-            .. deprecated:: 0.14.0
-
-               Use ``measurement_disturbance_variates`` and
-               ``state_disturbance_variates`` as replacements.
-
-        pretransformed : bool, optional
-            Deprecated, please use pretransformed_measurement_shocks and
-            pretransformed_state_shocks instead.
-
-            .. deprecated:: 0.14.0
-
-               Use ``pretransformed_measurement_disturbance_variates`` and
-               ``pretransformed_state_disturbance_variates`` as replacements.
         """
-        # Handle deprecated arguments
-        if disturbance_variates is not None:
-            msg = (
-                "`disturbance_variates` keyword is deprecated, use"
-                " `measurement_disturbance_variates` and"
-                " `state_disturbance_variates` instead."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if (
-                measurement_disturbance_variates is not None
-                or state_disturbance_variates is not None
-            ):
-                raise ValueError(
-                    "Cannot use `disturbance_variates` in"
-                    " combination with "
-                    " `measurement_disturbance_variates` or"
-                    " `state_disturbance_variates`."
-                )
-            if disturbance_variates is not None:
-                disturbance_variates = disturbance_variates.ravel()
-                n_mds = self.model.nobs * self.model.k_endog
-                measurement_disturbance_variates = disturbance_variates[:n_mds]
-                state_disturbance_variates = disturbance_variates[n_mds:]
-        if pretransformed is not None:
-            msg = (
-                "`pretransformed` keyword is deprecated, use"
-                " `pretransformed_measurement_disturbance_variates` and"
-                " `pretransformed_state_disturbance_variates` instead."
-            )
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if (
-                pretransformed_measurement_disturbance_variates is not None
-                or pretransformed_state_disturbance_variates is not None
-            ):
-                raise ValueError(
-                    "Cannot use `pretransformed` in combination with "
-                    " `pretransformed_measurement_disturbance_variates` or"
-                    " `pretransformed_state_disturbance_variates`."
-                )
-            if pretransformed is not None:
-                pretransformed_measurement_disturbance_variates = pretransformed
-                pretransformed_state_disturbance_variates = pretransformed
-
         if pretransformed_measurement_disturbance_variates is None:
             pretransformed_measurement_disturbance_variates = False
         if pretransformed_state_disturbance_variates is None:

@@ -24,6 +24,30 @@ def assert_maxabs(actual, expected, value):
     npt.assert_array_less(em.maxabs(actual, expected, None), value)
 
 
+def test_panel_sample_rng_default_is_generator():
+    # GH: rng=None used to be pre-converted to a random int before being
+    # handed to check_random_state(deprecated=True), so the default case
+    # always produced a legacy RandomState instead of a fresh Generator
+    # like every other canonical rng-accepting constructor in the
+    # library.
+    dgp = PanelSample(20, 2, 4, rng=None)
+    assert isinstance(dgp.random_state, np.random.Generator)
+
+
+def test_panel_sample_rng_types():
+    for rng in (0, np.random.RandomState(0), np.random.default_rng(0)):
+        dgp = PanelSample(20, 2, 4, rng=rng)
+        dgp.generate_panel()
+
+
+def test_panel_sample_rng_reproducible():
+    dgp1 = PanelSample(20, 2, 4, rng=0)
+    dgp2 = PanelSample(20, 2, 4, rng=0)
+    y1 = dgp1.generate_panel()
+    y2 = dgp2.generate_panel()
+    assert_almost_equal(y1, y2, decimal=13)
+
+
 def test_short_panel():
     # this checks that some basic statistical properties are satisfied by the
     # results, not verified results against other packages

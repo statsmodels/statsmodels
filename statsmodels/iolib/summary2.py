@@ -61,13 +61,13 @@ class Summary:
         ----------
         df : DataFrame
             The DataFrame to add to the summary table.
-        index : bool
+        index : bool, optional
             Reproduce the DataFrame row labels in summary table
-        header : bool
+        header : bool, optional
             Reproduce the DataFrame column labels in summary table
-        float_format : str
+        float_format : str, optional
             Formatting to float data columns
-        align : str
+        align : str, optional
             Data alignment (l/c/r)
         """
 
@@ -82,11 +82,11 @@ class Summary:
 
         Parameters
         ----------
-        array : ndarray
-            A 2D numpy array.
-        align : str
+        array : array_like
+            A 2D array of values.
+        align : str, optional
             Data alignment (l/c/r)
-        float_format : str
+        float_format : str, optional
             Formatting to array if type is float
         """
 
@@ -103,11 +103,11 @@ class Summary:
         d : dict
             Keys and values are automatically coerced to strings with str().
             Users are encouraged to format them before using add_dict.
-        ncols : int
+        ncols : int, optional
             Number of columns of the output table
-        align : str
+        align : str, optional
             Data alignment (l/c/r)
-        float_format : str
+        float_format : str, optional
             Formatting to float data columns
         """
 
@@ -170,16 +170,18 @@ class Summary:
         Parameters
         ----------
         results : Model results instance
-        alpha : float
-            significance level for the confidence intervals (optional)
-        float_format: str
-            Float formatting for summary of parameters (optional)
-        title : str
-            Title of the summary table (optional)
-        xname : list[str] of length equal to the number of parameters
-            Names of the independent variables (optional)
-        yname : str
-            Name of the dependent variable (optional)
+            The result instance to summarize.
+        alpha : float, optional
+            Significance level for the confidence intervals.
+        float_format : str, optional
+            Float formatting for summary of parameters.
+        title : str, optional
+            Title of the summary table.
+        xname : list of str, optional
+            Names of the independent variables. Must have length equal to
+            the number of parameters.
+        yname : str, optional
+            Name of the dependent variable.
         """
 
         param = summary_params(results, alpha=alpha, use_t=results.use_t)
@@ -250,9 +252,9 @@ class Summary:
 
         Parameters
         ----------
-        label : str
+        label : str, optional
             Label of the summary table that can be referenced
-            in a latex document (optional)
+            in a latex document.
         """
         tables = self.tables
         settings = self.settings
@@ -363,13 +365,13 @@ def summary_model(results):
 
     info = {}
     info["Model:"] = lambda x: x.model.__class__.__name__
-    info["Model Family:"] = lambda x: x.family.__class.__name__
+    info["Model Family:"] = lambda x: x.family.__class__.__name__
     info["Link Function:"] = lambda x: x.family.link.__class__.__name__
     info["Dependent Variable:"] = lambda x: x.model.endog_names
     info["Date:"] = time_now
-    info["No. Observations:"] = lambda x: "%#6d" % x.nobs
-    info["Df Model:"] = lambda x: "%#6d" % x.df_model
-    info["Df Residuals:"] = lambda x: "%#6d" % x.df_resid
+    info["No. Observations:"] = lambda x: f"{int(x.nobs):#6d}"
+    info["Df Model:"] = lambda x: f"{int(x.df_model):#6d}"
+    info["Df Residuals:"] = lambda x: f"{int(x.df_resid):#6d}"
     info["Converged:"] = lambda x: x.mle_retvals["converged"]
     info["No. Iterations:"] = lambda x: x.mle_retvals["iterations"]
     info["Method:"] = lambda x: x.method
@@ -378,19 +380,19 @@ def summary_model(results):
     info["Cov. Type:"] = lambda x: x.fit_options["cov"]
 
     rsquared_type = "" if results.k_constant else " (uncentered)"
-    info["R-squared" + rsquared_type + ":"] = lambda x: "%#8.3f" % x.rsquared
-    info["Adj. R-squared" + rsquared_type + ":"] = lambda x: "%#8.3f" % x.rsquared_adj
-    info["Pseudo R-squared:"] = lambda x: "%#8.3f" % x.prsquared
-    info["AIC:"] = lambda x: "%8.4f" % x.aic
-    info["BIC:"] = lambda x: "%8.4f" % x.bic
-    info["Log-Likelihood:"] = lambda x: "%#8.5g" % x.llf
-    info["LL-Null:"] = lambda x: "%#8.5g" % x.llnull
-    info["LLR p-value:"] = lambda x: "%#8.5g" % x.llr_pvalue
-    info["Deviance:"] = lambda x: "%#8.5g" % x.deviance
-    info["Pearson chi2:"] = lambda x: "%#6.3g" % x.pearson_chi2
-    info["F-statistic:"] = lambda x: "%#8.4g" % x.fvalue
-    info["Prob (F-statistic):"] = lambda x: "%#6.3g" % x.f_pvalue
-    info["Scale:"] = lambda x: "%#8.5g" % x.scale
+    info["R-squared" + rsquared_type + ":"] = lambda x: f"{x.rsquared:#8.3f}"
+    info["Adj. R-squared" + rsquared_type + ":"] = lambda x: f"{x.rsquared_adj:#8.3f}"
+    info["Pseudo R-squared:"] = lambda x: f"{x.prsquared:#8.3f}"
+    info["AIC:"] = lambda x: f"{x.aic:8.4f}"
+    info["BIC:"] = lambda x: f"{x.bic:8.4f}"
+    info["Log-Likelihood:"] = lambda x: f"{x.llf:#8.5g}"
+    info["LL-Null:"] = lambda x: f"{x.llnull:#8.5g}"
+    info["LLR p-value:"] = lambda x: f"{x.llr_pvalue:#8.5g}"
+    info["Deviance:"] = lambda x: f"{x.deviance:#8.5g}"
+    info["Pearson chi2:"] = lambda x: f"{x.pearson_chi2:#6.3g}"
+    info["F-statistic:"] = lambda x: f"{x.fvalue:#8.4g}"
+    info["Prob (F-statistic):"] = lambda x: f"{x.f_pvalue:#6.3g}"
+    info["Scale:"] = lambda x: f"{x.scale:#8.5g}"
     out = {}
     for key, func in info.items():
         try:
@@ -414,20 +416,20 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         instance. May also be a tuple of
         (results, params, bse, tvalues, pvalues, conf_int) for
         multivariate endog.
-    yname : {str, None}
+    yname : str, optional
         optional name for the endogenous variable, default is "y"
-    xname : {list[str], None}
+    xname : list of str, optional
         optional names for the exogenous variables, default is "var_xx"
-    alpha : float
+    alpha : float, optional
         significance level for the confidence intervals
-    use_t : bool
+    use_t : bool, optional
         indicator whether the p-values are based on the Student-t
         distribution (if True) or on the normal distribution (if False)
-    skip_header : bool
+    skip_header : bool, optional
         If false (default), then the header row is added. If true, then no
         header row is added.
-    float_format : str
-        float formatting options (e.g. ".3g")
+    float_format : str, optional
+        float formatting options (e.g., ".3g")
 
     Returns
     -------
@@ -476,11 +478,11 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
     ----------
     result : Model results instance
         The result instance to summarize.
-    float_format : str
+    float_format : str, optional
         Formatting to apply to coefficients and standard errors.
-    stars : bool
+    stars : bool, optional
         If True, append significance stars to the coefficients.
-    include_r2 : bool
+    include_r2 : bool, optional
         If True, include R-squared and adjusted R-squared in the column.
 
     Returns
@@ -516,7 +518,7 @@ def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
         r2 = pd.Series({("R-squared", ""): rsquared,
                         ("R-squared Adj.", ""): rsquared_adj})
 
-        if r2.notnull().any():
+        if r2.notna().any():
             r2 = r2.apply(lambda x: float_format % x)
             res = pd.concat([res, r2], axis=0)
 
@@ -567,12 +569,12 @@ def _make_unique(list_of_names):
 
     Parameters
     ----------
-    list_of_names : list[str]
+    list_of_names : list of str
         The candidate names.
 
     Returns
     -------
-    list[str]
+    list of str
         `list_of_names` unchanged if all entries are already unique.
         Otherwise, a list of the same length where repeated names have
         had roman-numeral-like "I" suffixes appended to disambiguate them
@@ -600,15 +602,16 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
+        The results to summarize side-by-side.
     float_format : str, optional
         float format for coefficients and standard errors
         Default : '%.4f'
-    model_names : list[str], optional
+    model_names : list of str, optional
         Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
-    stars : bool
+    stars : bool, optional
         print significance stars
-    info_dict : dict, default None
+    info_dict : dict, optional
         dict of functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a
         (nested) info_dict with model name as the key.
@@ -617,7 +620,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         additionally `N` for all other results.
         Default : None (use the info_dict specified in
         result.default_model_infos, if this property exists)
-    regressor_order : list[str], optional
+    regressor_order : list of str, optional
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     drop_omitted : bool, optional
@@ -626,7 +629,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
         Includes R2 and adjusted R2 in the summary table.
-    fixed_effects : list[str], optional
+    fixed_effects : list of str, optional
         List of categorical variables for which to indicate presence of
         fixed effects.
     fe_present : str, optional
@@ -719,7 +722,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
     # use unique column names, otherwise the merge will not succeed
-    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+    for df, name in zip(cols, _make_unique([df.columns[0] for df in cols]), strict=True):
         df.columns = [name]
 
     info = reduce(merg, cols)
@@ -764,7 +767,7 @@ def _formatter(element, float_format="%.4f"):
     element : object
         The value to format. Formatted as a float if possible, otherwise
         converted to a string.
-    float_format : str
+    float_format : str, optional
         The format string to apply if `element` can be formatted as a
         float.
 
@@ -790,23 +793,23 @@ def _df_to_simpletable(df, align="r", float_format="%.4f", header=True,
     ----------
     df : DataFrame
         The DataFrame to convert.
-    align : str
+    align : str, optional
         Data alignment (l/c/r).
-    float_format : str
+    float_format : str, optional
         Formatting to apply to float data columns.
-    header : bool
+    header : bool, optional
         If True, use the DataFrame column labels as the table header.
-    index : bool
+    index : bool, optional
         If True, use the DataFrame row labels as the table stubs.
-    table_dec_above : str
+    table_dec_above : str, optional
         Character used for the decoration line above the table.
-    table_dec_below : str
+    table_dec_below : str, optional
         Character used for the decoration line below the table.
-    header_dec_below : str
+    header_dec_below : str, optional
         Character used for the decoration line below the header.
-    pad_col : int
+    pad_col : int, optional
         Extra spaces to add to the column separator.
-    pad_index : int
+    pad_index : int, optional
         Extra spaces to add after each stub.
 
     Returns

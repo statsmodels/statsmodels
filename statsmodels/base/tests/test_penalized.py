@@ -637,7 +637,7 @@ class TestPenalizedGLMBinomCountNoPenal(CheckPenalizedBinomCount):
 class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
     # TODO: There are still problems with this case
     # using the standard optimization, I get convergence failures and
-    # different estimates depending on details, e.g. small changes in pen_weight
+    # different estimates depending on details, e.g., small changes in pen_weight
     # most likely convexity fails with SCAD in this case
 
     @classmethod

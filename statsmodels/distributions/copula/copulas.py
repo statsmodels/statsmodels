@@ -19,6 +19,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.graphics import utils
+from statsmodels.graphics.utils import _import_mpl
 
 
 class CopulaDistribution:
@@ -27,12 +28,12 @@ class CopulaDistribution:
     Parameters
     ----------
     copula : :class:`Copula` instance
-        An instance of :class:`Copula`, e.g. :class:`GaussianCopula`,
+        An instance of :class:`Copula`, e.g., :class:`GaussianCopula`,
         :class:`FrankCopula`, etc.
     marginals : list of distribution instances
         Marginal distributions.
-    copargs : tuple
-        Parameters for copula
+    cop_args : tuple, optional
+        Parameters for the copula.
 
     Notes
     -----
@@ -51,32 +52,30 @@ class CopulaDistribution:
 
     @deprecate_kwarg("random_state", "rng")
     def rvs(self, nobs=1, cop_args=None, marg_args=None, rng=None):
-        """Draw `n` in the half-open interval ``[0, 1)``.
-
-        Sample the joint distribution.
+        """Draw random samples from the joint (copula) distribution.
 
         Parameters
         ----------
         nobs : int, optional
             Number of samples to generate in the parameter space.
             Default is 1.
-        cop_args : tuple
+        cop_args : tuple, optional
             Copula parameters. If None, then the copula parameters will be
             taken from the ``cop_args`` attribute created when initiializing
             the instance.
-        marg_args : list of tuples
+        marg_args : list of tuples, optional
             Parameters for the marginal distributions. It can be None if none
             of the marginal distributions have parameters, otherwise it needs
             to be a list of tuples with the same length has the number of
             marginal distributions. The list can contain empty tuples for
             marginal distributions that do not take parameter arguments.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -84,8 +83,9 @@ class CopulaDistribution:
 
         Returns
         -------
-        sample : array_like (n, d)
-            Sample from the joint distribution.
+        sample : ndarray of shape (nobs, k_vars)
+            Sample from the joint distribution, with marginals transformed
+            to the distributions in ``self.marginals``.
 
         Notes
         -----
@@ -119,11 +119,11 @@ class CopulaDistribution:
             Values of random variable at which to evaluate cdf.
             If 2-dimensional, then components of multivariate random variable
             need to be in columns
-        cop_args : tuple
+        cop_args : tuple, optional
             Copula parameters. If None, then the copula parameters will be
             taken from the ``cop_args`` attribute created when initiializing
             the instance.
-        marg_args : list of tuples
+        marg_args : list of tuples, optional
             Parameters for the marginal distributions. It can be None if none
             of the marginal distributions have parameters, otherwise it needs
             to be a list of tuples with the same length has the number of
@@ -132,7 +132,8 @@ class CopulaDistribution:
 
         Returns
         -------
-        cdf values
+        ndarray
+            CDF values evaluated at ``y``.
 
         """
         y = np.asarray(y)
@@ -156,14 +157,14 @@ class CopulaDistribution:
         Parameters
         ----------
         y : array_like
-            Values of random variable at which to evaluate cdf.
+            Values of random variable at which to evaluate pdf.
             If 2-dimensional, then components of multivariate random variable
             need to be in columns
-        cop_args : tuple
+        cop_args : tuple, optional
             Copula parameters. If None, then the copula parameters will be
             taken from the ``cop_args`` attribute created when initiializing
             the instance.
-        marg_args : list of tuples
+        marg_args : list of tuples, optional
             Parameters for the marginal distributions. It can be None if none
             of the marginal distributions have parameters, otherwise it needs
             to be a list of tuples with the same length has the number of
@@ -172,7 +173,8 @@ class CopulaDistribution:
 
         Returns
         -------
-        pdf values
+        ndarray
+            PDF values evaluated at ``y``.
         """
         return np.exp(self.logpdf(y, cop_args=cop_args, marg_args=marg_args))
 
@@ -182,14 +184,14 @@ class CopulaDistribution:
         Parameters
         ----------
         y : array_like
-            Values of random variable at which to evaluate cdf.
+            Values of random variable at which to evaluate log-pdf.
             If 2-dimensional, then components of multivariate random variable
             need to be in columns
-        cop_args : tuple
+        cop_args : tuple, optional
             Copula parameters. If None, then the copula parameters will be
-            taken from the ``cop_args`` attribute creating when initiializing
+            taken from the ``cop_args`` attribute created when initiializing
             the instance.
-        marg_args : list of tuples
+        marg_args : list of tuples, optional
             Parameters for the marginal distributions. It can be None if none
             of the marginal distributions have parameters, otherwise it needs
             to be a list of tuples with the same length has the number of
@@ -198,7 +200,8 @@ class CopulaDistribution:
 
         Returns
         -------
-        log-pdf values
+        ndarray
+            Log-pdf values evaluated at ``y``.
 
         """
         y = np.asarray(y)
@@ -265,7 +268,7 @@ class Copula(ABC):
       Journal of the American Statistical Association, 83, 834-841, 1988.
     .. [2] Marius Hofert. "Sampling Archimedean copulas",
       Universität Ulm, 2008.
-    .. rvs[3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
+    .. [3] Harry Joe. "Dependence Modeling with Copulas", Monographs on
       Statistics and Applied Probability 134, 2015.
 
     """
@@ -283,16 +286,16 @@ class Copula(ABC):
         ----------
         nobs : int, optional
             Number of samples to generate from the copula. Default is 1.
-        args : tuple
+        args : tuple, optional
             Arguments for copula parameters. The number of arguments depends
             on the copula.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -300,7 +303,7 @@ class Copula(ABC):
 
         Returns
         -------
-        sample : array_like (nobs, d)
+        sample : ndarray of shape (nobs, k_dim)
             Sample from the copula.
 
         See Also
@@ -319,8 +322,8 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
-        args : tuple
+            of the random variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
             Arguments for copula parameters. The number of arguments depends
             on the copula.
 
@@ -339,14 +342,14 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
-        args : tuple
+            of the random variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
             Arguments for copula parameters. The number of arguments depends
             on the copula.
 
         Returns
         -------
-        cdf : ndarray, (nobs, k_dim)
+        logpdf : ndarray, (nobs, k_dim)
             Copula log-pdf evaluated at points ``u``.
         """
         return np.log(self.pdf(u, *args))
@@ -361,8 +364,8 @@ class Copula(ABC):
             Points of random variables in unit hypercube at which method is
             evaluated.
             The second (or last) dimension should be the same as the dimension
-            of the random variable, e.g. 2 for bivariate copula.
-        args : tuple
+            of the random variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
             Arguments for copula parameters. The number of arguments depends
             on the copula.
 
@@ -377,12 +380,12 @@ class Copula(ABC):
 
         Parameters
         ----------
-        sample : array-like, optional
+        sample : array_like, optional
             The sample to plot.  If not provided (the default), a sample
             is generated.
         nobs : int, optional
             Number of samples to generate from the copula.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -397,7 +400,7 @@ class Copula(ABC):
         fig : Figure
             If `ax` is None, the created figure.  Otherwise the figure to which
             `ax` is connected.
-        sample : array_like (n, d)
+        sample : ndarray of shape (nobs, k_dim)
             Sample from the copula.
 
         See Also
@@ -435,7 +438,7 @@ class Copula(ABC):
             `ax` is connected.
 
         """
-        from matplotlib import pyplot as plt
+        plt = _import_mpl()
 
         if self.k_dim != 2:
             import warnings
@@ -488,7 +491,7 @@ class Copula(ABC):
         ----------
         nobs : int, optional
             Number of samples to generate from the copula.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If

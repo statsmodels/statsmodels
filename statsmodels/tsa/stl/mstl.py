@@ -48,16 +48,16 @@ class MSTL:
     ----------
     endog : array_like
         Data to be decomposed. Must be squeezable to 1-d.
-    periods : {int, array_like, None}, optional
+    periods : int, sequence of int, or None, optional
         Periodicity of the seasonal components. If None and endog is a pandas
         Series or DataFrame, attempts to determine from endog. If endog is a
         ndarray, periods must be provided.
-    windows : {int, array_like, None}, optional
+    windows : int, sequence of int, or None, optional
         Length of the seasonal smoothers for each corresponding period.
         Must be an odd integer, and should normally be >= 7 (default). If None
         then default values determined using 7 + 4 * np.arange(1, n + 1, 1)
         where n is number of seasonal components.
-    lmbda : {float, str, None}, optional
+    lmbda : float, "auto", or None, optional
         The lambda parameter for the Box-Cox transform to be applied to `endog`
         prior to decomposition. If None, no transform is applied. If "auto", a
         value will be estimated that maximizes the log-likelihood function.
@@ -121,10 +121,11 @@ class MSTL:
         self._y = self._to_1d_array(endog)
         self.nobs = self._y.shape[0]
         self.lmbda = lmbda
+        self.est_lmbda = None
         self.periods, self.windows = self._process_periods_and_windows(periods, windows)
         self.iterate = iterate
         self._stl_kwargs = self._remove_overloaded_stl_kwargs(
-            stl_kwargs if stl_kwargs else {}
+            stl_kwargs or {}
         )
 
     def fit(self):
@@ -266,7 +267,7 @@ class MSTL:
     ) -> tuple[Sequence[int], Sequence[int]]:
         if len(periods) != len(windows):
             raise ValueError("Periods and windows must have same length")
-        periods, windows = zip(*sorted(zip(periods, windows)))
+        periods, windows = zip(*sorted(zip(periods, windows, strict=True)), strict=True)
         return periods, windows
 
     @staticmethod

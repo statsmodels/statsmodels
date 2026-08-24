@@ -3,7 +3,7 @@ from __future__ import annotations
 from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
 from statsmodels.tsa.statespace.kalman_filter import _check_dynamic
 
-DateLike = Union[int, str, dt.datetime, pd.Timestamp, np.datetime64]
+DateLike = int | str | dt.datetime | pd.Timestamp | np.datetime64
 
 ds = Docstring(STL.__doc__)
 ds.insert_parameters(
@@ -36,7 +36,7 @@ ds.insert_parameters(
     "model",
     Parameter(
         "model_kwargs",
-        "dict[str, Any]",
+        "dict, optional",
         [
             (
                 "Any additional arguments needed to initialized the model using "
@@ -174,19 +174,19 @@ class STLForecast:
         low_pass_jump=1,
     ):
         self._endog = endog
-        self._stl_kwargs = dict(
-            period=period,
-            seasonal=seasonal,
-            trend=trend,
-            low_pass=low_pass,
-            seasonal_deg=seasonal_deg,
-            trend_deg=trend_deg,
-            low_pass_deg=low_pass_deg,
-            robust=robust,
-            seasonal_jump=seasonal_jump,
-            trend_jump=trend_jump,
-            low_pass_jump=low_pass_jump,
-        )
+        self._stl_kwargs = {
+            "period": period,
+            "seasonal": seasonal,
+            "trend": trend,
+            "low_pass": low_pass,
+            "seasonal_deg": seasonal_deg,
+            "trend_deg": trend_deg,
+            "low_pass_deg": low_pass_deg,
+            "robust": robust,
+            "seasonal_jump": seasonal_jump,
+            "trend_jump": trend_jump,
+            "low_pass_jump": low_pass_jump,
+        }
         self._model = model
         self._model_kwargs = {} if model_kwargs is None else model_kwargs
         if not hasattr(model, "fit"):
@@ -199,7 +199,7 @@ class STLForecast:
 
         Parameters
         ----------\n%(fit_params)s
-        fit_kwargs : dict[str, Any]
+        fit_kwargs : dict, optional
             Any additional keyword arguments to pass to ``model``'s ``fit``
             method when estimating the model on the decomposed residuals.
 
@@ -235,6 +235,8 @@ class STLForecastResults:
         The time series model used to model the non-seasonal dynamics.
     model_result : Results
         Model results instance supporting, at a minimum, ``forecast``.
+    endog : array_like
+        The original data prior to seasonal decomposition.
     """
 
     def __init__(
@@ -322,7 +324,16 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
+        delta = len(left_data) - len(right_data)
+        adelta = abs(delta)
+        if delta < 0:
+            left_data += [[" " * len(left_data[0][0])] * adelta]
+            left_stubs += [" " * len(left_stubs[0])] * adelta
+        elif delta > 0:
+            right_data += [[" " * len(right_data[0][0])] * adelta]
+            right_stubs += [" " * len(right_stubs[0])] * adelta
         tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
+        right_data += [[""]] * (len(left_data) - len(right_data))
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary
@@ -338,18 +349,19 @@ class STLForecastResults:
 
         Parameters
         ----------
-        start : int, str, or datetime, optional
+        start : int, str, datetime, or None
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the zeroth observation.
-        end : int, str, or datetime, optional
+            parse or a datetime type. If None, the zeroth observation is
+            used.
+        end : int, str, datetime, or None
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
-            want out of sample prediction. Default is the last observation in
-            the sample.
-        dynamic : bool, int, str, or datetime, optional
+            want out of sample prediction. If None, the last observation in
+            the sample is used.
+        dynamic : bool, int, str, or datetime
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -404,15 +416,15 @@ class STLForecastResults:
         ----------
         steps : int
             The number of steps required.
-        index : pd.Index
+        index : pd.Index or None
             A pandas index to use. If None, returns an ndarray.
-        offset : int
+        offset : int or None, optional
             The index of the first out-of-sample observation. If None, uses
             nobs.
 
         Returns
         -------
-        seasonal : {ndarray, Series}
+        seasonal : ndarray or Series
             The seasonal component.
         """
 
@@ -446,7 +458,7 @@ class STLForecastResults:
 
         Returns
         -------
-        forecast : {ndarray, Series}
+        forecast : ndarray or Series
             Out of sample forecasts
         """
         forecast = self._model_result.forecast(steps=steps, **kwargs)

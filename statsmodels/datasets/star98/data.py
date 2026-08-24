@@ -79,6 +79,14 @@ def load():
 
 
 def load_pandas():
+    """
+    Load the star98 data and returns a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A class of the data with array attributes 'endog' and 'exog'.
+    """
     data = _get_data()
     return du.process_pandas(data, endog_idx=["NABOVE", "NBELOW"])
 

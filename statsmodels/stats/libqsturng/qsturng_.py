@@ -22,6 +22,7 @@ see:
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
+
 from statsmodels.compat.python import lrange
 
 import math
@@ -1904,7 +1905,7 @@ A = {
 p_keys = [0.1, 0.5, 0.675, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99, 0.995, 0.999]
 
 # v values that are defined in the A table
-v_keys = lrange(2, 21) + [24, 30, 40, 60, 120, inf]
+v_keys = [*lrange(2, 21), 24, 30, 40, 60, 120, inf]
 
 
 def _isfloat(x):
@@ -1961,7 +1962,7 @@ def _phi(p):
 
     if p <= 0 or p >= 1:
         # The original perl code exits here, we'll throw an exception instead
-        raise ValueError("Argument to ltqnorm %f must be in open interval (0,1)" % p)
+        raise ValueError(f"Argument to ltqnorm {p:f} must be in open interval (0,1)")
 
     # Coefficients in rational approximations.
     a = (
@@ -2060,25 +2061,25 @@ def _select_ps(p):
     # it is possible that different break points could yield
     # better estimates, but the function this is refactoring
     # just used linear distance.
-    """Returns the points to use for interpolating p"""
-    if p >= 0.99:
-        return 0.990, 0.995, 0.999
-    elif p >= 0.975:
-        return 0.975, 0.990, 0.995
-    elif p >= 0.95:
-        return 0.950, 0.975, 0.990
-    elif p >= 0.9125:
-        return 0.900, 0.950, 0.975
-    elif p >= 0.875:
-        return 0.850, 0.900, 0.950
-    elif p >= 0.825:
-        return 0.800, 0.850, 0.900
-    elif p >= 0.7625:
-        return 0.750, 0.800, 0.850
-    elif p >= 0.675:
-        return 0.675, 0.750, 0.800
-    elif p >= 0.500:
-        return 0.500, 0.675, 0.750
+    """returns the points to use for interpolating p"""
+    if p >= .99:
+        return .990, .995, .999
+    elif p >= .975:
+        return .975, .990, .995
+    elif p >= .95:
+        return .950, .975, .990
+    elif p >= .900:
+        return .900, .950, .975
+    elif p >= .875:
+        return .850, .900, .950
+    elif p >= .825:
+        return .800, .850, .900
+    elif p >= .7625:
+        return .750, .800, .850
+    elif p >= .675:
+        return .675, .750, .800
+    elif p >= .500:
+        return .500, .675, .750
     else:
         return 0.100, 0.500, 0.675
 
@@ -2345,24 +2346,24 @@ def qsturng(p, r, v):
 
     Parameters
     ----------
-    p : (scalar, array_like)
+    p : scalar or array_like
         The cumulative probability value
         p >= .1 and p <=.999
         (values under .5 are not recommended)
-    r : (scalar, array_like)
+    r : scalar or array_like
         The number of samples
         r >= 2 and r <= 200
         (values over 200 are permitted but not recommended)
-    v : (scalar, array_like)
+    v : scalar or array_like
         The sample degrees of freedom
         if p >= .9:
-            v >=1 and v >= inf
+            v >=1 and v <= inf
         else:
-            v >=2 and v >= inf
+            v >=2 and v <= inf
 
     Returns
     -------
-    q : (scalar, array_like)
+    q : float or ndarray
         approximation of the Studentized Range
     """
 
@@ -2436,27 +2437,27 @@ def psturng(q, r, v):
 
     Parameters
     ----------
-    q : (scalar, array_like)
+    q : scalar or array_like
         quantile value of Studentized Range
         q >= 0.
-    r : (scalar, array_like)
+    r : scalar or array_like
         The number of samples
         r >= 2 and r <= 200
         (values over 200 are permitted but not recommended)
-    v : (scalar, array_like)
+    v : scalar or array_like
         The sample degrees of freedom
-        if p >= .9:
-            v >=1 and v >= inf
+        if the corresponding probability is >= .9:
+            v >=1 and v <= inf
         else:
-            v >=2 and v >= inf
+            v >=2 and v <= inf
 
     Returns
     -------
-    p : (scalar, array_like)
+    p : float or ndarray
         1. - area from zero to q under the Studentized Range
         distribution. When v == 1, p is bound between .001
         and .1, when v > 1, p is bound between .001 and .9.
-        Values between .5 and .9 are 1st order appoximations.
+        Values between .5 and .9 are 1st order approximations.
     """
     if all(map(_isfloat, [q, r, v])):
         return _psturng(q, r, v)

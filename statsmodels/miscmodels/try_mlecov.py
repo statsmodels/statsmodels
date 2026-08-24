@@ -6,16 +6,16 @@ toeplitz structure is not exploited, need cholesky or inv for toeplitz
 Author: josef-pktd
 """
 
+import warnings
+
 import numpy as np
 from scipy import linalg
 from scipy.linalg import toeplitz
 
 from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.datasets import sunspots
 from statsmodels.tsa.arima_process import (
     ArmaProcess,
     arma_acovf,
-    arma_generate_sample,
 )
 
 
@@ -106,7 +106,7 @@ def mvn_loglike_chol(x, sigma):
         The log likelihood.
     logdetsigma : float
         The log of the determinant of `sigma`.
-    float
+    logdet_cholsigmainv : float
         Twice the sum of the log of the diagonal of the Cholesky factor
         of the inverse of `sigma`.
     """
@@ -240,6 +240,18 @@ class MLEGLS(GenericLikelihoodModel):
     already removed.
     """
 
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "MLEGLS is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
     def _params2cov(self, params, nobs):
         """
         Get autocovariance matrix from ARMA regression parameter
@@ -319,44 +331,3 @@ class MLEGLS(GenericLikelihoodModel):
             # need to add args kwds
             res = self.fit(start_params=start_params)
         return res
-
-
-if __name__ == "__main__":
-    nobs = 50
-    ar = [1.0, -0.8, 0.1]
-    ma = [1.0,  0.1,  0.2]
-    # ma = [1]
-    np.random.seed(9875789)
-    y = arma_generate_sample(ar, ma, nobs, 2)
-    y -= y.mean()  # I have not checked treatment of mean yet, so remove
-    mod = MLEGLS(y)
-    mod.nar, mod.nma = 2, 2   # needs to be added, no init method
-    mod.nobs = len(y)
-    res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
-    print("DGP", ar, ma)
-    print(res.params)
-    from statsmodels.regression import yule_walker
-    print(yule_walker(y, 2))
-    # resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
-
-    arpoly, mapoly = getpoly(mod, res.params[:-1])
-
-    data = sunspots.load()
-    # ys = data.endog[-100:]
-    # ys = data.endog[12:]-data.endog[:-12]
-    # ys -= ys.mean()
-    # mods = MLEGLS(ys)
-    # mods.nar, mods.nma = 13, 1   # needs to be added, no init method
-    # mods.nobs = len(ys)
-    # ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
-    # print(ress.params
-    # import matplotlib.pyplot as plt
-    # plt.plot(data.endog[1])
-    # # plt.show()
-
-    sigma = mod._params2cov(res.params[:-1], nobs) * res.params[-1]**2
-    print(mvn_loglike(y, sigma))
-    llo = mvn_nloglike_obs(y, sigma)
-    print(llo.sum(), llo.shape)
-    print(mvn_loglike_chol(y, sigma))
-    print(mvn_loglike_sum(y, sigma))

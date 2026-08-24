@@ -158,6 +158,18 @@ def test_beanplot_side_left(age_and_labels, close_figures):
     )
 
 
+def test_violinplot_invalid_side_raises(age_and_labels):
+    age, labels = age_and_labels
+    with pytest.raises(ValueError, match="side"):
+        violinplot(age, labels=labels, side="not-a-side")
+
+
+def test_beanplot_invalid_side_raises(age_and_labels):
+    age, labels = age_and_labels
+    with pytest.raises(ValueError, match="side"):
+        beanplot(age, labels=labels, side="not-a-side")
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_beanplot_legend_text(age_and_labels, close_figures):

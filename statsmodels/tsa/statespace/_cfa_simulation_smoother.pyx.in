@@ -204,7 +204,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
     cpdef int update_sparse_posterior_moments(self) except *:
         # Update the computation of posterior moments for the entire state
         # vector, with the  covariance matrix represented in what Scipy calls
-        # "lower diagonal ordered form" - see e.g. Scipy's documentation page
+        # "lower diagonal ordered form" - see e.g., Scipy's documentation page
         # for linalg.cholesky_banded for details of the storage format
         cdef:
             int t, i, j

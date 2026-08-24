@@ -216,21 +216,26 @@ class ETSModel(base.StateSpaceMLEModel):
     ----------
     endog : array_like
         The observed time-series process :math:`y`
-    error : str, optional
-        The error model. "add" (default) or "mul".
-    trend : str or None, optional
+    error : {"add", "additive", "mul", "multiplicative"}, optional
+        The error model. "add" (default) or "mul". "additive" and
+        "multiplicative" are accepted as aliases for "add" and "mul".
+    trend : {"add", "additive", "mul", "multiplicative"} or None, optional
         The trend component model. "add", "mul", or None (default).
+        "additive" and "multiplicative" are accepted as aliases for "add"
+        and "mul".
     damped_trend : bool, optional
         Whether or not an included trend component is damped. Default is
         False.
-    seasonal : str, optional
+    seasonal : {"add", "additive", "mul", "multiplicative"} or None, optional
         The seasonality model. "add", "mul", or None (default).
+        "additive" and "multiplicative" are accepted as aliases for "add"
+        and "mul".
     seasonal_periods : int, optional
         The number of periods in a complete seasonal cycle for seasonal
         (Holt-Winters) models. For example, 4 for quarterly data with an
         annual cycle or 7 for daily data with a weekly cycle. Required if
         `seasonal` is not None.
-    initialization_method : str, optional
+    initialization_method : {"estimated", "heuristic", "known"}, optional
         Method for initialization of the state space model. One of:
 
         * 'estimated' (default)
@@ -511,7 +516,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        initialization_method : str, optional
+        initialization_method : {"estimated", "heuristic", "known"}, optional
             Method for initialization of the state space model. One of:
 
             * 'estimated' (default)
@@ -602,10 +607,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
-            zip(self._internal_param_names, np.arange(self._k_params_internal))
+            zip(self._internal_param_names, np.arange(self._k_params_internal), strict=True)
         )
         self._params_index = OrderedDict(
-            zip(self.param_names, np.arange(self.k_params))
+            zip(self.param_names, np.arange(self.k_params), strict=True)
         )
 
     def set_bounds(self, bounds):
@@ -827,10 +832,11 @@ class ETSModel(base.StateSpaceMLEModel):
         This should not be called directly, but by calling
         ``self.start_params``.
         """
-        params = []
-        for p in self._smoothing_param_names:
-            if p in self.param_names:
-                params.append(self._default_start_params[p])
+        params = [
+            self._default_start_params[p]
+            for p in self._smoothing_param_names
+            if p in self.param_names
+        ]
 
         if self.initialization_method == "estimated":
             lvl_idx = len(params)
@@ -948,7 +954,7 @@ class ETSModel(base.StateSpaceMLEModel):
             default), additionally, the parameters
 
             * `initial_level` (:math:`l_{-1}`)
-            * `initial_trend` (:math:`l_{-1}`)
+            * `initial_trend` (:math:`b_{-1}`)
             * `initial_seasonal.0` (:math:`s_{-1}`)
             * ...
             * `initial_seasonal.<m-1>` (:math:`s_{-m}`)
@@ -962,7 +968,7 @@ class ETSModel(base.StateSpaceMLEModel):
             See LikelihoodModelResults notes section for more information.
         disp : bool, optional
             Set to True to print convergence messages.
-        callback : callable callback(xk), optional
+        callback : callable, optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
         return_params : bool, optional
@@ -974,6 +980,7 @@ class ETSModel(base.StateSpaceMLEModel):
         Returns
         -------
         results : ETSResults
+            The fitted model results.
         """
 
         if start_params is None:
@@ -1077,25 +1084,25 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : np.ndarray of np.float
+        params : ndarray of float
             Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m]). If there are no fixed values this must
             be in the format of internal parameters. Otherwise the fixed values
             are skipped.
-        yhat : np.ndarray
+        yhat : ndarray
             Array of size (n,) where fitted values will be written to.
-        xhat : np.ndarray
+        xhat : ndarray
             Array of size (n, _k_states_internal) where fitted states will be
             written to.
-        is_fixed : np.ndarray or None
+        is_fixed : ndarray, optional
             Boolean array indicating values which are fixed during fitting.
             This must have the full length of internal parameters.
-        fixed_values : np.ndarray or None
+        fixed_values : ndarray, optional
             Array of fixed values (arbitrary values for non-fixed parameters)
             This must have the full length of internal parameters.
-        use_beta_star : boolean
+        use_beta_star : bool
             Whether to internally use beta_star as parameter
-        use_gamma_star : boolean
+        use_gamma_star : bool
             Whether to internally use gamma_star as parameter
         """
         if np.iscomplexobj(params):
@@ -1147,7 +1154,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : np.ndarray of np.float
+        params : array_like
             Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m])
         **kwargs
@@ -1198,18 +1205,18 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : array_like
+        params : ndarray
             Model parameters
 
         Returns
         -------
-        yhat : pd.Series or np.ndarray
+        yhat : Series or ndarray
             Predicted values from exponential smoothing. If original data was a
-            ``pd.Series``, returns a ``pd.Series``, else a ``np.ndarray``.
-        states : pd.DataFrame or np.ndarray
+            Series, returns a Series, else a ndarray.
+        states : DataFrame or ndarray
             States (level, trend, and/or seasonal) of exponential smoothing.
-            If original data was a ``pd.Series``, returns a ``pd.DataFrame``,
-            else a ``np.ndarray``.
+            If original data was a Series, returns a DataFrame,
+            else a ndarray.
         """
         internal_params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
@@ -1272,10 +1279,10 @@ class ETSModel(base.StateSpaceMLEModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the hessian.
-        approx_centered : bool
+        approx_centered : bool, optional
             Whether to use a centered scheme for finite difference
             approximation
-        approx_complex_step : bool
+        approx_complex_step : bool, optional
             Whether to use complex step differentiation for approximation
         **kwargs
             Additional keyword arguments, including ``method``, which may be
@@ -1305,6 +1312,32 @@ class ETSModel(base.StateSpaceMLEModel):
         return hessian
 
     def score(self, params, approx_centered=False, approx_complex_step=True, **kwargs):
+        r"""
+        Score vector of the likelihood function, evaluated at the given
+        parameters
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the score.
+        approx_centered : bool, optional
+            Whether to use a centered scheme for finite difference
+            approximation
+        approx_complex_step : bool, optional
+            Whether to use complex step differentiation for approximation
+        **kwargs
+            Additional keyword arguments, including ``method``, which may be
+            used to specify the score calculation method.
+
+        Returns
+        -------
+        score : ndarray
+            Score vector evaluated at `params`
+
+        Notes
+        -----
+        This is a numerical approximation.
+        """
         method = kwargs.get("method", "approx")
 
         if method == "approx":
@@ -1319,7 +1352,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         return score
 
-    def update(params, *args, **kwargs):
+    def update(self, params, *args, **kwargs):
         # Dummy method to make methods copied from statespace.MLEModel work
         ...
 
@@ -1354,7 +1387,7 @@ class ETSResults(base.StateSpaceMLEResults):
         for attr in model_definition_attrs:
             setattr(self, attr, getattr(model, attr))
         self.param_names = [
-            "%s (fixed)" % name if name in self.fixed_params else name
+            f"{name} (fixed)" if name in self.fixed_params else name
             for name in (self.model.param_names or [])
         ]
 
@@ -1571,7 +1604,7 @@ class ETSResults(base.StateSpaceMLEResults):
             all existing datapoints prior to the `anchor`.  Type depends on the
             index of the given `endog` in the model. Two special cases are the
             strings 'start' and 'end'. `start` refers to beginning the
-            simulation at the first period of the sample (i.e. using the
+            simulation at the first period of the sample (i.e., using the
             initial values as simulation anchor), and `end` refers to
             beginning the simulation at the first period after the sample.
             Integer values can run from 0 to `nobs`, or can be negative to
@@ -1582,7 +1615,7 @@ class ETSResults(base.StateSpaceMLEResults):
             `start` observation in the `predict` method.
         repetitions : int, optional
             Number of simulated paths to generate. Default is 1 simulated path.
-        random_errors : optional
+        random_errors : ndarray, rv_continuous, rv_discrete, rv_frozen, or "bootstrap", optional
             Specifies how the random errors should be obtained. Can be one of
             the following:
 
@@ -1599,11 +1632,11 @@ class ETSResults(base.StateSpaceMLEResults):
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function.
-            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+            * A ndarray with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        rng : {None, int, numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int, a new
             ``RandomState`` instance is created, seeded with `rng`; this
@@ -1614,16 +1647,14 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        sim : pd.Series, pd.DataFrame or np.ndarray
-            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
-            values.
-            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
-            will be a ``pd.Series`` if `repetitions` is 1, and a
-            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
-            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
-            (`nsimulations`,) is returned, and if `repetitions` is not 1 a
-            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
-            returned.
+        sim : Series, DataFrame or ndarray
+            An ndarray, Series, or DataFrame of simulated values. If the
+            original data was a Series or DataFrame, `sim` will be a
+            Series if `repetitions` is 1, and a DataFrame of shape
+            (`nsimulations`, `repetitions`) else. Otherwise, if `repetitions`
+            is 1, a ndarray of shape (`nsimulations`,) is returned, and
+            if `repetitions` is not 1 a ndarray of shape
+            (`nsimulations`, `repetitions`) is returned.
 
         Notes
         -----
@@ -1841,7 +1872,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # Wrap data / squeeze where appropriate
         if repetitions > 1:
-            names = ["simulation.%d" % num for num in range(repetitions)]
+            names = [f"simulation.{num:d}" for num in range(repetitions)]
         else:
             names = "simulation"
         return self.model._wrap_data(
@@ -1973,10 +2004,10 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        forecast : array_like or pd.Series.
+        forecast : ndarray or Series.
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict,) array. If original data was a pd.Series
-            or DataFrame, a pd.Series is returned.
+            forecasts. An (npredict,) array. If original data was a Series
+            or DataFrame, a Series is returned.
         """
 
         (
@@ -2049,7 +2080,7 @@ class ETSResults(base.StateSpaceMLEResults):
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
-        method : str or None, optional
+        method : {"exact", "simulated"} or None, optional
             Method to use for calculating prediction intervals. 'exact'
             (default, if available) or 'simulated'.
         simulate_repetitions : int, optional
@@ -2112,7 +2143,7 @@ class ETSResults(base.StateSpaceMLEResults):
                 params = params[0]
             names = self.model.initial_state_names
             param_header = [
-                "initialization method: %s" % self.model.initialization_method
+                f"initialization method: {self.model.initialization_method}"
             ]
             params_stubs = names
             params_data = [[forg(params[i], prec=4)] for i in range(len(params))]
@@ -2174,7 +2205,7 @@ class PredictionResults:
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
         from the model's index or model's row labels.
-    method : str or None, optional
+    method : {"exact", "simulated"} or None, optional
         Method to use for calculating prediction intervals. 'exact' (default,
         if available) or 'simulated'.
     simulate_repetitions : int, optional
@@ -2234,7 +2265,7 @@ class PredictionResults:
         if self.method == "simulated":
 
             sim_results = []
-            # first, perform "non-dynamic" simulations, i.e. simulations of
+            # first, perform "non-dynamic" simulations, i.e., simulations of
             # only one step, based on the previous step
             if nsmooth > 1:
                 if start_smooth == 0:
@@ -2296,6 +2327,14 @@ class PredictionResults:
         alpha : float, optional
             The significance level for the prediction interval. Default is
             0.05, that is, a 95% prediction interval.
+
+        Returns
+        -------
+        ndarray or DataFrame
+            The array or DataFrame of lower and upper prediction intervals,
+            with one row per forecast period. Returns a DataFrame with
+            columns labeled by `alpha` if the original data was a pandas
+            object, otherwise an ndarray.
         """
 
         if self.method == "simulated":
@@ -2324,6 +2363,26 @@ class PredictionResults:
         return pred_int
 
     def summary_frame(self, endog=0, alpha=0.05):
+        """
+        Summarize the mean prediction and prediction intervals in a DataFrame
+
+        Parameters
+        ----------
+        endog : int, optional
+            Index of the endogenous variable. Unused, since ETS models have
+            a single endogenous variable; present for compatibility with the
+            state space prediction API. Default is 0.
+        alpha : float, optional
+            The significance level for the prediction interval. Default is
+            0.05, that is, a 95% prediction interval.
+
+        Returns
+        -------
+        DataFrame
+            DataFrame containing the columns `mean`, `pi_lower`, and
+            `pi_upper`, and, when ``method='simulated'``, `mean_numerical`
+            (the average of the simulated paths).
+        """
         pred_int = np.asarray(self.pred_int(alpha=alpha))
         to_include = {}
         to_include["mean"] = self.predicted_mean

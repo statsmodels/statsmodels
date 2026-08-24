@@ -25,7 +25,7 @@ KFAS v1.3.1 appears to have the following bugs:
   the state. See the section with "Note: Apparent loglikelihood discrepancy"
   in the R file. It appears that KFAS does not include the constant term
   (-0.5 * log(2 pi)) for the diffuse observations, whereas the loglikelihood
-  function as given in e.g. section 7.2.5 of Durbin and Koopman (2012) shows
+  function as given in e.g., section 7.2.5 of Durbin and Koopman (2012) shows
   that it should be included. To confirm this, we also check against the
   loglikelihood value computed by Stata.
 
@@ -40,10 +40,9 @@ the diffuse observations.
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.platform import PLATFORM_WIN
 
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -60,7 +59,7 @@ from statsmodels.tsa.statespace.varmax import VARMAX
 
 from . import kfas_helpers
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 macrodata = datasets.macrodata.load_pandas().data
 macrodata.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
@@ -714,9 +713,7 @@ class TestVAR1_Approx(CheckApproximateDiffuseMixin, CheckVAR1):
 
 
 class TestVAR1_KFAS(CheckKFASMixin, CheckVAR1):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_R.csv")
 
 
 # - VAR(1) + Measurement error -----------------------------------------------
@@ -735,7 +732,7 @@ class TestVAR1MeasurementError_Approx(
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e9 for the tests to pass at the appropriate level of precision, but
     # we cannot increase too much more than this because then we start get
-    # numerical errors (e.g. 1e10 is fine but 1e11 does not pass)
+    # numerical errors (e.g., 1e10 is fine but 1e11 does not pass)
     approximate_diffuse_variance = 1e9
 
     def test_smoothed_measurement_disturbance_cov(self):
@@ -752,9 +749,7 @@ class TestVAR1MeasurementError_Approx(
 
 
 class TestVAR1MeasurementError_KFAS(CheckKFASMixin, CheckVAR1MeasurementError):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_measurement_error_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_measurement_error_R.csv")
 
 
 # - VAR(1) + Missing data ----------------------------------------------------
@@ -779,7 +774,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e10 for the tests to pass at the appropriate level of precision, but
     # we cannot increase it any more than this because then we start get
-    # numerical errors (e.g. 1e11 does not pass)
+    # numerical errors (e.g., 1e11 does not pass)
     approximate_diffuse_variance = 1e10
 
     def test_smoothed_state_cov(self):
@@ -797,9 +792,7 @@ class TestVAR1Missing_Approx(CheckApproximateDiffuseMixin, CheckVAR1Missing):
 
 
 class TestVAR1Missing_KFAS(CheckKFASMixin, CheckVAR1Missing):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_missing_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_missing_R.csv")
 
     def test_forecasts_error_cov(self):
         # TODO: fails for the general version of forecasts_error_cov because
@@ -864,12 +857,10 @@ class TestVAR1Mixed_Approx(CheckVAR1Mixed, CheckApproximateDiffuseMixin, CheckVA
 
 class TestVAR1Mixed_KFAS(CheckVAR1Mixed, CheckKFASMixin, CheckVAR1):
     # TODO: fails
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_var1_mixed_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_var1_mixed_R.csv")
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
-    # states, but it appears that they have a bug (e.g. since the approximate
+    # states, but it appears that they have a bug (e.g., since the approximate
     # diffuse case agrees with us), so we should double-check against a third
     # package (RATS?)
     def test_predicted_state(self):
@@ -907,17 +898,15 @@ class TestDFM_Approx(CheckApproximateDiffuseMixin, CheckDFM):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 5e10 for the tests to pass at the appropriate level of precision, but
     # we cannot increase it too much more than this because then we start get
-    # numerical errors (e.g. 1e11 works but 1e12 does not pass)
+    # numerical errors (e.g., 1e11 works but 1e12 does not pass)
     approximate_diffuse_variance = 5e10
 
 
 class TestDFM_KFAS(CheckKFASMixin, CheckDFM):
-    results_path = os.path.join(
-        current_path, "results", "results_exact_initial_dfm_R.csv"
-    )
+    results_path = Path(current_path).joinpath("results", "results_exact_initial_dfm_R.csv")
 
     # TODO: KFAS disagrees for the diffuse observations for all of these
-    # states, but it appears that they have a bug (e.g. since the approximate
+    # states, but it appears that they have a bug (e.g., since the approximate
     # diffuse case agrees with us), so we should double-check against a third
     # package (RATS?)
     def test_predicted_state(self):
@@ -956,7 +945,7 @@ class TestDFMCollapsed_Approx(CheckApproximateDiffuseMixin, CheckDFMCollapsed):
     # Note: somewhat fragile, we need to increase the approximate variance to
     # 1e9 for the tests to pass at the appropriate level of precision, but
     # we cannot increase it too much more than this because then we start get
-    # numerical errors (e.g. 1e10 does not pass)
+    # numerical errors (e.g., 1e10 does not pass)
     approximate_diffuse_variance = 1e9
 
 
@@ -998,7 +987,7 @@ def test_irrelevant_state():
     mod2.ssm.initialization = Initialization(mod2.k_states, "diffuse")
     res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
 
-    # Check that e.g. the filtered state for the level is equal
+    # Check that e.g., the filtered state for the level is equal
     assert_allclose(res.filtered_state[0, 25:], res2.filtered_state[0, 25:], atol=1e-5)
 
 

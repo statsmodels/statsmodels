@@ -18,6 +18,7 @@ License: BSD (3-clause)
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pandas as pd
+import pytest
 from scipy import stats
 
 from statsmodels.stats.weightstats import (
@@ -47,7 +48,7 @@ class CheckExternalMixin:
             df["data1"] = cls.data
         else:
             for k in range(cls.data.shape[1]):
-                df["data%d" % (k + 1)] = cls.data[:, k]
+                df[f"data{k + 1:d}"] = cls.data[:, k]
         df.to_csv(fname)
 
     def test_mean(self):
@@ -852,3 +853,55 @@ def test_weightstats_2d_w2():
     w1 = [[1]]
     d1 = DescrStatsW(x1, w1)
     assert (d1.quantile([0, 0.5, 1.0]) == 1).all().all()
+
+
+def test_invalid_usevar_raises():
+    rs = np.random.RandomState(90210)
+    x1 = rs.standard_normal(20)
+    x2 = rs.standard_normal(20) + 0.5
+    cm = CompareMeans(DescrStatsW(x1), DescrStatsW(x2))
+
+    with pytest.raises(ValueError, match="usevar"):
+        cm.ttest_ind(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        cm.ztest_ind(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        cm.tconfint_diff(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        cm.zconfint_diff(usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        ttest_ind(x1, x2, usevar="not-a-usevar")
+    with pytest.raises(ValueError, match="usevar"):
+        ztest(x1, x2, usevar="not-a-usevar")
+    # zconfint only implements "pooled", unlike the other five
+    with pytest.raises(ValueError, match="usevar"):
+        zconfint(x1, x2, usevar="unequal")
+
+
+@pytest.mark.parametrize(
+    "alias,canonical",
+    [("2-sided", "two-sided"), ("2s", "two-sided"), ("l", "larger"), ("s", "smaller")],
+)
+def test_alternative_deprecated_alias(alias, canonical):
+    # undocumented short forms accepted by the shared _*stat_generic /
+    # _*confint_generic helpers still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    x1 = [1, 2, 3, 4, 5, 6, 2, 4, 6, 8]
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        stat_alias, pval_alias = ztest(x1, value=3, alternative=alias)
+    stat, pval = ztest(x1, value=3, alternative=canonical)
+    assert stat_alias == stat
+    assert pval_alias == pval
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        low_alias, upp_alias = zconfint(x1, alternative=alias)
+    low, upp = zconfint(x1, alternative=canonical)
+    assert low_alias == low
+    assert upp_alias == upp
+
+
+def test_alternative_invalid():
+    x1 = [1, 2, 3, 4, 5, 6, 2, 4, 6, 8]
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        ztest(x1, value=3, alternative="bogus")

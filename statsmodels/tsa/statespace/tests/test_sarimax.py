@@ -4,11 +4,10 @@ Tests for SARIMAX models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -17,6 +16,7 @@ import pandas as pd
 import pytest
 
 import statsmodels.iolib.summary
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools import add_constant
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import Bunch
@@ -24,13 +24,13 @@ from statsmodels.tsa.statespace import sarimax, tools
 
 from .results import results_sarimax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-realgdp_path = os.path.join("results", "results_realgdpar_stata.csv")
-realgdp_results = pd.read_csv(current_path + os.sep + realgdp_path)
+realgdp_path = Path("results") / "results_realgdpar_stata.csv"
+realgdp_results = pd.read_csv(current_path / realgdp_path)
 
-coverage_path = os.path.join("results", "results_sarimax_coverage.csv")
-coverage_results = pd.read_csv(os.path.join(current_path, coverage_path))
+coverage_path = Path("results") / "results_sarimax_coverage.csv"
+coverage_results = pd.read_csv(current_path / coverage_path)
 
 
 class TestSARIMAXStatsmodels:
@@ -141,7 +141,7 @@ class TestRealGDPARStata:
     def test_filtered_state(self):
         for i in range(12):
             assert_allclose(
-                realgdp_results.iloc[1:]["u%d" % (i + 1)],
+                realgdp_results.iloc[1:][f"u{i + 1:d}"],
                 self.results.filter_results.filtered_state[i],
                 atol=1e-6,
             )
@@ -2018,6 +2018,77 @@ def test_invalid_time_varying():
         )
 
 
+def test_time_varying_regression_differencing():
+    # GH 8725: with time-varying regression and differencing integrated in
+    # the state vector (so that there are no ARMA states), the design matrix
+    # was missing the differencing-state columns and the differencing states
+    # were incorrectly coupled into the regression state
+    nobs = 100
+    rng = np.random.default_rng(1234)
+    exog = rng.normal(size=nobs)
+    endog = 0.7 * exog + rng.normal(size=nobs)
+
+    mod = sarimax.SARIMAX(
+        endog,
+        exog=exog,
+        order=(0, 1, 0),
+        time_varying_regression=True,
+        mle_regression=False,
+    )
+
+    # The design matrix must contain the differencing state column along
+    # with the time-varying exogenous column
+    design = mod.ssm["design"]
+    assert_equal(design.shape, (1, 2, nobs))
+    assert_almost_equal(design[0, 0], np.ones(nobs))
+    assert_almost_equal(design[0, 1], exog)
+
+    # The differencing state must not feed into the regression state
+    assert_almost_equal(mod.ssm["transition"], np.eye(2))
+
+    # The model can now be fit, and the time-varying coefficient should
+    # estimate the static regression slope of the differenced data
+    d_endog = np.diff(endog)
+    d_exog = np.diff(exog)
+    slope = np.dot(d_exog, d_endog) / np.dot(d_exog, d_exog)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        res = mod.fit(disp=-1)
+    assert_allclose(res.smoothed_state[1].mean(), slope, atol=0.2)
+
+
+def test_time_varying_regression_seasonal_differencing():
+    # GH 8725: same failure mode as test_time_varying_regression_differencing
+    # but with seasonal differencing states
+    nobs = 80
+    rng = np.random.default_rng(1234)
+    exog = rng.normal(size=nobs)
+    endog = 0.5 * exog + rng.normal(size=nobs)
+
+    mod = sarimax.SARIMAX(
+        endog,
+        exog=exog,
+        order=(0, 0, 0),
+        seasonal_order=(0, 1, 0, 4),
+        time_varying_regression=True,
+        mle_regression=False,
+    )
+
+    design = mod.ssm["design"]
+    assert_equal(design.shape, (1, 5, nobs))
+    assert_almost_equal(design[0, -1], exog)
+
+    # The seasonal differencing states must not feed into the regression
+    # state
+    transition = mod.ssm["transition"]
+    assert_almost_equal(transition[-1], [0, 0, 0, 0, 1])
+    assert_(np.all(transition[:4, 4] == 0))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        mod.fit(disp=-1)
+
+
 def test_manual_stationary_initialization():
     endog = results_sarimax.wpi1_data
 
@@ -2208,7 +2279,7 @@ def test_predict_custom_index():
 
 
 def test_arima000():
-    # Test an ARIMA(0, 0, 0) with measurement error model (i.e. just estimating
+    # Test an ARIMA(0, 0, 0) with measurement error model (i.e., just estimating
     # a variance term)
     rs = np.random.RandomState(328423)
     nobs = 50
@@ -2289,7 +2360,7 @@ def check_concentrated_scale(filter_univariate=False):
         time_varying_regressions,
         simple_differencings,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
 
@@ -2618,7 +2689,7 @@ def test_recreate_model():
         time_varying_regressions,
         simple_differencings,
     ):
-        kwargs = dict(zip(names, element))
+        kwargs = dict(zip(names, element, strict=True))
         if kwargs.get("time_varying_regression", False):
             kwargs["mle_regression"] = False
         exog = kwargs.pop("exog", None)
@@ -2780,6 +2851,40 @@ def test_extend_by_one():
     # Check that we get an error if we try to extend without exog
     with pytest.raises(ValueError, match="Cloning a model with an exogenous"):
         res2.extend(endog[-1:])
+
+
+def test_extend_constant_exog_with_trend():
+    # GH 8991: `exog` that happens to be constant over the extension window, but
+    # not over the full sample, must not be mistaken for a constant column
+    # colliding with the constant trend.
+    endog = np.arange(100.0)
+    exog = np.r_[np.arange(50.0), np.ones(50) * 7.0]
+    params = [1.0, 1.0, 0.1, 1.0]
+
+    mod1 = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0), trend="c")
+    res1 = mod1.smooth(params)
+
+    mod2 = sarimax.SARIMAX(endog[:50], exog=exog[:50], order=(1, 0, 0), trend="c")
+    res2 = mod2.smooth(params)
+
+    # Raised ValueError before GH 8991 was fixed
+    res3 = res2.extend(endog[50:], exog=exog[50:])
+
+    assert_allclose(res3.llf_obs, res1.llf_obs[50:])
+    for attr in ["filtered_state", "predicted_state", "forecasts", "smoothed_state"]:
+        assert_allclose(getattr(res3, attr), getattr(res1, attr)[..., 50:])
+
+    fcast_exog = np.ones(10) * 7.0
+    assert_allclose(
+        res3.forecast(10, exog=fcast_exog), res1.forecast(10, exog=fcast_exog)
+    )
+
+    # The trend offset must still be applied to the extended model
+    assert_equal(res3.model.trend_offset, res2.nobs + 1)
+
+    # The exog check remains available to callers that explicitly ask for it
+    with pytest.raises(ValueError, match="already contains a column of constants"):
+        res2.extend(endog[50:], exog=exog[50:], validate_exog=True)
 
 
 def test_apply_results():
@@ -3017,3 +3122,49 @@ def test_sarimax_forecast_exog_trend():
 
     # Test for h=2
     assert_allclose(res.forecast(2, exog=[1.0, 1.0]), 0.2 + 0.4, 0.2 + 0.4 + 0.5)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    true = results_sarimax.wpi1_stationary
+    endog = true["data"]
+    mod = sarimax.SARIMAX(
+        endog,
+        order=(1, 1, 1),
+        trend="c",
+        simple_differencing=True,
+        hamilton_representation=True,
+    )
+    res = mod.fit(disp=-1)
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_model_latex_names_matches_model_names_structure():
+    rs = np.random.RandomState(19)
+    endog = rs.standard_normal(60).cumsum()
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 1), trend="ct")
+
+    names = mod.model_names
+    latex_names = mod.model_latex_names
+
+    assert set(names.keys()) == set(latex_names.keys())
+    for key in names:
+        if names[key] is None:
+            assert latex_names[key] is None
+        else:
+            assert len(names[key]) == len(latex_names[key])
+            assert len(set(latex_names[key])) == len(latex_names[key])
+
+    # ar/ma coefficients get a distinct latex (greek) rendering; the
+    # "intercept"/"drift" trend labels are shared verbatim between the two
+    assert names["trend"] == ["intercept", "drift"]
+    assert latex_names["trend"] == ["intercept", "drift"]
+    assert names["ar"] == ["ar.L1"]
+    assert latex_names["ar"] == [r"$\phi_1$"]
+    assert names["ma"] == ["ma.L1"]
+    assert latex_names["ma"] == [r"$\theta_1$"]
+    assert names["variance"] == ["sigma2"]
+    assert latex_names["variance"] == [r"$\sigma_\zeta^2$"]

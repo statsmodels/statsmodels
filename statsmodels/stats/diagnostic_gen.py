@@ -6,12 +6,64 @@ License: BSD-3
 
 """
 
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
-from statsmodels.stats.effect_size import _noncentrality_chisquare
+from statsmodels.stats.base import LimitedIterationMixin
+from statsmodels.stats.effect_size import (
+    NoncentralityChisquareResult,
+    _noncentrality_chisquare,
+)
 from statsmodels.tools.sm_exceptions import ModelWarning
+
+
+@dataclass(frozen=True, slots=True)
+class ChisquareBinningResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`test_chisquare_binning`.
+
+    Parameters
+    ----------
+    statistic : float
+        Chisquare statistic of the goodness-of-fit test.
+    pvalue : float
+        p-value of the chisquare test.
+    df : int
+        Degrees of freedom of the test.
+    freqs : ndarray
+        Observed frequencies summed within each bin.
+    probs : ndarray
+        Expected frequencies summed within each bin.
+    noncentrality : NoncentralityChisquareResult
+        Estimate of the noncentrality parameter and its confidence
+        interval for the chisquare statistic.
+    resid_pearson : ndarray
+        Pearson residuals for each bin, ``(freqs - probs) / sqrt(probs)``.
+    chi2_stat_groups : ndarray
+        Chisquare contribution of each bin, before summing across bins.
+    indices : list of ndarray
+        Indices of the original observations included in each bin.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    df: int
+    freqs: np.ndarray
+    probs: np.ndarray
+    noncentrality: NoncentralityChisquareResult
+    resid_pearson: np.ndarray
+    chi2_stat_groups: np.ndarray
+    indices: list
 
 
 def test_chisquare_binning(
@@ -33,45 +85,42 @@ def test_chisquare_binning(
     Parameters
     ----------
     counts : array_like
-        Observed frequency, i.e. counts for all choices
+        Observed frequency, i.e., counts for all choices
     expected : array_like
         Expected counts or probability. If expected are counts, then they
         need to sum to the same total count as the sum of observed.
         If those sums are unequal and all expected values are smaller or equal
         to 1, then they are interpreted as probabilities and will be rescaled
         to match counts.
-    sort_var : array_like
+    sort_var : array_like, optional
         1-dimensional array for binning. Groups will be formed according to
         quantiles of the sorted array ``sort_var``, so that group sizes have
-        equal or approximately equal sizes.
-    bins : int
+        equal or approximately equal sizes. If None, the original order of
+        ``counts`` and ``expected`` is used for binning instead.
+    bins : int, optional
         Number of bins or groups to use for binning the data based on
         ``sort_var``. Default is 10.
-    df : int
+    df : int, optional
         Degrees of freedom of the chisquare distribution used to compute
         the p-value of the test. If None, then the degrees of freedom are
         computed from the number of groups and choices, depending on
         whether ``ordered`` is True or False.
-    ordered : bool
+    ordered : bool, optional
         If True, the degrees of freedom for the ordinal case are used when
-        ``df`` is not provided. Default is False, i.e. the multinomial
+        ``df`` is not provided. Default is False, i.e., the multinomial
         (unordered) case.
-    sort_method : str
+    sort_method : str, optional
         Sorting method used by ``numpy.argsort`` when binning by
         ``sort_var``. Default is "quicksort".
-    alpha_nc : float
+    alpha_nc : float, optional
         Significance level used in the computation of the noncentrality
         parameter confidence interval. Default is 0.05.
 
     Returns
     -------
-    HolderTuple instance
-        This instance contains the results of the chisquare test and some
-        information about the data
-
-        - statistic : chisquare statistic of the goodness-of-fit test
-        - pvalue : pvalue of the chisquare test
-        - df : degrees of freedom of the test
+    ChisquareBinningResult
+        See :class:`ChisquareBinningResult` for a description of the
+        attributes.
 
     Notes
     -----
@@ -92,7 +141,7 @@ def test_chisquare_binning(
 
     observed = np.asarray(counts)
     expected = np.asarray(expected)
-    n_observed = counts.sum()
+    n_observed = observed.sum()
     n_expected = expected.sum()
     if not np.allclose(n_observed, n_expected, atol=1e-13):
         if np.max(expected) < 1 + 1e-13:
@@ -136,7 +185,7 @@ def test_chisquare_binning(
     pvalue = stats.chi2.sf(chi2_stat, df)
     noncentrality = _noncentrality_chisquare(chi2_stat, df, alpha=alpha_nc)
 
-    res = HolderTuple(
+    res = ChisquareBinningResult(
         statistic=chi2_stat,
         pvalue=pvalue,
         df=df,
@@ -161,13 +210,13 @@ def prob_larger_ordinal_choice(prob):
     Parameters
     ----------
     prob : array_like
-        Expected probabilities for ordinal choices, e.g. from prediction of
+        Expected probabilities for ordinal choices, e.g., from prediction of
         an ordinal model with observations in rows and choices in columns.
 
     Returns
     -------
     cdf_mid : ndarray
-        mid cdf, i.e. ``P(x < y) + 0.5 P(x=y)``
+        mid cdf, i.e., ``P(x < y) + 0.5 P(x=y)``
     r : ndarray
         Probability residual ``P(x > y) - P(x < y)`` for all possible choices.
         Computed as ``r = cdf_mid * 2 - 1``
@@ -178,7 +227,7 @@ def prob_larger_ordinal_choice(prob):
 
     References
     ----------
-    .. [2] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
+    .. [1] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
        Outcomes.” Biometrika 99 (2): 473-80.
     """
     # similar to `nonparametric rank_compare_2ordinal`
@@ -241,8 +290,8 @@ def prob_larger_2ordinal(probs1, probs2):
     freq1 = np.asarray(probs1)
     freq2 = np.asarray(probs2)
     # add zero at beginning of choices for cdf computation
-    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1), axis=-1)
-    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2), axis=-1)
+    freq1_ = np.concatenate((np.zeros((*freq1.shape[:-1], 1)), freq1), axis=-1)
+    freq2_ = np.concatenate((np.zeros((*freq2.shape[:-1], 1)), freq2), axis=-1)
 
     cdf1 = freq1_.cumsum(axis=-1)
     cdf2 = freq2_.cumsum(axis=-1)

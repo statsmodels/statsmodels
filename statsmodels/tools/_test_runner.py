@@ -1,6 +1,5 @@
 """Pytest runner that allows tests to be run within Python"""
-
-import os
+from pathlib import Path
 import sys
 
 
@@ -23,7 +22,7 @@ class PytestTester:
             package_path = f.f_locals.get("__file__", None)
             if package_path is None:
                 raise ValueError("Unable to determine path")
-        self.package_path = os.path.dirname(package_path)
+        self.package_path = str(Path(package_path).parent)
         self.package_name = f.f_locals.get("__name__", None)
 
     def __call__(self, extra_args=None, exit=False):
@@ -32,7 +31,7 @@ class PytestTester:
 
         Parameters
         ----------
-        extra_args : list[str], optional
+        extra_args : list of str, optional
             Command line arguments to pass to pytest. If None, defaults
             to ``["--tb=short", "--disable-pytest-warnings"]``.
         exit : bool, optional
@@ -48,11 +47,11 @@ class PytestTester:
 
         if extra_args is None:
             extra_args = ["--tb=short", "--disable-pytest-warnings"]
-        cmd = [self.package_path] + extra_args
+        cmd = [self.package_path, *extra_args]
         print("Running pytest " + " ".join(cmd))
         status = pytest.main(cmd)
         if exit:
             print(f"Exit status: {status}")
             sys.exit(status)
 
-        return (status == 0)
+        return status == 0

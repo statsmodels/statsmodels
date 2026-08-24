@@ -12,7 +12,7 @@ methodology of PSS, who only used 40,000. The asymptotic P-value response
 functions were computed based on the simulated value. Critical values
 are the point estimates for the respective quantiles. The simulation code
 is contained in pss.py. The output files from this function are then
-transformed using pss-process.py.
+transformed using pss_process.py.
 
 The format of the keys are (k, case, I1) where
 
