@@ -4,15 +4,16 @@ Created on Mar. 11, 2024 10:41:37 p.m.
 Author: Josef Perktold
 License: BSD-3
 """
-# flake8: noqa E731
-import numpy as np
-from scipy import stats, integrate, optimize
 
-from statsmodels.tools.testing import Holder
+from typing import NamedTuple
+
+import numpy as np
+from scipy import integrate, optimize, stats
 
 
 def _var_normal(norm):
-    """Variance factor for asymptotic relative efficiency of mean M-estimator.
+    """
+    Variance factor for asymptotic relative efficiency of mean M-estimator
 
     The reference distribution is the standard normal distribution.
     This assumes that the psi function is continuous.
@@ -26,12 +27,18 @@ def _var_normal(norm):
 
     Returns
     -------
-    Variance factor.
+    float
+        Variance factor.
 
     Notes
     -----
     This function does not verify that the assumption on the psi function and
     it's derivative hold.
+
+    S-estimator for mean and regression also have the same variance and
+    efficiency computation as M-estimators. Therefore, this function can
+    be used also for S-estimators and other estimators that are locally
+    equivalent to an M-estimator.
 
     Examples
     --------
@@ -39,31 +46,24 @@ def _var_normal(norm):
     mean using HuberT norm. At the default tuning parameter, the relative
     efficiency is 95%.
 
-    >>> import statsmodels.robust import norms
+    >>> from statsmodels.robust import norms
     >>> v = _var_normal(norms.HuberT())
     >>> eff = 1 / v
     >>> v, eff
     (1.0526312909084732, 0.9500002599551741)
 
-    Notes
-    -----
-    S-estimator for mean and regression also have the same variance and
-    efficiency computation as M-estimators. Therefore, this function can
-    be used also for S-estimators and other estimators that .
-
-    Reference
-    ---------
+    References
+    ----------
     Menenez et al., but it's also in all text books for robust statistics.
-
-
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
-    denom = stats.norm.expect(lambda x: norm.psi_deriv(x))**2  #noqa E731
+    num = stats.norm.expect(lambda x: norm.psi(x) ** 2)
+    denom = stats.norm.expect(norm.psi_deriv)**2
     return num / denom
 
 
 def _var_normal_jump(norm):
-    """Variance factor for asymptotic relative efficiency of mean M-estimator.
+    """
+    Variance factor for asymptotic relative efficiency of mean M-estimator
 
     The reference distribution is the standard normal distribution.
     This allows for the case when the psi function is not continuous, i.e.
@@ -78,7 +78,8 @@ def _var_normal_jump(norm):
 
     Returns
     -------
-    Variance factor.
+    float
+        Variance factor.
 
     Notes
     -----
@@ -87,20 +88,17 @@ def _var_normal_jump(norm):
 
     Examples
     --------
-
-    >>> import statsmodels.robust import norms
+    >>> from statsmodels.robust import norms
     >>> v = _var_normal_jump(norms.HuberT())
     >>> eff = 1 / v
     >>> v, eff
     (1.0526312908510451, 0.950000260007003)
 
-    Reference
-    ---------
+    References
+    ----------
     Menenez et al., but it's also in all text books for robust statistics.
-
-
     """
-    num = stats.norm.expect(lambda x: norm.psi(x)**2)  #noqa E731
+    num = stats.norm.expect(lambda x: norm.psi(x)**2)
 
     def func(x):
         # derivative normal pdf
@@ -114,7 +112,8 @@ def _var_normal_jump(norm):
 def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
                       bracket=None,
                       ):
-    """Tuning parameter for RLM norms for required relative efficiency.
+    """
+    Tuning parameter for RLM norms for required relative efficiency
 
     Parameters
     ----------
@@ -123,24 +122,24 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
         Required asymptotic relative efficiency compared to least squares
         at the normal reference distribution. For example, ``eff=0.95`` for
         95% efficiency.
-    kwd : str
+    kwd : str, optional
         Name of keyword for tuning parameter.
-    kwargs : dict or None
+    kwargs : dict or None, optional
         Dict for other keyword parameters.
-    use_jump : bool
+    use_jump : bool, optional
         If False (default), then use computation that require continuous
         psi function.
         If True, then use computation then the psi function can have jump
         discontinuities.
-    bracket : None or tuple
+    bracket : tuple, optional
         Bracket with lower and upper bounds to use for scipy.optimize.brentq.
         If None, than a default bracket, currently [0.1, 10], is used.
 
     Returns
     -------
-    Float : Value of tuning parameter to achieve asymptotic relative
+    float
+        Value of tuning parameter to achieve asymptotic relative
         efficiency.
-
     """
     if bracket is None:
         bracket = [0.1, 10]
@@ -160,27 +159,53 @@ def _get_tuning_param(norm, eff, kwd="c", kwargs=None, use_jump=False,
     return res
 
 
+class TuningSEstimatorMeanResult(NamedTuple):
+    """
+    Result of :func:`tuning_s_estimator_mean`.
+
+    Parameters
+    ----------
+    breakdown : float or ndarray
+        Breakdown point(s), same as the `breakdown` function argument.
+    eff : float or ndarray
+        Relative efficiency at the given breakdown point(s).
+    param : float or ndarray
+        Tuning parameter for the norm at the given breakdown point(s).
+    scale_bias : float or ndarray
+        Correction term for Fisher consistency at the given breakdown
+        point(s).
+    all : ndarray
+        Stacked array with rows `breakdown`, `eff`, `param` and
+        `scale_bias` for all requested breakdown points, regardless of
+        whether a scalar or iterable `breakdown` was given.
+    """
+
+    breakdown: float | np.ndarray
+    eff: float | np.ndarray
+    param: float | np.ndarray
+    scale_bias: float | np.ndarray
+    all: np.ndarray
+
+
 def tuning_s_estimator_mean(norm, breakdown=None):
-    """Tuning parameter and scale bias correction for S-estimators of mean.
+    """
+    Tuning parameter and scale bias correction for S-estimators of mean
 
     The reference distribution is the normal distribution.
-    This requires a (hard) redescending norm, i.e. with finite max rho.
+    This requires a (hard) redescending norm, i.e., with finite max rho.
 
     Parameters
     ----------
     norm : instance of RobustNorm subclass
-    breakdown : float or iterable of float in (0, 0.5]
+    breakdown : float or iterable of float in (0, 0.5], optional
         Desired breakdown point between 0 and 0.5.
         Default if breakdown is None is a list of breakdown points.
 
     Returns
     -------
-    Holder instance with the following attributes :
-
-     - `breakdown` : breakdown point
-     - `eff` : relative efficiency
-     - `param` : tuning parameter for norm
-     - `scale_bias` : correction term for Fisher consistency.
+    TuningSEstimatorMeanResult
+        Named tuple with `breakdown`, `eff`, `param`, and `scale_bias`.
+        See :class:`TuningSEstimatorMeanResult` for details.
 
     Notes
     -----
@@ -196,11 +221,9 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     TODO: more options for details, numeric approximation and root finding.
     There is currently no feasibility check in functions.
 
-    Reference
-    ---------
+    References
+    ----------
     Rousseeuw and Leroy book
-
-
     """
     if breakdown is None:
         bps = [0.5, 0.45, 0.40, 0.35, 0.30, 0.25, 0.20, 0.15, 0.1, 0.05]
@@ -215,16 +238,15 @@ def tuning_s_estimator_mean(norm, breakdown=None):
     def func(c):
         norm_ = norm
         norm_._set_tuning_param(c, inplace=True)
-        bp = (stats.norm.expect(lambda x : norm_.rho(x)) /  #noqa E731
-              norm_.max_rho())
+        bp = stats.norm.expect(norm_.rho) / norm_.max_rho()
         return bp
 
     res = []
     for bp in bps:
-        c_bp = optimize.brentq(lambda c0: func(c0) - bp, 0.1, 10)  #noqa E731
+        c_bp = optimize.brentq(lambda c0, bp: func(c0) - bp, 0.1, 10, args=(bp,))
         norm._set_tuning_param(c_bp, inplace=True)  # inplace modification
         eff = 1 / _var_normal(norm)
-        b = stats.norm.expect(lambda x : norm.rho(x))
+        b = stats.norm.expect(norm.rho)
         res.append([bp, eff, c_bp, b])
 
     if np.size(bps) > 1:
@@ -233,7 +255,7 @@ def tuning_s_estimator_mean(norm, breakdown=None):
         # use one list
         res = res[0]
 
-    res2 = Holder(
+    res2 = TuningSEstimatorMeanResult(
         breakdown=res[0],
         eff=res[1],
         param=res[2],
@@ -245,10 +267,25 @@ def tuning_s_estimator_mean(norm, breakdown=None):
 
 
 def scale_bias_cov_biw(c, k_vars):
-    """Multivariate scale bias correction for TukeyBiweight norm.
+    """
+    Multivariate scale bias correction for TukeyBiweight norm
 
     This uses the chisquare distribution as reference distribution for the
     squared Mahalanobis distance.
+
+    Parameters
+    ----------
+    c : float
+        Tuning parameter for the TukeyBiweight norm.
+    k_vars : int
+        Number of random variables in the multivariate data.
+
+    Returns
+    -------
+    b : float
+        Scale bias correction term.
+    breakdown_point : float
+        Breakdown point computed as scale bias divided by max rho.
     """
     p = k_vars  # alias for formula
     chip, chip2, chip4, chip6 = stats.chi2.cdf(c**2, [p, p + 2, p + 4, p + 6])
@@ -258,11 +295,11 @@ def scale_bias_cov_biw(c, k_vars):
 
 
 def scale_bias_cov(norm, k_vars):
-    """Multivariate scale bias correction.
+    """
+    Multivariate scale bias correction
 
-
-    Parameter
-    ---------
+    Parameters
+    ----------
     norm : norm instance
         The rho function of the norm is used in the moment condition for
         estimating scale.
@@ -271,18 +308,42 @@ def scale_bias_cov(norm, k_vars):
 
     Returns
     -------
-    scale_bias: float
+    scale_bias : float
+        Scale bias correction term.
     breakdown_point : float
         Breakdown point computed as scale bias divided by max rho.
     """
 
-    rho = lambda x: (norm.rho(np.sqrt(x)))  # noqa
+    def rho(x):
+        return norm.rho(np.sqrt(x))
     scale_bias = stats.chi2.expect(rho, args=(k_vars,))
     return scale_bias, scale_bias / norm.max_rho()
 
 
 def tuning_s_cov(norm, k_vars, breakdown_point=0.5, limits=()):
-    """Tuning parameter for multivariate S-estimator given breakdown point.
+    """
+    Tuning parameter for multivariate S-estimator given breakdown point
+
+    Parameters
+    ----------
+    norm : norm instance
+        The rho function of the norm is used in the moment condition for
+        estimating scale. If `norm` is an instance of `TukeyBiweight`, a
+        closed form solution is used, otherwise a copy of `norm` is used
+        for the root finding.
+    k_vars : int
+        Number of random variables in the multivariate data.
+    breakdown_point : float, optional
+        Desired breakdown point in (0, 0.5]. Default is 0.5.
+    limits : tuple, optional
+        Limits for rootfinding with scipy.optimize.brentq.
+        If empty, the default limits (0.5, 30) are used.
+
+    Returns
+    -------
+    float
+        Tuning parameter for the norm to achieve the desired breakdown
+        point.
     """
     from .norms import TukeyBiweight  # avoid circular import
 
@@ -304,7 +365,8 @@ def tuning_s_cov(norm, k_vars, breakdown_point=0.5, limits=()):
 
 
 def eff_mvmean(norm, k_vars):
-    """Efficiency for M-estimator of multivariate mean at normal distribution.
+    """
+    Efficiency for M-estimator of multivariate mean at normal distribution
 
     This also applies to estimators that are locally equivalent to an
     M-estimator such as S- and MM-estimators.
@@ -313,7 +375,7 @@ def eff_mvmean(norm, k_vars):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
 
     Returns
     -------
@@ -333,20 +395,25 @@ def eff_mvmean(norm, k_vars):
 
     .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
        and M-Estimators of Multivariate Location and Covariance.”
-       The Annals of Statistics 17 (4): 1662–83.
+       The Annals of Statistics 17 (4): 1662-83.
 
     """
     k = k_vars  # shortcut
-    f_alpha = lambda d: norm.psi(d)**2 / k
-    f_beta = lambda d: ((1 - 1 / k) * norm.weights(d) +
-                        1 / k * norm.psi_deriv(d))
+
+    def f_alpha(d):
+        return norm.psi(d) ** 2 / k
+
+    def f_beta(d):
+        return (1 - 1 / k) * norm.weights(d) + 1 / k * norm.psi_deriv(d)
+
     alpha = stats.chi(k).expect(f_alpha)
     beta = stats.chi(k).expect(f_beta)
     return beta**2 / alpha, alpha, beta
 
 
 def eff_mvshape(norm, k_vars):
-    """Efficiency of M-estimator of multivariate shape at normal distribution.
+    """
+    Efficiency of M-estimator of multivariate shape at normal distribution
 
     This also applies to estimators that are locally equivalent to an
     M-estimator such as S- and MM-estimators.
@@ -355,7 +422,7 @@ def eff_mvshape(norm, k_vars):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
+        Number of variables in multivariate random variable, i.e., dimension.
 
     Returns
     -------
@@ -376,20 +443,26 @@ def eff_mvshape(norm, k_vars):
 
     .. [1] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators
        and M-Estimators of Multivariate Location and Covariance.”
-       The Annals of Statistics 17 (4): 1662–83.
+       The Annals of Statistics 17 (4): 1662-83.
 
     """
 
     k = k_vars  # shortcut
-    f_a = lambda d: k * (k + 2) * norm.psi(d)**2 * d**2
-    f_b = lambda d: norm.psi_deriv(d) * d**2 + (k + 1) * norm.psi(d) * d
+
+    def f_a(d):
+        return k * (k + 2) * norm.psi(d) ** 2 * d**2
+
+    def f_b(d):
+        return norm.psi_deriv(d) * d**2 + (k + 1) * norm.psi(d) * d
+
     a = stats.chi(k).expect(f_a)
     b = stats.chi(k).expect(f_b)
     return b**2 / a, a, b
 
 
 def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
-    """Tuning parameter for multivariate M-estimator given efficiency.
+    """
+    Tuning parameter for multivariate M-estimator given efficiency
 
     This also applies to estimators that are locally equivalent to an
     M-estimator such as S- and MM-estimators.
@@ -398,23 +471,24 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     ----------
     norm : instance of norm class
     k_vars : int
-        Number of variables in multivariate random variable, i.e. dimension.
-    efficiency : float < 1
+        Number of variables in multivariate random variable, i.e., dimension.
+    efficiency : float < 1, optional
         Desired asymptotic relative efficiency of mean estimator.
         Default is 0.95.
-    eff_mean : bool
+    eff_mean : bool, optional
         If eff_mean is true (default), then tuning parameter is to achieve
         efficiency of mean estimate.
-        If eff_mean is fale, then tuning parameter is to achieve efficiency
+        If eff_mean is false, then tuning parameter is to achieve efficiency
         of shape estimate.
-    limits : tuple
+    limits : tuple, optional
         Limits for rootfinding with scipy.optimize.brentq.
         In some cases the interval limits for rootfinding can be too small
         and not cover the root. Current default limits are (0.5, 30).
 
     Returns
     -------
-    float : Tuning parameter for the norm to achieve desired efficiency.
+    float
+        Tuning parameter for the norm to achieve desired efficiency.
         Asymptotic relative efficiency of mean at normal distribution.
 
     Notes
@@ -440,36 +514,6 @@ def tuning_m_cov_eff(norm, k_vars, efficiency=0.95, eff_mean=True, limits=()):
     p_tune = optimize.brentq(func, limits[0], limits[1])
     return p_tune
 
-
-#  ##### tables
-
-tukeybiweight_bp = {
-    # breakdown point : (tuning parameter, efficiency, scale bias)
-    0.50: (1.547645, 0.286826, 0.199600),
-    0.45: (1.756059, 0.369761, 0.231281),
-    0.40: (1.987965, 0.461886, 0.263467),
-    0.35: (2.251831, 0.560447, 0.295793),
-    0.30: (2.560843, 0.661350, 0.327896),
-    0.25: (2.937015, 0.759040, 0.359419),
-    0.20: (3.420681, 0.846734, 0.390035),
-    0.15: (4.096255, 0.917435, 0.419483),
-    0.10: (5.182361, 0.966162, 0.447614),
-    0.05: (7.545252, 0.992424, 0.474424),
-    }
-
-tukeybiweight_eff = {
-    # efficiency : (tuning parameter, breakdown point)
-    0.65: (2.523102, 0.305646),
-    0.70: (2.697221, 0.280593),
-    0.75: (2.897166, 0.254790),
-    0.80: (3.136909, 0.227597),
-    0.85: (3.443690, 0.197957),
-    0.90: (3.882662, 0.163779),
-    0.95: (4.685065, 0.119414),
-    0.97: (5.596823, 0.087088),
-    0.98: (5.920719, 0.078604),
-    0.99: (7.041392, 0.056969),
-    }
 
 # relative efficiency for M and MM estimator of multivariate location
 # Table 2 from Kudraszow and Maronna JMA 2011
@@ -540,11 +584,29 @@ tukeybiweight_mvshape_eff_d = _convert_to_dict_mvmean_effs(eff_mean=False)
 
 
 def tukeybiweight_mvmean_eff(k, eff, eff_mean=True):
-    """tuning parameter for biweight norm to achieve efficiency for mv-mean.
+    """
+    Tuning parameter for biweight norm to achieve efficiency for mv-mean
 
     Uses values from precomputed table if available, otherwise computes it
     numerically and adds it to the module global dict.
 
+    Parameters
+    ----------
+    k : int
+        Number of variables in multivariate random variable, i.e., dimension.
+    eff : float
+        Desired asymptotic relative efficiency of mean estimator.
+    eff_mean : bool, optional
+        If eff_mean is true (default), then tuning parameter is to achieve
+        efficiency of mean estimate.
+        If eff_mean is false, then tuning parameter is to achieve efficiency
+        of shape estimate.
+
+    Returns
+    -------
+    float
+        Tuning parameter for the TukeyBiweight norm to achieve the desired
+        efficiency.
     """
     if eff_mean:
         table_dict = tukeybiweight_mvmean_eff_d

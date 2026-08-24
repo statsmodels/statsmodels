@@ -1,5 +1,6 @@
-__all__ = ['dentonm', 'test']
+__all__ = ["dentonm", "test"]
+from statsmodels.tools._test_runner import PytestTester
+
 from .denton import dentonm
-from statsmodels.tools._testing import PytestTester
 
 test = PytestTester()

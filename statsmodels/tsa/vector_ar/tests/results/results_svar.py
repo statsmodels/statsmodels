@@ -1,6 +1,4 @@
-"""
-Test Results for the SVAR model. Obtained from R using svartest.R
-"""
+"""Test results for the SVAR model, obtained from R using svartest.R"""
 
 
 class SVARdataResults:

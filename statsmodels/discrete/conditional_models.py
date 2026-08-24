@@ -2,20 +2,29 @@
 Conditional logistic, Poisson, and multinomial logit regression
 """
 
-import numpy as np
-import statsmodels.base.model as base
-import statsmodels.regression.linear_model as lm
-import statsmodels.base.wrapper as wrap
-from statsmodels.discrete.discrete_model import (MultinomialResults,
-      MultinomialResultsWrapper)
 import collections
-import warnings
 import itertools
+import warnings
+
+import numpy as np
+from scipy.special import logsumexp
+
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import (
+    MultinomialResults,
+    MultinomialResultsWrapper,
+)
+from statsmodels.formula.formulatools import advance_eval_env
+import statsmodels.regression.linear_model as lm
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.sm_exceptions import ModelWarning
+from statsmodels.tools.validation import string_like
 
 
 class _ConditionalModel(base.LikelihoodModel):
 
-    def __init__(self, endog, exog, missing='none', **kwargs):
+    def __init__(self, endog, exog, missing="none", **kwargs):
 
         if "groups" not in kwargs:
             raise ValueError("'groups' is a required argument")
@@ -29,12 +38,10 @@ class _ConditionalModel(base.LikelihoodModel):
             msg = "The leading dimension of 'exog' should equal the length of 'endog'"
             raise ValueError(msg)
 
-        super().__init__(
-            endog, exog, missing=missing, **kwargs)
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         if self.data.const_idx is not None:
-            msg = ("Conditional models should not have an intercept in the " +
-                  "design matrix")
+            msg = "Conditional models should not have an intercept in the design matrix"
             raise ValueError(msg)
 
         exog = self.exog
@@ -60,7 +67,7 @@ class _ConditionalModel(base.LikelihoodModel):
         self._sumy = []
         self.nobs = 0
         drops = [0, 0]
-        for g, ix in row_ix.items():
+        for _, ix in row_ix.items():
             y = endog[ix].flat
             if np.std(y) == 0:
                 drops[0] += 1
@@ -75,9 +82,11 @@ class _ConditionalModel(base.LikelihoodModel):
             self._sumy.append(np.sum(y))
 
         if drops[0] > 0:
-            msg = ("Dropped %d groups and %d observations for having " +
-                   "no within-group variance") % tuple(drops)
-            warnings.warn(msg)
+            msg = (
+                f"Dropped {drops[0]} groups and {drops[1]} observations for "
+                f"having no within-group variance"
+            )
+            warnings.warn(msg, ModelWarning, stacklevel=2)
 
         # This can be pre-computed
         if offset is not None:
@@ -96,23 +105,78 @@ class _ConditionalModel(base.LikelihoodModel):
             self._n1.append(np.sum(self._endog_grp[g]))
 
     def hessian(self, params):
+        """
+        Returns numerical approximation to the Hessian.
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+
+        Returns
+        -------
+        ndarray
+            The Hessian matrix, approximated numerically from the
+            score function.
+        """
 
         from statsmodels.tools.numdiff import approx_fprime
+
         hess = approx_fprime(params, self.score)
         hess = np.atleast_2d(hess)
         return hess
 
-    def fit(self,
-            start_params=None,
-            method='BFGS',
-            maxiter=100,
-            full_output=True,
-            disp=False,
-            fargs=(),
-            callback=None,
-            retall=False,
-            skip_hessian=False,
-            **kwargs):
+    def fit(
+        self,
+        start_params=None,
+        method="BFGS",
+        maxiter=100,
+        full_output=True,
+        disp=False,
+        fargs=(),
+        callback=None,
+        retall=False,
+        skip_hessian=False,
+        **kwargs,
+    ):
+        """
+        Fit the conditional model.
+
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Initial guess of the solution for the loglikelihood
+            maximization. The default is an array of zeros.
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used, see `LikelihoodModel.fit` for more information.
+        maxiter : int, optional
+            The maximum number of iterations to perform.
+        full_output : bool, optional
+            Set to True to have all available output in the Results
+            object's mle_retvals attribute.
+        disp : bool, optional
+            Set to True to print convergence messages.
+        fargs : tuple, optional
+            Extra arguments passed to the likelihood function.
+        callback : callable, optional
+            Called after each iteration, as callback(xk), where xk is
+            the current parameter vector.
+        retall : bool, optional
+            Set to True to return list of solutions at each iteration.
+        skip_hessian : bool, optional
+            If False, the covariance matrix is calculated using the
+            numerical Hessian after the optimization.  If True, the
+            Hessian is not calculated and the returned results have
+            no covariance matrix.
+        **kwargs
+            Additional keyword arguments used by the solver.
+
+        Returns
+        -------
+        ConditionalResultsWrapper
+            The fitted model results.
+        """
 
         rslt = super().fit(
             start_params=start_params,
@@ -120,41 +184,44 @@ class _ConditionalModel(base.LikelihoodModel):
             maxiter=maxiter,
             full_output=full_output,
             disp=disp,
-            skip_hessian=skip_hessian)
+            skip_hessian=skip_hessian,
+        )
 
-        crslt = ConditionalResults(self, rslt.params, rslt.cov_params(), 1)
+        if skip_hessian:
+            cov_params = None
+        else:
+            cov_params = rslt.cov_params()
+
+        crslt = ConditionalResults(self, rslt.params, cov_params, 1)
         crslt.method = method
         crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
         crslt._group_stats = [
-            "%d" % min(self._groupsize),
-            "%d" % max(self._groupsize),
-            "%.1f" % np.mean(self._groupsize)
+            f"{min(self._groupsize):d}",
+            f"{max(self._groupsize):d}",
+            f"{np.mean(self._groupsize):.1f}",
         ]
         rslt = ConditionalResultsWrapper(crslt)
         return rslt
 
-    def fit_regularized(self,
-                        method="elastic_net",
-                        alpha=0.,
-                        start_params=None,
-                        refit=False,
-                        **kwargs):
+    def fit_regularized(
+        self, method="elastic_net", alpha=0.0, start_params=None, refit=False, **kwargs
+    ):
         """
         Return a regularized fit to a linear regression model.
 
         Parameters
         ----------
-        method : {'elastic_net'}
+        method : {'elastic_net'}, optional
             Only the `elastic_net` approach is currently implemented.
-        alpha : scalar or array_like
+        alpha : scalar or array_like, optional
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
             penalty weight for each coefficient.
-        start_params : array_like
+        start_params : array_like, optional
             Starting values for `params`.
-        refit : bool
+        refit : bool, optional
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
             refitted model is not regularized.
@@ -169,43 +236,41 @@ class _ConditionalModel(base.LikelihoodModel):
 
         from statsmodels.base.elastic_net import fit_elasticnet
 
-        if method != "elastic_net":
-            raise ValueError("method for fit_regularized must be elastic_net")
+        method = string_like(method, "method", options=("elastic_net",), lower=False)
 
-        defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10,
-                    "zero_tol": 1e-10}
+        defaults = {"maxiter": 50, "L1_wt": 1, "cnvrg_tol": 1e-10, "zero_tol": 1e-10}
         defaults.update(kwargs)
 
-        return fit_elasticnet(self, method=method,
-                              alpha=alpha,
-                              start_params=start_params,
-                              refit=refit,
-                              **defaults)
+        return fit_elasticnet(
+            self,
+            method=method,
+            alpha=alpha,
+            start_params=start_params,
+            refit=refit,
+            **defaults,
+        )
 
     # Override to allow groups to be passed as a variable name.
     @classmethod
-    def from_formula(cls,
-                     formula,
-                     data,
-                     subset=None,
-                     drop_cols=None,
-                     *args,
-                     **kwargs):
+    def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
 
         try:
             groups = kwargs["groups"]
             del kwargs["groups"]
-        except KeyError:
-            raise ValueError("'groups' is a required argument")
+        except KeyError as err:
+            raise ValueError("'groups' is a required argument") from err
 
         if isinstance(groups, str):
             groups = data[groups]
 
         if "0+" not in formula.replace(" ", ""):
-            warnings.warn("Conditional models should not include an intercept")
-
-        model = super().from_formula(
-            formula, data=data, groups=groups, *args, **kwargs)
+            warnings.warn(
+                "Conditional models should not include an intercept",
+                ModelWarning,
+                stacklevel=2,
+            )
+        advance_eval_env(kwargs)
+        model = super().from_formula(formula, data, *args, groups=groups, **kwargs)
 
         return model
 
@@ -228,21 +293,37 @@ class ConditionalLogit(_ConditionalModel):
         in this array.
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : {'none', 'drop', 'raise'}, optional
+        If 'none', no nan checking is done. If 'drop', any observations
+        with nans are dropped. If 'raise', an error is raised.
     """
 
-    def __init__(self, endog, exog, missing='none', **kwargs):
+    def __init__(self, endog, exog, missing="none", **kwargs):
 
-        super().__init__(
-            endog, exog, missing=missing, **kwargs)
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         if np.any(np.unique(self.endog) != np.r_[0, 1]):
             msg = "endog must be coded as 0, 1"
             raise ValueError(msg)
 
         self.K = self.exog.shape[1]
-        # i.e. self.k_params, for compatibility with MNLogit
+        # i.e., self.k_params, for compatibility with MNLogit
 
     def loglike(self, params):
+        """
+        Log-likelihood of the conditional logistic model.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+
+        Returns
+        -------
+        float
+            The log-likelihood value at `params`, summed over all
+            groups.
+        """
 
         ll = 0
         for g in range(len(self._endog_grp)):
@@ -251,6 +332,19 @@ class ConditionalLogit(_ConditionalModel):
         return ll
 
     def score(self, params):
+        """
+        Score vector of the conditional logistic model.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+
+        Returns
+        -------
+        ndarray
+            The score vector at `params`, summed over all groups.
+        """
 
         score = 0
         for g in range(self._n_groups):
@@ -326,7 +420,7 @@ class ConditionalLogit(_ConditionalModel):
     def loglike_grp(self, grp, params):
 
         ofs = None
-        if hasattr(self, 'offset'):
+        if hasattr(self, "offset"):
             ofs = self._offset_grp[grp]
 
         llg = np.dot(self._xy[grp], params)
@@ -341,7 +435,7 @@ class ConditionalLogit(_ConditionalModel):
     def score_grp(self, grp, params):
 
         ofs = 0
-        if hasattr(self, 'offset'):
+        if hasattr(self, "offset"):
             ofs = self._offset_grp[grp]
 
         d, h = self._denom_grad(grp, params, ofs)
@@ -365,12 +459,29 @@ class ConditionalPoisson(_ConditionalModel):
         The covariates
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : {'none', 'drop', 'raise'}, optional
+        If 'none', no nan checking is done. If 'drop', any observations
+        with nans are dropped. If 'raise', an error is raised.
     """
 
     def loglike(self, params):
+        """
+        Log-likelihood of the conditional Poisson model.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+
+        Returns
+        -------
+        float
+            The log-likelihood value at `params`, summed over all
+            groups.
+        """
 
         ofs = None
-        if hasattr(self, 'offset'):
+        if hasattr(self, "offset"):
             ofs = self._offset_grp
 
         ll = 0.0
@@ -389,9 +500,22 @@ class ConditionalPoisson(_ConditionalModel):
         return ll
 
     def score(self, params):
+        """
+        Score vector of the conditional Poisson model.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+
+        Returns
+        -------
+        ndarray
+            The score vector at `params`, summed over all groups.
+        """
 
         ofs = None
-        if hasattr(self, 'offset'):
+        if hasattr(self, "offset"):
             ofs = self._offset_grp
 
         score = 0.0
@@ -415,12 +539,10 @@ class ConditionalResults(base.LikelihoodModelResults):
     def __init__(self, model, params, normalized_cov_params, scale):
 
         super().__init__(
-            model,
-            params,
-            normalized_cov_params=normalized_cov_params,
-            scale=scale)
+            model, params, normalized_cov_params=normalized_cov_params, scale=scale
+        )
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """
         Summarize the fitted model.
 
@@ -428,13 +550,13 @@ class ConditionalResults(base.LikelihoodModelResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is "var_xx".
             Must match the number of parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals
 
         Returns
@@ -450,20 +572,20 @@ class ConditionalResults(base.LikelihoodModelResults):
         """
 
         top_left = [
-            ('Dep. Variable:', None),
-            ('Model:', None),
-            ('Log-Likelihood:', None),
-            ('Method:', [self.method]),
-            ('Date:', None),
-            ('Time:', None),
+            ("Dep. Variable:", None),
+            ("Model:", None),
+            ("Log-Likelihood:", None),
+            ("Method:", [self.method]),
+            ("Date:", None),
+            ("Time:", None),
         ]
 
         top_right = [
-            ('No. Observations:', None),
-            ('No. groups:', [self.n_groups]),
-            ('Min group size:', [self._group_stats[0]]),
-            ('Max group size:', [self._group_stats[1]]),
-            ('Mean group size:', [self._group_stats[2]]),
+            ("No. Observations:", None),
+            ("No. groups:", [self.n_groups]),
+            ("Min group size:", [self._group_stats[0]]),
+            ("Max group size:", [self._group_stats[1]]),
+            ("Mean group size:", [self._group_stats[2]]),
         ]
 
         if title is None:
@@ -471,6 +593,7 @@ class ConditionalResults(base.LikelihoodModelResults):
 
         # create summary tables
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
         smry.add_table_2cols(
             self,
@@ -478,11 +601,14 @@ class ConditionalResults(base.LikelihoodModelResults):
             gright=top_right,  # [],
             yname=yname,
             xname=xname,
-            title=title)
+            title=title,
+        )
         smry.add_table_params(
-            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t)
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
 
         return smry
+
 
 class ConditionalMNLogit(_ConditionalModel):
     """
@@ -498,6 +624,9 @@ class ConditionalMNLogit(_ConditionalModel):
         The independent variables.
     groups : array_like
         Codes defining the groups. This is a required keyword parameter.
+    missing : {'none', 'drop', 'raise'}, optional
+        If 'none', no nan checking is done. If 'drop', any observations
+        with nans are dropped. If 'raise', an error is raised.
 
     Notes
     -----
@@ -509,10 +638,9 @@ class ConditionalMNLogit(_ConditionalModel):
     data. The Review of Economic Studies.  Vol. 47, No. 1, pp. 225-238.
     """
 
-    def __init__(self, endog, exog, missing='none', **kwargs):
+    def __init__(self, endog, exog, missing="none", **kwargs):
 
-        super().__init__(
-            endog, exog, missing=missing, **kwargs)
+        super().__init__(endog, exog, missing=missing, **kwargs)
 
         # endog must be integers
         self.endog = self.endog.astype(int)
@@ -535,22 +663,99 @@ class ConditionalMNLogit(_ConditionalModel):
         self._group_labels.sort()
         self._grp_ix = [grx[k] for k in self._group_labels]
 
-    def fit(self,
-            start_params=None,
-            method='BFGS',
-            maxiter=100,
-            full_output=True,
-            disp=False,
-            fargs=(),
-            callback=None,
-            retall=False,
-            skip_hessian=False,
-            **kwargs):
+    def fit(
+        self,
+        start_params=None,
+        method="BFGS",
+        maxiter=100,
+        full_output=True,
+        disp=False,
+        fargs=(),
+        callback=None,
+        retall=False,
+        skip_hessian=False,
+        rng=None,
+        **kwargs,
+    ):
+        """
+        Fit the conditional multinomial logit model.
+
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Initial guess of the solution for the loglikelihood
+            maximization.  If None, random values are drawn using
+            `generator`.
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used, see `LikelihoodModel.fit` for more information.
+        maxiter : int, optional
+            The maximum number of iterations to perform.
+        full_output : bool, optional
+            Set to True to have all available output in the Results
+            object's mle_retvals attribute.
+        disp : bool, optional
+            Set to True to print convergence messages.
+        fargs : tuple, optional
+            Extra arguments passed to the likelihood function.
+        callback : callable, optional
+            Called after each iteration, as callback(xk), where xk is
+            the current parameter vector.
+        retall : bool, optional
+            Set to True to return list of solutions at each iteration.
+        skip_hessian : bool, optional
+            If False, the covariance matrix is calculated using the
+            numerical Hessian after the optimization.  If True, the
+            Hessian is not calculated and the returned results have
+            no covariance matrix.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Used to draw random starting values for `start_params` when
+            `start_params` is None. If `rng` is None, the legacy global
+            (singleton) ``RandomState`` provided by ``numpy.random`` is
+            used; this behavior is deprecated and will change to
+            creating a new ``Generator`` using fresh entropy from the
+            operating system in a future release. If `rng` is an int or
+            array of ints, a new ``Generator`` is created, seeded with
+            `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+            instance, that instance is used.
+
+            .. deprecated:: 0.15
+
+               After statsmodels 0.15 is released, the default
+               (``rng=None``) method for producing random start_params
+               will change to a new instance of a
+               ``numpy.random.Generator``. To obtain deterministic
+               starting values today, either pass a ``Generator`` or
+               ``RandomState`` explicitly using `rng`, or call
+               ``numpy.random.seed()`` beforehand.
+
+        **kwargs
+            Additional keyword arguments used by the solver.
+
+        Returns
+        -------
+        MultinomialResultsWrapper
+            The fitted model results.
+        """
 
         if start_params is None:
             q = self.exog.shape[1]
             c = self.k_cat - 1
-            start_params = np.random.normal(size=q * c)
+            if rng is not None:
+                generator = check_random_state(rng)
+                start_params = generator.normal(size=q * c)
+            else:
+                warnings.warn(
+                    "When start_params is not specified, random values are "
+                    "used. After statsmodels 0.15 is released, the default method "
+                    "for producing random values will be a new instance of a "
+                    "numpy.random.Generator. To control the generation of "
+                    "start_param using random values, pass a Generator or "
+                    "RandomState using the ``generator`` keyword argument. ",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+                start_params = np.random.normal(size=q * c)
 
         # Do not call super(...).fit because it cannot handle the 2d-params.
         rslt = base.LikelihoodModel.fit(
@@ -560,7 +765,8 @@ class ConditionalMNLogit(_ConditionalModel):
             maxiter=maxiter,
             full_output=full_output,
             disp=disp,
-            skip_hessian=skip_hessian)
+            skip_hessian=skip_hessian,
+        )
 
         rslt.params = rslt.params.reshape((self.exog.shape[1], -1))
         rslt = MultinomialResults(self, rslt)
@@ -573,6 +779,21 @@ class ConditionalMNLogit(_ConditionalModel):
         return MultinomialResultsWrapper(rslt)
 
     def loglike(self, params):
+        """
+        Log-likelihood of the conditional multinomial logit model.
+
+        Parameters
+        ----------
+        params : ndarray
+            The flattened parameter array, of length
+            ``exog.shape[1] * (k_cat - 1)``.
+
+        Returns
+        -------
+        float
+            The log-likelihood value at `params`, summed over all
+            groups.
+        """
 
         q = self.exog.shape[1]
         c = self.k_cat - 1
@@ -582,19 +803,34 @@ class ConditionalMNLogit(_ConditionalModel):
         lpr = np.dot(self.exog, pmat)
 
         ll = 0.0
+
+        # denom - immediately calculate the sums for the selected elements
+
         for ii in self._grp_ix:
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            for p in itertools.permutations(y):
-                denom += np.exp(x[(jj, p)].sum())
-            ll += x[(jj, y)].sum() - np.log(denom)
+            denom = np.sum(x[jj, list(itertools.permutations(y))], axis=1)
+            ll += x[(jj, y)].sum() - logsumexp(denom)
 
         return ll
 
-
     def score(self, params):
+        """
+        Score vector of the conditional multinomial logit model.
+
+        Parameters
+        ----------
+        params : ndarray
+            The flattened parameter array, of length
+            ``exog.shape[1] * (k_cat - 1)``.
+
+        Returns
+        -------
+        ndarray
+            The flattened score vector at `params`, summed over all
+            groups.
+        """
 
         q = self.exog.shape[1]
         c = self.k_cat - 1
@@ -608,14 +844,28 @@ class ConditionalMNLogit(_ConditionalModel):
             x = lpr[ii, :]
             jj = np.arange(x.shape[0], dtype=int)
             y = self.endog[ii]
-            denom = 0.0
-            denomg = np.zeros((q, c))
-            for p in itertools.permutations(y):
-                v = np.exp(x[(jj, p)].sum())
-                denom += v
-                for i, r in enumerate(p):
-                    if r != 0:
-                        denomg[:, r - 1] += v * self.exog[ii[i], :]
+            denomg = np.zeros((q, c)).T
+
+            # Extract itertools.permutations(y) to the list
+            iter_ = np.array(list(itertools.permutations(y)))
+
+            # Instead of iterative exponential value of sums of
+            # selected elements and their product by selected
+            # elements from self.exog, we calculate them at
+            # once (exp_sum, exog_exp_multy).
+            exp_sum = np.exp(np.sum(x[jj, iter_], axis=1))
+            denom = np.sum(exp_sum)
+
+            ind_exog = np.arange(iter_.shape[1], dtype=np.int32)
+            hist = len(iter_)
+            mask = iter_ != 0
+            iexog = np.take(ind_exog, mask.nonzero()[1])
+            iexog = iexog.reshape((hist, int(len(iexog) / hist)))
+            ii_ = np.take(ii, iexog)
+            exog_exp_multy = self.exog[ii_, :] * exp_sum[:, np.newaxis, np.newaxis]
+            ind_iter = iter_[mask].reshape((hist, int(len(iter_[mask]) / hist))) - 1
+            np.add.at(denomg, ind_iter, exog_exp_multy)
+            denomg = denomg.T
 
             for i, r in enumerate(y):
                 if r != 0:
@@ -624,7 +874,6 @@ class ConditionalMNLogit(_ConditionalModel):
             grad -= denomg / denom
 
         return grad.flatten()
-
 
 
 class ConditionalResultsWrapper(lm.RegressionResultsWrapper):

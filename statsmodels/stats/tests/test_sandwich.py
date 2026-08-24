@@ -8,12 +8,15 @@ Created on Sat Dec 17 08:39:16 2011
 
 Author: Josef Perktold
 """
+from pathlib import Path
+
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_allclose, assert_almost_equal
+import pandas as pd
 
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.tools import add_constant
 import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.tools import add_constant
 
 
 def test_cov_cluster_2groups():
@@ -21,10 +24,9 @@ def test_cov_cluster_2groups():
     # requires Petersen's test_data
     # http://www.kellogg.northwestern.edu/faculty/petersen
     #      .../htm/papers/se/test_data.txt
-    import os
-    cur_dir = os.path.abspath(os.path.dirname(__file__))
-    fpath = os.path.join(cur_dir, "test_data.txt")
-    pet = np.genfromtxt(fpath)
+    cur_dir = Path(__file__).parent.resolve()
+    fpath = Path(cur_dir).joinpath("test_data.txt")
+    pet = pd.read_csv(fpath, delimiter=r"\s+", header=None).values
     endog = pet[:, -1]
     group = pet[:, 0].astype(int)
     time = pet[:, 1].astype(int)
@@ -57,9 +59,9 @@ def test_cov_cluster_2groups():
 def test_hac_simple():
     from statsmodels.datasets import macrodata
     d2 = macrodata.load_pandas().data
-    g_gdp = 400 * np.diff(np.log(d2['realgdp'].values))
-    g_inv = 400 * np.diff(np.log(d2['realinv'].values))
-    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1].values])
+    g_gdp = 400 * np.diff(np.log(d2["realgdp"].values))
+    g_inv = 400 * np.diff(np.log(d2["realinv"].values))
+    exogg = add_constant(np.c_[g_gdp, d2["realint"][:-1].values])
     res_olsg = OLS(g_inv, exogg).fit()
 
     # > NeweyWest(fm, lag = 4, prewhite = FALSE, sandwich = TRUE,
@@ -96,3 +98,30 @@ def test_hac_simple():
     cov3 = sw.cov_hac_simple(res_olsg, use_correction=False)
     cov4 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
     assert_allclose(cov3, cov4)
+
+
+def test_cov_hc0_to_hc3_match_results_attributes():
+    # cov_hc0..cov_hc3 are exported from statsmodels.stats.api but were only
+    # ever exercised in examples/ex_sandwich.py, which pytest does not
+    # collect. RegressionResults independently computes the same HCx
+    # covariances for its HCx_se attributes, giving a second implementation
+    # to check the standalone functions against.
+    rs = np.random.RandomState(12345)
+    nobs, kvars = 100, 4
+    x = rs.standard_normal((nobs, kvars - 1))
+    exog = add_constant(x)
+    beta = np.ones(kvars)
+    sigma = 0.1 + np.exp(exog[:, -1])
+    endog = exog.dot(beta) + sigma * rs.standard_normal(nobs)
+
+    res = OLS(endog, exog).fit()
+
+    assert_almost_equal(sw.se_cov(sw.cov_hc0(res)), res.HC0_se, decimal=13)
+    assert_almost_equal(sw.se_cov(sw.cov_hc1(res)), res.HC1_se, decimal=13)
+    assert_almost_equal(sw.se_cov(sw.cov_hc2(res)), res.HC2_se, decimal=13)
+    assert_almost_equal(sw.se_cov(sw.cov_hc3(res)), res.HC3_se, decimal=13)
+
+    assert_allclose(sw.cov_hc0(res), res.cov_HC0)
+    assert_allclose(sw.cov_hc1(res), res.cov_HC1)
+    assert_allclose(sw.cov_hc2(res), res.cov_HC2)
+    assert_allclose(sw.cov_hc3(res), res.cov_HC3)

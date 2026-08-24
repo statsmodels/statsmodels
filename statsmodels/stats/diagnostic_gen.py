@@ -6,17 +6,78 @@ License: BSD-3
 
 """
 
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
-from statsmodels.stats.effect_size import _noncentrality_chisquare
+from statsmodels.stats.base import LimitedIterationMixin
+from statsmodels.stats.effect_size import (
+    NoncentralityChisquareResult,
+    _noncentrality_chisquare,
+)
+from statsmodels.tools.sm_exceptions import ModelWarning
 
 
-def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
-                           df=None, ordered=False, sort_method="quicksort",
-                           alpha_nc=0.05):
-    """chisquare gof test with binning of data, Hosmer-Lemeshow type
+@dataclass(frozen=True, slots=True)
+class ChisquareBinningResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`test_chisquare_binning`.
+
+    Parameters
+    ----------
+    statistic : float
+        Chisquare statistic of the goodness-of-fit test.
+    pvalue : float
+        p-value of the chisquare test.
+    df : int
+        Degrees of freedom of the test.
+    freqs : ndarray
+        Observed frequencies summed within each bin.
+    probs : ndarray
+        Expected frequencies summed within each bin.
+    noncentrality : NoncentralityChisquareResult
+        Estimate of the noncentrality parameter and its confidence
+        interval for the chisquare statistic.
+    resid_pearson : ndarray
+        Pearson residuals for each bin, ``(freqs - probs) / sqrt(probs)``.
+    chi2_stat_groups : ndarray
+        Chisquare contribution of each bin, before summing across bins.
+    indices : list of ndarray
+        Indices of the original observations included in each bin.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    df: int
+    freqs: np.ndarray
+    probs: np.ndarray
+    noncentrality: NoncentralityChisquareResult
+    resid_pearson: np.ndarray
+    chi2_stat_groups: np.ndarray
+    indices: list
+
+
+def test_chisquare_binning(
+    counts,
+    expected,
+    sort_var=None,
+    bins=10,
+    df=None,
+    ordered=False,
+    sort_method="quicksort",
+    alpha_nc=0.05,
+):
+    """
+    chisquare gof test with binning of data, Hosmer-Lemeshow type
 
     ``observed`` and ``expected`` are observation specific and should have
     observations in rows and choices in columns
@@ -24,27 +85,42 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
     Parameters
     ----------
     counts : array_like
-        Observed frequency, i.e. counts for all choices
+        Observed frequency, i.e., counts for all choices
     expected : array_like
         Expected counts or probability. If expected are counts, then they
         need to sum to the same total count as the sum of observed.
         If those sums are unequal and all expected values are smaller or equal
         to 1, then they are interpreted as probabilities and will be rescaled
         to match counts.
-    sort_var : array_like
+    sort_var : array_like, optional
         1-dimensional array for binning. Groups will be formed according to
         quantiles of the sorted array ``sort_var``, so that group sizes have
-        equal or approximately equal sizes.
+        equal or approximately equal sizes. If None, the original order of
+        ``counts`` and ``expected`` is used for binning instead.
+    bins : int, optional
+        Number of bins or groups to use for binning the data based on
+        ``sort_var``. Default is 10.
+    df : int, optional
+        Degrees of freedom of the chisquare distribution used to compute
+        the p-value of the test. If None, then the degrees of freedom are
+        computed from the number of groups and choices, depending on
+        whether ``ordered`` is True or False.
+    ordered : bool, optional
+        If True, the degrees of freedom for the ordinal case are used when
+        ``df`` is not provided. Default is False, i.e., the multinomial
+        (unordered) case.
+    sort_method : str, optional
+        Sorting method used by ``numpy.argsort`` when binning by
+        ``sort_var``. Default is "quicksort".
+    alpha_nc : float, optional
+        Significance level used in the computation of the noncentrality
+        parameter confidence interval. Default is 0.05.
 
     Returns
     -------
-    Holdertuple instance
-        This instance contains the results of the chisquare test and some
-        information about the data
-
-        - statistic : chisquare statistic of the goodness-of-fit test
-        - pvalue : pvalue of the chisquare test
-        = df : degrees of freedom of the test
+    ChisquareBinningResult
+        See :class:`ChisquareBinningResult` for a description of the
+        attributes.
 
     Notes
     -----
@@ -65,14 +141,18 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
 
     observed = np.asarray(counts)
     expected = np.asarray(expected)
-    n_observed = counts.sum()
+    n_observed = observed.sum()
     n_expected = expected.sum()
     if not np.allclose(n_observed, n_expected, atol=1e-13):
         if np.max(expected) < 1 + 1e-13:
             # expected seems to be probability, warn and rescale
             import warnings
-            warnings.warn("sum of expected and of observed differ, "
-                          "rescaling ``expected``")
+
+            warnings.warn(
+                "sum of expected and of observed differ, rescaling ``expected``",
+                ModelWarning,
+                stacklevel=2,
+            )
             expected = expected / n_expected * n_observed
         else:
             # expected doesn't look like fractions or probabilities
@@ -94,7 +174,7 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
 
     # chisquare test
     resid_pearson = (freqs - probs) / np.sqrt(probs)
-    chi2_stat_groups = ((freqs - probs)**2 / probs).sum(1)
+    chi2_stat_groups = ((freqs - probs) ** 2 / probs).sum(1)
     chi2_stat = chi2_stat_groups.sum()
     if df is None:
         g, c = freqs.shape
@@ -105,49 +185,50 @@ def test_chisquare_binning(counts, expected, sort_var=None, bins=10,
     pvalue = stats.chi2.sf(chi2_stat, df)
     noncentrality = _noncentrality_chisquare(chi2_stat, df, alpha=alpha_nc)
 
-    res = HolderTuple(statistic=chi2_stat,
-                      pvalue=pvalue,
-                      df=df,
-                      freqs=freqs,
-                      probs=probs,
-                      noncentrality=noncentrality,
-                      resid_pearson=resid_pearson,
-                      chi2_stat_groups=chi2_stat_groups,
-                      indices=indices
-                      )
+    res = ChisquareBinningResult(
+        statistic=chi2_stat,
+        pvalue=pvalue,
+        df=df,
+        freqs=freqs,
+        probs=probs,
+        noncentrality=noncentrality,
+        resid_pearson=resid_pearson,
+        chi2_stat_groups=chi2_stat_groups,
+        indices=indices,
+    )
     return res
 
 
 def prob_larger_ordinal_choice(prob):
-    """probability that observed category is larger than distribution prob
+    """
+    probability that observed category is larger than distribution prob
 
     This is a helper function for Ordinal models, where endog is a 1-dim
     categorical variable and predicted probabilities are 2-dimensional with
     observations in rows and choices in columns.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     prob : array_like
-        Expected probabilities for ordinal choices, e.g. from prediction of
+        Expected probabilities for ordinal choices, e.g., from prediction of
         an ordinal model with observations in rows and choices in columns.
 
     Returns
     -------
     cdf_mid : ndarray
-        mid cdf, i.e ``P(x < y) + 0.5 P(x=y)``
+        mid cdf, i.e., ``P(x < y) + 0.5 P(x=y)``
     r : ndarray
         Probability residual ``P(x > y) - P(x < y)`` for all possible choices.
         Computed as ``r = cdf_mid * 2 - 1``
 
-    References
-    ----------
-    .. [2] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
-       Outcomes.” Biometrika 99 (2): 473–80.
-
     See Also
     --------
-    `statsmodels.stats.nonparametric.rank_compare_2ordinal`
+    statsmodels.stats.nonparametric.rank_compare_2ordinal
 
+    References
+    ----------
+    .. [1] Li, Chun, and Bryan E. Shepherd. 2012. “A New Residual for Ordinal
+       Outcomes.” Biometrika 99 (2): 473-80.
     """
     # similar to `nonparametric rank_compare_2ordinal`
 
@@ -164,13 +245,23 @@ def prob_larger_ordinal_choice(prob):
 
 
 def prob_larger_2ordinal(probs1, probs2):
-    """Stochastically large probability for two ordinal distributions
+    """
+    Stochastically large probability for two ordinal distributions
 
     Computes Pr(x1 > x2) + 0.5 * Pr(x1 = x2) for two ordered multinomial
     (ordinal) distributed random variables x1 and x2.
 
     This is vectorized with choices along last axis.
     Broadcasting if freq2 is 1-dim also seems to work correctly.
+
+    Parameters
+    ----------
+    probs1 : array_like
+        Probabilities of the choices for the first ordinal random variable
+        x1, with choices along the last axis.
+    probs2 : array_like
+        Probabilities of the choices for the second ordinal random variable
+        x2, with choices along the last axis.
 
     Returns
     -------
@@ -180,29 +271,27 @@ def prob_larger_2ordinal(probs1, probs2):
     prob2 : float
         prob2 = 1 - prob1 = Pr(x1 < x2) + 0.5 * Pr(x1 = x2)
     """
-#    count1 = np.asarray(count1)
-#    count2 = np.asarray(count2)
-#    nobs1, nobs2 = count1.sum(), count2.sum()
-#    freq1 = count1 / nobs1
-#    freq2 = count2 / nobs2
+    #    count1 = np.asarray(count1)
+    #    count2 = np.asarray(count2)
+    #    nobs1, nobs2 = count1.sum(), count2.sum()
+    #    freq1 = count1 / nobs1
+    #    freq2 = count2 / nobs2
 
-#     if freq1.ndim == 1:
-#         freq1_ = np.concatenate(([0], freq1))
-#     elif freq1.ndim == 2:
-#         freq1_ = np.concatenate((np.zeros((len(freq1), 1)), freq1), axis=1)
+    #     if freq1.ndim == 1:
+    #         freq1_ = np.concatenate(([0], freq1))
+    #     elif freq1.ndim == 2:
+    #         freq1_ = np.concatenate((np.zeros((len(freq1), 1)), freq1), axis=1)
 
-#     if freq2.ndim == 1:
-#         freq2_ = np.concatenate(([0], freq2))
-#     elif freq2.ndim == 2:
-#         freq2_ = np.concatenate((np.zeros((len(freq2), 1)), freq2), axis=1)
+    #     if freq2.ndim == 1:
+    #         freq2_ = np.concatenate(([0], freq2))
+    #     elif freq2.ndim == 2:
+    #         freq2_ = np.concatenate((np.zeros((len(freq2), 1)), freq2), axis=1)
 
     freq1 = np.asarray(probs1)
     freq2 = np.asarray(probs2)
     # add zero at beginning of choices for cdf computation
-    freq1_ = np.concatenate((np.zeros(freq1.shape[:-1] + (1,)), freq1),
-                            axis=-1)
-    freq2_ = np.concatenate((np.zeros(freq2.shape[:-1] + (1,)), freq2),
-                            axis=-1)
+    freq1_ = np.concatenate((np.zeros((*freq1.shape[:-1], 1)), freq1), axis=-1)
+    freq2_ = np.concatenate((np.zeros((*freq2.shape[:-1], 1)), freq2), axis=-1)
 
     cdf1 = freq1_.cumsum(axis=-1)
     cdf2 = freq2_.cumsum(axis=-1)
@@ -216,27 +305,48 @@ def prob_larger_2ordinal(probs1, probs2):
 
 
 def cov_multinomial(probs):
-    """covariance matrix of multinomial distribution
+    """
+    covariance matrix of multinomial distribution
 
     This is vectorized with choices along last axis.
 
     cov = diag(probs) - outer(probs, probs)
 
+    Parameters
+    ----------
+    probs : array_like
+        Probabilities of the choices, with choices along the last axis.
+
+    Returns
+    -------
+    ndarray
+        Covariance matrix of the multinomial distribution, with choices
+        along the last two axes.
     """
 
     k = probs.shape[-1]
     di = np.diag_indices(k, 2)
     cov = probs[..., None] * probs[..., None, :]
-    cov *= - 1
+    cov *= -1
     cov[..., di[0], di[1]] += probs
     return cov
 
 
 def var_multinomial(probs):
-    """variance of multinomial distribution
+    """
+    variance of multinomial distribution
 
     var = probs * (1 - probs)
 
+    Parameters
+    ----------
+    probs : array_like
+        Probabilities of the choices.
+
+    Returns
+    -------
+    ndarray
+        Variance of the multinomial distribution for each choice.
     """
     var = probs * (1 - probs)
     return var

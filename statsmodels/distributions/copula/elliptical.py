@@ -6,12 +6,14 @@ Author: Pamphile Roy
 License: BSD-3
 
 """
+
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 from scipy import stats
-# scipy compat:
-from statsmodels.compat.scipy import multivariate_t
 
 from statsmodels.distributions.copula.copulas import Copula
+from statsmodels.tools.rng_qrng import check_random_state
 
 
 class EllipticalCopula(Copula):
@@ -30,44 +32,128 @@ class EllipticalCopula(Copula):
     copulas.
 
     """
+
     def _handle_args(self, args):
         if args != () and args is not None:
-            msg = ("Methods in elliptical copulas use copula parameters in"
-                   " attributes. `arg` in the method is ignored")
+            msg = (
+                "Methods in elliptical copulas use copula parameters in"
+                " attributes. `arg` in the method is ignored"
+            )
             raise ValueError(msg)
         else:
             return args
 
-    def rvs(self, nobs=1, args=(), random_state=None):
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple, optional
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : ndarray of shape (nobs, k_dim)
+            Sample from the copula.
+        """
         self._handle_args(args)
-        x = self.distr_mv.rvs(size=nobs, random_state=random_state)
+        rng = check_random_state(rng)
+        x = self.distr_mv.rvs(size=nobs, random_state=rng)
         return self.distr_uv.cdf(x)
 
     def pdf(self, u, args=()):
+        """Evaluate the pdf of the copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+        args : tuple, optional
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+
+        Returns
+        -------
+        ndarray
+            Copula pdf evaluated at points ``u``.
+        """
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
         mv_pdf_ppf = self.distr_mv.pdf(ppf)
 
         return mv_pdf_ppf / np.prod(self.distr_uv.pdf(ppf), axis=-1)
 
-    def cdf(self, u, args=()):
+    @deprecate_kwarg("random_state", "rng")
+    def cdf(self, u, args=(), rng=None):
+        """Evaluate the cdf of the copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+        args : tuple, optional
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Passed to the underlying SciPy distribution's ``rng`` argument,
+            if supported by the installed SciPy version, to control the
+            quasi-Monte Carlo integration used to evaluate the cdf. If
+            `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        random_state : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        cdf : ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         self._handle_args(args)
         ppf = self.distr_uv.ppf(u)
-        return self.distr_mv.cdf(ppf)
+        rng = check_random_state(rng)
+        try:
+            # Modern SciPy supports this and is needed to avoid global random state
+            return self.distr_mv.cdf(ppf, rng=rng)
+        except TypeError:
+            return self.distr_mv.cdf(ppf)
 
     def tau(self, corr=None):
         """Bivariate kendall's tau based on correlation coefficient.
 
         Parameters
         ----------
-        corr : None or float
+        corr : float, optional
             Pearson correlation. If corr is None, then the correlation will be
             taken from the copula attribute.
 
         Returns
         -------
-        Kendall's tau that corresponds to pearson correlation in the
-        elliptical copula.
+        float or ndarray
+            Kendall's tau that corresponds to pearson correlation in the
+            elliptical copula.
         """
         if corr is None:
             corr = self.corr
@@ -86,8 +172,9 @@ class EllipticalCopula(Copula):
 
         Returns
         -------
-        Pearson correlation coefficient for given tau in elliptical
-        copula. This can be used as parameter for an elliptical copula.
+        float or ndarray
+            Pearson correlation coefficient for given tau in elliptical
+            copula. This can be used as parameter for an elliptical copula.
         """
         corr = np.sin(tau * np.pi / 2)
         return corr
@@ -102,10 +189,11 @@ class EllipticalCopula(Copula):
 
         Returns
         -------
-        corr_param : float
+        corr_param : float or ndarray
             Correlation parameter of the copula, ``theta`` in Archimedean and
-            pearson correlation in elliptical.
-            If k_dim > 2, then average tau is used.
+            pearson correlation in elliptical. For the bivariate case
+            (k_dim == 2) this is a scalar; if k_dim > 2, then the full
+            k_dim x k_dim matrix of pairwise correlations is returned.
         """
         x = np.asarray(data)
 
@@ -115,7 +203,7 @@ class EllipticalCopula(Copula):
             k = self.k_dim
             tau = np.eye(k)
             for i in range(k):
-                for j in range(i+1, k):
+                for j in range(i + 1, k):
                     tau_ij = stats.kendalltau(x[..., i], x[..., j])[0]
                     tau[i, j] = tau[j, i] = tau_ij
 
@@ -145,18 +233,18 @@ class GaussianCopula(EllipticalCopula):
 
     Parameters
     ----------
-    corr : scalar or array_like
+    corr : float or array_like, optional
         Correlation or scatter matrix for the elliptical copula. In the
-        bivariate case, ``corr` can be a scalar and is then considered as
+        bivariate case, ``corr`` can be a scalar and is then considered as
         the correlation coefficient. If ``corr`` is None, then the scatter
         matrix is the identity matrix.
-    k_dim : int
+    k_dim : int, optional
         Dimension, number of components in the multivariate random variable.
-    allow_singular : bool
+    allow_singular : bool, optional
         Allow singular correlation matrix.
         The behavior when the correlation matrix is singular is determined by
-        `scipy.stats.multivariate_normal`` and might not be appropriate for
-        all copula or copula distribution metnods. Behavior might change in
+        ``scipy.stats.multivariate_normal`` and might not be appropriate for
+        all copula or copula distribution methods. Behavior might change in
         future versions.
 
     Notes
@@ -180,13 +268,14 @@ class GaussianCopula(EllipticalCopula):
         if corr is None:
             corr = np.eye(k_dim)
         elif k_dim == 2 and np.size(corr) == 1:
-            corr = np.array([[1., corr], [corr, 1.]])
+            corr = np.array([[1.0, corr], [corr, 1.0]])
 
         self.corr = np.asarray(corr)
         self.args = (self.corr,)
         self.distr_uv = stats.norm
         self.distr_mv = stats.multivariate_normal(
-            cov=corr, allow_singular=allow_singular)
+            cov=corr, allow_singular=allow_singular
+        )
 
     def dependence_tail(self, corr=None):
         """
@@ -196,14 +285,18 @@ class GaussianCopula(EllipticalCopula):
 
         Parameters
         ----------
-        corr : any
+        corr : float, optional
             Tail dependence for Gaussian copulas is always zero.
             Argument will be ignored
 
         Returns
         -------
-        Lower and upper tail dependence coefficients of the copula with given
-        Pearson correlation coefficient.
+        lower : float
+            Lower tail dependence coefficient, always 0 for the Gaussian
+            copula.
+        upper : float
+            Upper tail dependence coefficient, always 0 for the Gaussian
+            copula.
         """
 
         return 0, 0
@@ -218,14 +311,14 @@ class StudentTCopula(EllipticalCopula):
 
     Parameters
     ----------
-    corr : scalar or array_like
+    corr : float or array_like, optional
         Correlation or scatter matrix for the elliptical copula. In the
-        bivariate case, ``corr` can be a scalar and is then considered as
+        bivariate case, ``corr`` can be a scalar and is then considered as
         the correlation coefficient. If ``corr`` is None, then the scatter
         matrix is the identity matrix.
-    df : float (optional)
+    df : float, optional
         Degrees of freedom of the multivariate t distribution.
-    k_dim : int
+    k_dim : int, optional
         Dimension, number of components in the multivariate random variable.
 
     Notes
@@ -248,16 +341,35 @@ class StudentTCopula(EllipticalCopula):
         if corr is None:
             corr = np.eye(k_dim)
         elif k_dim == 2 and np.size(corr) == 1:
-            corr = np.array([[1., corr], [corr, 1.]])
+            corr = np.array([[1.0, corr], [corr, 1.0]])
 
         self.df = df
         self.corr = np.asarray(corr)
         self.args = (corr, df)
         # both uv and mv are frozen distributions
         self.distr_uv = stats.t(df=df)
-        self.distr_mv = multivariate_t(shape=corr, df=df)
+        self.distr_mv = stats.multivariate_t(shape=corr, df=df)
 
     def cdf(self, u, args=()):
+        """Evaluate the cdf of the copula.
+
+        Not implemented for the Student t copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method
+            would be evaluated.
+        args : tuple, optional
+            Arguments for copula parameters. Not used by elliptical copulas,
+            which take their parameters as attributes.
+
+        Raises
+        ------
+        NotImplementedError
+            The cdf of the Student t copula is not available in closed
+            form.
+        """
         raise NotImplementedError("CDF not available in closed form.")
         # ppf = self.distr_uv.ppf(u)
         # mvt = MVT([0, 0], self.corr, self.df)
@@ -271,14 +383,15 @@ class StudentTCopula(EllipticalCopula):
 
         Parameters
         ----------
-        corr : None or float
+        corr : float, optional
             Pearson correlation. If corr is None, then the correlation will be
             taken from the copula attribute.
 
         Returns
         -------
-        Spearman's rho that corresponds to pearson correlation in the
-        elliptical copula.
+        float or ndarray
+            Spearman's rho that corresponds to pearson correlation in the
+            elliptical copula.
         """
         if corr is None:
             corr = self.corr
@@ -296,14 +409,18 @@ class StudentTCopula(EllipticalCopula):
 
         Parameters
         ----------
-        corr : None or float
+        corr : float, optional
             Pearson correlation. If corr is None, then the correlation will be
             taken from the copula attribute.
 
         Returns
         -------
-        Lower and upper tail dependence coefficients of the copula with given
-        Pearson correlation coefficient.
+        lower : float or ndarray
+            Lower tail dependence coefficient of the copula with given
+            Pearson correlation coefficient.
+        upper : float or ndarray
+            Upper tail dependence coefficient of the copula with given
+            Pearson correlation coefficient.
         """
         if corr is None:
             corr = self.corr
@@ -311,7 +428,7 @@ class StudentTCopula(EllipticalCopula):
             corr = corr[0, 1]
 
         df = self.df
-        t = - np.sqrt((df + 1) * (1 - corr) / 1 + corr)
+        t = -np.sqrt((df + 1) * (1 - corr) / (1 + corr))
         # Note self.distr_uv is frozen, df cannot change, use stats.t instead
         lam = 2 * stats.t.cdf(t, df + 1)
         return lam, lam

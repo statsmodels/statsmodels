@@ -1,13 +1,17 @@
 """
 Test SVAR estimation
 """
+
 from statsmodels.compat.platform import PLATFORM_WIN
+
+from contextlib import nullcontext
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 
 import statsmodels.datasets.macrodata
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.svar_model import SVAR
 
 DECIMAL_6 = 6
@@ -19,15 +23,16 @@ class TestSVAR:
     @classmethod
     def setup_class(cls):
         mdata = statsmodels.datasets.macrodata.load_pandas().data
-        mdata = mdata[['realgdp', 'realcons', 'realinv']]
+        mdata = mdata[["realgdp", "realcons", "realinv"]]
         data = mdata.values
         data = np.diff(np.log(data), axis=0)
-        A = np.asarray([[1, 0, 0], ['E', 1, 0], ['E', 'E', 1]], dtype="U")
-        B = np.asarray([['E', 0, 0], [0, 'E', 0], [0, 0, 'E']], dtype="U")
-        results = SVAR(data, svar_type='AB', A=A, B=B).fit(maxlags=3)
+        A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+        B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+        results = SVAR(data, svar_type="AB", A=A, B=B).fit(maxlags=3)
         cls.res1 = results
-        #cls.res2 = results_svar.SVARdataResults()
+        # cls.res2 = results_svar.SVARdataResults()
         from .results import results_svar_st
+
         cls.res2 = results_svar_st.results_svar1_small
 
     def _reformat(self, x):
@@ -64,13 +69,107 @@ class TestSVAR:
         # mostly SMOKE, API test
         # this only checks that the methods work and produce the same result
         res1 = self.res1
-        errband1 = res1.sirf_errband_mc(orth=False, repl=50, steps=10,
-                                        signif=0.05, seed=987123, burn=100,
-                                        cum=False)
+        with pytest.warns(FutureWarning):
+            errband1 = res1.sirf_errband_mc(
+                orth=False,
+                repl=50,
+                steps=10,
+                signif=0.05,
+                rng=987123,
+                burn=100,
+                cum=False,
+            )
+        assert isinstance(errband1, ErrorBand)
 
         irf = res1.irf()
-        errband2 = irf.errband_mc(orth=False, svar=True, repl=50,
-                                  signif=0.05, seed=987123, burn=100)
+        with pytest.warns(FutureWarning):
+            errband2 = irf.errband_mc(
+                orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
+            )
+        assert isinstance(errband2, ErrorBand)
         # Windows precision limits require non-zero atol
         atol = 1e-6 if PLATFORM_WIN else 1e-8
-        assert_allclose(errband1, errband2, rtol=1e-8, atol=atol)
+        assert_allclose(errband1.lower, errband2.lower, rtol=1e-8, atol=atol)
+        assert_allclose(errband1.upper, errband2.upper, rtol=1e-8, atol=atol)
+
+    def test_irf_var_order_not_implemented(self):
+        # var_order is not supported and must not be silently ignored,
+        # matching VARResults.irf
+        with pytest.raises(NotImplementedError, match="variable order"):
+            self.res1.irf(var_order=[2, 0, 1])
+
+    @pytest.mark.parametrize(
+        "rng",
+        [0, np.random.RandomState(0), np.random.default_rng(0)],
+        ids=["int", "randomstate", "generator"],
+    )
+    def test_sirf_errband_mc_replications_differ(self, rng):
+        # GH: sirf_errband_mc's internal irf_resim-equivalent loop
+        # re-derived a fresh generator from the raw seed on every Monte
+        # Carlo iteration, so every replication was identical for an int
+        # seed (or a freshly-instantiated RandomState/Generator). With
+        # degenerate (identical) replications the resulting error band
+        # collapses to lower == upper.
+        warn_cm = pytest.warns(FutureWarning) if isinstance(rng, int) else nullcontext()
+        with warn_cm:
+            errband = self.res1.sirf_errband_mc(
+                orth=False, repl=5, steps=3, signif=0.5, rng=rng, burn=10, cum=False
+            )
+        assert not np.allclose(errband.lower, errband.upper)
+
+    def test_sirf_errband_mc_reproducible_with_int_seed(self):
+        with pytest.warns(FutureWarning):
+            errband1 = self.res1.sirf_errband_mc(
+                orth=False, repl=5, steps=3, signif=0.5, rng=0, burn=10, cum=False
+            )
+        with pytest.warns(FutureWarning):
+            errband2 = self.res1.sirf_errband_mc(
+                orth=False, repl=5, steps=3, signif=0.5, rng=0, burn=10, cum=False
+            )
+        assert_allclose(errband1.lower, errband2.lower)
+        assert_allclose(errband1.upper, errband2.upper)
+
+
+def test_oneparam():
+    # regression test, one parameter in A, B, issue #9302
+    rs = np.random.RandomState(873562)
+    lags = 2
+    nobs = 200
+    y = rs.randn(nobs, 3)
+    y[1:] += 0.5 * y[:-1]
+    A = np.asarray([[1, "E"], [0, 1.0]])
+    # A_guess = np.asarray([[1, 0.2], [0, 1.]])
+    B = np.eye(2, dtype=object)
+
+    k = 2
+    model = SVAR(y[:, :k], svar_type="AB", A=A, B=B)
+    model.k_exog_user = 0
+    results = model.fit(maxlags=lags, solver="bfgs")  # "newton")
+    results.k_exog_user = 0
+    results.summary()
+
+    # regression number
+    assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
+
+    results = model.fit(maxlags=lags, solver="newton")
+    results.k_exog_user = 0
+    results.summary()
+
+    # regression number
+    assert_allclose(results.A[0, 1], -0.075818, atol=1e-5)
+
+
+def test_invalid_svar_type_raises():
+    rs = np.random.RandomState(0)
+    y = rs.randn(50, 2)
+    with pytest.raises(ValueError, match="svar_type"):
+        SVAR(y, svar_type="invalid")
+
+
+def test_summary_no_user_exog():
+    rs = np.random.RandomState(0)
+    data = rs.randn(200, 3)
+    B = np.asarray([[1, "E", "E"], [0, 1, "E"], [0, 0, 1]], dtype="U")
+    results = SVAR(data, svar_type="B", B=B).fit(maxlags=2, solver="newton")
+    assert results.k_exog_user == 0
+    results.summary()

@@ -1,5 +1,5 @@
 """
-Input/Output tools for working with binary data.
+Input/Output tools for working with binary data
 
 See Also
 --------
@@ -10,28 +10,28 @@ import numpy as np
 from statsmodels.iolib.openfile import get_file_obj
 
 
-def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
+def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
     """
-    Save an array to a text file.
+    Save an array to a text file
 
     This is just a copy of numpy.savetxt patched to support structured arrays
     or a header of names.  Does not include py3 support now in savetxt.
 
     Parameters
     ----------
-    fname : filename or file handle
+    fname : str, path object or file-like object
         If the filename ends in ``.gz``, the file is automatically saved in
         compressed gzip format.  `loadtxt` understands gzipped files
         transparently.
     X : array_like
         Data to be saved to a text file.
-    names : list, optional
+    names : sequence of str, optional
         If given names will be the column header in the text file.
-    fmt : str or sequence of strs
+    fmt : str or sequence of str, optional
         A single format (%10.5f), a sequence of formats, or a
-        multi-format string, e.g. 'Iteration %d -- %10.5f', in which
+        multi-format string, e.g., 'Iteration %d -- %10.5f', in which
         case `delimiter` is ignored.
-    delimiter : str
+    delimiter : str, optional
         Character separating columns.
 
     See Also
@@ -98,7 +98,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
     >>> savetxt('test.out', x, fmt='%1.4e')   # use exponential notation
     """
 
-    with get_file_obj(fname, 'w') as fh:
+    with get_file_obj(fname, "w") as fh:
         X = np.asarray(X)
 
         # Handle 1-dimensional arrays
@@ -115,18 +115,17 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
             ncol = X.shape[1]
 
         # `fmt` can be a string with multiple insertion points or a list of formats.
-        # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
+        # e.g., '%10.5f\t%10d' or ('%10.5f', '$10d')
         if isinstance(fmt, (list, tuple)):
             if len(fmt) != ncol:
-                raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
+                raise AttributeError(f"fmt has wrong shape.  {fmt!s}")
             format = delimiter.join(fmt)
         elif isinstance(fmt, str):
-            if fmt.count('%') == 1:
+            if fmt.count("%") == 1:
                 fmt = [fmt, ]*ncol
                 format = delimiter.join(fmt)
-            elif fmt.count('%') != ncol:
-                raise AttributeError('fmt has wrong number of %% formats.  %s'
-                                     % fmt)
+            elif fmt.count("%") != ncol:
+                raise AttributeError(f"fmt has wrong number of % formats.  {fmt}")
             else:
                 format = fmt
 
@@ -134,7 +133,7 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
         if names is None and X.dtype.names:
             names = X.dtype.names
         if names is not None:
-            fh.write(delimiter.join(names) + '\n')
+            fh.write(delimiter.join(names) + "\n")
 
         for row in X:
-            fh.write(format % tuple(row) + '\n')
+            fh.write(format % tuple(row) + "\n")

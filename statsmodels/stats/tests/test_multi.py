@@ -1,4 +1,4 @@
-'''Tests for multipletests and fdr pvalue corrections
+"""Tests for multipletests and fdr pvalue corrections
 
 Author : Josef Perktold
 
@@ -11,20 +11,26 @@ are tested against R:multtest
 'fdr_gbs', 'fdr_2sbky' I did not find them in R, currently tested for
     consistency only
 
-'''
-import pytest
-import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal,
-                           assert_allclose)
+"""
+from statsmodels.compat.scipy import SP_LT_112
 
-from statsmodels.stats.multitest import (multipletests, fdrcorrection,
-                                         fdrcorrection_twostage,
-                                         NullDistribution,
-                                         local_fdr, multitest_methods_names)
-from statsmodels.stats.multicomp import tukeyhsd
-from scipy.stats.distributions import norm
-import scipy
+import numpy as np
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 from packaging import version
+import pytest
+import scipy
+from scipy.stats.distributions import norm
+
+from statsmodels.stats.multicomp import tukeyhsd
+from statsmodels.stats.multitest import (
+    NullDistribution,
+    fdrcorrection,
+    fdrcorrection_twostage,
+    local_fdr,
+    local_fdr_correction,
+    multipletests,
+    multitest_methods_names,
+)
 
 pval0 = np.array([
     0.838541367553,  0.642193923795,  0.680845947633,
@@ -35,59 +41,68 @@ res_multtest1 = np.array([
     [5.2365677720800003e-05,   5.2365677720800005e-04,
      5.2365677720800005e-04,   5.2365677720800005e-04,
      5.2353339704891422e-04,   5.2353339704891422e-04,
-     5.2365677720800005e-04,   1.5337740764175588e-03],
+     5.2365677720800005e-04,   1.5337740764175588e-03,
+     5.23656777e-04,],
     [2.8140506198000000e-04,   2.8140506197999998e-03,
      2.5326455578199999e-03,   2.5326455578199999e-03,
      2.8104897961789277e-03,   2.5297966317768816e-03,
-     1.4070253098999999e-03,   4.1211324652269442e-03],
+     1.4070253098999999e-03,   4.1211324652269442e-03,
+     2.29039384e-03,],
     [1.4987731079600001e-02,   1.4987731079600000e-01,
      1.1990184863680001e-01,   1.1990184863680001e-01,
      1.4016246580579017e-01,   1.1379719679449507e-01,
-     4.9959103598666670e-02,   1.4632862843720582e-01],
+     4.9959103598666670e-02,   1.4632862843720582e-01,
+     9.99593191e-02,],
     [2.0273268879800001e-02,   2.0273268879799999e-01,
      1.4191288215860001e-01,   1.4191288215860001e-01,
      1.8520270949069695e-01,   1.3356756197485375e-01,
-     5.0683172199499998e-02,   1.4844940238274187e-01],
+     5.0683172199499998e-02,   1.4844940238274187e-01,
+     9.99593191e-02,],
     [1.7709695272300000e-01,   1.0000000000000000e+00,
      1.0000000000000000e+00,   9.6783382430900000e-01,
      8.5760763426056130e-01,   6.8947825122356643e-01,
-     3.5419390544599999e-01,   1.0000000000000000e+00],
+     3.5419390544599999e-01,   1.0000000000000000e+00,
+     1.0000000000000000e+00,],
     [6.4219392379499995e-01,   1.0000000000000000e+00,
      1.0000000000000000e+00,   9.6783382430900000e-01,
      9.9996560644133570e-01,   9.9413539782557070e-01,
-     8.9533672797500008e-01,   1.0000000000000000e+00],
+     8.9533672797500008e-01,   1.0000000000000000e+00,
+     1.0000000000000000e+00,],
     [6.8084594763299999e-01,   1.0000000000000000e+00,
      1.0000000000000000e+00,   9.6783382430900000e-01,
      9.9998903512635740e-01,   9.9413539782557070e-01,
-     8.9533672797500008e-01,   1.0000000000000000e+00],
+     8.9533672797500008e-01,   1.0000000000000000e+00,
+     1.0000000000000000e+00,],
     [7.1626938238000004e-01,   1.0000000000000000e+00,
      1.0000000000000000e+00,   9.6783382430900000e-01,
      9.9999661886871472e-01,   9.9413539782557070e-01,
-     8.9533672797500008e-01,   1.0000000000000000e+00],
+     8.9533672797500008e-01,   1.0000000000000000e+00,
+     1.0000000000000000e+00,],
     [8.3854136755300002e-01,   1.0000000000000000e+00,
      1.0000000000000000e+00,   9.6783382430900000e-01,
      9.9999998796038225e-01,   9.9413539782557070e-01,
-     9.3171263061444454e-01,   1.0000000000000000e+00],
+     9.3171263061444454e-01,   1.0000000000000000e+00,
+     1.0000000000000000e+00],
     [9.6783382430900000e-01,   1.0000000000000000e+00,
      1.0000000000000000e+00,   9.6783382430900000e-01,
      9.9999999999999878e-01,   9.9413539782557070e-01,
-     9.6783382430900000e-01,   1.0000000000000000e+00]])
-
+     9.6783382430900000e-01,   1.0000000000000000e+00,
+     1.0000000000000000e+00,]])
 
 res_multtest2_columns = [
-    'rawp', 'Bonferroni', 'Holm', 'Hochberg', 'SidakSS', 'SidakSD',
-    'BH', 'BY', 'ABH', 'TSBH_0.05']
+    "rawp", "Bonferroni", "Holm", "Hochberg", "SidakSS", "SidakSD",
+    "BH", "BY", "ABH", "TSBH_0.05"]
 
 rmethods = {
-    'rawp': (0, 'pval'),
-    'Bonferroni': (1, 'b'),
-    'Holm': (2, 'h'),
-    'Hochberg': (3, 'sh'),
-    'SidakSS': (4, 's'),
-    'SidakSD': (5, 'hs'),
-    'BH': (6, 'fdr_i'),
-    'BY': (7, 'fdr_n'),
-    'TSBH_0.05': (9, 'fdr_tsbh')
+    "rawp": (0, "pval"),
+    "Bonferroni": (1, "b"),
+    "Holm": (2, "h"),
+    "Hochberg": (3, "sh"),
+    "SidakSS": (4, "s"),
+    "SidakSD": (5, "hs"),
+    "BH": (6, "fdr_i"),
+    "BY": (7, "fdr_n"),
+    "TSBH_0.05": (9, "fdr_tsbh")
 }
 
 NA = np.nan
@@ -101,7 +116,7 @@ res_multtest2 = np.array([
      0.02378486270400004, 0.023808512, 0.023808512, 0.023808512, 0.012,
      0.012, 0.012, 0.012, 0.012, 0.012, 0.0294, 0.0294, 0.0294, 0.0294,
      0.0294, 0.0294, NA, NA, NA, NA, NA, NA, 0, 0, 0, 0, 0, 0
-    ]).reshape(6, 10, order='F')
+    ]).reshape(6, 10, order="F")
 
 res_multtest3 = np.array([
      0.001, 0.002, 0.003, 0.004, 0.005, 0.05, 0.06, 0.07, 0.08, 0.09, 0.01,
@@ -122,7 +137,7 @@ res_multtest3 = np.array([
      0.2636071428571428, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 0.005,
      0.005, 0.005, 0.005, 0.005, 0.04166666666666667, 0.04285714285714286,
      0.04375, 0.04444444444444445, 0.045
-    ]).reshape(10, 10, order='F')
+    ]).reshape(10, 10, order="F")
 
 res0_large = np.array([
      0.00031612, 0.0003965, 0.00048442, 0.00051932, 0.00101436, 0.00121506,
@@ -189,12 +204,12 @@ res0_large = np.array([
      0.43070808375, 0.43070808375, 0.43070808375, 0.4657937592,
      0.5013728192307692, 0.5431810875, 0.5431810875, 0.622398456206897,
      0.623229229
-    ]).reshape(30, 10, order='F')
+    ]).reshape(30, 10, order="F")
 
 
 class CheckMultiTestsMixin:
 
-    @pytest.mark.parametrize('key,val', sorted(rmethods.items()))
+    @pytest.mark.parametrize("key,val", sorted(rmethods.items()))
     def test_multi_pvalcorrection_rmethods(self, key, val):
         # test against R package multtest mt.rawp2adjp
 
@@ -214,25 +229,148 @@ class CheckMultiTestsMixin:
         res_multtest = self.res2
         pval0 = res_multtest[:, 0]
 
-        pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
+        pvalscorr = np.sort(fdrcorrection(pval0, method="n")[1])
         assert_almost_equal(pvalscorr, res_multtest[:, 7], 15)
-        pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
+        pvalscorr = np.sort(fdrcorrection(pval0, method="i")[1])
         assert_almost_equal(pvalscorr, res_multtest[:, 6], 15)
 
 
 class TestMultiTests1(CheckMultiTestsMixin):
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n"]
         cls.alpha = 0.1
         cls.res2 = res_multtest1
+
+
+@pytest.mark.skipif(SP_LT_112, reason="SciPy < 1.12 does not have isotonic_regression")
+def test_local_fdr_correction_reference():
+    # res_multtest1[:, 8] holds reference lfdr values for pval0; this is the
+    # only one of the res_multtest arrays with an lfdr reference column, the
+    # others reuse that column position for the (untested) ABH method or NA
+    lvals = np.sort(local_fdr_correction(pval0).lfdr)
+    assert_almost_equal(lvals, np.sort(res_multtest1[:, 8]), 8)
+
+
+@pytest.mark.skipif(SP_LT_112, reason="SciPy < 1.12 does not have isotonic_regression")
+@pytest.mark.parametrize(
+    "pvals, null_proportion, expected_fdr, expected_lfdr",
+    [
+        # distinct p-values, conservative (default) null_proportion
+        (
+            [0.0005, 0.003, 0.012, 0.02, 0.031, 0.045, 0.09, 0.14, 0.31,
+             0.52, 0.61, 0.77, 0.83, 0.91, 0.98],
+            1.0,
+            [0.0075000000000000006, 0.022499999999999999,
+             0.058846153846153847, 0.074999999999999997,
+             0.092999999999999999, 0.11249999999999999,
+             0.19285714285714284, 0.26250000000000001,
+             0.49380530973451325, 0.69850746268656716,
+             0.76783216783216779, 0.8716981132075472,
+             0.9054545454545454, 0.94682080924855494,
+             0.97999999999999998],
+            [0.0074999999999999997, 0.037500000000000006, 0.1275, 0.1275,
+             0.16500000000000004, 0.20999999999999985,
+             0.67500000000000016, 0.75000000000000044, 1, 1, 1, 1, 1, 1,
+             1],
+        ),
+        # same p-values, non-conservative null_proportion
+        (
+            [0.0005, 0.003, 0.012, 0.02, 0.031, 0.045, 0.09, 0.14, 0.31,
+             0.52, 0.61, 0.77, 0.83, 0.91, 0.98],
+            0.7,
+            [0.0052500000000000003, 0.01575, 0.041192307692307688, 0.0525,
+             0.065099999999999991, 0.078750000000000001,
+             0.13500000000000001, 0.18375, 0.34566371681415931,
+             0.48895522388059698, 0.53748251748251741,
+             0.61018867924528297, 0.63381818181818184,
+             0.66277456647398847, 0.68599999999999994],
+            [0.0052499999999999995, 0.026249999999999999,
+             0.089249999999999996, 0.089249999999999996,
+             0.11550000000000001, 0.14699999999999988,
+             0.47250000000000009, 0.52500000000000024, 1, 1, 1, 1, 1, 1,
+             1],
+        ),
+        # tied p-values: exercises the repeated-support-point handling
+        (
+            [0.001, 0.02, 0.02, 0.02, 0.15, 0.15, 0.4, 0.4, 0.4, 0.4, 0.8,
+             0.95],
+            0.9,
+            [0.010800000000000002, 0.054000000000000006,
+             0.054000000000000006, 0.054000000000000006,
+             0.26765217391304347, 0.26765217391304347,
+             0.43200000000000005, 0.43200000000000005,
+             0.43200000000000005, 0.43200000000000005,
+             0.75428571428571434, 0.85499999999999998],
+            [0.010800000000000001, 0.068400000000000002,
+             0.068400000000000002, 0.068400000000000002,
+             0.68399999999999994, 0.68399999999999994,
+             0.68399999999999994, 0.68399999999999994,
+             0.68399999999999994, 0.68399999999999994, 1, 1],
+        ),
+        # unsorted input, same values as the first case (exercises the
+        # is_sorted=False branch)
+        (
+            [0.0005, 0.031, 0.98, 0.31, 0.52, 0.02, 0.003, 0.77, 0.83,
+             0.61, 0.09, 0.91, 0.14, 0.012, 0.045],
+            1.0,
+            [0.0075000000000000006, 0.092999999999999999,
+             0.97999999999999998, 0.49380530973451325,
+             0.69850746268656716, 0.074999999999999997,
+             0.022499999999999999, 0.8716981132075472,
+             0.9054545454545454, 0.76783216783216779,
+             0.19285714285714284, 0.94682080924855494,
+             0.26250000000000001, 0.058846153846153847,
+             0.11249999999999999],
+            [0.0074999999999999997, 0.16500000000000004, 1, 1, 1, 0.1275,
+             0.037500000000000006, 1, 1, 1, 0.67500000000000016, 1,
+             0.75000000000000044, 0.1275, 0.20999999999999985],
+        ),
+    ],
+)
+def test_local_fdr_correction_against_r_fdrtool(
+    pvals, null_proportion, expected_fdr, expected_lfdr
+):
+    # Reference values were generated with R 4.6.1 and the fdrtool package
+    # (Strimmer 2008, the method cited in local_fdr_correction's docstring),
+    # whose grenander() function computes the same Grenander (1956) least
+    # concave majorant of the empirical cdf used here. R's F.knots agree
+    # exactly with our lcm_cdf, so the density (slope) at each p-value was
+    # derived directly from consecutive (knot, height) pairs rather than
+    # from grenander()'s f.knots, whose indexing is offset by one relative
+    # to x.knots. Generated with the following R script:
+    #
+    #   library(fdrtool)
+    #   options(digits = 17)
+    #
+    #   local_fdr_correction_ref <- function(pvals, null_proportion = 1.0) {
+    #     g <- grenander(ecdf(pvals), type = "decreasing")
+    #     knots <- c(0, g$x.knots)
+    #     heights <- c(0, g$F.knots)
+    #     lcm_cdf <- approx(knots, heights, xout = pvals, rule = 2)$y
+    #     slope_at <- function(p) {
+    #       j <- which(knots >= p)[1]
+    #       (heights[j] - heights[j - 1]) / (knots[j] - knots[j - 1])
+    #     }
+    #     slopes <- vapply(pvals, slope_at, numeric(1))
+    #     lfdr <- pmin(1, null_proportion / slopes)
+    #     fdr <- pmin(1, null_proportion * pvals / lcm_cdf)
+    #     list(fdr = fdr, lfdr = lfdr)
+    #   }
+    #
+    #   p <- c(0.0005, 0.003, 0.012, 0.02, 0.031, 0.045, 0.09, 0.14, 0.31,
+    #          0.52, 0.61, 0.77, 0.83, 0.91, 0.98)
+    #   local_fdr_correction_ref(p, null_proportion = 1.0)
+    res = local_fdr_correction(np.asarray(pvals), null_proportion=null_proportion)
+    assert_allclose(res.fdr, expected_fdr, rtol=0, atol=1e-10)
+    assert_allclose(res.lfdr, expected_lfdr, rtol=0, atol=1e-10)
 
 
 class TestMultiTests2(CheckMultiTestsMixin):
     # case: all hypothesis rejected (except 'b' and 's'
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n"]
         cls.alpha = 0.05
         cls.res2 = res_multtest2
 
@@ -240,8 +378,8 @@ class TestMultiTests2(CheckMultiTestsMixin):
 class TestMultiTests3(CheckMultiTestsMixin):
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
-                       'fdr_tsbh']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n",
+                       "fdr_tsbh"]
         cls.alpha = 0.05
         cls.res2 = res0_large
 
@@ -249,20 +387,20 @@ class TestMultiTests3(CheckMultiTestsMixin):
 class TestMultiTests4(CheckMultiTestsMixin):
     # in simulations, all two stage fdr, fdr_tsbky, fdr_tsbh, fdr_gbs, have in
     # some cases (cases with large Alternative) an FDR that looks too large
-    # this is the first case #rejected = 12, DGP : has 10 false
+    # this is the first case # rejected = 12, DGP : has 10 false
     @classmethod
     def setup_class(cls):
-        cls.methods = ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
-                       'fdr_tsbh']
+        cls.methods = ["b", "s", "sh", "hs", "h", "fdr_i", "fdr_n",
+                       "fdr_tsbh"]
         cls.alpha = 0.05
         cls.res2 = res_multtest3
 
 
-@pytest.mark.parametrize('alpha', [0.01, 0.05, 0.1])
-@pytest.mark.parametrize('method', ['b', 's', 'sh', 'hs', 'h', 'hommel',
-                                    'fdr_i', 'fdr_n', 'fdr_tsbky',
-                                    'fdr_tsbh', 'fdr_gbs'])
-@pytest.mark.parametrize('ii', list(range(11)))
+@pytest.mark.parametrize("alpha", [0.01, 0.05, 0.1])
+@pytest.mark.parametrize("method", ["b", "s", "sh", "hs", "h", "hommel",
+                                    "fdr_i", "fdr_n", "fdr_tsbky",
+                                    "fdr_tsbh", "fdr_gbs"])
+@pytest.mark.parametrize("ii", list(range(11)))
 def test_pvalcorrection_reject(alpha, method, ii):
     # consistency test for reject boolean and pvalscorr
 
@@ -272,8 +410,7 @@ def test_pvalcorrection_reject(alpha, method, ii):
     reject, pvalscorr = multipletests(pval1, alpha=alpha,
                                       method=method)[:2]
 
-    msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
-                     method, alpha, reject.sum(), pval1, pvalscorr)
+    msg = f"case {method} {alpha:3.2f} rejected:{reject.sum():d}\npval_raw={pval1!r}\npvalscorr={pvalscorr!r}"
     assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
 
 
@@ -304,7 +441,7 @@ def test_hommel():
         0.9538400000000001,  0.9538400000000001,  0.9538400000000001,
         0.9538400000000001])
 
-    rej, pvalscorr, _, _ = multipletests(pval0, alpha=0.1, method='ho')
+    rej, pvalscorr, _, _ = multipletests(pval0, alpha=0.1, method="ho")
     assert_almost_equal(pvalscorr, result_ho, 15)
     assert_equal(rej, result_ho < 0.1)
 
@@ -322,8 +459,7 @@ def test_fdr_bky():
     # also alpha_star is the same as theirs for TST
 
     # alpha_star for stage 2
-    with pytest.warns(FutureWarning, match="iter keyword"):
-        res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
+    res_tst = fdrcorrection_twostage(pvals, alpha=0.05)
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2], 3)
     assert_equal(8, res_tst[0].sum())
 
@@ -336,8 +472,8 @@ def test_fdr_bky():
 
     # issue #8619, problems if no or all rejected, ordering
     pvals = np.array([0.2, 0.8, 0.3, 0.5, 1])
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky')
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky')
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bky")
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbky")
     assert_equal(res1[0], res2[0])
     assert_allclose(res1[1], res2[1], atol=6e-5)
     # confirmed with Prism
@@ -356,20 +492,20 @@ def test_fdr_twostage():
     # bh twostage fdr
     k = 0
     # same pvalues as one-stage fdr
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bh', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bh", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbh', maxiter=k)
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbh", maxiter=k)
     assert_allclose(res1[1], res0[1])
     assert_allclose(res2[1], res1[1])
 
     k = 1
     # pvalues corrected by first stage number of rejections
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bh', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bh", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbh', maxiter=k)
-    res3 = multipletests(pvals, alpha=0.05, method='fdr_tsbh')
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbh", maxiter=k)
+    res3 = multipletests(pvals, alpha=0.05, method="fdr_tsbh")
     assert_allclose(res1[1], res0[1] * (1 - res0[0].sum() / n))
     assert_allclose(res2[1], res1[1])
     assert_allclose(res3[1], res1[1])  # check default maxiter
@@ -378,26 +514,34 @@ def test_fdr_twostage():
     fact = 1 + 0.05
     k = 0
     # same pvalues as one-stage fdr
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bky", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky', maxiter=k)
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbky", maxiter=k)
     assert_allclose(res1[1], np.clip(res0[1] * fact, 0, 1))
     assert_allclose(res2[1], res1[1])
 
     k = 1
     # pvalues corrected by first stage number of rejections
-    res0 = multipletests(pvals, alpha=0.05, method='fdr_bh')
-    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method='bky', maxiter=k,
+    res0 = multipletests(pvals, alpha=0.05, method="fdr_bh")
+    res1 = fdrcorrection_twostage(pvals, alpha=0.05, method="bky", maxiter=k,
                                   iter=None)
-    res2 = multipletests(pvals, alpha=0.05, method='fdr_tsbky', maxiter=k)
-    res3 = multipletests(pvals, alpha=0.05, method='fdr_tsbky')
+    res2 = multipletests(pvals, alpha=0.05, method="fdr_tsbky", maxiter=k)
+    res3 = multipletests(pvals, alpha=0.05, method="fdr_tsbky")
     assert_allclose(res1[1], res0[1] * (1 - res0[0].sum() / n) * fact)
     assert_allclose(res2[1], res1[1])
     assert_allclose(res3[1], res1[1])  # check default maxiter
 
 
-@pytest.mark.parametrize('method', sorted(multitest_methods_names))
+def test_fdrcorrection_invalid_method_raises():
+    pvals = np.array([0.01, 0.02, 0.3, 0.04, 0.5])
+    with pytest.raises(ValueError, match="method"):
+        fdrcorrection(pvals, method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        fdrcorrection_twostage(pvals, method="not-a-method")
+
+
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
 def test_issorted(method):
     # test that is_sorted keyword works correctly
     # the fdrcorrection functions are tested indirectly
@@ -415,7 +559,7 @@ def test_issorted(method):
     assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
 
 
-@pytest.mark.parametrize('method', sorted(multitest_methods_names))
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
 def test_floating_precision(method):
     # issue #7465
     pvals = np.full(6000, 0.99)
@@ -426,7 +570,7 @@ def test_floating_precision(method):
 def test_tukeyhsd():
     # example multicomp in R p 83
 
-    res = '''\
+    res = """\
     pair      diff        lwr        upr       p adj
     P-M   8.150000 -10.037586 26.3375861 0.670063958
     S-M  -3.258333 -21.445919 14.9292527 0.982419709
@@ -438,7 +582,7 @@ def test_tukeyhsd():
     T-S  27.066667   8.879081 45.2542527 0.002027122
     V-S   8.050000 -10.137586 26.2375861 0.679824487
     V-T -19.016667 -37.204253 -0.8290806 0.037710044
-    '''
+    """
 
     res = np.array([
         [8.150000,  -10.037586, 26.3375861, 0.670063958],
@@ -464,7 +608,7 @@ def test_tukeyhsd():
 
     # Remove this check when minimum SciPy version is 1.7+ (gh-8035)
     scipy_version = (version.parse(scipy.version.version) >=
-                     version.parse('1.7.0'))
+                     version.parse("1.7.0"))
     rtol = 1e-5 if scipy_version else 1e-2
     assert_allclose(myres[8][small_pvals_idx], res[small_pvals_idx, 3],
                     rtol=rtol)
@@ -514,9 +658,9 @@ def test_null_distribution():
                     rtol=1e-13)
 
 
-@pytest.mark.parametrize('estimate_prob', [True, False])
-@pytest.mark.parametrize('estimate_scale', [True, False])
-@pytest.mark.parametrize('estimate_mean', [True, False])
+@pytest.mark.parametrize("estimate_prob", [True, False])
+@pytest.mark.parametrize("estimate_scale", [True, False])
+@pytest.mark.parametrize("estimate_mean", [True, False])
 def test_null_constrained(estimate_mean, estimate_scale, estimate_prob):
 
     # Create a mixed population of Z-scores: 1000 standard normal and
@@ -542,3 +686,19 @@ def test_null_constrained(estimate_mean, estimate_scale, estimate_prob):
                     norm.pdf(np.r_[-1, 0, 1], loc=emp_null.mean,
                              scale=emp_null.sd),
                     rtol=1e-13)
+
+
+@pytest.mark.parametrize("method", sorted(multitest_methods_names))
+def test_multipletests_empty(method):
+    # An empty p-value array used to raise "float division by zero" for every
+    # method, because the corrected alphas are computed from 1 / ntests before
+    # the method is dispatched. fdrcorrection already accepted an empty input.
+    reject, pvals_corrected, alphac_sidak, alphac_bonf = multipletests(
+        [], method=method
+    )
+
+    assert reject.shape == (0,)
+    assert pvals_corrected.shape == (0,)
+    # the corrected alphas are undefined when there is nothing to correct
+    assert np.isnan(alphac_sidak)
+    assert np.isnan(alphac_bonf)

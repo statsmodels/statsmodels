@@ -13,7 +13,7 @@ def _conf_set(F, alpha=.05):
     ----------
     F : array_like
         The empirical distributions
-    alpha : float
+    alpha : float, optional
         Set alpha for a (1 - alpha) % confidence band.
 
     Notes
@@ -45,12 +45,15 @@ class StepFunction:
     Parameters
     ----------
     x : array_like
+        The x-values of the step function.
     y : array_like
-    ival : float
+        The y-values of the step function, one for each value in `x`.
+    ival : float, optional
         ival is the value given to the values to the left of x[0]. Default
         is 0.
-    sorted : bool
-        Default is False.
+    sorted : bool, optional
+        Set to True if `x` is already sorted to skip sorting. Default is
+        False.
     side : {'left', 'right'}, optional
         Default is 'left'. Defines the shape of the intervals constituting the
         steps. 'right' correspond to [a, b) intervals and 'left' to (a, b].
@@ -78,9 +81,9 @@ class StepFunction:
     3.0
     """
 
-    def __init__(self, x, y, ival=0., sorted=False, side='left'):  # noqa
+    def __init__(self, x, y, ival=0., sorted=False, side="left"):
 
-        if side.lower() not in ['right', 'left']:
+        if side.lower() not in ["right", "left"]:
             msg = "side can take the values 'right' or 'left'"
             raise ValueError(msg)
         self.side = side
@@ -92,7 +95,7 @@ class StepFunction:
             msg = "x and y do not have the same shape"
             raise ValueError(msg)
         if len(_x.shape) != 1:
-            msg = 'x and y must be 1-dimensional'
+            msg = "x and y must be 1-dimensional"
             raise ValueError(msg)
 
         self.x = np.r_[-np.inf, _x]
@@ -136,9 +139,8 @@ class ECDF(StepFunction):
     >>> ecdf([3, 55, 0.5, 1.5])
     array([ 0.75,  1.  ,  0.  ,  0.25])
     """
-    def __init__(self, x, side='right'):
-        x = np.array(x, copy=True)
-        x.sort()
+    def __init__(self, x, side="right"):
+        x = np.sort(np.asarray(x))
         nobs = len(x)
         y = np.linspace(1./nobs, 1, nobs)
         super().__init__(x, y, side=side, sorted=True)
@@ -163,7 +165,7 @@ class ECDFDiscrete(StepFunction):
         If freq_weights is not None, then x will be taken as the support of the
         mass point distribution with freq_weights as counts for x values.
         The x values can be arbitrary sortable values and need not be integers.
-    freq_weights : array_like
+    freq_weights : array_like, optional
         Weights of the observations.  sum(freq_weights) is interpreted as nobs
         for confint.
         If freq_weights is None, then the frequency counts for unique values
@@ -199,7 +201,7 @@ class ECDFDiscrete(StepFunction):
     >>> print(e1.y, e2.y)
     [0.  0.2 0.4 0.8 1. ] [0.  0.2 0.4 0.8 1. ]
     """
-    def __init__(self, x, freq_weights=None, side='right'):
+    def __init__(self, x, freq_weights=None, side="right"):
         if freq_weights is None:
             x, freq_weights = np.unique(x, return_counts=True)
         else:
@@ -220,6 +222,27 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
     Given a monotone function fn (no checking is done to verify monotonicity)
     and a set of x values, return an linearly interpolated approximation
     to its inverse from its values on x.
+
+    Parameters
+    ----------
+    fn : callable
+        Monotone function to invert. No check is performed to verify
+        monotonicity.
+    x : array_like
+        Grid of values on which `fn` is evaluated to construct the
+        approximate inverse.
+    vectorized : bool, optional
+        If True, `fn` is called on the whole array `x` at once. If False,
+        `fn` is called separately for each element of `x`. Default is
+        True.
+    **keywords
+        Additional keyword arguments passed to `fn`.
+
+    Returns
+    -------
+    callable
+        Linearly interpolated approximation to the inverse of `fn`,
+        constructed with `scipy.interpolate.interp1d`.
     """
     x = np.asarray(x)
     if vectorized:

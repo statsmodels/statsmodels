@@ -1,7 +1,7 @@
 """(West) German interest and inflation rate 1972-1998"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """..."""  # TODO
 TITLE = __doc__
@@ -40,7 +40,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----
@@ -51,6 +51,19 @@ def load():
 
 
 def load_pandas():
+    """
+    Load the West German interest/inflation data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The interest_inflation Dataset instance does not contain endog and exog
+    attributes.
+    """
     data = _get_data()
     names = data.columns
     dataset = du.Dataset(data=data, names=names)
@@ -58,7 +71,8 @@ def load_pandas():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'E6.csv', convert_float=True)
+    return du.load_csv(__file__, "E6.csv", convert_float=True)
+
 
 def __str__():
     return "e6"

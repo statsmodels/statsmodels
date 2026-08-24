@@ -1,16 +1,16 @@
 """
-State space approach to estimating SARIMAX models.
+State space approach to estimating SARIMAX models
 
 Author: Chad Fulton
 License: BSD-3
 """
 import numpy as np
 
-from statsmodels.tools.tools import add_constant, Bunch
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-
-from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tools.tools import Bunch, add_constant
+from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
+from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 def statespace(endog, exog=None, order=(0, 0, 0),
@@ -18,12 +18,15 @@ def statespace(endog, exog=None, order=(0, 0, 0),
                enforce_stationarity=True, enforce_invertibility=True,
                concentrate_scale=False, start_params=None, fit_kwargs=None):
     """
-    Estimate SARIMAX parameters using state space methods.
+    Estimate SARIMAX parameters using state space methods
 
     Parameters
     ----------
     endog : array_like
         Input time series array.
+    exog : array_like, optional
+        Array of exogenous regressors. If not included, then `include_constant`
+        must be True, and then `exog` will only include the constant column.
     order : tuple, optional
         The (p,d,q) order of the model for the number of AR parameters,
         differences, and MA parameters. Default is (0, 0, 0).
@@ -49,19 +52,23 @@ def statespace(endog, exog=None, order=(0, 0, 0),
     start_params : array_like, optional
         Initial guess of the solution for the loglikelihood maximization. The
         AR polynomial must be stationary. If `enforce_invertibility=True` the
-        MA poylnomial must be invertible. If not provided, default starting
+        MA polynomial must be invertible. If not provided, default starting
         parameters are computed using the Hannan-Rissanen method.
     fit_kwargs : dict, optional
         Arguments to pass to the state space model's `fit` method.
 
     Returns
     -------
-    parameters : SARIMAXParams object
-    other_results : Bunch
-        Includes two components, `spec`, containing the `SARIMAXSpecification`
-        instance corresponding to the input arguments; and
-        `state_space_results`, corresponding to the results from the underlying
-        state space model and Kalman filter / smoother.
+    ARMAEstimationResult
+        A result object with fields:
+
+        parameters : SARIMAXParams object
+        other_results : Bunch
+            Includes two components, `spec`, containing the
+            `SARIMAXSpecification` instance corresponding to the input
+            arguments; and `statespace_results`, corresponding to the
+            results from the underlying state space model and Kalman
+            filter / smoother.
 
     Notes
     -----
@@ -94,12 +101,12 @@ def statespace(endog, exog=None, order=(0, 0, 0),
         sp.params = start_params
 
         if spec.enforce_stationarity and not sp.is_stationary:
-            raise ValueError('Given starting parameters imply a non-stationary'
-                             ' AR process with `enforce_stationarity=True`.')
+            raise ValueError("Given starting parameters imply a non-stationary"
+                             " AR process with `enforce_stationarity=True`.")
 
         if spec.enforce_invertibility and not sp.is_invertible:
-            raise ValueError('Given starting parameters imply a non-invertible'
-                             ' MA process with `enforce_invertibility=True`.')
+            raise ValueError("Given starting parameters imply a non-invertible"
+                             " MA process with `enforce_invertibility=True`.")
 
     # Create and fit the state space model
     mod = SARIMAX(endog, exog=exog, order=spec.order,
@@ -109,14 +116,14 @@ def statespace(endog, exog=None, order=(0, 0, 0),
                   concentrate_scale=spec.concentrate_scale)
     if fit_kwargs is None:
         fit_kwargs = {}
-    fit_kwargs.setdefault('disp', 0)
+    fit_kwargs.setdefault("disp", 0)
     res_ss = mod.fit(start_params=start_params, **fit_kwargs)
 
     # Construct results
     p.params = res_ss.params
     res = Bunch({
-        'spec': spec,
-        'statespace_results': res_ss,
+        "spec": spec,
+        "statespace_results": res_ss,
     })
 
-    return p, res
+    return ARMAEstimationResult(p, res)

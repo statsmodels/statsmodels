@@ -2,15 +2,21 @@
 
 author: Yichuan Liu
 """
+from statsmodels.compat.pandas import Substitution
+
 import numpy as np
 
-from statsmodels.compat.pandas import Substitution
 from statsmodels.base.model import Model
-from .multivariate_ols import MultivariateTestResults
-from .multivariate_ols import _multivariate_ols_fit
-from .multivariate_ols import _multivariate_ols_test, _hypotheses_doc
+from statsmodels.formula._manager import FormulaManager
 
-__docformat__ = 'restructuredtext en'
+from .multivariate_ols import (
+    MultivariateTestResults,
+    _hypotheses_doc,
+    _multivariate_ols_fit,
+    _multivariate_ols_test,
+)
+
+__docformat__ = "restructuredtext en"
 
 
 class MANOVA(Model):
@@ -56,17 +62,17 @@ class MANOVA(Model):
     """
     _formula_max_endog = None
 
-    def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
+    def __init__(self, endog, exog, missing="none", hasconst=None, **kwargs):
         if len(endog.shape) == 1 or endog.shape[1] == 1:
-            raise ValueError('There must be more than one dependent variable'
-                             ' to fit MANOVA!')
-        super().__init__(endog, exog, missing=missing,
-                                     hasconst=hasconst, **kwargs)
+            raise ValueError(
+                "There must be more than one dependent variable to fit MANOVA!"
+            )
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
         self._fittedmod = _multivariate_ols_fit(self.endog, self.exog)
 
     def fit(self):
-        raise NotImplementedError('fit is not needed to use MANOVA. Call'
-                                  'mv_test directly on a MANOVA instance.')
+        raise NotImplementedError("fit is not needed to use MANOVA. Call"
+                                  "mv_test directly on a MANOVA instance.")
 
     @Substitution(hypotheses_doc=_hypotheses_doc)
     def mv_test(self, hypotheses=None, skip_intercept_test=False):
@@ -76,16 +82,17 @@ class MANOVA(Model):
         Parameters
         ----------
         %(hypotheses_doc)s
-        skip_intercept_test : bool
+        skip_intercept_test : bool, optional
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then
-            an exception because of emtpy arrays may be raised. This can
+            an exception because of empty arrays may be raised. This can
             happen for the intercept if the data has been demeaned.
 
         Returns
         -------
-        results: MultivariateTestResults
+        results : MultivariateTestResults
+            The results of the multivariate hypotheses tests.
 
         Notes
         -----
@@ -96,32 +103,44 @@ class MANOVA(Model):
         where `params` is the regression coefficient matrix for the
         linear model y = x * params
 
-        If the model is not specified using the formula interfact, then the
+        If the model is not specified using the formula interface, then the
         hypotheses test each included exogenous variable, one at a time. In
         most applications with categorical variables, the ``from_formula``
         interface should be preferred when specifying a model since it
         provides knowledge about the model when specifying the hypotheses.
         """
         if hypotheses is None:
-            if (hasattr(self, 'data') and self.data is not None and
-                        hasattr(self.data, 'design_info')):
-                terms = self.data.design_info.term_name_slices
+            if (
+                hasattr(self, "data")
+                and self.data is not None
+                and hasattr(self.data, "model_spec")
+            ):
+                # TODO: patsy migration
+
+                mgr = FormulaManager()
+                terms = mgr.get_term_name_slices(self.data.model_spec)
                 hypotheses = []
+
                 for key in terms:
-                    if skip_intercept_test and key == 'Intercept':
+                    if skip_intercept_test and (
+                        key == "Intercept" or key == mgr.intercept_term
+                    ):
                         continue
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
-                    hypotheses.append([key, L_contrast, None])
+                    test_name = str(key)
+                    if key == mgr.intercept_term:
+                        test_name = "Intercept"
+                    hypotheses.append([test_name, L_contrast, None])
             else:
                 hypotheses = []
                 for i in range(self.exog.shape[1]):
-                    name = 'x%d' % (i)
+                    name = f"x{i:d}"
                     L = np.zeros([1, self.exog.shape[1]])
                     L[0, i] = 1
                     hypotheses.append([name, L, None])
 
-        results = _multivariate_ols_test(hypotheses, self._fittedmod,
-                                         self.exog_names, self.endog_names)
+        results = _multivariate_ols_test(
+            hypotheses, self._fittedmod, self.exog_names, self.endog_names
+        )
 
-        return MultivariateTestResults(results, self.endog_names,
-                                       self.exog_names)
+        return MultivariateTestResults(results, self.endog_names, self.exog_names)

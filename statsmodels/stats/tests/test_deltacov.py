@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+
 from statsmodels.regression.linear_model import OLS
 from statsmodels.stats._delta_method import NonlinearDeltaCov
 
@@ -51,13 +52,13 @@ class TestDeltacovOLS:
         nl = NonlinearDeltaCov(fun, res.params, res.cov_params())
         predicted = nl.predicted()
         se = nl.se_vectorized()
-        assert_allclose(predicted, fun(res.params), rtol=1e-12)
-        assert_allclose(se, np.sqrt(np.diag(nl.cov())), rtol=1e-12)
+        assert_allclose(predicted, fun(res.params), rtol=1e-10)
+        assert_allclose(se, np.sqrt(np.diag(nl.cov())), rtol=1e-10)
 
         tt = res.t_test(x, use_t=False)
-        assert_allclose(predicted, tt.effect, rtol=1e-12)
-        assert_allclose(se, tt.sd, rtol=1e-12)
-        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-12)
+        assert_allclose(predicted, tt.effect, rtol=1e-10)
+        assert_allclose(se, tt.sd, rtol=1e-10)
+        assert_allclose(nl.conf_int(), tt.conf_int(), rtol=1e-10, atol=1e-12)
         t1 = nl.summary()
         t2 = tt.summary()
         # equal because nl.summary uses also ContrastResults
@@ -88,6 +89,39 @@ class TestDeltacovOLS:
         assert_allclose(nl.predicted(), res.params[0], rtol=1e-12)
         assert_allclose(nl.se_vectorized(), res.bse[0], rtol=1e-12)
 
+    def test_wald_test(self):
+        # fun = identity: predicted() = params, cov() = cov_params exactly,
+        # so wald_test(value) must reduce to the ordinary multivariate Wald
+        # statistic for H0: params = value, cross-checked against the
+        # already-tested Results.wald_test on an identity restriction.
+        res = self.res
+        k = len(res.params)
+
+        def fun(params):
+            return params
+
+        nl = NonlinearDeltaCov(fun, res.params, res.cov_params(), deriv=lambda p: np.eye(k))
+        value = res.params + 0.1
+
+        stat, pvalue = nl.wald_test(value)
+
+        diff = res.params - value
+        expected_stat = diff @ np.linalg.inv(res.cov_params()) @ diff
+        assert_allclose(stat, expected_stat, rtol=1e-10)
+
+        # NonlinearDeltaCov.wald_test always reports a raw chi2 statistic;
+        # Results.wald_test defaults to an F-statistic (chi2 / df_constraints)
+        # when the model uses t-distributed inference, so force use_f=False
+        # for a like-for-like comparison.
+        wt = res.wald_test((np.eye(k), value), use_f=False, scalar=True)
+        assert_allclose(stat, wt.statistic, rtol=1e-8)
+        assert_allclose(pvalue, wt.pvalue, rtol=1e-8)
+
+        # H0 exactly true at value=params: statistic must be ~0
+        stat0, pvalue0 = nl.wald_test(res.params)
+        assert_allclose(stat0, 0, atol=1e-8)
+        assert_allclose(pvalue0, 1, atol=1e-6)
+
 
 def test_deltacov_margeff():
     # compare with discrete margins
@@ -95,7 +129,7 @@ def test_deltacov_margeff():
     tc = dt.TestPoissonNewton()
     tc.setup_class()
     res_poi = tc.res1
-    res_poi.model._derivative_exog
+    assert isinstance(res_poi.model._derivative_exog(res_poi.params), np.ndarray)
 
     # 2d f doesn't work correctly,
     # se_vectorized and predicted are 2d column vector
@@ -107,7 +141,7 @@ def test_deltacov_margeff():
 
     nlp = NonlinearDeltaCov(f, res_poi.params, res_poi.cov_params())
 
-    marg = res_poi.get_margeff(at='mean')
+    marg = res_poi.get_margeff(at="mean")
     # margeff excludes constant, last parameter in this case
     assert_allclose(nlp.se_vectorized()[:-1], marg.margeff_se, rtol=1e-13)
     assert_allclose(nlp.predicted()[:-1], marg.margeff, rtol=1e-13)

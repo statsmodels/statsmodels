@@ -1,18 +1,19 @@
-from statsmodels.compat.scipy import SP_LT_15, SP_LT_17
+import warnings
+
+import numpy as np
+from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pytest
-from numpy.testing import assert_
-from numpy.testing import assert_almost_equal
 
 from statsmodels.base.optimizer import (
-    _fit_newton,
-    _fit_nm,
+    _fit_basinhopping,
     _fit_bfgs,
     _fit_cg,
-    _fit_ncg,
-    _fit_powell,
     _fit_lbfgs,
-    _fit_basinhopping,
     _fit_minimize,
+    _fit_ncg,
+    _fit_newton,
+    _fit_nm,
+    _fit_powell,
 )
 
 fit_funcs = {
@@ -29,7 +30,7 @@ fit_funcs = {
 
 
 def dummy_func(x):
-    return x ** 2
+    return x**2
 
 
 def dummy_score(x):
@@ -62,79 +63,72 @@ def dummy_constraints():
 
 
 @pytest.mark.smoke
-def test_full_output_false(reset_randomstate):
+@pytest.mark.parametrize("method", fit_funcs.keys())
+def test_full_output_false(method):
     # newton needs f, score, start, fargs, kwargs
     # bfgs needs f, score start, fargs, kwargs
     # nm needs ""
     # cg ""
     # ncg ""
     # powell ""
-    for method in fit_funcs:
-        func = fit_funcs[method]
-        if method == "newton":
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                hess=dummy_hess,
-                full_output=False,
-                disp=0,
-            )
+    func = fit_funcs[method]
+    kwargs = {"seed": 32839013} if method == "basinhopping" else {}
+    if method == "newton":
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs=kwargs,
+            hess=dummy_hess,
+            full_output=False,
+            disp=0,
+        )
 
-        else:
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                full_output=False,
-                disp=0
-            )
-        assert_(retvals is None)
-        if method == "powell" and SP_LT_15:
-            # Fixed in SP 1.5
-            assert_(xopt.shape == () and xopt.size == 1)
-        else:
-            assert_(len(xopt) == 1)
+    else:
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs=kwargs,
+            full_output=False,
+            disp=0,
+        )
+    assert_(retvals is None)
+    assert_(len(xopt) == 1)
 
 
-def test_full_output(reset_randomstate):
-    for method in fit_funcs:
-        func = fit_funcs[method]
-        if method == "newton":
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                hess=dummy_hess,
-                full_output=True,
-                disp=0,
-            )
+@pytest.mark.parametrize("method", fit_funcs.keys())
+def test_full_output(method):
+    func = fit_funcs[method]
+    kwargs = {"seed": 32839013} if method == "basinhopping" else {}
+    if method == "newton":
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs,
+            hess=dummy_hess,
+            full_output=True,
+            disp=0,
+        )
 
-        else:
-            xopt, retvals = func(
-                dummy_func,
-                dummy_score,
-                [1.0],
-                (),
-                {},
-                full_output=True,
-                disp=0
-            )
+    else:
+        xopt, retvals = func(
+            dummy_func,
+            dummy_score,
+            [1.0],
+            (),
+            kwargs,
+            full_output=True,
+            disp=0,
+        )
 
-        assert_(retvals is not None)
-        assert_("converged" in retvals)
-
-        if method == "powell" and SP_LT_15:
-            # Fixed in SP 1.5
-            assert_(xopt.shape == () and xopt.size == 1)
-        else:
-            assert_(len(xopt) == 1)
+    assert_(retvals is not None)
+    assert_("converged" in retvals)
+    assert_(len(xopt) == 1)
 
 
 def test_minimize_scipy_slsqp():
@@ -156,7 +150,6 @@ def test_minimize_scipy_slsqp():
     assert_almost_equal(xopt, [1.4, 1.7], 4)
 
 
-@pytest.mark.skipif(SP_LT_15, reason="Powell bounds support added in SP 1.5")
 def test_minimize_scipy_powell():
     func = fit_funcs["minimize"]
     xopt, _ = func(
@@ -175,7 +168,6 @@ def test_minimize_scipy_powell():
     assert_almost_equal(xopt, [2, 3.5], 4)
 
 
-@pytest.mark.skipif(SP_LT_17, reason="NM bounds support added in SP 1.7")
 def test_minimize_scipy_nm():
     func = fit_funcs["minimize"]
     xopt, _ = func(
@@ -192,3 +184,57 @@ def test_minimize_scipy_nm():
         disp=0,
     )
     assert_almost_equal(xopt, [2, 3.5], 4)
+
+
+@pytest.mark.parametrize("min_method", ["L-BFGS-B", "TNC"])
+def test_minimize_no_hess_method(min_method):
+    # GH#9140: L-BFGS-B and TNC do not accept a Hessian, so `hess` must not
+    # be forwarded to scipy.optimize.minimize (warning or error depending
+    # on the scipy version).
+    from statsmodels.discrete.discrete_model import Poisson
+
+    exog = np.column_stack((np.ones(10), np.arange(10) / 10.0))
+    endog = np.array([1, 2, 1, 3, 2, 4, 3, 5, 4, 6])
+    res_default = Poisson(endog, exog).fit(disp=0)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        res = Poisson(endog, exog).fit(
+            method="minimize", min_method=min_method, disp=0
+        )
+    hess_warnings = [
+        wrn for wrn in w if "hess" in str(wrn.message).lower()
+    ]
+    assert hess_warnings == []
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, res_default.params, rtol=1e-4)
+
+
+def test_fit_invalid_method_raises():
+    from statsmodels.discrete.discrete_model import Poisson
+
+    exog = np.column_stack((np.ones(10), np.arange(10) / 10.0))
+    endog = np.array([1, 2, 1, 3, 2, 4, 3, 5, 4, 6])
+    mod = Poisson(endog, exog)
+
+    with pytest.raises(ValueError, match="method"):
+        mod.fit(method="not-a-method", disp=0)
+
+    # case-insensitive, matching the previous manual `method.lower()`
+    res_upper = mod.fit(method="BFGS", disp=0)
+    res_lower = mod.fit(method="bfgs", disp=0)
+    assert_allclose(res_upper.params, res_lower.params)
+
+
+def test_lbfgs_disp_false_no_output(capsys):
+    xopt, _ = _fit_lbfgs(
+        dummy_func,
+        dummy_score,
+        [1.0],
+        (),
+        {},
+        full_output=False,
+        disp=False,
+    )
+    captured = capsys.readouterr()
+    assert captured.out == ""

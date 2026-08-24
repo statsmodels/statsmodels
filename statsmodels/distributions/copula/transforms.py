@@ -14,23 +14,80 @@ from scipy.special import expm1, gamma
 
 
 class Transforms:
+    """Base class for transformation (generator) functions of Archimedean
+    copulas.
+
+    Subclasses implement ``evaluate`` (the generator function) and
+    ``inverse`` (its inverse), and may override ``deriv``, ``deriv2`` and
+    the higher order derivatives of the inverse with closed-form
+    expressions.
+    """
 
     def __init__(self):
         pass
 
     def deriv2_inverse(self, phi, args):
+        """Second derivative of the inverse transformation function.
+
+        Generic implementation based on the derivatives of the direct
+        transformation function evaluated at the inverse.
+
+        Parameters
+        ----------
+        phi : array_like
+            Value(s) at which the derivative is evaluated.
+        args : tuple or float
+            Copula parameter(s), passed through to `inverse`, `deriv` and
+            `deriv2`.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the second derivative of the inverse transformation
+            function.
+        """
         t = self.inverse(phi, args)
         phi_d1 = self.deriv(t, args)
         phi_d2 = self.deriv2(t, args)
         return np.abs(phi_d2 / phi_d1**3)
 
     def derivk_inverse(self, k, phi, theta):
+        """k-th derivative of the inverse transformation function.
+
+        Not implemented in the base class.
+
+        Parameters
+        ----------
+        k : int
+            Order of the derivative.
+        phi : array_like
+            Value(s) at which the derivative is evaluated.
+        theta : array_like
+            Copula parameter.
+        """
         raise NotImplementedError("not yet implemented")
 
 
 class TransfFrank(Transforms):
+    """Transformation (generator) function of the Frank copula.
+    """
 
     def evaluate(self, t, theta):
+        """Evaluate the Frank copula generator function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the generator function is
+            evaluated.
+        theta : float
+            Copula dependence parameter.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the generator function at `t`.
+        """
         t = np.asarray(t)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
@@ -39,6 +96,20 @@ class TransfFrank(Transforms):
         # return - np.log(expm1(-theta*t) / expm1(-theta))
 
     def inverse(self, phi, theta):
+        """Evaluate the inverse of the Frank copula generator function.
+
+        Parameters
+        ----------
+        phi : array_like
+            Value(s) at which the inverse generator function is evaluated.
+        theta : float
+            Copula dependence parameter.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the inverse generator function at `phi`.
+        """
         phi = np.asarray(phi)
         return -np.log1p(np.exp(-phi) * expm1(-theta)) / theta
 
@@ -85,14 +156,45 @@ class TransfFrank(Transforms):
 
 
 class TransfClayton(Transforms):
+    """Transformation (generator) function of the Clayton copula.
+    """
 
     def _checkargs(self, theta):
         return theta > 0
 
     def evaluate(self, t, theta):
+        """Evaluate the Clayton copula generator function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the generator function is
+            evaluated.
+        theta : float
+            Copula dependence parameter, restricted to > 0.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the generator function at `t`.
+        """
         return np.power(t, -theta) - 1.
 
     def inverse(self, phi, theta):
+        """Evaluate the inverse of the Clayton copula generator function.
+
+        Parameters
+        ----------
+        phi : array_like
+            Value(s) at which the inverse generator function is evaluated.
+        theta : float
+            Copula dependence parameter, restricted to > 0.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the inverse generator function at `phi`.
+        """
         return np.power(1 + phi, -1/theta)
 
     def deriv(self, t, theta):
@@ -128,17 +230,47 @@ class TransfClayton(Transforms):
 
 
 class TransfGumbel(Transforms):
-    '''
-    requires theta >=1
-    '''
+    """Transformation (generator) function of the Gumbel copula.
+
+    Requires theta >= 1.
+    """
 
     def _checkargs(self, theta):
         return theta >= 1
 
     def evaluate(self, t, theta):
+        """Evaluate the Gumbel copula generator function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the generator function is
+            evaluated.
+        theta : float
+            Copula dependence parameter, restricted to >= 1.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the generator function at `t`.
+        """
         return np.power(-np.log(t), theta)
 
     def inverse(self, phi, theta):
+        """Evaluate the inverse of the Gumbel copula generator function.
+
+        Parameters
+        ----------
+        phi : array_like
+            Value(s) at which the inverse generator function is evaluated.
+        theta : float
+            Copula dependence parameter, restricted to >= 1.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the inverse generator function at `phi`.
+        """
         return np.exp(-np.power(phi, 1. / theta))
 
     def deriv(self, t, theta):
@@ -185,12 +317,46 @@ class TransfGumbel(Transforms):
 
 
 class TransfIndep(Transforms):
+    """Transformation (generator) function of the independence copula.
+    """
 
     def evaluate(self, t, *args):
+        """Evaluate the independence copula generator function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the generator function is
+            evaluated.
+        *args
+            Not used. Present for a consistent interface across
+            transforms.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the generator function at `t`.
+        """
         t = np.asarray(t)
         return -np.log(t)
 
     def inverse(self, phi, *args):
+        """Evaluate the inverse of the independence copula generator
+        function.
+
+        Parameters
+        ----------
+        phi : array_like
+            Value(s) at which the inverse generator function is evaluated.
+        *args
+            Not used. Present for a consistent interface across
+            transforms.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the inverse generator function at `phi`.
+        """
         phi = np.asarray(phi)
         return np.exp(-phi)
 
@@ -218,12 +384,39 @@ class _TransfPower(Transforms):
     Nelson p.144, equ. 4.5.2
 
     experimental, not yet tested and used
+
+    Parameters
+    ----------
+    transform : instance of transformation class
+        The base transformation (generator) function to which the power
+        transform is applied.
     """
 
     def __init__(self, transform):
         self.transform = transform
 
     def evaluate(self, t, alpha, beta, *tr_args):
+        """Evaluate the power-transformed generator function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the generator function is
+            evaluated.
+        alpha : float
+            Power parameter applied to `t` before evaluating the base
+            transform.
+        beta : float
+            Power parameter applied to the output of the base transform.
+        *tr_args
+            Additional arguments passed to the base transform's
+            ``evaluate`` method.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the power-transformed generator function at `t`.
+        """
         t = np.asarray(t)
 
         phi = np.power(self.transform.evaluate(np.power(t, alpha), *tr_args),
@@ -231,6 +424,27 @@ class _TransfPower(Transforms):
         return phi
 
     def inverse(self, phi, alpha, beta, *tr_args):
+        """Evaluate the inverse of the power-transformed generator function.
+
+        Parameters
+        ----------
+        phi : array_like
+            Value(s) at which the inverse generator function is evaluated.
+        alpha : float
+            Power parameter applied to the output of the base transform.
+        beta : float
+            Power parameter applied to `phi` before evaluating the base
+            transform.
+        *tr_args
+            Additional arguments passed to the base transform's
+            ``evaluate`` method.
+
+        Returns
+        -------
+        ndarray
+            Value(s) of the inverse power-transformed generator function at
+            `phi`.
+        """
         phi = np.asarray(phi)
         transf = self.transform
         phi_inv = np.power(transf.evaluate(np.power(phi, 1. / beta), *tr_args),

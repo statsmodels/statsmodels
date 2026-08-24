@@ -10,15 +10,38 @@ License: BSD-3
 
 import numpy as np
 from scipy import stats
+
 from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
 class PickandDependence:
+    """Base class for Pickands dependence functions for EV-copulas.
+
+    Subclasses implement ``evaluate`` (the dependence function itself) and
+    may override ``deriv`` and ``deriv2`` with closed-form derivatives;
+    otherwise these fall back to numerical differentiation.
+    """
 
     def __call__(self, *args, **kwargs):
         return self.evaluate(*args, **kwargs)
 
     def evaluate(self, t, *args):
+        """Evaluate the Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        *args
+            Shape parameters of the dependence function. The number and
+            meaning of these depends on the specific dependence function.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         raise NotImplementedError
 
     def deriv(self, t, *args):
@@ -43,14 +66,14 @@ class PickandDependence:
 
 
 class AsymLogistic(PickandDependence):
-    '''asymmetric logistic model of Tawn 1988
+    """asymmetric logistic model of Tawn 1988
 
     special case: a1=a2=1 : Gumbel
 
     restrictions:
      - theta in (0,1]
      - a1, a2 in [0,1]
-    '''
+    """
     k_args = 3
 
     def _check_args(self, a1, a2, theta):
@@ -60,6 +83,25 @@ class AsymLogistic(PickandDependence):
         return condth and conda1 and conda2
 
     def evaluate(self, t, a1, a2, theta):
+        """Evaluate the asymmetric logistic Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        a1 : float
+            Asymmetry parameter, restricted to [0, 1].
+        a2 : float
+            Asymmetry parameter, restricted to [0, 1].
+        theta : float
+            Dependence parameter, restricted to (0, 1].
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
 
         # if not np.all(_check_args(a1, a2, theta)):
         #    raise ValueError('invalid args')
@@ -89,14 +131,14 @@ transform_tawn = AsymLogistic()
 
 
 class AsymNegLogistic(PickandDependence):
-    '''asymmetric negative logistic model of Joe 1990
+    """asymmetric negative logistic model of Joe 1990
 
     special case:  a1=a2=1 : symmetric negative logistic of Galambos 1978
 
     restrictions:
      - theta in (0,inf)
      - a1, a2 in (0,1]
-    '''
+    """
     k_args = 3
 
     def _check_args(self, a1, a2, theta):
@@ -106,6 +148,25 @@ class AsymNegLogistic(PickandDependence):
         return condth and conda1 and conda2
 
     def evaluate(self, t, a1, a2, theta):
+        """Evaluate the asymmetric negative logistic dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        a1 : float
+            Asymmetry parameter, restricted to (0, 1].
+        a2 : float
+            Asymmetry parameter, restricted to (0, 1].
+        theta : float
+            Dependence parameter, restricted to (0, inf).
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         # if not np.all(self._check_args(a1, a2, theta)):
         #     raise ValueError('invalid args')
 
@@ -144,7 +205,7 @@ transform_joe = AsymNegLogistic()
 
 
 class AsymMixed(PickandDependence):
-    '''asymmetric mixed model of Tawn 1988
+    """asymmetric mixed model of Tawn 1988
 
     special case:  k=0, theta in [0,1] : symmetric mixed model of
         Tiago de Oliveira 1980
@@ -154,7 +215,7 @@ class AsymMixed(PickandDependence):
      - theta + 3*k > 0
      - theta + k <= 1
      - theta + 2*k <= 1
-    '''
+    """
     k_args = 2
 
     def _check_args(self, theta, k):
@@ -163,6 +224,25 @@ class AsymMixed(PickandDependence):
         return condth & cond1
 
     def evaluate(self, t, theta, k):
+        """Evaluate the asymmetric mixed Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        theta : float
+            Dependence parameter, restricted to theta > 0 (jointly with
+            `k`, see class restrictions).
+        k : float
+            Shape parameter, restricted jointly with `theta`, see class
+            restrictions.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         transf = 1 - (theta + k) * t + theta * t*t + k * t**3
         return transf
 
@@ -180,14 +260,14 @@ transform_tawn2 = AsymMixed()
 
 
 class AsymBiLogistic(PickandDependence):
-    '''bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
+    """bilogistic model of Coles and Tawn 1994, Joe, Smith and Weissman 1992
 
     restrictions:
      - (beta, delta) in (0,1)^2 or
      - (beta, delta) in (-inf,0)^2
 
     not vectorized because of numerical integration
-    '''
+    """
     k_args = 2
 
     def _check_args(self, beta, delta):
@@ -196,6 +276,26 @@ class AsymBiLogistic(PickandDependence):
         return cond1 | cond2
 
     def evaluate(self, t, beta, delta):
+        """Evaluate the bilogistic Pickands dependence function.
+
+        Not vectorized in `t` because of the numerical integration.
+
+        Parameters
+        ----------
+        t : float
+            Value in [0, 1] at which the dependence function is evaluated.
+        beta : float
+            Shape parameter, jointly restricted with `delta` to either
+            (0, 1) or (-inf, 0).
+        delta : float
+            Shape parameter, jointly restricted with `beta` to either
+            (0, 1) or (-inf, 0).
+
+        Returns
+        -------
+        float
+            Value of the Pickands dependence function at `t`.
+        """
         # if not np.all(_check_args(beta, delta)):
         #    raise ValueError('invalid args')
 
@@ -213,13 +313,13 @@ transform_bilogistic = AsymBiLogistic()
 
 
 class HR(PickandDependence):
-    '''model of Huesler Reiss 1989
+    """model of Huesler Reiss 1989
 
     special case:  a1=a2=1 : symmetric negative logistic of Galambos 1978
 
     restrictions:
      - lambda in (0,inf)
-    '''
+    """
     k_args = 1
 
     def _check_args(self, lamda):
@@ -227,12 +327,28 @@ class HR(PickandDependence):
         return cond
 
     def evaluate(self, t, lamda):
+        """Evaluate the Huesler-Reiss Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        lamda : float
+            Dependence parameter, restricted to (0, inf).
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         # if not np.all(self._check_args(lamda)):
         #    raise ValueError('invalid args')
 
         term = np.log((1. - t) / t) * 0.5 / lamda
 
         from scipy.stats import norm
+
         # use special if I want to avoid stats import
         transf = ((1 - t) * norm._cdf(lamda + term) +
                   t * norm._cdf(lamda - term))
@@ -294,12 +410,12 @@ transform_hr = HR()
 
 # def transform_tev(t, rho, df):
 class TEV(PickandDependence):
-    '''t-EV model of Demarta and McNeil 2005
+    """t-EV model of Demarta and McNeil 2005
 
     restrictions:
      - rho in (-1,1)
      - x > 0
-    '''
+    """
     k_args = 2
 
     def _check_args(self, rho, df):
@@ -309,11 +425,30 @@ class TEV(PickandDependence):
         return cond1 and cond2
 
     def evaluate(self, t, rho, df):
+        """Evaluate the t-EV Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        rho : float
+            Correlation parameter, restricted to (-1, 1).
+        df : float
+            Degrees of freedom parameter (denoted ``x`` or ``chi`` in
+            some references), restricted to > 0.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         x = df  # alias, Genest and Segers use chi, copual package uses df
         # if not np.all(self, _check_args(rho, x)):
         #    raise ValueError('invalid args')
 
         from scipy.stats import t as stats_t
+
         # use special if I want to avoid stats import
 
         term1 = (np.power(t/(1.-t), 1./x) - rho)  # for t

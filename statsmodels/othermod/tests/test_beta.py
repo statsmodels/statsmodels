@@ -1,23 +1,23 @@
 import io
-import os
-
-import pytest
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
-import patsy
+import pytest
+
 from statsmodels.api import families
-from statsmodels.tools.sm_exceptions import (
-    ValueWarning,
-    )
+from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.othermod.betareg import BetaModel
+from statsmodels.tools.sm_exceptions import ValueWarning
+
 from .results import results_betareg as resultsb
 
 links = families.links
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-res_dir = os.path.join(cur_dir, "results")
+cur_dir = Path(__file__).resolve().parent
+res_dir = Path(cur_dir).joinpath("results")
 
 
 # betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
@@ -55,8 +55,8 @@ expected_methylation_mean = pd.read_table(
 expected_methylation_precision = pd.read_table(
     io.StringIO(_methylation_estimates_precision), sep=r"\s+")
 
-income = pd.read_csv(os.path.join(res_dir, 'foodexpenditure.csv'))
-methylation = pd.read_csv(os.path.join(res_dir, 'methylation-test.csv'))
+income = pd.read_csv(Path(res_dir).joinpath("foodexpenditure.csv"))
+methylation = pd.read_csv(Path(res_dir).joinpath("methylation-test.csv"))
 
 
 def check_same(a, b, eps, name):
@@ -75,8 +75,15 @@ class TestBetaModel:
         model = "I(food/income) ~ income + persons"
         cls.income_fit = BetaModel.from_formula(model, income).fit()
 
+        def times_two(x):
+            return 2 * x
+
+        model = "I(food/income) ~ times_two(income) + persons"
+        cls.income_fit_eval_env = BetaModel.from_formula(model, income).fit()
+
         model = cls.model = "methylation ~ gender + CpG"
-        Z = cls.Z = patsy.dmatrix("~ age", methylation)
+        mgr = FormulaManager()
+        Z = cls.Z = mgr.get_matrices("~ age", methylation, pandas=False)
         mod = BetaModel.from_formula(model, methylation, exog_precision=Z,
                                      link_precision=links.Identity())
         cls.meth_fit = mod.fit()
@@ -86,35 +93,35 @@ class TestBetaModel:
 
     def test_income_coefficients(self):
         rslt = self.income_fit
-        assert_close(rslt.params[:-1], expected_income_mean['Estimate'], 1e-3)
-        assert_close(rslt.tvalues[:-1], expected_income_mean['zvalue'], 0.1)
-        assert_close(rslt.pvalues[:-1], expected_income_mean['Pr(>|z|)'], 1e-3)
+        assert_close(rslt.params[:-1], expected_income_mean["Estimate"], 1e-3)
+        assert_close(rslt.tvalues[:-1], expected_income_mean["zvalue"], 0.1)
+        assert_close(rslt.pvalues[:-1], expected_income_mean["Pr(>|z|)"], 1e-3)
 
     def test_income_precision(self):
 
         rslt = self.income_fit
         # note that we have to exp the phi results for now.
         assert_close(np.exp(rslt.params[-1:]),
-                     expected_income_precision['Estimate'], 1e-3)
+                     expected_income_precision["Estimate"], 1e-3)
         # yield check_same, rslt.tvalues[-1:],
         #                   expected_income_precision['zvalue'], 0.1, "z-score"
         assert_close(rslt.pvalues[-1:],
-                     expected_income_precision['Pr(>|z|)'], 1e-3)
+                     expected_income_precision["Pr(>|z|)"], 1e-3)
 
     def test_methylation_coefficients(self):
         rslt = self.meth_fit
         assert_close(rslt.params[:-2],
-                     expected_methylation_mean['Estimate'], 1e-2)
+                     expected_methylation_mean["Estimate"], 1e-2)
         assert_close(rslt.tvalues[:-2],
-                     expected_methylation_mean['zvalue'], 0.1)
+                     expected_methylation_mean["zvalue"], 0.1)
         assert_close(rslt.pvalues[:-2],
-                     expected_methylation_mean['Pr(>|z|)'], 1e-2)
+                     expected_methylation_mean["Pr(>|z|)"], 1e-2)
 
     def test_methylation_precision(self):
         # R results are from log link_precision
         rslt = self.meth_log_fit
         assert_allclose(rslt.params[-2:],
-                        expected_methylation_precision['Estimate'],
+                        expected_methylation_precision["Estimate"],
                         atol=1e-5, rtol=1e-10)
         #     expected_methylation_precision['Estimate']
         # yield check_same, links.logit()(rslt.params[-2:]),
@@ -124,7 +131,7 @@ class TestBetaModel:
 
     def test_precision_formula(self):
         m = BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula='~ age',
+                                   exog_precision_formula="~ age",
                                    link_precision=links.Identity())
         rslt = m.fit()
         assert_close(rslt.params, self.meth_fit.params, 1e-10)
@@ -132,7 +139,7 @@ class TestBetaModel:
 
         with pytest.warns(ValueWarning, match="unknown kwargs"):
             BetaModel.from_formula(self.model, methylation,
-                                   exog_precision_formula='~ age',
+                                   exog_precision_formula="~ age",
                                    link_precision=links.Identity(),
                                    junk=False)
 
@@ -161,8 +168,17 @@ class TestBetaModel:
         assert_allclose(rslt.resid, resid, rtol=1e-12)
         assert_allclose(rslt.resid_pearson, resid / np.sqrt(var), rtol=1e-12)
 
+    def test_eval_env(self):
+        assert "times_two(income)" in self.income_fit_eval_env.params.index
+        # Loose check that the eval env scaler worked
+        assert_allclose(
+            self.income_fit.params["income"],
+            2 * self.income_fit_eval_env.params["times_two(income)"],
+            rtol=1e-02
+        )
 
-class TestBetaMeth():
+
+class TestBetaMeth:
 
     @classmethod
     def setup_class(cls):
@@ -218,9 +234,9 @@ class TestBetaMeth():
     def test_resid(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.fittedvalues, res2.resid['fittedvalues'],
+        assert_allclose(res1.fittedvalues, res2.resid["fittedvalues"],
                         rtol=1e-8)
-        assert_allclose(res1.resid, res2.resid['response'],
+        assert_allclose(res1.resid, res2.resid["response"],
                         atol=1e-8, rtol=1e-8)
 
     def test_oim(self):
@@ -336,13 +352,14 @@ class TestBetaMeth():
         assert_allclose(dfmw, dfm6, rtol=1e-13)
 
 
-class TestBetaIncome():
+class TestBetaIncome:
 
     @classmethod
     def setup_class(cls):
 
         formula = "I(food/income) ~ income + persons"
-        exog_prec = patsy.dmatrix("~ persons", income)
+        mgr = FormulaManager()
+        exog_prec = mgr.get_matrices("~ persons", income)
         mod_income = BetaModel.from_formula(
             formula,
             income,
@@ -388,8 +405,8 @@ class TestBetaIncome():
 
         influ0 = MLEInfluence(res1)
         influ = res1.get_influence()
-        attrs = ['cooks_distance', 'd_fittedvalues', 'd_fittedvalues_scaled',
-                 'd_params', 'dfbetas', 'hat_matrix_diag', 'resid_studentized'
+        attrs = ["cooks_distance", "d_fittedvalues", "d_fittedvalues_scaled",
+                 "d_params", "dfbetas", "hat_matrix_diag", "resid_studentized"
                  ]
         for attr in attrs:
             getattr(influ, attr)
@@ -397,3 +414,85 @@ class TestBetaIncome():
         frame = influ.summary_frame()
         frame0 = influ0.summary_frame()
         assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)
+
+
+def test_hessian_observed_argument():
+    # `observed` must be honored when supplied, and only fall back to
+    # hess_type when it is None
+    formula = "methylation ~ gender + CpG"
+    mod = BetaModel.from_formula(formula, methylation,
+                                 exog_precision_formula="~ age",
+                                 link_precision=links.Log())
+    res = mod.fit()
+    params = res.params
+
+    hess_obs = mod.hessian(params, observed=True)
+    hess_eim = mod.hessian(params, observed=False)
+    assert not np.allclose(hess_obs, hess_eim)
+
+    # the default follows hess_type, which fit sets to "oim"
+    assert mod.hess_type == "oim"
+    assert_allclose(mod.hessian(params), hess_obs, rtol=1e-13)
+
+    mod.hess_type = "eim"
+    assert_allclose(mod.hessian(params), hess_eim, rtol=1e-13)
+
+    # an explicit argument still wins over hess_type
+    assert_allclose(mod.hessian(params, observed=True), hess_obs, rtol=1e-13)
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    model = "I(food/income) ~ income + persons"
+    res = BetaModel.from_formula(model, income).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_hessian_factor_reassembles_hessian():
+    # hessian() calls score_hessian_factor() directly rather than going
+    # through hessian_factor(), so the latter is only exercised by
+    # explicitly reassembling the Hessian from its output and checking it
+    # against hessian()'s own result.
+    model = "I(food/income) ~ income + persons"
+    mod = BetaModel.from_formula(model, income)
+    res = mod.fit()
+    params = np.asarray(res.params)
+
+    for observed in (True, False):
+        hf11, hf12, hf22 = mod.hessian_factor(params, observed=observed)
+        d11 = (mod.exog.T * hf11).dot(mod.exog)
+        d12 = (mod.exog.T * hf12).dot(mod.exog_precision)
+        d22 = (mod.exog_precision.T * hf22).dot(mod.exog_precision)
+        reassembled = np.block([[d11, d12], [d12.T, d22]])
+        assert_allclose(reassembled, mod.hessian(params, observed=observed),
+                        rtol=1e-12)
+
+
+def test_llrmixin_set_null_options():
+    # BetaResults is the only class in the codebase that mixes in
+    # _LLRMixin without overriding set_null_options (discrete_model.py's
+    # DiscreteResults defines its own, shadowing the mixin's version for
+    # every discrete model) -- so this is the only place its actual body
+    # can be exercised at all.
+    model = "I(food/income) ~ income + persons"
+    res = BetaModel.from_formula(model, income).fit()
+
+    llnull0 = res.llnull
+    assert not hasattr(res, "res_null")
+
+    res.set_null_options(attach_results=True)
+    lln = res.llnull
+    assert_allclose(lln, llnull0)
+    assert hasattr(res, "res_null")
+    assert_allclose(res.res_null.llf, lln)
+
+    # llr/llr_pvalue/pseudo_rsquared derive from llnull and must move
+    # together with it when the cache is reset via a direct override
+    res.set_null_options(llnull=res.llf - 5)
+    assert "prsquared" not in res._cache
+    assert_allclose(res._cache["llnull"], res.llf - 5)
+    assert_allclose(res.llr, -2 * (res.llnull - res.llf))
+    assert_allclose(res.pseudo_rsquared(), 1 - res.llf / res.llnull)

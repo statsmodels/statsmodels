@@ -4,11 +4,12 @@ author: Yichuan Liu
 """
 import numpy as np
 from numpy.linalg import svd
-import scipy
 import pandas as pd
+import scipy
 
 from statsmodels.base.model import Model
 from statsmodels.iolib import summary2
+
 from .multivariate_ols import multivariate_stats
 
 
@@ -22,7 +23,28 @@ class CanCorr(Model):
         x1 = x * x_cancoef, x1' * x1 is identity matrix
         y1 = y * y_cancoef, y1' * y1 is identity matrix
 
-    and the correlation between x1 and y1 is maximized.
+    and the correlation between x1 and y1 is maximized. The implementation is
+    based on [1]_, [2]_, and [3]_.
+
+    Parameters
+    ----------
+    endog : array_like
+        The endogenous (left-hand-side) variables.
+    exog : array_like
+        The exogenous (right-hand-side) variables.
+    tolerance : float, optional
+        Eigenvalue tolerance, values smaller than which are considered 0.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    hasconst : None or bool
+        Indicates whether the RHS includes a user-supplied constant. If True,
+        a constant is assumed. If False, no constant is checked for. If
+        None, the code checks for a constant.
+    **kwargs
+        Extra arguments that are used to set model properties when using the
+        formula interface.
 
     Attributes
     ----------
@@ -39,25 +61,33 @@ class CanCorr(Model):
 
     References
     ----------
-    .. [*] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
-    .. [*] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
-    .. [*] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
-    """  # noqa:E501
-    def __init__(self, endog, exog, tolerance=1e-8, missing='none', hasconst=None, **kwargs):
-        super().__init__(endog, exog, missing=missing,
-                                      hasconst=hasconst, **kwargs)
+    .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
+    .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
+    .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
+    """
+
+    def __init__(
+        self, endog, exog, tolerance=1e-8, missing="none", hasconst=None, **kwargs
+    ):
+        super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+        # Declared before `_fit` populates them, for a consistent attribute
+        # set even if an exception occurs during fitting.
+        self.cancorr = None
+        self.x_cancoef = None
+        self.y_cancoef = None
         self._fit(tolerance)
 
     def _fit(self, tolerance=1e-8):
-        """Fit the model
+        """
+        Fit the model
 
         A ValueError is raised if there are singular values smaller than the
         tolerance. The treatment of singular arrays might change in future.
 
         Parameters
         ----------
-        tolerance : float
-            eigenvalue tolerance, values smaller than which is considered 0
+        tolerance : float, optional
+            Eigenvalue tolerance, values smaller than which are considered 0.
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
@@ -73,14 +103,14 @@ class CanCorr(Model):
         vx_ds = vx.T
         mask = sx > tolerance
         if mask.sum() < len(mask):
-            raise ValueError('exog is collinear.')
+            raise ValueError("exog is collinear.")
         vx_ds[:, mask] /= sx[mask]
         uy, sy, vy = svd(y, 0)
         # vy_ds = vy.T divided by sy
         vy_ds = vy.T
         mask = sy > tolerance
         if mask.sum() < len(mask):
-            raise ValueError('endog is collinear.')
+            raise ValueError("endog is collinear.")
         vy_ds[:, mask] /= sy[mask]
         u, s, v = svd(ux.T.dot(uy), 0)
 
@@ -91,7 +121,9 @@ class CanCorr(Model):
         self.y_cancoef = vy_ds.dot(v.T[:, :k])
 
     def corr_test(self):
-        """Approximate F test
+        """
+        Approximate F test
+
         Perform multivariate statistical tests of the hypothesis that
         there is no canonical correlation between endog and exog.
         For each canonical correlation, testing its significance based on
@@ -99,13 +131,14 @@ class CanCorr(Model):
 
         Returns
         -------
-        CanCorrTestResults instance
+        CanCorrTestResults
+            Instance holding the canonical correlation test results.
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
         eigenvals = np.power(self.cancorr, 2)
-        stats = pd.DataFrame(columns=['Canonical Correlation', "Wilks' lambda",
-                                      'Num DF','Den DF', 'F Value','Pr > F'],
+        stats = pd.DataFrame(columns=["Canonical Correlation", "Wilks' lambda",
+                                      "Num DF", "Den DF", "F Value", "Pr > F"],
                              index=list(range(len(eigenvals) - 1, -1, -1)))
         prod = 1
         for i in range(len(eigenvals) - 1, -1, -1):
@@ -122,14 +155,14 @@ class CanCorr(Model):
             df2 = r * t - 2 * u
             lmd = np.power(prod, 1 / t)
             F = (1 - lmd) / lmd * df2 / df1
-            stats.loc[i, 'Canonical Correlation'] = self.cancorr[i]
+            stats.loc[i, "Canonical Correlation"] = self.cancorr[i]
             stats.loc[i, "Wilks' lambda"] = prod
-            stats.loc[i, 'Num DF'] = df1
-            stats.loc[i, 'Den DF'] = df2
-            stats.loc[i, 'F Value'] = F
+            stats.loc[i, "Num DF"] = df1
+            stats.loc[i, "Den DF"] = df2
+            stats.loc[i, "F Value"] = F
             pval = scipy.stats.f.sf(F, df1, df2)
-            stats.loc[i, 'Pr > F'] = pval
-            '''
+            stats.loc[i, "Pr > F"] = pval
+            """
             # Wilk's Chi square test of each canonical correlation
             df = (p - i + 1) * (q - i + 1)
             chi2 = a * np.log(prod)
@@ -138,7 +171,7 @@ class CanCorr(Model):
             stats.loc[i, 'Chi-square'] = chi2
             stats.loc[i, 'DF'] = df
             stats.loc[i, 'Pr > ChiSq'] = pval
-            '''
+            """
         ind = stats.index.values[::-1]
         stats = stats.loc[ind, :]
 
@@ -152,12 +185,19 @@ class CanCorrTestResults:
     """
     Canonical correlation results class
 
+    Parameters
+    ----------
+    stats : DataFrame
+        Contains statistical test results for each canonical correlation.
+    stats_mv : DataFrame
+        Contains the multivariate statistical test results.
+
     Attributes
     ----------
     stats : DataFrame
-        Contain statistical tests results for each canonical correlation
+        Contains statistical test results for each canonical correlation.
     stats_mv : DataFrame
-        Contain the multivariate statistical tests results
+        Contains the multivariate statistical test results.
     """
     def __init__(self, stats, stats_mv):
         self.stats = stats
@@ -168,9 +208,9 @@ class CanCorrTestResults:
 
     def summary(self):
         summ = summary2.Summary()
-        summ.add_title('Cancorr results')
+        summ.add_title("Cancorr results")
         summ.add_df(self.stats)
-        summ.add_dict({'': ''})
-        summ.add_dict({'Multivariate Statistics and F Approximations': ''})
+        summ.add_dict({"": ""})
+        summ.add_dict({"Multivariate Statistics and F Approximations": ""})
         summ.add_df(self.stats_mv)
         return summ

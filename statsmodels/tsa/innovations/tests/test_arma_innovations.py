@@ -3,8 +3,8 @@ Tests for ARMA innovations algorithm wrapper
 """
 
 import numpy as np
-import pytest
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.tsa.innovations import arma_innovations
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -21,8 +21,8 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     # Test the innovations algorithm and filter against the Kalman filter
     # for exact likelihood evaluation of an ARMA process
-    np.random.seed(42)
-    endog = np.random.normal(size=100)
+    rg = np.random.RandomState(42)
+    endog = rg.normal(size=100)
 
     # Innovations algorithm approach
     llf = arma_innovations.arma_loglike(endog, ar_params, ma_params, sigma2)
@@ -44,9 +44,9 @@ def test_innovations_algo_filter_kalman_filter(ar_params, ma_params, sigma2):
     assert_allclose(score_obs, mod.score_obs(params), atol=1e-5)
 
 
-@pytest.mark.parametrize("ar_params", ([1.9, -0.8], [1.0], [2.0, -1.0]))
+@pytest.mark.parametrize("ar_params", [(1.9, -0.8), (1.0), (2.0, -1.0)])
 def test_innovations_nonstationary(ar_params):
-    np.random.seed(42)
-    endog = np.random.normal(size=100)
+    rg = np.random.RandomState(42)
+    endog = rg.normal(size=100)
     with pytest.raises(ValueError, match="The model's autoregressive"):
         arma_innovations.arma_innovations(endog, ar_params=ar_params)

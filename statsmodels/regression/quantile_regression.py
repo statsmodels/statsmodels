@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-'''
+"""
 Quantile regression model
 
 Model parameters are estimated using iterated reweighted least squares. The
@@ -15,32 +13,38 @@ University of Tehran, 2008 (shmohammadi@gmail.com), with some lines based on
 code written by James P. Lesage in Applied Econometrics Using MATLAB(1999).PP.
 73-4.  Translated to python with permission from original author by Christian
 Prinoth (christian at prinoth dot name).
-'''
+"""
+
+import warnings
 
 import numpy as np
-import warnings
-import scipy.stats as stats
 from numpy.linalg import pinv
+from scipy import stats
 from scipy.stats import norm
-from statsmodels.tools.decorators import cache_readonly
-from statsmodels.regression.linear_model import (RegressionModel,
-                                                 RegressionResults,
-                                                 RegressionResultsWrapper)
-from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
-                                             IterationLimitWarning)
+
+from statsmodels.regression.linear_model import (
+    RegressionModel,
+    RegressionResults,
+    RegressionResultsWrapper,
+)
+from statsmodels.tools._decorators import cache_readonly, cache_writable
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, IterationLimitWarning
+from statsmodels.tools.validation import string_like
+
 
 class QuantReg(RegressionModel):
-    '''Quantile Regression
+    """
+    Quantile Regression
 
     Estimate a quantile regression model using iterative reweighted least
     squares.
 
     Parameters
     ----------
-    endog : array or dataframe
-        endogenous/response variable
-    exog : array or dataframe
-        exogenous/explanatory variable(s)
+    endog : array_like
+        Endogenous/response variable.
+    exog : array_like
+        Exogenous/explanatory variable(s).
 
     Notes
     -----
@@ -55,10 +59,10 @@ class QuantReg(RegressionModel):
     ----------
     General:
 
-    * Birkes, D. and Y. Dodge(1993). Alternative Methods of Regression, John Wiley and Sons.
-    * Green,W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
+    * Birkes, D. and Y. Dodge (1993). Alternative Methods of Regression, John Wiley and Sons.
+    * Green, W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
-    * LeSage, J. P.(1999). Applied Econometrics Using MATLAB,
+    * LeSage, J. P. (1999). Applied Econometrics Using MATLAB,
 
     Kernels (used by the fit method):
 
@@ -72,68 +76,93 @@ class QuantReg(RegressionModel):
 
     Keywords: Least Absolute Deviation(LAD) Regression, Quantile Regression,
     Regression, Robust Estimation.
-    '''
+
+    """
 
     def __init__(self, endog, exog, **kwargs):
         self._check_kwargs(kwargs)
         super().__init__(endog, exog, **kwargs)
 
     def whiten(self, data):
-        """
-        QuantReg model whitener does nothing: returns data.
-        """
+        """QuantReg model whitener does nothing: returns data"""
         return data
 
-    def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather',
-            max_iter=1000, p_tol=1e-6, **kwargs):
+    def fit(
+        self,
+        q=0.5,
+        vcov="robust",
+        kernel="epa",
+        bandwidth="hsheather",
+        max_iter=1000,
+        p_tol=1e-6,
+        **kwargs,
+    ):
         """
         Solve by Iterative Weighted Least Squares
 
         Parameters
         ----------
-        q : float
-            Quantile must be strictly between 0 and 1
-        vcov : str, method used to calculate the variance-covariance matrix
+        q : float, optional
+            Quantile must be strictly between 0 and 1.
+        vcov : {'robust', 'iid'}, optional
+            Method used to calculate the variance-covariance matrix
             of the parameters. Default is ``robust``:
 
             - robust : heteroskedasticity robust standard errors (as suggested
               in Greene 6th edition)
             - iid : iid errors (as in Stata 12)
 
-        kernel : str, kernel to use in the kernel density estimation for the
+        kernel : {'biw', 'cos', 'epa', 'gau', 'par'}, optional
+            Kernel to use in the kernel density estimation for the
             asymptotic covariance matrix:
 
+            - biw: Biweight
             - epa: Epanechnikov
             - cos: Cosine
             - gau: Gaussian
-            - par: Parzene
+            - par: Parzen
 
-        bandwidth : str, Bandwidth selection method in kernel density
+        bandwidth : {'hsheather', 'bofinger', 'chamberlain'}, optional
+            Bandwidth selection method in kernel density
             estimation for asymptotic covariance estimate (full
             references in QuantReg docstring):
 
             - hsheather: Hall-Sheather (1988)
             - bofinger: Bofinger (1975)
             - chamberlain: Chamberlain (1994)
+        max_iter : int, optional
+            Maximum number of iterations.
+        p_tol : float, optional
+            Convergence tolerance for the iterative parameter estimates.
+        **kwargs
+            Additional keyword arguments, accepted for API compatibility.
+
+        Returns
+        -------
+        RegressionResultsWrapper
+            Results instance for the fitted quantile regression, with
+            additional ``q``, ``iterations``, ``sparsity``, ``bandwidth``,
+            and ``history`` attributes.
         """
-
         if q <= 0 or q >= 1:
-            raise Exception('q must be strictly between 0 and 1')
+            raise ValueError("q must be strictly between 0 and 1")
 
-        kern_names = ['biw', 'cos', 'epa', 'gau', 'par']
-        if kernel not in kern_names:
-            raise Exception("kernel must be one of " + ', '.join(kern_names))
-        else:
-            kernel = kernels[kernel]
+        kernel = string_like(
+            kernel, "kernel", options=("biw", "cos", "epa", "gau", "par"),
+            lower=False,
+        )
+        kernel = kernels[kernel]
 
-        if bandwidth == 'hsheather':
+        bandwidth = string_like(
+            bandwidth, "bandwidth",
+            options=("hsheather", "bofinger", "chamberlain"), lower=False,
+        )
+        if bandwidth == "hsheather":
             bandwidth = hall_sheather
-        elif bandwidth == 'bofinger':
+        elif bandwidth == "bofinger":
             bandwidth = bofinger
-        elif bandwidth == 'chamberlain':
+        else:  # bandwidth == "chamberlain"
             bandwidth = chamberlain
-        else:
-            raise Exception("bandwidth must be in 'hsheather', 'bofinger', 'chamberlain'")
 
         endog = self.endog
         exog = self.exog
@@ -161,7 +190,7 @@ class QuantReg(RegressionModel):
         diff = 10
         cycle = False
 
-        history = dict(params = [], mse=[])
+        history = dict(params=[], mse=[])
         while n_iter < max_iter and diff > p_tol and not cycle:
             n_iter += 1
             beta0 = beta
@@ -170,26 +199,33 @@ class QuantReg(RegressionModel):
             beta = np.dot(pinv(xtx), xty)
             resid = endog - np.dot(exog, beta)
 
-            mask = np.abs(resid) < .000001
-            resid[mask] = ((resid[mask] >= 0) * 2 - 1) * .000001
-            resid = np.where(resid < 0, q * resid, (1-q) * resid)
+            mask = np.abs(resid) < 0.000001
+            resid[mask] = ((resid[mask] >= 0) * 2 - 1) * 0.000001
+            resid = np.where(resid < 0, q * resid, (1 - q) * resid)
             resid = np.abs(resid)
             xstar = exog / resid[:, np.newaxis]
             diff = np.max(np.abs(beta - beta0))
-            history['params'].append(beta)
-            history['mse'].append(np.mean(resid*resid))
+            history["params"].append(beta)
+            history["mse"].append(np.mean(resid * resid))
 
             if (n_iter >= 300) and (n_iter % 100 == 0):
                 # check for convergence circle, should not happen
                 for ii in range(2, 10):
-                    if np.all(beta == history['params'][-ii]):
+                    if np.all(beta == history["params"][-ii]):
                         cycle = True
-                        warnings.warn("Convergence cycle detected", ConvergenceWarning)
+                        warnings.warn(
+                            "Convergence cycle detected",
+                            ConvergenceWarning,
+                            stacklevel=2,
+                        )
                         break
 
         if n_iter == max_iter:
-            warnings.warn("Maximum number of iterations (" + str(max_iter) +
-                          ") reached.", IterationLimitWarning)
+            warnings.warn(
+                "Maximum number of iterations (" + str(max_iter) + ") reached.",
+                IterationLimitWarning,
+                stacklevel=2,
+            )
 
         e = endog - np.dot(exog, beta)
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:
@@ -197,26 +233,24 @@ class QuantReg(RegressionModel):
         # Instead, we calculate bandwidth as in Stata 12
         iqre = stats.scoreatpercentile(e, 75) - stats.scoreatpercentile(e, 25)
         h = bandwidth(nobs, q)
-        h = min(np.std(endog),
-                iqre / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
+        h = min(np.std(endog), iqre / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
-        fhat0 = 1. / (nobs * h) * np.sum(kernel(e / h))
+        fhat0 = 1.0 / (nobs * h) * np.sum(kernel(e / h))
 
-        if vcov == 'robust':
-            d = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
+        vcov = string_like(vcov, "vcov", options=("robust", "iid"), lower=False)
+        if vcov == "robust":
+            d = np.where(e > 0, (q / fhat0) ** 2, ((1 - q) / fhat0) ** 2)
             xtxi = pinv(np.dot(exog.T, exog))
             xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
             vcov = xtxi @ xtdx @ xtxi
-        elif vcov == 'iid':
-            vcov = (1. / fhat0)**2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
-        else:
-            raise Exception("vcov must be 'robust' or 'iid'")
+        else:  # vcov == "iid"
+            vcov = (1.0 / fhat0) ** 2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
 
         lfit.q = q
         lfit.iterations = n_iter
-        lfit.sparsity = 1. / fhat0
+        lfit.sparsity = 1.0 / fhat0
         lfit.bandwidth = h
         lfit.history = history
 
@@ -224,46 +258,53 @@ class QuantReg(RegressionModel):
 
 
 def _parzen(u):
-    z = np.where(np.abs(u) <= .5, 4./3 - 8. * u**2 + 8. * np.abs(u)**3,
-                 8. * (1 - np.abs(u))**3 / 3.)
+    z = np.where(
+        np.abs(u) <= 0.5,
+        4.0 / 3 - 8.0 * u**2 + 8.0 * np.abs(u) ** 3,
+        8.0 * (1 - np.abs(u)) ** 3 / 3.0,
+    )
     z[np.abs(u) > 1] = 0
     return z
 
 
 kernels = {}
-kernels['biw'] = lambda u: 15. / 16 * (1 - u**2)**2 * np.where(np.abs(u) <= 1, 1, 0)
-kernels['cos'] = lambda u: np.where(np.abs(u) <= .5, 1 + np.cos(2 * np.pi * u), 0)
-kernels['epa'] = lambda u: 3. / 4 * (1-u**2) * np.where(np.abs(u) <= 1, 1, 0)
-kernels['gau'] = norm.pdf
-kernels['par'] = _parzen
-#kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0)
-#kernels['log'] = lambda u: logistic.pdf(u) * (1 - logistic.pdf(u))
-#kernels['tri'] = lambda u: np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
-#kernels['trw'] = lambda u: 35. / 32 * (1 - u**2)**3 * np.where(np.abs(u) <= 1, 1, 0)
-#kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
+kernels["biw"] = lambda u: 15.0 / 16 * (1 - u**2) ** 2 * np.where(np.abs(u) <= 1, 1, 0)
+kernels["cos"] = lambda u: np.where(np.abs(u) <= 0.5, 1 + np.cos(2 * np.pi * u), 0)
+kernels["epa"] = lambda u: 3.0 / 4 * (1 - u**2) * np.where(np.abs(u) <= 1, 1, 0)
+kernels["gau"] = norm.pdf
+kernels["par"] = _parzen
+# kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0)
+# kernels['log'] = lambda u: logistic.pdf(u) * (1 - logistic.pdf(u))
+# kernels['tri'] = lambda u: np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
+# kernels['trw'] = lambda u: 35. / 32 * (1 - u**2)**3 * np.where(np.abs(u) <= 1, 1, 0)
+# kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
 
 
-def hall_sheather(n, q, alpha=.05):
+def hall_sheather(n, q, alpha=0.05):
     z = norm.ppf(q)
-    num = 1.5 * norm.pdf(z)**2.
-    den = 2. * z**2. + 1.
-    h = n**(-1. / 3) * norm.ppf(1. - alpha / 2.)**(2./3) * (num / den)**(1./3)
+    num = 1.5 * norm.pdf(z) ** 2.0
+    den = 2.0 * z**2.0 + 1.0
+    h = (
+        n ** (-1.0 / 3)
+        * norm.ppf(1.0 - alpha / 2.0) ** (2.0 / 3)
+        * (num / den) ** (1.0 / 3)
+    )
     return h
 
 
 def bofinger(n, q):
-    num = 9. / 2 * norm.pdf(2 * norm.ppf(q))**4
-    den = (2 * norm.ppf(q)**2 + 1)**2
-    h = n**(-1. / 5) * (num / den)**(1. / 5)
+    num = 9.0 / 2 * norm.pdf(2 * norm.ppf(q)) ** 4
+    den = (2 * norm.ppf(q) ** 2 + 1) ** 2
+    h = n ** (-1.0 / 5) * (num / den) ** (1.0 / 5)
     return h
 
 
-def chamberlain(n, q, alpha=.05):
-    return norm.ppf(1 - alpha / 2) * np.sqrt(q*(1 - q) / n)
+def chamberlain(n, q, alpha=0.05):
+    return norm.ppf(1 - alpha / 2) * np.sqrt(q * (1 - q) / n)
 
 
 class QuantRegResults(RegressionResults):
-    '''Results instance for the QuantReg model'''
+    """Results instance for the QuantReg model"""
 
     @cache_readonly
     def prsquared(self):
@@ -277,9 +318,9 @@ class QuantRegResults(RegressionResults):
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
-    #@cache_readonly
+    @cache_writable()
     def scale(self):
-        return 1.
+        return 1.0
 
     @cache_readonly
     def bic(self):
@@ -337,61 +378,89 @@ class QuantRegResults(RegressionResults):
     def HC3_se(self):
         raise NotImplementedError
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
-        """Summarize the Regression Results
+    def summary(
+            self,
+            yname=None,
+            xname=None,
+            title=None,
+            alpha=0.05
+    ):
+        """
+        Summarize the Regression Results
 
         Parameters
         ----------
         yname : str, optional
-            Default is `y`
+            Default is `y`.
         xname : list[str], optional
-            Names for the exogenous variables. Default is `var_##` for ## in
-            the number of regressors. Must match the number of parameters
-            in the model
+            Names for the exogenous variables. Default is `var_##` where
+            `##` is the 0-based index of the regressor. Must match the
+            number of parameters in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
-            default title
-        alpha : float
-            significance level for the confidence intervals
+            default title.
+        alpha : float, optional
+            Significance level for the confidence intervals.
 
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
         --------
         statsmodels.iolib.summary.Summary : class to hold summary results
         """
-        eigvals = self.eigenvals
-        condno = self.condition_number
+        # Cache the data-dependent scalars computed below as a plain dict
+        # (not cache_readonly) so that summary() keeps working after
+        # remove_data() has cleared resid/model.exog and the like.
+        cache = self.__dict__.setdefault("_summary_cache", {})
 
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['Least Squares']),
-                    ('Date:', None),
-                    ('Time:', None)
-                    ]
+        def cached(key, compute):
+            if key not in cache:
+                cache[key] = compute()
+            return cache[key]
 
-        top_right = [('Pseudo R-squared:', ["%#8.4g" % self.prsquared]),
-                     ('Bandwidth:', ["%#8.4g" % self.bandwidth]),
-                     ('Sparsity:', ["%#8.4g" % self.sparsity]),
-                     ('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None)
-                     ]
+        eigvals = cached("eigvals", lambda: self.eigenvals)
+        condno = cached("condno", lambda: self.condition_number)
+        prsquared = cached("prsquared", lambda: self.prsquared)
+
+        top_left = [
+            ("Dep. Variable:", None),
+            ("Model:", None),
+            ("Method:", ["Least Squares"]),
+            ("Date:", None),
+            ("Time:", None),
+        ]
+
+        top_right = [
+            ("Pseudo R-squared:", [f"{prsquared:#8.4g}"]),
+            ("Bandwidth:", [f"{self.bandwidth:#8.4g}"]),
+            ("Sparsity:", [f"{self.sparsity:#8.4g}"]),
+            ("No. Observations:", None),
+            ("Df Residuals:", None),
+            ("Df Model:", None),
+        ]
 
         if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+            title = self.model.__class__.__name__ + " " + "Regression Results"
 
         # create summary table instance
         from statsmodels.iolib.summary import Summary
+
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                              use_t=self.use_t)
+        smry.add_table_2cols(
+            self,
+            gleft=top_left,
+            gright=top_right,
+            yname=yname,
+            xname=xname,
+            title=title,
+        )
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
 
         # add warnings/notes, added to text format only
         etext = []

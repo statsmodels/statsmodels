@@ -14,12 +14,17 @@ Notes
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
+
+from statsmodels.tools.rng_qrng import check_random_state
+
 from . import correlation_structures as cs
 
 
 class PanelSample:
-    '''data generating process for panel with within correlation
+    """data generating process for panel with within correlation
 
     allows various within correlation structures, but no random intercept yet
 
@@ -43,9 +48,20 @@ class PanelSample:
         arguments for the corr_structure
     scale : float
         scale of noise, standard deviation of normal distribution
-    seed : None or int
-        If seed is given, then this is used to create the random numbers for
-        the sample.
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        Used to create the random numbers for the sample. If `rng` is
+        None, a new ``Generator`` is created using fresh entropy from
+        the operating system. If `rng` is an int, a new ``RandomState``
+        instance is created, seeded with `rng`; this integer-seeding
+        behavior is deprecated and will change to creating a
+        ``Generator`` in a future release. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
+    seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        .. deprecated:: 0.15
+
+           seed has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
 
     Notes
     -----
@@ -57,14 +73,24 @@ class PanelSample:
     This is just used in one example so far and needs more usage to see what
     will be useful to add.
 
-    '''
+    """
 
-    def __init__(self, nobs, k_vars, n_groups, exog=None, within=True,
-                 corr_structure=np.eye, corr_args=(), scale=1, seed=None):
+    @deprecate_kwarg("seed", "rng")
+    def __init__(
+        self,
+        nobs,
+        k_vars,
+        n_groups,
+        exog=None,
+        within=True,
+        corr_structure=np.eye,
+        corr_args=(),
+        scale=1,
+        rng=None,
+    ):
 
-
-        nobs_i = nobs//n_groups
-        nobs = nobs_i * n_groups  #make balanced
+        nobs_i = nobs // n_groups
+        nobs = nobs_i * n_groups  # make balanced
         self.nobs = nobs
         self.nobs_i = nobs_i
         self.n_groups = n_groups
@@ -72,41 +98,38 @@ class PanelSample:
         self.corr_structure = corr_structure
         self.groups = np.repeat(np.arange(n_groups), nobs_i)
 
-        self.group_indices = np.arange(n_groups+1) * nobs_i #check +1
+        self.group_indices = np.arange(n_groups + 1) * nobs_i  # check +1
 
         if exog is None:
             if within:
-                #t = np.tile(np.linspace(-1,1,nobs_i), n_groups)
+                # t = np.tile(np.linspace(-1,1,nobs_i), n_groups)
                 t = np.tile(np.linspace(0, 2, nobs_i), n_groups)
-                #rs2 = np.random.RandomState(9876)
-                #t = 1 + 0.3 * rs2.randn(nobs_i * n_groups)
-                #mix within and across variation
-                #t += np.repeat(np.linspace(-1,1,nobs_i), n_groups)
+                # rs2 = np.random.RandomState(9876)
+                # t = 1 + 0.3 * rs2.randn(nobs_i * n_groups)
+                # mix within and across variation
+                # t += np.repeat(np.linspace(-1,1,nobs_i), n_groups)
             else:
-                #no within group variation,
-                t = np.repeat(np.linspace(-1,1,nobs_i), n_groups)
+                # no within group variation,
+                t = np.repeat(np.linspace(-1, 1, nobs_i), n_groups)
 
-            exog = t[:,None]**np.arange(k_vars)
+            exog = t[:, None] ** np.arange(k_vars)
 
         self.exog = exog
-        #self.y_true = exog.sum(1)  #all coefficients equal 1,
-        #moved to make random coefficients
-        #initialize
+        # self.y_true = exog.sum(1)  # all coefficients equal 1,
+        # moved to make random coefficients
+        # initialize
         self.y_true = None
         self.beta = None
 
-        if seed is None:
-            seed = np.random.randint(0, 999999)
+        self.seed = rng
+        self.rng = rng
+        self.random_state = check_random_state(rng, deprecated=True, warn=False)
 
-        self.seed = seed
-        self.random_state = np.random.RandomState(seed)
-
-        #this makes overwriting difficult, move to method?
+        # this makes overwriting difficult, move to method?
         self.std = scale * np.ones(nobs_i)
         corr = self.corr_structure(nobs_i, *corr_args)
         self.cov = cs.corr2cov(corr, self.std)
         self.group_means = np.zeros(n_groups)
-
 
     def get_y_true(self):
         if self.beta is None:
@@ -114,14 +137,11 @@ class PanelSample:
         else:
             self.y_true = np.dot(self.exog, self.beta)
 
-
     def generate_panel(self):
-        '''
+        """
         generate endog for a random panel dataset with within correlation
 
-        '''
-
-        random = self.random_state
+        """
 
         if self.y_true is None:
             self.get_y_true()
@@ -130,22 +150,23 @@ class PanelSample:
         n_groups = self.n_groups
 
         use_balanced = True
-        if use_balanced: #much faster for balanced case
-            noise = self.random_state.multivariate_normal(np.zeros(nobs_i),
-                                                  self.cov,
-                                                  size=n_groups).ravel()
-            #need to add self.group_means
+        if use_balanced:  # much faster for balanced case
+            noise = self.random_state.multivariate_normal(
+                np.zeros(nobs_i), self.cov, size=n_groups
+            ).ravel()
+            # need to add self.group_means
             noise += np.repeat(self.group_means, nobs_i)
         else:
             noise = np.empty(self.nobs, np.float64)
             noise.fill(np.nan)
             for ii in range(self.n_groups):
-                #print ii,
-                idx, idxupp = self.group_indices[ii:ii+2]
-                #print idx, idxupp
+                # print ii,
+                idx, idxupp = self.group_indices[ii : ii + 2]
+                # print idx, idxupp
                 mean_i = self.group_means[ii]
                 noise[idx:idxupp] = self.random_state.multivariate_normal(
-                                        mean_i * np.ones(self.nobs_i), self.cov)
+                    mean_i * np.ones(self.nobs_i), self.cov
+                )
 
         endog = self.y_true + noise
         return endog

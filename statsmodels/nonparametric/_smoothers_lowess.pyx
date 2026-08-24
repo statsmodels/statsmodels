@@ -128,7 +128,7 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     This gives a similar comparison for when it is 0 vs not.
 
     >>> import numpy as np
-    >>> import scipy.stats as stats
+    >>> from scipy import stats
     >>> import statsmodels.api as sm
     >>> lowess = sm.nonparametric.lowess
     >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
@@ -406,7 +406,7 @@ cdef void calculate_y_fit(np.ndarray[DTYPE_t, ndim = 1] x,
 
     Notes
     -----
-    No regression function (e.g. lstsq) is called. Instead "projection
+    No regression function (e.g., lstsq) is called. Instead "projection
     vector" p_i_j is calculated, and y_fit[i] = sum(p_i_j * y[j]) = y_fit[i]
     for j s.t. x[j] is in the neighborhood of xval. p_i_j is a function of
     the weights, xval, and its neighbors.

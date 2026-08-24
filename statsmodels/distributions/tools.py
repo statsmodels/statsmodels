@@ -5,12 +5,17 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+
 import warnings
 
 import numpy as np
 from scipy import interpolate, stats
 
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
+
 # helper functions to work on a grid of cdf and pdf, histogram
+
 
 class _Grid:
     """Create Grid values and indices, grid in [0, 1]^d
@@ -22,22 +27,25 @@ class _Grid:
 
     Parameters
     ----------
-    k_grid : tuple or array_like
-        number of elements for axes, this defines k_grid - 1 equal sized
+    k_grid : sequence of int
+        Number of elements for axes, this defines k_grid - 1 equal sized
         intervals of [0, 1] for each axis.
-    eps : float
+    eps : float, optional
         If eps is not zero, then x values will be clipped to [eps, 1 - eps],
-        i.e. to the interior of the unit interval or hyper cube.
-
+        i.e., to the interior of the unit interval or hyper cube.
 
     Attributes
     ----------
-    k_grid : list of number of grid points
-    x_marginal: list of 1-dimensional marginal values
-    idx_flat: integer array with indices
-    x_flat: flattened grid values,
-        rows are grid points, columns represent variables or axis.
-        ``x_flat`` is currently also 2-dim in the univariate 1-dim grid case.
+    k_grid : sequence of int
+        Number of grid points along each axis.
+    x_marginal : list of ndarray
+        List of 1-dimensional marginal grid values, one array per axis.
+    idx_flat : ndarray
+        Integer array with indices.
+    x_flat : ndarray
+        Flattened grid values, rows are grid points, columns represent
+        variables or axis. ``x_flat`` is currently also 2-dim in the
+        univariate 1-dim grid case.
 
     """
 
@@ -47,8 +55,8 @@ class _Grid:
         x_marginal = [np.arange(ki) / (ki - 1) for ki in k_grid]
 
         idx_flat = np.column_stack(
-                np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
-                ).astype(float)
+            np.unravel_index(np.arange(np.prod(k_grid)), k_grid)
+        ).astype(float)
         x_flat = idx_flat / idx_flat.max(0)
         if eps != 0:
             x_marginal = [np.clip(xi, eps, 1 - eps) for xi in x_marginal]
@@ -60,7 +68,7 @@ class _Grid:
 
 
 def prob2cdf_grid(probs):
-    """Cumulative probabilities from cell provabilites on a grid
+    """Cumulative probabilities from cell probabilities on a grid
 
     Parameters
     ----------
@@ -87,6 +95,10 @@ def cdf2prob_grid(cdf, prepend=0):
     ----------
     cdf : array_like
         Grid of cumulative probabilities with same shape as probs.
+    prepend : int, float, or None, optional
+        Value to prepend to the difference along each axis before taking
+        ``np.diff``. If None, then no value is prepended (i.e., the length
+        along each axis decreases by 1 relative to ``cdf``).
 
     Returns
     -------
@@ -109,19 +121,23 @@ def average_grid(values, coords=None, _method="slicing"):
 
     Parameters
     ----------
-    values : array_like
+    values : ndarray
         Values on a grid that will average over corner points of each cell.
-    coords : None or list of array_like
-        Grid coordinates for each axis use to compute volumne of cell.
+    coords : None or list of array_like, optional
+        Grid coordinates for each axis used to compute the volume of cell.
         If None, then averaged values are not rescaled.
-    _method : {"slicing", "convolve"}
+    _method : {"slicing", "convolve"}, optional
         Grid averaging is implemented using numpy "slicing" or using
         scipy.signal "convolve".
 
     Returns
     -------
-    Grid with averaged cell values.
+    ndarray
+        Grid with averaged cell values.
     """
+    _method = string_like(
+        _method, "_method", options=("slicing", "convolve"), lower=False
+    )
     k_dim = values.ndim
     if _method == "slicing":
         p = values.copy()
@@ -137,10 +153,10 @@ def average_grid(values, coords=None, _method="slicing"):
 
             p = (p[sl1] + p[sl2]) / 2
 
-    elif _method == "convolve":
+    else:  # _method == "convolve"
         from scipy import signal
-        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim),
-                            mode="valid")
+
+        p = signal.convolve(values, 0.5**k_dim * np.ones([2] * k_dim), mode="valid")
 
     if coords is not None:
         dx = np.array(1)
@@ -157,18 +173,18 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
 
     Parameters
     ----------
-    mat : array_like, 2-D
+    mat : array_like
         Matrix that will be converted to have uniform margins.
-        Currently, `mat` has to be two dimensional.
-    maxiter : in
+    maxiter : int, optional
         Maximum number of iterations.
-    tol : float
+    tol : float, optional
         Tolerance for convergence, defined for difference between largest and
         smallest margin in each dimension.
 
     Returns
     -------
-    ndarray, nearest matrix with uniform margins.
+    ndarray
+        Nearest matrix with uniform margins.
 
     Notes
     -----
@@ -185,7 +201,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
     for _ in range(maxiter):
         pc0 = pc.copy()
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             pc0 /= pc.sum(axis=axs, keepdims=True)
         pc = pc0
         pc /= pc.sum()
@@ -193,7 +209,7 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
         # check convergence
         mptps = []
         for ax in range(pc.ndim):
-            axs = tuple([i for i in range(pc.ndim) if not i == ax])
+            axs = tuple(i for i in range(pc.ndim) if not i == ax)
             marg = pc.sum(axis=axs, keepdims=False)
             mptps.append(np.ptp(marg))
         if max(mptps) < tol:
@@ -202,8 +218,12 @@ def nearest_matrix_margins(mat, maxiter=100, tol=1e-8):
 
     if not converged:
         from statsmodels.tools.sm_exceptions import ConvergenceWarning
-        warnings.warn("Iterations did not converge, maxiter reached",
-                      ConvergenceWarning)
+
+        warnings.warn(
+            "Iterations did not converge, maxiter reached",
+            ConvergenceWarning,
+            stacklevel=2,
+        )
     return pc
 
 
@@ -212,6 +232,16 @@ def _rankdata_no_ties(x):
 
     This is a simplified version for ranking data if there are no ties.
     Works vectorized across columns.
+
+    Parameters
+    ----------
+    x : ndarray
+        2-D array with observations in rows and variables in columns.
+
+    Returns
+    -------
+    ndarray
+        Ranks of `x`, computed separately for each column.
 
     See Also
     --------
@@ -238,7 +268,7 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
         in unit interval.
     k_bins : int
         Number of bins along each dimension in the histogram
-    use_ranks : bool
+    use_ranks : bool, optional
         If use_rank is True, then data will be converted to ranks without
         tie handling.
 
@@ -267,35 +297,42 @@ def frequencies_fromdata(data, k_bins, use_ranks=True):
     return freqr
 
 
-def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
+def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False, rng=None):
     """Histogram probabilities as approximation to a copula density.
 
     Parameters
     ----------
     copula : instance
         Instance of a copula class. Only the ``pdf`` method is used.
-    k_bins : int
+    k_bins : int, optional
         Number of bins along each dimension in the approximating histogram.
-    force_uniform : bool
+    force_uniform : bool, optional
         If true, then the pdf grid will be adjusted to have uniform margins
         using `nearest_matrix_margin`.
         If false, then no adjustment is done and the margins may not be exactly
         uniform.
-    use_pdf : bool
+    use_pdf : bool, optional
         If false, then the grid cell probabilities will be computed from the
         copula cdf.
         If true, then the density, ``pdf``, is used and cell probabilities
         are approximated by averaging the pdf of the cell corners. This is
         only useful if the cdf is not available.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        The source of the random variables to use in cdf calculation, if
+        needed. If `rng` is None, a new ``Generator`` is created using
+        fresh entropy from the operating system. If `rng` is an int or
+        array of ints, a new ``Generator`` is created, seeded with `rng`.
+        If `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Returns
     -------
-    bin probabilites : ndarray
+    ndarray
         Probability that random variable falls in given bin. This corresponds
         to a discrete distribution, and is not scaled to bin size to form a
         piecewise uniform, histogram density.
         Bin probabilities are a k-dim array with k_bins segments in each
-        dimensionrows.
+        dimension.
 
     Notes
     -----
@@ -318,7 +355,13 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
             pdf_grid = ag / ag.sum()
     else:
         g = _Grid([k] * k_dim, eps=1e-6)
-        cdfg = copula.cdf(g.x_flat).reshape(*ks)
+        rng = check_random_state(rng)
+        try:
+            # This is a hack because some copula CDFs are approximate and use
+            # random variates in their calculation, while most do not.
+            cdfg = copula.cdf(g.x_flat, rng=rng).reshape(*ks)
+        except TypeError:
+            cdfg = copula.cdf(g.x_flat).reshape(*ks)
         # correct for bin size
         pdf_grid = cdf2prob_grid(cdfg, prepend=None)
         # TODO: check boundary approximation, eg. undefined at zero
@@ -329,6 +372,7 @@ def approx_copula_pdf(copula, k_bins=10, force_uniform=True, use_pdf=False):
 
 
 # functions to evaluate bernstein polynomials
+
 
 def _eval_bernstein_1d(x, fvals, method="binom"):
     """Evaluate 1-dimensional bernstein polynomial given grid of values.
@@ -342,7 +386,7 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
     fvals : ndarray
         Grid values of coefficients for Bernstein polynomial basis in the
         weighted sum.
-    method: "binom", "beta" or "bpoly"
+    method : {"binom", "beta", "bpoly"}, optional
         Method to construct Bernstein polynomial basis, used for comparison
         of parameterizations.
 
@@ -352,31 +396,31 @@ def _eval_bernstein_1d(x, fvals, method="binom"):
 
     Returns
     -------
-    Bernstein polynomial at evaluation points, weighted sum of Bernstein
-    polynomial basis.
+    ndarray
+        Bernstein polynomial at evaluation points, weighted sum of Bernstein
+        polynomial basis.
     """
+    method = string_like(method, "method", options=("binom", "beta", "bpoly"))
     k_terms = fvals.shape[-1]
     xx = np.asarray(x)
     k = np.arange(k_terms).astype(float)
-    n = k_terms - 1.
+    n = k_terms - 1.0
 
-    if method.lower() == "binom":
+    if method == "binom":
         # Divide by 0 RuntimeWarning here
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             poly_base = stats.binom.pmf(k, n, xx[..., None])
         bp_values = (fvals * poly_base).sum(-1)
-    elif method.lower() == "bpoly":
-        bpb = interpolate.BPoly(fvals[:, None], [0., 1])
+    elif method == "bpoly":
+        bpb = interpolate.BPoly(fvals[:, None], [0.0, 1])
         bp_values = bpb(x)
-    elif method.lower() == "beta":
+    else:  # method == "beta"
         # Divide by 0 RuntimeWarning here
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", RuntimeWarning)
             poly_base = stats.beta.pdf(xx[..., None], k + 1, n - k + 1) / (n + 1)
         bp_values = (fvals * poly_base).sum(-1)
-    else:
-        raise ValueError("method not recogized")
 
     return bp_values
 
@@ -396,8 +440,9 @@ def _eval_bernstein_2d(x, fvals):
 
     Returns
     -------
-    Bernstein polynomial at evaluation points, weighted sum of Bernstein
-    polynomial basis.
+    ndarray
+        Bernstein polynomial at evaluation points, weighted sum of Bernstein
+        polynomial basis.
     """
     k_terms = fvals.shape
     k_dim = fvals.ndim
@@ -413,15 +458,16 @@ def _eval_bernstein_2d(x, fvals):
     k2 = np.arange(k_terms[1]).astype(float)
 
     # we are building a nobs x n1 x n2 array
-    poly_base = (stats.binom.pmf(k1[None, :, None], n1, x1[:, None, None]) *
-                 stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None]))
+    poly_base = stats.binom.pmf(
+        k1[None, :, None], n1, x1[:, None, None]
+    ) * stats.binom.pmf(k2[None, None, :], n2, x2[:, None, None])
     bp_values = (fvals * poly_base).sum(-1).sum(-1)
 
     return bp_values
 
 
 def _eval_bernstein_dd(x, fvals):
-    """Evaluate d-dimensional bernstein polynomial given grid of valuesv
+    """Evaluate d-dimensional bernstein polynomial given grid of values
 
     experimental
 
@@ -435,8 +481,9 @@ def _eval_bernstein_dd(x, fvals):
 
     Returns
     -------
-    Bernstein polynomial at evaluation points, weighted sum of Bernstein
-    polynomial basis.
+    ndarray
+        Bernstein polynomial at evaluation points, weighted sum of Bernstein
+        polynomial basis.
     """
     k_terms = fvals.shape
     k_dim = fvals.ndim
@@ -449,7 +496,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.zeros(x.shape[0])
     for i in range(k_dim):
         ki = np.arange(k_terms[i]).astype(float)
-        for _ in range(i+1):
+        for _ in range(i + 1):
             ki = ki[..., None]
         ni = k_terms[i] - 1
         xi = xx[:, i]
@@ -458,7 +505,7 @@ def _eval_bernstein_dd(x, fvals):
     poly_base = np.exp(poly_base)
     bp_values = fvals.T[..., None] * poly_base
 
-    for i in range(k_dim):
+    for _ in range(k_dim):
         bp_values = bp_values.sum(0)
 
     return bp_values
@@ -466,8 +513,26 @@ def _eval_bernstein_dd(x, fvals):
 
 def _ecdf_mv(data, method="seq", use_ranks=True):
     """
-    Multivariate empiricial distribution function, empirical copula
+    Multivariate empirical distribution function, empirical copula
 
+    Parameters
+    ----------
+    data : array_like
+        Multivariate data with observations in rows and variables in
+        columns.
+    method : {"seq", "brute"}, optional
+        Method used to compute the empirical distribution function.
+    use_ranks : bool, optional
+        If True, then data is converted to ranks, without tie handling,
+        before computing the empirical distribution function.
+
+    Returns
+    -------
+    count : ndarray
+        Empirical distribution function counts for each observation.
+    x : ndarray
+        Data converted to ranks if `use_ranks` is True, otherwise the
+        original data as an array.
 
     Notes
     -----

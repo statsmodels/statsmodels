@@ -6,6 +6,7 @@ License: BSD-3
 """
 
 from collections import defaultdict
+
 import numpy as np
 
 from statsmodels.base._penalties import SCADSmoothed
@@ -24,40 +25,42 @@ class ScreeningResults:
         after trimming exog with params below trimming threshold.
     results_pen : results instance
         Results instance of the penalized model before trimming. This includes
-        variables from the last forward selection
-    idx_nonzero
-        index of exog columns in the final selection including exog_keep
-    idx_exog
-        index of exog columns in the final selection for exog candidates, i.e.
-        without exog_keep
-    idx_excl
-        idx of excluded exog based on combined [exog_keep, exog] array. This is
-        the complement of idx_nonzero
+        variables from the last forward selection.
+    idx_nonzero : ndarray
+        Index of exog columns in the final selection including exog_keep.
+    idx_exog : ndarray
+        Index of exog columns in the final selection for exog candidates, i.e.
+        without exog_keep.
+    idx_excl : ndarray
+        Index of excluded exog based on combined [exog_keep, exog] array. This
+        is the complement of idx_nonzero.
     converged : bool
         True if the iteration has converged and stopped before maxiter has been
         reached. False if maxiter has been reached.
     iterations : int
-        number of iterations in the screening process. Each iteration consists
+        Number of iterations in the screening process. Each iteration consists
         of a forward selection step and a trimming step.
     history : dict of lists
-        results collected for each iteration during the screening process
-        'idx_nonzero' 'params_keep'].append(start_params)
-            history['idx_added'].append(idx)
+        Results collected for each iteration during the screening process.
+        Keys are 'idx_nonzero', 'keep', 'params_keep' and 'idx_added', each
+        holding a list with one entry appended per iteration.
+    screener : instance of VariableScreening
+        The VariableScreening instance that produced these results.
 
     The ScreeningResults returned by `screen_exog_iterator` has additional
     attributes:
 
-    idx_nonzero_batches : ndarray 2-D
+    idx_nonzero_batches : ndarray, 2-D
         Two-dimensional array with batch index in the first column and variable
-        index withing batch in the second column. They can be used jointly as
+        index within batch in the second column. They can be used jointly as
         index for the data in the exog_iterator.
-    exog_final_names : list[str]
+    exog_final_names : list of str
         'var<bidx>_<idx>' where `bidx` is the batch index and `idx` is the
-        index of the selected column withing batch `bidx`.
+        index of the selected column within batch `bidx`.
     history_batches : dict of lists
         This provides information about the selected variables within each
-        batch during the first round screening
-        'idx_nonzero' is based ond the array that includes exog_keep, while
+        batch during the first round screening.
+        'idx_nonzero' is based on the array that includes exog_keep, while
         'idx_exog' is the index based on the exog of the batch.
     """
     def __init__(self, screener, **kwds):
@@ -73,27 +76,31 @@ class VariableScreening:
     Parameters
     ----------
     model : instance of penalizing model
-        examples: GLMPenalized, PoissonPenalized and LogitPenalized.
+        Examples: GLMPenalized, PoissonPenalized and LogitPenalized.
         The attributes of the model instance `pen_weight` and `penal` will be
         ignored.
-    pen_weight : None or float
-        penalization weight use in SCAD penalized MLE
-    k_add : int
-        number of exog to add during expansion or forward selection
-        see Notes section for tie handling
-    k_max_add : int
-        maximum number of variables to include during variable addition, i.e.
-        forward selection. default is 30
-    threshold_trim : float
-        threshold for trimming parameters to zero, default is 1e-4
-    k_max_included : int
-        maximum total number of variables to include in model.
-    ranking_attr : str
+    pen_weight : float, optional
+        Penalization weight use in SCAD penalized MLE.
+    use_weights : bool, optional
+        If True, penalty weights are used so that `exog_keep` is not
+        penalized (weight 0) while candidate exog have weight 1. If False,
+        all penalty weights are set equally.
+    k_add : int, optional
+        Number of exog to add during expansion or forward selection.
+        See Notes section for tie handling.
+    k_max_add : int, optional
+        Maximum number of variables to include during variable addition, i.e.
+        forward selection. Default is 30.
+    threshold_trim : float, optional
+        Threshold for trimming parameters to zero, default is 1e-4.
+    k_max_included : int, optional
+        Maximum total number of variables to include in model.
+    ranking_attr : str, optional
         This determines the result attribute or model method that is used for
         the ranking of exog to include. The availability of attributes depends
         on the model.
         Default is 'resid_pearson', 'model.score_factor' can be used in GLM.
-    ranking_project : bool
+    ranking_project : bool, optional
         If ranking_project is True, then the exog candidates for inclusion are
         first projected on the already included exog before the computation
         of the ranking measure. This brings the ranking measure closer to
@@ -142,15 +149,15 @@ class VariableScreening:
 
     def __init__(self, model, pen_weight=None, use_weights=True, k_add=30,
                  k_max_add=30, threshold_trim=1e-4, k_max_included=20,
-                 ranking_attr='resid_pearson', ranking_project=True):
+                 ranking_attr="resid_pearson", ranking_project=True):
 
         self.model = model
         self.model_class = model.__class__
         self.init_kwds = model._get_init_kwds()
         # pen_weight and penal are explicitly included
         # TODO: check what we want to do here
-        self.init_kwds.pop('pen_weight', None)
-        self.init_kwds.pop('penal', None)
+        self.init_kwds.pop("pen_weight", None)
+        self.init_kwds.pop("penal", None)
 
         self.endog = model.endog
         self.exog_keep = model.exog
@@ -173,13 +180,11 @@ class VariableScreening:
         self.ranking_project = ranking_project
 
     def _get_penal(self, weights=None):
-        """create new Penalty instance
-        """
+        """Create new Penalty instance"""
         return SCADSmoothed(0.1, c0=0.0001, weights=weights)
 
     def ranking_measure(self, res_pen, exog, keep=None):
-        """compute measure for ranking exog candidates for inclusion
-        """
+        """Compute measure for ranking exog candidates for inclusion"""
         endog = self.endog
 
         if self.ranking_project:
@@ -187,7 +192,7 @@ class VariableScreening:
             ex_incl = res_pen.model.exog[:, keep]
             exog = exog - ex_incl.dot(np.linalg.pinv(ex_incl).dot(exog))
 
-        if self.ranking_attr == 'predicted_poisson':
+        if self.ranking_attr == "predicted_poisson":
             # I keep this for more experiments
 
             # TODO: does it really help to change/trim params
@@ -198,9 +203,9 @@ class VariableScreening:
             predicted = res_pen.model.predict(p)
             # this is currently hardcoded for Poisson
             resid_factor = (endog - predicted) / np.sqrt(predicted)
-        elif self.ranking_attr[:6] == 'model.':
+        elif self.ranking_attr[:6] == "model.":
             # use model method, this is intended for score_factor
-            attr = self.ranking_attr.split('.')[1]
+            attr = self.ranking_attr.split(".")[1]
             resid_factor = getattr(res_pen.model, attr)(res_pen.params)
             if resid_factor.ndim == 2:
                 # for score_factor when extra params are in model
@@ -212,34 +217,36 @@ class VariableScreening:
             mom_cond = np.abs(resid_factor.dot(exog))**2
         return mom_cond
 
-    def screen_exog(self, exog, endog=None, maxiter=100, method='bfgs',
+    def screen_exog(self, exog, endog=None, maxiter=100, method="bfgs",
                     disp=False, fit_kwds=None):
-        """screen and select variables (columns) in exog
+        """Screen and select variables (columns) in exog
 
         Parameters
         ----------
         exog : ndarray
-            candidate explanatory variables that are screened for inclusion in
-            the model
-        endog : ndarray (optional)
-            use a new endog in the screening model.
-            This is not tested yet, and might not work correctly
-        maxiter : int
-            number of screening iterations
-        method : str
-            optimization method to use in fit, needs to be only of the gradient
-            optimizers
-        disp : bool
-            display option for fit during optimization
+            Candidate explanatory variables that are screened for inclusion in
+            the model.
+        endog : ndarray, optional
+            Use a new endog in the screening model.
+            This is not tested yet, and might not work correctly.
+        maxiter : int, optional
+            Number of screening iterations.
+        method : str, optional
+            Optimization method to use in fit, needs to be only of the gradient
+            optimizers.
+        disp : bool, optional
+            Display option for fit during optimization.
+        fit_kwds : dict-like, optional
+            Additional keyword arguments passed to the model's `fit` method.
 
         Returns
         -------
         res_screen : instance of ScreeningResults
-            The attribute `results_final` contains is the results instance
+            The attribute `results_final` contains the results instance
             with the final model selection.
             `idx_nonzero` contains the index of the selected exog in the full
-            exog, combined exog that are always kept plust exog_candidates.
-            see ScreeningResults for a full description
+            exog, combined exog that are always kept plus exog_candidates.
+            See ScreeningResults for a full description.
         """
         model_class = self.model_class
         if endog is None:
@@ -254,7 +261,7 @@ class VariableScreening:
         x = np.column_stack((x0, x1))
         nobs, k_vars = x.shape
         fkwds = fit_kwds if fit_kwds is not None else {}
-        fit_kwds = {'maxiter': 200, 'disp': False}
+        fit_kwds = {"maxiter": 200, "disp": False}
         fit_kwds.update(fkwds)
 
         history = defaultdict(list)
@@ -268,7 +275,9 @@ class VariableScreening:
         start_params = res_pen.params
         converged = False
         idx_old = []
-        for it in range(maxiter):
+        iterations = 0
+        for _ in range(maxiter):
+            iterations += 1
             # candidates for inclusion in next iteration
             x1 = x[:, idx_excl]
             mom_cond = self.ranking_measure(res_pen, x1, keep=keep)
@@ -322,10 +331,10 @@ class VariableScreening:
             mask_excl = np.ones(k_vars, dtype=bool)
             mask_excl[idx_nonzero] = False
             idx_excl = np.nonzero(mask_excl)[0]
-            history['idx_nonzero'].append(idx_nonzero)
-            history['keep'].append(keep)
-            history['params_keep'].append(start_params)
-            history['idx_added'].append(idx)
+            history["idx_nonzero"].append(idx_nonzero)
+            history["keep"].append(keep)
+            history["params_keep"].append(start_params)
+            history["idx_added"].append(idx)
 
             if (len(idx_nonzero) == len(idx_old) and
                     (idx_nonzero == idx_old).all()):
@@ -353,24 +362,24 @@ class VariableScreening:
                                   warn_convergence=False,
                                   **fit_kwds)
         # set exog_names for final model
-        xnames = ['var%4d' % ii for ii in idx_nonzero]
+        xnames = [f"var{ii:4d}" for ii in idx_nonzero]
         res_final.model.exog_names[k_keep:] = xnames[k_keep:]
 
         res = ScreeningResults(self,
-                               results_pen = res_pen,
-                               results_final = res_final,
-                               idx_nonzero = idx_nonzero,
-                               idx_exog = idx_nonzero[k_keep:] - k_keep,
-                               idx_excl = idx_excl,
-                               history = history,
-                               converged = converged,
-                               iterations = it + 1  # it is 0-based
+                               results_pen=res_pen,
+                               results_final=res_final,
+                               idx_nonzero=idx_nonzero,
+                               idx_exog=idx_nonzero[k_keep:] - k_keep,
+                               idx_excl=idx_excl,
+                               history=history,
+                               converged=converged,
+                               iterations=iterations
                                )
         return res
 
     def screen_exog_iterator(self, exog_iterator):
         """
-        batched version of screen exog
+        Batched version of screen exog
 
         This screens variables in a two step process:
 
@@ -384,6 +393,8 @@ class VariableScreening:
         Parameters
         ----------
         exog_iterator : iterator over ndarrays
+            Batches of candidate explanatory variables that are screened
+            for inclusion in the model.
 
         Returns
         -------
@@ -396,7 +407,7 @@ class VariableScreening:
             index in the first column and variable index within batch in the
             second column. They can be used jointly as index for the data
             in the exog_iterator.
-            see ScreeningResults for a full description
+            See ScreeningResults for a full description.
         """
         k_keep = self.k_keep
         # res_batches = []
@@ -414,7 +425,7 @@ class VariableScreening:
         exog_winner = np.column_stack(exog_winner)
         res_screen_final = self.screen_exog(exog_winner, maxiter=20)
 
-        exog_winner_names = ['var%d_%d' % (bidx, idx)
+        exog_winner_names = [f"var{bidx:d}_{idx:d}"
                              for bidx, batch in enumerate(exog_idx)
                              for idx in batch]
 
@@ -425,7 +436,7 @@ class VariableScreening:
         final_names = np.array(exog_winner_names)[ex_final_idx]
         res_screen_final.idx_nonzero_batches = np.array(idx_full)[ex_final_idx]
         res_screen_final.exog_final_names = final_names
-        history = {'idx_nonzero': res_idx,
-                   'idx_exog': exog_idx}
+        history = {"idx_nonzero": res_idx,
+                   "idx_exog": exog_idx}
         res_screen_final.history_batches = history
         return res_screen_final

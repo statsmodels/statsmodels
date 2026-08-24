@@ -9,7 +9,7 @@ of a model.
 
   1. Basic linear models such as :ref:`WLS and OLS <regression>` are directly
      estimated using appropriate linear algebra.
-  2. :ref:`RLM <rlm>` and :ref:`GLM <glm>`, use iteratively re-weighted
+  2. :ref:`RLM <rlm>` and :ref:`GLM <glm_ref>`, use iteratively re-weighted
      least squares. However, you can optionally select one of the scipy
      optimizers discussed below.
   3. For all other models, we use

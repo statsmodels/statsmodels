@@ -10,31 +10,30 @@ import warnings
 
 import numpy as np
 
-from statsmodels.tools.decorators import cache_readonly
-
-from statsmodels.stats.diagnostic_gen import (
-    test_chisquare_binning
-    )
 from statsmodels.discrete._diagnostics_count import (
-    test_poisson_dispersion,
-    # _test_poisson_dispersion_generic,
-    test_poisson_zeroinflation_jh,
-    test_poisson_zeroinflation_broek,
-    test_poisson_zeros,
+    plot_probs,
     test_chisquare_prob,
-    plot_probs
-    )
+    test_poisson_dispersion,
+    test_poisson_zeroinflation_broek,
+    test_poisson_zeroinflation_jh,
+    test_poisson_zeros,
+)
+from statsmodels.stats.diagnostic_gen import test_chisquare_binning
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.sm_exceptions import ModelWarning
 
 
 class CountDiagnostic:
-    """Diagnostic and specification tests and plots for Count model
+    """
+    Diagnostic and specification tests and plots for count models
 
-    status: experimental
+    Status: experimental.
 
     Parameters
     ----------
-    results : Results instance of a count model.
-    y_max : int
+    results : Results instance
+        Results instance of a fitted count model.
+    y_max : int, optional
         Largest count to include when computing predicted probabilities for
         counts. Default is the largest observed count.
 
@@ -53,16 +52,17 @@ class CountDiagnostic:
         return self.results.predict(which="prob", **kwds)
 
     def test_chisquare_prob(self, bin_edges=None, method=None):
-        """Moment test for binned probabilites using OPG.
+        """
+        Moment test for binned probabilities using OPG
 
-        Paramters
-        ---------
-        binedges : array_like or None
+        Parameters
+        ----------
+        bin_edges : array_like, optional
             This defines which counts are included in the test on frequencies
             and how counts are combined in bins.
             The default if bin_edges is None will change in future.
             See Notes and Example sections below.
-        method : str
+        method : str, optional
             Currently only `method = "opg"` is available.
             If method is None, the OPG will be used, but the default might
             change in future versions.
@@ -70,7 +70,9 @@ class CountDiagnostic:
 
         Returns
         -------
-        test result
+        ChisquareProbResult
+            See :class:`~statsmodels.discrete._diagnostics_count.ChisquareProbResult`
+            for a description of the attributes.
 
         Notes
         -----
@@ -98,7 +100,7 @@ class CountDiagnostic:
         In this case, edges are 0, ..., 9 which defines 9 bins for
         counts 0 to 8. The last bin is dropped, so the joint test hypothesis is
         that the observed aggregated frequencies for counts 0 to 7 correspond
-        to the model prediction for those frequencies. Predicted probabilites
+        to the model prediction for those frequencies. Predicted probabilities
         Prob(y_i = k | x) are aggregated over observations ``i``.
 
         """
@@ -107,67 +109,94 @@ class CountDiagnostic:
             # TODO: verify upper bound, we drop last bin (may be open, inf)
             kwds["y_values"] = np.arange(bin_edges[-2] + 1)
         probs = self.results.predict(which="prob", **kwds)
-        res = test_chisquare_prob(self.results, probs, bin_edges=bin_edges,
-                                  method=method)
+        res = test_chisquare_prob(
+            self.results, probs, bin_edges=bin_edges
+        )
         return res
 
-    def plot_probs(self, label='predicted', upp_xlim=None,
-                   fig=None):
-        """Plot observed versus predicted frequencies for entire sample.
+    def plot_probs(self, label="predicted", upp_xlim=None, fig=None):
+        """
+        Plot observed versus predicted frequencies for entire sample
+
+        Parameters
+        ----------
+        label : str, optional
+            Label used for the predicted frequencies in the plot legend.
+        upp_xlim : int, optional
+            If provided, the xlim of the first two subplots is set to
+            (0, upp_xlim), otherwise the matplotlib default is used.
+        fig : matplotlib.figure.Figure, optional
+            If provided, then the axes will be added to it in a (3, 1)
+            subplot grid, otherwise a matplotlib figure instance is created.
+
+        Returns
+        -------
+        Figure
+            The figure contains 3 subplots with probabilities, cumulative
+            probabilities and a PP-plot.
         """
         probs_predicted = self.probs_predicted.sum(0)
         k_probs = len(probs_predicted)
-        freq = np.bincount(self.results.model.endog.astype(int),
-                           minlength=k_probs)[:k_probs]
-        fig = plot_probs(freq, probs_predicted,
-                         label=label, upp_xlim=upp_xlim,
-                         fig=fig)
+        freq = np.bincount(self.results.model.endog.astype(int), minlength=k_probs)[
+            :k_probs
+        ]
+        fig = plot_probs(freq, probs_predicted, label=label, upp_xlim=upp_xlim, fig=fig)
         return fig
 
 
 class PoissonDiagnostic(CountDiagnostic):
-    """Diagnostic and specification tests and plots for Poisson model
+    """
+    Diagnostic and specification tests and plots for Poisson models
 
-    status: experimental
+    Status: experimental.
 
     Parameters
     ----------
     results : PoissonResults instance
-
     """
 
-    def _init__(self, results):
-        self.results = results
+    def __init__(self, results, y_max=None):
+        super().__init__(results, y_max=y_max)
 
     def test_dispersion(self):
-        """Test for excess (over or under) dispersion in Poisson.
+        """
+        Test for excess (over or under) dispersion in Poisson
 
         Returns
         -------
-        dispersion results
+        DispersionResults
+            See :class:`~statsmodels.discrete._diagnostics_count.DispersionResults`
+            for a description of the attributes.
         """
         res = test_poisson_dispersion(self.results)
         return res
 
     def test_poisson_zeroinflation(self, method="prob", exog_infl=None):
-        """Test for excess zeros, zero inflation or deflation.
+        """
+        Test for excess zeros, zero inflation or deflation
 
         Parameters
         ----------
-        method : str
-            Three methods ara available for the test:
+        method : str, optional
+            Three methods are available for the test:
 
              - "prob" : moment test for the probability of zeros
              - "broek" : score test against zero inflation with or without
                 explanatory variables for inflation
 
-        exog_infl : array_like or None
+        exog_infl : array_like, optional
             Optional explanatory variables under the alternative of zero
             inflation, or deflation. Only used if method is "broek".
 
         Returns
         -------
-        results
+        ZeroModificationTestResult or ZeroinflationJHResult
+            The test result. A
+            :class:`~statsmodels.discrete._diagnostics_count.ZeroModificationTestResult`
+            is returned if `method` is "prob", or if `method` is "broek" and
+            `exog_infl` is not provided. Otherwise, a
+            :class:`~statsmodels.discrete._diagnostics_count.ZeroinflationJHResult`
+            is returned.
 
         Notes
         -----
@@ -175,7 +204,7 @@ class PoissonDiagnostic(CountDiagnostic):
         on the explicit formula in Tang and Tang 2_.
 
         If method = "broek" and exog_infl is None, then the test by Van den
-        Broek 3_ is used. This is a score test against and alternative of
+        Broek 3_ is used. This is a score test against an alternative of
         constant zero inflation or deflation.
 
         If method = "broek" and exog_infl is provided, then the extension of
@@ -183,13 +212,17 @@ class PoissonDiagnostic(CountDiagnostic):
         Hinde is used.
 
         Warning: The Broek and the Jansakul and Hinde tests are not numerically
-        stable when the probability of zeros in Poisson is small, i.e. if the
+        stable when the probability of zeros in Poisson is small, i.e., if the
         conditional means of the estimated Poisson distribution are large.
         In these cases, p-values will not be accurate.
         """
         if method == "prob":
             if exog_infl is not None:
-                warnings.warn('exog_infl is only used if method = "broek"')
+                warnings.warn(
+                    'exog_infl is only used if method = "broek"',
+                    ModelWarning,
+                    stacklevel=2,
+                )
             res = test_poisson_zeros(self.results)
         elif method == "broek":
             if exog_infl is None:
@@ -198,15 +231,22 @@ class PoissonDiagnostic(CountDiagnostic):
                 exog_infl = np.asarray(exog_infl)
                 if exog_infl.ndim == 1:
                     exog_infl = exog_infl[:, None]
-                res = test_poisson_zeroinflation_jh(self.results,
-                                                    exog_infl=exog_infl)
+                res = test_poisson_zeroinflation_jh(self.results, exog_infl=exog_infl)
 
         return res
 
-    def _chisquare_binned(self, sort_var=None, bins=10, k_max=None, df=None,
-                          sort_method="quicksort", frac_upp=0.1,
-                          alpha_nc=0.05):
-        """Hosmer-Lemeshow style test for count data.
+    def _chisquare_binned(
+        self,
+        sort_var=None,
+        bins=10,
+        k_max=None,
+        df=None,
+        sort_method="quicksort",
+        frac_upp=0.1,
+        alpha_nc=0.05,
+    ):
+        """
+        Hosmer-Lemeshow style test for count data
 
         Note, this does not take into account that parameters are estimated.
         The distribution of the test statistic is only an approximation.
@@ -215,8 +255,40 @@ class PoissonDiagnostic(CountDiagnostic):
         response variable. The outcome space y = k is partitioned into bins
         and treated as ordinal variable.
         The observations are split into approximately equal sized groups
-        of observations sorted according the ``sort_var``.
+        of observations sorted according to ``sort_var``.
 
+        Parameters
+        ----------
+        sort_var : array_like, optional
+            1-dimensional array used for sorting observations into bins.
+            If None, the linear predictor, ``results.predict(which="lin")``,
+            is used.
+        bins : int, optional
+            Number of bins used for the Hosmer-Lemeshow type grouping.
+        k_max : int, optional
+            Largest count included before the upper tail is truncated into
+            a single bin. If None, it is chosen so that approximately
+            `frac_upp` of the observations fall in the truncated upper bin.
+        df : int, optional
+            Degrees of freedom of the chi-square distribution used for the
+            test. If None, it is computed from the number of bins and
+            counts.
+        sort_method : str, optional
+            Sorting method used by :func:`numpy.argsort` when binning by
+            `sort_var`.
+        frac_upp : float, optional
+            Fraction of observations used to determine the truncation point
+            of the upper tail when `k_max` is None.
+        alpha_nc : float, optional
+            Significance level used in the computation of the noncentrality
+            parameter confidence interval.
+
+        Returns
+        -------
+        ChisquareBinningResult
+            See
+            :class:`~statsmodels.stats.diagnostic_gen.ChisquareBinningResult`
+            for a description of the attributes.
         """
 
         if sort_var is None:
@@ -243,8 +315,14 @@ class PoissonDiagnostic(CountDiagnostic):
         counts[:, -1] += 1 - counts.sum(1)
 
         # TODO: what's the correct df, same as for multinomial/ordered ?
-        res = test_chisquare_binning(counts, expected, sort_var=sort_var,
-                                     bins=bins, df=df, ordered=True,
-                                     sort_method=sort_method,
-                                     alpha_nc=alpha_nc)
+        res = test_chisquare_binning(
+            counts,
+            expected,
+            sort_var=sort_var,
+            bins=bins,
+            df=df,
+            ordered=True,
+            sort_method=sort_method,
+            alpha_nc=alpha_nc,
+        )
         return res

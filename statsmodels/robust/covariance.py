@@ -1,4 +1,5 @@
-r"""robust location, scatter and covariance estimators
+r"""
+Robust location, scatter and covariance estimators
 
 Author: Josef Perktold
 License: BSD-3
@@ -24,19 +25,43 @@ doi:10.1109/TSP.2011.2138698.
 
 """
 
+from typing import NamedTuple
+
 import numpy as np
-from scipy import stats, linalg
-from scipy.linalg.lapack import dtrtri
-from .scale import mad
+from scipy import linalg, stats
+from scipy.linalg.lapack import get_lapack_funcs
+
 import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
-from statsmodels.tools.testing import Holder
+from statsmodels.stats.covariance import corr_normal_scores, corr_rank
+from statsmodels.tools.validation import string_like
 
-from statsmodels.stats.covariance import corr_rank, corr_normal_scores
+from .scale import mad
 
-mad0 = lambda x: mad(x, center=0)  # noqa: E731
-median = lambda x: np.median(x, axis=0)  # noqa: E731
+
+def mad0(x):
+    return mad(x, center=0)
+
+
+def median(x):
+    return np.median(x, axis=0)
+
+
+class NaiveLedoitWolfResult(NamedTuple):
+    """
+    Result of :func:`_naive_ledoit_wolf_shrinkage`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Shrinkage estimate of the covariance matrix.
+    method : str
+        Name of the estimation method, "naive ledoit wolf".
+    """
+
+    cov: np.ndarray
+    method: str
 
 
 # from scikit-learn
@@ -54,34 +79,38 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     emp_cov = xdm.T.dot(xdm) / n_samples
     mu = np.trace(emp_cov) / n_features
     delta_ = emp_cov.copy()
-    delta_.flat[::n_features + 1] -= mu
-    delta = (delta_ ** 2).sum() / n_features
-    x2 = x ** 2
-    beta_ = 1. / (n_features * n_samples) \
-        * np.sum(np.dot(x2.T, x2) / n_samples - emp_cov ** 2)
+    delta_.flat[:: n_features + 1] -= mu
+    delta = (delta_**2).sum() / n_features
+    x2 = x**2
+    beta_ = (
+        1.0
+        / (n_features * n_samples)
+        * np.sum(np.dot(x2.T, x2) / n_samples - emp_cov**2)
+    )
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
-    return Holder(cov=shrinkage * emp_cov, method="naive ledoit wolf")
+    return NaiveLedoitWolfResult(cov=shrinkage * emp_cov, method="naive ledoit wolf")
 
 
 def coef_normalize_cov_truncated(frac, k_vars):
-    """factor for consistency of truncated cov at normal distribution
+    """
+    Factor for consistency of truncated cov at normal distribution
 
     This is usually denoted by `b`. Here, it is calculated as `1 / b`.
     Trimming threshold is based on chisquare distribution.
 
     Parameters
     ----------
-    frac: float in (0, 1)
-        fraction (probability) of observations that are not trimmed
-    k_vars : integer
-        number of variables, i.e. dimension of multivariate random variable
+    frac : float in (0, 1)
+        Fraction (probability) of observations that are not trimmed.
+    k_vars : int
+        Number of variables, i.e., dimension of multivariate random variable.
 
     Returns
     -------
     fac : float
-        factor to multiply the raw trimmed covariance
+        Factor to multiply the raw trimmed covariance.
 
     Notes
     -----
@@ -91,16 +120,14 @@ def coef_normalize_cov_truncated(frac, k_vars):
 
     References
     ----------
-
     .. [1] Riani, Marco, Andrea Cerioli, and Francesca Torti. “On Consistency
        Factors and Efficiency of Robust S-Estimators.” TEST 23, no. 2 (February
-       4, 2014): 356–87. https://doi.org/10.1007/s11749-014-0357-7.
+       4, 2014): 356-87. https://doi.org/10.1007/s11749-014-0357-7.
 
     .. [2] Rocke, David M., and David L. Woodruff. “Identification of Outliers
        in Multivariate Data.” Journal of the American Statistical
-       Association 91, no. 435 (1996): 1047–61.
+       Association 91, no. 435 (1996): 1047-61.
        https://doi.org/10.2307/2291724.
-
     """
     # todo: use isf(alpha, k_vars) instead?
     fac = 1 / (stats.chi2.cdf(stats.chi2.ppf(frac, k_vars), k_vars + 2) / frac)
@@ -111,11 +138,9 @@ def _coef_normalize_cov_truncated_(frac, k_vars):
     # normalize cov_truncated (example ogk)
     # currently not used except for verification
     # I think it generalized to other weight/transform function than trimming
-    ct = k_vars / stats.chi2.expect(lambda x: x,
-                                    lb=0,
-                                    ub=stats.chi2.ppf(frac, k_vars),
-                                    args=(k_vars,)
-                                    )
+    ct = k_vars / stats.chi2.expect(
+        lambda x: x, lb=0, ub=stats.chi2.ppf(frac, k_vars), args=(k_vars,)
+    )
     # correction for using cov of truncated sample which uses nobs of subsample
     # not full nobs
     ct *= frac
@@ -123,16 +148,15 @@ def _coef_normalize_cov_truncated_(frac, k_vars):
 
 
 class _NormalizeTruncCov:
-    """Normalization factor for truncation with caching
-    """
+    """Normalization factor for truncation with caching"""
+
     _cache = {}
 
     def __call__(self, frac, k_vars):
 
         return self._cache.setdefault(
-            (frac, k_vars),
-            _coef_normalize_cov_truncated(frac, k_vars)
-            )
+            (frac, k_vars), _coef_normalize_cov_truncated(frac, k_vars)
+        )
 
 
 _coef_normalize_cov_truncated = _NormalizeTruncCov()
@@ -140,21 +164,21 @@ _coef_normalize_cov_truncated = _NormalizeTruncCov()
 
 # reweight adapted from OGK reweight step
 def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
-    """Reweighting step, trims data and computes Pearson covariance
+    """
+    Reweighting step, trims data and computes Pearson covariance
 
     Parameters
     ----------
     x : ndarray
-        Multivariate data with observation in rows
+        Multivariate data with observation in rows.
     loc : ndarray
         Location, mean or center of the data.
     cov : ndarray
-        Covariance for computing Mahalanobis distance
-    trim_frac : float in (0, 1)
-        # todo: change name
+        Covariance for computing Mahalanobis distance.
+    trim_frac : float in (0, 1), optional
         This is the coverage, (1 - trim_frac) is tail probability for chi2
-        distribution.
-    ddof : int or float
+        distribution. (todo: change name)
+    ddof : int or float, optional
         Delta degrees of freedom used for trimmed Pearson covariance
         computed with `np.cov`.
 
@@ -175,21 +199,14 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     This reweighting step is used in OGK and in literature also for MCD.
     Trimming is metric with cutoff computed under the assumption that the
     Mahalanobis distances are chi-square distributed.
-
-    References
-    ----------
-    ???
-
-
     """
     beta = trim_frac
-    nobs, k_vars = x.shape  # noqa: F841
+    nobs, k_vars = x.shape
     # d = (((z - loc_z) / scale_z)**2).sum(1) # for orthogonal
     d = mahalanobis(x - loc, cov)
     # only hard thresholding right now
     dmed = np.median(d)
-    cutoff = (dmed * stats.chi2.isf(1-beta, k_vars) /
-              stats.chi2.ppf(0.5, k_vars))
+    cutoff = dmed * stats.chi2.isf(1 - beta, k_vars) / stats.chi2.ppf(0.5, k_vars)
     mask = d <= cutoff
     sample = x[mask]
     loc = sample.mean(0)
@@ -198,23 +215,29 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
 
 
 def _rescale(x, loc, cov, prob=0.5):
-    """rescale covariance to be consistent with normal distribution
+    """
+    Rescale covariance to be consistent with normal distribution
 
     This matches median of mahalanobis distance with the chi-square
     distribution. This assumes that the data is normally distributed.
 
     Parameters
     ----------
-    x : array-like
-       sample data, 2-dim with observation in rows
+    x : array_like
+        Sample data, 2-dim with observation in rows.
     loc : ndarray
-       mean or center of data
+        Mean or center of data.
     cov : ndarray
-       covariance estimate
+        Covariance estimate.
+    prob : float, optional
+        Probability used to match the median of the Mahalanobis distance
+        with the corresponding chi-square quantile. Currently only
+        prob=0.5 is supported.
 
     Returns
     -------
-    ndarray: rescaled covariance
+    ndarray
+        Rescaled covariance.
 
     Notes
     -----
@@ -233,7 +256,8 @@ def _rescale(x, loc, cov, prob=0.5):
 
 
 def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
-    """determine outlier fraction given reference distribution
+    """
+    Determine outlier fraction given reference distribution
 
     This implements the outlier cutoff of Gervini and Yohai 2002
     for use in efficient reweighting.
@@ -241,45 +265,44 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
     Parameters
     ----------
     d : array_like, 1-D
-        array of squared standardized residuals or Mahalanobis distance
-    distr : None or distribution instance
-        reference distribution of d, needs cdf and ppf methods.
+        Array of squared standardized residuals or Mahalanobis distance.
+    distr : distribution instance, optional
+        Reference distribution of d, needs cdf and ppf methods.
         If None, then chisquare with k_endog degrees of freedom is
         used. Otherwise, it should be a callable that provides the
-        cdf function
-    k_endog : int or float
-        used only if cdf is None. In that case, it provides the degrees
+        cdf function.
+    k_endog : int or float, optional
+        Used only if distr is None. In that case, it provides the degrees
         of freedom for the chisquare distribution.
-    trim_prob : float in (0.5, 1)
-        threshold for the tail probability at which the search for
+    trim_prob : float in (0.5, 1), optional
+        Threshold for the tail probability at which the search for
         trimming or outlier fraction starts.
 
     Returns
     -------
     frac : float
-        fraction of outliers
+        Fraction of outliers.
     cutoff : float
-        cutoff value, values with `d > cutoff` are considered outliers
+        Cutoff value, values with `d > cutoff` are considered outliers.
     ntail : int
-        number of outliers
+        Number of outliers.
     ntail0 : int
-        initial number of outliers based on trim tail probability.
+        Initial number of outliers based on trim tail probability.
     cutoff0 : float
-        initial cutoff value based on trim tail probability.
+        Initial cutoff value based on trim tail probability.
 
     Notes
     -----
     This does not fully correct for multiple testing and does not
     maintain a familywise error rate or false discovery rate.
     The error rate goes to zero asymptotically under the null model,
-    i.e. if there are no outliers.
+    i.e., if there are no outliers.
 
     This might not handle threshold points correctly with discrete
     distribution.
-    TODO: check weak versus strict inequalities (e.g. in isf)
+    TODO: check weak versus strict inequalities (e.g., in isf)
 
     This only checks the upper tail of the distribution and of `d`.
-
     """
     d = np.asarray(d)
     nobs = d.shape[0]
@@ -306,36 +329,41 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
         cutoff = dtail[-1] + 1e-15  # not sure, check inequality
     if (dtail > cutoff).sum() < ntail:
         import warnings
-        warnings.warn('ties at cutoff, cutoff rule produces fewer'
-                      'outliers than `ntail`')
+
+        warnings.warn(
+            "ties at cutoff, cutoff rule produces feweroutliers than `ntail`",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     return frac, cutoff, ntail, ntail0, threshold
 
 
-# ## GK and OGK ###
+# # GK and OGK ###
+
 
 def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
-    """Mahalanobis distance squared
-
-    Note: this is without taking the square root.
-    assumes data is already centered.
+    """
+    Mahalanobis distance squared
 
     Parameters
     ----------
-    data : array-like
-        Multivariate data with observation in rows.
-    cov : None or ndarray
+    data : array_like
+        Multivariate data with observation in rows. Data is assumed to be
+        already centered.
+    cov : ndarray, optional
         Covariance matrix used in computing distance.
         This is only used if cov_inv is None.
-    cov_inv : None or ndarray
-        Inverse ovariance matrix used in computing distance.
+    cov_inv : ndarray, optional
+        Inverse covariance matrix used in computing distance.
         One of cov and cov_inv needs to be provided.
-    sqrt : bool
+    sqrt : bool, optional
         If False, then the squared distance is returned.
-        If True, then the square root is returmend.
+        If True, then the square root is returned.
 
-    Return
-    ------
-    ndarray : Mahalanobis distances or squared distance.
+    Returns
+    -------
+    ndarray
+        Mahalanobis distances or squared distance.
     """
     # another option would be to allow also cov^{-0.5) as keyword
     x = np.asarray(data)
@@ -345,7 +373,7 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     elif cov is not None:
         d = (x * np.linalg.solve(cov, x.T).T).sum(1)
     else:
-        raise ValueError('either cov or cov_inv needs to be given')
+        raise ValueError("either cov or cov_inv needs to be given")
 
     if sqrt:
         d = np.sqrt(d)
@@ -354,22 +382,23 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
 
 
 def cov_gk1(x, y, scale_func=mad):
-    """Gnanadesikan and Kettenring covariance between two variables.
+    """
+    Gnanadesikan and Kettenring covariance between two variables
 
     Parameters
     ----------
     x : ndarray
         Data array.
     y : ndarray
-        Data array
-    scale_func : callable
+        Data array.
+    scale_func : callable, optional
         Scale function used in computing covariance.
         Default is median absolute deviation, MAD.
 
     Returns
     -------
-    ndarray : GK covariance between x and y.
-
+    ndarray
+        GK covariance between x and y.
     """
     s1 = scale_func(x + y)
     s2 = scale_func(x - y)
@@ -377,31 +406,32 @@ def cov_gk1(x, y, scale_func=mad):
 
 
 def cov_gk(data, scale_func=mad):
-    """Gnanadesikan and Kettenring covariance matrix estimator
+    """
+    Gnanadesikan and Kettenring covariance matrix estimator
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         Multivariate data array with observations in rows.
-    scale_func : callable
+    scale_func : callable, optional
         Scale function used in computing covariance.
         Default is median absolute deviation, MAD.
 
     Returns
     -------
-    ndarray : GK covariance matrix of the data
+    ndarray
+        GK covariance matrix of the data.
 
     Notes
     -----
     This uses a loop over pairs of variables with cov_gk1 to avoid large
     intermediate arrays.
-
     """
     x = np.asarray(data)
     if x.ndim != 2:
-        raise ValueError('data needs to be two dimensional')
-    nobs, k_vars = x.shape  # noqa: F841
-    cov = np.diag(scale_func(x)**2)
+        raise ValueError("data needs to be two dimensional")
+    nobs, k_vars = x.shape
+    cov = np.diag(scale_func(x) ** 2)
     for i in range(k_vars):
         for j in range(i):
             cij = cov_gk1(x[:, i], x[:, j], scale_func=scale_func)
@@ -409,57 +439,114 @@ def cov_gk(data, scale_func=mad):
     return cov
 
 
-def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
-            loc_func=lambda x: np.median(x, axis=0), reweight=0.9,
-            rescale=True, rescale_raw=True, ddof=1):
-    """Orthogonalized Gnanadesikan and Kettenring covariance estimator.
+class CovOGKResult(NamedTuple):
+    """
+    Result of :func:`cov_ogk`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimated covariance, either raw OGK or reweighted OGK.
+    mean : ndarray
+        Estimated location, either from raw OGK or reweighted OGK.
+    mask : ndarray or None
+        Boolean mask of observations kept in the reweighting step, or None
+        if `reweight` was None.
+    mahalanobis_raw : ndarray or None
+        Squared robust distances of the raw OGK estimate used for
+        reweighting, or None if neither `reweight` nor `rescale_raw` was
+        used.
+    cov_raw : ndarray
+        OGK covariance without reweighting, optionally rescaled.
+    loc_raw : ndarray
+        Location or center of OGK without reweighting.
+    transf0 : ndarray
+        Orthogonal transformation matrix accumulated over `maxiter` steps.
+    scale_factor : float
+        Rescaling factor applied to the reweighted covariance. Equal to 1.0
+        if `reweight` was None or `rescale` was False.
+    scale_factor_raw : float
+        Rescaling factor applied to the raw covariance. Equal to 1.0 if
+        neither `reweight` nor `rescale_raw` was used.
+    n_trunc : int
+        Number of observations trimmed in the reweighting step. Zero if
+        `reweight` was None.
+    method : str
+        Name of the estimation method, "ogk".
+    """
+
+    cov: np.ndarray
+    mean: np.ndarray
+    mask: np.ndarray | None
+    mahalanobis_raw: np.ndarray | None
+    cov_raw: np.ndarray
+    loc_raw: np.ndarray
+    transf0: np.ndarray
+    scale_factor: float
+    scale_factor_raw: float
+    n_trunc: int
+    method: str
+
+
+def cov_ogk(
+    data,
+    maxiter=2,
+    scale_func=mad,
+    cov_func=cov_gk,
+    loc_func=lambda x: np.median(x, axis=0),
+    reweight=0.9,
+    rescale=True,
+    rescale_raw=True,
+    ddof=1,
+):
+    """
+    Orthogonalized Gnanadesikan and Kettenring covariance estimator
 
     Based on Maronna and Zamar 2002
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    maxiter : int
+    maxiter : int, optional
         Number of iteration steps. According to Maronna and Zamar the
         estimate doesn't improve much after the second iteration and the
         iterations do not converge.
-    scale_func : callable
+    scale_func : callable, optional
         Scale function over axis=0 used in computing covariance.
         Default is median absolute deviation, MAD.
-    cov_func : callable
+    cov_func : callable, optional
         Bivariate covariance function. Default is GK.
-    loc_func : callable
+    loc_func : callable, optional
         Function to compute mean or center over axis=0.
-    reweight : float in (0, 1) or None
+    reweight : float in (0, 1) or None, optional
         API for this will change.
         If reweight is None, then the reweighting step is skipped.
         Otherwise, reweight is the chisquare probability beta for the
         trimming based on estimated robust distances.
         Hard-rejection is currently the only weight function.
-    rescale: bool
-        If rescale is true, then reweighted covariance is rescale to be
+    rescale : bool, optional
+        If rescale is true, then reweighted covariance is rescaled to be
         consistent at normal distribution.
         This only applies if reweight is not None.
-    ddof : int
+    rescale_raw : bool, optional
+        If rescale_raw is true, then the raw, non-reweighted covariance is
+        rescaled to be consistent at normal distribution.
+    ddof : int, optional
         Degrees of freedom correction for the reweighted sample
         covariance.
 
     Returns
     -------
-    Holder instance with main attributes
-
-    - cov : covariance, either raw OGK or reweighted OGK.
-    - loc (and alias mean) : mean, either from raw OGK or reweighted OGK.
-    - cov_ogk_raw : OGK covariance without reweighting optionally rescaled.
-    - loc_ogk_raw : mean or center of OGK without reweighting.
-
-    and extra attributes from intermediate results.
+    CovOGKResult
+        Named tuple with `cov`, `loc` (and alias `mean`), `cov_raw`,
+        `loc_raw`, and extra attributes from intermediate results. See
+        :class:`CovOGKResult` for details.
 
     Notes
     -----
-    compared to R: In robustbase covOGK the default scale and location are
+    Compared to R: In robustbase covOGK the default scale and location are
     given by tau_scale with normalization but ddof=0.
     CovOGK of R package rrcov does not agree with this in the default options.
 
@@ -467,8 +554,7 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     ----------
     .. [1] Maronna, Ricardo A, and Ruben H Zamar. “Robust Estimates of Location
        and Dispersion for High-Dimensional Datasets.” Technometrics 44, no. 4
-       (November 1, 2002): 307–17. https://doi.org/10.1198/004017002188618509.
-
+       (November 1, 2002): 307-17. https://doi.org/10.1198/004017002188618509.
     """
     if reweight is False:
         # treat false the same as None
@@ -479,8 +565,8 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         beta = 0.9
     x = np.asarray(data)
     if x.ndim != 2:
-        raise ValueError('data needs to be two dimensional')
-    nobs, k_vars = x.shape  # noqa: F841
+        raise ValueError("data needs to be two dimensional")
+    nobs, k_vars = x.shape
     z = x
     transf0 = np.eye(k_vars)
     for _ in range(maxiter):
@@ -489,7 +575,7 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
         corr = cov_func(zs, scale_func=scale_func)
         # Maronna, Zamar set diagonal to 1, otherwise small difference to 1
         corr[np.arange(k_vars), np.arange(k_vars)] = 1
-        evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+        evals, evecs = np.linalg.eigh(corr)
         transf = evecs * scale[:, None]  # A matrix in Maronna, Zamar
         # z = np.linalg.solve(transf, z.T).T
         z = zs.dot(evecs)
@@ -508,17 +594,17 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     # extra results are None if reweight is None
     mask = None
     d = None
-    scale_factor_raw = 1.
-    scale_factor = 1.
+    scale_factor_raw = 1.0
+    scale_factor = 1.0
     n_trunc = 0
     if (reweight is not None) or rescale_raw:
         # compute scale_factor_raw and cutoff if needed
-        d = (((z - loc_z) / scale_z)**2).sum(1)
+        d = (((z - loc_z) / scale_z) ** 2).sum(1)
         # d = mahalanobis(x - loc, cov)
         # only hard thresholding right now
         dmed = np.median(d)
         scale_factor_raw = dmed / stats.chi2.ppf(0.5, k_vars)
-        cutoff = scale_factor_raw * stats.chi2.isf(1-beta, k_vars)
+        cutoff = scale_factor_raw * stats.chi2.isf(1 - beta, k_vars)
 
     if reweight is not None:
         mask = d <= cutoff
@@ -535,36 +621,63 @@ def cov_ogk(data, maxiter=2, scale_func=mad, cov_func=cov_gk,
     if rescale_raw:
         cov_raw *= scale_factor_raw
 
-    # duplicate name loc mean center, choose consistent naming
-    res = Holder(cov=cov, loc=loc, mean=loc, mask=mask, mahalanobis_raw=d,
-                 cov_raw=cov_raw, loc_raw=loc_raw,
-                 transf0=transf0, scale_factor=scale_factor,
-                 scale_factor_raw=scale_factor_raw,
-                 n_trunc=n_trunc,
-                 method="ogk"
-                 )
+    res = CovOGKResult(
+        cov=cov,
+        mean=loc,
+        mask=mask,
+        mahalanobis_raw=d,
+        cov_raw=cov_raw,
+        loc_raw=loc_raw,
+        transf0=transf0,
+        scale_factor=scale_factor,
+        scale_factor_raw=scale_factor_raw,
+        n_trunc=n_trunc,
+        method="ogk",
+    )
 
     return res
 
 
-# ## Tyler ###
+# # Tyler ###
+
+
+class CovTylerResult(NamedTuple):
+    """
+    Result of :func:`cov_tyler`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimate of the scatter matrix.
+    n_iter : int
+        Number of iterations used in finding a solution. If n_iter is less
+        than maxiter, then the iteration converged.
+    method : str
+        Name of the estimation method, "tyler".
+    """
+
+    cov: np.ndarray
+    n_iter: int
+    method: str
+
 
 def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
-    """Tyler's M-estimator for normalized covariance (scatter)
+    """
+    Tyler's M-estimator for normalized covariance (scatter)
 
     The underlying (population) mean of the data is assumed to be zero.
 
     Parameters
     ----------
-    data : array-like
-        data array with observations in rows and variables in columns
-    start_cov : None or ndarray
-        starting covariance for iterative solution
-    normalize : False or string
+    data : array_like
+        Data array with observations in rows and variables in columns.
+    start_cov : ndarray, optional
+        Starting covariance for iterative solution.
+    normalize : {False, "trace", "det", "normal", "weights"}, optional
         If normalize is False (default), then the unscaled tyler scatter matrix
         is returned.
 
-        Three types of normalization, i.e. rescaling are available by defining
+        Four types of normalization, i.e., rescaling are available by defining
         string option:
 
         - "trace" :
@@ -578,37 +691,32 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
           distances and assuming chisquare distribution of the distances.
         - "weights" :
           The scatter matrix is rescaled by the sum of weights.
-          see Ollila et al 2023
+          See Ollila et al 2023.
 
-    maxiter : int
-        maximum number of iterations to find the solution.
-    eps : float
-        convergence criterion. The maximum absolute distance needs to be
+    maxiter : int, optional
+        Maximum number of iterations to find the solution.
+    eps : float, optional
+        Convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
     Returns
     -------
-    Holder instance with the following attributes
-    cov : ndarray
-        estimate of the scatter matrix
-    iter : int
-        number of iterations used in finding a solution. If iter is less than
-        maxiter, then the iteration converged.
+    CovTylerResult
+        Named tuple with `cov`, `n_iter`, and `method`. See
+        :class:`CovTylerResult` for details.
 
     References
     ----------
     .. [1] Tyler, David E. “A Distribution-Free M-Estimator of Multivariate
-       Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234–51.
+       Scatter.” The Annals of Statistics 15, no. 1 (March 1, 1987): 234-51.
     .. [2] Soloveychik, I., and A. Wiesel. 2014. Tyler's Covariance Matrix
        Estimator in Elliptical Models With Convex Structure.
        IEEE Transactions on Signal Processing 62 (20): 5251-59.
        doi:10.1109/TSP.2014.2348951.
     .. [3] Ollila, Esa, Daniel P. Palomar, and Frederic Pascal.
-       “Affine Equivariant Tyler’s M-Estimator Applied to Tail Parameter
+       “Affine Equivariant Tyler's M-Estimator Applied to Tail Parameter
        Learning of Elliptical Distributions.” arXiv, May 7, 2023.
        https://doi.org/10.48550/arXiv.2305.04330.
-
-
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
@@ -616,19 +724,22 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     if start_cov is not None:
         c = start_cov
     else:
-        c = np.diag(mad(x, center=0)**2)
+        c = np.diag(mad(x, center=0) ** 2)
 
+    dtrtri = get_lapack_funcs("trtri", dtype=np.float64, ilp64="preferred")
     # Tyler's M-estimator of shape (scatter) matrix
-    for i in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
         # this is old code, slower than new version, but more literal
         # c_inv = np.linalg.pinv(c)
         # c_old = c
         # c = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
         #              for xi in x)
+        n_iter += 1
         c_old = c
         ichol, _ = dtrtri(linalg.cholesky(c, lower=False), lower=0)
         v = x @ ichol
-        dist_mahal_2 = np.einsum('ij,ji->i', v, v.T)
+        dist_mahal_2 = np.einsum("ij,ji->i", v, v.T)
         weights = k_vars / dist_mahal_2[:, None]
         xw = np.sqrt(weights) * x
         c = xw.T @ xw / nobs
@@ -642,7 +753,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     elif normalize == "trace":
         c /= np.trace(c) / k_vars
     elif normalize == "det":
-        c /= np.linalg.det(c)**(1. / k_vars)
+        c /= np.linalg.det(c) ** (1.0 / k_vars)
     elif normalize == "normal":
         _rescale(x, np.zeros(k_vars), c, prob=0.5)
     elif normalize == "weights":
@@ -651,46 +762,67 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
         msg = 'normalize needs to be False, "trace", "det" or "normal"'
         raise ValueError(msg)
 
-    return Holder(cov=c, n_iter=i, method="tyler")
+    return CovTylerResult(cov=c, n_iter=n_iter, method="tyler")
 
 
-def cov_tyler_regularized(data, start_cov=None, normalize=False,
-                          shrinkage_factor=None,
-                          maxiter=100, eps=1e-13):
-    """Regularized Tyler's M-estimator for normalized covariance (shape).
+class CovTylerRegularizedResult(NamedTuple):
+    """
+    Result of :func:`cov_tyler_regularized` and
+    :func:`cov_tyler_pairs_regularized`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimate of the scatter matrix.
+    n_iter : int
+        Number of iterations used in finding a solution. If n_iter is less
+        than maxiter, then the iteration converged.
+    shrinkage_factor : float
+        Shrinkage factor that was used in the estimation. This will be the
+        same as the function argument if it was not None.
+    corr : ndarray or None
+        Correlation matrix used in the plugin shrinkage factor estimation,
+        or None if shrinkage_factor was given.
+    """
+
+    cov: np.ndarray
+    n_iter: int
+    shrinkage_factor: float
+    corr: np.ndarray | None
+
+
+def cov_tyler_regularized(
+    data, start_cov=None, normalize=False, shrinkage_factor=None, maxiter=100, eps=1e-13
+):
+    """
+    Regularized Tyler's M-estimator for normalized covariance (shape)
 
     The underlying (population) mean of the data is assumed to be zero.
 
     Parameters
     ----------
-    data : ndarray
-        data array with observations in rows and variables in columns.
-    start_cov : None or ndarray
-        starting covariance for iterative solution
-    normalize : bool
-        If True, then the scatter matrix is normalized to have trace equalt
+    data : array_like
+        Data array with observations in rows and variables in columns.
+    start_cov : ndarray, optional
+        Starting covariance for iterative solution.
+    normalize : bool, optional
+        If True, then the scatter matrix is normalized to have trace equal
         to the number of columns in the data.
-    shrinkage_factor : None or float in [0, 1]
+    shrinkage_factor : float in [0, 1], optional
         Shrinkage for the scatter estimate. If it is zero, then no shrinkage
         is performed. If it is None, then the shrinkage factor will be
-        determined by a plugin estimator
-    maxiter : int
-        maximum number of iterations to find the solution
-    eps : float
-        convergence criterion. The maximum absolute distance needs to be
+        determined by a plugin estimator.
+    maxiter : int, optional
+        Maximum number of iterations to find the solution.
+    eps : float, optional
+        Convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
     Returns
     -------
-    result instance with the following attributes
-    cov : ndarray
-        estimate of the scatter matrix
-    iter : int
-        number of iterations used in finding a solution. If iter is less than
-        maxiter, then the iteration converged.
-    shrinkage_factor : float
-        shrinkage factor that was used in the estimation. This will be the
-        same as the function argument if it was not None.
+    CovTylerRegularizedResult
+        Named tuple with `cov`, `n_iter`, `shrinkage_factor`, and `corr`.
+        See :class:`CovTylerRegularizedResult` for details.
 
     Notes
     -----
@@ -702,33 +834,32 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
     ----------
     .. [1] Chen, Yilun, A. Wiesel, and A.O. Hero. “Robust Shrinkage
        Estimation of High-Dimensional Covariance Matrices.” IEEE Transactions
-       on Signal Processing 59, no. 9 (September 2011): 4097–4107.
+       on Signal Processing 59, no. 9 (September 2011): 4097-4107.
        https://doi.org/10.1109/TSP.2011.2138698.
-
-
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
-    kn = k_vars * 1. / nobs
+    kn = k_vars * 1.0 / nobs
 
     # calculate MAD only once if needed
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
         n, k = nobs, k_vars
         # Chen and Wiesel 2011 equation (13)
-        sf = k*k + (1 - 2./k) * tr
-        sf /= (k*k - n*k - 2*n) + (n + 1 + 2. * (n - 1.) / k) * tr
+        sf = k * k + (1 - 2.0 / k) * tr
+        sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
@@ -737,13 +868,14 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
 
     identity = np.eye(k_vars)
 
-    for i in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
         # TODO:  try to work in vectorized batches
-        c0 = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi))
-                      for xi in x)
+        c0 = kn * sum(np.outer(xi, xi) / np.inner(xi, c_inv.dot(xi)) for xi in x)
         if shrinkage_factor != 0:
             c = (1 - shrinkage_factor) * c0 + shrinkage_factor * identity
         else:
@@ -755,51 +887,62 @@ def cov_tyler_regularized(data, start_cov=None, normalize=False,
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor,
-                 corr=corr)
+    res = CovTylerRegularizedResult(
+        cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr
+    )
     return res
 
 
-def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
-                                shrinkage_factor=None, nobs=None, k_vars=None,
-                                maxiter=100, eps=1e-13):
-    """Tyler's M-estimator for normalized covariance (scatter)
+def cov_tyler_pairs_regularized(
+    data_iterator,
+    start_cov=None,
+    normalize=False,
+    shrinkage_factor=None,
+    nobs=None,
+    k_vars=None,
+    maxiter=100,
+    eps=1e-13,
+):
+    """
+    Tyler's M-estimator for normalized covariance (scatter)
 
     The underlying (population) mean of the data is assumed to be zero.
 
-    experimental, calculation of startcov and shrinkage factor doesn't work
-    This is intended for cluster robust and HAC covariance matrices that need
-    to iterate over pairs of observations that are correlated.
+    This is experimental, calculation of start_cov and shrinkage factor
+    doesn't work. This is intended for cluster robust and HAC covariance
+    matrices that need to iterate over pairs of observations that are
+    correlated.
 
     Parameters
     ----------
     data_iterator : restartable iterator
-        needs to provide three elements xi, xj and w
-    start_cov : None or ndarray
-        starting covariance for iterative solution
-    normalize : bool
-        If True, then the scatter matrix is normalized to have trace equalt
+        Needs to provide two elements xi and xj per iteration.
+    start_cov : ndarray, optional
+        Starting covariance for iterative solution.
+    normalize : bool, optional
+        If True, then the scatter matrix is normalized to have trace equal
         to the number of columns in the data.
-    shrinkage_factor : None or float in [0, 1]
+    shrinkage_factor : float in [0, 1], optional
         Shrinkage for the scatter estimate. If it is zero, then no shrinkage
         is performed. If it is None, then the shrinkage factor will be
-        determined by a plugin estimator
-    maxiter : int
-        maximum number of iterations to find the solution
-    eps : float
-        convergence criterion. The maximum absolute distance needs to be
+        determined by a plugin estimator.
+    nobs : int, optional
+        Number of observations, needed because data_iterator does not
+        provide its length.
+    k_vars : int, optional
+        Number of variables, needed because data_iterator does not provide
+        the dimension of the data.
+    maxiter : int, optional
+        Maximum number of iterations to find the solution.
+    eps : float, optional
+        Convergence criterion. The maximum absolute distance needs to be
         smaller than eps for convergence.
 
     Returns
     -------
-    scatter : ndarray
-        estimate of the scatter matrix
-    iter : int
-        number of iterations used in finding a solution. If iter is less than
-        maxiter, then the iteration converged.
-    shrinkage_factor : float
-        shrinkage factor that was used in the estimation. This will be the
-        same as the function argument if it was not None.
+    CovTylerRegularizedResult
+        Named tuple with `cov`, `n_iter`, `shrinkage_factor`, and `corr`.
+        See :class:`CovTylerRegularizedResult` for details.
 
     Notes
     -----
@@ -811,9 +954,8 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
     ----------
     .. [1] Chen, Yilun, A. Wiesel, and A.O. Hero. “Robust Shrinkage Estimation
        of High-Dimensional Covariance Matrices.” IEEE Transactions on Signal
-       Processing 59, no. 9 (September 2011): 4097–4107.
+       Processing 59, no. 9 (September 2011): 4097-4107.
        https://doi.org/10.1109/TSP.2011.2138698.
-
     """
     x = data_iterator
     # x = np.asarray(data)
@@ -823,20 +965,21 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
     if start_cov is None or shrinkage_factor is None:
         scale_mad = mad(x, center=0)
 
-    corr = None
     if shrinkage_factor is None:
         # maybe some things here are redundant
         xd = x / x.std(0)  # scale_mad
         corr = xd.T.dot(xd)
-        corr * np.outer(scale_mad, scale_mad)
+        corr *= np.outer(scale_mad, scale_mad)
         corr *= k_vars / np.trace(corr)
         tr = np.trace(corr.dot(corr))
 
         n, k = nobs, k_vars
         # Chen and Wiesel 2011 equation (13)
-        sf = k*k + (1 - 2./k) * tr
-        sf /= (k*k - n*k - 2*n) + (n + 1 + 2. * (n - 1.) / k) * tr
+        sf = k * k + (1 - 2.0 / k) * tr
+        sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
+    else:
+        corr = None
 
     if start_cov is not None:
         c = start_cov
@@ -844,8 +987,10 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         c = np.diag(scale_mad**2)
 
     identity = np.eye(k_vars)
-    kn = k_vars * 1. / nobs
-    for i in range(maxiter):
+    kn = k_vars * 1.0 / nobs
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         c_inv = np.linalg.pinv(c)
         c_old = c
         # this could be vectorized but could use a lot of memory
@@ -853,8 +998,9 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         # weights is a problem if iterator should be ndarray
         # c0 = kn * sum(np.outer(xi, xj) / np.inner(xi, c_inv.dot(xj))
         #               for xi, xj in x)
-        c0 = kn * sum(np.outer(xij[0], xij[1]) /
-                      np.inner(xij[0], c_inv.dot(xij[1])) for xij in x)
+        c0 = kn * sum(
+            np.outer(xij[0], xij[1]) / np.inner(xij[0], c_inv.dot(xij[1])) for xij in x
+        )
         if shrinkage_factor != 0:
             c = (1 - shrinkage_factor) * c0 + shrinkage_factor * identity
         else:
@@ -866,16 +1012,20 @@ def cov_tyler_pairs_regularized(data_iterator, start_cov=None, normalize=False,
         if diff < eps:
             break
 
-    res = Holder(cov=c, n_iter=i, shrinkage_factor=shrinkage_factor,
-                 corr=corr)
+    res = CovTylerRegularizedResult(
+        cov=c, n_iter=n_iter, shrinkage_factor=shrinkage_factor, corr=corr
+    )
     return res
 
 
-# ## iterative, M-estimators and related
+# # iterative, M-estimators and related
 
-def cov_weighted(data, weights, center=None, weights_cov=None,
-                 weights_cov_denom=None, ddof=1):
-    """weighted mean and covariance (for M-estimators)
+
+def cov_weighted(
+    data, weights, center=None, weights_cov=None, weights_cov_denom=None, ddof=1
+):
+    """
+    Weighted mean and covariance (for M-estimators)
 
     wmean = sum (weights * data) / sum(weights)
     wcov = sum (weights_cov * data_i data_i') / weights_cov_denom
@@ -887,18 +1037,18 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     Parameters
     ----------
     data : array_like, 2-D
-        observations in rows, variables in columns
-        no missing value handling
+        Observations in rows, variables in columns.
+        No missing value handling.
     weights : ndarray, 1-D
-        weights array with length equal to the number of observations
-    center : None or ndarray (optional)
-        If None, then the weighted mean is subtracted from the data
+        Weights array with length equal to the number of observations.
+    center : ndarray, optional
+        If None, then the weighted mean is subtracted from the data.
         If center is provided, then it is used instead of the
         weighted mean.
-    weights_cov : None, ndarray or "det" (optional)
+    weights_cov : None, ndarray or "det", optional
         If None, then the same weights as for the mean are used.
-    weights_cov_denom : None, float or "det" (optional)
-        specified the denominator for the weighted covariance
+    weights_cov_denom : float or "det", optional
+        Specifies the denominator for the weighted covariance.
         If None, then the sum of weights - ddof are used and the covariance is
         an average cross product.
         If "det", then the weighted covariance is normalized such that
@@ -907,9 +1057,16 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
         without averaging or scaling (sum of squares).
         Otherwise it is used directly as denominator after subtracting
         ddof.
-    ddof : int or float
-        covariance degrees of freedom correction, only used if
+    ddof : int or float, optional
+        Covariance degrees of freedom correction, only used if
         weights_cov_denom is None or a float.
+
+    Returns
+    -------
+    wcov : ndarray
+        Weighted covariance.
+    wmean : ndarray
+        Weighted mean.
 
     Notes
     -----
@@ -919,7 +1076,7 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     sum (weights * (x - m)) = 0
     sum (weights_cov * (x_i - m) * (x_i - m)') - weights_cov_denom * cov = 0
 
-    where the weights are functions of the mahalonibis distance of the
+    where the weights are functions of the mahalanobis distance of the
     residuals, and m is the mean.
 
     In the default case
@@ -932,8 +1089,6 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
        Estimates of Multivariate Location and Shape.
        Statistica Neerlandica 47 (1): 27-42.
        doi:10.1111/j.1467-9574.1993.tb01404.x.
-
-
     """
 
     wsum = weights.sum()
@@ -953,33 +1108,34 @@ def cov_weighted(data, weights, center=None, weights_cov=None,
     if weights_cov_denom is None:
         if wsum_cov is None:
             wsum_cov = weights_cov.sum()
-        wcov /= (wsum_cov - ddof)   # * np.sum(weights_cov**2) / wsum_cov)
+        wcov /= wsum_cov - ddof  # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
-        wcov /= np.linalg.det(wcov)**(1 / wcov.shape[0])
+        wcov /= np.linalg.det(wcov) ** (1 / wcov.shape[0])
     elif weights_cov_denom == 1:
         pass
     else:
-        wcov /= (weights_cov_denom - ddof)
+        wcov /= weights_cov_denom - ddof
 
     return wcov, wmean
 
 
 def weights_mvt(distance, df, k_vars):
-    """weight function based on multivariate t distribution
+    """
+    Weight function based on multivariate t distribution
 
     Parameters
     ----------
     distance : ndarray
-        mahalanobis distance
+        Mahalanobis distance.
     df : int or float
-        degrees of freedom of the t distribution
+        Degrees of freedom of the t distribution.
     k_vars : int
-        number of variables in the multivariate sample
+        Number of variables in the multivariate sample.
 
     Returns
     -------
     weights : ndarray
-        weights calculated for the given distances.
+        Weights calculated for the given distances.
 
     References
     ----------
@@ -996,49 +1152,121 @@ def weights_mvt(distance, df, k_vars):
 
 
 def weights_quantile(distance, frac=0.5, rescale=True):
-    """Weight function for cutoff weights.
+    """
+    Weight function for cutoff weights
 
-    The weight function is an indicator function for distances smaller then
+    The weight function is an indicator function for distances smaller than
     the frac quantile.
 
-    rescale option is not supported.
+    Parameters
+    ----------
+    distance : ndarray
+        Mahalanobis distance or other measure of outlyingness.
+    frac : float in (0, 1), optional
+        Quantile of distance used as the cutoff for the indicator weights.
+    rescale : bool, optional
+        This option is not supported.
+
+    Returns
+    -------
+    ndarray
+        Indicator weights, 1 if distance is below the cutoff, 0 otherwise.
     """
     cutoff = np.percentile(distance, frac * 100)
     w = (distance < cutoff).astype(int)
     return w
 
 
-def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
-              rescale='med', maxiter=3, atol=1e-14, rtol=1e-6):
-    """Iterative robust covariance estimation using weights.
+class CovIterResult(NamedTuple):
+    """
+    Result of :func:`_cov_iter`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimated covariance, rescaled if `rescale` was not "none".
+    mean : ndarray
+        Weighted mean from the final iteration.
+    weights : ndarray
+        Weights from the final iteration.
+    mahalanobis : ndarray
+        Mahalanobis distances computed at the final covariance estimate.
+    scale_factor : float
+        Rescaling factor applied to `cov`. Equal to 1 if `rescale` is
+        "none".
+    n_iter : int
+        Number of iterations used in finding a solution.
+    converged : bool
+        Whether the iteration converged before `maxiter` was reached.
+    method : str
+        Name of the estimation method, "m-estimator".
+    weights_func : callable
+        The `weights_func` argument that was used.
+    """
+
+    cov: np.ndarray
+    mean: np.ndarray
+    weights: np.ndarray
+    mahalanobis: np.ndarray
+    scale_factor: float
+    n_iter: int
+    converged: bool
+    method: str
+    weights_func: object
+
+
+def _cov_iter(
+    data,
+    weights_func,
+    weights_args=None,
+    cov_init=None,
+    rescale="med",
+    maxiter=3,
+    atol=1e-14,
+    rtol=1e-6,
+):
+    """
+    Iterative robust covariance estimation using weights
 
     This is in the style of M-estimators for given weight function.
 
-    Note: ??? Whether this is normalized to be consistent with the
+    Note: whether this is normalized to be consistent with the
     multivariate normal case depends on the weight function.
-    maybe it is consistent, it's just a weighted cov.
 
     TODO: options for rescale instead of just median
 
     Parameters
     ----------
     data : array_like
+        Multivariate data with observations in rows.
     weights_func : callable
-        function to calculate weights from the distances and weights_args
-    weights_args : tuple
-        extra arguments for the weights_func
-    cov_init : ndarray, square 2-D
-        initial covariance matrix
-    rescale : "med" or "none"
+        Function to calculate weights from the distances and weights_args.
+    weights_args : tuple, optional
+        Extra arguments for the weights_func.
+    cov_init : ndarray, square 2-D, optional
+        Initial covariance matrix. If None, then the sample covariance of
+        `data` is used.
+    rescale : {"med", "none"}, optional
         If "med" then the resulting covariance matrix is normalized so it is
         approximately consistent with the normal distribution. Rescaling is
         based on the median of the distances and of the chisquare distribution.
         Other options are not yet available.
         If rescale is the string "none", then no rescaling is performed.
+    maxiter : int, optional
+        Maximum number of iterations.
+    atol : float, optional
+        Absolute convergence tolerance for `numpy.allclose` comparison of
+        the covariance in successive iterations.
+    rtol : float, optional
+        Relative convergence tolerance for `numpy.allclose` comparison of
+        the covariance in successive iterations.
 
     Returns
     -------
-    Holder instance with attributes: cov, mean, w, dist, it, converged
+    CovIterResult
+        Named tuple with `cov`, `mean`, `weights`, `mahalanobis`,
+        `scale_factor`, `n_iter`, `converged`, `method`, and
+        `weights_func`. See :class:`CovIterResult` for details.
 
     Notes
     -----
@@ -1053,17 +1281,18 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     .. [1] Finegold, Michael, and Mathias Drton. 2011. Robust graphical
        modeling of gene networks using classical and alternative
        t-distributions. Annals of Applied Statistics 5 (2A): 1057-80.
-
     """
     data = np.asarray(data)
-    nobs, k_vars = data.shape  # noqa: F841
+    nobs, k_vars = data.shape
 
     if cov_init is None:
         cov_init = np.cov(data.T)
 
     converged = False
     cov = cov_old = cov_init
-    for it in range(maxiter):
+    n_iter = 0
+    for _ in range(maxiter):
+        n_iter += 1
         dist = mahalanobis(data, cov=cov)
         w = weights_func(dist, *weights_args)
         cov, mean = cov_weighted(data, w)
@@ -1074,24 +1303,50 @@ def _cov_iter(data, weights_func, weights_args=None, cov_init=None,
     # recompute maha distance at final estimate
     dist = mahalanobis(data, cov=cov)
 
-    if rescale == 'none':
+    rescale = string_like(rescale, "rescale", options=("med", "none"), lower=False)
+    if rescale == "none":
         s = 1
-    elif rescale == 'med':
+    else:  # rescale == "med"
         s = np.median(dist) / stats.chi2.ppf(0.5, k_vars)
         cov *= s
-    else:
-        raise NotImplementedError('only rescale="med" is currently available')
 
-    res = Holder(cov=cov, mean=mean, weights=w, mahalanobis=dist,
-                 scale_factor=s, n_iter=it, converged=converged,
-                 method="m-estimator",
-                 weights_func=weights_func,
-                 )
+    res = CovIterResult(
+        cov=cov,
+        mean=mean,
+        weights=w,
+        mahalanobis=dist,
+        scale_factor=s,
+        n_iter=n_iter,
+        converged=converged,
+        method="m-estimator",
+        weights_func=weights_func,
+    )
     return res
 
 
+class CovStartingResult(NamedTuple):
+    """
+    One robust starting covariance estimate from :func:`_cov_starting`.
+
+    Parameters
+    ----------
+    cov : ndarray
+        Estimate of the covariance or correlation matrix.
+    mean : ndarray
+        Estimate of the mean or center.
+    method : str
+        Name identifying the estimation method used for this starting
+        covariance.
+    """
+
+    cov: np.ndarray
+    mean: np.ndarray
+    method: str
+
+
 def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
-    """compute some robust starting covariances
+    """
+    Compute some robust starting covariances
 
     The returned covariance matrices are intended as starting values
     for further processing. The main purpose is for algorithms with high
@@ -1100,31 +1355,37 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
     be very good.
 
     Preliminary version. This will still be changed. Options and defaults can
-    change, additional covarince methods will be added and return extended.
+    change, additional covariance methods will be added and return extended.
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data with observations in rows (axis=0).
-    standardize : bool
+    standardize : bool, optional
         If False, then the data is only centered (by median).
         If True, then the data is standardized using median and mad-scale.
         This scaling is only intermediate, the returned covariance compensates
         for the initial scaling.
-    quantile : float in [0.5, 1]
+    quantile : float in [0.5, 1], optional
         Parameter used for `_cov_iter` estimation.
+    retransform : bool, optional
+        If standardize and retransform are both True, then the returned
+        covariances are transformed back to compensate for the initial
+        standardization, and the result is a list of ndarrays instead of a
+        list of named tuples.
 
     Returns
     -------
-    list of Holder instances with `cov` attribute.
-
+    list of CovStartingResult and CovIterResult and CovOGKResult
+        Each entry has at least `cov` and `method` attributes. See
+        :class:`CovStartingResult` for the common shape.
     """
     x = np.asarray(data)
     nobs, k_vars = x.shape
     if standardize:
         # there should be a helper function/class
         center = np.median(data, axis=0)
-        xs = (x - center)
+        xs = x - center
         std = mad0(data)
         xs /= std
     else:
@@ -1134,76 +1395,88 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars+2) / nobs * 100 * 2, 25, 50, 85]
+    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
-    for p, cutoff in zip(percentiles, cutoffs):
+    for p, cutoff in zip(percentiles, cutoffs, strict=True):
         xsp = xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
-        c0 = Holder(
+        c0 = CovStartingResult(
             cov=c * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="pearson truncated",
-            )
-        c01 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
-                        rescale="med", cov_init=c0.cov, maxiter=100)
+        )
+        c01 = _cov_iter(
+            xs,
+            weights_quantile,
+            weights_args=(quantile,),
+            rescale="med",
+            cov_init=c0.cov,
+            maxiter=100,
+        )
 
-        c02 = Holder(
+        c02 = CovStartingResult(
             cov=_naive_ledoit_wolf_shrinkage(xsp, 0).cov * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="ledoit_wolf",
-            )
-        c03 = _cov_iter(xs, weights_quantile, weights_args=(quantile,),
-                        rescale="med", cov_init=c02.cov, maxiter=100)
+        )
+        c03 = _cov_iter(
+            xs,
+            weights_quantile,
+            weights_args=(quantile,),
+            rescale="med",
+            cov_init=c02.cov,
+            maxiter=100,
+        )
 
         if not standardize or not retransform:
             cov_all.extend([c0, c01, c02, c03])
         else:
             # compensate for initial rescaling
-            # TODO: this does not return list of Holder anymore
+            # TODO: this does not return list of named tuples anymore
             s = np.outer(std, std)
             cov_all.extend([r.cov * s for r in [c0, c01, c02, c03]])
 
     c2 = cov_ogk(xs)
     cov_all.append(c2)
 
-    c2raw = Holder(
-            cov=c2.cov_raw,
-            mean=c2.loc_raw * std + center,
-            method="ogk_raw",
-            )
+    c2raw = CovStartingResult(
+        cov=c2.cov_raw,
+        mean=c2.loc_raw * std + center,
+        method="ogk_raw",
+    )
     cov_all.append(c2raw)
 
     z_tanh = np.tanh(xs)
-    c_th = Holder(
-            cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
-            mean=center,  # TODO: do we add inverted mean z_tanh ?
-            method="tanh",
-            )
+    c_th = CovStartingResult(
+        cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
+        mean=center,  # TODO: do we add inverted mean z_tanh ?
+        method="tanh",
+    )
     cov_all.append(c_th)
 
     x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
-    c_th = Holder(
-            cov=np.cov(x_spatial.T),
-            mean=center,
-            method="spatial",
-            )
+    c_th = CovStartingResult(
+        cov=np.cov(x_spatial.T),
+        mean=center,
+        method="spatial",
+    )
     cov_all.append(c_th)
 
-    c_th = Holder(
-            # not consistently scaled for cov
-            # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
-            cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
-            mean=center,
-            method="spearman",
-            )
+    c_th = CovStartingResult(
+        # not consistently scaled for cov
+        # cov=stats.spearmanr(xs)[0], # not correct shape if k=1 or 2
+        cov=corr_rank(xs),  # always returns matrix, np.corrcoef result
+        mean=center,
+        method="spearman",
+    )
     cov_all.append(c_th)
 
-    c_ns = Holder(
-            cov=corr_normal_scores(xs),  # not consistently scaled for cov
-            mean=center,  # TODO: do we add inverted mean z_tanh ?
-            method="normal-scores",
-            )
+    c_ns = CovStartingResult(
+        cov=corr_normal_scores(xs),  # not consistently scaled for cov
+        mean=center,  # TODO: do we add inverted mean z_tanh ?
+        method="normal-scores",
+    )
     cov_all.append(c_ns)
 
     # TODO: rescale back to original space using center and std
@@ -1213,14 +1486,12 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 # ####### Det, CovDet and helper functions, might be moved to separate module
 
 
-class _Standardize():
-    """Robust standardization of random variable
-
-    """
+class _Standardize:
+    """Robust standardization of random variable"""
 
     def __init__(self, x, func_center=None, func_scale=None):
         # naming mean or center
-        # maybe also allow str func_scale for robust.scale, e.g. for not
+        # maybe also allow str func_scale for robust.scale, e.g., for not
         #    vectorized Qn
         if func_center is None:
             center = np.median(x, axis=0)
@@ -1248,17 +1519,33 @@ class _Standardize():
 
 
 def _orthogonalize_det(x, corr, loc_func, scale_func):
-    """Orthogonalize
+    """
+    Orthogonalize
 
     This is a simplified version of the OGK method.
-    version from DetMCD works on zscored data
+    Version from DetMCD works on zscored data
     (does not return mean and cov of original data)
-    so we drop the compensation for scaling in zscoring
+    so we drop the compensation for scaling in zscoring.
 
-    z is the data here, zscored with robust estimators,
-    e.g. median and Qn in DetMCD
+    Parameters
+    ----------
+    x : ndarray
+        Data, zscored with robust estimators, e.g., median and Qn in DetMCD.
+    corr : ndarray
+        Correlation matrix used to obtain the orthogonalizing eigenvectors.
+    loc_func : callable
+        Function to compute location over axis=0.
+    scale_func : callable
+        Function to compute scale over axis=0.
+
+    Returns
+    -------
+    loc : ndarray
+        Estimated location.
+    cov : ndarray
+        Estimated covariance.
     """
-    evals, evecs = np.linalg.eigh(corr)  # noqa: F841
+    evals, evecs = np.linalg.eigh(corr)
     z = x.dot(evecs)
     transf0 = evecs
 
@@ -1278,10 +1565,35 @@ def _orthogonalize_det(x, corr, loc_func, scale_func):
 
 
 def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
-    """Starting sets for deterministic robust covariance estimators.
+    """
+    Starting sets for deterministic robust covariance estimators
 
     These are intended as starting sets for DetMCD, DetS and DetMM.
+
+    Parameters
+    ----------
+    z : array_like
+        Multivariate data with observations in rows.
+    h : int
+        Size of the subsets used for the starting index sets.
+    options_start : dict, optional
+        Options for the location and scale function used to standardize
+        the data before computing the starting sets. Supported keys are
+        "loc_func" and "scale_func". Default is median and mad.
+    methods_cov : {"all"}, optional
+        Currently unused, only the default of using all available starting
+        covariance methods is implemented.
+
+    Returns
+    -------
+    list of tuples
+        Each tuple contains an array of indices for a starting subset and
+        a string label identifying the method used to obtain it.
     """
+
+    _ = string_like(
+        methods_cov, "methods_cov", options=("all",), lower=False
+    )
 
     if options_start is None:
         options_start = {}
@@ -1319,36 +1631,91 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
     return idx_all
 
 
+class CovMResult(NamedTuple):
+    """
+    Result of :meth:`CovM.fit`, also used and extended by
+    :meth:`CovDetS.fit`.
+
+    Parameters
+    ----------
+    mean : ndarray
+        Estimated mean.
+    shape : ndarray
+        Estimated shape matrix, i.e., scatter matrix normalized to
+        det(shape) = 1.
+    scale : float
+        Estimated scale.
+    cov : ndarray
+        Estimated covariance, ``shape * scale**2``.
+    converged : bool
+        Whether the iteration converged before `maxiter` was reached.
+    n_iter : int
+        Number of iterations used.
+    mahalanobis : ndarray
+        Mahalanobis distances at the final mean and shape/scale estimate.
+    method : str or None
+        Label of the starting set that produced this fit. Only set by
+        :meth:`CovDetS.fit`.
+    scale_all : ndarray or None
+        Scale estimates of all starting sets. Only set on the final result
+        returned by :meth:`CovDetS.fit`.
+    idx_best : int or None
+        Index of the best starting set in `scale_all`. Only set on the
+        final result returned by :meth:`CovDetS.fit`.
+    tmean : ndarray or None
+        Location estimate used to standardize the data before computing
+        starting sets. Only set on the final result returned by
+        :meth:`CovDetS.fit`.
+    tscale : ndarray or None
+        Scale estimate used to standardize the data before computing
+        starting sets. Only set on the final result returned by
+        :meth:`CovDetS.fit`.
+    """
+
+    mean: np.ndarray
+    shape: np.ndarray
+    scale: float
+    cov: np.ndarray
+    converged: bool
+    n_iter: int
+    mahalanobis: np.ndarray
+    method: str | None = None
+    scale_all: np.ndarray | None = None
+    idx_best: int | None = None
+    tmean: np.ndarray | None = None
+    tscale: np.ndarray | None = None
+
+
 class CovM:
-    """M-estimator for multivariate Mean and Scatter.
+    """
+    M-estimator for multivariate Mean and Scatter
 
     Interface incomplete and experimental.
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    norm_mean : norm instance
+    norm_mean : norm instance, optional
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
-    norm_scatter : None or norm instance
+    norm_scatter : norm instance, optional
         If norm_scatter is None, then the norm_mean will be used.
-    breakdown_point : float in (0, 0.5]
-        Breakdown point for first stage S-estimator.
-    scale_bias : None or float
+    scale_bias : float, optional
         Must currently be provided if norm_mean is not None.
-    method : str
+    method : str, optional
         Currently only S-estimator has automatic selection of scale function.
     """
 
-    def __init__(self, data, norm_mean=None, norm_scatter=None,
-                 scale_bias=None, method="S"):
+    def __init__(
+        self, data, norm_mean=None, norm_scatter=None, scale_bias=None, method="S"
+    ):
         # todo: method defines how norm_mean and norm_scatter are linked
         #       currently I try for S-estimator
 
-        if method.lower() not in ["s"]:
+        if method.lower() != "s":
             msg = f"method {method} option not recognize or implemented"
             raise ValueError(msg)
 
@@ -1376,14 +1743,15 @@ class CovM:
         self.rho = self.norm_scatter.rho
 
     def _fit_mean_shape(self, mean, shape, scale):
-        """Estimate mean and shape in iteration step.
+        """
+        Estimate mean and shape in iteration step
 
         This does only one step.
 
         Parameters
         ----------
         mean : ndarray
-            Starting value for mean
+            Starting value for mean.
         shape : ndarray
             Starting value for shape matrix.
         scale : float
@@ -1391,7 +1759,10 @@ class CovM:
 
         Returns
         -------
-        Holder instance with updated estimates.
+        shape : ndarray
+            Updated estimate of the shape matrix.
+        mean : ndarray
+            Updated estimate of the mean.
         """
         d = mahalanobis(self.data - mean, shape, sqrt=True) / scale
         weights_mean = self.weights_mean(d)
@@ -1404,27 +1775,29 @@ class CovM:
             weights_cov=weights_cov,
             weights_cov_denom="det",
             ddof=1,
-            )
+        )
         return res
 
-    def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5,
-                   atol=1e-5):
-        """Estimate iterated M-scale.
+    def _fit_scale(self, maha, start_scale=None, maxiter=100, rtol=1e-5, atol=1e-5):
+        """
+        Estimate iterated M-scale
 
         Parameters
         ----------
         maha : ndarray
-        start_scale : None or float
-            Starting scale. If it is None, the mad of maha wi
-        maxiter : int
-            Maximum iterations to compute M-scale
-        rtol, atol : float
+            Mahalanobis distances used to estimate the scale.
+        start_scale : float, optional
+            Starting scale. If it is None, the mad of maha is used.
+        maxiter : int, optional
+            Maximum iterations to compute M-scale.
+        rtol, atol : float, optional
             Relative and absolute convergence criteria for scale used with
             allclose.
 
         Returns
         -------
-        float : scale estimate
+        scale : float
+            Scale estimate.
         """
         if start_scale is None:
             # TODO: this does not really make sense
@@ -1439,39 +1812,49 @@ class CovM:
             atol=atol,
             meef_scale=self.rho,
             scale_bias=self.scale_bias,
-            )
+        )
         return scale
 
-    def fit(self, start_mean=None, start_shape=None, start_scale=None,
-            maxiter=100, update_scale=True):
-        """Estimate mean, shape and scale parameters with MM-estimator.
+    def fit(
+        self,
+        start_mean=None,
+        start_shape=None,
+        start_scale=None,
+        maxiter=100,
+        update_scale=True,
+    ):
+        """
+        Estimate mean, shape and scale parameters with MM-estimator
 
         Parameters
         ----------
-        start_mean : None or float
+        start_mean : ndarray, optional
             Starting value for mean, center.
             If None, then median is used.
-        start_shape : None or 2-dim ndarray
-            Starting value of shape matrix, i.e. scatter matrix normalized
+        start_shape : 2-dim ndarray, optional
+            Starting value of shape matrix, i.e., scatter matrix normalized
             to det(scatter) = 1.
             If None, then scaled covariance matrix of data is used.
-        start_scale : None or float.
+        start_scale : float, optional
             Starting value of scale.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
-        update_scale : bool
-            If update_scale is False, then
+        update_scale : bool, optional
+            If update_scale is False, then the scale is fixed at start_scale
+            and only mean and shape are updated in each iteration.
 
         Returns
         -------
-        results instance with mean, shape, scale, cov and other attributes.
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov`, `converged`,
+            `n_iter`, and `mahalanobis`. See :class:`CovMResult` for
+            details.
 
         Notes
         -----
         If start_scale is provided and update_scale is False, then this is
         an M-estimator with a predetermined scale as used in the second
         stage of an MM-estimator.
-
         """
 
         converged = False
@@ -1497,16 +1880,19 @@ class CovM:
         if update_scale is False:
             scale = start_scale
 
-        for i in range(maxiter):
+        n_iter = 0
+        for _ in range(maxiter):
+            n_iter += 1
             shape, mean = self._fit_mean_shape(mean_old, shape_old, scale_old)
             d = mahalanobis(self.data - mean, shape, sqrt=True)
             if update_scale:
                 scale = self._fit_scale(d, start_scale=scale_old, maxiter=10)
 
-            if (np.allclose(scale, scale_old, rtol=1e-5) and
-                    np.allclose(mean, mean_old, rtol=1e-5) and
-                    np.allclose(shape, shape_old, rtol=1e-5)
-                    ):  # noqa E124
+            if (
+                np.allclose(scale, scale_old, rtol=1e-5)
+                and np.allclose(mean, mean_old, rtol=1e-5)
+                and np.allclose(shape, shape_old, rtol=1e-5)
+            ):
                 converged = True
                 break
             scale_old = scale
@@ -1515,39 +1901,90 @@ class CovM:
 
         maha = mahalanobis(self.data - mean, shape / scale, sqrt=True)
 
-        res = Holder(
+        res = CovMResult(
             mean=mean,
             shape=shape,
             scale=scale,
             cov=shape * scale**2,
             converged=converged,
-            n_iter=i,
+            n_iter=n_iter,
             mahalanobis=maha,
-            )
+        )
         return res
 
 
-class CovDetMCD:
-    """Minimum covariance determinant estimator with deterministic starts.
+class CovDetMCDResult(NamedTuple):
+    """
+    Result of :meth:`CovDetMCD.fit`.
 
-    preliminary version
-
-    reproducability:
-
-    This uses deterministic starting sets and there is no randomness in the
-    estimator.
-    However, this will not be reprodusible across statsmodels versions
-    when the methods for starting sets or tuning parameters for the
-    optimization change.
+    Also used internally for the per-starting-set candidates and, via
+    `results_raw`, for the non-reweighted result nested inside the final
+    reweighted result.
 
     Parameters
     ----------
-    data : array-like
+    mean : ndarray
+        Estimated mean.
+    cov : ndarray
+        Estimated covariance.
+    method : str
+        Label of the starting set that produced this candidate, or of the
+        best candidate if this is the final (possibly reweighted) result.
+    det_subset : float or None
+        Determinant of the covariance of the evaluation subset. Only set
+        for the non-reweighted (raw) result.
+    converged : bool or None
+        Whether the final c-step iteration converged. Only set if the best
+        candidate was refit to convergence, i.e., if ``maxiter_step <
+        maxiter`` in :meth:`CovDetMCD.fit`.
+    det_all : ndarray or None
+        Determinants of the covariance of the evaluation subset for all
+        starting sets. Only set on the non-reweighted (raw) result.
+    idx_best : int or None
+        Index of the best starting set in `det_all`. Only set on the
+        non-reweighted (raw) result.
+    tmean : ndarray or None
+        Location estimate used to standardize the data before computing
+        starting sets. Only set on the non-reweighted (raw) result.
+    tscale : ndarray or None
+        Scale estimate used to standardize the data before computing
+        starting sets. Only set on the non-reweighted (raw) result.
+    results_raw : CovDetMCDResult or None
+        The non-reweighted (raw) result. Only set if ``reweight=True`` in
+        :meth:`CovDetMCD.fit`.
+    """
+
+    mean: np.ndarray
+    cov: np.ndarray
+    method: str
+    det_subset: float | None = None
+    converged: bool | None = None
+    det_all: np.ndarray | None = None
+    idx_best: int | None = None
+    tmean: np.ndarray | None = None
+    tscale: np.ndarray | None = None
+    results_raw: "CovDetMCDResult | None" = None
+
+
+class CovDetMCD:
+    """
+    Minimum covariance determinant estimator with deterministic starts
+
+    Preliminary version.
+
+    Parameters
+    ----------
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
 
     Notes
     -----
+    Reproducibility: this uses deterministic starting sets and there is no
+    randomness in the estimator. However, this will not be reproducible
+    across statsmodels versions when the methods for starting sets or
+    tuning parameters for the optimization change.
+
     The correction to the scale to take account of trimming in the reweighting
     estimator is based on the chisquare tail probability.
     This differs from CovMcd in R which uses the observed fraction of
@@ -1555,13 +1992,13 @@ class CovDetMCD:
 
     References
     ----------
-    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+    .. [1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
-       Computational Statistics & Data Analysis 81 (January): 64–75.
+       Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
-    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+    .. [2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
     """
 
@@ -1570,11 +2007,38 @@ class CovDetMCD:
         self.data = np.asarray(data)
 
     def _cstep(self, x, mean, cov, h, maxiter=2, tol=1e-8):
-        """C-step for mcd iteration
+        """
+        C-step for mcd iteration
 
-        x is data, perc is percentile h / nobs, don't need perc when we
-        use np.argpartition
-        requires starting mean and cov
+        Requires starting mean and cov.
+
+        Parameters
+        ----------
+        x : ndarray
+            Data.
+        mean : ndarray
+            Starting value for mean.
+        cov : ndarray
+            Starting value for covariance.
+        h : int
+            Number of observations in the subset used to update mean and
+            covariance at each step. This corresponds to percentile
+            h / nobs; using `np.argpartition` avoids the need for an
+            explicit percentile.
+        maxiter : int, optional
+            Maximum number of c-steps.
+        tol : float, optional
+            Convergence tolerance for the change in covariance between
+            steps.
+
+        Returns
+        -------
+        mean : ndarray
+            Estimated mean.
+        cov : ndarray
+            Estimated covariance.
+        converged : bool
+            Whether the iteration converged before maxiter was reached.
         """
 
         converged = False
@@ -1586,7 +2050,7 @@ class CovDetMCD:
             mean = x_sel.mean(0)
             cov_new = np.cov(x_sel.T, ddof=1)
 
-            if ((cov - cov_new)**2).mean() < tol:
+            if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
                 converged = True
                 break
@@ -1596,18 +2060,24 @@ class CovDetMCD:
         return mean, cov, converged
 
     def _fit_one(self, x, idx, h, maxiter=2, mean=None, cov=None):
-        """Compute mcd for one starting set of observations.
+        """
+        Compute mcd for one starting set of observations
 
         Parameters
         ----------
         x : ndarray
             Data.
         idx : ndarray
-            Indices or mask of observation in starting set, used as ``x[idx]``
+            Indices or mask of observation in starting set, used as ``x[idx]``.
         h : int
             Number of observations in evaluation set for cov.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of c-steps.
+        mean : ndarray, optional
+            Starting value for mean. If None, the mean of ``x[idx]`` is used.
+        cov : ndarray, optional
+            Starting value for covariance. If None, the covariance of
+            ``x[idx]`` is used.
 
         Returns
         -------
@@ -1617,6 +2087,9 @@ class CovDetMCD:
             Estimated covariance.
         det : float
             Determinant of estimated covariance matrix.
+        converged : bool
+            Whether the c-step iteration converged before maxiter was
+            reached.
 
         Notes
         -----
@@ -1638,42 +2111,58 @@ class CovDetMCD:
 
         return mean, cov, det, conv
 
-    def fit(self, h, *, h_start=None, mean_func=None, scale_func=None,
-            maxiter=100, options_start=None, reweight=True,
-            trim_frac=0.975, maxiter_step=100):
+    def fit(
+        self,
+        h,
+        *,
+        h_start=None,
+        mean_func=None,
+        scale_func=None,
+        maxiter=100,
+        options_start=None,
+        reweight=True,
+        trim_frac=0.975,
+        maxiter_step=100,
+    ):
         """
-        Compute minimum covariance determinant estimate of mean and covariance.
+        Compute minimum covariance determinant estimate of mean and covariance
 
-        x : array-like
-            Data with observation in rows and variables in columns.
+        Parameters
+        ----------
         h : int
-            Number of observations in evaluation set for minimimizing
+            Number of observations in evaluation set for minimizing
             determinant.
-        h_start : int
+        h_start : int, optional
             Number of observations used in starting mean and covariance.
-        mean_func, scale_func : callable or None.
+        mean_func, scale_func : callable or None, optional
             Mean and scale function for initial standardization.
             Current defaults, if they are None, are median and mad, but
             default scale_func will likely change.
-        options_start : None or dict
+        maxiter : int, optional
+            Maximum number of iterations for the c-step of the best
+            candidate solution.
+        options_start : dict, optional
             Options for the starting estimators.
-            currently not used
-            TODO: which options? e.g. for OGK
-        reweight : bool
+            Currently not used.
+            TODO: which options? e.g., for OGK
+        reweight : bool, optional
             If reweight is true, then a reweighted estimator is returned. The
             reweighting is based on a chisquare trimming of Mahalanobis
             distances. The raw results are in the ``results_raw`` attribute.
-        trim_frac : float in (0, 1)
+        trim_frac : float in (0, 1), optional
             Trim fraction used if reweight is true. Used to compute quantile
             of chisquare distribution with tail probability 1 - trim_frac.
-        maxiter_step : int
+        maxiter_step : int, optional
             Number of iteration in the c-step.
             In the current implementation a small maxiter in the c-step does
             not find the optimal solution.
 
         Returns
         -------
-        Holder instance with results
+        CovDetMCDResult
+            Named tuple with `mean`, `cov`, `method` and extra attributes
+            depending on `reweight`. See :class:`CovDetMCDResult` for
+            details.
         """
 
         x = self.data
@@ -1682,7 +2171,8 @@ class CovDetMCD:
         if h is None:
             h = (nobs + k_vars + 1) // 2  # check with literature
         if mean_func is None:
-            mean_func = lambda x: np.median(x, axis=0)  # noqa
+            def mean_func(x):
+                return np.median(x, axis=0)
         if scale_func is None:
             scale_func = mad
         if options_start is None:
@@ -1703,14 +2193,13 @@ class CovDetMCD:
         res = {}
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
-            mean, cov, det, _ = self._fit_one(x, idx_sel, h,
-                                              maxiter=maxiter_step)
-            res[ii] = Holder(
+            mean, cov, det, _ = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
+            res[ii] = CovDetMCDResult(
                 mean=mean,
                 cov=cov * fac_trunc,
-                det_subset=det,
                 method=method,
-                )
+                det_subset=det,
+            )
 
         det_all = np.array([i.det_subset for i in res.values()])
         idx_best = np.argmin(det_all)
@@ -1721,75 +2210,67 @@ class CovDetMCD:
         # need to c-step to convergence for best,
         # is with best 2 in original DetMCD
         if maxiter_step < maxiter:
-            mean, cov, det, conv = self._fit_one(x, None, h, maxiter=maxiter,
-                                                 mean=best.mean, cov=best.cov)
-            best = Holder(
-                mean=mean,
-                cov=cov * fac_trunc,
-                det_subset=det,
-                method=method,
-                converged=conv,
-                )
+            mean, cov, det, conv = self._fit_one(
+                x, None, h, maxiter=maxiter, mean=best.mean, cov=best.cov
+            )
+            best = best._replace(
+                mean=mean, cov=cov * fac_trunc, det_subset=det, converged=conv
+            )
 
-        # include extra info in returned Holder instance
-        best.det_all = det_all
-        best.idx_best = idx_best
-
-        best.tmean = m
-        best.tscale = s
+        # include extra info in the returned CovDetMCDResult
+        best = best._replace(
+            det_all=det_all, idx_best=idx_best, tmean=m, tscale=s
+        )
 
         if reweight:
-            cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac,
-                                  ddof=1)
+            cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac, ddof=1)
             fac_trunc = coef_normalize_cov_truncated(trim_frac, k_vars)
-            best_w = Holder(
+            best_w = CovDetMCDResult(
                 mean=mean,
                 cov=cov * fac_trunc,
-                # det_subset=det,
-                method=method,
+                method=best.method,
                 results_raw=best,
-                )
+            )
 
             return best_w
         else:
-            return best  # is Holder instance already
+            return best
 
 
 class CovDetS:
-    """S-estimator for mean and covariance with deterministic starts.
+    """
+    S-estimator for mean and covariance with deterministic starts
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    norm : norm instance
+    norm : norm instance, optional
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
-    breakdown_point : float in (0, 0.5]
+    breakdown_point : float in (0, 0.5], optional
         Breakdown point for first stage S-estimator.
 
     Notes
     -----
-    Reproducability:
-
-    This uses deterministic starting sets and there is no randomness in the
-    estimator.
-    However, the estimates may not be reproducable across statsmodels versions
+    Reproducibility: this uses deterministic starting sets and there is no
+    randomness in the estimator.
+    However, the estimates may not be reproducible across statsmodels versions
     when the methods for starting sets or default tuning parameters for the
     optimization change. With different starting sets, the estimate can
     converge to a different local optimum.
 
     References
     ----------
-    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+    .. [1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
-       Computational Statistics & Data Analysis 81 (January): 64–75.
+       Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
-    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+    .. [2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
     """
 
@@ -1810,11 +2291,17 @@ class CovDetS:
 
         self.norm = norm
 
-        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
-                        scale_bias=self.scale_bias, method="S")
+        self.mod = CovM(
+            data,
+            norm_mean=norm,
+            norm_scatter=norm,
+            scale_bias=self.scale_bias,
+            method="S",
+        )
 
     def _get_start_params(self, idx):
-        """Starting parameters from a subsample given by index
+        """
+        Starting parameters from a subsample given by index
 
         Parameters
         ----------
@@ -1825,7 +2312,7 @@ class CovDetS:
         Returns
         -------
         mean : ndarray
-            Mean of subsample
+            Mean of subsample.
         shape : ndarray
             The shape matrix of the subsample which is the covariance
             normalized so that determinant of shape is one.
@@ -1844,27 +2331,26 @@ class CovDetS:
         return mean, shape, scale
 
     def _fit_one(self, mean=None, shape=None, scale=None, maxiter=100):
-        """Compute local M-estimator for one starting set of observations.
+        """
+        Compute local M-estimator for one starting set of observations
 
         Parameters
         ----------
-        x : ndarray
-            Data.
-        idx : ndarray
-            Indices or mask of observation in starting set, used as ``x[idx]``
-        h : int
-            Number of observations in evaluation set for cov.
-        maxiter : int
-            Maximum number of c-steps.
+        mean : ndarray, optional
+            Starting value for mean.
+        shape : ndarray, optional
+            Starting value for shape matrix.
+        scale : float, optional
+            Starting value for scale.
+        maxiter : int, optional
+            Maximum number of iterations.
 
         Returns
         -------
-        mean : ndarray
-            Estimated mean.
-        cov : ndarray
-            Estimated covariance.
-        det : float
-            Determinant of estimated covariance matrix.
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov`, `converged`,
+            `n_iter`, and `mahalanobis`. See :class:`CovMResult` for
+            details.
 
         Notes
         -----
@@ -1877,37 +2363,57 @@ class CovDetS:
             start_shape=shape,
             start_scale=scale,
             maxiter=maxiter,
-            update_scale=True
-            )
+            update_scale=True,
+        )
 
         return res
 
-    def fit(self, *, h_start=None, mean_func=None, scale_func=None,
-            maxiter=100, options_start=None, maxiter_step=5):
-        """Compute S-estimator of mean and covariance.
+    def fit(
+        self,
+        *,
+        h_start=None,
+        mean_func=None,
+        scale_func=None,
+        maxiter=100,
+        options_start=None,
+        maxiter_step=5,
+    ):
+        """
+        Compute S-estimator of mean and covariance
 
         Parameters
         ----------
-        h_start : int
+        h_start : int, optional
             Number of observations used in starting mean and covariance.
-        mean_func, scale_func : callable or None.
+        mean_func, scale_func : callable or None, optional
             Mean and scale function for initial standardization.
             Current defaults, if they are None, are median and mad, but
             default scale_func will likely change.
-        options_start : None or dict
-           Options for the starting estimators.
-           TODO: which options? e.g. for OGK
+        maxiter : int, optional
+            Maximum number of iterations for the c-step of the best
+            candidate solution.
+        options_start : dict, optional
+            Options for the starting estimators.
+            TODO: which options? e.g., for OGK
+        maxiter_step : int, optional
+            Number of iterations used for each starting candidate before
+            selecting the best one for further iteration.
 
         Returns
         -------
-        Holder instance with results
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov` and extra
+            attributes `scale_all`, `idx_best`, `tmean`, `tscale` from the
+            starting-set search. See :class:`CovMResult` for details.
         """
 
         x = self.data
         nobs, k_vars = x.shape
 
         if mean_func is None:
-            mean_func = lambda x: np.median(x, axis=0)  # noqa
+
+            def mean_func(x):
+                return np.median(x, axis=0)
         if scale_func is None:
             scale_func = mad
         if options_start is None:
@@ -1932,10 +2438,9 @@ class CovDetS:
                 shape=shape0,
                 scale=scale0,
                 maxiter=maxiter_step,
-                )
+            )
 
-            res_i.method = method
-            res[ii] = res_i
+            res[ii] = res_i._replace(method=method)
 
         scale_all = np.array([i.scale for i in res.values()])
         idx_best = np.argmin(scale_all)
@@ -1951,41 +2456,40 @@ class CovDetS:
                 shape=best.shape,
                 scale=best.scale,
                 maxiter=maxiter,
-                )
+            )._replace(method=best.method)
 
-        # include extra info in returned Holder instance
-        best.scale_all = scale_all
-        best.idx_best = idx_best
+        # include extra info in the returned CovMResult
+        best = best._replace(
+            scale_all=scale_all, idx_best=idx_best, tmean=m, tscale=s
+        )
 
-        best.tmean = m
-        best.tscale = s
-
-        return best  # is Holder instance already
+        return best
 
 
-class CovDetMM():
-    """MM estimator using DetS as first stage estimator.
+class CovDetMM:
+    """
+    MM estimator using DetS as first stage estimator
 
     Note: The tuning parameter for second stage M estimator is currently only
     available for a small number of variables and only three values of
     efficiency. For other cases, the user has to provide the norm instance
-    with desirec tuning parameter.
+    with desired tuning parameter.
 
     Parameters
     ----------
-    data : array-like
+    data : array_like
         Multivariate data set with observation in rows and variables in
         columns.
-    norm : norm instance
+    norm : norm instance, optional
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
         If ``norm`` is an instance of TukeyBiweight, then it will be used in
         the second stage M-estimation. The ``efficiency`` argument is ignored
         and the tuning parameter of the user provided instance is not changed.
-    breakdown_point : float in (0, 0.5]
+    breakdown_point : float in (0, 0.5], optional
         Breakdown point for first stage S-estimator.
-    efficiency : float
+    efficiency : float, optional
         Asymptotic efficiency of second stage M estimator.
 
     Notes
@@ -2001,24 +2505,24 @@ class CovDetMM():
 
     References
     ----------
-    ..[1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
+    .. [1] Hubert, Mia, Peter Rousseeuw, Dina Vanpaemel, and Tim Verdonck. 2015.
        “The DetS and DetMM Estimators for Multivariate Location and Scatter.”
-       Computational Statistics & Data Analysis 81 (January): 64–75.
+       Computational Statistics & Data Analysis 81 (January): 64-75.
        https://doi.org/10.1016/j.csda.2014.07.013.
-    ..[2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
+    .. [2] Hubert, Mia, Peter J. Rousseeuw, and Tim Verdonck. 2012. “A
        Deterministic Algorithm for Robust Location and Scatter.” Journal of
-       Computational and Graphical Statistics 21 (3): 618–37.
+       Computational and Graphical Statistics 21 (3): 618-37.
        https://doi.org/10.1080/10618600.2012.672100.
-    ..[3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
+    .. [3] Lopuhaä, Hendrik P. 1989. “On the Relation between S-Estimators and
        M-Estimators of Multivariate Location and Covariance.” The Annals of
-       Statistics 17 (4): 1662–83.
-    ..[4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
+       Statistics 17 (4): 1662-83.
+    .. [4] Salibián-Barrera, Matías, Stefan Van Aelst, and Gert Willems. 2006.
        “Principal Components Analysis Based on Multivariate MM Estimators with
        Fast and Robust Bootstrap.” Journal of the American Statistical
-       Association 101 (475): 1198–1211.
-    ..[5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
+       Association 101 (475): 1198-1211.
+    .. [5] Tatsuoka, Kay S., and David E. Tyler. 2000. “On the Uniqueness of
        S-Functionals and M-Functionals under Nonelliptical Distributions.” The
-       Annals of Statistics 28 (4): 1219–43.
+       Annals of Statistics 28 (4): 1219-43.
     """
 
     def __init__(self, data, norm=None, breakdown_point=0.5, efficiency=0.95):
@@ -2040,37 +2544,35 @@ class CovDetMM():
 
         self.norm = norm
         # model for second stage M-estimator
-        self.mod = CovM(data, norm_mean=norm, norm_scatter=norm,
-                        scale_bias=None, method="S")
+        self.mod = CovM(
+            data, norm_mean=norm, norm_scatter=norm, scale_bias=None, method="S"
+        )
 
     def fit(self, maxiter=100):
-        """Estimate model parameters.
+        """
+        Estimate model parameters
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations in the second stage M-estimation.
-        fit args : dict
-            currently missing
 
         Returns
         -------
-        Instance of a results or holder class.
+        CovMResult
+            Named tuple with `mean`, `shape`, `scale`, `cov`, `converged`,
+            `n_iter`, and `mahalanobis`. See :class:`CovMResult` for
+            details.
 
         Notes
         -----
         This uses CovDetS for the first stage estimation and CovM with fixed
         scale in the second stage MM-estimation.
 
-        TODO: fit options are missing.
-
+        TODO: fit options for the first stage CovDetS estimation are missing.
         """
         # first stage estimate
-        mod_s = CovDetS(
-            self.data,
-            norm=None,
-            breakdown_point=self.breakdown_point
-            )
+        mod_s = CovDetS(self.data, norm=None, breakdown_point=self.breakdown_point)
         res_s = mod_s.fit()
 
         res = self.mod.fit(
@@ -2079,6 +2581,6 @@ class CovDetMM():
             start_scale=res_s.scale,
             maxiter=maxiter,
             update_scale=False,
-            )
+        )
 
         return res

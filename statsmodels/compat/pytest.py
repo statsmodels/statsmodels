@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import warnings
 
-from _pytest.recwarn import WarningsChecker
-from pytest import warns
+import pytest
+
+if TYPE_CHECKING:
+    from _pytest.recwarn import WarningsChecker
 
 __all__ = ["pytest_warns"]
 
 
 class NoWarningsChecker:
+    """Context manager that asserts no warnings are raised in its block"""
+
     def __init__(self):
         self.cw = warnings.catch_warnings(record=True)
         self.rec = []
@@ -28,23 +33,25 @@ class NoWarningsChecker:
 
 
 def pytest_warns(
-    warning: type[Warning] | tuple[type[Warning], ...] | None
+    warning: type[Warning] | tuple[type[Warning], ...] | None,
 ) -> WarningsChecker | NoWarningsChecker:
     """
+    Shim for pytest warn compatibility
 
     Parameters
     ----------
-    warning : {None, Warning, Tuple[Warning]}
-        None if no warning is produced, or a single or multiple Warnings
+    warning : type[Warning], tuple[type[Warning], ...], or None
+        None if no warning is produced, or a single or multiple Warnings.
 
     Returns
     -------
-    cm
-
+    WarningsChecker or NoWarningsChecker
+        A context manager that checks for the expected warning(s), or
+        that verifies no warnings are raised if `warning` is None.
     """
     if warning is None:
         return NoWarningsChecker()
     else:
         assert warning is not None
 
-        return warns(warning)
+        return pytest.warns(warning)

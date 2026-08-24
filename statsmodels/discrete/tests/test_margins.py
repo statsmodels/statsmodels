@@ -20,10 +20,11 @@ from statsmodels.tools.tools import add_constant
 cpunish_data = load()
 cpunish_data.exog = np.asarray(cpunish_data.exog)
 cpunish_data.endog = np.asarray(cpunish_data.endog)
-cpunish_data.exog[:,3] = np.log(cpunish_data.exog[:,3])
+cpunish_data.exog[:, 3] = np.log(cpunish_data.exog[:, 3])
 exog = add_constant(cpunish_data.exog, prepend=False)
-endog = cpunish_data.endog - 1 # avoid zero-truncation
+endog = cpunish_data.endog - 1  # avoid zero-truncation
 exog /= np.round(exog.max(0), 3)
+
 
 class CheckMarginMixin:
     rtol_fac = 1
@@ -48,7 +49,7 @@ class TestPoissonMargin(CheckMarginMixin):
                         -5.0529]
         mod_poi = Poisson(endog, exog)
         res_poi = mod_poi.fit(start_params=start_params)
-        #res_poi = mod_poi.fit(maxiter=100)
+        # res_poi = mod_poi.fit(maxiter=100)
         marge_poi = res_poi.get_margeff()
         cls.res = res_poi
         cls.margeff = marge_poi
@@ -83,7 +84,7 @@ class TestNegBinMargin(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res
         cls.margeff = marge
@@ -102,7 +103,7 @@ class TestNegBinMarginDummy(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomial(endog, exog)
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff(dummy=True)
         cls.res = res
         cls.margeff = marge
@@ -121,7 +122,7 @@ class TestNegBinPMargin(CheckMarginMixin):
         start_params = [13.1996, 0.8582, -2.8005, -1.5031, 2.3849, -8.5552,
                         -2.88, 1.14]
         mod = NegativeBinomialP(endog, exog)   # checks also that default p=2
-        res = mod.fit(start_params=start_params, method='nm', maxiter=2000)
+        res = mod.fit(start_params=start_params, method="nm", maxiter=2000)
         marge = res.get_margeff()
         cls.res = res
         cls.margeff = marge
@@ -130,3 +131,47 @@ class TestNegBinPMargin(CheckMarginMixin):
         cls.res1 = res_stata.results_negbin_margins_cont
         cls.rtol_fac = 5e1
         # negbin has lower agreement with Stata in this case
+
+
+def test_discrete_margins_summary_single_equation():
+    rs = np.random.RandomState(20260822)
+    n = 200
+    x = rs.standard_normal(n)
+    exog = add_constant(np.column_stack([x, rs.standard_normal(n)]))
+    endog = rs.poisson(np.exp(exog @ [0.2, 0.3, -0.1]))
+
+    res = Poisson(endog, exog).fit(disp=0)
+    marge = res.get_margeff()
+    text = str(marge.summary())
+
+    assert "Poisson Marginal Effects" in text
+    assert res.model.endog_names in text
+    for val, se in zip(marge.margeff, marge.margeff_se, strict=True):
+        assert f"{val:.4f}" in text
+        assert f"{se:.3f}" in text
+
+
+def test_discrete_margins_summary_multi_equation():
+    from statsmodels.discrete.discrete_model import MNLogit
+
+    rs = np.random.RandomState(20260823)
+    n = 300
+    x = rs.standard_normal((n, 2))
+    exog = add_constant(x)
+    lin0 = exog @ [0.0, 0.0, 0.0]
+    lin1 = exog @ [0.5, 0.8, -0.4]
+    lin2 = exog @ [-0.3, -0.2, 0.6]
+    p = np.exp(np.column_stack([lin0, lin1, lin2]))
+    p /= p.sum(1, keepdims=True)
+    endog = np.array([rs.choice(3, p=row) for row in p])
+
+    res = MNLogit(endog, exog).fit(disp=0)
+    marge = res.get_margeff()
+    text = str(marge.summary())
+
+    assert "MNLogit Marginal Effects" in text
+    # one sub-table per outcome category
+    assert marge.margeff.shape[1] == 3
+    for eq in range(marge.margeff.shape[1]):
+        for val in marge.margeff[:, eq]:
+            assert f"{val:.4f}" in text

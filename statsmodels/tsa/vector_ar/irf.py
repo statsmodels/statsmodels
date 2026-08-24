@@ -1,27 +1,48 @@
-"""
-Impulse reponse-related code
-"""
+"""Impulse response-related code"""
+
+from statsmodels.compat.pandas import deprecate_kwarg
 
 import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.tsatools as tsa
-import statsmodels.tsa.vector_ar.plotting as plotting
-import statsmodels.tsa.vector_ar.util as util
+from statsmodels.tsa.vector_ar import plotting, util
+from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 
 mat = np.array
 
 
 class BaseIRAnalysis:
     """
-    Base class for plotting and computing IRF-related statistics, want to be
-    able to handle known and estimated processes
+    Base class for plotting and computing IRF-related statistics, designed
+    to handle both known and estimated processes
+
+    Parameters
+    ----------
+    model : VAR, SVAR, or VECM instance
+        The fitted model used to compute impulse responses.
+    P : ndarray, optional
+        The matrix used for orthogonalization, satisfying sigma_u = P P'.
+        If None, computed as the Cholesky decomposition of the model's
+        residual covariance matrix.
+    periods : int, optional
+        Number of periods to compute the impulse responses for. The
+        default is 10.
+    order : sequence, optional
+        Alternate variable order for the Cholesky decomposition. Not
+        currently implemented.
+    svar : bool, optional
+        Flag indicating whether the model is a structural VAR. The
+        default is False.
+    vecm : bool, optional
+        Flag indicating whether the model is a VECM. The default is
+        False.
     """
 
-    def __init__(self, model, P=None, periods=10, order=None, svar=False,
-                 vecm=False):
+    def __init__(self, model, P=None, periods=10, order=None, svar=False, vecm=False):
         self.model = model
         self.periods = periods
         self.neqs, self.lags, self.T = model.neqs, model.k_ar, model.nobs
@@ -85,43 +106,85 @@ class BaseIRAnalysis:
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
-    def plot(self, orth=False, *, impulse=None, response=None,
-             signif=0.05, plot_params=None, figsize=(10, 10),
-             subplot_params=None, plot_stderr=True, stderr_type='asym',
-             repl=1000, seed=None, component=None):
+    @deprecate_kwarg("seed", "rng")
+    def plot(
+        self,
+        orth=False,
+        *,
+        impulse=None,
+        response=None,
+        signif=0.05,
+        plot_params=None,
+        figsize=(10, 10),
+        subplot_params=None,
+        plot_stderr=True,
+        stderr_type="asym",
+        repl=1000,
+        rng=None,
+        component=None,
+        err_bands=None,
+    ):
         """
         Plot impulse responses
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse responses
-        impulse : {str, int}
-            variable providing the impulse
-        response : {str, int}
-            variable affected by the impulse
-        signif : float (0 < signif < 1)
-            Significance level for error bars, defaults to 95% CI
-        subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        impulse : str or int, optional
+            Name or index of the variable providing the impulse. If None,
+            plots impulses from all variables.
+        response : str or int, optional
+            Name or index of the variable affected by the impulse. If None,
+            plots responses of all variables.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        subplot_params : dict, optional
+            To pass to subplot plotting functions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
-        plot_params : dict
+        plot_params : dict, optional
+            Keyword arguments to pass to the individual plotting functions.
+        figsize : tuple of float, optional
+            Figure size (width, height in inches). The default is (10, 10).
+        plot_stderr : bool, optional
+            Plot standard impulse response error bands. The default is
+            True.
+        stderr_type : {"asym", "mc", "sz1", "sz2", "sz3"}, optional
+            The method used to compute the error bands. "asym" computes
+            asymptotic standard errors and is the default. "mc" computes
+            Monte Carlo standard errors using ``repl`` replications.
+            "sz1", "sz2", and "sz3" compute Sims-Zha error bands using
+            replications and, optionally, ``component``.
+        repl : int, optional
+            Number of replications for Monte Carlo and Sims-Zha standard
+            errors. The default is 1000.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
 
-        figsize : (float, float), default (10, 10)
-            Figure size (width, height in inches)
-        plot_stderr : bool, default True
-            Plot standard impulse response error bands
-        stderr_type : str
-            'asym': default, computes asymptotic standard errors
-            'mc': monte carlo standard errors (use rpl)
-        repl : int, default 1000
-            Number of replications for Monte Carlo and Sims-Zha standard errors
-        seed : int
-            np.random.seed for Monte Carlo replications
-        component: array or vector of principal component indices
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        component : array_like of int, optional
+            Index of the principal component to use for the Sims-Zha
+            "sz1"/"sz2" (shape (neqs, neqs)) or "sz3" (length neqs) error
+            bands. If None, the component with the largest eigenvalue is
+            used for each element. Ignored unless ``stderr_type`` is
+            "sz1", "sz2", or "sz3".
+        err_bands : ndarray of shape (2, periods + 1, neqs, neqs), optional
+            Pre-computed error bands. The first dimension contains the lower
+            and upper bounds of the confidence interval, respectively. If
+            provided, the internal calculation of standard errors is bypassed
+            and ``stderr_type`` is used only for plot formatting.
         """
-        periods = self.periods
-        model = self.model
         svar = self.svar
 
         if orth and svar:
@@ -129,110 +192,202 @@ class BaseIRAnalysis:
 
         irfs = self._choose_irfs(orth, svar)
         if orth:
-            title = 'Impulse responses (orthogonalized)'
+            title = "Impulse responses (orthogonalized)"
         elif svar:
-            title = 'Impulse responses (structural)'
+            title = "Impulse responses (structural)"
         else:
-            title = 'Impulse responses'
+            title = "Impulse responses"
+
+        stderr_type = string_like(
+            stderr_type,
+            "stderr_type",
+            options=("asym", "mc", "sz1", "sz2", "sz3"),
+            lower=False,
+        )
 
         if plot_stderr is False:
             stderr = None
+        elif err_bands is not None:
+            if isinstance(err_bands, ErrorBand):
+                err_bands = (err_bands.lower, err_bands.upper)
+            expected_shape = (2, self.periods + 1, self.neqs, self.neqs)
+            if np.asarray(err_bands).shape != expected_shape:
+                raise ValueError(
+                    f"err_bands has shape {np.asarray(err_bands).shape}, expected "
+                    f"{expected_shape} (2, periods+1, neqs, neqs)."
+                )
+            stderr = err_bands
+        elif stderr_type == "asym":
+            stderr = self.cov(orth=orth)
+        elif stderr_type == "mc":
+            _err_band = self.errband_mc(
+                orth=orth, svar=svar, repl=repl, signif=signif, rng=rng
+            )
+            stderr = (_err_band.lower, _err_band.upper)
+        elif stderr_type == "sz1":
+            _err_band = self.err_band_sz1(
+                orth=orth,
+                svar=svar,
+                repl=repl,
+                signif=signif,
+                rng=rng,
+                component=component,
+            )
+            stderr = (_err_band.lower, _err_band.upper)
+        elif stderr_type == "sz2":
+            _err_band = self.err_band_sz2(
+                orth=orth,
+                svar=svar,
+                repl=repl,
+                signif=signif,
+                rng=rng,
+                component=component,
+            )
+            stderr = (_err_band.lower, _err_band.upper)
+        else:  # stderr_type == "sz3":
+            _err_band = self.err_band_sz3(
+                orth=orth,
+                svar=svar,
+                repl=repl,
+                signif=signif,
+                rng=rng,
+                component=component,
+            )
+            stderr = (_err_band.lower, _err_band.upper)
 
-        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
-            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
-        else:
-            if stderr_type == 'asym':
-                stderr = self.cov(orth=orth)
-            if stderr_type == 'mc':
-                stderr = self.errband_mc(orth=orth, svar=svar,
-                                         repl=repl, signif=signif,
-                                         seed=seed)
-            if stderr_type == 'sz1':
-                stderr = self.err_band_sz1(orth=orth, svar=svar,
-                                           repl=repl, signif=signif,
-                                           seed=seed,
-                                           component=component)
-            if stderr_type == 'sz2':
-                stderr = self.err_band_sz2(orth=orth, svar=svar,
-                                           repl=repl, signif=signif,
-                                           seed=seed,
-                                           component=component)
-            if stderr_type == 'sz3':
-                stderr = self.err_band_sz3(orth=orth, svar=svar,
-                                           repl=repl, signif=signif,
-                                           seed=seed,
-                                           component=component)
-
-        fig = plotting.irf_grid_plot(irfs, stderr, impulse, response,
-                                     self.model.names, title, signif=signif,
-                                     subplot_params=subplot_params,
-                                     plot_params=plot_params,
-                                     figsize=figsize,
-                                     stderr_type=stderr_type)
+        fig = plotting.irf_grid_plot(
+            irfs,
+            stderr,
+            impulse,
+            response,
+            self.model.names,
+            title,
+            signif=signif,
+            subplot_params=subplot_params,
+            plot_params=plot_params,
+            figsize=figsize,
+            stderr_type=stderr_type,
+        )
         return fig
 
-    def plot_cum_effects(self, orth=False, *, impulse=None, response=None,
-                         signif=0.05, plot_params=None, figsize=(10, 10),
-                         subplot_params=None, plot_stderr=True,
-                         stderr_type='asym', repl=1000, seed=None):
+    @deprecate_kwarg("seed", "rng")
+    def plot_cum_effects(
+        self,
+        orth=False,
+        *,
+        impulse=None,
+        response=None,
+        signif=0.05,
+        plot_params=None,
+        figsize=(10, 10),
+        subplot_params=None,
+        plot_stderr=True,
+        stderr_type="asym",
+        repl=1000,
+        rng=None,
+        err_bands=None,
+    ):
         """
         Plot cumulative impulse response functions
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse responses
-        impulse : {str, int}
-            variable providing the impulse
-        response : {str, int}
-            variable affected by the impulse
-        signif : float (0 < signif < 1)
-            Significance level for error bars, defaults to 95% CI
-        subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        impulse : str or int, optional
+            Name or index of the variable providing the impulse. If None,
+            plots impulses from all variables.
+        response : str or int, optional
+            Name or index of the variable affected by the impulse. If None,
+            plots responses of all variables.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        subplot_params : dict, optional
+            To pass to subplot plotting functions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
-        plot_params : dict
+        plot_params : dict, optional
+            Keyword arguments to pass to the individual plotting functions.
+        figsize : tuple of float, optional
+            Figure size (width, height in inches). The default is (10, 10).
+        plot_stderr : bool, optional
+            Plot standard impulse response error bands. The default is
+            True.
+        stderr_type : {"asym", "mc"}, optional
+            The method used to compute the error bands. "asym" computes
+            asymptotic standard errors and is the default. "mc" computes
+            Monte Carlo standard errors using ``repl`` replications.
+        repl : int, optional
+            Number of replications for Monte Carlo standard errors. The
+            default is 1000.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
 
-        figsize: (float, float), default (10, 10)
-            Figure size (width, height in inches)
-        plot_stderr : bool, default True
-            Plot standard impulse response error bands
-        stderr_type : str
-            'asym': default, computes asymptotic standard errors
-            'mc': monte carlo standard errors (use rpl)
-        repl : int, default 1000
-            Number of replications for monte carlo standard errors
-        seed : int
-            np.random.seed for Monte Carlo replications
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        err_bands : ndarray of shape (2, periods + 1, neqs, neqs), optional
+            Pre-computed error bands. The first dimension contains the lower
+            and upper bounds of the confidence interval, respectively. If
+            provided, the internal calculation of standard errors is bypassed
+            and ``stderr_type`` is used only for plot formatting.
         """
 
         if orth:
-            title = 'Cumulative responses responses (orthogonalized)'
+            title = "Cumulative responses (orthogonalized)"
             cum_effects = self.orth_cum_effects
             lr_effects = self.orth_lr_effects
         else:
-            title = 'Cumulative responses'
+            title = "Cumulative responses"
             cum_effects = self.cum_effects
             lr_effects = self.lr_effects
 
-        if stderr_type not in ['asym', 'mc']:
-            raise ValueError("`stderr_type` must be one of 'asym', 'mc'")
-        else:
-            if stderr_type == 'asym':
-                stderr = self.cum_effect_cov(orth=orth)
-            if stderr_type == 'mc':
-                stderr = self.cum_errband_mc(orth=orth, repl=repl,
-                                             signif=signif, seed=seed)
         if not plot_stderr:
             stderr = None
+        elif err_bands is not None:
+            if isinstance(err_bands, ErrorBand):
+                err_bands = (err_bands.lower, err_bands.upper)
+            expected_shape = (2, self.periods + 1, self.neqs, self.neqs)
+            if np.asarray(err_bands).shape != expected_shape:
+                raise ValueError(
+                    f"err_bands has shape {np.asarray(err_bands).shape}, expected "
+                    f"{expected_shape} (2, periods+1, neqs, neqs)."
+                )
+            stderr = err_bands
+        else:
+            stderr_type = string_like(
+                stderr_type, "stderr_type", options=("asym", "mc"), lower=False
+            )
+            if stderr_type == "asym":
+                stderr = self.cum_effect_cov(orth=orth)
+            else:  # stderr_type == "mc"
+                _err_band = self.cum_errband_mc(
+                    orth=orth, repl=repl, signif=signif, rng=rng
+                )
+                stderr = (_err_band.lower, _err_band.upper)
 
-        fig = plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
-                                     self.model.names, title, signif=signif,
-                                     hlines=lr_effects,
-                                     subplot_params=subplot_params,
-                                     plot_params=plot_params,
-                                     figsize=figsize,
-                                     stderr_type=stderr_type)
+        fig = plotting.irf_grid_plot(
+            cum_effects,
+            stderr,
+            impulse,
+            response,
+            self.model.names,
+            title,
+            signif=signif,
+            hlines=lr_effects,
+            subplot_params=subplot_params,
+            plot_params=plot_params,
+            figsize=figsize,
+            stderr_type=stderr_type,
+        )
         return fig
 
 
@@ -243,16 +398,34 @@ class IRAnalysis(BaseIRAnalysis):
 
     Parameters
     ----------
-    model : VAR instance
+    model : VAR, SVAR, or VECM instance
+        The fitted model used to compute impulse responses.
+    P : ndarray, optional
+        The matrix used for orthogonalization, satisfying sigma_u = P P'.
+        If None, computed as the Cholesky decomposition of the model's
+        residual covariance matrix.
+    periods : int, optional
+        Number of periods to compute the impulse responses for. The
+        default is 10.
+    order : sequence, optional
+        Alternate variable order for the Cholesky decomposition. Not
+        currently implemented.
+    svar : bool, optional
+        Flag indicating whether the model is a structural VAR. The
+        default is False.
+    vecm : bool, optional
+        Flag indicating whether the model is a VECM. The default is
+        False.
 
     Notes
     -----
     Using Lütkepohl (2005) notation
     """
-    def __init__(self, model, P=None, periods=10, order=None, svar=False,
-                 vecm=False):
-        BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
-                                order=order, svar=svar, vecm=vecm)
+
+    def __init__(self, model, P=None, periods=10, order=None, svar=False, vecm=False):
+        BaseIRAnalysis.__init__(
+            self, model, P=P, periods=periods, order=order, svar=svar, vecm=vecm
+        )
 
         if vecm:
             self.cov_a = model.cov_var_repr
@@ -267,62 +440,149 @@ class IRAnalysis(BaseIRAnalysis):
         """
         Compute asymptotic standard errors for impulse response coefficients
 
-        Notes
-        -----
-        Lütkepohl eq 3.7.5
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
 
         Returns
         -------
+        ndarray
+            Array of shape (periods + 1, neqs ** 2, neqs ** 2) containing
+            the covariance matrix of the impulse response coefficients for
+            each period.
+
+        Notes
+        -----
+        Lütkepohl eq 3.7.5
         """
         if orth:
             return self._orth_cov()
 
         covs = self._empty_covm(self.periods + 1)
-        covs[0] = np.zeros((self.neqs ** 2, self.neqs ** 2))
+        covs[0] = np.zeros((self.neqs**2, self.neqs**2))
         for i in range(1, self.periods + 1):
             Gi = self.G[i - 1]
             covs[i] = Gi @ self.cov_a @ Gi.T
 
         return covs
 
-    def errband_mc(self, orth=False, svar=False, repl=1000,
-                   signif=0.05, seed=None, burn=100):
+    @deprecate_kwarg("seed", "rng")
+    def errband_mc(
+        self, orth=False, svar=False, repl=1000, signif=0.05, rng=None, burn=100
+    ):
         """
         IRF Monte Carlo integrated error bands
+
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        svar : bool, optional
+            Compute structural impulse responses. The default is False.
+        repl : int, optional
+            Number of MC replications. The default is 1000.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            Number of initial simulated obs to discard. The default is 100.
+
+        Returns
+        -------
+        ErrorBand
+            A result object with fields ``lower`` and ``upper``.
         """
         model = self.model
         periods = self.periods
         if svar:
-            return model.sirf_errband_mc(orth=orth, repl=repl, steps=periods,
-                                         signif=signif, seed=seed,
-                                         burn=burn, cum=False)
+            return model.sirf_errband_mc(
+                orth=orth,
+                repl=repl,
+                steps=periods,
+                signif=signif,
+                rng=rng,
+                burn=burn,
+                cum=False,
+            )
         else:
-            return model.irf_errband_mc(orth=orth, repl=repl, steps=periods,
-                                        signif=signif, seed=seed,
-                                        burn=burn, cum=False)
+            return model.irf_errband_mc(
+                orth=orth,
+                repl=repl,
+                steps=periods,
+                signif=signif,
+                rng=rng,
+                burn=burn,
+                cum=False,
+            )
 
-    def err_band_sz1(self, orth=False, svar=False, repl=1000,
-                     signif=0.05, seed=None, burn=100, component=None):
+    @deprecate_kwarg("seed", "rng")
+    def err_band_sz1(
+        self,
+        orth=False,
+        svar=False,
+        repl=1000,
+        signif=0.05,
+        rng=None,
+        burn=100,
+        component=None,
+    ):
         """
         IRF Sims-Zha error band method 1. Assumes symmetric error bands around
         mean.
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse responses
-        repl : int, default 1000
-            Number of MC replications
-        signif : float (0 < signif < 1)
-            Significance level for error bars, defaults to 95% CI
-        seed : int, default None
-            np.random seed
-        burn : int, default 100
-            Number of initial simulated obs to discard
-        component : neqs x neqs array, default to largest for each
-            Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing
-            principle component
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        svar : bool, optional
+            Use structural IRFs. The default is False.
+        repl : int, optional
+            Number of MC replications. The default is 1000.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            Number of initial simulated obs to discard. The default is 100.
+        component : ndarray of int, optional
+            Array of shape (neqs, neqs) giving the index of the
+            column of eigenvector/value to use for each error band. Note:
+            the period of impulse (t=0) is not included when computing the
+            principal component. If None, the column of the largest
+            eigenvalue is used for each element.
+
+        Returns
+        -------
+        ErrorBand
+            A result object with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -334,16 +594,19 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods,
-                                    seed=seed, burn=burn)
+        irf_resim = model.irf_resim(
+            orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
+        )
         q = util.norm_signif_level(signif)
 
-        W, eigva, k =self._eigval_decomp_SZ(irf_resim)
+        W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
         if component is not None:
-            if np.shape(component) != (neqs,neqs):
-                raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
-            if np.argmax(component) >= neqs*periods:
+            if np.shape(component) != (neqs, neqs):
+                raise ValueError(
+                    "Component array must be " + str(neqs) + " x " + str(neqs)
+                )
+            if np.argmax(component) >= neqs * periods:
                 raise ValueError("Atleast one of the components does not exist")
             else:
                 k = component
@@ -353,34 +616,69 @@ class IRAnalysis(BaseIRAnalysis):
         upper = np.copy(irfs)
         for i in range(neqs):
             for j in range(neqs):
-                lower[1:,i,j] = irfs[1:,i,j] + W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
-                upper[1:,i,j] = irfs[1:,i,j] - W[i,j,:,k[i,j]]*q*np.sqrt(eigva[i,j,k[i,j]])
+                lower[1:, i, j] = irfs[1:, i, j] + W[i, j, :, k[i, j]] * q * np.sqrt(
+                    eigva[i, j, k[i, j]]
+                )
+                upper[1:, i, j] = irfs[1:, i, j] - W[i, j, :, k[i, j]] * q * np.sqrt(
+                    eigva[i, j, k[i, j]]
+                )
 
-        return lower, upper
+        return ErrorBand(lower, upper)
 
-    def err_band_sz2(self, orth=False, svar=False, repl=1000, signif=0.05,
-                     seed=None, burn=100, component=None):
+    @deprecate_kwarg("seed", "rng")
+    def err_band_sz2(
+        self,
+        orth=False,
+        svar=False,
+        repl=1000,
+        signif=0.05,
+        rng=None,
+        burn=100,
+        component=None,
+    ):
         """
-        IRF Sims-Zha error band method 2.
+        IRF Sims-Zha error band method 2
 
-        This method Does not assume symmetric error bands around mean.
+        This method does not assume symmetric error bands around mean.
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse responses
-        repl : int, default 1000
-            Number of MC replications
-        signif : float (0 < signif < 1)
-            Significance level for error bars, defaults to 95% CI
-        seed : int, default None
-            np.random seed
-        burn : int, default 100
-            Number of initial simulated obs to discard
-        component : neqs x neqs array, default to largest for each
-            Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing
-            principle component
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        svar : bool, optional
+            Use structural IRFs. The default is False.
+        repl : int, optional
+            Number of MC replications. The default is 1000.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            Number of initial simulated obs to discard. The default is 100.
+        component : ndarray of int, optional
+            Array of shape (neqs, neqs) giving the index of the
+            column of eigenvector/value to use for each error band. Note:
+            the period of impulse (t=0) is not included when computing the
+            principal component. If None, the column of the largest
+            eigenvalue is used for each element.
+
+        Returns
+        -------
+        ErrorBand
+            A result object with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -391,58 +689,93 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods, seed=seed,
-                                    burn=100)
+        irf_resim = model.irf_resim(
+            orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
+        )
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
         if component is not None:
-            if np.shape(component) != (neqs,neqs):
-                raise ValueError("Component array must be " + str(neqs) + " x " + str(neqs))
-            if np.argmax(component) >= neqs*periods:
+            if np.shape(component) != (neqs, neqs):
+                raise ValueError(
+                    "Component array must be " + str(neqs) + " x " + str(neqs)
+                )
+            if np.argmax(component) >= neqs * periods:
                 raise ValueError("Atleast one of the components does not exist")
             else:
                 k = component
 
-        gamma = np.zeros((repl, periods+1, neqs, neqs))
+        gamma = np.zeros((repl, periods + 1, neqs, neqs))
         for p in range(repl):
             for i in range(neqs):
                 for j in range(neqs):
-                    gamma[p,1:,i,j] = W[i,j,k[i,j],:] * irf_resim[p,1:,i,j]
+                    gamma[p, 1:, i, j] = W[i, j, k[i, j], :] * irf_resim[p, 1:, i, j]
 
-        gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
-        indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        gamma_sort = np.sort(gamma, axis=0)  # sort to get quantiles
+        indx = round(signif / 2 * repl) - 1, round((1 - signif / 2) * repl) - 1
 
         lower = np.copy(irfs)
         upper = np.copy(irfs)
         for i in range(neqs):
             for j in range(neqs):
-                lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+                lower[:, i, j] = irfs[:, i, j] + gamma_sort[indx[0], :, i, j]
+                upper[:, i, j] = irfs[:, i, j] + gamma_sort[indx[1], :, i, j]
 
-        return lower, upper
+        return ErrorBand(lower, upper)
 
-    def err_band_sz3(self, orth=False, svar=False, repl=1000, signif=0.05,
-                     seed=None, burn=100, component=None):
+    @deprecate_kwarg("seed", "rng")
+    def err_band_sz3(
+        self,
+        orth=False,
+        svar=False,
+        repl=1000,
+        signif=0.05,
+        rng=None,
+        burn=100,
+        component=None,
+    ):
         """
-        IRF Sims-Zha error band method 3. Does not assume symmetric error bands around mean.
+        IRF Sims-Zha error band method 3. Does not assume symmetric error
+        bands around mean.
 
         Parameters
         ----------
-        orth : bool, default False
-            Compute orthogonalized impulse responses
-        repl : int, default 1000
-            Number of MC replications
-        signif : float (0 < signif < 1)
-            Significance level for error bars, defaults to 95% CI
-        seed : int, default None
-            np.random seed
-        burn : int, default 100
-            Number of initial simulated obs to discard
-        component : vector length neqs, default to largest for each
-            Index of column of eigenvector/value to use for each error band
-            Note: period of impulse (t=0) is not included when computing
-            principle component
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        svar : bool, optional
+            Use structural IRFs. The default is False.
+        repl : int, optional
+            Number of MC replications. The default is 1000.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            Number of initial simulated obs to discard. The default is 100.
+        component : array_like of int, optional
+            Sequence of length neqs giving the index of the column of
+            eigenvector/value to use for each error band. Note: the period
+            of impulse (t=0) is not included when computing the principal
+            component. If None, the column of the largest eigenvalue is
+            used for each element.
+
+        Returns
+        -------
+        ErrorBand
+            A result object with fields ``lower`` and ``upper``.
 
         References
         ----------
@@ -454,62 +787,79 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(orth=orth, repl=repl, steps=periods,
-                                    seed=seed, burn=100)
-        stack = np.zeros((neqs, repl, periods*neqs))
+        irf_resim = model.irf_resim(
+            orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
+        )
+        stack = np.zeros((neqs, repl, periods * neqs))
 
-        #stack left to right, up and down
+        # stack left to right, up and down
 
         for p in range(repl):
             for i in range(neqs):
-                stack[i, p,:] = np.ravel(irf_resim[p,1:,:,i].T)
+                stack[i, p, :] = np.ravel(irf_resim[p, 1:, :, i].T)
 
-        stack_cov=np.zeros((neqs, periods*neqs, periods*neqs))
-        W = np.zeros((neqs, periods*neqs, periods*neqs))
-        eigva = np.zeros((neqs, periods*neqs))
+        stack_cov = np.zeros((neqs, periods * neqs, periods * neqs))
+        W = np.zeros((neqs, periods * neqs, periods * neqs))
+        eigva = np.zeros((neqs, periods * neqs))
         k = np.zeros(neqs, dtype=int)
 
         if component is not None:
             if np.size(component) != (neqs):
                 raise ValueError("Component array must be of length " + str(neqs))
-            if np.argmax(component) >= neqs*periods:
+            if np.argmax(component) >= neqs * periods:
                 raise ValueError("Atleast one of the components does not exist")
             else:
                 k = component
 
-        #compute for eigen decomp for each stack
+        # compute for eigen decomp for each stack
         for i in range(neqs):
-            stack_cov[i] = np.cov(stack[i],rowvar=0)
+            stack_cov[i] = np.cov(stack[i], rowvar=0)
             W[i], eigva[i], k[i] = util.eigval_decomp(stack_cov[i])
 
-        gamma = np.zeros((repl, periods+1, neqs, neqs))
+        gamma = np.zeros((repl, periods + 1, neqs, neqs))
         for p in range(repl):
-            c = 0
             for j in range(neqs):
                 for i in range(neqs):
-                    gamma[p,1:,i,j] = W[j,k[j],i*periods:(i+1)*periods] * irf_resim[p,1:,i,j]
-                    if i == neqs-1:
-                        gamma[p,1:,i,j] = W[j,k[j],i*periods:] * irf_resim[p,1:,i,j]
+                    gamma[p, 1:, i, j] = (
+                        W[j, k[j], i * periods : (i + 1) * periods]
+                        * irf_resim[p, 1:, i, j]
+                    )
+                    if i == neqs - 1:
+                        gamma[p, 1:, i, j] = (
+                            W[j, k[j], i * periods :] * irf_resim[p, 1:, i, j]
+                        )
 
-        gamma_sort = np.sort(gamma, axis=0) #sort to get quantiles
-        indx = round(signif/2*repl)-1,round((1-signif/2)*repl)-1
+        gamma_sort = np.sort(gamma, axis=0)  # sort to get quantiles
+        indx = round(signif / 2 * repl) - 1, round((1 - signif / 2) * repl) - 1
 
         lower = np.copy(irfs)
         upper = np.copy(irfs)
         for i in range(neqs):
             for j in range(neqs):
-                lower[:,i,j] = irfs[:,i,j] + gamma_sort[indx[0],:,i,j]
-                upper[:,i,j] = irfs[:,i,j] + gamma_sort[indx[1],:,i,j]
+                lower[:, i, j] = irfs[:, i, j] + gamma_sort[indx[0], :, i, j]
+                upper[:, i, j] = irfs[:, i, j] + gamma_sort[indx[1], :, i, j]
 
-        return lower, upper
+        return ErrorBand(lower, upper)
 
     def _eigval_decomp_SZ(self, irf_resim):
         """
+        Eigenvalue decomposition of the covariance matrix of the resimulated
+        impulse responses
+
+        Parameters
+        ----------
+        irf_resim : ndarray
+            Monte Carlo resimulated impulse responses.
+
         Returns
         -------
-        W: array of eigenvectors
-        eigva: list of eigenvalues
-        k: matrix indicating column # of largest eigenvalue for each c_i,j
+        W : ndarray
+            Array of eigenvectors.
+        eigva : ndarray
+            Array of eigenvalues.
+        k : ndarray
+            Matrix indicating the column number of the largest eigenvalue
+            for each c_i,j.
         """
         neqs = self.neqs
         periods = self.periods
@@ -517,7 +867,7 @@ class IRAnalysis(BaseIRAnalysis):
         cov_hold = np.zeros((neqs, neqs, periods, periods))
         for i in range(neqs):
             for j in range(neqs):
-                cov_hold[i,j,:,:] = np.cov(irf_resim[:,1:,i,j],rowvar=0)
+                cov_hold[i, j, :, :] = np.cov(irf_resim[:, 1:, i, j], rowvar=0)
 
         W = np.zeros((neqs, neqs, periods, periods))
         eigva = np.zeros((neqs, neqs, periods, 1))
@@ -525,7 +875,9 @@ class IRAnalysis(BaseIRAnalysis):
 
         for i in range(neqs):
             for j in range(neqs):
-                W[i,j,:,:], eigva[i,j,:,0], k[i,j] = util.eigval_decomp(cov_hold[i,j,:,:])
+                W[i, j, :, :], eigva[i, j, :, 0], k[i, j] = util.eigval_decomp(
+                    cov_hold[i, j, :, :]
+                )
         return W, eigva, k
 
     @cache_readonly
@@ -539,7 +891,7 @@ class IRAnalysis(BaseIRAnalysis):
 
         def _make_g(i):
             # p. 111 Lutkepohl
-            G = 0.
+            G = 0.0
             for m in range(i):
                 # be a bit cute to go faster
                 idx = i - 1 - m
@@ -571,7 +923,7 @@ class IRAnalysis(BaseIRAnalysis):
             if i == 0:
                 apiece = 0
             else:
-                Ci = np.dot(PIk, self.G[i-1])
+                Ci = np.dot(PIk, self.G[i - 1])
                 apiece = Ci @ self.cov_a @ Ci.T
 
             Cibar = np.dot(np.kron(Ik, self.irfs[i]), H)
@@ -589,19 +941,24 @@ class IRAnalysis(BaseIRAnalysis):
 
         Parameters
         ----------
-        orth : bool
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+
+        Returns
+        -------
+        ndarray
+            Array of shape (periods + 1, neqs ** 2, neqs ** 2) containing
+            the covariance matrix of the cumulative impulse response
+            coefficients for each period.
 
         Notes
         -----
         eq. 3.7.7 (non-orth), 3.7.10 (orth)
-
-        Returns
-        -------
         """
         Ik = np.eye(self.neqs)
         PIk = np.kron(self.P.T, Ik)
 
-        F = 0.
+        F = 0.0
         covs = self._empty_covm(self.periods + 1)
         for i in range(self.periods + 1):
             if i > 0:
@@ -627,21 +984,67 @@ class IRAnalysis(BaseIRAnalysis):
 
         return covs
 
-    def cum_errband_mc(self, orth=False, repl=1000,
-                       signif=0.05, seed=None, burn=100):
+    @deprecate_kwarg("seed", "rng")
+    def cum_errband_mc(self, orth=False, repl=1000, signif=0.05, rng=None, burn=100):
         """
         IRF Monte Carlo integrated error bands of cumulative effect
+
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+        repl : int, optional
+            Number of MC replications. The default is 1000.
+        signif : float, optional
+            Significance level for the confidence interval, between 0 and
+            1. The default is 0.05, giving a 95% confidence interval.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            Source of random numbers used for the Monte Carlo
+            replications. If `rng` is None, a new ``Generator`` is
+            created using fresh entropy from the operating system. If
+            `rng` is an int, a new ``RandomState`` instance is created,
+            seeded with `rng`; this integer-seeding behavior is
+            deprecated and will change to creating a ``Generator`` in a
+            future release. If `rng` is already a ``Generator`` or
+            ``RandomState`` instance, that instance is used.
+        seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               seed has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+        burn : int, optional
+            Number of initial simulated obs to discard. The default is 100.
+
+        Returns
+        -------
+        ErrorBand
+            A result object with fields ``lower`` and ``upper``.
         """
         model = self.model
         periods = self.periods
-        return model.irf_errband_mc(orth=orth, repl=repl,
-                                    steps=periods, signif=signif,
-                                    seed=seed, burn=burn, cum=True)
+        return model.irf_errband_mc(
+            orth=orth,
+            repl=repl,
+            steps=periods,
+            signif=signif,
+            rng=rng,
+            burn=burn,
+            cum=True,
+        )
 
     def lr_effect_cov(self, orth=False):
         """
+        Compute asymptotic standard errors for long-run effects
+
+        Parameters
+        ----------
+        orth : bool, optional
+            Compute orthogonalized impulse responses. The default is False.
+
         Returns
         -------
+        ndarray
+            The covariance matrix of the long-run effects.
         """
         lre = self.lr_effects
         Finfty = np.kron(np.tile(lre.T, self.lags), lre)
@@ -651,26 +1054,24 @@ class IRAnalysis(BaseIRAnalysis):
             Binf = np.dot(np.kron(self.P.T, np.eye(self.neqs)), Finfty)
             Binfbar = np.dot(np.kron(Ik, lre), self.H)
 
-            return (Binf @ self.cov_a @ Binf.T +
-                    Binfbar @ self.cov_sig @ Binfbar.T)
+            return Binf @ self.cov_a @ Binf.T + Binfbar @ self.cov_sig @ Binfbar.T
         else:
             return Finfty @ self.cov_a @ Finfty.T
 
     def stderr(self, orth=False):
-        return np.array([tsa.unvec(np.sqrt(np.diag(c)))
-                         for c in self.cov(orth=orth)])
+        return np.array([tsa.unvec(np.sqrt(np.diag(c))) for c in self.cov(orth=orth)])
 
     def cum_effect_stderr(self, orth=False):
-        return np.array([tsa.unvec(np.sqrt(np.diag(c)))
-                         for c in self.cum_effect_cov(orth=orth)])
+        return np.array(
+            [tsa.unvec(np.sqrt(np.diag(c))) for c in self.cum_effect_cov(orth=orth)]
+        )
 
     def lr_effect_stderr(self, orth=False):
         cov = self.lr_effect_cov(orth=orth)
         return tsa.unvec(np.sqrt(np.diag(cov)))
 
     def _empty_covm(self, periods):
-        return np.zeros((periods, self.neqs ** 2, self.neqs ** 2),
-                        dtype=float)
+        return np.zeros((periods, self.neqs**2, self.neqs**2), dtype=float)
 
     @cache_readonly
     def H(self):

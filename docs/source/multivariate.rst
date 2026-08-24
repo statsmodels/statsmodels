@@ -89,3 +89,18 @@ supports multivariate hypothesis tests and is used as backend for MANOVA.
    _MultivariateOLS
    _MultivariateOLSResults
    MultivariateTestResults
+
+
+Multivariate Least Squares
+---------------------------
+
+`MultivariateLS` is a multivariate least-squares model for a set of
+continuous, jointly-modeled response variables.
+
+.. currentmodule:: statsmodels.multivariate.multivariate_ols
+
+.. autosummary::
+   :toctree: generated/
+
+   MultivariateLS
+   MultivariateLSResults

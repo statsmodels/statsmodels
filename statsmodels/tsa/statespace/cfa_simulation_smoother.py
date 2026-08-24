@@ -18,6 +18,11 @@ class CFASimulationSmoother:
     ----------
     model : Representation
         The state space model.
+    cfa_simulation_smoother_classes : dict, optional
+        Dictionary with keys equal to the prefix (i.e., the Numpy data type
+        prefix ("s", "d", "c", or "z")) and values equal to the corresponding
+        Cython CFA simulation smoother class. See `tools.py` for more
+        information.
 
     Notes
     -----
@@ -37,7 +42,7 @@ class CFASimulationSmoother:
 
     However, this simulation smoother cannot be used with all state space
     models, including several of the most popular. In particular, the CFA
-    algorithm cannot support degenerate distributions (i.e. positive
+    algorithm cannot support degenerate distributions (i.e., positive
     semi-definite covariance matrices) for the initial state (which is the
     prior for the first state) or the observation or state innovations.
 
@@ -64,9 +69,8 @@ class CFASimulationSmoother:
 
     - It does not yet allow diffuse initialization of the state vector.
     - It produces simulated states only for exactly the observations in the
-      model (i.e. it cannot produce simulations for a subset of the model
+      model (i.e., it cannot produce simulations for a subset of the model
       observations or for observations outside the model).
-
 
     References
     ----------
@@ -95,7 +99,7 @@ class CFASimulationSmoother:
         self._posterior_mean = None
         self._posterior_cov_inv_chol = None
         self._posterior_cov = None
-        self._simulated_state = None
+        self.simulated_state = None
 
     @property
     def _simulation_smoother(self):
@@ -108,9 +112,6 @@ class CFASimulationSmoother:
     def posterior_mean(self):
         r"""
         Posterior mean of the states conditional on the data
-
-        Notes
-        -----
 
         .. math::
 
@@ -128,16 +129,6 @@ class CFASimulationSmoother:
     def posterior_cov_inv_chol_sparse(self):
         r"""
         Sparse Cholesky factor of inverse posterior covariance matrix
-
-        Notes
-        -----
-        This attribute holds in sparse diagonal banded storage the Cholesky
-        factor of the inverse of the posterior covariance matrix. If we denote
-        :math:`P = Var[\alpha \mid Y^n ]`, then the this attribute holds the
-        lower Cholesky factor :math:`L`, defined from :math:`L L' = P^{-1}`.
-        This attribute uses the sparse diagonal banded storage described in the
-        documentation of, for example, the SciPy function
-        `scipy.linalg.solveh_banded`.
         """
         if self._posterior_cov_inv_chol is None:
             self._posterior_cov_inv_chol = np.array(
@@ -149,23 +140,13 @@ class CFASimulationSmoother:
         r"""
         Posterior covariance of the states conditional on the data
 
-        Notes
-        -----
-        **Warning**: the matrix computed when accessing this property can be
-        extremely large: it is shaped `(nobs * k_states, nobs * k_states)`. In
-        most cases, it is better to use the `posterior_cov_inv_chol_sparse`
+        Warnings
+        --------
+        The matrix computed when accessing this property can be extremely
+        large: it is shaped `(nobs * k_states, nobs * k_states)`. In most
+        cases, it is better to use the `posterior_cov_inv_chol_sparse`
         property if possible, which holds in sparse diagonal banded storage
         the Cholesky factor of the inverse of the posterior covariance matrix.
-
-        .. math::
-
-            Var[\alpha \mid Y^n ]
-
-        This posterior covariance matrix is *not* identical to the
-        `smoothed_state_cov` attribute produced by the Kalman smoother, because
-        it additionally contains all cross-covariance terms. Instead,
-        `smoothed_state_cov` contains the `(k_states, k_states)` block
-        diagonal entries of this posterior covariance matrix.
         """
         if self._posterior_cov is None:
             from scipy.linalg import cho_solve_banded
@@ -184,11 +165,17 @@ class CFASimulationSmoother:
 
         Parameters
         ----------
-        variates : array_like, optional
+        variates : ndarray, optional
             Random variates, distributed standard Normal. Usually only
-            specified if results are to be replicated (e.g. to enforce a seed)
+            specified if results are to be replicated (e.g., to enforce a seed)
             or for testing. If not specified, random variates are drawn. Must
-            be shaped (nobs, k_states).
+            be shaped (k_states, nobs).
+        update_posterior : bool, optional
+            Whether to update the posterior mean and covariance matrix (held
+            in the `posterior_mean` and `posterior_cov_inv_chol_sparse`
+            attributes) prior to performing the simulation. Default is True.
+            Can be set to False if the posterior moments have already been
+            computed and only a new simulated draw is desired.
 
         Notes
         -----
@@ -215,24 +202,23 @@ class CFASimulationSmoother:
           `posterior_mean` attribute.
         - The (lower triangular) Cholesky factor of the inverse posterior
           covariance matrix, :math:`L`, is held in sparse diagonal banded
-          storage in the `posterior_cov_inv_chol` attribute.
+          storage in the `posterior_cov_inv_chol_sparse` attribute.
         - The posterior covariance matrix :math:`Var(\alpha \mid Y_n)` can be
           computed on demand by accessing the `posterior_cov` property. Note
           that this matrix can be extremely large, so care must be taken when
           accessing this property. In most cases, it will be preferred to make
-          use of the `posterior_cov_inv_chol` attribute rather than the
+          use of the `posterior_cov_inv_chol_sparse` attribute rather than the
           `posterior_cov` attribute.
-
         """
         # (Re) initialize the _statespace representation
         prefix, dtype, create = self.model._initialize_representation()
 
         # Validate variates and get in required datatype
         if variates is not None:
-            tools.validate_matrix_shape('variates', variates.shape,
+            tools.validate_matrix_shape("variates", variates.shape,
                                         self.model.k_states,
                                         self.model.nobs, 1)
-            variates = np.ravel(variates, order='F').astype(dtype)
+            variates = np.ravel(variates, order="F").astype(dtype)
 
         # (Re) initialize the state
         self.model._initialize_state(prefix=prefix)

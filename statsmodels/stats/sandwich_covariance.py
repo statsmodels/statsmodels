@@ -1,4 +1,5 @@
-"""Sandwich covariance estimators
+"""
+Sandwich covariance estimators
 
 
 Created on Sun Nov 27 14:10:57 2011
@@ -55,7 +56,7 @@ This is the general case for MLE and GMM also
 
 in MLE     hessian H, outerproduct of jacobian S,   cov_hjjh = HJJH,
 which reduces to the above in the linear case, but can be used
-generally, e.g. in discrete, and is misnomed in GenericLikelihoodModel
+generally, e.g., in discrete, and is misnomed in GenericLikelihoodModel
 
 in GMM it's similar but I would have to look up the details, (it comes
 out in sandwich form by default, it's in the sandbox), standard Newey
@@ -93,28 +94,40 @@ Sets: Comparing Approaches,” Review of Financial Studies 22, no. 1
 With Multiway Clustering,” Journal of Business and Economic Statistics 29
 (April 2011): 238-249.
 
+[5] MacKinnon, Nielsen & Webb, "Fast and Reliable Jackknife and Bootstrap Methods
+    for Cluster-Robust Inference", Queens University Working Paper No. 1485 (October 2022)
+
 
 not used yet:
 A.C. Cameron, J.B. Gelbach, and D.L. Miller, “Bootstrap-based improvements
 for inference with clustered errors,” The Review of Economics and
-Statistics 90, no. 3 (2008): 414–427.
+Statistics 90, no. 3 (2008): 414-427.
 
 """
 import numpy as np
 
-from statsmodels.tools.grouputils import combine_indices, group_sums
 from statsmodels.stats.moment_helpers import se_cov
+from statsmodels.tools.grouputils import combine_indices, group_sums
+from statsmodels.tools.validation import string_like
 
-__all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
-           'cov_white_simple',
-           'cov_hc0', 'cov_hc1', 'cov_hc2', 'cov_hc3',
-           'se_cov', 'weights_bartlett', 'weights_uniform']
+__all__ = [
+    "cov_cluster",
+    "cov_cluster_2groups",
+    "cov_hac",
+    "cov_hc0",
+    "cov_hc1",
+    "cov_hc2",
+    "cov_hc3",
+    "cov_nw_panel",
+    "cov_white_simple",
+    "se_cov",
+    "weights_bartlett",
+    "weights_uniform",
+]
 
 
-
-
-#----------- from linear_model.RegressionResults
-'''
+# from linear_model.RegressionResults
+"""
     HC0_se
         White's (1980) heteroskedasticity robust standard errors.
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
@@ -154,71 +167,166 @@ __all__ = ['cov_cluster', 'cov_cluster_2groups', 'cov_hac', 'cov_nw_panel',
         which is in this case is resid^(2)/(1-h_ii)^(2).  HCCM matrices are
         only appropriate for OLS.
 
-'''
+"""
 
 # Note: HCCM stands for Heteroskedasticity Consistent Covariance Matrix
+
+
 def _HCCM(results, scale):
-    '''
-    sandwich with pinv(x) * diag(scale) * pinv(x).T
+    """
+    Sandwich with pinv(x) * diag(scale) * pinv(x).T
 
     where pinv(x) = (X'X)^(-1) X
     and scale is (nobs,)
-    '''
-    H = np.dot(results.model.pinv_wexog,
-        scale[:,None]*results.model.pinv_wexog.T)
+
+    Parameters
+    ----------
+    results : result instance
+        Regression results instance; uses ``results.model.pinv_wexog``.
+    scale : ndarray
+        1-D array of scale values, treated as the diagonal of the middle
+        matrix in the sandwich.
+
+    Returns
+    -------
+    H : ndarray
+        The sandwich covariance matrix.
+    """
+    H = np.dot(results.model.pinv_wexog, scale[:, None] * results.model.pinv_wexog.T)
     return H
+
 
 def cov_hc0(results):
     """
-    See statsmodels.RegressionResults
+    Heteroscedasticity robust covariance matrix, White's (1980) HC0
+
+    Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)) where
+    e_i = resid[i]. See statsmodels.RegressionResults.
+
+    Parameters
+    ----------
+    results : result instance
+        Results instance from an OLS regression.
+
+    Returns
+    -------
+    ndarray
+        The HC0 heteroscedasticity robust covariance matrix for the
+        parameter estimates.
     """
 
-    het_scale = results.resid**2 # or whitened residuals? only OLS?
+    het_scale = results.resid**2  # or whitened residuals? only OLS?
     cov_hc0 = _HCCM(results, het_scale)
 
     return cov_hc0
 
+
 def cov_hc1(results):
     """
-    See statsmodels.RegressionResults
+    Heteroscedasticity robust covariance matrix, MacKinnon-White's HC1
+
+    Defined as sqrt(diag(n/(n-p)*HC_0)). See statsmodels.RegressionResults.
+
+    Parameters
+    ----------
+    results : result instance
+        Results instance from an OLS regression.
+
+    Returns
+    -------
+    ndarray
+        The HC1 heteroscedasticity robust covariance matrix for the
+        parameter estimates.
     """
 
     het_scale = results.nobs/(results.df_resid)*(results.resid**2)
     cov_hc1 = _HCCM(results, het_scale)
     return cov_hc1
 
+
 def cov_hc2(results):
     """
-    See statsmodels.RegressionResults
+    Heteroscedasticity robust covariance matrix, MacKinnon-White's HC2
+
+    Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1) where
+    h_ii = x_i(X.T X)^(-1)x_i.T. See statsmodels.RegressionResults.
+
+    Parameters
+    ----------
+    results : result instance
+        Results instance from an OLS regression.
+
+    Returns
+    -------
+    ndarray
+        The HC2 heteroscedasticity robust covariance matrix for the
+        parameter estimates.
     """
 
     # probably could be optimized
-    h = np.diag(np.dot(results.model.exog,
-                          np.dot(results.normalized_cov_params,
-                          results.model.exog.T)))
+    h = np.diag(
+        np.dot(
+            results.model.exog,
+            np.dot(results.normalized_cov_params, results.model.exog.T),
+        )
+    )
+
     het_scale = results.resid**2/(1-h)
     cov_hc2_ = _HCCM(results, het_scale)
     return cov_hc2_
 
+
 def cov_hc3(results):
     """
-    See statsmodels.RegressionResults
+    Heteroscedasticity robust covariance matrix, MacKinnon-White's HC3
+
+    Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
+    where h_ii = x_i(X.T X)^(-1)x_i.T. See statsmodels.RegressionResults.
+
+    Parameters
+    ----------
+    results : result instance
+        Results instance from an OLS regression.
+
+    Returns
+    -------
+    ndarray
+        The HC3 heteroscedasticity robust covariance matrix for the
+        parameter estimates.
     """
 
     # above probably could be optimized to only calc the diag
-    h = np.diag(np.dot(results.model.exog,
-                          np.dot(results.normalized_cov_params,
-                          results.model.exog.T)))
-    het_scale=(results.resid/(1-h))**2
+
+    h = np.diag(
+        np.dot(
+            results.model.exog,
+            np.dot(results.normalized_cov_params, results.model.exog.T),
+        )
+    )
+    het_scale = (results.resid / (1 - h)) ** 2
     cov_hc3_ = _HCCM(results, het_scale)
     return cov_hc3_
 
-#---------------------------------------
 
-def _get_sandwich_arrays(results, cov_type=''):
-    """Helper function to get scores from results
+def _get_sandwich_arrays(results, cov_type=""):
+    """
+    Helper function to get scores from results
 
     Parameters
+    ----------
+    results : result instance or tuple
+        A results instance, or a tuple of (jac, hessian_inv).
+    cov_type : str, optional
+        If "clu", then the score array is not rescaled by frequency
+        weights when the model defines ``freq_weights``.
+
+    Returns
+    -------
+    xu : ndarray
+        The observation-wise score/jacobian array.
+    hessian_inv : ndarray
+        The inverse Hessian, or an equivalent normalized covariance, used
+        as the bread of the sandwich.
     """
 
     if isinstance(results, tuple):
@@ -226,15 +334,15 @@ def _get_sandwich_arrays(results, cov_type=''):
         jac, hessian_inv = results
         xu = jac = np.asarray(jac)
         hessian_inv = np.asarray(hessian_inv)
-    elif hasattr(results, 'model'):
-        if hasattr(results, '_results'):
+    elif hasattr(results, "model"):
+        if hasattr(results, "_results"):
             # remove wrapper
             results = results._results
         # assume we have a results instance
-        if hasattr(results.model, 'jac'):
+        if hasattr(results.model, "jac"):
             xu = results.model.jac(results.params)
             hessian_inv = np.linalg.inv(results.model.hessian(results.params))
-        elif hasattr(results.model, 'score_obs'):
+        elif hasattr(results.model, "score_obs"):
             xu = results.model.score_obs(results.params)
             hessian_inv = np.linalg.inv(results.model.hessian(results.params))
         else:
@@ -243,7 +351,7 @@ def _get_sandwich_arrays(results, cov_type=''):
             hessian_inv = np.asarray(results.normalized_cov_params)
 
         # experimental support for freq_weights
-        if hasattr(results.model, 'freq_weights') and not cov_type == 'clu':
+        if hasattr(results.model, "freq_weights") and not cov_type == "clu":
             # we do not want to square the weights in the covariance calculations
             # assumes that freq_weights are incorporated in score_obs or equivalent
             # assumes xu/score_obs is 2D
@@ -251,14 +359,14 @@ def _get_sandwich_arrays(results, cov_type=''):
             xu /= np.sqrt(np.asarray(results.model.freq_weights)[:, None])
 
     else:
-        raise ValueError('need either tuple of (jac, hessian_inv) or results' +
-                         'instance')
+        raise ValueError("need either tuple of (jac, hessian_inv) or results"
+                         "instance")
 
     return xu, hessian_inv
 
 
 def _HCCM1(results, scale):
-    '''
+    """
     sandwich with pinv(x) * scale * pinv(x).T
 
     where pinv(x) = (X'X)^(-1) X
@@ -276,17 +384,18 @@ def _HCCM1(results, scale):
     H : ndarray (k_vars, k_vars)
         robust covariance matrix for the parameter estimates
 
-    '''
+    """
     if scale.ndim == 1:
         H = np.dot(results.model.pinv_wexog,
-                   scale[:,None]*results.model.pinv_wexog.T)
+                   scale[:, None]*results.model.pinv_wexog.T)
     else:
         H = np.dot(results.model.pinv_wexog,
                    np.dot(scale, results.model.pinv_wexog.T))
     return H
 
+
 def _HCCM2(hessian_inv, scale):
-    '''
+    """
     sandwich with (X'X)^(-1) * scale * (X'X)^(-1)
 
     scale is (kvars, kvars)
@@ -294,8 +403,9 @@ def _HCCM2(hessian_inv, scale):
 
     Parameters
     ----------
-    results : result instance
-       need to contain regression results, uses results.normalized_cov_params
+    hessian_inv : ndarray (k_vars, k_vars)
+       inverse Hessian, i.e., (X'X)^(-1), usually
+       results.normalized_cov_params
     scale : ndarray (k_vars, k_vars)
        scale matrix
 
@@ -304,17 +414,115 @@ def _HCCM2(hessian_inv, scale):
     H : ndarray (k_vars, k_vars)
         robust covariance matrix for the parameter estimates
 
-    '''
+    """
     if scale.ndim == 1:
-        scale = scale[:,None]
+        scale = scale[:, None]
 
     xxi = hessian_inv
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
-#TODO: other kernels, move ?
+
+def _cluster_jackknife(results, group, center, hessian_inv):
+    """
+    Computes CRV3 Variance-Covariance Matrix Via a Cluster Jackknife.
+    For reference, see "Fast and Reliable Jackknife and Bootstrap
+    Methods for Cluster-Robust Inference", MacKinnon, Nielsen & Webb, Queens
+    University Working Paper No. 1485
+
+    Parameters
+    ----------
+    results : result instance
+        need to contain regression results, uses results.model.wexog,
+        results.model.wendog and results.params
+    group : array_like of int
+        Integer-valued index of clusters or groups, one entry per
+        observation, already recoded to a dense range so that
+        ``np.unique(group)`` visits every cluster.
+    center : str
+        character specifying how to center the coefficients from all jacknife samples
+        (each dropping one cluster). By default the coefficients are
+        centered by the original full-sample "estimate", or alternatively by their
+        "mean" across the sample.
+    hessian_inv : ndarray (k_vars, k_vars)
+        Inverse of the full-sample ``X'X`` (e.g. ``results.normalized_cov_params``),
+        reused instead of recomputing ``X'X`` from scratch.
+
+    Returns
+    -------
+    H : ndarray (k_vars, k_vars)
+        cluster jackknife estimate of a robust covariance matrix for the parameter estimates
+    """
+    model = results.model
+    if not hasattr(model, "wexog") or not hasattr(model, "wendog"):
+        raise TypeError(
+            "crv_type='cluster-crv3'/'cluster-jk' require a linear "
+            "regression model (e.g. OLS or WLS) exposing `wexog`/`wendog`; "
+            f"got a {type(model).__name__} model instance."
+        )
+    X = np.asarray(model.wexog)
+    Y = np.asarray(model.wendog)
+    group = np.asarray(group)
+
+    k_params = X.shape[1]
+
+    tXX = np.linalg.inv(hessian_inv)
+    tXy = np.transpose(X) @ Y
+    beta_hat = np.asarray(results.params)
+
+    clusters = np.unique(group)
+    n_groups = len(clusters)
+
+    beta_jack = np.zeros((n_groups, k_params))
+
+    # compute leave-one-cluster-out regression coefficients (aka
+    # clusterjacks'), masking each cluster by its own label, not by the
+    # position of that label in `clusters`
+
+    for ixg, g in enumerate(clusters):
+
+        mask = group == g
+        Xg = X[mask]
+        Yg = Y[mask]
+        tXgXg = np.transpose(Xg) @ Xg
+        design_g = tXX - tXgXg
+        rhs_g = tXy - np.transpose(Xg) @ Yg
+        # Use an explicit (tolerance-based) rank check rather than relying
+        # on np.linalg.solve to raise on singular input: design_g is a
+        # difference of two independently-rounded sums, so a structurally
+        # singular case (e.g. a column that is constant within cluster g)
+        # generally shows up as *near*-zero pivots rather than an exact
+        # zero, which LU-based solve can silently push through.
+
+        if np.linalg.matrix_rank(design_g) < k_params:
+            g_display = g.item() if hasattr(g, "item") else g
+            raise ValueError(
+                "Cannot compute the cluster jackknife/CRV3 covariance: "
+                f"removing cluster {g_display!r} leaves a rank-deficient design "
+                "matrix. This typically happens when a regressor (e.g. a "
+                "fixed effect) is constant within, or perfectly collinear "
+                "across, individual clusters, so the leave-one-cluster-out "
+                "estimate is not identified for that cluster."
+            )
+        beta_jack[ixg, :] = np.linalg.solve(design_g, rhs_g).flatten()
+    # optional: beta_bar in MNW (2022)
+
+    if center == "estimate":
+        beta_center = beta_hat
+    else:
+        beta_center = np.mean(beta_jack, axis=0)
+    beta_centered = beta_jack - beta_center
+    H = beta_centered.T @ beta_centered
+
+    return H
+
+
+# TODO: other kernels, move ?
+
+
 def weights_bartlett(nlags):
-    '''Bartlett weights for HAC
+    """
+    Bartlett weights for HAC
 
     this will be moved to another module
 
@@ -328,13 +536,16 @@ def weights_bartlett(nlags):
     kernel : ndarray, (nlags+1,)
         weights for Bartlett kernel
 
-    '''
+    """
 
-    #with lag zero
-    return 1 - np.arange(nlags+1)/(nlags+1.)
+    # with lag zero
+
+    return 1 - np.arange(nlags + 1) / (nlags + 1.0)
+
 
 def weights_uniform(nlags):
-    '''uniform weights for HAC
+    """
+    Uniform weights for HAC
 
     this will be moved to another module
 
@@ -348,31 +559,31 @@ def weights_uniform(nlags):
     kernel : ndarray, (nlags+1,)
         weights for uniform kernel
 
-    '''
+    """
 
-    #with lag zero
-    return np.ones(nlags+1)
+    # with lag zero
+
+    return np.ones(nlags + 1)
 
 
-kernel_dict = {'bartlett': weights_bartlett,
-               'uniform': weights_uniform}
+kernel_dict = {"bartlett": weights_bartlett, "uniform": weights_uniform}
 
 
 def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
-    '''inner covariance matrix for HAC (Newey, West) sandwich
+    """
+    Inner covariance matrix for HAC (Newey, West) sandwich
 
     assumes we have a single time series with zero axis consecutive, equal
     spaced time periods
-
 
     Parameters
     ----------
     x : ndarray (nobs,) or (nobs, k_var)
         data, for HAC this is array of x_i * u_i
-    nlags : int or None
+    nlags : int or None, optional
         highest lag to include in kernel window. If None, then
         nlags = floor(4(T/100)^(2/9)) is used.
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
 
@@ -387,27 +598,26 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
 
     options might change when other kernels besides Bartlett are available.
 
-    '''
+    """
 
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     n_periods = x.shape[0]
     if nlags is None:
-        nlags = int(np.floor(4 * (n_periods / 100.)**(2./9.)))
-
+        nlags = int(np.floor(4 * (n_periods / 100.0) ** (2.0 / 9.0)))
     weights = weights_func(nlags)
 
-    S = weights[0] * np.dot(x.T, x)  #weights[0] just for completeness, is 1
+    S = weights[0] * np.dot(x.T, x)  # weights[0] just for completeness, is 1
 
-    for lag in range(1, nlags+1):
+    for lag in range(1, nlags + 1):
         s = np.dot(x[lag:].T, x[:-lag])
         S += weights[lag] * (s + s.T)
-
     return S
 
-def S_white_simple(x):
-    '''inner covariance matrix for White heteroscedastistity sandwich
 
+def S_white_simple(x):
+    """
+    Inner covariance matrix for White heteroscedasticity sandwich
 
     Parameters
     ----------
@@ -423,15 +633,15 @@ def S_white_simple(x):
     -----
     this is just dot(X.T, X)
 
-    '''
+    """
     if x.ndim == 1:
-        x = x[:,None]
-
+        x = x[:, None]
     return np.dot(x.T, x)
 
 
 def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
-    '''inner covariance matrix for HAC over group sums sandwich
+    """
+    Inner covariance matrix for HAC over group sums sandwich
 
     This assumes we have complete equal spaced time periods.
     The number of time periods per group need not be the same, but we need
@@ -443,14 +653,14 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
 
     Parameters
     ----------
-    x : ndarray (nobs,) or (nobs, k_var)
+    x : array_like (nobs,) or (nobs, k_var)
         data, for HAC this is array of x_i * u_i
-    time : ndarray, (nobs,)
-        timeindes, assumed to be integers range(n_periods)
-    nlags : int or None
+    time : array_like of int, (nobs,)
+        time index, assumed to be integers in range(n_periods)
+    nlags : int or None, optional
         highest lag to include in kernel window. If None, then
         nlags = floor[4(T/100)^(2/9)] is used.
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
 
@@ -464,41 +674,56 @@ def S_hac_groupsum(x, time, nlags=None, weights_func=weights_bartlett):
     Daniel Hoechle, xtscc paper
     Driscoll and Kraay
 
-    '''
-    #needs groupsums
+    """
+    # needs groupsums
 
-    x_group_sums = group_sums(x, time).T #TODO: transpose return in grou_sum
+    x_group_sums = group_sums(x, time)  # (n_groups, n_features)
 
     return S_hac_simple(x_group_sums, nlags=nlags, weights_func=weights_func)
 
 
 def S_crosssection(x, group):
-    '''inner covariance matrix for White on group sums sandwich
+    """
+    Inner covariance matrix for White on group sums sandwich
 
     I guess for a single categorical group only,
     categorical group, can also be the product/intersection of groups
 
     This is used by cov_cluster and indirectly verified
 
-    '''
-    x_group_sums = group_sums(x, group).T  #TODO: why transposed
+    Parameters
+    ----------
+    x : array_like (nobs,) or (nobs, k_var)
+        data, for HAC this is array of x_i * u_i
+    group : array_like of int, (nobs,)
+        group or cluster indicator for each observation
+
+    Returns
+    -------
+    S : ndarray, (k_vars, k_vars)
+        inner covariance matrix for sandwich
+    """
+    x_group_sums = group_sums(x, group)  # (n_groups, n_features)
 
     return S_white_simple(x_group_sums)
 
 
 def cov_crosssection_0(results, group):
-    '''this one is still wrong, use cov_cluster instead'''
+    """this one is still wrong, use cov_cluster instead"""
 
-    #TODO: currently used version of groupsums requires 2d resid
-    scale = S_crosssection(results.resid[:,None], group)
+    # TODO: currently used version of groupsums requires 2d resid
+
+    scale = S_crosssection(results.resid[:, None], group)
     scale = np.squeeze(scale)
     cov = _HCCM1(results, scale)
     return cov
 
-def cov_cluster(results, group, use_correction=True):
-    '''cluster robust covariance matrix
 
-    Calculates sandwich covariance matrix for a single cluster, i.e. grouped
+def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
+    """
+    Cluster robust covariance matrix
+
+    Calculates sandwich covariance matrix for a single cluster, i.e., grouped
     variables.
 
     Parameters
@@ -506,8 +731,15 @@ def cov_cluster(results, group, use_correction=True):
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    use_correction : bool
+    group : array_like of int
+        Integer-valued index of clusters or groups.
+    use_correction : bool, optional
        If true (default), then the small sample correction factor is used.
+    crv_type : {"cluster", "cluster-crv3", "cluster-jk"}, optional
+       If 'cluster' (default), compute a CRV1 robust variance covariance matrix.
+       If 'cluster-crv3', compute a CRV3 robust variance covariance matrix.
+       If 'cluster-jk', compute a variance covariance matrix via the cluster jackknife.
+
 
     Returns
     -------
@@ -518,38 +750,78 @@ def cov_cluster(results, group, use_correction=True):
     -----
     same result as Stata in UCLA example and same as Peterson
 
-    '''
-    #TODO: currently used version of groupsums requires 2d resid
-    xu, hessian_inv = _get_sandwich_arrays(results, cov_type='clu')
+    """
+    crv_type = string_like(
+        crv_type,
+        "crv_type",
+        options=("cluster", "cluster-crv3", "cluster-jk"),
+        lower=False,
+    )
+    # TODO: currently used version of groupsums requires 2d resid
 
-    if not hasattr(group, 'dtype') or group.dtype != np.dtype('int'):
+    xu, hessian_inv = _get_sandwich_arrays(results, cov_type="clu")
+
+    if not hasattr(group, "dtype") or group.dtype != np.dtype("int"):
         clusters, group = np.unique(group, return_inverse=True)
     else:
         clusters = np.unique(group)
-
-    scale = S_crosssection(xu, group)
-
     nobs, k_params = xu.shape
-    n_groups = len(clusters) #replace with stored group attributes if available
+    n_groups = len(clusters)  # replace with stored group attributes if available
 
-    cov_c = _HCCM2(hessian_inv, scale)
+    if crv_type == "cluster":
 
-    if use_correction:
-        cov_c *= (n_groups / (n_groups - 1.) *
-                  ((nobs-1.) / float(nobs - k_params)))
+        scale = S_crosssection(xu, group)
+        cov_c = _HCCM2(hessian_inv, scale)
 
+        if use_correction:
+            cov_c *= (
+                n_groups / (n_groups - 1.0) * ((nobs - 1.0) / float(nobs - k_params))
+            )
+    else:
+        if n_groups < 2:
+            raise ValueError(
+                f"crv_type={crv_type!r} requires at least 2 clusters, "
+                f"found {n_groups}."
+            )
+        if crv_type == "cluster-crv3":
+            center = "estimate"
+        # cluster-jk
+
+        else:
+            center = "mean"
+        cov_c = _cluster_jackknife(results, group, center, hessian_inv)
+
+        if use_correction:
+            cov_c *= (n_groups - 1.0) / n_groups
     return cov_c
 
-def cov_cluster_2groups(results, group, group2=None, use_correction=True):
-    '''cluster robust covariance matrix for two groups/clusters
+
+def cov_cluster_2groups(
+    results, group, group2=None, use_correction=True, crv_type="cluster"
+):
+    """
+    Cluster robust covariance matrix for two groups/clusters
 
     Parameters
     ----------
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    use_correction : bool
+    group : ndarray
+       Group/cluster indicator for the first cluster dimension. If `group2`
+       is not given, `group` must be a 2-D array with two columns, one for
+       each cluster dimension.
+    group2 : ndarray, optional
+       Group/cluster indicator for the second cluster dimension.
+    use_correction : bool, optional
        If true (default), then the small sample correction factor is used.
+    crv_type : {"cluster"}, optional
+       Only 'cluster' (default), computing the additive two-way CRV1
+       combination ``cov0 + cov1 - cov01``, is supported here. Passing
+       'cluster-crv3' or 'cluster-jk' raises ``ValueError``; use
+       :func:`cov_cluster` directly with one-way clustering for those
+       options.
+
 
     Returns
     -------
@@ -567,38 +839,59 @@ def cov_cluster_2groups(results, group, group2=None, use_correction=True):
     -----
 
     verified against Peterson's table, (4 decimal print precision)
-    '''
-
+    """
+    if crv_type != "cluster":
+        raise NotImplementedError(
+            "Two-way clustering is only supported for crv_type='cluster' "
+            f"(CRV1); got crv_type={crv_type!r}. The additive two-way "
+            "combination cov0 + cov1 - cov01 (Cameron, Gelbach and Miller, "
+            "2011) is only valid for the CRV1 sandwich estimator -- "
+            "applying it to the CRV3/cluster-jackknife estimator does not "
+            "generally produce a positive semi-definite covariance matrix. "
+            "Use one-way clustering (a single `groups` array) with "
+            "crv_type='cluster-crv3' or 'cluster-jk'."
+        )
     if group2 is None:
-        if group.ndim !=2 or group.shape[1] != 2:
-            raise ValueError('if group2 is not given, then groups needs to be ' +
-                             'an array with two columns')
+        if group.ndim != 2 or group.shape[1] != 2:
+            raise ValueError(
+                "if group2 is not given, then groups needs to be "
+                "an array with two columns"
+            )
         group0 = group[:, 0]
         group1 = group[:, 1]
     else:
         group0 = group
         group1 = group2
         group = (group0, group1)
+    cov0 = cov_cluster(
+        results, group0, use_correction=use_correction, crv_type=crv_type
+    )
+    # [0] because we get still also returns bse
 
-
-    cov0 = cov_cluster(results, group0, use_correction=use_correction)
-    #[0] because we get still also returns bse
-    cov1 = cov_cluster(results, group1, use_correction=use_correction)
+    cov1 = cov_cluster(
+        results, group1, use_correction=use_correction, crv_type=crv_type
+    )
 
     # cov of cluster formed by intersection of two groups
-    cov01 = cov_cluster(results,
-                        combine_indices(group)[0],
-                        use_correction=use_correction)
 
-    #robust cov matrix for union of groups
+    cov01 = cov_cluster(
+        results,
+        combine_indices(group)[0],
+        use_correction=use_correction,
+        crv_type=crv_type,
+    )
+
+    # robust cov matrix for union of groups
+
     cov_both = cov0 + cov1 - cov01
 
-    #return all three (for now?)
+    # return all three (for now?)
+
     return cov_both, cov0, cov1
 
 
 def cov_white_simple(results, use_correction=True):
-    '''
+    """
     heteroscedasticity robust covariance matrix (White)
 
     Parameters
@@ -606,6 +899,8 @@ def cov_white_simple(results, use_correction=True):
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
+    use_correction : bool, optional
+       If true (default), then a small sample correction factor is used.
 
     Returns
     -------
@@ -624,11 +919,11 @@ def cov_white_simple(results, use_correction=True):
     cov_hc1, cov_hc2, cov_hc3 : heteroscedasticity robust covariance matrices
         with small sample corrections
 
-    '''
+    """
     xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_white_simple(xu)
 
-    cov_w = _HCCM2(hessian_inv, sigma)  #add bread to sandwich
+    cov_w = _HCCM2(hessian_inv, sigma)  # add bread to sandwich
 
     if use_correction:
         nobs, k_params = xu.shape
@@ -639,7 +934,7 @@ def cov_white_simple(results, use_correction=True):
 
 def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
                    use_correction=True):
-    '''
+    """
     heteroscedasticity and autocorrelation robust covariance matrix (Newey-West)
 
     Assumes we have a single time series with zero axis consecutive, equal
@@ -651,12 +946,14 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    nlags : int or None
+    nlags : int or None, optional
         highest lag to include in kernel window. If None, then
         nlags = floor[4(T/100)^(2/9)] is used.
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
+    use_correction : bool, optional
+        If true (default), then a small sample correction factor is used.
 
     Returns
     -------
@@ -670,7 +967,7 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
 
     options might change when other kernels besides Bartlett are available.
 
-    '''
+    """
     xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
@@ -682,44 +979,79 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
 
     return cov_hac
 
-cov_hac = cov_hac_simple   #alias for users
 
-#---------------------- use time lags corrected for groups
-#the following were copied from a different experimental script,
-#groupidx is tuple, observations assumed to be stacked by group member and
-#sorted by time, equal number of periods is not required, but equal spacing is.
-#I think this is pure within group HAC: apply HAC to each group member
-#separately
+cov_hac = cov_hac_simple   # alias for users
+
+# use time lags corrected for groups
+# the following were copied from a different experimental script,
+# groupidx is tuple, observations assumed to be stacked by group member and
+# sorted by time, equal number of periods is not required, but equal spacing is.
+# I think this is pure within group HAC: apply HAC to each group member
+# separately
+
 
 def lagged_groups(x, lag, groupidx):
-    '''
-    assumes sorted by time, groupidx is tuple of start and end values
-    not optimized, just to get a working version, loop over groups
-    '''
+    """
+    Assumes sorted by time, groupidx is tuple of start and end values
+
+    Not optimized, just to get a working version, loop over groups
+
+    Parameters
+    ----------
+    x : ndarray
+        Data array, sorted by time within each group.
+    lag : int
+        The lag length.
+    groupidx : list of tuple
+        Each tuple contains the start and end index for a group.
+
+    Returns
+    -------
+    out0 : ndarray
+        Stacked array of ``x`` values from index ``lo + lag`` to ``up`` for
+        each group.
+    out_lagged : ndarray
+        Stacked array of ``x`` values from index ``lo`` to ``up - lag`` for
+        each group, i.e., ``out0`` lagged by ``lag``.
+    """
     out0 = []
     out_lagged = []
-    for l,u in groupidx:
-        if l+lag < u: #group is longer than lag
-            out0.append(x[l+lag:u])
-            out_lagged.append(x[l:u-lag])
+    for lo, up in groupidx:
+        if lo+lag < up:  # group is longer than lag
+            out0.append(x[lo+lag:up])
+            out_lagged.append(x[lo:up-lag])
 
     if out0 == []:
-        raise ValueError('all groups are empty taking lags')
-    #return out0, out_lagged
+        raise ValueError("all groups are empty taking lags")
     return np.vstack(out0), np.vstack(out_lagged)
 
 
-
 def S_nw_panel(xw, weights, groupidx):
-    '''inner covariance matrix for HAC for panel data
+    """
+    Inner covariance matrix for HAC for panel data
 
     no denominator nobs used
 
     no reference for this, just accounting for time indices
-    '''
+
+    Parameters
+    ----------
+    xw : ndarray
+        Data array (x_i * u_i), sorted by time within each group.
+    weights : ndarray
+        Kernel weights, as returned by a ``weights_func`` such as
+        `weights_bartlett`.
+    groupidx : list of tuple
+        Each tuple contains the start and end index for a group.
+
+    Returns
+    -------
+    S : ndarray, (k_vars, k_vars)
+        inner covariance matrix for sandwich
+    """
     nlags = len(weights)-1
 
-    S = weights[0] * np.dot(xw.T, xw)  #weights just for completeness
+    S = weights[0] * np.dot(xw.T, xw)  # weights just for completeness
     for lag in range(1, nlags+1):
         xw0, xwlag = lagged_groups(xw, lag, groupidx)
         s = np.dot(xw0.T, xwlag)
@@ -728,8 +1060,9 @@ def S_nw_panel(xw, weights, groupidx):
 
 
 def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
-                 use_correction='hac'):
-    '''Panel HAC robust covariance matrix
+                 use_correction="hac"):
+    """
+    Panel HAC robust covariance matrix
 
     Assumes we have a panel of time series with consecutive, equal spaced time
     periods. Data is assumed to be in long format with time series of each
@@ -740,22 +1073,22 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     results : result instance
        result of a regression, uses results.model.exog and results.resid
        TODO: this should use wexog instead
-    nlags : int or None
+    nlags : int
         Highest lag to include in kernel window. Currently, no default
         because the optimal length will depend on the number of observations
         per cross-sectional unit.
     groupidx : list of tuple
         each tuple should contain the start and end index for an individual.
         (groupidx might change in future).
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
-    use_correction : 'cluster' or 'hac' or False
+    use_correction : {"hac", "cluster", False}, optional
         If False, then no small sample correction is used.
-        If 'cluster' (default), then the same correction as in cov_cluster is
+        If 'cluster', then the same correction as in cov_cluster is
         used.
-        If 'hac', then the same correction as in single time series, cov_hac
-        is used.
+        If 'hac' (default), then the same correction as in single time
+        series, cov_hac is used.
 
 
     Returns
@@ -775,9 +1108,9 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     Options might change when other kernels besides Bartlett and uniform are
     available.
 
-    '''
-    if nlags == 0: #so we can reproduce HC0 White
-        weights = [1, 0]  #to avoid the scalar check in hac_nw
+    """
+    if nlags == 0:  # so we can reproduce HC0 White
+        weights = [1, 0]  # to avoid the scalar check in hac_nw
     else:
         weights = weights_func(nlags)
 
@@ -787,9 +1120,9 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
         nobs, k_params = xu.shape
-        if use_correction == 'hac':
+        if use_correction == "hac":
             cov_hac *= nobs / float(nobs - k_params)
-        elif use_correction in ['c', 'clu', 'cluster']:
+        elif use_correction in ["c", "clu", "cluster"]:
             n_groups = len(groupidx)
             cov_hac *= n_groups / (n_groups - 1.)
             cov_hac *= ((nobs-1.) / float(nobs - k_params))
@@ -797,9 +1130,15 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     return cov_hac
 
 
-def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
-                 use_correction=0):
-    '''Driscoll and Kraay Panel robust covariance matrix
+def cov_nw_groupsum(
+        results,
+        nlags,
+        time,
+        weights_func=weights_bartlett,
+        use_correction=0
+):
+    """
+    Driscoll and Kraay Panel robust covariance matrix
 
     Robust covariance matrix for panel data of Driscoll and Kraay.
 
@@ -816,15 +1155,15 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
         Highest lag to include in kernel window. Currently, no default
         because the optimal length will depend on the number of observations
         per cross-sectional unit.
-    time : ndarray of int
+    time : array_like of int
         this should contain the coding for the time period of each observation.
         time periods should be integers in range(maxT) where maxT is obs of i
-    weights_func : callable
+    weights_func : callable, optional
         weights_func is called with nlags as argument to get the kernel
         weights. default are Bartlett weights
-    use_correction : 'cluster' or 'hac' or False
-        If False, then no small sample correction is used.
-        If 'hac' (default), then the same correction as in single time series, cov_hac
+    use_correction : {"hac", "cluster", False}, optional
+        If False (default), then no small sample correction is used.
+        If 'hac', then the same correction as in single time series, cov_hac
         is used.
         If 'cluster', then the same correction as in cov_cluster is
         used.
@@ -855,18 +1194,18 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
     Daniel Hoechle, xtscc paper
     Driscoll and Kraay
 
-    '''
+    """
 
     xu, hessian_inv = _get_sandwich_arrays(results)
 
-    #S_hac = S_nw_panel(xw, weights, groupidx)
+    # S_hac = S_nw_panel(xw, weights, groupidx)
     S_hac = S_hac_groupsum(xu, time, nlags=nlags, weights_func=weights_func)
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
         nobs, k_params = xu.shape
-        if use_correction == 'hac':
+        if use_correction == "hac":
             cov_hac *= nobs / float(nobs - k_params)
-        elif use_correction in ['c', 'cluster']:
+        elif use_correction in ["c", "cluster"]:
             n_groups = len(np.unique(time))
             cov_hac *= n_groups / (n_groups - 1.)
             cov_hac *= ((nobs-1.) / float(nobs - k_params))

@@ -1,45 +1,56 @@
-__all__ = ["ZeroInflatedPoisson", "ZeroInflatedGeneralizedPoisson",
-           "ZeroInflatedNegativeBinomialP"]
+__all__ = [
+    "ZeroInflatedGeneralizedPoisson",
+    "ZeroInflatedNegativeBinomialP",
+    "ZeroInflatedPoisson",
+]
+
 
 import warnings
+
 import numpy as np
+
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+from statsmodels.discrete.discrete_model import (
+    CountModel,
+    CountResults,
+    DiscreteModel,
+    GeneralizedPoisson,
+    L1CountResults,
+    Logit,
+    NegativeBinomialP,
+    Poisson,
+    Probit,
+    _discrete_results_docs,
+    _validate_l1_method,
+)
+from statsmodels.distributions import zigenpoisson, zinegbin, zipoisson
 import statsmodels.regression.linear_model as lm
-from statsmodels.discrete.discrete_model import (DiscreteModel, CountModel,
-                                                 Poisson, Logit, CountResults,
-                                                 L1CountResults, Probit,
-                                                 _discrete_results_docs,
-                                                 _validate_l1_method,
-                                                 GeneralizedPoisson,
-                                                 NegativeBinomialP)
-from statsmodels.distributions import zipoisson, zigenpoisson, zinegbin
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from statsmodels.compat.pandas import Appender
-
 
 _doc_zi_params = """
-    exog_infl : array_like or None
-        Explanatory variables for the binary inflation model, i.e. for
+    exog_infl : array_like or None, optional
+        Explanatory variables for the binary inflation model, i.e., for
         mixing probability model. If None, then a constant is used.
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    inflation : {'logit', 'probit'}
-        The model for the zero inflation, either Logit (default) or Probit
+    inflation : {'logit', 'probit'}, optional
+        The model for zero inflation, either Logit (default) or Probit.
     """
 
 
 class GenericZeroInflated(CountModel):
-    __doc__ = """
-    Generic Zero Inflated Model
+    __doc__ = f"""
+    Generic Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -49,66 +60,66 @@ class GenericZeroInflated(CountModel):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' : _doc_zi_params + base._missing_param_doc}
+    """
 
-    def __init__(self, endog, exog, exog_infl=None, offset=None,
-                 inflation='logit', exposure=None, missing='none', **kwargs):
-        super().__init__(endog, exog, offset=offset,
-                                                  exposure=exposure,
-                                                  missing=missing, **kwargs)
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_infl=None,
+        offset=None,
+        inflation="logit",
+        exposure=None,
+        missing="none",
+        **kwargs
+    ):
+        super().__init__(
+            endog, exog, offset=offset, exposure=exposure, missing=missing, **kwargs
+        )
 
         if exog_infl is None:
             self.k_inflate = 1
             self._no_exog_infl = True
-            self.exog_infl = np.ones((endog.size, self.k_inflate),
-                                     dtype=np.float64)
+            self.exog_infl = np.ones((endog.size, self.k_inflate), dtype=np.float64)
         else:
             self.exog_infl = exog_infl
             self.k_inflate = exog_infl.shape[1]
             self._no_exog_infl = False
-
         if len(exog.shape) == 1:
             self.k_exog = 1
         else:
             self.k_exog = exog.shape[1]
-
         self.infl = inflation
-        if inflation == 'logit':
-            self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]),
-                                    self.exog_infl)
+        if inflation == "logit":
+            self.model_infl = Logit(np.zeros(self.exog_infl.shape[0]), self.exog_infl)
             self._hessian_inflate = self._hessian_logit
-        elif inflation == 'probit':
-            self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]),
-                                    self.exog_infl)
+        elif inflation == "probit":
+            self.model_infl = Probit(np.zeros(self.exog_infl.shape[0]), self.exog_infl)
             self._hessian_inflate = self._hessian_probit
-
         else:
-            raise ValueError("inflation == %s, which is not handled"
-                             % inflation)
+            raise ValueError(f"inflation == {inflation}, which is not handled")
 
         self.inflation = inflation
         self.k_extra = self.k_inflate
 
         if len(self.exog) != len(self.exog_infl):
-            raise ValueError('exog and exog_infl have different number of'
-                             'observation. `missing` handling is not supported')
+            raise ValueError("exog and exog_infl have different number of"
+                             "observation. `missing` handling is not supported")
 
-        infl_names = ['inflate_%s' % i for i in self.model_infl.data.param_names]
+        infl_names = [f"inflate_{i}" for i in self.model_infl.data.param_names]
         self.exog_names[:] = infl_names + list(self.exog_names)
         self.exog_infl = np.asarray(self.exog_infl, dtype=np.float64)
 
-        self._init_keys.extend(['exog_infl', 'inflation'])
-        self._null_drop_keys = ['exog_infl']
+        self._init_keys.extend(["exog_infl", "inflation"])
+        self._null_drop_keys = ["exog_infl"]
 
     def _get_exogs(self):
-        """list of exogs, for internal use in post-estimation
-        """
+        """list of exogs, for internal use in post-estimation"""
         return (self.exog, self.exog_infl)
 
     def loglike(self, params):
         """
-        Loglikelihood of Generic Zero Inflated model.
+        Log-likelihood of Generic Zero-Inflated model.
 
         Parameters
         ----------
@@ -131,7 +142,7 @@ class GenericZeroInflated(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generic Zero Inflated model.
+        Log-likelihood for observations of Generic Zero-Inflated model.
 
         Parameters
         ----------
@@ -152,8 +163,8 @@ class GenericZeroInflated(CountModel):
 
         for observations :math:`i=1,...,n`
         """
-        params_infl = params[:self.k_inflate]
-        params_main = params[self.k_inflate:]
+        params_infl = params[: self.k_inflate]
+        params_main = params[self.k_inflate :]
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
@@ -164,78 +175,126 @@ class GenericZeroInflated(CountModel):
         nonzero_idx = np.nonzero(y)[0]
 
         llf = np.zeros_like(y, dtype=np.float64)
-        llf[zero_idx] = (np.log(w[zero_idx] +
-            (1 - w[zero_idx]) * np.exp(llf_main[zero_idx])))
+        llf[zero_idx] = np.log(
+            w[zero_idx] + (1 - w[zero_idx]) * np.exp(llf_main[zero_idx])
+        )
         llf[nonzero_idx] = np.log(1 - w[nonzero_idx]) + llf_main[nonzero_idx]
 
         return llf
 
     @Appender(DiscreteModel.fit.__doc__)
-    def fit(self, start_params=None, method='bfgs', maxiter=35,
-            full_output=1, disp=1, callback=None,
-            cov_type='nonrobust', cov_kwds=None, use_t=None, **kwargs):
+    def fit(
+        self,
+        start_params=None,
+        method="bfgs",
+        maxiter=35,
+        full_output=1,
+        disp=1,
+        callback=None,
+        cov_type="nonrobust",
+        cov_kwds=None,
+        use_t=None,
+        **kwargs
+    ):
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             start_params = self._get_start_params()
-
         if callback is None:
             # work around perfect separation callback #3895
-            callback = lambda *x: x
 
-        mlefit = super().fit(start_params=start_params,
-                       maxiter=maxiter, disp=disp, method=method,
-                       full_output=full_output, callback=callback,
-                       **kwargs)
+            def callback(*x):
+                return x
+
+        mlefit = super().fit(
+            start_params=start_params,
+            maxiter=maxiter,
+            disp=disp,
+            method=method,
+            full_output=full_output,
+            callback=callback,
+            **kwargs
+        )
 
         zipfit = self.result_class(self, mlefit._results)
         result = self.result_class_wrapper(zipfit)
 
         if cov_kwds is None:
             cov_kwds = {}
-
-        result._get_robustcov_results(cov_type=cov_type,
-                                      use_self=True, use_t=use_t, **cov_kwds)
+        result._get_robustcov_results(
+            cov_type=cov_type, use_self=True, use_t=use_t, **cov_kwds
+        )
         return result
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
-    def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
-            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            qc_tol=0.03, **kwargs):
+    def fit_regularized(
+        self,
+        start_params=None,
+        method="l1",
+        maxiter="defined_by_method",
+        full_output=1,
+        disp=1,
+        callback=None,
+        alpha=0,
+        trim_mode="auto",
+        auto_trim_tol=0.01,
+        size_trim_tol=1e-4,
+        qc_tol=0.03,
+        **kwargs
+    ):
 
         _validate_l1_method(method)
 
         if np.size(alpha) == 1 and alpha != 0:
             k_params = self.k_exog + self.k_inflate
             alpha = alpha * np.ones(k_params)
-
         extra = self.k_extra - self.k_inflate
-        alpha_p = alpha[:-(self.k_extra - extra)] if (self.k_extra
-            and np.size(alpha) > 1) else alpha
+        alpha_p = (
+            alpha[: -(self.k_extra - extra)]
+            if (self.k_extra and np.size(alpha) > 1)
+            else alpha
+        )
         if start_params is None:
             offset = getattr(self, "offset", 0) + getattr(self, "exposure", 0)
             if np.size(offset) == 1 and offset == 0:
                 offset = None
             start_params = self.model_main.fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=0, callback=callback,
-                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+                start_params=start_params,
+                method=method,
+                maxiter=maxiter,
+                full_output=full_output,
+                disp=0,
+                callback=callback,
+                alpha=alpha_p,
+                trim_mode=trim_mode,
+                auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol,
+                qc_tol=qc_tol,
+                **kwargs
+            ).params
             start_params = np.append(np.ones(self.k_inflate), start_params)
         cntfit = super(CountModel, self).fit_regularized(
-                start_params=start_params, method=method, maxiter=maxiter,
-                full_output=full_output, disp=disp, callback=callback,
-                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+            start_params=start_params,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            disp=disp,
+            callback=callback,
+            alpha=alpha,
+            trim_mode=trim_mode,
+            auto_trim_tol=auto_trim_tol,
+            size_trim_tol=size_trim_tol,
+            qc_tol=qc_tol,
+            **kwargs
+        )
 
         discretefit = self.result_class_reg(self, cntfit)
         return self.result_class_reg_wrapper(discretefit)
 
     def score_obs(self, params):
         """
-        Generic Zero Inflated model score (gradient) vector of the log-likelihood
+        Generic Zero-Inflated model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -245,11 +304,11 @@ class GenericZeroInflated(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
         """
-        params_infl = params[:self.k_inflate]
-        params_main = params[self.k_inflate:]
+        params_infl = params[: self.k_inflate]
+        params_main = params[self.k_inflate :]
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
@@ -260,29 +319,47 @@ class GenericZeroInflated(CountModel):
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
-        mu = self.model_main.predict(params_main)
+        # Unused, commented out
+        # mu = self.model_main.predict(params_main)
 
         # TODO: need to allow for complex to use CS numerical derivatives
+
         dldp = np.zeros((self.exog.shape[0], self.k_exog), dtype=np.float64)
         dldw = np.zeros_like(self.exog_infl, dtype=np.float64)
 
-        dldp[zero_idx,:] = (score_main[zero_idx].T *
-                     (1 - (w[zero_idx]) / np.exp(llf[zero_idx]))).T
-        dldp[nonzero_idx,:] = score_main[nonzero_idx]
+        dldp[zero_idx, :] = (
+            score_main[zero_idx].T * (1 - (w[zero_idx]) / np.exp(llf[zero_idx]))
+        ).T
+        dldp[nonzero_idx, :] = score_main[nonzero_idx]
 
-        if self.inflation == 'logit':
-            dldw[zero_idx,:] =  (self.exog_infl[zero_idx].T * w[zero_idx] *
-                                 (1 - w[zero_idx]) *
-                                 (1 - np.exp(llf_main[zero_idx])) /
-                                  np.exp(llf[zero_idx])).T
-            dldw[nonzero_idx,:] = -(self.exog_infl[nonzero_idx].T *
-                                    w[nonzero_idx]).T
-        elif self.inflation == 'probit':
+        if self.inflation == "logit":
+            dldw[zero_idx, :] = (
+                self.exog_infl[zero_idx].T
+                * w[zero_idx]
+                * (1 - w[zero_idx])
+                * (1 - np.exp(llf_main[zero_idx]))
+                / np.exp(llf[zero_idx])
+            ).T
+            dldw[nonzero_idx, :] = -(self.exog_infl[nonzero_idx].T * w[nonzero_idx]).T
+        elif self.inflation == "probit":
             return approx_fprime(params, self.loglikeobs)
-
         return np.hstack((dldw, dldp))
 
     def score(self, params):
+        """
+        Generic Zero-Inflated model score (gradient) vector of the log-likelihood.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model
+
+        Returns
+        -------
+        score : ndarray, 1-D
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
+        """
         return self.score_obs(params).sum(0)
 
     def _hessian_main(self, params):
@@ -305,25 +382,43 @@ class GenericZeroInflated(CountModel):
 
         pmf = np.exp(llf)
 
-        #d2l/dw2
+        # d2l/dw2
         for i in range(self.k_inflate):
             for j in range(i, -1, -1):
-                hess_arr[i, j] = ((
-                    self.exog_infl[zero_idx, i] * self.exog_infl[zero_idx, j] *
-                    (w[zero_idx] * (1 - w[zero_idx]) * ((1 -
-                    np.exp(llf_main[zero_idx])) * (1 - 2 * w[zero_idx]) *
-                    np.exp(llf[zero_idx]) - (w[zero_idx] - w[zero_idx]**2) *
-                    (1 - np.exp(llf_main[zero_idx]))**2) /
-                    pmf[zero_idx]**2)).sum() -
-                    (self.exog_infl[nonzero_idx, i] * self.exog_infl[nonzero_idx, j] *
-                    w[nonzero_idx] * (1 - w[nonzero_idx])).sum())
+                a = (
+                    self.exog_infl[zero_idx, i]
+                    * self.exog_infl[zero_idx, j]
+                    * (
+                        w[zero_idx]
+                        * (1 - w[zero_idx])
+                        * (
+                            (1 - np.exp(llf_main[zero_idx]))
+                            * (1 - 2 * w[zero_idx])
+                            * np.exp(llf[zero_idx])
+                            - (w[zero_idx] - w[zero_idx] ** 2)
+                            * (1 - np.exp(llf_main[zero_idx])) ** 2
+                        )
+                        / pmf[zero_idx] ** 2
+                    )
+                ).sum()
+                b = (
+                    self.exog_infl[nonzero_idx, i]
+                    * self.exog_infl[nonzero_idx, j]
+                    * w[nonzero_idx]
+                    * (1 - w[nonzero_idx])
+                ).sum()
+                hess_arr[i, j] = a - b
 
-        #d2l/dpdw
+        # d2l/dpdw
         for i in range(self.k_inflate):
             for j in range(self.k_exog):
-                hess_arr[i, j + self.k_inflate] = -(score_main[zero_idx, j] *
-                    w[zero_idx] * (1 - w[zero_idx]) *
-                    self.exog_infl[zero_idx, i] / pmf[zero_idx]).sum()
+                hess_arr[i, j + self.k_inflate] = -(
+                    score_main[zero_idx, j]
+                    * w[zero_idx]
+                    * (1 - w[zero_idx])
+                    * self.exog_infl[zero_idx, i]
+                    / pmf[zero_idx]
+                ).sum()
 
         return hess_arr
 
@@ -332,7 +427,7 @@ class GenericZeroInflated(CountModel):
 
     def hessian(self, params):
         """
-        Generic Zero Inflated model Hessian matrix of the loglikelihood
+        Generic Zero-Inflated model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -342,11 +437,8 @@ class GenericZeroInflated(CountModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
-
-        Notes
-        -----
         """
         hess_arr_main = self._hessian_main(params)
         hess_arr_infl = self._hessian_inflate(params)
@@ -358,8 +450,8 @@ class GenericZeroInflated(CountModel):
 
         hess_arr = np.zeros((dim, dim))
 
-        hess_arr[:self.k_inflate,:] = hess_arr_infl
-        hess_arr[self.k_inflate:,self.k_inflate:] = hess_arr_main
+        hess_arr[:self.k_inflate, :] = hess_arr_infl
+        hess_arr[self.k_inflate:, self.k_inflate:] = hess_arr_main
 
         tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
@@ -367,7 +459,7 @@ class GenericZeroInflated(CountModel):
         return hess_arr
 
     def predict(self, params, exog=None, exog_infl=None, exposure=None,
-                offset=None, which='mean', y_values=None):
+                offset=None, which="mean", y_values=None):
         """
         Predict expected response or other statistic given exogenous variables.
 
@@ -375,26 +467,26 @@ class GenericZeroInflated(CountModel):
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        exog_infl : ndarray, optional
+        exog_infl : array_like, optional
             Explanatory variables for the zero-inflation model.
             ``exog_infl`` has to be provided if ``exog`` was provided unless
             ``exog_infl`` in the model is only a constant.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
+        exposure : array_like, optional
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
-        which : str (optional)
-            Statitistic to predict. Default is 'mean'.
+        which : str, optional
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' : the conditional expectation of endog E(y | x). This
               takes inflated zeros into account.
@@ -403,7 +495,7 @@ class GenericZeroInflated(CountModel):
               model.
             - 'mean-main' : mean of the main count model
             - 'prob-main' : probability of selecting the main model.
-                The probability of zero inflation is ``1 - prob-main``.
+              The probability of zero inflation is ``1 - prob-main``.
             - 'mean-nonzero' : expected value conditional on having observation
               larger than zero, E(y | X, y>0)
             - 'prob-zero' : probability of observing a zero count. P(y=0 | x)
@@ -411,9 +503,14 @@ class GenericZeroInflated(CountModel):
               for y_values if those are provided. This is a multivariate
               return (2-dim when predicting for several observations).
 
-        y_values : array_like
+        y_values : array_like, optional
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
+
+        Returns
+        -------
+        ndarray
+            The predicted values, whose interpretation depends on `which`.
         """
         no_exog = False
         if exog is None:
@@ -423,9 +520,8 @@ class GenericZeroInflated(CountModel):
         if exog_infl is None:
             if no_exog:
                 exog_infl = self.exog_infl
-            else:
-                if self._no_exog_infl:
-                    exog_infl = np.ones((len(exog), 1))
+            elif self._no_exog_infl:
+                exog_infl = np.ones((len(exog), 1))
         else:
             exog_infl = np.asarray(exog_infl)
             if exog_infl.ndim == 1 and self.k_inflate == 1:
@@ -433,7 +529,7 @@ class GenericZeroInflated(CountModel):
 
         if exposure is None:
             if no_exog:
-                exposure = getattr(self, 'exposure', 0)
+                exposure = getattr(self, "exposure", 0)
             else:
                 exposure = 0
         else:
@@ -441,7 +537,7 @@ class GenericZeroInflated(CountModel):
 
         if offset is None:
             if no_exog:
-                offset = getattr(self, 'offset', 0)
+                offset = getattr(self, "offset", 0)
             else:
                 offset = 0
 
@@ -457,8 +553,8 @@ class GenericZeroInflated(CountModel):
         # this is just prob(y=0 | model_main)
         tmp_exog = self.model_main.exog
         tmp_endog = self.model_main.endog
-        tmp_offset = getattr(self.model_main, 'offset', False)
-        tmp_exposure = getattr(self.model_main, 'exposure', False)
+        tmp_offset = getattr(self.model_main, "offset", False)
+        tmp_exposure = getattr(self.model_main, "exposure", False)
         self.model_main.exog = exog
         self.model_main.endog = np.zeros(exog.shape[0])
         self.model_main.offset = offset
@@ -467,12 +563,12 @@ class GenericZeroInflated(CountModel):
         self.model_main.exog = tmp_exog
         self.model_main.endog = tmp_endog
         # tmp_offset might be an array with elementwise equality testing
-        #if np.size(tmp_offset) == 1 and tmp_offset[0] == 'no':
+        # if np.size(tmp_offset) == 1 and tmp_offset[0] == 'no':
         if tmp_offset is False:
             del self.model_main.offset
         else:
             self.model_main.offset = tmp_offset
-        #if np.size(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
+        # if np.size(tmp_exposure) == 1 and tmp_exposure[0] == 'no':
         if tmp_exposure is False:
             del self.model_main.exposure
         else:
@@ -481,36 +577,34 @@ class GenericZeroInflated(CountModel):
 
         prob_zero = (1 - prob_main) + prob_main * np.exp(llf)
 
-        if which == 'mean':
+        if which == "mean":
             return prob_main * np.exp(lin_pred)
-        elif which == 'mean-main':
+        elif which == "mean-main":
             return np.exp(lin_pred)
-        elif which == 'linear':
+        elif which == "linear":
             return lin_pred
-        elif which == 'mean-nonzero':
+        elif which == "mean-nonzero":
             return prob_main * np.exp(lin_pred) / (1 - prob_zero)
-        elif which == 'prob-zero':
+        elif which == "prob-zero":
             return prob_zero
-        elif which == 'prob-main':
+        elif which == "prob-main":
             return prob_main
-        elif which == 'var':
+        elif which == "var":
             mu = np.exp(lin_pred)
             return self._predict_var(params, mu, 1 - prob_main)
-        elif which == 'prob':
+        elif which == "prob":
             return self._predict_prob(params, exog, exog_infl, exposure,
                                       offset, y_values=y_values)
         else:
-            raise ValueError('which = %s is not available' % which)
+            raise ValueError(f"which = {which} is not available")
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
-        """NotImplemented
-        """
+    def _derivative_predict(self, params, exog=None, transform="dydx"):
+        """NotImplemented"""
         raise NotImplementedError
 
     def _derivative_exog(self, params, exog=None, transform="dydx",
                          dummy_idx=None, count_idx=None):
-        """NotImplemented
-        """
+        """NotImplemented"""
         raise NotImplementedError
 
     def _deriv_mean_dparams(self, params):
@@ -519,13 +613,14 @@ class GenericZeroInflated(CountModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        The value of the derivative of the expected endog with respect
-        to the parameter vector.
+        ndarray
+            The value of the derivative of the expected endog with respect
+            to the parameter vector.
         """
         params_infl = params[:self.k_inflate]
         params_main = params[self.k_inflate:]
@@ -544,22 +639,23 @@ class GenericZeroInflated(CountModel):
         return dmat
 
     def _deriv_score_obs_dendog(self, params):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray, 2-D
             The derivative of the score_obs with respect to endog.
         """
         raise NotImplementedError
 
         # The below currently does not work, discontinuity at zero
-        # see https://github.com/statsmodels/statsmodels/pull/7951#issuecomment-996355875  # noqa
+        # see https://github.com/statsmodels/statsmodels/pull/7951#issuecomment-996355875
         from statsmodels.tools.numdiff import _approx_fprime_scalar
         endog_original = self.endog
 
@@ -579,11 +675,11 @@ class GenericZeroInflated(CountModel):
 
 
 class ZeroInflatedPoisson(GenericZeroInflated):
-    __doc__ = """
-    Poisson Zero Inflated Model
+    __doc__ = f"""
+    Poisson Zero-Inflated Model
 
-    %(params)s
-    %(extra_params)s
+    {base._model_params_doc}
+    {_doc_zi_params + base._missing_param_doc}
 
     Attributes
     ----------
@@ -593,18 +689,32 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' : _doc_zi_params + base._missing_param_doc}
+    """
 
-    def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
-                 inflation='logit', missing='none', **kwargs):
-        super().__init__(endog, exog, offset=offset,
-                                                  inflation=inflation,
-                                                  exog_infl=exog_infl,
-                                                  exposure=exposure,
-                                                  missing=missing, **kwargs)
-        self.model_main = Poisson(self.endog, self.exog, offset=offset,
-                                  exposure=exposure)
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_infl=None,
+        offset=None,
+        exposure=None,
+        inflation="logit",
+        missing="none",
+        **kwargs
+    ):
+        super().__init__(
+            endog,
+            exog,
+            offset=offset,
+            inflation=inflation,
+            exog_infl=exog_infl,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+        )
+        self.model_main = Poisson(
+            self.endog, self.exog, offset=offset, exposure=exposure
+        )
         self.distribution = zipoisson
         self.result_class = ZeroInflatedPoissonResults
         self.result_class_wrapper = ZeroInflatedPoissonResultsWrapper
@@ -612,13 +722,15 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         self.result_class_reg_wrapper = L1ZeroInflatedPoissonResultsWrapper
 
     def _hessian_main(self, params):
-        params_infl = params[:self.k_inflate]
-        params_main = params[self.k_inflate:]
+        params_infl = params[: self.k_inflate]
+        params_main = params[self.k_inflate :]
 
         y = self.endog
         w = self.model_infl.predict(params_infl)
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        score = self.score(params)
+        # Unused, commented out
+        # score = self.score(params)
+
         zero_idx = np.nonzero(y == 0)[0]
         nonzero_idx = np.nonzero(y)[0]
 
@@ -626,18 +738,26 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
         hess_arr = np.zeros((self.k_exog, self.k_exog))
 
-        coeff = (1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1))
+        coeff = 1 + w[zero_idx] * (np.exp(mu[zero_idx]) - 1)
 
-        #d2l/dp2
+        # d2l/dp2
+
         for i in range(self.k_exog):
             for j in range(i, -1, -1):
-                hess_arr[i, j] = ((
-                    self.exog[zero_idx, i] * self.exog[zero_idx, j] *
-                    mu[zero_idx] * (w[zero_idx] - 1) * (1 / coeff -
-                    w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) /
-                    coeff**2)).sum() - (mu[nonzero_idx] * self.exog[nonzero_idx, i] *
-                    self.exog[nonzero_idx, j]).sum())
-
+                hess_arr[i, j] = (
+                    self.exog[zero_idx, i]
+                    * self.exog[zero_idx, j]
+                    * mu[zero_idx]
+                    * (w[zero_idx] - 1)
+                    * (
+                        1 / coeff
+                        - w[zero_idx] * mu[zero_idx] * np.exp(mu[zero_idx]) / coeff**2
+                    )
+                ).sum() - (
+                    mu[nonzero_idx]
+                    * self.exog[nonzero_idx, i]
+                    * self.exog[nonzero_idx, j]
+                ).sum()
         return hess_arr
 
     def _predict_prob(self, params, exog, exog_infl, exposure, offset,
@@ -657,13 +777,13 @@ class ZeroInflatedPoisson(GenericZeroInflated):
             w = self.model_infl.predict(params_infl, exog_infl)[:, None]
 
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        mu = self.model_main.predict(params_main, exog,
-            offset=offset)[:, None]
+        mu = self.model_main.predict(params_main, exog, offset=offset)[:, None]
         result = self.distribution.pmf(y_values, mu, w)
         return result[0] if transform else result
 
     def _predict_var(self, params, mu, prob_infl):
-        """predict values for conditional variance V(endog | exog)
+        """
+        Predict values for conditional variance V(endog | exog)
 
         Parameters
         ----------
@@ -672,12 +792,13 @@ class ZeroInflatedPoisson(GenericZeroInflated):
             like dispersion parameter.
         mu : array_like
             Array of mean predictions for main model.
-        prob_inlf : array_like
+        prob_infl : array_like
             Array of predicted probabilities of zero-inflation `w`.
 
         Returns
         -------
-        Predicted conditional variance.
+        ndarray
+            Predicted conditional variance.
         """
         w = prob_infl
         var_ = (1 - w) * mu * (1 + w * mu)
@@ -690,42 +811,58 @@ class ZeroInflatedPoisson(GenericZeroInflated):
         start_params = np.append(np.ones(self.k_inflate) * 0.1, start_params)
         return start_params
 
-    def get_distribution(self, params, exog=None, exog_infl=None,
-                         exposure=None, offset=None):
-        """Get frozen instance of distribution based on predicted parameters.
+    def get_distribution(
+        self, params, exog=None, exog_infl=None, exposure=None, offset=None
+    ):
+        """
+        Get a frozen instance of distribution based on predicted parameters
 
         Parameters
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        exog_infl : ndarray, optional
+        exog_infl : array_like, optional
             Explanatory variables for the zero-inflation model.
             ``exog_infl`` has to be provided if ``exog`` was provided unless
             ``exog_infl`` in the model is only a constant.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
-            Log(exposure) is added to the linear predictor  of the mean
+        exposure : array_like, optional
+            Log(exposure) is added to the linear predictor of the mean
             function with coefficient equal to 1. If exposure is specified,
             then it will be logged by the method. The user does not need to
             log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
 
         Returns
         -------
-        Instance of frozen scipy distribution subclass.
+        scipy.stats.distributions.rv_frozen
+            Frozen random variable instance representing the distribution
+            implied by the model and the given parameters.
         """
-        mu = self.predict(params, exog=exog, exog_infl=exog_infl,
-                          exposure=exposure, offset=offset, which="mean-main")
-        w = self.predict(params, exog=exog, exog_infl=exog_infl,
-                         exposure=exposure, offset=offset, which="prob-main")
+        mu = self.predict(
+            params,
+            exog=exog,
+            exog_infl=exog_infl,
+            exposure=exposure,
+            offset=offset,
+            which="mean-main",
+        )
+        w = self.predict(
+            params,
+            exog=exog,
+            exog_infl=exog_infl,
+            exposure=exposure,
+            offset=offset,
+            which="prob-main",
+        )
 
         # distr = self.distribution(mu[:, None], 1 - w[:, None])
         distr = self.distribution(mu, 1 - w)
@@ -734,10 +871,10 @@ class ZeroInflatedPoisson(GenericZeroInflated):
 
 class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Poisson Model
+    Zero-Inflated Generalized Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -747,25 +884,41 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    p : scalar
-        P denotes parametrizations for ZIGP regression.
-    """ % {'params' : base._model_params_doc,
-           'extra_params' : _doc_zi_params +
-           """p : float
-        dispersion power parameter for the GeneralizedPoisson model.  p=1 for
-        ZIGP-1 and p=2 for ZIGP-2. Default is p=2
-    """ + base._missing_param_doc}
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
+        + """p : int, optional
+        Dispersion power parameter for the GeneralizedPoisson model. p=1
+        for ZIGP-1 and p=2 for ZIGP-2. Default is p=2.
+    """
+        + base._missing_param_doc,
+    )
 
-    def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
-                 inflation='logit', p=2, missing='none', **kwargs):
-        super().__init__(endog, exog,
-                                                  offset=offset,
-                                                  inflation=inflation,
-                                                  exog_infl=exog_infl,
-                                                  exposure=exposure,
-                                                  missing=missing, **kwargs)
-        self.model_main = GeneralizedPoisson(self.endog, self.exog,
-            offset=offset, exposure=exposure, p=p)
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_infl=None,
+        offset=None,
+        exposure=None,
+        inflation="logit",
+        p=2,
+        missing="none",
+        **kwargs
+    ):
+        super().__init__(
+            endog,
+            exog,
+            offset=offset,
+            inflation=inflation,
+            exog_infl=exog_infl,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+        )
+        self.model_main = GeneralizedPoisson(
+            self.endog, self.exog, offset=offset, exposure=exposure, p=p
+        )
         self.distribution = zigenpoisson
         self.k_exog += 1
         self.k_extra += 1
@@ -777,7 +930,7 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
     def _get_init_kwds(self):
         kwds = super()._get_init_kwds()
-        kwds['p'] = self.model_main.parameterization + 1
+        kwds["p"] = self.model_main.parameterization + 1
         return kwds
 
     def _predict_prob(self, params, exog, exog_infl, exposure, offset,
@@ -798,13 +951,16 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
             w = self.model_infl.predict(params_infl, exog_infl)[:, None]
 
         w[w == 1.] = np.nextafter(1, 0)
-        mu = self.model_main.predict(params_main, exog,
-            exposure=exposure, offset=offset)[:, None]
+        mu = self.model_main.predict(
+            params_main, exog, exposure=exposure, offset=offset
+        )
+        mu = mu[:, None]
         result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
     def _predict_var(self, params, mu, prob_infl):
-        """predict values for conditional variance V(endog | exog)
+        """
+        Predict values for conditional variance V(endog | exog)
 
         Parameters
         ----------
@@ -813,24 +969,28 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
             like dispersion parameter.
         mu : array_like
             Array of mean predictions for main model.
-        prob_inlf : array_like
+        prob_infl : array_like
             Array of predicted probabilities of zero-inflation `w`.
 
         Returns
         -------
-        Predicted conditional variance.
+        ndarray
+            Predicted conditional variance.
         """
         alpha = params[-1]
         w = prob_infl
         p = self.model_main.parameterization
-        var_ = (1 - w) * mu * ((1 + alpha * mu**p)**2 + w * mu)
+        var_ = (1 - w) * mu * ((1 + alpha * mu**p) ** 2 + w * mu)
         return var_
 
     def _get_start_params(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
-            start_params = ZeroInflatedPoisson(self.endog, self.exog,
-                exog_infl=self.exog_infl).fit(disp=0).params
+            start_params = (
+                ZeroInflatedPoisson(self.endog, self.exog, exog_infl=self.exog_infl)
+                .fit(disp=0)
+                .params
+            )
         start_params = np.append(start_params, 0.1)
         return start_params
 
@@ -850,10 +1010,10 @@ class ZeroInflatedGeneralizedPoisson(GenericZeroInflated):
 
 class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     __doc__ = """
-    Zero Inflated Generalized Negative Binomial Model
+    Zero-Inflated Generalized Negative Binomial Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -863,26 +1023,41 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         A reference to the exogenous design.
     exog_infl : ndarray
         A reference to the zero-inflated exogenous design.
-    p : scalar
-        P denotes parametrizations for ZINB regression. p=1 for ZINB-1 and
-    p=2 for ZINB-2. Default is p=2
-    """ % {'params' : base._model_params_doc,
-           'extra_params' : _doc_zi_params +
-           """p : float
-        dispersion power parameter for the NegativeBinomialP model.  p=1 for
-        ZINB-1 and p=2 for ZINM-2. Default is p=2
-    """ + base._missing_param_doc}
+    """.format(
+        params=base._model_params_doc,
+        extra_params=_doc_zi_params
+        + """p : int, optional
+        Dispersion power parameter for the NegativeBinomialP model. p=1
+        for ZINB-1 and p=2 for ZINB-2. Default is p=2.
+    """
+        + base._missing_param_doc,
+    )
 
-    def __init__(self, endog, exog, exog_infl=None, offset=None, exposure=None,
-                 inflation='logit', p=2, missing='none', **kwargs):
-        super().__init__(endog, exog,
-                                                  offset=offset,
-                                                  inflation=inflation,
-                                                  exog_infl=exog_infl,
-                                                  exposure=exposure,
-                                                  missing=missing, **kwargs)
-        self.model_main = NegativeBinomialP(self.endog, self.exog,
-            offset=offset, exposure=exposure, p=p)
+    def __init__(
+        self,
+        endog,
+        exog,
+        exog_infl=None,
+        offset=None,
+        exposure=None,
+        inflation="logit",
+        p=2,
+        missing="none",
+        **kwargs
+    ):
+        super().__init__(
+            endog,
+            exog,
+            offset=offset,
+            inflation=inflation,
+            exog_infl=exog_infl,
+            exposure=exposure,
+            missing=missing,
+            **kwargs
+        )
+        self.model_main = NegativeBinomialP(
+            self.endog, self.exog, offset=offset, exposure=exposure, p=p
+        )
         self.distribution = zinegbin
         self.k_exog += 1
         self.k_extra += 1
@@ -894,34 +1069,34 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 
     def _get_init_kwds(self):
         kwds = super()._get_init_kwds()
-        kwds['p'] = self.model_main.parameterization
+        kwds["p"] = self.model_main.parameterization
         return kwds
 
-    def _predict_prob(self, params, exog, exog_infl, exposure, offset,
-                      y_values=None):
-        params_infl = params[:self.k_inflate]
-        params_main = params[self.k_inflate:]
+    def _predict_prob(self, params, exog, exog_infl, exposure, offset, y_values=None):
+        params_infl = params[: self.k_inflate]
+        params_main = params[self.k_inflate :]
 
         p = self.model_main.parameterization
         if y_values is None:
-            y_values = np.arange(0, np.max(self.endog)+1)
+            y_values = np.arange(0, np.max(self.endog) + 1)
 
         if len(exog_infl.shape) < 2:
             transform = True
-            w = np.atleast_2d(
-                self.model_infl.predict(params_infl, exog_infl))[:, None]
+            w = np.atleast_2d(self.model_infl.predict(params_infl, exog_infl))[:, None]
         else:
             transform = False
             w = self.model_infl.predict(params_infl, exog_infl)[:, None]
 
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        mu = self.model_main.predict(params_main, exog,
-            exposure=exposure, offset=offset)[:, None]
+        mu = self.model_main.predict(
+            params_main, exog, exposure=exposure, offset=offset
+        )[:, None]
         result = self.distribution.pmf(y_values, mu, params_main[-1], p, w)
         return result[0] if transform else result
 
     def _predict_var(self, params, mu, prob_infl):
-        """predict values for conditional variance V(endog | exog)
+        """
+        Predict values for conditional variance V(endog | exog)
 
         Parameters
         ----------
@@ -930,12 +1105,13 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
             like dispersion parameter.
         mu : array_like
             Array of mean predictions for main model.
-        prob_inlf : array_like
+        prob_infl : array_like
             Array of predicted probabilities of zero-inflation `w`.
 
         Returns
         -------
-        Predicted conditional variance.
+        ndarray
+            Predicted conditional variance.
         """
         alpha = params[-1]
         w = prob_infl
@@ -946,7 +1122,7 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
     def _get_start_params(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
-            start_params = self.model_main.fit(disp=0, method='nm').params
+            start_params = self.model_main.fit(disp=0, method="nm").params
         start_params = np.append(np.zeros(self.k_inflate), start_params)
         return start_params
 
@@ -968,17 +1144,66 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
 class ZeroInflatedResults(CountResults):
 
     def get_prediction(self, exog=None, exog_infl=None, exposure=None,
-                       offset=None, which='mean', average=False,
+                       offset=None, which="mean", average=False,
                        agg_weights=None, y_values=None,
                        transform=True, row_labels=None):
+        """
+        Compute prediction results for zero-inflated model.
 
+        Parameters
+        ----------
+        exog : array_like, optional
+            The values for which you want to predict.
+        exog_infl : array_like, optional
+            Explanatory variables for the zero-inflation model.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear predictor of the mean
+            function with coefficient equal to 1.
+        offset : array_like, optional
+            Offset is added to the linear predictor of the mean function
+            with coefficient equal to 1.
+        which : str, optional
+            Which statistic is to be predicted. Default is "mean".
+            The available statistics and options depend on the model.
+            See the model.predict docstring.
+        average : bool, optional
+            If average is True, then the mean prediction is computed, that
+            is, predictions are computed for individual exog and then the
+            average over observation is used.
+            If average is False, then the results are the predictions for
+            all observations, i.e., same length as ``exog``.
+        agg_weights : ndarray, optional
+            Aggregation weights, only used if average is True.
+            The weights are not normalized.
+        y_values : array_like, optional
+            Values of the random variable endog at which pmf is evaluated.
+            Only used if ``which="prob"``.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True. E.g., if you fit
+            a model y ~ log(x1) + log(x2), and transform is True, then
+            you can pass a data structure that contains x1 and x2 in
+            their original form. Otherwise, you'd need to log the data
+            first.
+        row_labels : list of str, optional
+            If row_labels are provided, then they will replace the
+            generated labels.
+
+        Returns
+        -------
+        PredictionResultsDelta
+            The prediction results instance contains prediction and
+            prediction variance and can on demand calculate confidence
+            intervals and summary tables for the prediction of the mean
+            and of new observations.
+        """
         import statsmodels.base._prediction_inference as pred
 
         pred_kwds = {
-            'exog_infl': exog_infl,
-            'exposure': exposure,
-            'offset': offset,
-            'y_values': y_values,
+            "exog_infl": exog_infl,
+            "exposure": exposure,
+            "offset": offset,
+            "y_values": y_values,
             }
 
         res = pred.get_prediction_delta(self, exog=exog, which=which,
@@ -992,7 +1217,7 @@ class ZeroInflatedResults(CountResults):
         Influence and outlier measures
 
         See notes section for influence measures that do not apply for
-        zero inflated models.
+        zero-inflated models.
 
         Returns
         -------
@@ -1011,33 +1236,35 @@ class ZeroInflatedResults(CountResults):
         leverage cannot be computed in the usual definition.
 
         Currently, both the generalized leverage, in `hat_matrix_diag`
-        attribute and studetized residuals are not available. In the influence
+        attribute and studentized residuals are not available. In the influence
         plot generalized leverage is replaced by a hat matrix diagonal that
         only takes combined exog into account, computed in the same way as
         for OLS. This is a measure for exog outliers but does not take
         specific features of the model into account.
         """
-        # same as sumper in DiscreteResults, only added for docstring
+        # same as super in DiscreteResults, only added for docstring
         from statsmodels.stats.outliers_influence import MLEInfluence
         return MLEInfluence(self)
 
 
 class ZeroInflatedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-    "one_line_description": "A results class for Zero Inflated Poisson",
-    "extra_attr": ""}
+        "one_line_description": "A results class for Zero-Inflated Poisson",
+        "extra_attr": ""
+    }
 
     @cache_readonly
     def _dispersion_factor(self):
-        mu = self.predict(which='linear')
-        w = 1 - self.predict() / np.exp(self.predict(which='linear'))
+        mu = self.predict(which="linear")
+        w = 1 - self.predict() / np.exp(self.predict(which="linear"))
         return (1 + w * np.exp(mu))
 
-    def get_margeff(self, at='overall', method='dydx', atexog=None,
+    def get_margeff(self, at="overall", method="dydx", atexog=None,
                     dummy=False, count=False):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
-        Not yet implemented for Zero Inflated Models
+        Not yet implemented for Zero-Inflated Models
         """
         raise NotImplementedError("not yet implemented for zero inflation")
 
@@ -1048,93 +1275,112 @@ class L1ZeroInflatedPoissonResults(L1CountResults, ZeroInflatedPoissonResults):
 
 class ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(ZeroInflatedPoissonResultsWrapper,
-                      ZeroInflatedPoissonResults)
+
+
+wrap.populate_wrapper(ZeroInflatedPoissonResultsWrapper, ZeroInflatedPoissonResults)
 
 
 class L1ZeroInflatedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper,
-                      L1ZeroInflatedPoissonResults)
+
+
+wrap.populate_wrapper(L1ZeroInflatedPoissonResultsWrapper, L1ZeroInflatedPoissonResults)
 
 
 class ZeroInflatedGeneralizedPoissonResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Generalized Poisson",
-        "extra_attr": ""}
+        "one_line_description": "A results class for Zero-Inflated Generalized Poisson",
+        "extra_attr": "",
+    }
 
     @cache_readonly
     def _dispersion_factor(self):
         p = self.model.model_main.parameterization
-        alpha = self.params[self.model.k_inflate:][-1]
-        mu = np.exp(self.predict(which='linear'))
+        alpha = self.params[self.model.k_inflate :][-1]
+        mu = np.exp(self.predict(which="linear"))
         w = 1 - self.predict() / mu
-        return ((1 + alpha * mu**p)**2 + w * mu)
+        return (1 + alpha * mu**p) ** 2 + w * mu
 
-    def get_margeff(self, at='overall', method='dydx', atexog=None,
-                    dummy=False, count=False):
-        """Get marginal effects of the fitted model.
+    def get_margeff(
+        self, at="overall", method="dydx", atexog=None, dummy=False, count=False
+    ):
+        """
+        Get marginal effects of the fitted model
 
-        Not yet implemented for Zero Inflated Models
+        Not yet implemented for Zero-Inflated Models
         """
         raise NotImplementedError("not yet implemented for zero inflation")
 
 
-class L1ZeroInflatedGeneralizedPoissonResults(L1CountResults,
-        ZeroInflatedGeneralizedPoissonResults):
+class L1ZeroInflatedGeneralizedPoissonResults(
+    L1CountResults, ZeroInflatedGeneralizedPoissonResults
+):
     pass
 
 
-class ZeroInflatedGeneralizedPoissonResultsWrapper(
-        lm.RegressionResultsWrapper):
+class ZeroInflatedGeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(ZeroInflatedGeneralizedPoissonResultsWrapper,
-                      ZeroInflatedGeneralizedPoissonResults)
 
 
-class L1ZeroInflatedGeneralizedPoissonResultsWrapper(
-        lm.RegressionResultsWrapper):
+wrap.populate_wrapper(
+    ZeroInflatedGeneralizedPoissonResultsWrapper, ZeroInflatedGeneralizedPoissonResults
+)
+
+
+class L1ZeroInflatedGeneralizedPoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(L1ZeroInflatedGeneralizedPoissonResultsWrapper,
-                      L1ZeroInflatedGeneralizedPoissonResults)
+
+
+wrap.populate_wrapper(
+    L1ZeroInflatedGeneralizedPoissonResultsWrapper,
+    L1ZeroInflatedGeneralizedPoissonResults,
+)
 
 
 class ZeroInflatedNegativeBinomialResults(ZeroInflatedResults):
     __doc__ = _discrete_results_docs % {
-        "one_line_description": "A results class for Zero Inflated Generalized Negative Binomial",
-        "extra_attr": ""}
+        "one_line_description": "A results class for Zero-Inflated Generalized Negative Binomial",
+        "extra_attr": "",
+    }
 
     @cache_readonly
     def _dispersion_factor(self):
         p = self.model.model_main.parameterization
-        alpha = self.params[self.model.k_inflate:][-1]
-        mu = np.exp(self.predict(which='linear'))
+        alpha = self.params[self.model.k_inflate :][-1]
+        mu = np.exp(self.predict(which="linear"))
         w = 1 - self.predict() / mu
-        return (1 + alpha * mu**(p-1) + w * mu)
+        return 1 + alpha * mu ** (p - 1) + w * mu
 
-    def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
-        """Get marginal effects of the fitted model.
+    def get_margeff(
+        self, at="overall", method="dydx", atexog=None, dummy=False, count=False
+    ):
+        """
+        Get marginal effects of the fitted model
 
-        Not yet implemented for Zero Inflated Models
+        Not yet implemented for Zero-Inflated Models
         """
         raise NotImplementedError("not yet implemented for zero inflation")
 
 
-class L1ZeroInflatedNegativeBinomialResults(L1CountResults,
-        ZeroInflatedNegativeBinomialResults):
+class L1ZeroInflatedNegativeBinomialResults(
+    L1CountResults, ZeroInflatedNegativeBinomialResults
+):
     pass
 
 
-class ZeroInflatedNegativeBinomialResultsWrapper(
-        lm.RegressionResultsWrapper):
+class ZeroInflatedNegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(ZeroInflatedNegativeBinomialResultsWrapper,
-                      ZeroInflatedNegativeBinomialResults)
 
 
-class L1ZeroInflatedNegativeBinomialResultsWrapper(
-        lm.RegressionResultsWrapper):
+wrap.populate_wrapper(
+    ZeroInflatedNegativeBinomialResultsWrapper, ZeroInflatedNegativeBinomialResults
+)
+
+
+class L1ZeroInflatedNegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(L1ZeroInflatedNegativeBinomialResultsWrapper,
-                      L1ZeroInflatedNegativeBinomialResults)
+
+
+wrap.populate_wrapper(
+    L1ZeroInflatedNegativeBinomialResultsWrapper, L1ZeroInflatedNegativeBinomialResults
+)

@@ -7,12 +7,29 @@ License: BSD-3
 """
 
 import numpy as np
+
 from .copulas import Copula
 
 
 def copula_bv_ev(u, transform, args=()):
-    '''generic bivariate extreme value copula
-    '''
+    """generic bivariate extreme value copula
+
+    Parameters
+    ----------
+    u : tuple
+        Pair ``(u, v)`` of values in [0, 1] at which the copula is
+        evaluated.
+    transform : instance of transformation class
+        Pickand's dependence function with required methods including
+        first and second derivatives.
+    args : tuple, optional
+        Optional copula parameters, passed to `transform`.
+
+    Returns
+    -------
+    ndarray
+        CDF values at evaluation points.
+    """
     u, v = u
     return np.exp(np.log(u * v) * (transform(np.log(u)/np.log(u*v), *args)))
 
@@ -24,13 +41,13 @@ class ExtremeValueCopula(Copula):
 
     Parameters
     ----------
-    transform: instance of transformation class
+    transform : instance of transformation class
         Pickand's dependence function with required methods including first
         and second derivatives
-    args : tuple
+    args : tuple, optional
         Optional copula parameters. Copula parameters can be either provided
         when creating the instance or as arguments when calling methods.
-    k_dim : int
+    k_dim : int, optional
         Currently only bivariate extreme value copulas are supported.
 
     Notes
@@ -76,17 +93,18 @@ class ExtremeValueCopula(Copula):
         Parameters
         ----------
         u : array_like
-            Values of random bivariate random variable, each defined on [0, 1],
+            Values of the bivariate random variable, each defined on [0, 1],
             for which cdf is computed.
             Can be two dimensional with multivariate components in columns and
             observation in rows.
-        args : tuple
+        args : tuple, optional
             Required parameters for the copula. The meaning and number of
             parameters in the tuple depends on the specific copula.
 
         Returns
         -------
-        CDF values at evaluation points.
+        ndarray
+            CDF values at evaluation points.
         """
         # currently only Bivariate
         u, v = np.asarray(u).T
@@ -101,17 +119,18 @@ class ExtremeValueCopula(Copula):
         Parameters
         ----------
         u : array_like
-            Values of random bivariate random variable, each defined on [0, 1],
-            for which cdf is computed.
+            Values of the bivariate random variable, each defined on [0, 1],
+            for which pdf is computed.
             Can be two dimensional with multivariate components in columns and
             observation in rows.
-        args : tuple
+        args : tuple, optional
             Required parameters for the copula. The meaning and number of
             parameters in the tuple depends on the specific copula.
 
         Returns
         -------
-        PDF values at evaluation points.
+        ndarray
+            PDF values at evaluation points.
         """
         tr = self.transform
         u1, u2 = np.asarray(u).T
@@ -134,17 +153,18 @@ class ExtremeValueCopula(Copula):
         Parameters
         ----------
         u : array_like
-            Values of random bivariate random variable, each defined on [0, 1],
-            for which cdf is computed.
+            Values of the bivariate random variable, each defined on [0, 1],
+            for which log-pdf is computed.
             Can be two dimensional with multivariate components in columns and
             observation in rows.
-        args : tuple
+        args : tuple, optional
             Required parameters for the copula. The meaning and number of
             parameters in the tuple depends on the specific copula.
 
         Returns
         -------
-        Log-pdf values at evaluation points.
+        ndarray
+            Log-pdf values at evaluation points.
         """
         return np.log(self.pdf(u, args=args))
 

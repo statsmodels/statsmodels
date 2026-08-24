@@ -66,25 +66,42 @@ Descriptive Statistics and Tests
 
    stattools.acovf
    stattools.acf
+   stattools.AcfResult
    stattools.pacf
+   stattools.PacfResult
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
+   stattools.PacfBurgResult
    stattools.ccovf
    stattools.ccf
+   stattools.CcfResult
+   stattools.pccf
+   stattools.PccfResult
    stattools.adfuller
+   stattools.ADFullerResult
    stattools.kpss
+   stattools.KPSSResult
+   stattools.leybourne
    stattools.range_unit_root_test
+   stattools.RURResult
    stattools.zivot_andrews
    stattools.coint
+   stattools.CointResult
    stattools.bds
+   stattools.block_jackknife
+   stattools.JackknifeResult
    stattools.q_stat
+   stattools.QStatResult
    stattools.breakvar_heteroskedasticity_test
+   stattools.BreakvarHeteroskedasticityResult
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.LevinsonDurbinResult
    stattools.innovations_algo
    stattools.innovations_filter
    stattools.levinson_durbin_pacf
+   stattools.LevinsonDurbinPacfResult
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis
@@ -108,6 +125,7 @@ The basic autoregressive model in Statsmodels is:
    ar_model.AutoReg
    ar_model.AutoRegResults
    ar_model.ar_select_order
+   ar_model.InformationCriteria
 
 The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
 and supports exogenous regressors (an AR-X model) and seasonal effects.
@@ -143,6 +161,22 @@ See the notebooks `ARMA: Sunspots Data
 <examples/notebooks/generated/tsa_arma_0.ipynb>`_ and
 `ARMA: Artificial Data <examples/notebooks/generated/tsa_arma_1.ipynb>`_
 for an overview.
+
+The innovations algorithm provides a way to compute the likelihood, score, and
+related quantities for a given ARMA process without constructing a full state
+space representation; it is used internally by some of the Hannan-Rissanen and
+innovations-based ARMA parameter estimators.
+
+.. currentmodule:: statsmodels.tsa.innovations
+
+.. autosummary::
+   :toctree: generated/
+
+   arma_innovations.arma_innovations
+   arma_innovations.arma_loglike
+   arma_innovations.arma_loglikeobs
+   arma_innovations.arma_score
+   arma_innovations.arma_scoreobs
 
 
 Exponential Smoothing
@@ -326,10 +360,18 @@ Time Series Filters
 
    cffilter
 
+.. currentmodule:: statsmodels.tsa.filters.hamilton_filter
+.. autosummary::
+   :toctree: generated/
+
+   hamilton_filter
+
+
 .. currentmodule:: statsmodels.tsa.filters.filtertools
 .. autosummary::
    :toctree: generated/
 
+   CycleTrendResult
    convolution_filter
    recursive_filter
    miso_lfilter
@@ -361,6 +403,7 @@ TSA Tools
    add_trend
    detrend
    lagmat
+   LagmatResult
    lagmat2ds
 
 VARMA Process

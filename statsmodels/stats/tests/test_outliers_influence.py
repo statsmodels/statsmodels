@@ -20,9 +20,9 @@ def test_reset_stata():
 
     exog_idx = list(data.columns).index("urban")
     data_arr = np.asarray(data)
-    vif = variance_inflation_factor(data_arr, exog_idx)
+    vif = variance_inflation_factor(data_arr, exog_idx, standardize=False)
     assert_almost_equal(vif, 16.4394, decimal=4)
 
     exog_idx = list(data.columns).index("urban")
-    vif_df = variance_inflation_factor(data, exog_idx)
+    vif_df = variance_inflation_factor(data, exog_idx, standardize=False)
     assert_almost_equal(vif_df, 16.4394, decimal=4)

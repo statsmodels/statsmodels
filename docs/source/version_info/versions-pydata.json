@@ -1,0 +1,73 @@
+[
+  {
+    "name": "Stable",
+    "version": "stable",
+    "url": "https://statsmodels.org/stable/",
+    "preferred": true
+  },
+  {
+    "name": "Development",
+    "version": "devel",
+    "url": "https://statsmodels.org/devel/"
+  },
+  {
+    "name": "0.14.4",
+    "version": "v0.14.4",
+    "url": "https://statsmodels.org/v0.14.4/"
+  },
+  {
+    "name": "0.14.3",
+    "version": "v0.14.3",
+    "url": "https://statsmodels.org/v0.14.3/"
+  },
+  {
+    "name": "0.14.2",
+    "version": "v0.14.2",
+    "url": "https://statsmodels.org/v0.14.2/"
+  },
+  {
+    "name": "0.14.1",
+    "version": "v0.14.1",
+    "url": "https://statsmodels.org/v0.14.1/"
+  },
+  {
+    "name": "0.14.0",
+    "version": "v0.14.0",
+    "url": "https://statsmodels.org/v0.14.0/"
+  },
+  {
+    "name": "0.13",
+    "version": "v0.13.5",
+    "url": "https://statsmodels.org/v0.13.5/"
+  },
+  {
+    "name": "0.12",
+    "version": "v0.12.2",
+    "url": "https://statsmodels.org/v0.12.2/"
+  },
+  {
+    "name": "0.11",
+    "version": "v0.11.1",
+    "url": "https://statsmodels.org/v0.11.1/"
+  },
+  {
+    "name": "0.10",
+    "version": "v0.10.2",
+    "url": "https://statsmodels.org/v0.10.2/"
+  },
+  {
+    "name": "0.9",
+    "version": "0.9.0",
+    "url": "https://statsmodels.org/0.9.0/"
+  },
+  {
+    "name": "0.8",
+    "version": "0.8.0",
+    "url": "https://statsmodels.org/0.8.0/"
+  },
+  {
+    "name": "0.6",
+    "version": "0.6.1",
+    "url": "https://statsmodels.org/0.6.1/"
+  }
+]

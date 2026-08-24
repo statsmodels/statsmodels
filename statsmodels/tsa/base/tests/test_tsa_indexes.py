@@ -9,12 +9,13 @@ Test index support in time series models
 Author: Chad Fulton
 License: BSD-3
 """
+
 from statsmodels.compat.pandas import PD_LT_2_2_0, YEAR_END, is_int_index
 
 import warnings
 
 import numpy as np
-from numpy.testing import assert_equal, assert_raises
+from numpy.testing import assert_equal
 import pandas as pd
 import pytest
 
@@ -111,12 +112,12 @@ unsupported_indexes = [
     # Float indexes, even if they increment from zero
     (np.arange(nobs) * 1.0, None),
     # Non-date-string indexes
-    ([x for x in "abcde"], None),
+    (list("abcde"), None),
     # Non-date-object indexes
     ([str, 1, "a", -30.1, {}], None),
 ]
 
-# Unsupported date indexes (i.e. those without inferrable frequency)
+# Unsupported date indexes (i.e., those without inferrable frequency)
 unsupported_date_indexes = [
     (["1950", "1952", "1941", "1954", "1991"], None),
     (
@@ -144,7 +145,7 @@ def test_instantiation_valid():
     #
     # Each pandas index (of `endog`, `exog`, or passed to `dates`) can be:
     # 0. None
-    # 1. RangeIndex (if applicable; i.e. if Pandas >= 0.18)
+    # 1. RangeIndex (if applicable; i.e., if Pandas >= 0.18)
     # 2. Integral Indexes with values exactly equal to 0, 1, ..., nobs-1
     # 3. DatetimeIndex with frequency
     # 4. PeriodIndex with frequency
@@ -173,11 +174,11 @@ def test_instantiation_valid():
     #
     # Each test will be denoted by:
     # endog.index:exog.index/date/freq where the corresponding
-    # location is the integer from above; e.g. 1.0:0.0/9/1 corresponds to
+    # location is the integer from above; e.g., 1.0:0.0/9/1 corresponds to
     # - List endog (with no index)
     # - No exog
     # - Series of datetime objects
-    # - Something valid for `pd.to_offset` (e.g. 'D', if that works with
+    # - Something valid for `pd.to_offset` (e.g., 'D', if that works with
     #   dates)
     #
     # Notice that the endog.index:exog.index really collapses to a single
@@ -186,14 +187,14 @@ def test_instantiation_valid():
     # otherwise. **Thus, we will not test `exog` here.**
     #
     # Example valid combinations of row_label/date/freq include:
-    # - */0/0 (i.e. anything is valid if date and freq are not passed)
-    # - */%/% where %/% denotes a valid date/freq combination (i.e. any
+    # - */0/0 (i.e., anything is valid if date and freq are not passed)
+    # - */%/% where %/% denotes a valid date/freq combination (i.e., any
     #   row_label is valid if a valid date/freq combination is given)
     #
     # Example invalid combinations include:
-    # - [1-2],[3-4].4/0/[1-2] (i.e. if have freq, then must have, or
+    # - [1-2],[3-4].4/0/[1-2] (i.e., if have freq, then must have, or
     #   coerce, a date index)
-    # - */[4-10]/0 (i.e. for some types of dates, freq must be passed)
+    # - */[4-10]/0 (i.e., for some types of dates, freq must be passed)
 
     # Baseline: list, numpy endog with no dates, no freq
     for endog in dta[:2]:
@@ -278,10 +279,9 @@ def test_instantiation_valid():
 
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
-        for ix, freq in supported_increment_indexes + unsupported_indexes:
-            assert_raises(
-                ValueError, tsa_model.TimeSeriesModel, endog, dates=ix
-            )
+        for ix, _ in supported_increment_indexes + unsupported_indexes:
+            with pytest.raises(ValueError):
+                tsa_model.TimeSeriesModel(endog, dates=ix)
 
     # Test pandas (Series, DataFrame); with index (no dates/freq argument)
     for base_endog in dta[2:4]:
@@ -434,18 +434,16 @@ def test_instantiation_valid():
         message = (
             "An unsupported index was provided. As a result, forecasts "
             "cannot be generated. To use the model for forecasting, use "
-            "on the the supported classes of index."
+            "on the supported classes of index."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_indexes:
+            for ix, _ in unsupported_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
-                assert_equal(
-                    isinstance(mod._index, (pd.Index, pd.RangeIndex)), True
-                )
+                assert_equal(isinstance(mod._index, (pd.Index, pd.RangeIndex)), True)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -460,18 +458,16 @@ def test_instantiation_valid():
         message = (
             "A date index has been provided, but it has no"
             " associated frequency information and so will be"
-            " ignored when e.g. forecasting."
+            " ignored when e.g., forecasting."
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
 
-            for ix, freq in unsupported_date_indexes:
+            for ix, _ in unsupported_date_indexes:
                 endog = base_endog.copy()
                 endog.index = ix
                 mod = tsa_model.TimeSeriesModel(endog)
-                assert isinstance(mod._index, pd.RangeIndex) or is_int_index(
-                    mod._index
-                )
+                assert isinstance(mod._index, pd.RangeIndex) or is_int_index(mod._index)
                 assert_equal(mod._index_none, False)
                 assert_equal(mod._index_dates, False)
                 assert_equal(mod._index_generated, True)
@@ -483,51 +479,45 @@ def test_instantiation_valid():
 
     # Test (invalid) freq with no index
     endog = dta[0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
     # Test conflicting index, freq specifications
     endog = dta[2].copy()
     endog.index = date_indexes[0][0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
     # Test unsupported index, but a freq specification
     endog = dta[2].copy()
     endog.index = unsupported_indexes[0][0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
     # Test index that can coerce to date time but incorrect freq
     endog = dta[2].copy()
     endog.index = numpy_datestr_indexes[0][0]
-    assert_raises(
-        ValueError,
-        tsa_model.TimeSeriesModel,
-        endog,
-        freq=date_indexes[1][0].freq,
-    )
+    with pytest.raises(ValueError):
+        tsa_model.TimeSeriesModel(
+            endog,
+            freq=date_indexes[1][0].freq,
+        )
 
 
 def test_prediction_increment_unsupported():
     # a. Generated from unsupported index
     endog = dta[2].copy()
     endog.index = unsupported_indexes[-2][0]
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("ignore")
-        mod = tsa_model.TimeSeriesModel(endog)
+    mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
     # out-of-sample indexes.
@@ -563,27 +553,8 @@ def test_prediction_increment_unsupported():
     # a warning will be issued
     start_key = 1
     end_key = nobs
-    message = (
-        "No supported index is available. In the next version, calling this "
-        "method in a model without a supported index will result in an "
-        "exception."
-    )
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        (
-            start,
-            end,
-            out_of_sample,
-            prediction_index,
-        ) = mod._get_prediction_index(start_key, end_key)
-
-        assert_equal(str(w[0].message), message)
-
-    assert_equal(start, 1)
-    assert_equal(end, 4)
-    assert_equal(out_of_sample, 1)
-    assert_equal(prediction_index.equals(pd.Index(np.arange(1, 6))), True)
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(start_key, end_key)
 
     # Test getting a location that exists in the (internal) index
     loc, index, index_was_expanded = mod._get_index_loc(2)
@@ -740,7 +711,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 0)
     assert_equal(end, nobs - 1)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index), True)
 
     # In-sample prediction: [0, 3]; the index is a subset of the date index
@@ -753,7 +724,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 0)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[:4]), True)
 
     # Negative index: [-2, end]
@@ -766,7 +737,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 3)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[3:]), True)
 
     # Forecasting: [1, 5]; the index is an extended version of the date index
@@ -794,7 +765,7 @@ def test_prediction_increment_pandas_dates_daily():
     assert_equal(start, 1)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[1:4]), True)
 
     # Out-of-sample forecasting (equivalent to [0, 5])
@@ -853,7 +824,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 0)
     assert_equal(end, nobs - 1)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index), True)
 
     # In-sample prediction: [0, 3]; the index is a subset of the date index
@@ -866,7 +837,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 0)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[:4]), True)
 
     # Negative index: [-2, end]
@@ -879,7 +850,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 3)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[3:]), True)
 
     # Forecasting: [1, 5]; the index is an extended version of the date index
@@ -907,7 +878,7 @@ def test_prediction_increment_pandas_dates_monthly():
     assert_equal(start, 1)
     assert_equal(end, 3)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[1:4]), True)
 
     # Out-of-sample forecasting (equivalent to [0, 5])
@@ -950,9 +921,7 @@ def test_prediction_increment_pandas_dates_monthly():
 def test_prediction_increment_pandas_dates_nanosecond():
     # Date-based index
     endog = dta[2].copy()
-    endog.index = pd.date_range(
-        start="1970-01-01", periods=len(endog), freq="ns"
-    )
+    endog.index = pd.date_range(start="1970-01-01", periods=len(endog), freq="ns")
     mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
@@ -968,7 +937,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 0)
     assert_equal(end, nobs - 1)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index), True)
 
     # Negative index: [-2, end]
@@ -981,7 +950,7 @@ def test_prediction_increment_pandas_dates_nanosecond():
     assert_equal(start, 3)
     assert_equal(end, 4)
     assert_equal(out_of_sample, 0)
-    assert type(prediction_index) is type(endog.index)  # noqa: E721
+    assert type(prediction_index) is type(endog.index)
     assert_equal(prediction_index.equals(mod._index[3:]), True)
 
     # Forecasting: [1, 5]; the index is an extended version of the date index
@@ -1012,14 +981,15 @@ def test_prediction_increment_pandas_dates_nanosecond():
 
 
 def test_range_index():
+    rs = np.random.RandomState(328389218)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(np.random.normal(size=5))
+    endog = pd.Series(rs.normal(size=5))
     assert_equal(isinstance(endog.index, pd.RangeIndex), True)
     # Warning should not be given
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        mod = tsa_model.TimeSeriesModel(endog)
+        tsa_model.TimeSeriesModel(endog)
         assert_equal(len(w), 0)
 
 
@@ -1127,14 +1097,13 @@ def test_prediction_rangeindex_withstep():
 
 
 def test_custom_index():
+    rs = np.random.RandomState(328392810)
     tsa_model.__warningregistry__ = {}
 
-    endog = pd.Series(
-        np.random.normal(size=5), index=["a", "b", "c", "d", "e"]
-    )
+    endog = pd.Series(rs.normal(size=5), index=["a", "b", "c", "d", "e"])
     message = (
         "An unsupported index was provided. As a result, forecasts cannot be "
-        "generated. To use the model for forecasting, use on the the "
+        "generated. To use the model for forecasting, use on the "
         "supported classes of index."
     )
     with warnings.catch_warnings(record=True) as w:
@@ -1183,22 +1152,8 @@ def test_custom_index():
     # Test out-of-sample
     start_key = 4
     end_key = 5
-    message = (
-        "No supported index is available. In the next version, calling this "
-        "method in a model without a supported index will result in an "
-        "exception."
-    )
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-
-        (
-            start,
-            end,
-            out_of_sample,
-            prediction_index,
-        ) = mod._get_prediction_index(start_key, end_key)
-        assert_equal(prediction_index.equals(pd.Index([4, 5])), True)
-        assert_equal(str(w[0].message), message)
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(start_key, end_key)
 
     # Test out-of-sample custom index
     start, end, out_of_sample, prediction_index = mod._get_prediction_index(
@@ -1207,18 +1162,17 @@ def test_custom_index():
     assert_equal(prediction_index.equals(pd.Index(["f", "g"])), True)
 
     # Test invalid custom index
-    assert_raises(
-        ValueError,
-        mod._get_prediction_index,
-        start_key,
-        end_key,
-        index=["f", "g", "h"],
-    )
+    with pytest.raises(ValueError):
+        mod._get_prediction_index(
+            start_key,
+            end_key,
+            index=["f", "g", "h"],
+        )
 
 
 def test_nonmonotonic_periodindex():
     # Create a nonmonotonic period index
-    tmp = pd.period_range(start=2000, end=2002, freq="Y")
+    tmp = pd.period_range(start="2000", end="2002", freq="Y")
     index = tmp.tolist() + tmp.tolist()
     endog = pd.Series(np.zeros(len(index)), index=index)
 
@@ -1231,30 +1185,18 @@ def test_nonmonotonic_periodindex():
         tsa_model.TimeSeriesModel(endog)
 
 
-@pytest.mark.xfail(
-    reason="Pandas PeriodIndex.is_full does not yet work for"
-    " all frequencies (e.g. frequencies with a"
-    ' multiplier, like "2Q").'
-)
 def test_nonfull_periodindex():
     index = pd.PeriodIndex(["2000-01", "2000-03"], freq="M")
     endog = pd.Series(np.zeros(len(index)), index=index)
 
-    message = (
-        "A Period index has been provided, but it is not"
-        " full and so will be ignored when e.g."
-        " forecasting."
-    )
-    with pytest.warns(ValueWarning, match=message):
-        tsa_model.TimeSeriesModel(endog)
+    tsa_model.TimeSeriesModel(endog)
 
 
 def test_get_index_loc_quarterly():
     # See GH#6339
-
-    ix = pd.date_range("2000Q1", periods=8, freq="QS")
+    ix = pd.period_range("2000Q1", periods=8, freq="Q").to_timestamp()
     endog = pd.Series(np.zeros(8), index=ix)
 
     mod = tsa_model.TimeSeriesModel(endog)
     loc, index, _ = mod._get_index_loc("2003Q2")
-    assert_equal(index[loc], pd.Timestamp("2003Q2"))
+    assert_equal(index[loc], pd.Period("2003Q2").to_timestamp())

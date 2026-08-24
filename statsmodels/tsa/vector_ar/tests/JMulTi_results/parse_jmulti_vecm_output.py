@@ -1,41 +1,11 @@
 import itertools
 import os
+from pathlib import Path
 import re
 
 import numpy as np
 
-debug_mode = False
-
-here = os.path.dirname(os.path.realpath(__file__))
-
-
-def print_debug_output(results, dt):
-    print("\n\n\nDETERMINISTIC TERMS: " + dt)
-    alpha = results["est"]["alpha"]
-    print("alpha:")
-    print(str(type(alpha)) + str(alpha.shape))
-    print(alpha)
-    print("se: ")
-    print(results["se"]["alpha"])
-    print("t: ")
-    print(results["t"]["alpha"])
-    print("p: ")
-    print(results["p"]["alpha"])
-    beta = results["est"]["beta"]
-    print("beta:")
-    print(str(type(beta)) + str(beta.shape))
-    print(beta)
-    gamma = results["est"]["Gamma"]
-    print("Gamma:")
-    print(str(type(gamma)) + str(gamma.shape))
-    print(gamma)
-    if "co" in dt or "s" in dt or "lo" in dt:
-        c = results["est"]["C"]
-        print("C:")
-        print(str(type(c)) + str(c.shape))
-        print(c)
-        print("se: ")
-        print(results["se"]["C"])
+here = Path(os.path.realpath(__file__)).parent
 
 
 def dt_s_tup_to_string(dt_s_tup):
@@ -49,12 +19,12 @@ def dt_s_tup_to_string(dt_s_tup):
 
 
 def sublists(lst, min_elmts=0, max_elmts=None):
-    """Build a list of all possible sublists of a given list. Restrictions
-    on the length of the sublists can be posed via the min_elmts and max_elmts
-    parameters.
-    All sublists
-    have will have at least min_elmts elements and not more than max_elmts
-    elements.
+    """
+    Build a list of all possible sublists of a given list
+
+    Restrictions on the length of the sublists can be posed via the
+    min_elmts and max_elmts parameters. All sublists will have at least
+    min_elmts elements and not more than max_elmts elements.
 
     Parameters
     ----------
@@ -86,11 +56,15 @@ def sublists(lst, min_elmts=0, max_elmts=None):
 
 def stringify_var_names(var_list, delimiter=""):
     """
+    Join variable names into a single, lowercased string
 
     Parameters
     ----------
     var_list : list[str]
         Each list element is the name of a variable.
+    delimiter : str
+        String used to join consecutive variable names. Default is the
+        empty string.
 
     Returns
     -------
@@ -105,15 +79,13 @@ def stringify_var_names(var_list, delimiter=""):
 
 def load_results_jmulti(dataset):
     """
+    Load and parse JMulTi VECM output results for a dataset
 
     Parameters
     ----------
     dataset : module
         A data module in the statsmodels/datasets directory that defines a
         __str__() method returning the dataset's name.
-    dt_s_list : list
-        A list of strings where each string represents a combination of
-        deterministic terms.
 
     Returns
     -------
@@ -132,7 +104,7 @@ def load_results_jmulti(dataset):
     for dt_s in dataset.dt_s_list:
         dt_string = dt_s_tup_to_string(dt_s)
         params_file = "vecm_"+dataset.__str__()+"_"+source+"_"+dt_string+".txt"
-        params_file = os.path.join(here, params_file)
+        params_file = Path(here).joinpath(params_file)
         # sections in jmulti output:
         section_header = ["Lagged endogenous term",  # Gamma
                           "Deterministic term",      # co, s, lo
@@ -164,7 +136,7 @@ def load_results_jmulti(dataset):
                 # JMulTi: no deterministic section in VAR repr.
                 del section_header[-1]
                 del sections[-1]
-        results = dict()
+        results = {}
         results["est"] = dict.fromkeys(sections)
         results["se"] = dict.fromkeys(sections)
         results["t"] = dict.fromkeys(sections)
@@ -182,7 +154,7 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse information about \alpha, \beta, \Gamma, deterministic of VECM
         # and A_i and deterministic of corresponding VAR:
-        params_file = open(params_file, encoding="latin_1")
+        params_file = Path(params_file).open(encoding="latin_1")
         for line in params_file:
             if section == -1 and section_header[section+1] not in line:
                 continue
@@ -274,12 +246,12 @@ def load_results_jmulti(dataset):
         # parse information regarding \Sigma_u
         sigmau_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                       dt_string + "_Sigmau" + ".txt"
-        sigmau_file = os.path.join(here, sigmau_file)
+        sigmau_file = Path(here).joinpath(sigmau_file)
         rows_to_parse = 0
-        # all numbers of Sigma_u in notation with e (e.g. 2.283862e-05)
+        # all numbers of Sigma_u in notation with e (e.g., 2.283862e-05)
         regex_est = re.compile(r"\s+\S+e\S+")
         sigmau_section_reached = False
-        sigmau_file = open(sigmau_file, encoding="latin_1")
+        sigmau_file = Path(sigmau_file).open(encoding="latin_1")
         for line in sigmau_file:
             if line.startswith("Log Likelihood:"):
                 line = line.split("Log Likelihood:")[1]
@@ -289,7 +261,7 @@ def load_results_jmulti(dataset):
             if "Covariance:" in line:
                 sigmau_section_reached = True
                 row = re.findall(regex_est, line)
-                rows_to_parse = len(row)  # Sigma_u quadratic ==> #rows==#cols
+                rows_to_parse = len(row)  # Sigma_u quadratic ==> # rows==#cols
                 sigma_u = np.empty((rows_to_parse, rows_to_parse))
             row = re.findall(regex_est, line)
             rows_to_parse -= 1
@@ -303,9 +275,9 @@ def load_results_jmulti(dataset):
         # parse forecast related output:
         fc_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                   dt_string + "_fc5" + ".txt"
-        fc_file = os.path.join(here, fc_file)
+        fc_file = Path(here).joinpath(fc_file)
         fc, lower, upper, plu_min = [], [], [], []
-        fc_file = open(fc_file, encoding='latin_1')
+        fc_file = Path(fc_file).open(encoding="latin_1")
         for line in fc_file:
             str_number = r"(\s+-?\d+\.\d{4}\s*?)"
             regex_number = re.compile(str_number)
@@ -330,8 +302,8 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse output related to Granger-causality:
         results["granger_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["granger_caus"]["p"] = dict()
-        results["granger_caus"]["test_stat"] = dict()
+        results["granger_caus"]["p"] = {}
+        results["granger_caus"]["test_stat"] = {}
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
@@ -342,8 +314,8 @@ def load_results_jmulti(dataset):
                 + dt_string + "_granger_causality_" \
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
-            granger_file = os.path.join(here, granger_file)
-            granger_file = open(granger_file, encoding="latin_1")
+            granger_file = Path(here).joinpath(granger_file)
+            granger_file = Path(granger_file).open(encoding="latin_1")
             granger_results = []
             for line in granger_file:
                 str_number = r"\d+\.\d{4}"
@@ -362,8 +334,8 @@ def load_results_jmulti(dataset):
         # ---------------------------------------------------------------------
         # parse output related to instant causality:
         results["inst_caus"] = dict.fromkeys(["p", "test_stat"])
-        results["inst_caus"]["p"] = dict()
-        results["inst_caus"]["test_stat"] = dict()
+        results["inst_caus"]["p"] = {}
+        results["inst_caus"]["test_stat"] = {}
         vn = dataset.variable_names
         # all possible combinations of potentially causing variables
         # (at least 1 variable and not all variables together):
@@ -381,8 +353,8 @@ def load_results_jmulti(dataset):
                 + dt_string + "_inst_causality_" \
                 + stringify_var_names(causing) + "_" \
                 + stringify_var_names(caused) + ".txt"
-            inst_file = os.path.join(here, inst_file)
-            inst_file = open(inst_file, encoding="latin_1")
+            inst_file = Path(here).joinpath(inst_file)
+            inst_file = Path(inst_file).open(encoding="latin_1")
             inst_results = []
             for line in inst_file:
                 str_number = r"\d+\.\d{4}"
@@ -402,8 +374,8 @@ def load_results_jmulti(dataset):
         # parse output related to impulse-response analysis:
         ir_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                   dt_string + "_ir" + ".txt"
-        ir_file = os.path.join(here, ir_file)
-        ir_file = open(ir_file, encoding='latin_1')
+        ir_file = Path(here).joinpath(ir_file)
+        ir_file = Path(ir_file).open(encoding="latin_1")
         causing = None
         caused = None
         data = None
@@ -438,9 +410,9 @@ def load_results_jmulti(dataset):
         # parse output related to lag order selection:
         lagorder_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                         dt_string + "_lagorder" + ".txt"
-        lagorder_file = os.path.join(here, lagorder_file)
-        lagorder_file = open(lagorder_file, encoding='latin_1')
-        results["lagorder"] = dict()
+        lagorder_file = Path(here).joinpath(lagorder_file)
+        lagorder_file = Path(lagorder_file).open(encoding="latin_1")
+        results["lagorder"] = {}
         aic_start = "Akaike Info Criterion:"
         fpe_start = "Final Prediction Error:"
         hqic_start = "Hannan-Quinn Criterion:"
@@ -460,9 +432,9 @@ def load_results_jmulti(dataset):
         # parse output related to non-normality-test:
         test_norm_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                          dt_string + "_diag" + ".txt"
-        test_norm_file = os.path.join(here, test_norm_file)
-        test_norm_file = open(test_norm_file, encoding='latin_1')
-        results["test_norm"] = dict()
+        test_norm_file = Path(here).joinpath(test_norm_file)
+        test_norm_file = Path(test_norm_file).open(encoding="latin_1")
+        results["test_norm"] = {}
         reading_values = False
         line_start_statistic = "joint test statistic:"
         line_start_pvalue = " p-value:"
@@ -485,9 +457,9 @@ def load_results_jmulti(dataset):
         # parse output related to testing the whiteness of the residuals:
         whiteness_file = "vecm_" + dataset.__str__() + "_" + source + "_" + \
                          dt_string + "_diag" + ".txt"
-        whiteness_file = os.path.join(here, whiteness_file)
-        whiteness_file = open(whiteness_file, encoding='latin_1')
-        results["whiteness"] = dict()
+        whiteness_file = Path(here).joinpath(whiteness_file)
+        whiteness_file = Path(whiteness_file).open(encoding="latin_1")
+        results["whiteness"] = {}
         section_start_marker = "PORTMANTEAU TEST"
         order_start = "tested order:"
         statistic_start = "test statistic:"
@@ -524,10 +496,6 @@ def load_results_jmulti(dataset):
                         float(line[len(p_start):])
                     break
         whiteness_file.close()
-
-        # ---------------------------------------------------------------------
-        if debug_mode:
-            print_debug_output(results, dt_string)
 
         results_dict_per_det_terms[dt_s] = results
 
