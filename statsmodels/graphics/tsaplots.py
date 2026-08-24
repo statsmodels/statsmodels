@@ -22,7 +22,7 @@ def _prepare_data_corr_plot(x, lags, zero):
     ----------
     x : array_like
         Array of time-series values.
-    lags : {int, array_like, None}
+    lags : int, array_like, or None
         An int or array of lag values, or None to use a sensible default
         based on the number of observations in `x`.
     zero : bool
@@ -175,11 +175,11 @@ def plot_acf(
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    lags : {int, array_like}, optional
+    lags : int or array_like, optional
         An int or array of lag values, used on horizontal axis. Uses
         np.arange(lags) when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
-    alpha : scalar, optional
+    alpha : float or None, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
@@ -204,16 +204,16 @@ def plot_acf(
         Default is True.
     auto_ylims : bool, optional
         If True, adjusts automatically the y-axis limits to ACF values.
-    bartlett_confint : bool, default True
+    bartlett_confint : bool, optional
         Confidence intervals for ACF values are generally placed at 2
         standard errors around r_k. The formula used for standard error
         depends upon the situation. If the autocorrelations are being used
         to test for randomness of residuals as part of the ARIMA routine,
         the standard errors are determined assuming the residuals are white
         noise. The approximate formula for any lag is that standard error
-        of each r_k = 1/sqrt(N). See section 9.4 of [1] for more details on
+        of each r_k = 1/sqrt(N). See section 9.4 of [1]_ for more details on
         the 1/sqrt(N) result. For more elementary discussion, see section
-        5.3.2 in [2].
+        5.3.2 in [2]_.
         For the ACF of raw data, the standard error at a lag k is
         found as if the right model was an MA(k-1). This allows the
         possible interpretation that if all autocorrelations past a
@@ -222,10 +222,10 @@ def plot_acf(
         case, a moving average model is assumed for the data and the
         standard errors for the confidence intervals should be
         generated using Bartlett's formula. For more details on
-        Bartlett formula result, see section 7.2 in [1].
+        Bartlett formula result, see section 7.2 in [1]_.
     vlines_kwargs : dict, optional
         Optional dictionary of keyword arguments that are passed to vlines.
-    **kwargs : kwargs, optional
+    **kwargs
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
 
@@ -257,9 +257,9 @@ def plot_acf(
 
     References
     ----------
-    [1] Brockwell and Davis, 1987. Time Series Theory and Methods
-    [2] Brockwell and Davis, 2010. Introduction to Time Series and
-    Forecasting, 2nd edition.
+    .. [1] Brockwell and Davis, 1987. Time Series Theory and Methods
+    .. [2] Brockwell and Davis, 2010. Introduction to Time Series and
+       Forecasting, 2nd edition.
 
     Examples
     --------
@@ -288,9 +288,9 @@ def plot_acf(
         bartlett_confint=bartlett_confint,
         adjusted=adjusted,
         missing=missing,
-        use_namedtuple=True,
+        result_object=True,
     )
-    # use_namedtuple=True always yields an AcfResult; confint is None when
+    # result_object=True always yields an AcfResult; confint is None when
     # alpha is None.
     acf_x, confint = acf_res.acf, acf_res.confint
 
@@ -332,15 +332,15 @@ def plot_pacf(
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    lags : {int, array_like}, optional
+    lags : int or array_like, optional
         An int or array of lag values, used on horizontal axis. Uses
         np.arange(lags) when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
-    alpha : float, optional
+    alpha : float or None, optional
         If a number is given, the confidence intervals for the given level are
         returned. For instance if alpha=.05, 95 % confidence intervals are
         returned where the standard deviation is computed according to
-        1/sqrt(len(x))
+        1/sqrt(len(x)). If None, no confidence intervals are plotted.
     method : str, optional
         Specifies which method for the calculations to use:
 
@@ -356,6 +356,7 @@ def plot_pacf(
           correction.
         - "ldb" or "ldbiased" : Levinson-Durbin recursion without bias
           correction.
+        - "burg" : Burg's partial autocorrelation estimator.
 
     use_vlines : bool, optional
         If True, vertical lines and markers are plotted.
@@ -368,7 +369,7 @@ def plot_pacf(
         Default is True.
     vlines_kwargs : dict, optional
         Optional dictionary of keyword arguments that are passed to vlines.
-    **kwargs : kwargs, optional
+    **kwargs
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
 
@@ -418,9 +419,9 @@ def plot_pacf(
     lags, nlags, irregular = _prepare_data_corr_plot(x, lags, zero)
 
     result = pacf(
-        x, nlags=nlags, alpha=alpha, method=method, use_namedtuple=True
+        x, nlags=nlags, alpha=alpha, method=method, result_object=True
     )
-    # use_namedtuple=True always yields a PacfResult; confint is None when
+    # result_object=True always yields a PacfResult; confint is None when
     # alpha is None.
     acf_x, confint = result.pacf, result.confint
 
@@ -470,15 +471,15 @@ def plot_ccf(
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in, otherwise a new figure with
         one subplot is created.
-    lags : {int, array_like}, optional
+    lags : int or array_like, optional
         An int or array of lag values, used on the horizontal axis. Uses
         ``np.arange(lags)`` when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
     negative_lags : bool, optional
         If True, negative lags are shown on the horizontal axis.
-    alpha : scalar, optional
+    alpha : float or None, optional
         If a number is given, the confidence intervals for the given level are
-        plotted, e.g. if alpha=.05, 95 % confidence intervals are shown.
+        plotted, e.g., if alpha=.05, 95 % confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
         If True, shows vertical lines and markers for the correlation values.
@@ -494,7 +495,7 @@ def plot_ccf(
         If True, adjusts automatically the vertical axis limits to CCF values.
     vlines_kwargs : dict, optional
         Optional dictionary of keyword arguments that are passed to vlines.
-    **kwargs : kwargs, optional
+    **kwargs
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
 
@@ -535,9 +536,9 @@ def plot_ccf(
         fft=fft,
         alpha=alpha,
         nlags=nlags + 1,
-        use_namedtuple=True,
+        result_object=True,
     )
-    # use_namedtuple=True always yields a CcfResult; confint is None when
+    # result_object=True always yields a CcfResult; confint is None when
     # alpha is None.
     ccf_xy, confint = ccf_res.ccf, ccf_res.confint
 
@@ -588,11 +589,11 @@ def plot_pccf(
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in, otherwise a new
         figure with one subplot is created.
-    lags : {int, array_like}, optional
+    lags : int or array_like, optional
         An int or array of lag values, used on the horizontal axis.
         Uses ``np.arange(lags)`` when lags is an int.  If not
         provided, ``lags=np.arange(len(corr))`` is used.
-    method : str, default "ywm"
+    method : str, optional
         Specifies which method for the calculations to use.
 
         - "ywm", "ywmle" or "yw_mle" : Yule-Walker via the
@@ -603,9 +604,9 @@ def plot_pccf(
           sample-size adjustment in the autocovariance denominator.
         - "ols" : OLS regression of x_t and y_{t+h} on all
           intervening observations.
-    alpha : scalar, optional
+    alpha : float or None, optional
         If a number is given, the confidence intervals for the
-        given level are plotted, e.g. if alpha=.05, 95 %
+        given level are plotted, e.g., if alpha=.05, 95 %
         confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
@@ -622,7 +623,7 @@ def plot_pccf(
     vlines_kwargs : dict, optional
         Optional dictionary of keyword arguments that are passed
         to vlines.
-    **kwargs : kwargs, optional
+    **kwargs
         Optional keyword arguments that are directly passed on to
         the Matplotlib ``plot`` and ``axhline`` functions.
 
@@ -658,9 +659,9 @@ def plot_pccf(
     vlines_kwargs = {} if vlines_kwargs is None else vlines_kwargs
 
     pccf_res = pccf(
-        x, y, alpha=alpha, nlags=nlags, method=method, use_namedtuple=True
+        x, y, alpha=alpha, nlags=nlags, method=method, result_object=True
     )
-    # use_namedtuple=True always yields a PccfResult; confint is None when
+    # result_object=True always yields a PccfResult; confint is None when
     # alpha is None.
     pccf_xy, confint = pccf_res.pccf, pccf_res.confint
 
@@ -724,19 +725,19 @@ def plot_accf_grid(
         and ``varnames`` is provided, it overrides the column names
         of the dataframe. If ``varnames`` is not provided and ``x`` is not
         a dataframe, variable names ``x[0]``, ``x[1]``, etc. are generated.
-    fig : Matplotlib figure instance, optional
+    fig : Figure, optional
         If given, this figure is used to plot in, otherwise a new figure
         is created.
-    lags : {int, array_like}, optional
+    lags : int or array_like, optional
         An int or array of lag values, used on horizontal axes. Uses
         ``np.arange(lags)`` when lags is an int.  If not provided,
         ``lags=np.arange(len(corr))`` is used.
     negative_lags : bool, optional
         If True, negative lags are shown on the horizontal axes of plots
         below the main diagonal.
-    alpha : scalar, optional
+    alpha : float or None, optional
         If a number is given, the confidence intervals for the given level are
-        plotted, e.g. if alpha=.05, 95 % confidence intervals are shown.
+        plotted, e.g., if alpha=.05, 95 % confidence intervals are shown.
         If None, confidence intervals are not shown on the plot.
     use_vlines : bool, optional
         If True, shows vertical lines and markers for the correlation values.
@@ -755,13 +756,13 @@ def plot_accf_grid(
     auto_ylims : bool, optional
         If True, adjusts automatically the vertical axis limits
         to correlation values.
-    bartlett_confint : bool, default False
+    bartlett_confint : bool, optional
         If True, use Bartlett's formula to calculate confidence intervals
         in auto-correlation plots. See the description of ``plot_acf`` for
         details. This argument does not affect cross-correlation plots.
     vlines_kwargs : dict, optional
         Optional dictionary of keyword arguments that are passed to vlines.
-    **kwargs : kwargs, optional
+    **kwargs
         Optional keyword arguments that are directly passed on to the
         Matplotlib ``plot`` and ``axhline`` functions.
 
@@ -1034,7 +1035,7 @@ def plot_predict(
         prediction; starting with this observation and continuing through
         the end of prediction, forecasted endogenous values will be used
         instead.
-    alpha : {float, None}, optional
+    alpha : float or None, optional
         The tail probability not covered by the confidence interval. Must
         be in (0, 1). Confidence interval is constructed assuming normally
         distributed shocks. If None, figure will not show the confidence
@@ -1096,13 +1097,13 @@ def seasonal_diagnostic_plot(x, period, subplots=None, labels=None, nrows=1, **k
     period : int
         The length of the period. Should match the `period` parameter used to
         decompose the series.
-    subplots : int or array of int, optional
+    subplots : int, list of int, or ndarray of int, optional
         If `period` is large, `subplots` can be used to specify how many should
         be plotted. If `subplots` is an `int`, the periods are selected evenly
-        from `range(period)`. If `subplots` is an array of `int`, the periods
-        with those indices will be selected for the subplots. By default,
-        `subplots=period`.
-    labels : array of str, optional
+        from `range(period)`. If `subplots` is a list or ndarray of `int`, the
+        periods with those indices will be selected for the subplots. By
+        default, `subplots=period`.
+    labels : sequence of str, optional
         Labels for the displayed period subplots.
     nrows : int, optional
         The number of rows on which to display the plots.

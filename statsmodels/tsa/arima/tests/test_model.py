@@ -61,7 +61,7 @@ def test_invalid():
         mod.fit(method="not_a_method")
 
     # Can only use certain methods with fixed parameters
-    # (e.g. 'statespace' and 'hannan-rissanen')
+    # (e.g., 'statespace' and 'hannan-rissanen')
     with mod.fix_params({"ar.L1": 0.5}):
         with pytest.raises(ValueError):
             mod.fit(method="yule_walker")
@@ -95,7 +95,7 @@ def test_yule_walker():
     endog = dta["infl"].iloc[:50]
 
     # AR(2), no trend (since trend would imply GLS estimation)
-    desired_p, _ = yule_walker(endog, ar_order=2, demean=False)
+    desired_p = yule_walker(endog, ar_order=2, demean=False).parameters
     mod = ARIMA(endog, order=(2, 0, 0), trend="n")
     res = mod.fit(method="yule_walker")
     assert_allclose(res.params, desired_p.params)
@@ -106,7 +106,7 @@ def test_burg():
     endog = dta["infl"].iloc[:50]
 
     # AR(2), no trend (since trend would imply GLS estimation)
-    desired_p, _ = burg(endog, ar_order=2, demean=False)
+    desired_p = burg(endog, ar_order=2, demean=False).parameters
     mod = ARIMA(endog, order=(2, 0, 0), trend="n")
     res = mod.fit(method="burg")
     assert_allclose(res.params, desired_p.params)
@@ -117,7 +117,7 @@ def test_hannan_rissanen():
     endog = dta["infl"].diff().iloc[1:101]
 
     # ARMA(1, 1), no trend (since trend would imply GLS estimation)
-    desired_p, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=False)
+    desired_p = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=False).parameters
     mod = ARIMA(endog, order=(1, 0, 1), trend="n")
     res = mod.fit(method="hannan_rissanen")
     assert_allclose(res.params, desired_p.params)
@@ -128,7 +128,7 @@ def test_innovations():
     endog = dta["infl"].iloc[:50]
 
     # MA(2), no trend (since trend would imply GLS estimation)
-    desired_p, _ = innovations(endog, ma_order=2, demean=False)
+    desired_p = innovations(endog, ma_order=2, demean=False).parameters
     mod = ARIMA(endog, order=(0, 0, 2), trend="n")
     res = mod.fit(method="innovations")
     assert_allclose(res.params, desired_p[-1].params)
@@ -139,16 +139,16 @@ def test_innovations_mle():
     endog = dta["infl"].iloc[:100]
 
     # ARMA(1, 1), no trend (since trend would imply GLS estimation)
-    desired_p, _ = innovations_mle(endog, order=(1, 0, 1), demean=False)
+    desired_p = innovations_mle(endog, order=(1, 0, 1), demean=False).parameters
     mod = ARIMA(endog, order=(1, 0, 1), trend="n")
     res = mod.fit(method="innovations_mle")
     # Note: atol is required only due to precision issues on Windows
     assert_allclose(res.params, desired_p.params, atol=1e-5)
 
     # SARMA(1, 0)x(1, 0)4, no trend (since trend would imply GLS estimation)
-    desired_p, _ = innovations_mle(
+    desired_p = innovations_mle(
         endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), demean=False
-    )
+    ).parameters
     mod = ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), trend="n")
     res = mod.fit(method="innovations_mle")
     # Note: atol is required only due to precision issues on Windows
@@ -160,7 +160,7 @@ def test_statespace():
     endog = dta["infl"].iloc[:100]
 
     # ARMA(1, 1), no trend
-    desired_p, _ = statespace(endog, order=(1, 0, 1), include_constant=False)
+    desired_p = statespace(endog, order=(1, 0, 1), include_constant=False).parameters
     mod = ARIMA(endog, order=(1, 0, 1), trend="n")
     res = mod.fit(method="statespace")
     # Note: tol changes required due to precision issues on Windows
@@ -168,14 +168,14 @@ def test_statespace():
     assert_allclose(res.params, desired_p.params, rtol=rtol, atol=1e-4)
 
     # ARMA(1, 2), with trend
-    desired_p, _ = statespace(endog, order=(1, 0, 2), include_constant=True)
+    desired_p = statespace(endog, order=(1, 0, 2), include_constant=True).parameters
     mod = ARIMA(endog, order=(1, 0, 2), trend="c")
     res = mod.fit(method="statespace")
     # Note: atol is required only due to precision issues on Windows
     assert_allclose(res.params, desired_p.params, atol=1e-4)
 
     # SARMA(1, 0)x(1, 0)4, no trend
-    desired_p, _spec = statespace(
+    desired_p, _ = statespace(
         endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), include_constant=False
     )
     mod = ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), trend="n")
@@ -427,13 +427,13 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
     # Test for basic uses of Hannan-Rissanen estimation with fixed parameters
     endog = dta["infl"].diff().iloc[1:101]
 
-    desired_p, _ = hannan_rissanen(
+    desired_p = hannan_rissanen(
         endog,
         ar_order=ar_order,
         ma_order=ma_order,
         demean=False,
         fixed_params=fixed_params,
-    )
+    ).parameters
     # no constant or trend (since constant or trend would imply GLS estimation)
     mod = ARIMA(
         endog,
@@ -480,7 +480,8 @@ def test_alternative_estimators_seasonal_differencing():
     # hannan_rissanen should accept seasonal-differencing-only models
     mod_hr = ARIMA(endog, order=order, seasonal_order=seasonal_order)
     try:
-        mod_hr.fit(method="hannan_rissanen")
+        with pytest.warns(UserWarning, match="Provided"):
+            mod_hr.fit(method="hannan_rissanen")
     except Exception as exc:
         pytest.fail(
             f"hannan_rissanen failed on seasonal-differencing-only model: {exc}"
@@ -489,7 +490,8 @@ def test_alternative_estimators_seasonal_differencing():
     # yule_walker: AR-only model with seasonal differencing
     mod_yw = ARIMA(endog, order=(2, 0, 0), seasonal_order=seasonal_order)
     try:
-        mod_yw.fit(method="yule_walker")
+        with pytest.warns(UserWarning, match="Provided"):
+            mod_yw.fit(method="yule_walker")
     except Exception as exc:
         pytest.fail(f"yule_walker failed on seasonal-differencing-only model: {exc}")
 

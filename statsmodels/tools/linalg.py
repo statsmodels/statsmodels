@@ -15,7 +15,7 @@ def logdet_symm(m, check_symm=False):
     ----------
     m : array_like
         2d array that is positive-definite (and symmetric)
-    check_symm : bool
+    check_symm : bool, optional
         If True, check that `m` is symmetric before factorizing.
 
     Returns
@@ -45,8 +45,8 @@ def stationary_solve(r, b):
     r : array_like
         A vector describing the coefficient matrix.  r[0] is the first
         band next to the diagonal, r[1] is the second band, etc.
-    b : array_like
-        The right-hand side for which we are solving, i.e. we solve
+    b : ndarray
+        The right-hand side for which we are solving, i.e., we solve
         Tx = b and return b, where T is the Toeplitz coefficient matrix.
 
     Returns
@@ -137,18 +137,18 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15
         There is no checking for whether the matrix is symmetric.
         A warning is issued if some singular values are negative, i.e.
         below the negative of the threshold.
-    inverse : bool
+    inverse : bool, optional
         If False (default), then the matrix square root is returned.
         If inverse is True, then the matrix square root of the inverse
         matrix is returned.
-    full : bool
+    full : bool, optional
         If full is False (default, then the square root has reduce number
-        of rows if the matrix is singular, i.e. has singular values below
+        of rows if the matrix is singular, i.e., has singular values below
         the threshold.
-    nullspace : bool
+    nullspace : bool, optional
         If nullspace is true, then the matrix square root of the null space
         of the matrix is returned.
-    threshold : float
+    threshold : float, optional
         Singular values below the threshold are dropped.
 
     Returns

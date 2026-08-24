@@ -40,11 +40,11 @@ Some informal definitions of the terms are
 
 *Endogenous variables designates variables in an economic/econometric model
 that are explained, or predicted, by that model.*
-http://stats.oecd.org/glossary/detail.asp?ID=794
+`Endogenous and exogenous variables <https://en.wikipedia.org/wiki/Endogenous_and_exogenous_variables>`_
 
 *Exogenous variables designates variables that appear in an
 economic/econometric model, but are not explained by that model (i.e. they are
-taken as given by the model).*  http://stats.oecd.org/glossary/detail.asp?ID=890
+taken as given by the model).*  See `Endogenous and exogenous variables <https://en.wikipedia.org/wiki/Endogenous_and_exogenous_variables>`_.
 
 In econometrics and statistics the terms are defined more formally, and
 different definitions of exogeneity (weak, strong, strict) are used depending

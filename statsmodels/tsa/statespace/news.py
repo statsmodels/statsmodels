@@ -12,6 +12,7 @@ import pandas as pd
 from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.validation import string_like
 
 
 class NewsResults:
@@ -40,86 +41,86 @@ class NewsResults:
     tolerance : float, optional
         The numerical threshold for determining zero impact. Default is that
         any impact less than 1e-10 is assumed to be zero.
-    row_labels : iterable
+    row_labels : array_like, optional
         Row labels (often dates) for the impacts of the revisions and news.
 
     Attributes
     ----------
-    total_impacts : pd.DataFrame
+    total_impacts : DataFrame
         Updates to forecasts of impacted variables from both news and data
         revisions, E[y^i | post] - E[y^i | previous].
-    update_impacts : pd.DataFrame
+    update_impacts : DataFrame
         Updates to forecasts of impacted variables from the news,
         E[y^i | post] - E[y^i | revisions] where y^i are the impacted variables
         of interest.
-    revision_impacts : pd.DataFrame
+    revision_impacts : DataFrame
         Updates to forecasts of impacted variables from all data revisions,
         E[y^i | revisions] - E[y^i | previous].
-    news : pd.DataFrame
+    news : Series
         The unexpected component of the updated data,
         E[y^u | post] - E[y^u | revisions] where y^u are the updated variables.
-    weights : pd.DataFrame
+    weights : DataFrame
         Weights describing the effect of news on variables of interest.
-    revisions : pd.DataFrame
+    revisions : Series
         The revisions between the current and previously observed data, for
         revisions for which detailed impacts were computed.
-    revisions_all : pd.DataFrame
+    revisions_all : Series
         The revisions between the current and previously observed data,
         y^r_{revised} - y^r_{previous} where y^r are the revised variables.
-    revision_weights : pd.DataFrame
+    revision_weights : DataFrame
         Weights describing the effect of revisions on variables of interest,
         for revisions for which detailed impacts were computed.
-    revision_weights_all : pd.DataFrame
+    revision_weights_all : DataFrame
         Weights describing the effect of revisions on variables of interest,
         with a new entry that includes NaNs for the revisions for which
         detailed impacts were not computed.
-    update_forecasts : pd.DataFrame
+    update_forecasts : Series
         Forecasts based on the previous dataset of the variables that were
         updated, E[y^u | previous].
-    update_realized : pd.DataFrame
+    update_realized : Series
         Actual observed data associated with the variables that were
         updated, y^u
     revisions_details_start : int
         Integer index of first period in which detailed revision impacts were
         computed.
-    revision_detailed_impacts : pd.DataFrame
+    revision_detailed_impacts : DataFrame
         Updates to forecasts of impacted variables from data revisions with
         detailed impacts, E[y^i | revisions] - E[y^i | grouped revisions].
-    revision_grouped_impacts : pd.DataFrame
+    revision_grouped_impacts : DataFrame
         Updates to forecasts of impacted variables from data revisions that
         were grouped together, E[y^i | grouped revisions] - E[y^i | previous].
-    revised_prev : pd.DataFrame
+    revised_prev : Series
         Previously observed data associated with the variables that were
         revised, for revisions for which detailed impacts were computed.
-    revised_prev_all : pd.DataFrame
+    revised_prev_all : Series
         Previously observed data associated with the variables that were
         revised, y^r_{previous}
-    revised : pd.DataFrame
+    revised : Series
         Currently observed data associated with the variables that were
         revised, for revisions for which detailed impacts were computed.
-    revised_all : pd.DataFrame
+    revised_all : Series
         Currently observed data associated with the variables that were
         revised, y^r_{revised}
-    prev_impacted_forecasts : pd.DataFrame
+    prev_impacted_forecasts : DataFrame
         Previous forecast of the variables of interest, E[y^i | previous].
-    post_impacted_forecasts : pd.DataFrame
+    post_impacted_forecasts : DataFrame
         Forecast of the variables of interest after taking into account both
         revisions and updates, E[y^i | post].
-    revisions_iloc : pd.DataFrame
+    revisions_iloc : DataFrame
         The integer locations of the data revisions in the dataset.
-    revisions_ix : pd.DataFrame
+    revisions_ix : DataFrame
         The label-based locations of the data revisions in the dataset.
-    revisions_iloc_detailed : pd.DataFrame
+    revisions_iloc_detailed : DataFrame
         The integer locations of the data revisions in the dataset for which
         detailed impacts were computed.
-    revisions_ix_detailed : pd.DataFrame
+    revisions_ix_detailed : DataFrame
         The label-based locations of the data revisions in the dataset for
         which detailed impacts were computed.
-    updates_iloc : pd.DataFrame
+    updates_iloc : DataFrame
         The integer locations of the updated data points.
-    updates_ix : pd.DataFrame
+    updates_ix : DataFrame
         The label-based locations of updated data points.
-    state_index : array_like
+    state_index : ndarray or None
         Index of state variables used to compute impacts.
 
     References
@@ -356,7 +357,7 @@ class NewsResults:
 
         Returns
         -------
-        data_revisions : pd.DataFrame
+        data_revisions : DataFrame
             Index is as MultiIndex consisting of `revision date` and
             `revised variable`. The columns are:
 
@@ -387,7 +388,7 @@ class NewsResults:
 
         Returns
         -------
-        data_updates : pd.DataFrame
+        data_updates : DataFrame
             Index is as MultiIndex consisting of `update date` and
             `updated variable`. The columns are:
 
@@ -415,7 +416,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `impact date`: the date of the impact on the variable of interest
@@ -509,7 +510,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `impact date`: the date of the impact on the variable of interest
@@ -596,7 +597,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `update date`: the date of the data update, that results in
@@ -680,7 +681,7 @@ class NewsResults:
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Index is as MultiIndex consisting of:
 
             - `revision date`: the date of the data revision, that results in
@@ -772,7 +773,7 @@ class NewsResults:
 
         Returns
         -------
-        impacts : pd.DataFrame
+        impacts : DataFrame
             Index is as MultiIndex consisting of:
 
             - `impact date`: the date of the impact on the variable of interest
@@ -855,7 +856,7 @@ class NewsResults:
             the variables that were *affected* by the news. If you do not know
             the labels for the variables, check the `endog_names` attribute of
             the model instance.
-        groupby : {impact date, impacted variable}
+        groupby : {"impact date", "impacted variable"}, optional
             The primary variable for grouping results in the impacts table. The
             default is to group by impact date.
         show_revisions_columns : bool, optional
@@ -863,9 +864,9 @@ class NewsResults:
             data revisions or the total impacts. Default is to show the
             revisions and totals columns if any revisions were made and
             otherwise to hide them.
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
         float_format : str, optional
             Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
@@ -978,7 +979,7 @@ class NewsResults:
 
         Parameters
         ----------
-        source : {news, revisions}
+        source : {"news", "revisions"}, optional
             The source of impacts to summarize. Default is "news".
         impact_date : int, str, datetime, list, array, or slice, optional
             Observation index label or slice of labels specifying particular
@@ -1007,12 +1008,13 @@ class NewsResults:
             variables that were *affected* by the news. If you do not know the
             labels for the variables, check the `endog_names` attribute of the
             model instance.
-        groupby : {update date, updated variable, impact date, impacted variable}
+        groupby : {"update date", "updated variable", "impact date",
+            "impacted variable"}, optional
             The primary variable for grouping results in the details table. The
             default is to group by update date.
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
         float_format : str, optional
             Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
@@ -1025,7 +1027,7 @@ class NewsResults:
         -------
         details_table : SimpleTable or list of SimpleTable
             Table or list of tables describing how the news from each update
-            (i.e. news from a particular variable / date) translates into
+            (i.e., news from a particular variable / date) translates into
             changes to the forecasts of each impacted variable / date.
 
             This table contains information about the updates and about the
@@ -1085,6 +1087,7 @@ class NewsResults:
             s[3] = np.s_[updated_variable]
         s = tuple(s)
 
+        source = string_like(source, "source", options=("news", "revisions"))
         if source == "news":
             details = self.details_by_impact.loc[s, :]
             columns = {
@@ -1094,7 +1097,7 @@ class NewsResults:
                 "updated variable": "updated variable",
                 "news": "news",
             }
-        elif source == "revisions":
+        else:  # source == "revisions"
             details = self.revision_details_by_impact.loc[s, :]
             columns = {
                 "current": "revised",
@@ -1103,9 +1106,6 @@ class NewsResults:
                 "updated variable": "revised variable",
                 "news": "revision",
             }
-        else:
-            raise ValueError(f'Invalid `source`: {source}. Must be "news" or'
-                             ' "revisions".')
 
         # Make the first index level the groupby level
         groupby = groupby.lower().replace("_", " ")
@@ -1245,9 +1245,9 @@ class NewsResults:
 
         Parameters
         ----------
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
 
         Returns
         -------
@@ -1273,8 +1273,12 @@ class NewsResults:
         try:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].map(str))
-            data.iloc[:, 2:-1] = data.iloc[:, 2:-1].map(
-                lambda num: "" if pd.isna(num) else f"{num:.2f}")
+            # Assign column-by-column (rather than as a single .iloc block)
+            # since pandas >= 2.2 raises when a block assignment would
+            # lossily cast a float column to hold the formatted strings.
+            for col in data.columns[2:-1]:
+                data[col] = data[col].map(
+                    lambda num: "" if pd.isna(num) else f"{num:.2f}")
         except AttributeError:
             data[["revision date", "revised variable"]] = (
                 data[["revision date", "revised variable"]].applymap(str))
@@ -1303,9 +1307,9 @@ class NewsResults:
 
         Parameters
         ----------
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
 
         Returns
         -------
@@ -1317,7 +1321,7 @@ class NewsResults:
             - `updated variable` : variable for which new data was added at
               `update date`.
             - `forecast (prev)` : the forecast value for the updated variable
-              at the update date in the previous results object (i.e. prior to
+              at the update date in the previous results object (i.e., prior to
               the data being available).
             - `observed` : the observed value of the new datapoint.
 
@@ -1407,22 +1411,22 @@ class NewsResults:
             variables that were *revised*. If you do not know the labels for
             the variables, check the `endog_names` attribute of the model
             instance.
-        impacts_groupby : {impact date, impacted variable}
+        impacts_groupby : {"impact date", "impacted variable"}, optional
             The primary variable for grouping results in the impacts table. The
             default is to group by impact date.
-        details_groupby : str
-            One of "update date", "updated variable", "impact date", or
-            "impacted variable". The primary variable for grouping results in
-            the details table. Only used if the details tables are included.
-            The default is to group by update date.
+        details_groupby : {"update date", "updated variable", "impact date",
+            "impacted variable"}, optional
+            The primary variable for grouping results in the details table.
+            Only used if the details tables are included. The default is to
+            group by update date.
         show_revisions_columns : bool, optional
             If set to False, the impacts table will not show the impacts from
             data revisions or the total impacts. Default is to show the
             revisions and totals columns if any revisions were made and
             otherwise to hide them.
-        sparsify : bool, optional, default True
+        sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
-            keys at each row.
+            keys at each row. Default is True.
         include_details_tables : bool, optional
             If set to True, the summary will show tables describing the details
             of how news from specific updates translate into specific impacts.
@@ -1569,12 +1573,12 @@ class NewsResults:
             Whether to include the details of impacts from data revisions.
             Default is True.
         include_updates : bool, optional
-            Whether to include the details of impacts from news (i.e. newly
+            Whether to include the details of impacts from news (i.e., newly
             observed datapoints). Default is True.
 
         Returns
         -------
-        details : pd.DataFrame
+        details : DataFrame
             Combination of the `details_by_impact` and
             `revision_details_by_impact` tables, with columns renamed so
             that both sets of details can be concatenated together. The
@@ -1614,7 +1618,7 @@ class NewsResults:
 
         Parameters
         ----------
-        groupby : str, list of str, or function, optional
+        groupby : str, list of str, or callable, optional
             Argument passed to the `groupby` method of the combined details
             table (see `get_details`) to group impacts by, e.g., by the
             update date. If not specified, no grouping is performed.
@@ -1622,12 +1626,12 @@ class NewsResults:
             Whether to include the impacts from data revisions. Default is
             True.
         include_updates : bool, optional
-            Whether to include the impacts from news (i.e. newly observed
+            Whether to include the impacts from news (i.e., newly observed
             datapoints). Default is True.
 
         Returns
         -------
-        impacts : pd.DataFrame
+        impacts : DataFrame
             Impacts on variables of interest, indexed by (grouped) update /
             revision date and columns given by the impact date / impacted
             variable.

@@ -174,10 +174,6 @@ class LeastSquares(RobustNorm):
         r"""
         The robust criterion function for the least squares estimator
 
-        .. math::
-
-            \rho(z) = \frac{1}{2} z^2
-
         Parameters
         ----------
         z : array_like
@@ -187,8 +183,12 @@ class LeastSquares(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
-        """
 
+            .. math::
+
+                \rho(z) = \frac{z^2}{2}
+        """
+        z = np.asarray(z)
         return z**2 * 0.5
 
     def psi(self, z):
@@ -196,10 +196,6 @@ class LeastSquares(RobustNorm):
         The psi function for the least squares estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = z
 
         Parameters
         ----------
@@ -210,6 +206,10 @@ class LeastSquares(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = z
         """
 
         return np.asarray(z)
@@ -220,10 +220,6 @@ class LeastSquares(RobustNorm):
 
         The psi function scaled by the input z.
 
-        .. math::
-
-            w(z) = 1
-
         Parameters
         ----------
         z : array_like
@@ -233,6 +229,10 @@ class LeastSquares(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                w(z) = 1
         """
 
         z = np.asarray(z)
@@ -241,10 +241,6 @@ class LeastSquares(RobustNorm):
     def psi_deriv(self, z):
         r"""
         The derivative of the least squares psi function
-
-        .. math::
-
-            \psi'(z) = 1
 
         Parameters
         ----------
@@ -255,6 +251,10 @@ class LeastSquares(RobustNorm):
         -------
         psi_deriv : ndarray
             The value of the derivative of the psi function.
+
+            .. math::
+
+                \psi'(z) = 1
 
         Notes
         -----
@@ -338,13 +338,6 @@ class HuberT(RobustNorm):
         r"""
         The robust criterion function for Huber's t estimator
 
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le t \\
-            t|z| - \frac{1}{2} t^2 & \text{for } |z| > t
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -354,6 +347,13 @@ class HuberT(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{z^2}{2} & \text{if } \lvert z \rvert \le t \\
+                              \lvert z \rvert t - \frac{t^2}{2} & \text{if } \lvert z \rvert > t
+                          \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -366,13 +366,6 @@ class HuberT(RobustNorm):
 
         The analytic derivative of rho.
 
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le t \\
-            \text{sign}(z) \cdot t & \text{for } |z| > t
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -382,6 +375,13 @@ class HuberT(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z & \text{if } \lvert z \rvert \le t \\
+                              \text{sign}(z) \cdot t & \text{if } \lvert z \rvert > t
+                          \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -393,13 +393,6 @@ class HuberT(RobustNorm):
 
         The psi function scaled by z.
 
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le t \\
-            t/|z| & \text{for } |z| > t
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -409,6 +402,13 @@ class HuberT(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        1 & \text{if } \lvert z \rvert \le t \\
+                                        \frac{t}{\lvert z \rvert} & \text{if } \lvert z \rvert > t
+                                    \end{cases}
         """
         z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
@@ -501,10 +501,6 @@ class RamsayE(RobustNorm):
         r"""
         The robust criterion function for Ramsay's Ea
 
-        .. math::
-
-            \rho(z) = a^{-2} (1 - \exp(-a|z|)(1 + a|z|))
-
         Parameters
         ----------
         z : array_like
@@ -514,6 +510,10 @@ class RamsayE(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = a^{-2} \cdot (1 - \exp(-a \lvert z \rvert ) \cdot (1 + a \lvert z \rvert))
         """
         z = np.asarray(z)
         return (1 - np.exp(-self.a * np.abs(z)) *
@@ -525,10 +525,6 @@ class RamsayE(RobustNorm):
 
         The analytic derivative of rho.
 
-        .. math::
-
-            \psi(z) = z \exp(-a|z|)
-
         Parameters
         ----------
         z : array_like
@@ -538,6 +534,10 @@ class RamsayE(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = z \cdot \exp(-a \cdot \lvert z \rvert)
         """
         z = np.asarray(z)
         return z * np.exp(-self.a * np.abs(z))
@@ -548,10 +548,6 @@ class RamsayE(RobustNorm):
 
         The psi function scaled by z.
 
-        .. math::
-
-            w(z) = \exp(-a|z|)
-
         Parameters
         ----------
         z : array_like
@@ -561,6 +557,10 @@ class RamsayE(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \exp(-a \cdot \lvert z \rvert)
         """
 
         z = np.asarray(z)
@@ -666,13 +666,6 @@ class AndrewWave(RobustNorm):
         r"""
         The robust criterion function for Andrew's wave
 
-        .. math::
-
-            \rho(z) = \begin{cases}
-            a^2 (1 - \cos(z/a)) & \text{for } |z| \le a\pi \\
-            2a^2 & \text{for } |z| > a\pi
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -682,6 +675,13 @@ class AndrewWave(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              a^2 \cdot (1 - \cos(\frac{z}{a})) & \text{if } \lvert z \rvert \le a\pi \\
+                              2a^2 & \text{if } \lvert z \rvert > a\pi
+                          \end{cases}
         """
 
         a = self.a
@@ -696,13 +696,6 @@ class AndrewWave(RobustNorm):
 
         The analytic derivative of rho.
 
-        .. math::
-
-            \psi(z) = \begin{cases}
-            a \sin(z/a) & \text{for } |z| \le a\pi \\
-            0 & \text{for } |z| > a\pi
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -712,6 +705,13 @@ class AndrewWave(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              a \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
+                              0 & \text{if } \lvert z \rvert > a\pi
+                          \end{cases}
         """
 
         a = self.a
@@ -725,13 +725,6 @@ class AndrewWave(RobustNorm):
 
         The psi function scaled by z.
 
-        .. math::
-
-            w(z) = \begin{cases}
-            \sin(z/a) / (z/a) & \text{for } |z| \le a\pi \\
-            0 & \text{for } |z| > a\pi
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -741,6 +734,13 @@ class AndrewWave(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        \frac{a}{z} \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
+                                        0 & \text{if } \lvert z \rvert > a\pi
+                                    \end{cases}
         """
         a = self.a
         z = np.asarray(z)
@@ -854,13 +854,6 @@ class TrimmedMean(RobustNorm):
         r"""
         The robust criterion function for least trimmed mean
 
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le c \\
-            \frac{1}{2} c^2 & \text{for } |z| > c
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -870,6 +863,13 @@ class TrimmedMean(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{z^2}{2} & \text{if } \lvert z \rvert \le c \\
+                              \frac{c^2}{2} & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
 
         z = np.asarray(z)
@@ -882,13 +882,6 @@ class TrimmedMean(RobustNorm):
 
         The analytic derivative of rho.
 
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -898,6 +891,13 @@ class TrimmedMean(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z & \text{if } \lvert z \rvert \le c \\
+                              0 & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -909,13 +909,6 @@ class TrimmedMean(RobustNorm):
 
         The psi function scaled by z.
 
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -925,6 +918,13 @@ class TrimmedMean(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        1 & \text{if } \lvert z \rvert \le c \\
+                                        0 & \text{if } \lvert z \rvert > c
+                                    \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -1039,15 +1039,6 @@ class Hampel(RobustNorm):
         r"""
         The robust criterion function for Hampel's estimator
 
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le a \\
-            a|z| - \frac{1}{2} a^2 & \text{for } a < |z| \le b \\
-            \frac{a(c - |z|)^2}{2(c - b)} & \text{for } b < |z| \le c \\
-            \frac{a(b + c - a)}{2} & \text{for } |z| > c
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -1057,6 +1048,15 @@ class Hampel(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{z^2}{2} & \text{if } \lvert z \rvert \le a \\
+                              a \lvert z \rvert - \frac{a^2}{2} & \text{if } a < \lvert z \rvert \le b \\
+                              \frac{a}{2}(b + c - a) - \frac{a}{2(c - b)}(c - \lvert z \rvert)^2  & \text{if } b < \lvert z \rvert \le c \\
+                              \frac{a}{2} \cdot (b + c - a) & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
         a, b, c = self.a, self.b, self.c
 
@@ -1085,15 +1085,6 @@ class Hampel(RobustNorm):
 
         The analytic derivative of rho.
 
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le a \\
-            a \cdot \text{sgn}(z) & \text{for } a < |z| \le b \\
-            a \cdot \text{sgn}(z) \frac{c - |z|}{c - b} & \text{for } b < |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -1103,6 +1094,15 @@ class Hampel(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z & \text{if } \lvert z \rvert \le a \\
+                              a \cdot \text{sign}(z) & \text{if } a < \lvert z \rvert \le b \\
+                              \frac{a}{c - b} \cdot \text{sign}(z) \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
+                              0 & \text{if } \lvert z \rvert > c \\
+                          \end{cases}
         """
         a, b, c = self.a, self.b, self.c
 
@@ -1129,15 +1129,6 @@ class Hampel(RobustNorm):
 
         The psi function scaled by z.
 
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le a \\
-            a/|z| & \text{for } a < |z| \le b \\
-            \frac{a(c - |z|)}{|z|(c - b)} & \text{for } b < |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
-
         Parameters
         ----------
         z : array_like
@@ -1147,6 +1138,15 @@ class Hampel(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        1 & \text{if } \lvert z \rvert \le a \\
+                                        \frac{a}{\lvert z \rvert} & \text{if } a < \lvert z \rvert \le b \\
+                                        \frac{a}{\lvert z \rvert (c - b)} \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
+                                        0 & \text{if } \lvert z \rvert > c \\
+                                    \end{cases}
         """
         a, b, c = self.a, self.b, self.c
 
@@ -1236,17 +1236,19 @@ class TukeyBiweight(RobustNorm):
 
         Parameters
         ----------
-        bp : float in [0.05, 0.5] or None
+        bp : float in [0.05, 0.10, 0.15, ..., 0.5], optional
             Required breakdown point
             Either bp or eff has to be specified, but not both.
-        eff : float or None
+        eff : float or None, optional
             Required asymptotic efficiency.
             Either bp or eff has to be specified, but not both.
 
         Returns
         -------
-        float
-            The tuning parameter.
+        tuple of float
+            The output depends on whether using bp or eff. If using bp, returns
+            (tuning parameter, efficiency, scale bias) where c is the tuning.
+            If using eff, (tuning parameter, breakdown point).
         """
         if ((bp is None and eff is None) or
                 (bp is not None and eff is not None)):
@@ -1319,9 +1321,14 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = (c**2 / 6) * (1 - (1 - (z/c)**2)**3)   for \|z\| <= c
+            The value of the robust criterion function.
 
-            rho(z) = c**2 / 6                               for \|z\| > c
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{c^2}{6}\left(1 - \left(1 - (\frac{z}{c})^2\right)^3\right) & \text{if } \lvert z \rvert \le c \\
+                              \frac{c^2}{6} & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
         subset = self._subset(z)
         factor = self.c**2 / 6.
@@ -1331,7 +1338,7 @@ class TukeyBiweight(RobustNorm):
         r"""
         The psi function for Tukey's biweight estimator
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
 
         Parameters
         ----------
@@ -1341,9 +1348,14 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*(1 - (z/c)**2)**2        for \|z\| <= c
+            The value of the psi function.
 
-            psi(z) = 0                           for \|z\| > c
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z \cdot (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le c \\
+                              0 & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
 
         z = np.asarray(z)
@@ -1354,7 +1366,7 @@ class TukeyBiweight(RobustNorm):
         r"""
         Tukey's biweight weighting function for the IRLS algorithm
 
-        The psi function scaled by z
+        The psi function scaled by z.
 
         Parameters
         ----------
@@ -1364,9 +1376,14 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = (1 - (z/c)**2)**2          for \|z\| <= c
+            The value of the weighting function.
 
-            weights(z) = 0                          for \|z\| > c
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le c \\
+                                        0 & \text{if } \lvert z \rvert > c
+                                    \end{cases}
         """
         z = np.asarray(z)
         subset = self._subset(z)
@@ -1476,15 +1493,6 @@ class TukeyQuartic(RobustNorm):
         r"""
         The robust criterion function for TukeyQuartic norm
 
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 \left(1 - \frac{4}{k + 2} x^k + \frac{1}{k + 1} x^{2k}\right) & \text{for } |z| \le c \\
-            \rho(c) & \text{for } | z | > c
-            \end{cases}
-
-        where :math:`x = z / c`.
-
         Parameters
         ----------
         z : array_like
@@ -1494,6 +1502,15 @@ class TukeyQuartic(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{1}{2} z^2 \left(1 - \frac{4}{k + 2} x^k + \frac{1}{k + 1} x^{2k}\right) & \text{if } \lvert z \rvert \le c \\
+                              \rho(c) & \text{if } \lvert z \rvert > c
+                          \end{cases}
+
+            where :math:`x = z / c`.
         """
         c = self.c
         k = self.k
@@ -1767,26 +1784,28 @@ class MQuantileNorm(RobustNorm):
     -----
     This is mainly for base norms that are not redescending, like HuberT or
     LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
-    in the case of non-redescending Norms.)
+    in the case of non-redescending Norms.) See [BianchiEtAl2015]_,
+    [BrecklingChambers1988]_, [Jones1994]_, and [NeweyPowell1987]_ for more
+    information.
 
     Expectiles are M-quantiles with the LeastSquares as base norm.
 
     References
     ----------
-    .. [*] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic Properties
-       and Variance Estimators of the M-Quantile Regression Coefficients
+    .. [BianchiEtAl2015] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic
+       Properties and Variance Estimators of the M-Quantile Regression Coefficients
        Estimators.” Communications in Statistics - Theory and Methods 44 (11):
        2416-29. doi:10.1080/03610926.2013.791375.
 
-    .. [*] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
+    .. [BrecklingChambers1988] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
        Biometrika 75 (4): 761-71. doi:10.2307/2336317.
 
-    .. [*] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
+    .. [Jones1994] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
        Statistics & Probability Letters 20 (2): 149-53.
        doi:10.1016/0167-7152(94)90031-0.
 
-    .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
-       Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
+    .. [NeweyPowell1987] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric
+       Least Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
        doi:10.2307/1911031.
     """
 
@@ -1819,6 +1838,7 @@ class MQuantileNorm(RobustNorm):
         rho : ndarray
             The value of the robust criterion function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.rho(z)
 
@@ -1838,6 +1858,7 @@ class MQuantileNorm(RobustNorm):
         psi : ndarray
             The value of the psi function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi(z)
 
@@ -1857,6 +1878,7 @@ class MQuantileNorm(RobustNorm):
         weights : ndarray
             The value of the weighting function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.weights(z)
 
@@ -1878,6 +1900,7 @@ class MQuantileNorm(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
 
@@ -1910,7 +1933,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
 
     Parameters
     ----------
-    a : ndarray
+    a : array_like
         Array over which the location parameter is to be estimated
     scale : ndarray
         Scale parameter to be used in M-estimator

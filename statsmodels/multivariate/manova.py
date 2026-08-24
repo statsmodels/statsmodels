@@ -82,7 +82,7 @@ class MANOVA(Model):
         Parameters
         ----------
         %(hypotheses_doc)s
-        skip_intercept_test : bool
+        skip_intercept_test : bool, optional
             If true, then testing the intercept is skipped, the model is not
             changed.
             Note: If a term has a numerically insignificant effect, then

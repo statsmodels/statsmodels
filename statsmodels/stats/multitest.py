@@ -6,19 +6,31 @@ Author: Josef Perktold
 License: BSD-3
 
 """
+from statsmodels.compat.scipy import SP_LT_112
+
+from typing import NamedTuple
 
 import numpy as np
 
 from statsmodels.stats._knockoff import RegressionFDR
 
 __all__ = [
+    "LocalFDRCorrectionResult",
     "NullDistribution",
     "RegressionFDR",
     "fdrcorrection",
     "fdrcorrection_twostage",
     "local_fdr",
+    "local_fdr_correction",
     "multipletests",
 ]
+
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    string_like,
+)
 
 # ==============================================
 #
@@ -52,6 +64,7 @@ multitest_methods_names = {
     "fdr_tsbh": "FDR 2-stage Benjamini-Hochberg",
     "fdr_tsbky": "FDR 2-stage Benjamini-Krieger-Yekutieli",
     "fdr_gbs": "FDR adaptive Gavrilov-Benjamini-Sarkar",
+    "lfdr": "lfdr support line procedure",
 }
 
 _alias_list = [
@@ -66,14 +79,21 @@ _alias_list = [
     ["fdr_tsbh", "fdr_2sbh"],
     ["fdr_tsbky", "fdr_2sbky", "fdr_twostage"],
     ["fdr_gbs"],
+    ["lfdr", "lfdr_sl"],
 ]
 
 
+if SP_LT_112:
+    # lfdr does not work with scipy < 1.12 because it uses isotonic_regression
+    del multitest_methods_names["lfdr"]
+    _alias_list.remove(["lfdr", "lfdr_sl"])
+
+
 multitest_alias = {}
-for m in _alias_list:
-    multitest_alias[m[0]] = m[0]
-    for a in m[1:]:
-        multitest_alias[a] = m[0]
+for _alias_sub_list in _alias_list:
+    _formal_name = _alias_sub_list[0]
+    for _alias in _alias_sub_list:
+        multitest_alias[_alias] = _formal_name
 
 
 def multipletests(
@@ -86,9 +106,9 @@ def multipletests(
     ----------
     pvals : array_like, 1-d
         uncorrected p-values.   Must be 1-dimensional.
-    alpha : float
-        FWER, family-wise error rate, e.g. 0.1
-    method : str
+    alpha : float, optional
+        FWER, family-wise error rate, e.g., 0.1
+    method : str, optional
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:
 
@@ -102,24 +122,26 @@ def multipletests(
         - `fdr_by` : Benjamini/Yekutieli (negative)
         - `fdr_tsbh` : two stage fdr correction (non-negative)
         - `fdr_tsbky` : two stage fdr correction (non-negative)
+        - `fdr_gbs` : adaptive step-down (Gavrilov, Benjamini, Sarkar)
+        - `lfdr` : support line
 
-    maxiter : int or bool
+    maxiter : int or bool, optional
         Maximum number of iterations for two-stage fdr, `fdr_tsbh` and
         `fdr_tsbky`. It is ignored by all other methods.
         maxiter=1 (default) corresponds to the two stage method.
         maxiter=-1 corresponds to full iterations which is maxiter=len(pvals).
         maxiter=0 uses only a single stage fdr correction using a 'bh' or 'bky'
         prior fraction of assumed true hypotheses.
-    is_sorted : bool
+    is_sorted : bool, optional
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
         pvalues are already sorted in ascending order.
-    returnsorted : bool
+    returnsorted : bool, optional
          not tested, return sorted p-values instead of original sequence
 
     Returns
     -------
-    reject : ndarray, boolean
+    reject : ndarray, bool
         true for hypothesis that can be rejected for given alpha
     pvals_corrected : ndarray
         p-values corrected for multiple tests
@@ -280,6 +302,10 @@ def multipletests(
         del pvals_corrected_raw
         reject = pvals_corrected <= alpha
 
+    elif method.lower() in ["lfdr", "lfdr_sl"]:
+        pvals_corrected = local_fdr_correction(pvals, is_sorted=True).lfdr
+        reject = pvals_corrected <= alpha
+
     else:
         raise ValueError("method not recognized")
 
@@ -325,7 +351,7 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     -------
     rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : ndarray
+    pvals_corrected : ndarray
         pvalues adjusted for multiple hypothesis testing to limit FDR
 
     Notes
@@ -337,6 +363,30 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
 
     The two-step method of Benjamini, Krieger and Yekutieli that estimates the number
     of false hypotheses will be available (soon).
+
+    Method names can be abbreviated to first letter, 'i' or 'p' for fdr_bh and 'n' for
+    fdr_by.
+
+    **Benjamini-Hochberg procedure** (see Benjamini and Hochberg, 1995)
+
+    Define pvals as:
+
+        ``pvals`` = ``pval_1`` <= ``pval_2`` <= ... <= ``pval_k`` ... <= ``pval_(m-1)`` <= ``pval_m``
+
+    Compute raw adjusted p-values as:
+
+       ``raw_adj_pval_k`` = ``pval_k`` * ``m``/``k``, where
+
+    - ``raw_adj_pval_k`` is the adjusted ``pval_k`` BEFORE a final correction,
+    - ``pval_k`` is the p-value under consideration,
+    - ``m`` is the total number of p-values, and
+    - ``k`` is the rank of ``pval_k``.
+
+    Perform a final correction to make sure that adjusted p-values are monotonic:
+
+    The final correction is to make sure that ``adj_pval_k`` is less than or
+    equal to ``adj_pval_(k+1)``. This procedure starts at the last p-value
+    (``raw_adj_pval_m``) and proceeds until the first p-value (``raw_adj_pval_1``).
 
     Both methods exposed via this function (Benjamini/Hochberg, Benjamini/Yekutieli)
     are also available in the function ``multipletests``, as ``method="fdr_bh"`` and
@@ -356,22 +406,27 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     else:
         pvals_sorted = pvals  # alias
 
+    method = string_like(
+        method,
+        "method",
+        options=("i", "indep", "p", "poscorr", "n", "negcorr"),
+        lower=False,
+    )
     if method in ["i", "indep", "p", "poscorr"]:
         ecdffactor = _ecdf(pvals_sorted)
-    elif method in ["n", "negcorr"]:
+    else:  # method in ("n", "negcorr")
         cm = np.sum(1.0 / np.arange(1, len(pvals_sorted) + 1))  # corrected this
         ecdffactor = _ecdf(pvals_sorted) / cm
     #    elif method in ['n', 'negcorr']:
     #        cm = np.sum(np.arange(len(pvals)))
     #        ecdffactor = ecdf(pvals_sorted)/cm
-    else:
-        raise ValueError("only indep and negcorr implemented")
     reject = pvals_sorted <= ecdffactor * alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
         reject[:rejectmax] = True
 
     pvals_corrected_raw = pvals_sorted / ecdffactor
+    # adjust raw adjusted p-values to make them monotonic
     pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
     del pvals_corrected_raw
     pvals_corrected[pvals_corrected > 1] = 1
@@ -384,6 +439,172 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
         return reject_, pvals_corrected_
     else:
         return reject, pvals_corrected
+
+
+class LocalFDRCorrectionResult(NamedTuple):
+    """
+    Result of :func:`local_fdr_correction`.
+
+    Parameters
+    ----------
+    fdr : ndarray
+        The estimated tail false discovery rate for each input p-value, in
+        the same order as the p-values passed to `local_fdr_correction`.
+    lfdr : ndarray
+        The estimated local false discovery rate for each input p-value, in
+        the same order as the p-values passed to `local_fdr_correction`.
+    """
+
+    fdr: np.ndarray
+    lfdr: np.ndarray
+
+
+def local_fdr_correction(pvals, null_proportion=1.0, is_sorted=False):
+    r"""
+    Estimate local and tail false discovery rates for a list of p-values.
+
+    Fits a monotone (non-increasing) estimate of the marginal density of
+    the p-values using the Grenander estimator. Combined with an estimate
+    of the proportion of true null hypotheses, this yields, by Bayes' rule,
+    empirical Bayes estimates of the tail and local false discovery rates.
+
+    Parameters
+    ----------
+    pvals : array_like, 1d
+        List of p-values of the individual tests.
+    null_proportion : float, optional
+        Estimate of :math:`\pi_0`, the proportion of true null hypotheses.
+        Defaults to the conservative choice ``1.0``, i.e. all hypotheses
+        are assumed null.
+    is_sorted : bool, optional
+        If False (default), the p-values will be sorted, but the estimated
+        FDR values are returned in the original order. If True, then it is
+        assumed that the p-values are already sorted in ascending order.
+
+    Returns
+    -------
+    LocalFDRCorrectionResult
+        A namedtuple with the estimated tail false discovery rates
+        (``fdr``) and estimated local false discovery rates (``lfdr``).
+
+    See Also
+    --------
+    local_fdr : Local FDR estimation for Z-scores using Poisson regression.
+    fdrcorrection : Benjamini-Hochberg/Benjamini-Yekutieli p-value
+        correction.
+
+    Notes
+    -----
+    Let :math:`t \in [0, 1]` denote a p-value threshold and
+    :math:`\hat{\pi}_0` the `null_proportion`. Let :math:`\hat{F}` be the
+    Grenander estimate of the empirical distribution function of `pvals`,
+    given by the least concave majorant (LCM) of the empirical cdf, and let
+    :math:`\hat{f}` be its density estimate, given by the left-hand slope
+    of the LCM. The tail and local false discovery rates are then estimated
+    by Bayes' rule as
+
+    .. math::
+
+        \widehat{Fdr}(t) = \min\left(1, \hat{\pi}_0 \frac{t}{\hat{F}(t)}
+            \right) \approx \Pr(\text{null} \mid p \leq t)
+
+    .. math::
+
+        \widehat{fdr}(t) = \min\left(1, \frac{\hat{\pi}_0}{\hat{f}(t)}
+            \right) \approx \Pr(\text{null} \mid p = t)
+
+    Tied p-values are treated as repeated observations at a single support
+    point of the empirical distribution function.
+
+    This method assumes that the p-values are independent, are uniformly
+    distributed under the null, and have non-increasing densities under
+    the alternative.
+
+    References
+    ----------
+    .. [*] U Grenander (1956). On the theory of mortality measurement: part
+       II. Scandinavian Actuarial Journal, 39, 125-153.
+
+    .. [*] B Efron, R Tibshirani, J D Storey, and V Tusher (2001). Empirical
+       Bayes analysis of a microarray experiment. Journal of the American
+       Statistical Association, 96:456, 1151-1160.
+
+    .. [*] B Efron (2007). Size, Power and False Discovery Rates. The
+       Annals of Statistics, 35:4, 1351-1377.
+
+    .. [*] K Strimmer (2008). A unified approach to false discovery rate
+       estimation. BMC Bioinformatics, 9, 303.
+
+    .. [*] J A Soloff, D Xiang, and W Fithian (2024). The edge of
+       discovery: Controlling the local false discovery rate at the
+       margin. The Annals of Statistics, 52:2, 580-601.
+
+    Examples
+    --------
+    >>> from statsmodels.stats.multitest import local_fdr_correction
+    >>> import numpy as np
+    >>> pvals = np.random.rand(30)
+    >>> lfdr = local_fdr_correction(pvals).lfdr
+    """
+    try:
+        from scipy.optimize import isotonic_regression
+    except ImportError as imp_err:
+        raise ImportError(
+            "SciPy 1.12 or greater is required to provide the function "
+            "isotonic_regression in order to use local FDR."
+        ) from imp_err
+
+    pvals = array_like(pvals, "pvals", maxdim=1, ndim=1, dtype=float)
+    null_proportion = float_like(null_proportion, "null_proportion")
+    is_sorted = bool_like(is_sorted, "is_sorted")
+
+    nobs = len(pvals)
+
+    if not is_sorted:
+        pvals_sortind = np.argsort(pvals)
+        pvals_sorted = np.take(pvals, pvals_sortind)
+    else:
+        pvals_sorted = pvals  # alias
+
+    # tied p-values share a support point of the empirical cdf, so the
+    # Grenander fit is computed on the distinct values weighted by their
+    # multiplicities (ties otherwise produce zero-width, zero-weight gaps)
+    uniq_pvals, counts = np.unique(pvals_sorted, return_counts=True)
+
+    # compute left-hand slopes of least concave majorant of empirical cdf
+    gaps = np.diff(uniq_pvals, prepend=0)
+    # Ensure arrays passed to isotonic_regression are contiguous, aligned, and writeable to avoid
+    # potential issues with memory layout and performance on Windows
+    requirements = ("C_CONTIGUOUS", "ALIGNED", "OWNDATA", "WRITEABLE", "ENSUREARRAY")
+    y = np.require(counts / (nobs * gaps), dtype=float, requirements=requirements)
+    weights = np.require(gaps, dtype=float, requirements=requirements)
+
+    # Special case when y is empty, which can happen if pvals is empty.
+    # In that case, we should avoid calling isotonic_regression and
+    # just set slopes_uniq to an empty array.
+    if y.size:
+        slope_reg = isotonic_regression(y, weights=weights, increasing=False)
+        slopes_uniq = slope_reg.x
+    else:
+        slopes_uniq = np.array([])
+
+    # compute LCM of empirical cdf
+    keep = np.ones(len(uniq_pvals), dtype=bool)
+    keep[:-1] = ~np.isclose(slopes_uniq[:-1], slopes_uniq[1:])
+    knots_ = np.hstack([0, uniq_pvals[keep]])
+    heights_ = np.hstack([0, np.cumsum(counts)[keep] / nobs])
+    lcm_cdf = np.interp(pvals_sorted, knots_, heights_)
+    slopes = np.repeat(slopes_uniq, counts)
+
+    # return fitted values in original order
+    if not is_sorted:
+        pvals_unsortind = pvals_sortind.argsort()
+        slopes = np.take(slopes, pvals_unsortind)
+        lcm_cdf = np.take(lcm_cdf, pvals_unsortind)
+    lfdr = np.minimum(1, null_proportion / slopes)
+    fdr = np.minimum(1, null_proportion * pvals / lcm_cdf)
+
+    return LocalFDRCorrectionResult(fdr=fdr, lfdr=lfdr)
 
 
 def fdrcorrection_twostage(
@@ -399,16 +620,16 @@ def fdrcorrection_twostage(
     ----------
     pvals : array_like
         set of p-values of the individual tests.
-    alpha : float
+    alpha : float, optional
         error rate
-    method : {'bky', 'bh'}
+    method : {'bky', 'bh'}, optional
         see Notes for details
 
         * 'bky' - implements the procedure in Definition 6 of Benjamini, Krieger
            and Yekutieli 2006
         * 'bh' - the two stage method of Benjamini and Hochberg
 
-    maxiter : int or bool
+    maxiter : int or bool, optional
         Maximum number of iterations.
         maxiter=1 (default) corresponds to the two stage method.
         maxiter=-1 corresponds to full iterations which is maxiter=len(pvals).
@@ -418,11 +639,11 @@ def fdrcorrection_twostage(
         deprecated ``iter`` keyword.
         maxiter=False is two-stage fdr (maxiter=1)
         maxiter=True is full iteration (maxiter=-1 or maxiter=len(pvals))
-    iter : bool
+    iter : None, optional
         Removed keyword that is kept only for backwards compatibility.
         Passing anything other than the default ``None`` raises a
         ``TypeError``; use ``maxiter`` instead.
-    is_sorted : bool
+    is_sorted : bool, optional
         If False (default), the p_values will be sorted, but the corrected
         pvalues are in the original order. If True, then it assumed that the
         pvalues are already sorted in ascending order.
@@ -431,7 +652,7 @@ def fdrcorrection_twostage(
     -------
     rejected : ndarray, bool
         True if a hypothesis is rejected, False if not
-    pvalue-corrected : ndarray
+    pvals_corrected : ndarray
         pvalues adjusted for multiple hypotheses testing to limit FDR
     m0 : int
         ntest - rej, estimated number of true (not rejected) hypotheses
@@ -473,15 +694,14 @@ def fdrcorrection_twostage(
         pvals_sortind = np.argsort(pvals)
         pvals = np.take(pvals, pvals_sortind)
 
+    method = string_like(method, "method", options=("bky", "bh"), lower=False)
     ntests = len(pvals)
     if method == "bky":
         fact = 1.0 + alpha
         alpha_prime = alpha / fact
-    elif method == "bh":
+    else:  # method == "bh"
         fact = 1.0
         alpha_prime = alpha
-    else:
-        raise ValueError("only 'bky' and 'bh' are available as method")
 
     alpha_stages = [alpha_prime]
     rej, pvalscorr = fdrcorrection(
@@ -537,31 +757,31 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     Parameters
     ----------
-    zscores : array_like
+    zscores : ndarray
         A vector of Z-scores
-    null_proportion : float
+    null_proportion : float, optional
         The assumed proportion of true null hypotheses
-    null_pdf : function mapping reals to positive reals
+    null_pdf : callable, optional
         The density of null Z-scores; if None, use standard normal
-    deg : int
+    deg : int, optional
         The maximum exponent in the polynomial expansion of the
         density of non-null Z-scores
-    nbins : int
+    nbins : int, optional
         The number of bins for estimating the marginal density
         of Z-scores.
-    alpha : float
+    alpha : float, optional
         Use Poisson ridge regression with parameter alpha to estimate
         the density of non-null Z-scores.
 
     Returns
     -------
-    fdr : array_like
+    fdr : ndarray
         A vector of FDR values
 
     References
     ----------
-    B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
-    Model.  Statistical Science 23:1, 1-22.
+    .. [*] B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
+       Model.  Statistical Science 23:1, 1-22.
 
     Examples
     --------
@@ -574,7 +794,8 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     Use a Gaussian null distribution estimated from the data:
 
-    >>> null = EmpiricalNull(zscores)
+    >>> from statsmodels.stats.multitest import NullDistribution
+    >>> null = NullDistribution(zscores)
     >>> fdr = local_fdr(zscores, null_pdf=null.pdf)
     """
 
@@ -642,20 +863,20 @@ class NullDistribution:
 
     Parameters
     ----------
-    zscores : array_like
+    zscores : ndarray
         The observed Z-scores.
-    null_lb : float
+    null_lb : float, optional
         Z-scores between `null_lb` and `null_ub` are all considered to be
         true null hypotheses.
-    null_ub : float
+    null_ub : float, optional
         See `null_lb`.
-    estimate_mean : bool
+    estimate_mean : bool, optional
         If True, estimate the mean of the distribution.  If False, the
         mean is fixed at zero.
-    estimate_scale : bool
+    estimate_scale : bool, optional
         If True, estimate the scale of the distribution.  If False, the
         scale parameter is fixed at 1.
-    estimate_null_proportion : bool
+    estimate_null_proportion : bool, optional
         If True, estimate the proportion of true null hypotheses (i.e.
         the proportion of z-scores with expected value zero).  If False,
         this parameter is fixed at 1.
@@ -671,8 +892,8 @@ class NullDistribution:
 
     References
     ----------
-    B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
-    Model.  Statistical Science 23:1, 1-22.
+    .. [*] B Efron (2008).  Microarrays, Empirical Bayes, and the Two-Groups
+       Model.  Statistical Science 23:1, 1-22.
 
     Notes
     -----
@@ -777,13 +998,13 @@ class NullDistribution:
 
         Parameters
         ----------
-        zscores : scalar or array_like
+        zscores : scalar or ndarray
             The point or points at which the density is to be
             evaluated.
 
         Returns
         -------
-        scalar or array_like
+        scalar or ndarray
             The empirical null Z-score density evaluated at the given
             points.
         """

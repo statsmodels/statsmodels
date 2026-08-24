@@ -46,13 +46,13 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
         If a tuple, the elements are stacked column-wise to form a 2d
         array of groups to combine. Otherwise treated as an existing 1d
         or 2d array of group values.
-    prefix : str
+    prefix : str, optional
         Prefix prepended to each label. Only used if ``return_labels``
         is True.
-    sep : str
+    sep : str, optional
         Separator used to join the columns of a 2d group array when
         building labels. Only used if ``return_labels`` is True.
-    return_labels : bool
+    return_labels : bool, optional
         If True, also return a list of string labels for each unique
         group.
 
@@ -60,14 +60,14 @@ def combine_indices(groups, prefix="", sep=".", return_labels=False):
     -------
     uni_inv : ndarray
         Integer codes into `uni` that reconstruct the original `groups`
-        array, i.e. the group index of each observation.
+        array, i.e., the group index of each observation.
     uni_idx : ndarray
         Indices of the first occurrence of each unique group in the
         input.
     uni : ndarray
         Sorted unique groups, or unique group combinations if `groups`
         was 2d or a tuple.
-    label : list[str]
+    label : list of str
         String label for each unique group in `uni`. Only returned if
         ``return_labels`` is True.
     """
@@ -113,9 +113,9 @@ def group_sums(x, group, use_bincount=True):
         ``x`` is only supported when ``use_bincount=False``.
     group : array_like of non-negative int
         Non-negative integer group labels of shape ``(nobs,)``. For predictable
-        indexing (e.g. ``result[group]``), groups should be coded as
+        indexing (e.g., ``result[group]``), groups should be coded as
         ``0, 1, ..., n_groups-1``.
-    use_bincount : bool, default True
+    use_bincount : bool, optional
         Use ``np.bincount`` when True, otherwise a pure-Python group loop.
         The bincount path expects non-negative, reasonably consecutive codes
         and may re-label via ``pd.factorize`` when ``max(group)`` is large.
@@ -191,7 +191,7 @@ def dummy_sparse(groups):
     ----------
     groups : ndarray, int, 1d (nobs,)
         an array of group indicators for each observation. Group levels are
-        assumed to be defined as consecutive integers, i.e. range(n_groups)
+        assumed to be defined as consecutive integers, i.e., range(n_groups)
         where n_groups is the number of group levels. A group level with no
         observations for it will still produce a column of zeros.
 
@@ -249,7 +249,7 @@ class Group:
         Group labels for each observation. A tuple of arrays is combined
         into a single set of group labels representing the intersection
         of the individual groupings.
-    name : str
+    name : str, optional
         Name used as a prefix when constructing string group labels.
 
     Attributes
@@ -274,7 +274,8 @@ class Group:
 
     def __init__(self, group, name=""):
 
-        # self.group = np.asarray(group)  # TODO: use checks in combine_indices
+        # TODO: use checks in combine_indices
+        self.group = np.asarray(group)
         self.name = name
         uni, uni_idx, uni_inv = combine_indices(group)
 
@@ -309,7 +310,7 @@ class Group:
 
         Returns
         -------
-        list[str]
+        list of str
             Labels built from `prefix`, `separator` and the unique group
             values in `uni`.
         """
@@ -335,10 +336,10 @@ class Group:
         drop_idx : int, optional
             Index into `uni` of a group level to drop from the returned
             matrix. Only available if ``sparse`` is False.
-        sparse : bool
+        sparse : bool, optional
             If True, return a sparse indicator matrix instead of a dense
             array.
-        dtype : type
+        dtype : dtype, optional
             The dtype of the returned dense indicator matrix.
 
         Returns
@@ -388,7 +389,7 @@ class Group:
         ----------
         x : array_like
             Data of shape ``(nobs,)`` or ``(nobs, n_features)``.
-        use_bincount : bool
+        use_bincount : bool, optional
             Use ``np.bincount`` when True, otherwise a pure-Python group
             loop. See :func:`group_sums`.
 
@@ -407,7 +408,7 @@ class Group:
         ----------
         x : array_like
             Data of shape ``(nobs,)`` or ``(nobs, n_features)``.
-        use_bincount : bool
+        use_bincount : bool, optional
             Use ``np.bincount`` when True, otherwise a pure-Python group
             loop. See :func:`group_sums`.
 
@@ -448,7 +449,7 @@ class GroupSorted(Group):
         Group labels for each observation. Must already be sorted so
         that all observations belonging to the same group are
         contiguous.
-    name : str
+    name : str, optional
         Name used as a prefix when constructing string group labels.
 
     Attributes
@@ -525,7 +526,7 @@ def _is_hierarchical(x):
     -------
     bool
         True if `x` appears to represent hierarchical (MultiIndex-style)
-        groups, i.e. its first element is itself list-like. False
+        groups, i.e., its first element is itself list-like. False
         otherwise.
     """
     item = x[0]
@@ -544,7 +545,7 @@ def _make_hierarchical_index(index, names):
     ----------
     index : array_like
         Array-like where each row is a tuple of group values.
-    names : list[str]
+    names : list of str
         Names to assign to the levels of the resulting MultiIndex.
 
     Returns
@@ -567,7 +568,7 @@ def _make_generic_names(index):
 
     Returns
     -------
-    list[str]
+    list of str
         Names of the form ``"group0"``, ``"group1"``, ... , zero-padded
         to a consistent width.
     """
@@ -585,7 +586,7 @@ class Grouping:
     index : index-like
         Can be a pandas MultiIndex, Index, or array-like. If array-like
         and hierarchical (more than one grouping variable), groups are
-        expected to be given as a tuple in each row, e.g. ``[('red', 1),
+        expected to be given as a tuple in each row, e.g., ``[('red', 1),
         ('red', 2), ('green', 1), ('green', 2)]``.
     names : list or str, optional
         The names to use for the groups. Should be a str if only one
@@ -597,7 +598,7 @@ class Grouping:
         The (possibly constructed) pandas index representing the
         groups.
     nobs : int
-        Number of observations, i.e. ``len(index)``.
+        Number of observations, i.e., ``len(index)``.
     nlevels : int
         Number of grouping levels.
     slices : list or None
@@ -672,7 +673,7 @@ class Grouping:
         if hasattr(self.index, "levels"):
             return self.index.levels
         else:
-            return pd.Categorical(self.index).levels
+            return pd.Categorical(self.index).categories
 
     @property
     def labels(self):
@@ -732,7 +733,7 @@ class Grouping:
 
         Parameters
         ----------
-        level : int
+        level : int, optional
             Index level to group by.
 
         Notes
@@ -756,7 +757,7 @@ class Grouping:
 
         Parameters
         ----------
-        level : int
+        level : int, optional
             Index level to count.
 
         Notes
@@ -773,9 +774,9 @@ class Grouping:
 
         Parameters
         ----------
-        is_sorted : bool
+        is_sorted : bool, optional
             If True, check that `index` is sorted.
-        unique : bool
+        unique : bool, optional
             If True, check that `index` has no duplicate entries.
         index : index-like, optional
             Index to check. Defaults to `self.index`.
@@ -859,7 +860,7 @@ class Grouping:
         function : callable
             Function applied to each group of each column via
             ``groupby(...).apply``.
-        level : int
+        level : int, optional
             Index level to group by.
         **kwargs
             Additional keyword arguments passed to `function`.
@@ -893,7 +894,7 @@ class Grouping:
             Data to transform, with `self.nobs` rows.
         function : callable
             Function applied to each group of each column.
-        level : int
+        level : int, optional
             Index level to group by.
         **kwargs
             Additional keyword arguments passed to `function`.
@@ -930,7 +931,7 @@ class Grouping:
             for each group, where `subset` is the group's rows of
             `array` and `group_idx` is the index/slice used to select
             them.
-        level : int
+        level : int, optional
             Index level to group by.
         **kwargs
             Additional keyword arguments passed to `function`.
@@ -981,7 +982,7 @@ class Grouping:
 
         Parameters
         ----------
-        level : int
+        level : int, optional
             Grouping level used to form the sparse indicator.
 
         Returns
@@ -999,7 +1000,7 @@ class Grouping:
 
         Parameters
         ----------
-        level : int
+        level : int, optional
             Grouping level used to form the sparse indicator.
 
         Notes

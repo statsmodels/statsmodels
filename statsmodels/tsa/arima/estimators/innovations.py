@@ -41,7 +41,7 @@ def innovations(endog, ma_order=0, demean=True):
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : list of SARIMAXParams objects
             List elements correspond to estimates at different `ma_order`.
@@ -140,14 +140,14 @@ def innovations_mle(
     fixed_params : dict, optional
         Dictionary of parameter names and fixed values. Keys must be valid
         AR or MA parameter names as returned by
-        ``SARIMAXSpecification.param_names`` (e.g. ``{"ar.L1": 0.5}``).
+        ``SARIMAXSpecification.param_names`` (e.g., ``{"ar.L1": 0.5}``).
         ``sigma2`` may not be fixed. Default is None, which fixes no
         parameters.
 
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
         other_results : Bunch
@@ -234,9 +234,10 @@ def innovations_mle(
         sp = SARIMAXParams(spec=spec)
 
         # Estimate starting parameters via Hannan-Rissanen
-        hr, hr_results = hannan_rissanen(
+        _hr_result = hannan_rissanen(
             endog, ar_order=spec.ar_order, ma_order=spec.ma_order, demean=False
         )
+        hr, hr_results = _hr_result.parameters, _hr_result.other_results
         if spec.seasonal_periods == 0:
             # If no seasonal component, then `hr` gives starting parameters
             sp.params = hr.params
@@ -252,9 +253,10 @@ def innovations_mle(
 
             ar_order = np.array(spec.seasonal_ar_lags) * spec.seasonal_periods
             ma_order = np.array(spec.seasonal_ma_lags) * spec.seasonal_periods
-            seasonal_hr, seasonal_hr_results = hannan_rissanen(
+            _seasonal_hr_result = hannan_rissanen(
                 hr_results.resid, ar_order=ar_order, ma_order=ma_order, demean=False
             )
+            seasonal_hr = _seasonal_hr_result.parameters
 
             # Set the starting parameters
             sp.ar_params = hr.ar_params

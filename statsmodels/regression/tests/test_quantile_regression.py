@@ -2,6 +2,7 @@
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pytest
 import scipy.stats
 
 import statsmodels.api as sm
@@ -365,3 +366,65 @@ def test_scale_is_a_property():
     y = np.array([0, 1, 2, 3], dtype=np.float64)
     res = QuantReg(y, X).fit(0.5, bandwidth="chamberlain")
     assert res.scale == 1.0
+
+
+def test_ols_criteria_are_nan_not_ols_values():
+    # QuantRegResults deliberately overrides the OLS-specific information
+    # criteria/goodness-of-fit measures with nan, since they don't apply
+    # to a pinball-loss fit -- guard against one of the overrides being
+    # dropped and silently falling through to RegressionResults' formulas.
+    rs = np.random.RandomState(918273)
+    n = 60
+    X = sm.add_constant(rs.standard_normal((n, 2)))
+    y = X @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
+    res = QuantReg(y, X).fit(0.5)
+
+    for name in (
+            "bic",
+            "aic",
+            "llf",
+            "rsquared",
+            "rsquared_adj",
+            "mse",
+            "mse_model",
+            "mse_total",
+            "centered_tss",
+            "uncentered_tss"
+    ):
+        assert np.isnan(getattr(res, name)), name
+
+
+def test_prsquared_improves_with_informative_regressors():
+    rs = np.random.RandomState(19)
+    n = 200
+    x = rs.standard_normal(n)
+    y = 2.0 * x + rs.standard_normal(n) * 0.5
+
+    exog_null = sm.add_constant(np.zeros(n))[:, :1]
+    res_null = QuantReg(y, exog_null).fit(0.5)
+    # an intercept-only fit reproduces the unconditional quantile, so
+    # weighted absolute deviations match the "null" comparator exactly
+    assert_allclose(res_null.prsquared, 0.0, atol=1e-10)
+
+    exog_full = sm.add_constant(x)
+    res_full = QuantReg(y, exog_full).fit(0.5)
+    assert 0 < res_full.prsquared <= 1
+    assert res_full.prsquared > res_null.prsquared
+
+
+def test_fit_invalid_options_raise():
+    X = np.array([[1, 0], [0, 1], [0, 2.1], [0, 3.1]], dtype=np.float64)
+    y = np.array([0, 1, 2, 3], dtype=np.float64)
+    mod = QuantReg(y, X)
+
+    with pytest.raises(ValueError, match="kernel"):
+        mod.fit(0.5, kernel="not-a-kernel")
+    with pytest.raises(ValueError, match="bandwidth"):
+        mod.fit(0.5, bandwidth="not-a-bandwidth")
+    with pytest.raises(ValueError, match="vcov"):
+        mod.fit(0.5, vcov="not-a-vcov")
+
+    # case is not folded: this file's existing validation never was, and
+    # string_like(..., lower=False) preserves that
+    with pytest.raises(ValueError, match="vcov"):
+        mod.fit(0.5, vcov="ROBUST")

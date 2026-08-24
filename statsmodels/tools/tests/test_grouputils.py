@@ -27,6 +27,16 @@ class CheckGrouping:
         self.grouping.count_categories(level=0)
         np.testing.assert_equal(self.grouping.counts, self.expected_counts)
 
+    def test_levels(self):
+        levels = self.grouping.levels
+        if hasattr(self.grouping.index, "levels"):
+            assert levels is self.grouping.index.levels
+        else:
+            assert_equal(
+                np.asarray(levels),
+                np.asarray(pd.Categorical(self.grouping.index).categories),
+            )
+
     def test_check_index(self):
         # GH: check_index used `if not index:`, which raises for a
         # multi-element pandas Index/MultiIndex, and called the long-removed
@@ -158,6 +168,12 @@ class CheckGrouping:
                 pd.Series(values, dtype="category"), drop_first=False
             )
             np.testing.assert_equal(self.grouping._dummies.toarray(), expected)
+
+            # dummies_time() is a thin convenience wrapper: dummy_sparse(1)
+            # then return _dummies
+            np.testing.assert_equal(
+                self.grouping.dummies_time().toarray(), expected
+            )
 
 
 class TestMultiIndexGrouping(CheckGrouping):

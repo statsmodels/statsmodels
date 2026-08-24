@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -13,6 +14,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.multivariate.factor import Factor
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -87,6 +89,24 @@ def test_direct_corr_matrix():
     # Test set endog_names with the wrong number of elements
     with pytest.raises(ValueError):
         mod.endog_names = X.iloc[:, :1].columns
+
+
+def test_no_endog_no_corr_raises():
+    # Providing neither endog nor corr must raise, and must not first emit
+    # a warning claiming that both were provided
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match="Either endog or corr"):
+            Factor(None, 2, corr=None)
+
+
+def test_both_endog_and_corr_warns():
+    # Providing both must warn and fall back to endog, not raise
+    endog = X.iloc[:, 1:-1]
+    corr = np.eye(endog.shape[1])
+    with pytest.warns(SpecificationWarning, match="endog will be used"):
+        mod = Factor(endog, 2, corr=corr, smc=False)
+    assert_allclose(mod.corr, np.corrcoef(endog, rowvar=0))
 
 
 def test_unknown_fa_method_error():

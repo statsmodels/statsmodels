@@ -41,19 +41,19 @@ _model_params_doc = """Parameters
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    exog : array_like
+    exog : array_like, optional
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See
         :func:`statsmodels.tools.add_constant`."""
 
 _missing_param_doc = """\
-missing : str
+missing : str, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'."""
 _extra_param_doc = """
-    hasconst : None or bool
+    hasconst : None or bool, optional
         Indicates whether the RHS includes a user-supplied constant. If True,
         a constant is not checked for and k_constant is set to 1 and all
         result statistics are calculated as if a constant is present. If
@@ -163,11 +163,11 @@ class Model:
             The formula specifying the model.
         data : array_like
             The data for the model. See Notes.
-        subset : array_like
+        subset : array_like, optional
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
             `pandas.DataFrame`.
-        drop_cols : array_like
+        drop_cols : array_like, optional
             Columns to drop from the design matrix.  Cannot be used to
             drop terms involving categoricals.
         *args
@@ -308,6 +308,11 @@ class LikelihoodModel(Model):
         params : ndarray
             The model parameters used to compute the log-likelihood.
 
+        Returns
+        -------
+        float
+            The log-likelihood value evaluated at `params`.
+
         Notes
         -----
         Must be overridden by subclasses.
@@ -323,7 +328,7 @@ class LikelihoodModel(Model):
         Parameters
         ----------
         params : ndarray
-            The parameters to use when evaluating the Hessian.
+            The parameters to use when evaluating the score.
 
         Returns
         -------
@@ -342,6 +347,11 @@ class LikelihoodModel(Model):
         ----------
         params : ndarray
             The model parameters.
+
+        Returns
+        -------
+        ndarray
+            The information matrix evaluated at the parameters.
         """
         raise NotImplementedError
 
@@ -423,13 +433,18 @@ class LikelihoodModel(Model):
             after the optimization. If True, then the hessian will not be
             calculated. However, it will be available in methods that use the
             hessian in the optimization (currently only with `"newton"`).
-        kwargs : keywords
+        **kwargs
             All kwargs are passed to the chosen solver with one exception. The
             following keyword controls what happens after the fit::
 
                 warn_convergence : bool, optional
                     If True, checks the model for the converged flag. If the
                     converged flag is False, a ConvergenceWarning is issued.
+
+        Returns
+        -------
+        LikelihoodModelResults
+            The fitted model results.
 
         Notes
         -----
@@ -523,7 +538,7 @@ class LikelihoodModel(Model):
                 minimizer : dict
                     Extra keyword arguments to be passed to the minimizer
                     `scipy.optimize.minimize()`, for example 'method' - the
-                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    minimization method (e.g., 'L-BFGS-B'), or 'tol' - the
                     tolerance for termination. Other arguments are mapped from
                     explicit argument of `fit`:
                       - `args` <- `fargs`
@@ -678,15 +693,15 @@ class LikelihoodModel(Model):
 
         Parameters
         ----------
-        keep_index : array_like (int or bool) or slice
+        keep_index : array_like (int or bool) or slice, optional
             variables that should be dropped.
-        start_params : None or array_like
+        start_params : array_like, optional
             starting values for the optimization. `start_params` needs to be
             given in the original parameter space and are internally
             transformed.
-        return_auxiliary : bool
+        return_auxiliary : bool, optional
             If True, then return the auxiliary results. Currently not used.
-        k_params : int or None
+        k_params : int or None, optional
             If None, then we try to infer from start_params or model.
         **fit_kwds : keyword arguments
             fit_kwds are used in the optimization of the transformed model.
@@ -756,7 +771,7 @@ class LikelihoodModel(Model):
 
         if hasattr(res_constr, "mle_retvals"):
             res._results.mle_retvals = res_constr.mle_retvals
-            # not available for not scipy optimization, e.g. glm irls
+            # not available for not scipy optimization, e.g., glm irls
             # TODO: what retvals should be required?
             # res.mle_retvals['fcall'] = res_constr.mle_retvals.get('fcall', np.nan)
             # res.mle_retvals['iterations'] = res_constr.mle_retvals.get(
@@ -855,6 +870,34 @@ class GenericLikelihoodModel(LikelihoodModel):
     A subclass needs to specify at least the log-likelihood
     If the log-likelihood is specified for each observation, then results that
     require the Jacobian will be available. (The other case is not tested yet.)
+
+    Parameters
+    ----------
+    endog : array_like
+        A 1-d endogenous response variable. The dependent variable.
+    exog : array_like, optional
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An intercept is not included by default
+        and should be added by the user.
+    loglike : callable, optional
+        Log-likelihood function. If provided, it is used instead of the
+        class's `loglike`/`loglikeobs` methods for this instance.
+    score : callable, optional
+        Score (gradient) function. If provided, it is used instead of the
+        class's `score` method for this instance.
+    hessian : callable, optional
+        Hessian function. If provided, it is used instead of the class's
+        `hessian` method for this instance.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    extra_params_names : list of str, optional
+        Names for additional parameters that are not part of exog, appended
+        to `exog_names`.
+    **kwds
+        Extra arguments that are used to set model properties when using the
+        formula interface.
 
     Notes
     -----
@@ -1039,6 +1082,20 @@ class GenericLikelihoodModel(LikelihoodModel):
         """
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model.
+        **kwds
+            Additional keyword arguments passed to the numerical
+            derivative function, e.g., `centered` or `epsilon`.
+
+        Returns
+        -------
+        ndarray
+            The Jacobian of the log-likelihood evaluated at `params` for
+            each observation.
         """
         # kwds.setdefault('epsilon', 1e-4)
         kwds.setdefault("centered", True)
@@ -1059,11 +1116,11 @@ class GenericLikelihoodModel(LikelihoodModel):
         ----------
         params : ndarray
             Parameter at which Hessian is evaluated.
-        scale : None or float
+        scale : None or float, optional
             If scale is None, then the default scale will be calculated.
             Default scale is defined by `self.scaletype` and set in fit.
             If scale is not None, then it is used as a fixed scale.
-        observed : bool
+        observed : bool, optional
             If True, then the observed Hessian is returned. If false then the
             expected information matrix is returned.
 
@@ -1167,6 +1224,9 @@ class Results:
         The previously specified model instance.
     params : ndarray
         Parameter estimates from the fit model.
+    **kwd
+        Additional keyword arguments used to initialize the results
+        instance.
     """
 
     def __init__(self, model, params, **kwd):
@@ -1278,7 +1338,7 @@ class Results:
 
         Returns
         -------
-        array_like
+        ndarray or pandas object
             See self.model.predict.
 
         Notes
@@ -1331,9 +1391,9 @@ class LikelihoodModelResults(Results):
         LikelihoodModelResults holds a reference to the model that is fit.
     params : 1d array_like
         Parameter estimates from estimated model.
-    normalized_cov_params : 2d array
+    normalized_cov_params : ndarray, optional
         Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
-    scale : float
+    scale : float, optional
         For (some subset of models) scale will typically be the
         mean square error from the estimated model (sigma^2).
 
@@ -1596,7 +1656,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : array_like
+        r_matrix : array_like, optional
             Can be 1d, or 2d.  Can be used alone or with other.
         column : array_like, optional
             Must be used on its own.  Can be 0d or 1d see below.
@@ -1692,7 +1752,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : {array_like, str, tuple}
+        r_matrix : array_like, str, or tuple
             One of:
 
             - array : If an array is given, a p x k 2d array or length k 1d
@@ -1841,7 +1901,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : {array_like, str, tuple}
+        r_matrix : array_like, str, or tuple
             One of:
 
             - array : An r x k array where r is the number of restrictions to
@@ -1945,7 +2005,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        r_matrix : {array_like, str, tuple}
+        r_matrix : array_like, str, or tuple
             One of:
 
             - array : An r x k array where r is the number of restrictions to
@@ -1962,7 +2022,7 @@ class LikelihoodModelResults(Results):
         invcov : array_like, optional
             A q x q array to specify an inverse covariance matrix based on a
             restrictions matrix.
-        use_f : bool
+        use_f : bool, optional
             If True, then the F-distribution is used. If False, then the
             asymptotic distribution, chisquare is used. If use_f is None, then
             the F distribution is used if the model specifies that use_t is True.
@@ -2091,14 +2151,16 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        skip_single : bool
+        skip_single : bool, optional
             If true, then terms that consist only of a single column and,
             therefore, refers only to a single parameter is skipped.
             If false, then all terms are included.
-        extra_constraints : ndarray
-            Additional constraints to test. Note that this input has not been
+        extra_constraints : list[tuple], optional
+            Additional constraints to test, given as a list of (name,
+            constraint_matrix) tuples in the same form as the automatically
+            generated term constraints. Note that this input has not been
             tested.
-        combine_terms : {list[str], None}
+        combine_terms : list of str, optional
             Each string in this list is matched to the name of the terms or
             the name of the exogenous variables. All columns whose name
             includes that string are combined in one joint test.
@@ -2200,7 +2262,13 @@ class LikelihoodModelResults(Results):
         index = []
         for name, constraint in constraints + combined_constraints + extra_constraints:
             wt = result.wald_test(constraint, scalar=scalar)
-            row = [wt.statistic, wt.pvalue, constraint.shape[0]]
+            # Use rank-adjusted df from wald_test instead of
+            # constraint.shape[0] which ignores rank deficiency.
+            if use_t:
+                df_c = int(wt.df_num)
+            else:
+                df_c = int(wt.df_denom)
+            row = [wt.statistic, wt.pvalue, df_c]
             if use_t:
                 row.append(wt.df_denom)
             res_wald.append(row)
@@ -2232,12 +2300,12 @@ class LikelihoodModelResults(Results):
             The name of the term for which pairwise comparisons are computed.
             Term names for categorical effects are created by patsy and
             correspond to the main part of the exog names.
-        method : {str, list[str]}
+        method : str or list of str, optional
             The multiple testing p-value correction to apply. The default is
             'hs'. See stats.multipletesting.
-        alpha : float
+        alpha : float, optional
             The significance level for multiple testing reject decision.
-        factor_labels : {list[str], None}
+        factor_labels : list of str, optional
             Labels for the factor levels used for pairwise labels. If not
             provided, then the labels from the formula's model_spec are used.
 
@@ -2288,7 +2356,7 @@ class LikelihoodModelResults(Results):
         ----------
         func : callable, f(params)
             Nonlinear function of the estimation parameters. The return of
-            the function can be vector valued, i.e. a 1-D array.
+            the function can be vector valued, i.e., a 1-D array.
         deriv : function or None
             First derivative or Jacobian of func. If deriv is None, then a
             numerical derivative will be used. If func returns a 1-D array,
@@ -2322,7 +2390,7 @@ class LikelihoodModelResults(Results):
 
         Returns
         -------
-        array_like
+        ndarray
             Each row contains [lower, upper] limits of the confidence interval
             for the corresponding parameter. The first column contains all
             lower, the second column contains all upper limits.
@@ -2374,9 +2442,9 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        fname : {str, handle}
+        fname : str or handle
             A string filename or a file handle.
-        remove_data : bool
+        remove_data : bool, optional
             If False (default), then the instance is pickled without changes.
             If True, then all arrays with length nobs are set to None before
             pickling. See the remove_data method.
@@ -2408,7 +2476,7 @@ class LikelihoodModelResults(Results):
 
         Parameters
         ----------
-        fname : {str, handle, pathlib.Path}
+        fname : str, handle, or pathlib.Path
             A string filename or a file handle.
 
         Returns
@@ -2636,16 +2704,16 @@ class ResultMixin:
 
         Parameters
         ----------
-        nrep : int
+        nrep : int, optional
             Number of bootstrap replications.
-        method : str
+        method : str, optional
             Optimization method to use.
-        disp : bool
+        disp : bool, optional
             If true, then optimization prints results.
-        store : bool
+        store : bool, optional
             If true, then parameter estimates for all bootstrap iterations
             are attached in self.bootstrap_results.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -2756,10 +2824,10 @@ class _LLRMixin:
 
         Parameters
         ----------
-        llnull : {None, float}
+        llnull : float, optional
             If llnull is not None, then the value will be directly assigned to
             the cached attribute "llnull".
-        attach_results : bool
+        attach_results : bool, optional
             Sets an internal flag whether the results instance of the null
             model should be attached. By default without calling this method,
             the null model results are not attached and only the loglikelihood
@@ -2845,16 +2913,11 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
     """
     A results class for the discrete dependent variable models
 
-    .. warning::
-
-       The following description has not been updated to this version/class.
-       Where are AIC, BIC, ....? docstring looks like copy from discretemod
-
     Parameters
     ----------
-    model : DiscreteModel instance
+    model : GenericLikelihoodModel instance
         The fitted model instance.
-    mlefit : instance of LikelihoodResults
+    mlefit : LikelihoodModelResults instance
         This contains the numerical optimization results as returned by
         LikelihoodModel.fit(), in a superclass of GenericLikelihoodModels.
 
@@ -2872,7 +2935,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         See model definition.
     df_model : float
         See model definition.
-    fitted_values : ndarray
+    fittedvalues : ndarray
         Linear predictor XB.
     llf : float
         Value of the loglikelihood
@@ -2949,7 +3012,7 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         ----------
         exog : array_like, optional
             The values for which you want to predict.
-        which : str
+        which : str, optional
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
             See the model.predict docstring.
@@ -2960,15 +3023,15 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
-        row_labels : list of str or None
+        row_labels : list of str or None, optional
             If row_labels are provided, then they will replace the generated
             labels.
-        average : bool
+        average : bool, optional
             If average is True, then the mean prediction is computed, that is,
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Aggregation weights, only used if average is True.
             The weights are not normalized.
@@ -3013,13 +3076,13 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
+        xname : list of str, optional
             Names for the exogenous variables, default is "var_xx".
             Must match the number of parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
 
         Returns

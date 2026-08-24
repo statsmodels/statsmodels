@@ -57,7 +57,8 @@ class TestPHReg:
     @staticmethod
     def load_file(fname):
         cur_dir = Path(__file__).resolve().parent
-        data = np.genfromtxt(Path(cur_dir).joinpath("results", fname), delimiter=" ")
+        df = pd.read_csv(Path(cur_dir).joinpath("results", fname), delimiter=" ", header=None)
+        data = df.values
         time = data[:, 0]
         status = data[:, 1]
         entry = data[:, 2]
@@ -451,6 +452,17 @@ class TestPHReg:
                 llf_r = plf(params, model, time, s)
                 llf_sm = plf(sm_result.params, model, time, s)
                 assert_equal(np.sign(llf_sm - llf_r), 1)
+
+    def test_invalid_ties_raises(self):
+        time, status, entry, exog = self.load_file("survival_data_50_2.csv")
+        with pytest.raises(ValueError, match="ties"):
+            PHReg(time, exog, status=status, ties="not-a-tie-method")
+
+    def test_fit_regularized_invalid_method_raises(self):
+        time, status, entry, exog = self.load_file("survival_data_50_2.csv")
+        model = PHReg(time, exog, status=status, ties="breslow")
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
 
 
 cur_dir = Path(__file__).resolve().parent

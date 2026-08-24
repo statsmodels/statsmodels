@@ -288,6 +288,18 @@ def test_lasso_poisson():
     assert_allclose(result2.params, result3.params)
 
 
+def test_fit_regularized_invalid_method():
+    rs = np.random.RandomState(3423948)
+    n = 200
+    groups = np.kron(np.arange(10), np.ones(n // 10))
+    x = rs.normal(size=(n, 2))
+    y = (rs.uniform(size=n) < 0.5).astype(int)
+
+    model = ConditionalLogit(y, x, groups=groups)
+    with pytest.raises(ValueError, match="method"):
+        model.fit_regularized(method="not-a-method")
+
+
 def gen_mnlogit(n):
 
     rs = np.random.RandomState(235)
@@ -327,7 +339,7 @@ def test_conditional_mnlogit_2d():
 
     df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    result = model.fit(generator=rs)
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -348,7 +360,7 @@ def test_conditional_mnlogit_3d():
     df, rs = gen_mnlogit(90)
     df["x3"] = rs.normal(size=df.shape[0])
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3", groups="g", data=df)
-    result = model.fit(generator=rs)
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -369,6 +381,45 @@ def test_conditional_mnlogit_3d():
 
     # Smoke test
     result.summary()
+
+
+@pytest.mark.parametrize(
+    "rng",
+    [0, np.random.RandomState(0), np.random.default_rng(0)],
+    ids=["int", "randomstate", "generator"],
+)
+def test_conditional_mnlogit_fit_rng_types(recwarn, rng):
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    model.fit(rng=rng, disp=False)
+    future_warnings = [w for w in recwarn.list if issubclass(w.category, FutureWarning)]
+    assert not future_warnings, [str(w.message) for w in future_warnings]
+
+
+@pytest.mark.singleton_randomstate
+def test_conditional_mnlogit_fit_warn():
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    with pytest.warns(FutureWarning, match="When start_params is not specified,"):
+        model.fit(rng=None, disp=False)
+
+
+def test_conditional_mnlogit_fit_rng_reproducible():
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    res1 = model.fit(rng=0, disp=False)
+    res2 = model.fit(rng=0, disp=False)
+    assert_allclose(res1.params, res2.params)
 
 
 def test_skip_hessian():
@@ -406,7 +457,7 @@ def _fit_conditional_poisson_for_summary():
 def _fit_conditional_mnlogit_for_summary():
     df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    return model.fit(generator=rs)
+    return model.fit(rng=rs)
 
 
 @pytest.mark.parametrize(

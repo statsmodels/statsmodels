@@ -912,12 +912,12 @@ def test_fc():
             obtained_w_intervals_exog = results_sm_exog[ds][dt].predict(
                 steps=STEPS, alpha=ALPHA, exog_fc=exog_fc
             )
-            obt = obtained_w_intervals[0]  # forecast
-            obt_l = obtained_w_intervals[1]  # lower bound
-            obt_u = obtained_w_intervals[2]  # upper bound
-            obt_exog = obtained_w_intervals_exog[0]
-            obt_exog_l = obtained_w_intervals_exog[1]
-            obt_exog_u = obtained_w_intervals_exog[2]
+            obt = obtained_w_intervals.point_forecast  # forecast
+            obt_l = obtained_w_intervals.forc_lower  # lower bound
+            obt_u = obtained_w_intervals.forc_upper  # upper bound
+            obt_exog = obtained_w_intervals_exog.point_forecast
+            obt_exog_l = obtained_w_intervals_exog.forc_lower
+            obt_exog_u = obtained_w_intervals_exog.forc_upper
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -967,12 +967,12 @@ def test_fc():
             obtained_w_intervals_exog_coint = results_sm_exog_coint[ds][dt].predict(
                 steps=STEPS, alpha=ALPHA, exog_coint_fc=exog_coint_fc
             )
-            obt = obtained_w_intervals[0]  # forecast
-            obt_l = obtained_w_intervals[1]  # lower bound
-            obt_u = obtained_w_intervals[2]  # upper bound
-            obt_exog_coint = obtained_w_intervals_exog_coint[0]
-            obt_exog_coint_l = obtained_w_intervals_exog_coint[1]
-            obt_exog_coint_u = obtained_w_intervals_exog_coint[2]
+            obt = obtained_w_intervals.point_forecast  # forecast
+            obt_l = obtained_w_intervals.forc_lower  # lower bound
+            obt_u = obtained_w_intervals.forc_upper  # upper bound
+            obt_exog_coint = obtained_w_intervals_exog_coint.point_forecast
+            obt_exog_coint_l = obtained_w_intervals_exog_coint.forc_lower
+            obt_exog_coint_u = obtained_w_intervals_exog_coint.forc_upper
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -1080,7 +1080,7 @@ def test_granger_causality():
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
                     ci = causing_ind[0] if len(causing_ind) == 1 else causing_ind
@@ -1118,7 +1118,7 @@ def test_granger_causality():
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
@@ -1200,7 +1200,7 @@ def test_inst_causality():  # test instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -1234,7 +1234,7 @@ def test_inst_causality():  # test instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -1482,6 +1482,10 @@ def test_exceptions():
     with pytest.raises(ValueError):
         select_coint_rank(endog, 0, 3, "trace", 0.025)
 
+    # VECM.fit: method argument cannot be anything other than "ml"
+    with pytest.raises(ValueError, match="method"):
+        VECM(endog).fit(method="not-ml")
+
     # Granger_causality:
     # # 0<signif<1
     # this means signif=0
@@ -1498,9 +1502,8 @@ def test_exceptions():
 
     # exceptions in VECM class
     # # choose only one of the two: "co" and "ci"
-    model = VECM(endog, k_ar_diff=1, deterministic="cico")
-    with pytest.raises(ValueError):
-        model.fit()
+    with pytest.raises(ValueError, match="deterministic must be one "):
+        model = VECM(endog, k_ar_diff=1, deterministic="cico")
     # # we analyze multiple time series
     univariate_data = endog[0]
     with pytest.raises(ValueError):
@@ -1601,6 +1604,31 @@ def test_select_coint_rank():  # This is only a smoke test.
         assert (test_stats[rank] < crit_vals[rank])
 
 
+def test_coint_rank_results_summary():
+    # CointRankResults.summary is exported (as the return type of
+    # select_coint_rank) but had no direct test coverage: it renders a
+    # SimpleTable from the same rank/test_stats/crit_vals data already
+    # validated numerically in test_select_coint_rank above.
+    endog = data[datasets[0]]
+
+    trace_result = select_coint_rank(endog, 0, 3, method="trace", signif=0.05)
+    table = trace_result.summary()
+    text = str(table)
+    assert "trace" in text.lower()
+    assert "5%" in text
+    num_tests = min(trace_result.rank, trace_result.neqs - 1)
+    assert len(table.data) == num_tests + 2  # header row + one per test
+    for i in range(num_tests + 1):
+        assert f"{trace_result.test_stats[i]:#0.4g}" in text
+
+    maxeig_result = select_coint_rank(
+        endog, 0, 3, method="maxeig", signif=0.1
+    )
+    text_maxeig = str(maxeig_result.summary())
+    assert "maximum eigenvalue" in text_maxeig.lower()
+    assert "10%" in text_maxeig
+
+
 def test_VECM_seasonal_forecast():
     # timing of seasonal dummies, VAR forecast horizon
     rs = np.random.RandomState(964255)
@@ -1663,5 +1691,44 @@ def test_VECM_seasonal_forecast():
         forecast = res.predict(steps=3 * seasons)
         dips = np.sort(np.argsort(forecast, axis=0)[:3], axis=0)
         assert_array_equal(dips, dips_true)
-
     # res2.plot_forecast(steps=18, alpha=0.1, n_last_obs=4*seasons)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_forecast_and_plot_data(close_figures):
+    rs = np.random.RandomState(20260821)
+    n = 100
+    common_trend = np.cumsum(rs.standard_normal(n))
+    endog = np.column_stack([
+        common_trend + rs.standard_normal(n) * 0.3,
+        common_trend + rs.standard_normal(n) * 0.3,
+        common_trend + rs.standard_normal(n) * 0.3,
+    ])
+
+    res = VECM(endog, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
+
+    fig = res.plot_forecast(steps=10)
+    assert len(fig.axes) == endog.shape[1]
+
+    fig_short = res.plot_forecast(steps=10, plot_conf_int=False, n_last_obs=20)
+    assert len(fig_short.axes) == endog.shape[1]
+
+    fig_data = res.plot_data()
+    assert len(fig_data.axes) == endog.shape[1]
+    for ax in fig_data.axes:
+        assert len(ax.get_lines()) >= 1
+        assert len(ax.get_lines()[0].get_ydata()) == n - res.k_ar
+
+    fig_full = res.plot_data(with_presample=True)
+    for ax in fig_full.axes:
+        assert len(ax.get_lines()[0].get_ydata()) == n
+
+    # plot_data must also work when the model was fit with a date index
+    # (previously crashed: self.dates[self.k_ar:] on a None self.dates
+    # was only reached through the *array* path above)
+    import pandas as pd
+    dated = pd.DataFrame(endog, index=pd.date_range("2000-01-01", periods=n, freq="D"))
+    res_dated = VECM(dated, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
+    fig_dated = res_dated.plot_data()
+    assert len(fig_dated.axes) == endog.shape[1]

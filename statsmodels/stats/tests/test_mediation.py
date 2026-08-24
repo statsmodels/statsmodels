@@ -141,6 +141,59 @@ def test_framing_example_moderator():
     med.fit(method="parametric", n_rep=100, rng=rs)
 
 
+def _make_mediation_example(rs):
+    n = 100
+    exp = rs.binomial(1, 0.5, size=n)
+    med = 0.5 * exp + rs.normal(size=n)
+    out = 0.3 * med + 0.2 * exp + rs.normal(size=n)
+    df = pd.DataFrame({"exp": exp, "med": med, "out": out})
+    outcome_model = sm.OLS.from_formula("out ~ exp + med", df)
+    mediator_model = sm.OLS.from_formula("med ~ exp", df)
+    return Mediation(outcome_model, mediator_model, "exp", "med")
+
+
+@pytest.mark.parametrize("method", ["parametric", "boot"])
+@pytest.mark.parametrize(
+    "rng",
+    ["none", "int", "randomstate", "generator"],
+)
+def test_mediation_fit_rng_types(method, rng):
+    # GH: Mediation.fit(method="boot") used to raise AttributeError for
+    # int and None rng because the rng was only normalized on the
+    # "parametric" code path, not before the bootstrap resampling call.
+    med_obj = _make_mediation_example(np.random.RandomState(2394))
+    rng = {
+        "none": None,
+        "int": 0,
+        "randomstate": np.random.RandomState(0),
+        "generator": np.random.default_rng(0),
+    }[rng]
+
+    result = med_obj.fit(method=method, n_rep=5, rng=rng)
+    summ = result.summary()
+    assert np.all(np.isfinite(np.asarray(summ)))
+
+
+def test_mediation_boot_rng_reproducible_and_varies():
+    # An int/array seed should behave like check_random_state everywhere
+    # else in statsmodels: reproducible across calls, and each of the
+    # n_rep replications should use a distinct draw (not be a chain of
+    # freshly re-seeded, identical replications).
+    med_obj = _make_mediation_example(np.random.RandomState(8213))
+
+    res1 = med_obj.fit(method="boot", n_rep=10, rng=0)
+    res2 = med_obj.fit(method="boot", n_rep=10, rng=0)
+    assert_allclose(np.asarray(res1.summary()), np.asarray(res2.summary()))
+
+    indirect = np.asarray(res1.indirect_effects)
+    # Successive bootstrap replications must not all be identical.
+    assert not np.allclose(indirect[0][:, 0], indirect[0][:, 1])
+
+    indirect = np.asarray(res1.indirect_effects)
+    # Successive bootstrap replications must not all be identical.
+    assert not np.allclose(indirect[0][:, 0], indirect[0][:, 1])
+
+
 @pytest.mark.slow
 def test_framing_example_formula():
 

@@ -63,7 +63,7 @@ dependencies = [
     "packaging>=21.3",  # released Nov 2021
     "formulaic>=1.1.0",  # released December 2024
 ]
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
@@ -119,6 +119,10 @@ dev = [
     "flake8",
     "flake8-bugbear",
     "ruff",
+]
+polars = [
+    # Polars support
+    "polars>=1.0.0",
 ]
 
 [project.urls]
@@ -441,6 +445,13 @@ filterwarnings = [
     "error:Passing `None` as the seed currently:FutureWarning:",
     "error:the 'random_state' keyword is deprecated:FutureWarning:",
     "error:the 'seed' keyword is deprecated:FutureWarning:",
+    "error:the 'center' keyword is deprecated:FutureWarning:",
+    "error:Unpacking:FutureWarning:",
+    "error:The test statistic is outside:statsmodels.tools.sm_exceptions.InterpolationWarning:",
+    "error:The design matrix is:statsmodels.tools.sm_exceptions.SingularMatrixWarning:",
+    "error:Fast medcouple algorithm:UserWarning:",
+    "error:medcouple is undefined:UserWarning:",
+    "error:Provided `endog` series:UserWarning:",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
@@ -459,6 +470,7 @@ markers = [
     "high_memory: mark a test as a high memory utilization test",
     "low_precision: mark a test as low precision",
     "todo: mark a test as incomplete",
+    "polars: mark a test that requires polars",
     "singleton_randomstate: mark a test as changing the singleton RandomState",
     "joblib: mark a test as using joblib for parallel computation",
 ]
@@ -466,7 +478,7 @@ markers = [
 [tool.coverage.run]
 source = ["statsmodels"]
 branch = true
-# plugins = ["Cython.Coverage"]
+plugins = ["Cython.Coverage"]
 omit = [
     # print_version is untestable
     "*/print_version.py",
@@ -489,6 +501,7 @@ omit = [
     "*/tests/r*",
     "*/tests/s*",
     "*/_version.py",
+    "*/_pss_critical_values/*",
 ]
 
 [tool.coverage.report]

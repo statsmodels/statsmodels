@@ -22,7 +22,7 @@ class TableDist:
     """
     Distribution, critical values and p-values from tables
 
-    currently only 1 extra parameter, e.g. sample size
+    currently only 1 extra parameter, e.g., sample size
 
     Parameters
     ----------

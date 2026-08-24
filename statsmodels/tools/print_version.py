@@ -16,10 +16,10 @@ def safe_version(module, attr="__version__", *others):
     ----------
     module : module
         The imported module to inspect.
-    attr : str or list[str]
+    attr : str or list of str, optional
         Name of the attribute (or chain of nested attribute names) to
-        look up on ``module``, e.g. ``"__version__"`` or
-        ``["version", "version"]``.
+        look up on ``module``, e.g., ``"__version__"`` or
+        ``["version", "version"]``. Default is ``"__version__"``.
     *others : str
         Additional attribute names to try, in order, if ``attr`` is not
         found on ``module``.
@@ -192,8 +192,8 @@ def show_versions(show_dirs=True):
 
     Parameters
     ----------
-    show_dirs : bool
-        Flag indicating to show module locations
+    show_dirs : bool, optional
+        Flag indicating to show module locations. Default is True.
 
     """
     if not show_dirs:

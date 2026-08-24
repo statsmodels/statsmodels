@@ -30,7 +30,7 @@ def burg(endog, ar_order=0, demean=True):
     Returns
     -------
     ARMAEstimationResult
-        A NamedTuple with fields:
+        A result object with fields:
 
         parameters : SARIMAXParams object
             Contains the parameter estimates from the final iteration.

@@ -237,3 +237,44 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_split_param_names_partitions_xnames():
+    rs = np.random.RandomState(8234)
+    y, x_mean, x_sc, x_sm, x_no, time, groups = setup1(50, model1, True, rs)
+    mod = ProcessMLE(y, x_mean, x_sc, x_sm, x_no, time, groups)
+
+    mean_names, scale_names, smooth_names, noise_names = mod._split_param_names()
+    assert list(mean_names) + list(scale_names) + list(smooth_names) + \
+        list(noise_names) == list(mod.data.param_names)
+    assert len(mean_names) == mod.k_exog
+    assert len(scale_names) == mod.k_scale
+    assert len(smooth_names) == mod.k_smooth
+    assert len(noise_names) == mod.k_noise
+
+
+def test_covariance_group_matches_direct_call():
+    rs = np.random.RandomState(8234)
+    res = run_arrays(50, model1, False, rng=rs)
+    mod = res.model
+
+    group = next(iter(mod._groups_ix))
+    ix = mod._groups_ix[group]
+    cov = res.covariance_group(group)
+
+    assert cov.shape == (len(ix), len(ix))
+    assert_allclose(cov, cov.T)
+    assert np.all(np.linalg.eigvalsh(cov) > -1e-8 * np.abs(cov).max())
+
+    # rebuild it "by hand" from the model's own covariance() kernel to
+    # check covariance_group's indexing/column-selection, independent of
+    # its own internal computation of scale_data/smooth_data
+    _, scale_names, smooth_names, _ = mod._split_param_names()
+    scale_data = pd.DataFrame(mod.exog_scale[ix, :], columns=scale_names)
+    smooth_data = pd.DataFrame(mod.exog_smooth[ix, :], columns=smooth_names)
+    expected = mod.covariance(
+        mod.time[ix], res.scale_params, res.smooth_params, scale_data, smooth_data)
+    assert_allclose(cov, expected)
+
+    with pytest.raises(ValueError, match="does not exist"):
+        res.covariance_group("not-a-real-group")

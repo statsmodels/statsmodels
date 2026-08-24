@@ -66,7 +66,7 @@ def test_brockwell_davis_ex533():
     # (it is time varying here)
     assert_equal(acovf.shape, (m * 2, m * 2))
 
-    # (we need to check `acovf[:m * 2, :m]`, i.e. `acovf[:2, :1])`
+    # (we need to check `acovf[:m * 2, :m]`, i.e., `acovf[:2, :1])`
     ix = np.diag_indices_from(acovf)
     ix_lower = (ix[0][:-1] + 1, ix[1][:-1])
 

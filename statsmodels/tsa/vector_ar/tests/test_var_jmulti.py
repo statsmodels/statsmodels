@@ -251,9 +251,9 @@ def test_fc():
                 alpha=0.05,
                 exog_future=exog_future,
             )
-            obt = obtained[0]  # forecast
-            obt_l = obtained[1]  # lower bound
-            obt_u = obtained[2]  # upper bound
+            obt = obtained.point_forecast  # forecast
+            obt_l = obtained.forc_lower  # lower bound
+            obt_u = obtained.forc_upper  # upper bound
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -304,7 +304,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
                     ci = causing_ind[0] if len(causing_ind) == 1 else causing_ind
@@ -340,7 +340,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
@@ -376,7 +376,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -410,7 +410,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(

@@ -38,16 +38,16 @@ class ELOriginRegress:
 
     Parameters
     ----------
-    endog : nx1 array
+    endog : array_like
         Array of response variables.
-    exog : nxk array
+    exog : array_like
         Array of exogenous variables.  Assumes no array of ones
 
     Attributes
     ----------
-    endog : nx1 array
+    endog : array_like
         Array of response variables
-    exog : nxk array
+    exog : array_like
         Array of exogenous variables.  Assumes no array of ones.
     nobs : int
         Number of observations.
@@ -76,7 +76,7 @@ class ELOriginRegress:
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
-            np.array([0]), np.array([0]), ret_params=1, use_namedtuple=False
+            np.array([0]), np.array([0]), ret_params=1, result_object=False
         )
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
@@ -92,7 +92,7 @@ class ELOriginRegress:
         params : ndarray
             Parameters, including the (fixed at 0) intercept term,
             as returned by `fit`.
-        exog : ndarray, optional
+        exog : array_like, optional
             Exogenous variables to use for the prediction.  If None,
             the exog attached to the model is used.
 
@@ -112,7 +112,7 @@ class OriginResults(RegressionResults):
 
     Parameters
     ----------
-    model : class
+    model : OLS
         An OLS model with an intercept.
     params : 1darray
         Fitted parameters.
@@ -125,7 +125,7 @@ class OriginResults(RegressionResults):
 
     Attributes
     ----------
-    model : class
+    model : OLS
         An OLS model with an intercept.
     params : 1darray
         Fitted parameter.
@@ -180,7 +180,7 @@ class OriginResults(RegressionResults):
         stochastic_exog=1,
         return_weights=0,
         *,
-        use_namedtuple=None,
+        result_object=None,
     ):
         """
         Returns the llr and p-value for a hypothesized parameter value
@@ -194,20 +194,20 @@ class OriginResults(RegressionResults):
             Which parameters to test.  Note this uses python
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
-        method : str
+        method : str, optional
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'.
-        stochastic_exog : bool
-            When TRUE, the exogenous variables are assumed to be stochastic.
+        stochastic_exog : bool, optional
+            When True, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
             stochastic regressors are at least as large as non-stochastic
-            regressors.  Default is TRUE.
-        return_weights : bool
+            regressors.  Default is True.
+        return_weights : bool, optional
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False.
-        use_namedtuple : bool, optional
+        result_object : bool, optional
             Flag indicating whether to return the results as an
             ``EmpLikeTestResult`` NamedTuple instead of a plain tuple. When
             ``return_weights=True`` the NamedTuple holds the same three
@@ -220,14 +220,14 @@ class OriginResults(RegressionResults):
 
                 In release 0.16.0 or after July 2027, whichever is later, the
                 default will change to always return an
-                ``EmpLikeTestResult``. Set ``use_namedtuple=True`` to opt in
-                now, or ``use_namedtuple=False`` to silence the warning and
+                ``EmpLikeTestResult``. Set ``result_object=True`` to opt in
+                now, or ``result_object=False`` to silence the warning and
                 keep the current return type.
 
         Returns
         -------
         EmpLikeTestResult or tuple
-            If ``use_namedtuple=True`` or ``return_weights=True``, a
+            If ``result_object=True`` or ``return_weights=True``, a
             NamedTuple with fields:
 
             llr : float
@@ -244,7 +244,7 @@ class OriginResults(RegressionResults):
             Otherwise (the deprecated default), the plain ``(llr, pvalue)``
             tuple.
         """
-        use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+        result_object = bool_like(result_object, "result_object", optional=True)
         b0_vals = np.hstack((0, b0_vals))
         param_nums = np.hstack((0, param_nums))
         test_res = self.model.fit().el_test(
@@ -253,7 +253,7 @@ class OriginResults(RegressionResults):
             method=method,
             stochastic_exog=stochastic_exog,
             return_weights=return_weights,
-            use_namedtuple=False,
+            result_object=False,
         )
         llr_test = test_res[0]
         llr_res = llr_test - self.llr
@@ -262,19 +262,19 @@ class OriginResults(RegressionResults):
         # computes them when return_weights is True, so they stay None here
         # otherwise.
         weights = test_res[2] if return_weights else None
-        if use_namedtuple is None and not return_weights:
+        if result_object is None and not return_weights:
             warnings.warn(
                 "OriginResults.el_test currently returns a plain tuple whose "
                 "length depends on the return_weights argument. In release "
                 "0.16.0 or after July 2027, whichever is later, the default "
                 "behavior will switch to always returning an "
-                "EmpLikeTestResult NamedTuple. Set use_namedtuple=True to "
-                "switch now, or use_namedtuple=False to keep the current "
+                "EmpLikeTestResult NamedTuple. Set result_object=True to "
+                "switch now, or result_object=False to keep the current "
                 "behavior and silence this warning.",
                 FutureWarning,
                 stacklevel=2,
             )
-        if use_namedtuple or return_weights:
+        if result_object or return_weights:
             return EmpLikeTestResult(llr_res, pval, weights)
         return llr_res, pval
 
@@ -335,7 +335,7 @@ class OriginResults(RegressionResults):
                 param_num,
                 method=method,
                 stochastic_exog=stochastic_exog,
-                use_namedtuple=True,
+                result_object=True,
             )
             return val.llr - r0
 

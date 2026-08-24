@@ -67,6 +67,7 @@ class Link:
         Parameters
         ----------
         p : array_like
+            Probabilities
 
         Returns
         -------
@@ -267,13 +268,13 @@ class Power(Link):
 
     Parameters
     ----------
-    power : float
+    power : float, optional
         The exponent of the power transform
 
     Notes
     -----
     Aliases of Power:
-    Inverse = Power(power=-1)
+    InversePower = Power(power=-1)
     Sqrt = Power(power=.5)
     InverseSquared = Power(power=-2.)
     Identity = Power(power=1.)
@@ -427,7 +428,7 @@ class InversePower(Power):
     -----
     g(p) = 1/p
 
-    Alias of statsmodels.family.links.Power(power=-1.)
+    Alias of statsmodels.genmod.families.links.Power(power=-1.)
     """
 
     def __init__(self):
@@ -442,7 +443,7 @@ class Sqrt(Power):
     -----
     g(`p`) = sqrt(`p`)
 
-    Alias of statsmodels.family.links.Power(power=.5)
+    Alias of statsmodels.genmod.families.links.Power(power=.5)
     """
 
     def __init__(self):
@@ -457,7 +458,7 @@ class InverseSquared(Power):
     -----
     g(`p`) = 1/(`p`\*\*2)
 
-    Alias of statsmodels.family.links.Power(power=2.)
+    Alias of statsmodels.genmod.families.links.Power(power=2.)
     """
 
     def __init__(self):
@@ -472,7 +473,7 @@ class Identity(Power):
     -----
     g(`p`) = `p`
 
-    Alias of statsmodels.family.links.Power(power=1.)
+    Alias of statsmodels.genmod.families.links.Power(power=1.)
     """
 
     def __init__(self):
@@ -519,7 +520,7 @@ class Log(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -581,7 +582,7 @@ class Log(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -633,7 +634,7 @@ class LogC(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -696,7 +697,7 @@ class LogC(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -735,7 +736,7 @@ class CDFLink(Logit):
 
     Parameters
     ----------
-    dbn : scipy.stats distribution
+    dbn : scipy.stats distribution, optional
         Default is dbn=scipy.stats.norm
 
     Notes
@@ -836,7 +837,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -891,8 +892,20 @@ class Probit(CDFLink):
         """
         Second derivative of the inverse link function
 
-        This is the derivative of the pdf in a CDFLink
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
 
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            probit link function
+
+        Notes
+        -----
+        This is the derivative of the pdf in a CDFLink
         """
         return -z * self.dbn.pdf(z)
 
@@ -900,6 +913,16 @@ class Probit(CDFLink):
         """
         Second derivative of the link function g''(p)
 
+        Parameters
+        ----------
+        p : array_like
+            Probabilities
+
+        Returns
+        -------
+        g''(p) : ndarray
+            The value of the second derivative of the probit link
+            function
         """
         p = self._clean(p)
         linpred = self.dbn.ppf(p)
@@ -940,6 +963,20 @@ class Cauchy(CDFLink):
         return d2
 
     def inverse_deriv2(self, z):
+        """
+        Second derivative of the inverse of the Cauchy transform
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            Cauchy link function
+        """
         return -2 * z / (np.pi * (z**2 + 1) ** 2)
 
 
@@ -961,7 +998,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : ndarray
+        p : array_like
             Mean parameters
 
         Returns
@@ -1069,7 +1106,7 @@ class LogLog(Logit):
 
         Parameters
         ----------
-        p : ndarray
+        p : array_like
             Mean parameters
 
         Returns

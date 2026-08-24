@@ -7,6 +7,7 @@ Author: Luca Puggini
 Created on 08/07/2015
 """
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -39,6 +40,7 @@ from statsmodels.genmod.families.family import Gaussian
 from statsmodels.genmod.generalized_linear_model import GLM, lm
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.linalg import matrix_sqrt
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 sigmoid = np.vectorize(lambda x: 1.0 / (1.0 + np.exp(-x)))
 
@@ -256,9 +258,9 @@ def test_gam_discrete():
 def multivariate_sample_data(seed=1):
     n = 1000
     x1 = np.linspace(-1, 1, n)
-    x2 = np.linspace(-10, 10, n)
-    x = np.vstack([x1, x2]).T
     rs = np.random.RandomState(seed)
+    x2 = 1 + np.sort(rs.standard_normal(n))
+    x = np.vstack([x1, x2]).T
     y = x1 * x1 * x1 + x2 + rs.normal(0, 0.01, n)
     degree1 = 4
     degree2 = 3
@@ -558,7 +560,10 @@ def test_cyclic_cubic_splines():
     # TODO: if alpha changes in pirls this should be updated
 
     gam = GLMGam(y, smoother=ccs, alpha=alpha)
-    gam_res = gam.fit(method="pirls")
+    with warnings.catch_warnings():
+        # Warns of singular matrix on OSX only
+        warnings.simplefilter("ignore", category=SingularMatrixWarning)
+        gam_res = gam.fit(method="pirls")
 
     s0 = np.dot(ccs.basis[:, ccs.mask[0]], gam_res.params[ccs.mask[0]])
     # TODO: Mean has to be removed
@@ -678,6 +683,8 @@ def test_zero_penalty():
     gam_gs_res = gam_gs.fit()
     y_est_gam = gam_gs_res.predict()
 
+    # Poly basis has linearly related columns, so we need to remove
+    # two columns to avoid singular matrix warning
     glm = GLM(y, poly.basis).fit()
     y_est = glm.predict()
 
@@ -839,3 +846,38 @@ def test_cov_params():
     assert_allclose(
         res_glm.cov_params(), res_glm_gam.cov_params(), rtol=1e-4, atol=1e-8
     )
+
+
+def test_glmgam_results_hat_matrix_cv_gcv_test_significance():
+    from statsmodels.gam.smooth_basis import CubicSplines
+
+    rs = np.random.RandomState(0)
+    n = 200
+    x1 = np.linspace(-3, 3, n)
+    x2 = np.linspace(0, 1, n) ** 2
+    x = np.vstack([x1, x2]).T
+    y = np.sin(x1) / x1 + x2 * x2 + rs.normal(0, 0.2, n)
+
+    cs = CubicSplines(x, df=[6, 6], constraints="center")
+    gam = GLMGam(y, exog=np.ones((n, 1)), smoother=cs, alpha=[1e-2, 1e-2])
+    res = gam.fit(method="pirls")
+
+    # hat_matrix_trace/diag and gcv/cv are simple closed forms over
+    # get_hat_matrix_diag() -- recompute independently
+    hd = res.get_hat_matrix_diag(observed=True)
+    assert_allclose(res.hat_matrix_diag, hd)
+    assert_allclose(res.hat_matrix_trace, hd.sum())
+    assert_allclose(res.gcv, res.scale / (1.0 - hd.sum() / res.nobs) ** 2)
+    expected_cv = ((res.resid_pearson / (1.0 - hd)) ** 2).sum() / res.nobs
+    assert_allclose(res.cv, expected_cv)
+
+    # test_significance(i) is a wald_test restricted to smooth term i's
+    # columns, using that term's effective degrees of freedom
+    for i in range(2):
+        wt = res.test_significance(i)
+        assert 0 <= wt.pvalue <= 1
+        mask = cs.mask[i]
+        start = gam.k_exog_linear
+        idx = start + np.nonzero(mask)[0][0]
+        k_constraints = mask.sum()
+        assert_allclose(wt.df_denom, res.edf[idx:idx + k_constraints].sum())

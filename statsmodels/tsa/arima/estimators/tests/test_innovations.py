@@ -23,7 +23,7 @@ def test_brockwell_davis_example_515():
     endog = dowj.diff().iloc[1:]
 
     # Innvations algorithm (MA)
-    p, _ = innovations(endog, ma_order=17, demean=True)
+    p = innovations(endog, ma_order=17, demean=True).parameters
 
     # First BD show the MA(2) coefficients resulting from the m=17 computations
     assert_allclose(p[17].ma_params[:2], [0.4269, 0.2704], atol=1e-4)
@@ -54,7 +54,7 @@ def test_brockwell_davis_example_515():
 
 def check_innovations_ma_itsmr(lake):
     # Test against R itsmr::ia; see results/results_innovations.R
-    ia, _ = innovations(lake, 10, demean=True)
+    ia = innovations(lake, 10, demean=True).parameters
 
     desired = [
         1.0816255264,
@@ -108,12 +108,12 @@ def test_brockwell_davis_example_524():
     endog = dowj.diff().iloc[1:]
 
     # Use Burg method to get initial coefficients for MLE
-    initial, _ = burg(endog, ar_order=1, demean=True)
+    initial = burg(endog, ar_order=1, demean=True).parameters
 
     # Fit MLE via innovations algorithm
-    p, _ = innovations_mle(
+    p = innovations_mle(
         endog, order=(1, 0, 0), demean=True, start_params=initial.params
-    )
+    ).parameters
 
     assert_allclose(p.ar_params, 0.4471, atol=1e-4)
 
@@ -131,12 +131,12 @@ def test_brockwell_davis_example_524_variance():
     endog = dowj.diff().iloc[1:]
 
     # Use Burg method to get initial coefficients for MLE
-    initial, _ = burg(endog, ar_order=1, demean=True)
+    initial = burg(endog, ar_order=1, demean=True).parameters
 
     # Fit MLE via innovations algorithm
-    p, _ = innovations_mle(
+    p = innovations_mle(
         endog, order=(1, 0, 0), demean=True, start_params=initial.params
-    )
+    ).parameters
 
     assert_allclose(p.sigma2, 0.02117, atol=1e-4)
 
@@ -147,17 +147,17 @@ def test_brockwell_davis_example_525():
     endog = lake.copy()
 
     # Use HR method to get initial coefficients for MLE
-    initial, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=True)
+    initial = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=True).parameters
 
     # Fit MLE via innovations algorithm
-    p, _ = innovations_mle(
+    p = innovations_mle(
         endog, order=(1, 0, 1), demean=True, start_params=initial.params
-    )
+    ).parameters
 
     assert_allclose(p.params, [0.7446, 0.3213, 0.4750], atol=1e-4)
 
     # Fit MLE via innovations algorithm, with default starting parameters
-    p, _ = innovations_mle(endog, order=(1, 0, 1), demean=True)
+    p = innovations_mle(endog, order=(1, 0, 1), demean=True).parameters
 
     assert_allclose(p.params, [0.7446, 0.3213, 0.4750], atol=1e-4)
 
@@ -168,18 +168,18 @@ def test_brockwell_davis_example_541():
     endog = oshorts.copy()
 
     # Use innovations MA method to get initial coefficients for MLE
-    initial, _ = innovations(endog, ma_order=1, demean=True)
+    initial = innovations(endog, ma_order=1, demean=True).parameters
 
     # Fit MLE via innovations algorithm
-    p, _ = innovations_mle(
+    p = innovations_mle(
         endog, order=(0, 0, 1), demean=True, start_params=initial[1].params
-    )
+    ).parameters
 
     assert_allclose(p.ma_params, -0.818, atol=1e-3)
 
     # TODO: the test for sigma2 fails; we get 2040.85 whereas BD reports
     # 2040.75. Unclear if this is optimizers finding different maxima, or a
-    # reporting error by BD (i.e. typo where the 8 got reported as a 7). Should
+    # reporting error by BD (i.e., typo where the 8 got reported as a 7). Should
     # check this out with ITSM program. NB: state space also finds 2040.85 as
     # the MLE value.
     # assert_allclose(p.sigma2, 2040.75, atol=1e-2)
@@ -191,9 +191,10 @@ def test_innovations_mle_statespace():
     endog = endog - endog.mean()
 
     start_params = [0, 0, np.var(endog)]
-    p, mleres = innovations_mle(
+    _result = innovations_mle(
         endog, order=(1, 0, 1), demean=False, start_params=start_params
     )
+    p, mleres = _result.parameters, _result.other_results
 
     mod = sarimax.SARIMAX(endog, order=(1, 0, 1))
 
@@ -213,8 +214,8 @@ def test_innovations_mle_statespace():
     assert_allclose(p.params, res2.params)
 
     # Test that starting parameter estimation succeeds and isn't terrible
-    # (i.e. leads to the same MLE)
-    p2, _ = innovations_mle(endog, order=(1, 0, 1), demean=False)
+    # (i.e., leads to the same MLE)
+    p2 = innovations_mle(endog, order=(1, 0, 1), demean=False).parameters
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
@@ -226,9 +227,10 @@ def test_innovations_mle_statespace_seasonal():
     endog = endog - endog.mean()
 
     start_params = [0, np.var(endog)]
-    p, mleres = innovations_mle(
+    _result = innovations_mle(
         endog, seasonal_order=(1, 0, 0, 4), demean=False, start_params=start_params
     )
+    p, mleres = _result.parameters, _result.other_results
 
     mod = sarimax.SARIMAX(endog, order=(0, 0, 0), seasonal_order=(1, 0, 0, 4))
 
@@ -248,8 +250,8 @@ def test_innovations_mle_statespace_seasonal():
     assert_allclose(p.params, res2.params)
 
     # Test that starting parameter estimation succeeds and isn't terrible
-    # (i.e. leads to the same MLE)
-    p2, _ = innovations_mle(endog, seasonal_order=(1, 0, 0, 4), demean=False)
+    # (i.e., leads to the same MLE)
+    p2 = innovations_mle(endog, seasonal_order=(1, 0, 0, 4), demean=False).parameters
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
@@ -261,9 +263,10 @@ def test_innovations_mle_statespace_nonconsecutive():
     endog = endog - endog.mean()
 
     start_params = [0, 0, np.var(endog)]
-    p, mleres = innovations_mle(
+    _result = innovations_mle(
         endog, order=([0, 1], 0, [0, 1]), demean=False, start_params=start_params
     )
+    p, mleres = _result.parameters, _result.other_results
 
     mod = sarimax.SARIMAX(endog, order=([0, 1], 0, [0, 1]))
 
@@ -283,8 +286,8 @@ def test_innovations_mle_statespace_nonconsecutive():
     assert_allclose(p.params, res2.params)
 
     # Test that starting parameter estimation succeeds and isn't terrible
-    # (i.e. leads to the same MLE)
-    p2, _ = innovations_mle(endog, order=([0, 1], 0, [0, 1]), demean=False)
+    # (i.e., leads to the same MLE)
+    p2 = innovations_mle(endog, order=([0, 1], 0, [0, 1]), demean=False).parameters
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
@@ -295,9 +298,10 @@ def test_innovations_mle_integrated():
 
     start_params = [0, np.var(lake.copy())]
     with pytest.warns(UserWarning, match="Provided `endog` series"):
-        p, mleres = innovations_mle(
+        _result = innovations_mle(
             endog, order=(1, 1, 0), demean=False, start_params=start_params
         )
+    p, mleres = _result.parameters, _result.other_results
 
     mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
@@ -319,9 +323,9 @@ def test_innovations_mle_integrated():
 
     # Test that the result is equivalent to order=(1, 0, 0) on the differenced
     # data
-    p2, _ = innovations_mle(
+    p2 = innovations_mle(
         lake.copy(), order=(1, 0, 0), demean=False, start_params=start_params
-    )
+    ).parameters
     # (does not need to be high-precision test since it's okay if different
     # starting parameters give slightly different MLE)
     assert_allclose(p.params, p2.params, atol=1e-5)
@@ -332,16 +336,16 @@ def test_innovations_mle_misc():
 
     # Check that when Hannan-Rissanen estimates non-stationary starting
     # parameters, innovations_mle sets it to zero
-    hr, _ = hannan_rissanen(endog, ar_order=1, demean=False)
+    hr = hannan_rissanen(endog, ar_order=1, demean=False).parameters
     assert hr.ar_params[0] > 1
-    _, res = innovations_mle(endog, order=(1, 0, 0))
+    res = innovations_mle(endog, order=(1, 0, 0)).other_results
     assert_allclose(res.start_params[0], 0)
 
     # Check that when Hannan-Rissanen estimates non-invertible starting
     # parameters, innovations_mle sets it to zero
-    hr, _ = hannan_rissanen(endog, ma_order=1, demean=False)
+    hr = hannan_rissanen(endog, ma_order=1, demean=False).parameters
     assert hr.ma_params[0] > 1
-    _, res = innovations_mle(endog, order=(0, 0, 1))
+    res = innovations_mle(endog, order=(0, 0, 1)).other_results
     assert_allclose(res.start_params[0], 0)
 
 
@@ -367,16 +371,16 @@ def test_innovations_mle_fixed_params_ar():
 
     start_params = [0.0, 0.0, np.var(endog)]
 
-    p_free, _ = innovations_mle(
+    p_free = innovations_mle(
         endog, order=(1, 0, 1), demean=False, start_params=start_params
-    )
-    p_fixed, _ = innovations_mle(
+    ).parameters
+    p_fixed = innovations_mle(
         endog,
         order=(1, 0, 1),
         demean=False,
         start_params=start_params,
         fixed_params={"ar.L1": 0.5},
-    )
+    ).parameters
 
     assert_allclose(p_fixed.ar_params[0], 0.5)
     assert not np.isclose(p_fixed.ma_params[0], p_free.ma_params[0])
@@ -389,16 +393,16 @@ def test_innovations_mle_fixed_params_ma():
 
     start_params = [0.0, 0.0, np.var(endog)]
 
-    p_free, _ = innovations_mle(
+    p_free = innovations_mle(
         endog, order=(1, 0, 1), demean=False, start_params=start_params
-    )
-    p_fixed, _ = innovations_mle(
+    ).parameters
+    p_fixed = innovations_mle(
         endog,
         order=(1, 0, 1),
         demean=False,
         start_params=start_params,
         fixed_params={"ma.L1": 0.0},
-    )
+    ).parameters
 
     assert_allclose(p_fixed.ma_params[0], 0.0)
     assert not np.isclose(p_fixed.ar_params[0], p_free.ar_params[0])
@@ -410,13 +414,13 @@ def test_innovations_mle_fixed_params_both():
 
     start_params = [0.0, 0.0, np.var(endog)]
 
-    p_fixed, _ = innovations_mle(
+    p_fixed = innovations_mle(
         endog,
         order=(1, 0, 1),
         demean=False,
         start_params=start_params,
         fixed_params={"ar.L1": 0.5, "ma.L1": 0.0},
-    )
+    ).parameters
 
     assert_allclose(p_fixed.ar_params[0], 0.5)
     assert_allclose(p_fixed.ma_params[0], 0.0)
@@ -430,13 +434,14 @@ def test_innovations_mle_fixed_params_statespace():
 
     start_params = [0.0, 0.0, np.var(endog)]
 
-    p, mleres = innovations_mle(
+    _result = innovations_mle(
         endog,
         order=(1, 0, 1),
         demean=False,
         start_params=start_params,
         fixed_params={"ar.L1": 0.5},
     )
+    p, mleres = _result.parameters, _result.other_results
 
     mod = sarimax.SARIMAX(endog, order=(1, 0, 1))
     res = mod.filter(p.params)
@@ -449,23 +454,23 @@ def test_innovations_mle_fixed_params_no_fixed():
 
     start_params = [0.0, 0.0, np.var(endog)]
 
-    p_baseline, _ = innovations_mle(
+    p_baseline = innovations_mle(
         endog, order=(1, 0, 1), demean=False, start_params=start_params
-    )
-    p_none, _ = innovations_mle(
+    ).parameters
+    p_none = innovations_mle(
         endog,
         order=(1, 0, 1),
         demean=False,
         start_params=start_params,
         fixed_params=None,
-    )
-    p_empty, _ = innovations_mle(
+    ).parameters
+    p_empty = innovations_mle(
         endog,
         order=(1, 0, 1),
         demean=False,
         start_params=start_params,
         fixed_params={},
-    )
+    ).parameters
 
     assert_allclose(p_none.params, p_baseline.params)
     assert_allclose(p_empty.params, p_baseline.params)

@@ -89,7 +89,7 @@ class Representation:
 
     Parameters
     ----------
-    k_endog : {array_like, int}
+    k_endog : ndarray or int
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -101,7 +101,7 @@ class Representation:
     initial_variance : float, optional
         Initial variance used when approximate diffuse initialization is
         specified. Default is 1e6.
-    initialization : Initialization object or str, optional
+    initialization : Initialization or str, optional
         Initialization method for the initial state. If a string, must be one
         of {'diffuse', 'approximate_diffuse', 'stationary', 'known'}.
     initial_state : array_like, optional
@@ -111,11 +111,11 @@ class Representation:
         If `initialization='known'` is used, the covariance matrix of the
         initial state's distribution.
     nobs : int, optional
-        If an endogenous vector is not given (i.e. `k_endog` is an integer),
+        If an endogenous vector is not given (i.e., `k_endog` is an integer),
         the number of observations can optionally be specified. If not
         specified, they will be set to zero until data is bound to the model.
     dtype : np.dtype, optional
-        If an endogenous vector is not given (i.e. `k_endog` is an integer),
+        If an endogenous vector is not given (i.e., `k_endog` is an integer),
         the default datatype of the state space matrices can optionally be
         specified. Default is `np.float64`.
     design : array_like, optional
@@ -139,7 +139,7 @@ class Representation:
     **kwargs
         Additional keyword arguments. Not used directly. It is present to
         improve compatibility with subclasses, so that they can use `**kwargs`
-        to specify any default state space matrices (e.g. `design`) without
+        to specify any default state space matrices (e.g., `design`) without
         having to clean out any other keyword arguments they might have been
         passed.
 
@@ -155,11 +155,11 @@ class Representation:
         The dimension of a guaranteed positive
         definite covariance matrix describing
         the shocks in the measurement equation.
-    shapes : dictionary of name:tuple
+    shapes : dict of str to tuple
         A dictionary recording the initial shapes
         of each of the representation matrices as
         tuples.
-    initialization : str
+    initialization : Initialization
         Kalman filter initialization method. Default is unset.
     initial_variance : float
         Initial variance for approximate diffuse
@@ -459,7 +459,7 @@ class Representation:
             # Set the new value
             matrix[slice_] = value
             setattr(self, name, matrix)
-        # Otherwise we got a single non-string key, (e.g. mod[:]), which is
+        # Otherwise we got a single non-string key, (e.g., mod[:]), which is
         # invalid
         else:
             raise IndexError(
@@ -659,7 +659,7 @@ class Representation:
                 # (so we pass in updated_mat.shape[-1] as the nobs argument
                 # in the validate_* calls); instead, we check below that we
                 # at least `nobs` values were passed in and then only take the
-                # first of them as required. This can be useful when e.g. the
+                # first of them as required. This can be useful when e.g., the
                 # end user knows the extension values up to some maximum
                 # endpoint, but does not know what the calling methods may
                 # specifically require.
@@ -708,7 +708,7 @@ class Representation:
             (non-missing) value.
         new_ix : list of tuple
             List of (row, column) indices indicating which values in
-            `new_endog` represent a newly observed value (i.e. one that
+            `new_endog` represent a newly observed value (i.e., one that
             was previously missing).
         """
         # TODO: move this function to tools?
@@ -998,7 +998,7 @@ class Representation:
         ----------
         variance : float, optional
             The variance for approximating diffuse initial conditions. Default
-            is 1e6.
+            is `self.initial_variance`.
         """
         if variance is None:
             variance = self.initial_variance
@@ -1188,7 +1188,7 @@ class FrozenRepresentation:
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
-    shapes : dictionary of name:tuple
+    shapes : dict of str to tuple
         A dictionary recording the shapes of each of
         the representation matrices as tuples.
     endog : ndarray
@@ -1207,24 +1207,24 @@ class FrozenRepresentation:
         The selection matrix, :math:`R`.
     state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
-    missing : array of bool
+    missing : ndarray of bool
         An array of the same size as `endog`, filled
         with boolean values that are True if the
         corresponding entry in `endog` is NaN and False
         otherwise.
-    nmissing : array of int
+    nmissing : ndarray of int
         An array of size `nobs`, where the ith entry
         is the number (between 0 and `k_endog`) of NaNs in
         the ith row of the `endog` array.
     time_invariant : bool
         Whether or not the representation matrices are time-invariant
-    initialization : Initialization object
+    initialization : Initialization
         Kalman filter initialization method.
-    initial_state : array_like
+    initial_state : ndarray
         The state vector used to initialize the Kalman filter.
-    initial_state_cov : array_like
+    initial_state_cov : ndarray
         The state covariance matrix used to initialize the Kalman filter.
-    initial_diffuse_state_cov : array_like
+    initial_diffuse_state_cov : ndarray
         The diffuse part of the state covariance matrix used to initialize
         the Kalman filter.
     initial_variance : float

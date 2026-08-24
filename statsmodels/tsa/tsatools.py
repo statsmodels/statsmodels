@@ -47,7 +47,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     ----------
     x : array_like
         Original array of data.
-    trend : str {'n', 'c', 't', 'ct', 'ctt'}
+    trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to add.
 
         * 'n' add no trend.
@@ -55,19 +55,20 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         * 't' add trend only.
         * 'ct' add constant and linear trend.
         * 'ctt' add constant and linear and quadratic trend.
-    prepend : bool
+    prepend : bool, optional
         If True, prepends the new data to the columns of X.
-    has_constant : str {'raise', 'add', 'skip'}
+    has_constant : {'raise', 'add', 'skip'}, optional
         Controls what happens when trend is 'c' and a constant column already
         exists in x. 'raise' will raise an error. 'add' will add a column of
         1s. 'skip' will return the data without change. 'skip' is the default.
 
     Returns
     -------
-    array_like
+    ndarray, Series, or DataFrame
         The original data with the additional trend columns.  If x is a
         pandas Series or DataFrame, then the trend column names are 'const',
-        'trend' and 'trend_squared'.
+        'trend' and 'trend_squared'.  A Series is only returned when
+        ``trend='n'`` and x is a Series, since no columns are added.
 
     See Also
     --------
@@ -179,14 +180,14 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
         observations in columns.
-    col : int or None
+    col : int, optional
         `col` can be an int of the zero-based column index. If it's a
         1d array `col` can be None.
-    lags : int
+    lags : int, optional
         The number of lags desired.
-    drop : bool
+    drop : bool, optional
         Whether to keep the contemporaneous variable for the data.
-    insert : bool or int
+    insert : bool or int, optional
         If True, inserts the lagged values after `col`. If False, appends
         the data. If int inserts the lags at int.
 
@@ -255,13 +256,13 @@ def detrend(x, order=1, axis=0):
 
     Parameters
     ----------
-    x : array_like, 1d or 2d
-        Data, if 2d, then each row or column is independently detrended with
-        the same trendorder, but independent trend estimates.
-    order : int
+    x : ndarray
+        Data, 1d or 2d. If 2d, then each row or column is independently
+        detrended with the same trendorder, but independent trend estimates.
+    order : int, optional
         The polynomial order of the trend, zero is constant, one is
         linear trend, two is quadratic trend.
-    axis : int
+    axis : int, optional
         Axis can be either 0, observations by rows, or 1, observations by
         columns.
 
@@ -302,13 +303,13 @@ class LagmatResult(NamedTuple):
     ----------
     lags : ndarray or DataFrame
         The array with lagged observations.
-    leads : ndarray or DataFrame
+    leads : ndarray, DataFrame, or None
         The original (unlagged) array, truncated to have the same number
         of rows as ``lags``.
     """
 
     lags: NDArray | DataFrame
-    leads: NDArray | DataFrame
+    leads: NDArray | DataFrame | None
 
 
 def lagmat(
@@ -318,8 +319,8 @@ def lagmat(
     original: Literal["ex", "sep", "in"] = "ex",
     use_pandas: bool = False,
     *,
-    use_namedtuple: bool | None = None,
-) -> NDArray | DataFrame | tuple[NDArray, NDArray] | tuple[DataFrame, DataFrame]:
+    result_object: bool | None = None,
+) -> NDArray | DataFrame | LagmatResult:
     """
     Create 2d array of lags
 
@@ -327,20 +328,20 @@ def lagmat(
     ----------
     x : array_like
         Data; if 2d, observation in rows and variables in columns.
-    maxlag : {int, list[int], array_like[int]}
+    maxlag : int or array_like of int
         The lags to be applied.
 
         * int : All lags from zero to maxlag are included.
         * array_like : All lags associated to the values in the array.
             Must contain non-negative integers.
-    trim : {'forward', 'backward', 'both', 'none', None}
+    trim : {'forward', 'backward', 'both', 'none', None}, optional
         The trimming method to use.
 
         * 'forward' : trim invalid observations in front.
         * 'backward' : trim invalid initial observations.
         * 'both' : trim invalid observations on both sides.
         * 'none', None : no trimming of observations.
-    original : {'ex','sep','in'}
+    original : {'ex','sep','in'}, optional
         How the original is treated.
 
         * 'ex' : drops the original array returning only the lagged values.
@@ -349,38 +350,33 @@ def lagmat(
         * 'sep' : returns a tuple (original array, lagged values). The original
                   array is truncated to have the same number of rows as
                   the returned lagmat.
-    use_pandas : bool
+    use_pandas : bool, optional
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
-    use_namedtuple : bool, optional
-        Flag controlling whether a ``LagmatResult`` NamedTuple is
-        returned. When ``original="sep"`` a ``LagmatResult`` is always
-        returned; it holds the same two elements as the legacy tuple, so
-        it unpacks and indexes identically. For other values of
-        ``original`` a bare array is returned unless
-        ``use_namedtuple=True``, which additionally yields a
-        ``LagmatResult`` with ``leads`` set to ``None``.
+    result_object : bool, optional
+        Flag controlling whether a :class:`LagmatResult` is returned. When
+        ``original="sep"`` a :class:`LagmatResult` is always returned. For
+        other values of ``original`` a bare array is returned unless
+        ``result_object=True``, which additionally yields a
+        :class:`LagmatResult` with ``leads`` set to ``None``.
 
     Returns
     -------
-    LagmatResult or ndarray
-        When ``original="sep"`` (or ``use_namedtuple=True``), a NamedTuple
-        with fields:
+    LagmatResult, ndarray, or DataFrame
+        When ``original="sep"`` (or ``result_object=True``), a
+        :class:`LagmatResult` with fields:
 
-        lags : ndarray
+        lags : ndarray or DataFrame
             The array with lagged observations.
-        leads : ndarray or None
+        leads : ndarray, DataFrame, or None
             The original (unlagged) array, truncated to have the same
             number of rows as ``lags``. ``None`` for other values of
             ``original``, where the original series was either excluded
             ("ex") or folded into ``lags`` ("in").
 
-        ``LagmatResult`` has the same length and contents as the plain
-        ``(lags, leads)`` tuple it replaces, so it unpacks and indexes
-        identically. See :class:`~statsmodels.tsa.tsatools.LagmatResult`.
-
-        For other values of ``original`` a bare array of lagged
-        observations is returned instead.
+        For other values of ``original`` a bare array (or, when
+        ``use_pandas=True`` and `x` is a pandas object, a DataFrame) of
+        lagged observations is returned instead.
 
     Notes
     -----
@@ -444,7 +440,7 @@ def lagmat(
         # Special case for lag_indices = [0] to empty to match above
         lag_indices = lag_indices[lag_indices > 0]
     use_pandas = bool_like(use_pandas, "use_pandas")
-    use_namedtuple = bool_like(use_namedtuple, "use_namedtuple", optional=True)
+    result_object = bool_like(result_object, "result_object", optional=True)
     trim = string_like(
         trim,
         "trim",
@@ -511,14 +507,12 @@ def lagmat(
         if original == "sep":
             leads = lm[startobs:stopobs, :dropidx]
 
-    # LagmatResult has exactly the same length and contents as the legacy
-    # (lags, leads) tuple, so it unpacks and indexes identically and is
-    # always used when original="sep".  For other values of `original` a
-    # bare array is returned, as before; pass use_namedtuple=True to always
-    # get a LagmatResult.  `leads` is only meaningful for "sep" -- for "ex"
-    # the caller asked for it to be excluded and for "in" it is part of
-    # `lags`.
-    if use_namedtuple or original == "sep":
+    # LagmatResult is always used when original="sep".  For other values of
+    # `original` a bare array is returned, as before; pass
+    # result_object=True to always get a LagmatResult.  `leads` is only
+    # meaningful for "sep" -- for "ex" the caller asked for it to be
+    # excluded and for "in" it is part of `lags`.
+    if result_object or original == "sep":
         return LagmatResult(lags, leads if original == "sep" else None)
     return lags
 
@@ -529,31 +523,33 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=Fa
 
     Parameters
     ----------
-    x : array_like
-        Data, 2d. Observations in rows and variables in columns.
+    x : ndarray, Series, or DataFrame
+        Data, 1d or 2d. Observations in rows and variables in columns.
     maxlag0 : int
         The first variable all lags from zero to maxlag are included.
-    maxlagex : {None, int}
+    maxlagex : int, optional
         The max lag for all other variables all lags from zero to maxlag are
-        included.
-    dropex : int
+        included. If None, defaults to maxlag0.
+    dropex : int, optional
         Exclude first dropex lags from other variables. For all variables,
         except the first, lags from dropex to maxlagex are included.
-    trim : str
+    trim : {'forward', 'backward', 'both', 'none'}, optional
         The trimming method to use.
 
         * 'forward' : trim invalid observations in front.
         * 'backward' : trim invalid initial observations.
         * 'both' : trim invalid observations on both sides.
         * 'none' : no trimming of observations.
-    use_pandas : bool
+    use_pandas : bool, optional
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
 
     Returns
     -------
-    ndarray
-        The array with lagged observations, columns ordered by variable.
+    ndarray or DataFrame
+        The array with lagged observations, columns ordered by variable. A
+        DataFrame is returned if `x` is a pandas Series or DataFrame and
+        `use_pandas` is True.
 
     Notes
     -----
@@ -603,10 +599,52 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=Fa
 
 
 def vec(mat):
+    """
+    Vectorize a matrix by stacking its columns
+
+    Parameters
+    ----------
+    mat : ndarray
+        A 2d array.
+
+    Returns
+    -------
+    ndarray
+        A 1d array containing the columns of `mat` stacked on top of
+        one another (Fortran, i.e. column-major, order).
+
+    See Also
+    --------
+    unvec
+        Inverse operation.
+    vech
+        Half-vectorization operator for symmetric matrices.
+    """
     return mat.ravel("F")
 
 
 def vech(mat):
+    """
+    Half-vectorize a symmetric matrix by stacking its lower triangle
+
+    Parameters
+    ----------
+    mat : ndarray
+        A symmetric 2d array.
+
+    Returns
+    -------
+    ndarray
+        A 1d array containing the lower-triangular elements of `mat`,
+        stacked column by column (Fortran, i.e. column-major, order).
+
+    See Also
+    --------
+    unvech
+        Inverse operation.
+    vec
+        Full vectorization operator.
+    """
     # Gets Fortran-order
     return mat.T.take(_triu_indices(len(mat)))
 
@@ -630,12 +668,51 @@ def _diag_indices(n):
 
 
 def unvec(v):
+    """
+    Reconstruct a square matrix from its vectorized (stacked-column) form
+
+    Parameters
+    ----------
+    v : ndarray
+        A 1d array whose length is a perfect square.
+
+    Returns
+    -------
+    ndarray
+        The square matrix whose columns, stacked on top of one another,
+        equal `v`.
+
+    See Also
+    --------
+    vec
+        Inverse operation.
+    """
     k = int(np.sqrt(len(v)))
     assert k * k == len(v)
     return v.reshape((k, k), order="F")
 
 
 def unvech(v):
+    """
+    Reconstruct a symmetric matrix from its half-vectorized form
+
+    Parameters
+    ----------
+    v : ndarray
+        A 1d array containing the stacked lower-triangular elements of a
+        symmetric matrix, as produced by :func:`vech`.
+
+    Returns
+    -------
+    ndarray
+        The symmetric matrix whose lower-triangular elements, stacked
+        column by column, equal `v`.
+
+    See Also
+    --------
+    vech
+        Inverse operation.
+    """
     # quadratic formula, correct fp error
     rows = 0.5 * (-1 + np.sqrt(1 + 8 * len(v)))
     rows = int(np.round(rows))
@@ -703,7 +780,8 @@ def commutation_matrix(p, q):
 
     Returns
     -------
-    K : ndarray (pq x pq)
+    K : ndarray
+        The commutation matrix, of shape `(pq, pq)`.
     """
     p = int_like(p, "p")
     q = int_like(q, "q")
@@ -719,8 +797,13 @@ def _ar_transparams(params):
 
     Parameters
     ----------
-    params : array_like
+    params : ndarray
         The AR coefficients
+
+    Returns
+    -------
+    ndarray
+        The transformed AR coefficients.
 
     References
     ----------
@@ -742,8 +825,13 @@ def _ar_invtransparams(params):
 
     Parameters
     ----------
-    params : array_like
+    params : ndarray
         The transformed AR coefficients
+
+    Returns
+    -------
+    ndarray
+        The untransformed AR coefficients.
     """
     params = params.copy()
     tmp = params.copy()
@@ -764,6 +852,11 @@ def _ma_transparams(params):
     ----------
     params : ndarray
         The ma coefficients of an (AR)MA model.
+
+    Returns
+    -------
+    ndarray
+        The transformed MA coefficients.
 
     References
     ----------
@@ -789,6 +882,11 @@ def _ma_invtransparams(macoefs):
     ----------
     macoefs : ndarray
         The transformed MA coefficients
+
+    Returns
+    -------
+    ndarray
+        The untransformed MA coefficients.
     """
     tmp = macoefs.copy()
     for j in range(len(macoefs) - 1, 0, -1):
@@ -813,7 +911,7 @@ def unintegrate_levels(x, d):
 
     Returns
     -------
-    y : array_like
+    y : ndarray
         The increasing differences from 0 to d-1 of the first d elements
         of x.
 
@@ -834,13 +932,13 @@ def unintegrate(x, levels):
     ----------
     x : array_like
         The n-th differenced series
-    levels : list
-        A list of the first-value in each differenced series, for
+    levels : sequence of float
+        The first-value in each differenced series, for
         [first-difference, second-difference, ..., n-th difference]
 
     Returns
     -------
-    y : array_like
+    y : ndarray
         The original series de-differenced
 
     Examples
@@ -878,9 +976,9 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     -----
     Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
     """
-    if not isinstance(freq, offsets.DateOffset):
+    if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
-    assert isinstance(freq, offsets.DateOffset)
+    assert isinstance(freq, offsets.BaseOffset)
     freq = freq.rule_code.upper()
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")

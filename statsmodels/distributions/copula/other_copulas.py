@@ -16,7 +16,7 @@ from statsmodels.tools.rng_qrng import check_random_state
 
 
 class IndependenceCopula(Copula):
-    """Independence copula.
+    r"""Independence copula.
 
     Copula with independent random variables.
 
@@ -26,7 +26,7 @@ class IndependenceCopula(Copula):
 
     Parameters
     ----------
-    k_dim : int
+    k_dim : int, optional
         Dimension, number of components in the multivariate random variable.
 
     Notes
@@ -56,15 +56,15 @@ class IndependenceCopula(Copula):
         ----------
         nobs : int, optional
             Number of samples to generate from the copula. Default is 1.
-        args : tuple
+        args : tuple, optional
             Arguments for copula parameters. Not used by ``IndependenceCopula``.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
             `rng` is already a ``Generator`` or ``RandomState`` instance,
             that instance is used.
-        random_state : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
                random_state has been deprecated. In-line with SPEC-007, use
@@ -81,16 +81,66 @@ class IndependenceCopula(Copula):
         return x
 
     def pdf(self, u, args=()):
+        """Probability density function of the independence copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the
+            dimension of the random variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
+            Not used by ``IndependenceCopula``.
+
+        Returns
+        -------
+        ndarray
+            Copula pdf evaluated at points ``u``. Constant equal to 1.
+        """
         u = np.asarray(u)
         return np.ones(u.shape[:-1])
 
     def cdf(self, u, args=()):
+        """Cumulative distribution function of the independence copula.
+
+        Parameters
+        ----------
+        u : array_like, 2-D
+            Points of random variables in unit hypercube at which method is
+            evaluated.
+            The second (or last) dimension should be the same as the
+            dimension of the random variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
+            Not used by ``IndependenceCopula``.
+
+        Returns
+        -------
+        ndarray
+            Copula cdf evaluated at points ``u``, i.e., the product of the
+            components of ``u``.
+        """
         return np.prod(u, axis=-1)
 
     def tau(self):
+        """Kendall's tau of the independence copula.
+
+        Returns
+        -------
+        float
+            Kendall's tau, which is always 0 for the independence copula.
+        """
         return 0
 
     def plot_pdf(self, *args):
+        """Not implemented.
+
+        Raises
+        ------
+        NotImplementedError
+            The independence copula's pdf is constant over the domain and
+            is not plotted.
+        """
         raise NotImplementedError("PDF is constant over the domain.")
 
 
@@ -100,23 +150,23 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
     Parameters
     ----------
     sample : ndarray
-        Sample of multivariate observations in (o, 1) interval.
+        Sample of multivariate observations in (0, 1) interval.
     size : int
         Number of observations to simulate.
-    bw : float
+    bw : float, optional
         Bandwidth for Beta sampling. The beta copula corresponds to a kernel
         estimate of the distribution. bw=1 corresponds to the empirical beta
         copula. A small bandwidth like bw=0.001 corresponds to small noise
-        added to the empirical distribution. Larger bw, e.g. bw=10 corresponds
+        added to the empirical distribution. Larger bw, e.g., bw=10 corresponds
         to kernel estimate with more smoothing.
-    k_func : None or callable
+    k_func : callable, optional
         The default kernel function is currently a beta function with 1 added
         to the first beta parameter.
-    return_extras : bool
+    return_extras : bool, optional
         If this is False, then only the random sample will be returned.
         If true, then extra information is returned that is mainly of interest
         for verification.
-    rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
         If `rng` is None, a new ``Generator`` is created using fresh
         entropy from the operating system. If `rng` is an int or array
         of ints, a new ``Generator`` is created, seeded with `rng`. If

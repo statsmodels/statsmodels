@@ -416,6 +416,31 @@ class TestBetaIncome:
         assert_allclose(frame, frame0, rtol=1e-13, atol=1e-13)
 
 
+def test_hessian_observed_argument():
+    # `observed` must be honored when supplied, and only fall back to
+    # hess_type when it is None
+    formula = "methylation ~ gender + CpG"
+    mod = BetaModel.from_formula(formula, methylation,
+                                 exog_precision_formula="~ age",
+                                 link_precision=links.Log())
+    res = mod.fit()
+    params = res.params
+
+    hess_obs = mod.hessian(params, observed=True)
+    hess_eim = mod.hessian(params, observed=False)
+    assert not np.allclose(hess_obs, hess_eim)
+
+    # the default follows hess_type, which fit sets to "oim"
+    assert mod.hess_type == "oim"
+    assert_allclose(mod.hessian(params), hess_obs, rtol=1e-13)
+
+    mod.hess_type = "eim"
+    assert_allclose(mod.hessian(params), hess_eim, rtol=1e-13)
+
+    # an explicit argument still wins over hess_type
+    assert_allclose(mod.hessian(params, observed=True), hess_obs, rtol=1e-13)
+
+
 def test_summary_after_remove_data():
     # summary() must still work after remove_data() has been called
     model = "I(food/income) ~ income + persons"
@@ -424,3 +449,50 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_hessian_factor_reassembles_hessian():
+    # hessian() calls score_hessian_factor() directly rather than going
+    # through hessian_factor(), so the latter is only exercised by
+    # explicitly reassembling the Hessian from its output and checking it
+    # against hessian()'s own result.
+    model = "I(food/income) ~ income + persons"
+    mod = BetaModel.from_formula(model, income)
+    res = mod.fit()
+    params = np.asarray(res.params)
+
+    for observed in (True, False):
+        hf11, hf12, hf22 = mod.hessian_factor(params, observed=observed)
+        d11 = (mod.exog.T * hf11).dot(mod.exog)
+        d12 = (mod.exog.T * hf12).dot(mod.exog_precision)
+        d22 = (mod.exog_precision.T * hf22).dot(mod.exog_precision)
+        reassembled = np.block([[d11, d12], [d12.T, d22]])
+        assert_allclose(reassembled, mod.hessian(params, observed=observed),
+                        rtol=1e-12)
+
+
+def test_llrmixin_set_null_options():
+    # BetaResults is the only class in the codebase that mixes in
+    # _LLRMixin without overriding set_null_options (discrete_model.py's
+    # DiscreteResults defines its own, shadowing the mixin's version for
+    # every discrete model) -- so this is the only place its actual body
+    # can be exercised at all.
+    model = "I(food/income) ~ income + persons"
+    res = BetaModel.from_formula(model, income).fit()
+
+    llnull0 = res.llnull
+    assert not hasattr(res, "res_null")
+
+    res.set_null_options(attach_results=True)
+    lln = res.llnull
+    assert_allclose(lln, llnull0)
+    assert hasattr(res, "res_null")
+    assert_allclose(res.res_null.llf, lln)
+
+    # llr/llr_pvalue/pseudo_rsquared derive from llnull and must move
+    # together with it when the cache is reset via a direct override
+    res.set_null_options(llnull=res.llf - 5)
+    assert "prsquared" not in res._cache
+    assert_allclose(res._cache["llnull"], res.llf - 5)
+    assert_allclose(res.llr, -2 * (res.llnull - res.llf))
+    assert_allclose(res.pseudo_rsquared(), 1 - res.llf / res.llnull)

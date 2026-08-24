@@ -35,7 +35,7 @@ def outlier_test(
     ----------
     model_results : RegressionResults
         Linear model results
-    method : str
+    method : str, optional
         - `bonferroni` : one-step correction
         - `sidak` : one-step correction
         - `holm-sidak` :
@@ -45,15 +45,15 @@ def outlier_test(
         - `fdr_bh` : Benjamini/Hochberg
         - `fdr_by` : Benjamini/Yekutieli
         See `statsmodels.stats.multitest.multipletests` for details.
-    alpha : float
+    alpha : float, optional
         familywise error rate
-    labels : None or array_like
+    labels : None or array_like, optional
         If `labels` is not None, then it will be used as index to the
         returned pandas DataFrame. See also Returns below
-    order : bool
+    order : bool, optional
         Whether or not to order the results by the absolute value of the
         studentized residuals. If labels are provided they will also be sorted.
-    cutoff : None or float in [0, 1]
+    cutoff : None or float in [0, 1], optional
         If cutoff is not None, then the return only includes observations with
         multiple testing corrected p-values strictly below the cutoff. The
         returned array or dataframe can be empty if there are no outlier
@@ -126,7 +126,7 @@ def reset_ramsey(res, degree=5):
     ----------
     res : RegressionResults instance
         Results instance from an OLS regression.
-    degree : int
+    degree : int, optional
         Maximum power to include in the RESET test.  Powers 0 and 1 are
         excluded, so that degree tests powers 2, ..., degree of the fitted
         values.
@@ -137,7 +137,7 @@ def reset_ramsey(res, degree=5):
     is augmented by powers 2 to degree of the fitted values. Then it performs
     an F-test whether these additional terms are significant.
 
-    If the p-value of the f-test is below a threshold, e.g. 0.1, then this
+    If the p-value of the f-test is below a threshold, e.g., 0.1, then this
     indicates that there might be additional non-linear effects in the model
     and that the linear model is mis-specified.
 
@@ -178,7 +178,7 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
 
     Parameters
     ----------
-    exog : {ndarray, DataFrame}
+    exog : array_like
         design matrix with all explanatory variables, as for example used in
         regression
     exog_idx : int
@@ -333,20 +333,20 @@ class _BaseInfluenceMixin:
 
         Parameters
         ----------
-        y_var : str
+        y_var : str, optional
             Name of attribute or shortcut for predefined attributes that will
             be plotted on the y-axis.
-        threshold : None or float
+        threshold : None or float, optional
             Threshold for adding annotation with observation labels.
             Observations for which the absolute value of the y_var is larger
             than the threshold will be annotated. Set to a negative number to
             label all observations or to a large number to have no annotation.
-        title : str
+        title : str, optional
             If provided, the title will replace the default "Index Plot" title.
-        ax : matplotlib axis instance
+        ax : matplotlib axis instance, optional
             The plot will be added to the `ax` if provided, otherwise a new
             figure is created.
-        idx : {None, int}
+        idx : {None, int}, optional
             Some attributes require an additional index to select the y-var.
             In dfbetas this refers to the column index.
         **kwds
@@ -413,28 +413,36 @@ class MLEInfluence(_BaseInfluenceMixin):
 
     Attributes
     ----------
-    hat_matrix_diag (hii) : This is the generalized leverage computed as the
-        local derivative of fittedvalues (predicted mean) with respect to the
+    hat_matrix_diag : ndarray or None
+        This is the generalized leverage (``hii``) computed as the local
+        derivative of fittedvalues (predicted mean) with respect to the
         observed response for each observation.
         Not available for ZeroInflated models because of nondifferentiability.
-    d_params : Change in parameters computed with one Newton step using the
+    d_params : ndarray
+        Change in parameters computed with one Newton step using the
         full Hessian corrected by division by (1 - hii).
         If hat_matrix_diag is not available, then the division by (1 - hii) is
         not included.
-    dbetas : change in parameters divided by the standard error of parameters
+    dfbetas : ndarray
+        change in parameters divided by the standard error of parameters
         from the full model results, ``bse``.
-    cooks_distance : quadratic form for change in parameters weighted by
+    cooks_distance : tuple
+        quadratic form for change in parameters weighted by
         ``cov_params`` from the full model divided by the number of variables.
         It includes p-values based on the F-distribution which are only
         approximate outside of linear Gaussian models.
-    resid_studentized : In the general MLE case resid_studentized are
+    resid_studentized : ndarray
+        In the general MLE case resid_studentized are
         computed from the score residuals scaled by hessian factor and
         leverage. This does not use ``cov_params``.
-    d_fittedvalues : local change of expected mean given the change in the
+    d_fittedvalues : ndarray
+        local change of expected mean given the change in the
         parameters as computed in ``d_params``.
-    d_fittedvalues_scaled : same as d_fittedvalues but scaled by the standard
+    d_fittedvalues_scaled : ndarray
+        same as d_fittedvalues but scaled by the standard
         errors of a predicted mean of the response.
-    params_one : is the one step parameter estimate computed as ``params``
+    params_one : ndarray
+        is the one step parameter estimate computed as ``params``
         from the full sample minus ``d_params``.
 
     Notes
@@ -448,7 +456,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     GLM hat matrix in the case of Probit, which corresponds to family
     Binomial with a non-canonical link.
 
-    The extension to non-standard models, e.g. multi-link model like
+    The extension to non-standard models, e.g., multi-link model like
     BetaModel and the ZeroInflated models is still experimental and might still
     change.
     Additionally, ZeroInflated and some threshold models have a
@@ -456,7 +464,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     might also change.
 
     Warning: This does currently not work for constrained or penalized models,
-    e.g. models estimated with fit_constrained or fit_regularized.
+    e.g., models estimated with fit_constrained or fit_regularized.
 
     This has not yet been tested for correctness when offset or exposure
     are used, although they should be supported by the code.
@@ -479,7 +487,7 @@ class MLEInfluence(_BaseInfluenceMixin):
     ):
         # this __init__ attaches attributes that we don't really need
         self.results = results = maybe_unwrap_results(results)
-        # TODO: check for extra params in e.g. NegBin
+        # TODO: check for extra params in e.g., NegBin
         self.nobs, self.k_vars = results.model.exog.shape
         self.k_params = np.size(results.params)
         self.endog = endog if endog is not None else results.model.endog
@@ -629,7 +637,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         of the model.
 
         Note: This might have nan values if second derivative, hessian_factor,
-        is positive, i.e. loglikelihood is not globally concave w.r.t. linear
+        is positive, i.e., loglikelihood is not globally concave w.r.t. linear
         predictor. (This occurred in an example for GeneralizedPoisson)
         """
         from statsmodels.genmod.generalized_linear_model import GLM
@@ -655,15 +663,15 @@ class MLEInfluence(_BaseInfluenceMixin):
 
         Parameters
         ----------
-        joint : bool
+        joint : bool, optional
             If joint is true, then a quadratic form similar to score_test is
             returned for each observation.
             If joint is false, then standardized score_obs are returned. The
             returned array is two-dimensional
-        index : ndarray (optional)
+        index : ndarray, optional
             Optional index to select a subset of score_obs columns.
             By default, all columns of score_obs will be used.
-        studentize : bool
+        studentize : bool, optional
             If studentize is true, the scaled residuals are also
             studentized using the generalized leverage.
 
@@ -736,7 +744,7 @@ class MLEInfluence(_BaseInfluenceMixin):
         for the predicted mean provided by results.get_prediction.
         """
         # Note: this and the previous methods are for the response
-        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # and not for a weighted response, i.e., not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
         return self.d_fittedvalues / self._get_prediction.se
 
@@ -925,7 +933,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Parameters
         ----------
-        sigma : None or float
+        sigma : float, optional
             estimate of the standard deviation of the residuals. If None, then
             the estimate from the regression results is used.
 
@@ -1003,7 +1011,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Returns
         -------
-        dffits : float
+        dffits : ndarray
             The dffits measure for each observation, which is a measure of the
             influence of a single data point on the predicted value of a model.
         dffits_threshold : float
@@ -1132,14 +1140,14 @@ class OLSInfluence(_BaseInfluenceMixin):
         ----------
         drop_idx : int
             index of exog that is dropped from the regression
-        endog_idx : 'endog' or int
+        endog_idx : 'endog' or int, optional
             If 'endog', then the endogenous variable of the result instance
             is regressed on the exogenous variables, excluding the one at
             drop_idx. If endog_idx is an integer, then the exog with that
             index is regressed with OLS on all other exogenous variables.
             (The latter is the auxiliary regression for the variance inflation
             factor.)
-        store : bool
+        store : bool, optional
             If True, the result instance is cached for reuse.
 
         Notes
@@ -1147,23 +1155,17 @@ class OLSInfluence(_BaseInfluenceMixin):
         This needs more thought, memory versus speed.
         Not yet used in any other parts, not sufficiently tested.
         """
-        # reverse the structure, access store, if fail calculate ?
-        # this creates keys in store even if store = false ! bug
         if endog_idx == "endog":
             stored = self.aux_regression_endog
-            if hasattr(stored, drop_idx):
+            if drop_idx in stored:
                 return stored[drop_idx]
             x_i = self.results.model.endog
 
         else:
-            # nested dictionary
-            try:
-                self.aux_regression_exog[endog_idx][drop_idx]
-            except KeyError:
-                pass
-
-            stored = self.aux_regression_exog[endog_idx]
-            stored = {}
+            # nested dictionary, one per endog_idx
+            stored = self.aux_regression_exog.setdefault(endog_idx, {})
+            if drop_idx in stored:
+                return stored[drop_idx]
 
             x_i = self.exog[:, endog_idx]
 
@@ -1304,7 +1306,7 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Parameters
         ----------
-        float_fmt : str
+        float_fmt : str, optional
             Format string for float values in the table.
 
         Returns
@@ -1363,7 +1365,7 @@ def summary_table(res, alpha=0.05):
     ----------
     res : RegressionResults
        Results from an OLS regression.
-    alpha : float
+    alpha : float, optional
        significance level for confidence interval
 
     Returns
@@ -1458,7 +1460,7 @@ class GLMInfluence(MLEInfluence):
     Influence and outlier measures (experimental)
 
     This uses partly formulas specific to GLM, specifically cooks_distance
-    is based on the hessian, i.e. observed or expected information matrix and
+    is based on the hessian, i.e., observed or expected information matrix and
     not on cov_params, in contrast to MLEInfluence.
     Standardization for changes in parameters, in fittedvalues and in
     the linear predictor are based on cov_params.
@@ -1487,15 +1489,15 @@ class GLMInfluence(MLEInfluence):
 
     Attributes
     ----------
-    dbetas
+    dfbetas : ndarray
         change in parameters divided by the standard error of parameters from
         the full model results, ``bse``.
-    d_fittedvalues_scaled
+    d_fittedvalues_scaled : ndarray
         same as d_fittedvalues but scaled by the standard errors of a
         predicted mean of the response.
-    d_linpred
+    d_linpred : ndarray
         local change in linear prediction.
-    d_linpred_scale
+    d_linpred_scaled : ndarray
         local change in linear prediction scaled by the standard errors for
         the prediction based on cov_params.
 
@@ -1603,7 +1605,7 @@ class GLMInfluence(MLEInfluence):
         for linpred provided by results.get_prediction.
         """
         # Note: this and the previous methods are for the response
-        # and not for a weighted response, i.e. not the self.exog, self.endog
+        # and not for a weighted response, i.e., not the self.exog, self.endog
         # this will be relevant for WLS comparing fitted endog versus wendog
         return self.d_linpred / self._get_prediction.linpred.se
 
@@ -1660,7 +1662,7 @@ class GLMInfluence(MLEInfluence):
         offset = offset_ = init_kwds.pop("offset")
         exposure = exposure_ = init_kwds.pop("exposure")
         n_trials = init_kwds.pop("n_trials", None)
-        # family Binomial creates `n` i.e. `n_trials`
+        # family Binomial creates `n` i.e., `n_trials`
         # we need to reset it
         # TODO: figure out how to do this properly
         if hasattr(init_kwds["family"], "initialize"):

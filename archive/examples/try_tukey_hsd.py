@@ -314,9 +314,13 @@ cyl_labels = np.array(
     ]
 )
 
-dta = np.recfromtxt(StringIO(ss), names=("Rust", "Brand", "Replication"))
-dta2 = np.recfromtxt(StringIO(ss2), names=("idx", "Treatment", "StressReduction"))
-dta3 = np.recfromtxt(StringIO(ss3), names=("Brand", "Relief"))
+dta = np.genfromtxt(
+    StringIO(ss), names=("Rust", "Brand", "Replication"), dtype=None
+)
+dta2 = np.genfromtxt(
+    StringIO(ss2), names=("idx", "Treatment", "StressReduction"), dtype=None
+)
+dta3 = np.genfromtxt(StringIO(ss3), names=("Brand", "Relief"), dtype=None)
 
 # print tukeyhsd(dta['Brand'], dta['Rust'])
 
@@ -427,13 +431,16 @@ ss5 = """\
 1 - 2	-4.600	-8.249	-0.951	***
 1 - 3	-0.260	-3.909	3.389	"""
 
-dta5 = np.recfromtxt(
-    StringIO(ss5), names=("pair", "mean", "lower", "upper", "sig"), delimiter="\t"
+dta5 = np.genfromtxt(
+    StringIO(ss5),
+    names=("pair", "mean", "lower", "upper", "sig"),
+    delimiter="\t",
+    dtype=None,
 )
 
 sas_ = dta5[[1, 3, 2]]
 confint1 = res3.confint
-confint2 = sas_[["lower", "upper"]].view(float).reshape((3, 2))
+confint2 = np.column_stack([sas_["lower"], sas_["upper"]])
 assert_almost_equal(confint1, confint2, decimal=2)
 reject1 = res3.reject
 reject2 = sas_["sig"] == "***"

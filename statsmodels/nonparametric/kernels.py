@@ -3,7 +3,8 @@ Module of kernels that are able to handle continuous as well as categorical
 variables (both ordered and unordered)
 
 This is a slight deviation from the current approach in
-statsmodels.nonparametric.kernels where each kernel is a class object.
+statsmodels.sandbox.nonparametric.kernels where each kernel is a class
+object.
 
 Having kernel functions rather than classes makes extension to a multivariate
 kernel density estimation much easier.
@@ -25,21 +26,21 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 2-D ndarray of ints, shape (nobs, K)
-        The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : float or ndarray of int
+        The value(s) of the training set; may be a scalar or a 1-D array.
+    x : float
         The value at which the kernel density is being estimated.
-    num_levels : bool, optional
+    num_levels : int, optional
         Gives the user the option to specify the number of levels for the
-        random variable.  If False, the number of levels is calculated from
-        the data.
+        random variable. If not given, the number of levels is calculated
+        from the data.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
 
     Notes
     -----
@@ -70,17 +71,17 @@ def wang_ryzin(h, Xi, x):
 
     Parameters
     ----------
-    h : scalar or 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : ndarray of ints, shape (nobs, K)
-        The value of the training set.
-    x : scalar or 1-D ndarray of shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : float or ndarray of int
+        The value(s) of the training set; may be a scalar or a 1-D array.
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
 
     Notes
     -----
@@ -110,17 +111,17 @@ def gaussian(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
     """
     return (1.0 / np.sqrt(2 * np.pi)) * np.exp(-((Xi - x) ** 2) / (h**2 * 2.0))
 
@@ -131,17 +132,17 @@ def tricube(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
     """
     u = (Xi - x) / h
     u[np.abs(u) > 1] = 0
@@ -154,17 +155,17 @@ def gaussian_convolution(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
     """
     return (1.0 / np.sqrt(4 * np.pi)) * np.exp(-((Xi - x) ** 2) / (h**2 * 4.0))
 
@@ -175,12 +176,13 @@ def wang_ryzin_convolution(h, Xi, Xj):
 
     Parameters
     ----------
-    h : scalar or 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : ndarray of ints, shape (nobs, K)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray of int
         The value of the first training set.
-    Xj : ndarray of ints, shape (nobs, K)
-        The value of the second training set.
+    Xj : float or ndarray of int
+        The value of the second training set; may be a scalar or a 1-D
+        array.
 
     Returns
     -------
@@ -205,12 +207,13 @@ def aitchison_aitken_convolution(h, Xi, Xj):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 2-D ndarray of ints, shape (nobs, K)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray of int
         The value of the first training set.
-    Xj : 2-D ndarray of ints, shape (nobs, K)
-        The value of the second training set.
+    Xj : float or ndarray of int
+        The value of the second training set; may be a scalar or a 1-D
+        array.
 
     Returns
     -------
@@ -234,11 +237,11 @@ def gaussian_cdf(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel cdf is being estimated.
 
     Returns
@@ -255,11 +258,11 @@ def aitchison_aitken_cdf(h, Xi, x_u):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 2-D ndarray of ints, shape (nobs, K)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray of int
         The value of the training set.
-    x_u : scalar
+    x_u : int
         The value at which the kernel cdf is being estimated.
 
     Returns
@@ -284,9 +287,9 @@ def wang_ryzin_cdf(h, Xi, x_u):
 
     Parameters
     ----------
-    h : scalar or 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : ndarray of ints, shape (nobs, K)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray of int
         The value of the training set.
     x_u : scalar
         The value at which the kernel cdf is being estimated.
@@ -310,11 +313,11 @@ def d_gaussian(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
@@ -332,17 +335,17 @@ def aitchison_aitken_reg(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray of int
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
 
     Notes
     -----
@@ -361,17 +364,17 @@ def wang_ryzin_reg(h, Xi, x):
 
     Parameters
     ----------
-    h : scalar or 1-D ndarray, shape (K,)
-        The bandwidths used to estimate the value of the kernel function.
-    Xi : ndarray of ints, shape (nobs, K)
+    h : float
+        The bandwidth used to estimate the value of the kernel function.
+    Xi : ndarray of int
         The value of the training set.
-    x : scalar or 1-D ndarray of shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (nobs, K)
-        The value of the kernel function at each training point for each var.
+    kernel_value : ndarray
+        The value of the kernel function at each point in `Xi`.
 
     Notes
     -----

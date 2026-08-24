@@ -2,6 +2,8 @@ import numpy as np
 from numpy import asarray, diag, diag_indices, dot, ones, r_, zeros
 from numpy.linalg import solve
 
+from statsmodels.tools.validation import string_like
+
 # def denton(indicator, benchmark, freq="aq", **kwarg):
 #    """
 #    Denton's method to convert low-frequency to high frequency data.
@@ -96,11 +98,11 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     benchmark : array_like
         The higher frequency benchmark.  A 1d or 2d data series in columns.
         If 2d, then M series are assumed.
-    freq : str {"aq","qm", "other"}
+    freq : {"aq", "qm", "other"}, optional
         The frequency to use in the conversion.
 
         * "aq" - Benchmarking an annual series to quarterly.
-        * "mq" - Benchmarking a quarterly series to monthly.
+        * "qm" - Benchmarking a quarterly series to monthly.
         * "other" - Custom stride.  A kwarg, k, must be supplied.
     **kwargs
         Additional keyword arguments. For example:
@@ -174,16 +176,15 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 
     # number of low-freq observations for aggregate measure
     # 4 for annual to quarter and 3 for quarter to monthly
+    freq = string_like(freq, "freq", options=("aq", "qm", "other"), lower=False)
     if freq == "aq":
         k = 4
     elif freq == "qm":
         k = 3
-    elif freq == "other":
+    else:  # freq == "other"
         k = kwargs.get("k")
         if not k:
             raise ValueError('k must be supplied with freq="other"')
-    else:
-        raise ValueError(f"freq {freq} not understood")
 
     n = k*m  # number of indicator series with a benchmark for back-series
     # if k*m != n, then we are going to extrapolate q observations

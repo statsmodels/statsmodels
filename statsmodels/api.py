@@ -8,6 +8,7 @@ __all__ = [
     "MICE",
     "OLS",
     "PCA",
+    "QIF",
     "RLM",
     "WLS",
     "BayesGaussMI",
@@ -23,6 +24,7 @@ __all__ = [
     "MICEData",
     "MNLogit",
     "MixedLM",
+    "MultivariateLS",
     "NegativeBinomial",
     "NegativeBinomialP",
     "NominalGEE",
@@ -37,6 +39,7 @@ __all__ = [
     "SurvfuncRight",
     "TruncatedLFNegativeBinomialP",
     "TruncatedLFPoisson",
+    "VCSpec",
     "ZeroInflatedGeneralizedPoisson",
     "ZeroInflatedNegativeBinomialP",
     "ZeroInflatedPoisson",
@@ -53,6 +56,7 @@ __all__ = [
     "gam",
     "genmod",
     "graphics",
+    "impute_ros",
     "iolib",
     "load",
     "load_pickle",
@@ -114,6 +118,7 @@ from .genmod import api as genmod
 from .genmod.api import (
     GEE,
     GLM,
+    QIF,
     BinomialBayesMixedGLM,
     NominalGEE,
     OrdinalGEE,
@@ -125,14 +130,16 @@ from .graphics import api as graphics
 from .graphics.gofplots import ProbPlot, qqline, qqplot, qqplot_2samples
 from .imputation.bayes_mi import MI, BayesGaussMI
 from .imputation.mice import MICE, MICEData
+from .imputation.ros import impute_ros
 from .iolib.smpickle import load_pickle
 from .multivariate import api as multivariate
 from .multivariate.factor import Factor
 from .multivariate.manova import MANOVA
+from .multivariate.multivariate_ols import MultivariateLS
 from .multivariate.pca import PCA
 from .nonparametric import api as nonparametric
 from .regression.linear_model import GLS, GLSAR, OLS, WLS
-from .regression.mixed_linear_model import MixedLM
+from .regression.mixed_linear_model import MixedLM, VCSpec
 from .regression.quantile_regression import QuantReg
 from .regression.recursive_ls import RecursiveLS
 from .robust.robust_linear_model import RLM

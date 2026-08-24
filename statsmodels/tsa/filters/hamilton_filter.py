@@ -38,13 +38,13 @@ def hamilton_filter(x, h=8, p=4):
     Returns
     -------
     CycleTrendResult
-        A NamedTuple with fields:
+        A result object with fields:
 
-        cycle : ndarray or Series
+        cycle : ndarray, Series, or DataFrame
             Estimated cyclical component.  The first ``p + h - 1`` values
             are ``NaN`` because no regression can be formed for those
             periods.
-        trend : ndarray or Series
+        trend : ndarray, Series, or DataFrame
             Estimated trend component.  The first ``p + h - 1`` values are
             likewise ``NaN``.
 
@@ -77,7 +77,7 @@ def hamilton_filter(x, h=8, p=4):
     [Hamilton2018]_ shows that the HP filter introduces spurious cyclical
     dynamics; the regression-based filter avoids this by construction.
 
-    The regression is estimated once on all available observations (i.e. this
+    The regression is estimated once on all available observations (i.e., this
     is *not* a rolling regression).  With ``h = 8`` and ``p = 4`` (the
     quarterly defaults), the first ``11`` observations of the output are
     ``NaN``.
@@ -150,7 +150,7 @@ def _single_hamilton_filter(x: np.ndarray, h: int, p: int):
 
     Parameters
     ----------
-    x : np.ndarray
+    x : array
         1-d array of time series values
     h : int
         Number of leads to use
@@ -159,9 +159,9 @@ def _single_hamilton_filter(x: np.ndarray, h: int, p: int):
 
     Returns
     -------
-    cycle : np.ndarray
+    cycle : ndarray
         The extracted cycle (nobs, ).
-    trend : np.ndarray
+    trend : ndarray
         The extracted trend (nobs, ).
     """
     t = x.shape[0]

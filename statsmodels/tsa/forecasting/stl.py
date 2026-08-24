@@ -36,7 +36,7 @@ ds.insert_parameters(
     "model",
     Parameter(
         "model_kwargs",
-        "dict[str, Any]",
+        "dict, optional",
         [
             (
                 "Any additional arguments needed to initialized the model using "
@@ -199,7 +199,7 @@ class STLForecast:
 
         Parameters
         ----------\n%(fit_params)s
-        fit_kwargs : dict[str, Any]
+        fit_kwargs : dict, optional
             Any additional keyword arguments to pass to ``model``'s ``fit``
             method when estimating the model on the decomposed residuals.
 
@@ -235,6 +235,8 @@ class STLForecastResults:
         The time series model used to model the non-seasonal dynamics.
     model_result : Results
         Model results instance supporting, at a minimum, ``forecast``.
+    endog : array_like
+        The original data prior to seasonal decomposition.
     """
 
     def __init__(
@@ -347,18 +349,19 @@ class STLForecastResults:
 
         Parameters
         ----------
-        start : int, str, or datetime, optional
+        start : int, str, datetime, or None
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the zeroth observation.
-        end : int, str, or datetime, optional
+            parse or a datetime type. If None, the zeroth observation is
+            used.
+        end : int, str, datetime, or None
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
             parse or a datetime type. However, if the dates index does not
             have a fixed frequency, end must be an integer index if you
-            want out of sample prediction. Default is the last observation in
-            the sample.
-        dynamic : bool, int, str, or datetime, optional
+            want out of sample prediction. If None, the last observation in
+            the sample is used.
+        dynamic : bool, int, str, or datetime
             Integer offset relative to `start` at which to begin dynamic
             prediction. Can also be an absolute date string to parse or a
             datetime type (these are not interpreted as offsets).
@@ -413,15 +416,15 @@ class STLForecastResults:
         ----------
         steps : int
             The number of steps required.
-        index : pd.Index
+        index : pd.Index or None
             A pandas index to use. If None, returns an ndarray.
-        offset : int
+        offset : int or None, optional
             The index of the first out-of-sample observation. If None, uses
             nobs.
 
         Returns
         -------
-        seasonal : {ndarray, Series}
+        seasonal : ndarray or Series
             The seasonal component.
         """
 
@@ -455,7 +458,7 @@ class STLForecastResults:
 
         Returns
         -------
-        forecast : {ndarray, Series}
+        forecast : ndarray or Series
             Out of sample forecasts
         """
         forecast = self._model_result.forecast(steps=steps, **kwargs)

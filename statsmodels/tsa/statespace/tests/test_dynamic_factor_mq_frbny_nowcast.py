@@ -271,7 +271,7 @@ def test_emstep1(matlab_results, run):
     # Test that our EM step gets params2 from params1
     # Uses our default method for the observation equation, which is an
     # optimized version of the method presented in Bańbura and Modugno (2014)
-    # (e.g. our version doesn't require the loop over T or the Kronecker
+    # (e.g., our version doesn't require the loop over T or the Kronecker
     # product)
     endog_M, endog_Q = matlab_results[:2]
     results1 = matlab_results[2][f"{run}1"]

@@ -16,7 +16,7 @@ def standardize_lag_order(order, title=None):
     order : int or array_like
         Maximum lag order (if integer) or iterable of specific lag orders.
     title : str, optional
-        Description of the order (e.g. "autoregressive") to use in error
+        Description of the order (e.g., "autoregressive") to use in error
         messages.
 
     Returns
@@ -62,7 +62,7 @@ def standardize_lag_order(order, title=None):
         order = order[:, 0]
     elif order.ndim > 1:
         raise ValueError(f"Invalid {title}. Must be an integer or"
-                         " 1-dimensional array-like object (e.g. list,"
+                         " 1-dimensional array-like object (e.g., list,"
                          f" ndarray, etc.). Got {order}.")
 
     # Option 1: the typical integer response (implies including all
@@ -121,7 +121,7 @@ def validate_basic(params, length, allow_infnan=False, title=None):
         Whether or not to allow `params` to contain -np.inf, np.inf, and
         np.nan. Default is False.
     title : str, optional
-        Description of the parameters (e.g. "autoregressive") to use in error
+        Description of the parameters (e.g., "autoregressive") to use in error
         messages.
 
     Returns

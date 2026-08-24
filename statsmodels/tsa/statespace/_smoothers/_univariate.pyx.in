@@ -96,7 +96,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
     # dim2[0] = self.kfilter.k_states; dim2[1] = self.kfilter.k_states;
     # self.tmpL = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
 
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
@@ -157,10 +157,10 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate({{prefix}}KalmanSm
             {{endif}}
 
         # In most cases we can use an optimized version of these iterations
-        # that e.g. reduces the number of (m x m) matrix multiplications.
+        # that e.g., reduces the number of (m x m) matrix multiplications.
         # However, it can suffer from catestrophic cancellation (especially for
         # the first period in the approximate diffuse case, and even more so if
-        # the initial variance is increased to e.g. 1e9), and as a result we
+        # the initial variance is increased to e.g., 1e9), and as a result we
         # fall back to the more-precise-but-slower version (maybe 4x slower
         # for large state vectors) when numerical problems seems likely.
         if smoother.t >= kfilter.loglikelihood_burn and kfilter._forecast_error_cov[i*kfilter.k_endog + i]{{if combined_prefix == 'z'}}.real{{endif}} < 1e5:

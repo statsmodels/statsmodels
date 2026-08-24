@@ -48,16 +48,16 @@ class MSTL:
     ----------
     endog : array_like
         Data to be decomposed. Must be squeezable to 1-d.
-    periods : {int, array_like, None}, optional
+    periods : int, sequence of int, or None, optional
         Periodicity of the seasonal components. If None and endog is a pandas
         Series or DataFrame, attempts to determine from endog. If endog is a
         ndarray, periods must be provided.
-    windows : {int, array_like, None}, optional
+    windows : int, sequence of int, or None, optional
         Length of the seasonal smoothers for each corresponding period.
         Must be an odd integer, and should normally be >= 7 (default). If None
         then default values determined using 7 + 4 * np.arange(1, n + 1, 1)
         where n is number of seasonal components.
-    lmbda : {float, str, None}, optional
+    lmbda : float, "auto", or None, optional
         The lambda parameter for the Box-Cox transform to be applied to `endog`
         prior to decomposition. If None, no transform is applied. If "auto", a
         value will be estimated that maximizes the log-likelihood function.

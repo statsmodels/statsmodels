@@ -70,14 +70,14 @@ def arma_generate_sample(
         dimensional time series where time is indexed along the input
         variable ``axis``. All series are independent unless ``distrvs``
         generates dependent data.
-    scale : float
+    scale : float, optional
         The standard deviation of noise.
-    distrvs : function, random number generator
+    distrvs : callable, optional
         A function that generates the random numbers, and takes ``size``
         as argument. The default is np.random.standard_normal.
-    axis : int
+    axis : int, optional
         See nsample for details.
-    burnin : int
+    burnin : int, optional
         Number of observation at the beginning of the sample to drop.
         Used to reduce dependence on initial values.
 
@@ -137,9 +137,9 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
         The coefficients for autoregressive lag polynomial, including zero lag.
     ma : array_like, 1d
         The coefficients for moving-average lag polynomial, including zero lag.
-    nobs : int
+    nobs : int, optional
         The number of terms (lags plus zero lag) to include in returned acovf.
-    sigma2 : float
+    sigma2 : float, optional
         Variance of the innovation term.
     dtype : str, optional
         Numpy dtype to use for the output. If None (the default), the dtype
@@ -218,7 +218,7 @@ def arma_acf(ar, ma, lags=10):
         Coefficients for autoregressive lag polynomial, including zero lag.
     ma : array_like
         Coefficients for moving-average lag polynomial, including zero lag.
-    lags : int
+    lags : int, optional
         The number of terms (lags plus zero lag) to include in returned acf.
 
     Returns
@@ -246,7 +246,7 @@ def arma_pacf(ar, ma, lags=10):
         The coefficients for autoregressive lag polynomial, including zero lag.
     ma : array_like, 1d
         The coefficients for moving-average lag polynomial, including zero lag.
-    lags : int
+    lags : int, optional
         The number of terms (lags plus zero lag) to include in returned pacf.
 
     Returns
@@ -281,12 +281,12 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
         The autoregressive lag-polynomial with leading 1 and lhs sign.
     ma : array_like
         The moving average lag-polynomial with leading 1.
-    worN : {None, int}, optional
+    worN : int or array_like, optional
         An option for scipy.signal.freqz (read "w or N").
         If None, then compute at 512 frequencies around the unit circle.
         If a single integer, the compute at that many frequencies.
         Otherwise, compute the response at frequencies given in worN.
-    whole : {0,1}, optional
+    whole : bool, optional
         An option for scipy.signal.freqz.
         Normally, frequencies are computed from 0 to pi (upper-half of
         unit-circle.  If whole is non-zero compute frequencies from 0 to 2*pi.
@@ -329,13 +329,13 @@ def arma_impulse_response(ar, ma, leads=100):
         The auto regressive lag polynomial.
     ma : array_like, 1d
         The moving average lag polynomial.
-    leads : int
+    leads : int, optional
         The number of observations to calculate.
 
     Returns
     -------
     ndarray
-        The impulse response function with nobs elements.
+        The impulse response function with ``leads`` elements.
 
     Notes
     -----
@@ -384,17 +384,17 @@ def arma2ma(ar, ma, lags=100):
 
     Parameters
     ----------
-    ar : ndarray
+    ar : array_like
         The auto regressive lag polynomial.
-    ma : ndarray
+    ma : array_like
         The moving average lag polynomial.
-    lags : int
+    lags : int, optional
         The number of coefficients to calculate.
 
     Returns
     -------
     ndarray
-        The coefficients of MA lag polynomial with nobs elements.
+        The coefficients of MA lag polynomial with ``lags`` elements.
 
     Notes
     -----
@@ -413,13 +413,13 @@ def arma2ar(ar, ma, lags=100):
         The auto regressive lag polynomial.
     ma : array_like
         The moving average lag polynomial.
-    lags : int
+    lags : int, optional
         The number of coefficients to calculate.
 
     Returns
     -------
     ndarray
-        The coefficients of AR lag polynomial with nobs elements.
+        The coefficients of AR lag polynomial with ``lags`` elements.
 
     Notes
     -----
@@ -447,12 +447,12 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
         The length of desired AR lag polynomials.
     q : int
         The length of desired MA lag polynomials.
-    n : int
+    n : int, optional
         The number of terms of the impulse_response function to include in the
         objective function for the approximation.
-    mse : str, 'ar'
+    mse : str, optional
         Not used.
-    start : ndarray
+    start : array_like, optional
         Initial values to use when finding the approximation.
 
     Returns
@@ -486,7 +486,7 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
         arma0 = start
     res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)
     arma_app = np.atleast_1d(res[0])
-    ar_app = (np.r_[1, arma_app[: p - 1]],)
+    ar_app = np.r_[1, arma_app[: p - 1]]
     ma_app = np.r_[1, arma_app[p - 1 :]]
     return ar_app, ma_app, res
 
@@ -524,14 +524,14 @@ def index2lpol(coeffs, index):
 
     Parameters
     ----------
-    coeffs : ndarray
+    coeffs : array_like
         non-zero coefficients of lag polynomial
-    index : ndarray
+    index : array_like
         index (lags) of lag polynomial with non-zero elements
 
     Returns
     -------
-    ar : array_like
+    ar : ndarray
         coefficients of lag polynomial
     """
     n = max(index)
@@ -550,7 +550,7 @@ def lpol_fima(d, n=20):
     ----------
     d : float
         fractional power
-    n : int
+    n : int, optional
         number of terms to calculate, including lag zero
 
     Returns
@@ -576,7 +576,7 @@ def lpol_fiar(d, n=20):
     ----------
     d : float
         fractional power
-    n : int
+    n : int, optional
         number of terms to calculate, including lag zero
 
     Returns
@@ -629,7 +629,7 @@ def deconvolve(num, den, n=None):
         signal or lag polynomial
     den : array_like
         coefficients of lag polynomial (linear filter)
-    n : None or int
+    n : int, optional
         number of terms of quotient
 
     Returns
@@ -680,12 +680,14 @@ class ArmaProcess:
 
     Parameters
     ----------
-    ar : array_like
+    ar : array_like, optional
         Coefficient for autoregressive lag polynomial, including zero lag.
         Must be entered using the signs from the lag polynomial representation.
-        See the notes for more information about the sign.
-    ma : array_like
+        See the notes for more information about the sign. If not provided,
+        defaults to ``[1.0]``.
+    ma : array_like, optional
         Coefficient for moving-average lag polynomial, including zero lag.
+        If not provided, defaults to ``[1.0]``.
     nobs : int, optional
         Length of simulated time series. Used, for example, if a sample is
         generated. See example.
@@ -816,12 +818,12 @@ class ArmaProcess:
 
         Parameters
         ----------
-        arcoefs : array_like
+        arcoefs : array_like, optional
             Coefficient for autoregressive lag polynomial, not including zero
             lag. The sign is inverted to conform to the usual time series
             representation of an ARMA process in statistics. See the class
             docstring for more information.
-        macoefs : array_like
+        macoefs : array_like, optional
             Coefficient for moving-average lag polynomial, excluding zero lag.
         nobs : int, optional
             Length of simulated time series. Used, for example, if a sample
@@ -982,7 +984,7 @@ class ArmaProcess:
 
         Parameters
         ----------
-        retnew : bool
+        retnew : bool, optional
             If False (default), then return the lag-polynomial as array.
             If True, then return a new instance with invertible MA-polynomial.
 
@@ -993,7 +995,7 @@ class ArmaProcess:
         wasinvertible : bool
             True if the MA lag-polynomial was already invertible, returned if
             retnew is false.
-        armaprocess : new instance of class
+        armaprocess : ArmaProcess
             If retnew is true, then return a new instance with invertible
             MA-polynomial.
         """

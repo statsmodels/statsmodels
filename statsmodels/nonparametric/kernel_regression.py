@@ -95,8 +95,15 @@ class KernelReg(GenericKDE):
         The kernel used for the unordered discrete variables.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
-    rng : {int, np.random.Generator, np.random.RandomState}, optional
-        A seed to use. If None, will use the global RandomState.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -106,7 +113,7 @@ class KernelReg(GenericKDE):
 
     Attributes
     ----------
-    bw : array_like
+    bw : ndarray
         The bandwidth parameters.
     """
 
@@ -168,7 +175,7 @@ class KernelReg(GenericKDE):
             self._bw_method = "user-specified"
             return np.asarray(bw)
         else:
-            # The user specified a bandwidth selection method e.g. 'cv_ls'
+            # The user specified a bandwidth selection method e.g., 'cv_ls'
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
             if bw == "cv_ls":
@@ -313,15 +320,15 @@ class KernelReg(GenericKDE):
 
         Parameters
         ----------
-        bw : str or array_like
-            See the ``bw`` parameter of `KernelReg` for details.
-        func : None, optional
+        bw : array_like
+            Vector of bandwidth value(s) at which to evaluate the criterion.
+        func : callable, optional
             Unused here, needed in signature because it's used in `cv_loo`.
 
         Returns
         -------
         aic : ndarray
-            The AIC Hurvich criteria, one element for each variable.
+            The value of the AIC Hurvich criterion.
 
         References
         ----------
@@ -370,7 +377,7 @@ class KernelReg(GenericKDE):
         ----------
         bw : array_like
             Vector of bandwidth values.
-        func : callable function
+        func : callable
             Returns the estimator of g(x).  Can be either ``_est_loc_constant``
             (local constant) or ``_est_loc_linear`` (local_linear).
 
@@ -443,9 +450,9 @@ class KernelReg(GenericKDE):
         Returns
         -------
         mean : ndarray
-            The regression result for the mean (i.e. the actual curve).
+            The regression result for the mean (i.e., the actual curve).
         mfx : ndarray
-            The marginal effects, i.e. the partial derivatives of the mean.
+            The marginal effects, i.e., the partial derivatives of the mean.
         """
         func = self.est[self.reg_type]
         if data_predict is None:
@@ -472,7 +479,7 @@ class KernelReg(GenericKDE):
 
         Parameters
         ----------
-        var_pos : sequence
+        var_pos : array_like of int
             The position of the variable in exog to be tested.
         nboot : int, optional
             Number of bootstrap samples used to determine the distribution
@@ -562,9 +569,9 @@ class KernelCensoredReg(KernelReg):
 
     Parameters
     ----------
-    endog : list with one element which is array_like
+    endog : array_like
         This is the dependent variable.
-    exog : list
+    exog : array_like
         The training data for the independent variable(s)
         Each element in the list is a separate variable
     var_type : str
@@ -597,8 +604,15 @@ class KernelCensoredReg(KernelReg):
         Value at which the dependent variable is censored. Default is 0.
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
-    rng : {int, Generator, RandomState}, optional
-        A seed to use. If None, will use the global RandomState.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -608,7 +622,7 @@ class KernelCensoredReg(KernelReg):
 
     Attributes
     ----------
-    bw : array_like
+    bw : ndarray
         The bandwidth parameters
     """
 
@@ -713,9 +727,9 @@ class KernelCensoredReg(KernelReg):
 
         Returns
         -------
-        mean : array_like
+        mean : ndarray
             The value of the conditional mean at data_predict
-        mfx : array_like
+        mfx : ndarray
             The marginal effects.
 
         Notes
@@ -768,7 +782,7 @@ class KernelCensoredReg(KernelReg):
         ----------
         bw : array_like
             Vector of bandwidth values
-        func : callable function
+        func : callable
             Returns the estimator of g(x).
             Can be either ``_est_loc_constant`` (local constant) or
             ``_est_loc_linear`` (local_linear).
@@ -817,9 +831,9 @@ class KernelCensoredReg(KernelReg):
         Returns
         -------
         mean : ndarray
-            The regression result for the mean (i.e. the actual curve).
+            The regression result for the mean (i.e., the actual curve).
         mfx : ndarray
-            The marginal effects, i.e. the partial derivatives of the mean.
+            The marginal effects, i.e., the partial derivatives of the mean.
         """
         func = self.est[self.reg_type]
         if data_predict is None:
@@ -857,9 +871,9 @@ class TestRegCoefC:
     model : KernelReg instance
         This is the nonparametric regression model whose elements
         are tested for significance.
-    test_vars : tuple, list of integers, array_like
+    test_vars : sequence of int
         index of position of the continuous variables to be tested
-        for significance. E.g. (1,3,5) jointly tests variables at
+        for significance. e.g., (1,3,5) jointly tests variables at
         position 1,3 and 5 for significance.
     nboot : int, optional
         Number of bootstrap samples used to determine the distribution
@@ -872,8 +886,15 @@ class TestRegCoefC:
         Significantly increases computational time. But pivot statistics
         have more desirable properties
         (See references). Default is False.
-    rng : {int, Generator, RandomState}, optional
-        A seed to use. If None, will use the global RandomState.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 
@@ -1060,15 +1081,22 @@ class TestRegCoefD(TestRegCoefC):
     model : Instance of KernelReg class
         This is the nonparametric regression model whose elements
         are tested for significance.
-    test_vars : tuple, list of one element
+    test_vars : sequence of int
         index of position of the discrete variable to be tested
-        for significance. E.g. (3) tests variable at
+        for significance. e.g., (3) tests variable at
         position 3 for significance.
     nboot : int, optional
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
-    rng : {int, Generator, RandomState}, optional
-        A seed to use. If None, will use the global RandomState.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is
+        already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
 
         .. deprecated:: 0.15.0
 

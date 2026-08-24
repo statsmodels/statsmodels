@@ -31,7 +31,7 @@ class PytestTester:
 
         Parameters
         ----------
-        extra_args : list[str], optional
+        extra_args : list of str, optional
             Command line arguments to pass to pytest. If None, defaults
             to ``["--tb=short", "--disable-pytest-warnings"]``.
         exit : bool, optional

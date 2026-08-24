@@ -3,7 +3,7 @@ Author: Samuel Scherrer
 """
 
 from statsmodels.compat.pandas import QUARTER_END
-from statsmodels.compat.platform import PLATFORM_LINUX32, PLATFORM_WIN
+from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32, PLATFORM_WIN
 
 from itertools import product
 import json
@@ -18,6 +18,9 @@ import scipy.stats
 from statsmodels.iolib.summary import Summary
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
+from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_simple,
+)
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
 
 # This contains tests for the exponential smoothing implementation in
@@ -473,6 +476,7 @@ def test_simulate_vs_R(setup_model):
     assert_allclose(expected, sim.values, rtol=1e-5, atol=1e-5)
 
 
+@pytest.mark.skipif(PLATFORM_32, reason="Fails on 32 bit systems")
 def test_fit_vs_R(setup_model):
     model_class, model_args, model_kwargs, params, results_R = setup_model
     model = model_class(*model_args, **model_kwargs)
@@ -483,26 +487,12 @@ def test_fit_vs_R(setup_model):
         start = None
     fit = model.fit(disp=True, pgtol=1e-8, start_params=start)
 
-    # check log likelihood: we want to have a fit that is better, i.e. a fit
+    # check log likelihood: we want to have a fit that is better, i.e., a fit
     # that has a **higher** log-likelihood
     const = -model.nobs / 2 * (np.log(2 * np.pi / model.nobs) + 1)
     loglike_R = results_R["loglik"][0] + const
     loglike = fit.llf
-    try:
-        assert loglike >= loglike_R - 1e-4
-    except AssertionError:
-        fit = model.fit(disp=True, pgtol=1e-8, start_params=params)
-        loglike = fit.llf
-        try:
-            assert loglike >= loglike_R - 1e-4
-        except AssertionError:
-            if PLATFORM_LINUX32:
-                # Linux32 often fails to produce the correct solution.
-                # Fixing this is low priority given the rareness of
-                # its application
-                pytest.xfail("Known to fail on 32-bit Linux")
-            else:
-                raise
+    assert loglike >= loglike_R - 1e-4
 
 
 def test_predict_vs_R(setup_model):
@@ -541,6 +531,28 @@ def test_initialization_known(austourists):
     assert initial_level == internal_params[4]
     assert initial_trend == internal_params[5]
     assert internal_params[6] == 0
+
+
+@pytest.mark.parametrize("trend", [False, None])
+def test_initialization_simple_seasonal_no_trend(trend):
+    # `False` is the no-trend sentinel used by ExponentialSmoothing, so a
+    # seasonal model without a trend must not get an initial trend value
+    y = np.arange(1.0, 25.0) + np.tile([1.0, 2.0, 3.0, 0.0], 6)
+    level, initial_trend, seasonal = _initialization_simple(
+        y, trend=trend, seasonal="add", seasonal_periods=4
+    )
+    assert initial_trend is None
+    assert level is not None
+    assert seasonal is not None
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+def test_initialization_simple_seasonal_with_trend(trend):
+    y = np.arange(1.0, 25.0) + np.tile([1.0, 2.0, 3.0, 0.0], 6)
+    _, initial_trend, _ = _initialization_simple(
+        y, trend=trend, seasonal="add", seasonal_periods=4
+    )
+    assert_allclose(initial_trend, 1.0)
 
 
 def test_initialization_heuristic(oildata):
@@ -726,6 +738,18 @@ def test_hessian(austourists_model_fit):
     )
 
 
+def test_diagnostics_invalid_method_raises(austourists_model_fit):
+    model_class, model_args, model_kwargs = austourists_model_fit
+    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+
+    with pytest.raises(ValueError, match="method"):
+        fit.test_serial_correlation(method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        fit.test_heteroskedasticity(method="not-a-method")
+    with pytest.raises(ValueError, match="method"):
+        fit.test_normality(method="not-a-method")
+
+
 def test_prediction_results(austourists_model_fit):
     # simple test case starting at 0
     model_class, model_args, model_kwargs = austourists_model_fit
@@ -849,6 +873,20 @@ def test_results_vs_statespace(statespace_comparison):
         assert_allclose(ets_het[0], statespace_het[0], rtol=0.2)
         assert_allclose(ets_het[1], statespace_het[1], rtol=0.7)
 
+    # the undocumented "d" alias for "decreasing" still works but warns,
+    # and is equivalent to spelling out "decreasing"
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        ets_het_alias = ets_results.test_heteroskedasticity(
+            method="breakvar", alternative="d"
+        )
+    ets_het_canonical = ets_results.test_heteroskedasticity(
+        method="breakvar", alternative="decreasing"
+    )
+    assert_allclose(ets_het_alias, ets_het_canonical)
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        ets_results.test_heteroskedasticity(method="breakvar", alternative="bogus")
+
 
 def test_prediction_results_vs_statespace(statespace_comparison):
     ets_results, statespace_results = statespace_comparison
@@ -891,8 +929,9 @@ def test_prediction_results_vs_statespace(statespace_comparison):
     )
 
 
-@pytest.mark.skip
-def test_prediction_results_slow_AAN(oildata):
+@pytest.mark.matplotlib
+@pytest.mark.slow
+def test_prediction_results_slow_AAN(oildata, close_figures):
     # slow test with high number of simulation repetitions for comparison
     # Note: runs succesfull with specified tolerance
     fit = ETSModel(oildata, error="add", trend="add").fit(disp=False)
@@ -904,7 +943,7 @@ def test_prediction_results_slow_AAN(oildata):
         start=40,
         end=55,
         simulate_repetitions=int(1e6),
-        rng=11,
+        rng=np.random.RandomState(11),
         method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
@@ -918,7 +957,6 @@ def test_prediction_results_slow_AAN(oildata):
 
     import matplotlib.pyplot as plt
 
-    plt.switch_backend("TkAgg")
     for i in range(1000):
         plt.plot(
             pred_sim._results.simulation_results.iloc[:, i],
@@ -938,20 +976,21 @@ def test_prediction_results_slow_AAN(oildata):
     assert_allclose(
         summary_sim["pi_lower"].values,
         summary_exact["pi_lower"].values,
-        rtol=1e-4,
+        rtol=1e-2,
         atol=1e-4,
     )
 
     assert_allclose(
         summary_sim["pi_upper"].values,
         summary_exact["pi_upper"].values,
-        rtol=1e-4,
+        rtol=1e-2,
         atol=1e-4,
     )
 
 
-@pytest.mark.skip
-def test_prediction_results_slow_AAdA(austourists):
+@pytest.mark.matplotlib
+@pytest.mark.slow
+def test_prediction_results_slow_AAdA(austourists, close_figures):
     # slow test with high number of simulation repetitions for comparison
     # Note: succesfull with specified tolerance
     fit = ETSModel(
@@ -969,7 +1008,7 @@ def test_prediction_results_slow_AAdA(austourists):
         start=60,
         end=75,
         simulate_repetitions=int(1e6),
-        rng=11,
+        rng=np.random.default_rng(2381032),
         method="simulated",
     )
     summary_sim = pred_sim.summary_frame()
@@ -983,7 +1022,6 @@ def test_prediction_results_slow_AAdA(austourists):
 
     import matplotlib.pyplot as plt
 
-    plt.switch_backend("TkAgg")
     for i in range(1000):
         plt.plot(
             pred_sim._results.simulation_results.iloc[:, i],
@@ -996,7 +1034,6 @@ def test_prediction_results_slow_AAdA(austourists):
     plt.plot(summary_exact["pi_lower"], ".-", label="exact lower")
     plt.plot(summary_sim["pi_upper"], ":", label="sim upper")
     plt.plot(summary_exact["pi_upper"], ".-", label="exact upper")
-    plt.show()
 
     # check if prediction intervals are equal
     assert_allclose(

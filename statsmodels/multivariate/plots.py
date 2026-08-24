@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -15,7 +14,7 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     ncomp : int, optional
         Number of factors to include in the plot.  If None, will
         include the same number as the maximum possible number of loadings.
-    x_label : str
+    x_label : str, optional
         Label of the x-axis.
 
     Returns
@@ -23,6 +22,12 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     Figure
         Handle to the figure.
     """
+    # deferred import: matplotlib is only needed when this function is
+    # actually called, and _import_mpl gives a clear error if it is missing
+    from statsmodels.graphics.utils import _import_mpl
+
+    plt = _import_mpl()
+
     fig = plt.figure()
     ncomp = len(eigenvals) if ncomp is None else ncomp
     vals = eigenvals
@@ -101,6 +106,12 @@ def plot_loadings(loadings, col_names=None, row_names=None,
     figs : list[Figure]
         A list of figure handles.
     """
+    # deferred import: matplotlib is only needed when this function is
+    # actually called, and _import_mpl gives a clear error if it is missing
+    from statsmodels.graphics.utils import _import_mpl
+
+    plt = _import_mpl()
+
     k_var, n_factor = loadings.shape
     if loading_pairs is None:
         loading_pairs = []

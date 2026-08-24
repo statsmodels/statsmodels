@@ -4,6 +4,8 @@ Non-linear least squares
 Author: Josef Perktold based on scipy.optimize.curve_fit
 """
 
+import warnings
+
 import numpy as np
 from scipy import optimize
 
@@ -94,7 +96,7 @@ class NonlinearLS(Model):  # or subclass a model
     sigma : array_like, optional
         1-d array of standard deviations used to construct `weights` as
         ``1 / sigma``. Correlated errors (2-d `sigma`) are not supported.
-    missing : str
+    missing : str, optional
         Available options are 'none', 'drop', and 'raise'. Currently not
         used in `__init__`.
 
@@ -128,6 +130,15 @@ class NonlinearLS(Model):  # or subclass a model
 
     # NOTE: This needs to call super for data checking
     def __init__(self, endog=None, exog=None, weights=None, sigma=None, missing="none"):
+        warnings.warn(
+            "NonlinearLS is deprecated and is not exported from any public "
+            "statsmodels API; it has had no test coverage and its behavior "
+            "is not guaranteed. It will be removed after statsmodels 0.16 "
+            "is released. If you rely on this class, please open an issue "
+            "at https://github.com/statsmodels/statsmodels/issues.",
+            FutureWarning,
+            stacklevel=2,
+        )
         self.endog = endog
         self.exog = exog
         if sigma is not None:
@@ -340,7 +351,7 @@ class NonlinearLS(Model):  # or subclass a model
 
         Parameters
         ----------
-        ntries : int
+        ntries : int, optional
             Number of random starting values to try.
         rvs_generator : callable, optional
             Function to generate random starting values given a `size`

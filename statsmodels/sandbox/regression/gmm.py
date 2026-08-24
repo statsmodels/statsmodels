@@ -13,12 +13,12 @@ Issues
   breaks down. iter=1 works (weights is identity matrix)
   -> need method to do one iteration with an identity matrix or an
      analytical weighting matrix given as parameter.
-  -> add result statistics for this case, e.g. cov_params, I have it in the
+  -> add result statistics for this case, e.g., cov_params, I have it in the
      standalone function (and in calc_covparams which is a copy of it),
      but not tested yet.
   DONE `fitonce` in DistQuantilesGMM, params are the same as in direct call to fitgmm
       move it to GMM class (once it's clearer for which cases I need this.)
-* GMM does not know anything about the underlying model, e.g. y = X beta + u or panel
+* GMM does not know anything about the underlying model, e.g., y = X beta + u or panel
   data model. It would be good if we can reuse methods from regressions, e.g.
   predict, fitted values, calculating the error term, and some result statistics.
   What's the best way to do this, multiple inheritance, outsourcing the functions,
@@ -421,7 +421,7 @@ other arguments:
      degrees of freedom correction, applies currently only to `cov`
    - maxlag : int
      number of lags to include in HAC calculation , applies only to `hac`
-   - others not yet, e.g. groups for cluster robust
+   - others not yet, e.g., groups for cluster robust
 
 covariance matrix
 ~~~~~~~~~~~~~~~~~
@@ -639,7 +639,7 @@ class GMM(Model):
               degrees of freedom correction, applies currently only to `cov`
             - `maxlag` : int
               number of lags to include in HAC calculation , applies only to `hac`
-            - others not yet, e.g. groups for cluster robust
+            - others not yet, e.g., groups for cluster robust
 
         has_optimal_weights: If true, then the calculation of the covariance
               matrix assumes that we have optimal GMM with :math:`W = S^{-1}`.
@@ -674,7 +674,7 @@ class GMM(Model):
         #       because I'm still adding options
 
         # TODO: check repeated calls to fit with different options
-        #       arguments are dictionaries, i.e. mutable
+        #       arguments are dictionaries, i.e., mutable
         #       unit test if anything  is stale or spilled over.
 
         # bug: where does start come from ???
@@ -1489,7 +1489,7 @@ class LinearIVGMM(IVGMM):
 
     Notation Warning: our name `exog` stands for the explanatory variables,
     and includes both exogenous and explanatory variables that are endogenous,
-    i.e. included endogenous variables
+    i.e., included endogenous variables
 
     Parameters
     ----------
@@ -1591,7 +1591,7 @@ class NonlinearIVGMM(IVGMM):
 
     Notation Warning: our name `exog` stands for the explanatory variables,
     and includes both exogenous and explanatory variables that are endogenous,
-    i.e. included endogenous variables
+    i.e., included endogenous variables
 
     Parameters
     ----------

@@ -14,6 +14,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.tsatools import lagmat
 from statsmodels.tsa.vector_ar.var_model import VAR
@@ -52,7 +53,7 @@ class DynamicFactor(MLEModel):
         is "diagonal".
     error_order : int, optional
         The order of the vector autoregression followed by the observation
-        error component. Default is None, corresponding to white noise errors.
+        error component. Default is 0, corresponding to white noise errors.
     error_var : bool, optional
         Whether or not to model the errors jointly via a vector autoregression,
         rather than as individual autoregressions. Has no effect unless
@@ -129,7 +130,7 @@ class DynamicFactor(MLEModel):
       it is "diagonal", then
       :math:`\Sigma = \text{diag}(\sigma_1^2, \dots, \sigma_n^2)`. If it is
       "unstructured", then :math:`\Sigma` is any valid variance / covariance
-      matrix (i.e. symmetric and positive definite).
+      matrix (i.e., symmetric and positive definite).
     - `error_var`: this controls whether or not the errors evolve jointly
       according to a VAR(q), or individually according to separate AR(q)
       processes. In terms of the formulation above, if `error_var = False`,
@@ -182,7 +183,7 @@ class DynamicFactor(MLEModel):
             k_states += self._error_order
             k_posdef += k_endog
 
-        # We can still estimate the model with no dynamic state (e.g. SUR), we
+        # We can still estimate the model with no dynamic state (e.g., SUR), we
         # just need to have one state that does nothing.
         self._unused_state = False
         if k_states == 0:
@@ -201,9 +202,12 @@ class DynamicFactor(MLEModel):
                              " of endogenous variables.")
 
         # Test for invalid error_cov_type
-        if self.error_cov_type not in ["scalar", "diagonal", "unstructured"]:
-            raise ValueError("Invalid error covariance matrix type"
-                             " specification.")
+        self.error_cov_type = string_like(
+            self.error_cov_type,
+            "error_cov_type",
+            options=("scalar", "diagonal", "unstructured"),
+            lower=False,
+        )
 
         # By default, initialize as stationary
         kwargs.setdefault("initialization", "stationary")
@@ -406,7 +410,7 @@ class DynamicFactor(MLEModel):
         # Setup indices of state space matrices
         # Here we want to set only the diagonal elements of the coefficient
         # matrices, and we want to set them in order by equation, not by
-        # matrix (i.e. set the first element of the first matrix's diagonal,
+        # matrix (i.e., set the first element of the first matrix's diagonal,
         # then set the first element of the second matrix's diagonal, then...)
 
         # The basic setup is a tiled list of diagonal indices, one for each

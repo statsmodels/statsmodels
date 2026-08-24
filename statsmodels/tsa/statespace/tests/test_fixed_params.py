@@ -747,7 +747,7 @@ def test_dynamic_factor_diag_error_cov():
         res2 = mod2.smooth(params)
 
     # Can't check some parameters-related values because of the different
-    # parameterization (i.e. cov_params, bse, pvalues, etc. won't match).
+    # parameterization (i.e., cov_params, bse, pvalues, etc. won't match).
     check_results(res1, res2, check_params=False)
 
 

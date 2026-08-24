@@ -16,6 +16,7 @@ from numpy.testing import (
     assert_array_less,
     assert_equal,
 )
+import pandas as pd
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import GLSAR, OLS
@@ -113,7 +114,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.wresid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.wresid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=4)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 
@@ -144,7 +145,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.wresid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.wresid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.wresid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=1)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=2)
 
@@ -313,14 +314,10 @@ class TestGLSARGretl:
         names = "date   residual        leverage       influence        DFFITS".split()
         cur_dir = Path(__file__).parent.resolve()
         fpath = Path(cur_dir).joinpath("results/leverage_influence_ols_nostars.txt")
-        lev = np.genfromtxt(fpath, skip_header=3, skip_footer=1,
-                            converters={0: lambda s: s})
-        # either numpy 1.6 or python 3.2 changed behavior
-        if np.isnan(lev[-1]["f1"]):
-            lev = np.genfromtxt(fpath, skip_header=3, skip_footer=2,
-                                converters={0: lambda s: s})
-
-        lev.dtype.names = names
+        lev = pd.read_csv(
+            fpath, skiprows=3, skipfooter=3, sep=r"\s+", header=None, engine="python"
+        )
+        lev.columns = names
 
         res = res_ols  # for easier copying
 
@@ -361,7 +358,7 @@ class TestGLSARGretl:
 
         # arch
         # sm_arch = smsdia.acorr_lm(res.resid**2, maxlag=4, autolag=None)
-        sm_arch = smsdia.het_arch(res.resid, nlags=4, use_namedtuple=False)
+        sm_arch = smsdia.het_arch(res.resid, nlags=4, result_object=False)
         assert_almost_equal(sm_arch[0], arch_4[0], decimal=5)
         assert_almost_equal(sm_arch[1], arch_4[1], decimal=6)
 

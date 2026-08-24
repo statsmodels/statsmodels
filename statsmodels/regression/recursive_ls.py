@@ -41,7 +41,7 @@ class RecursiveLS(MLEModel):
         The observed time-series process :math:`y`
     exog : array_like
         Array of exogenous regressors, shaped nobs x k.
-    constraints : array_like, str, or tuple
+    constraints : {None, array_like, str, tuple}, optional
         - array : An r x k array where r is the number of restrictions to
           test and k is the number of regressors. It is assumed that the
           linear combination is equal to zero.
@@ -159,11 +159,11 @@ class RecursiveLS(MLEModel):
             The formula specifying the model.
         data : array_like
             The data for the model. See Notes.
-        subset : array_like
+        subset : array_like, optional
             An array-like object of booleans, integers, or index values that
             indicate the subset of df to use in the model. Assumes df is a
             `pandas.DataFrame`.
-        constraints : array_like, str, or tuple
+        constraints : {None, array_like, str, tuple}, optional
             See `RecursiveLS` for details.
 
         Returns
@@ -366,7 +366,7 @@ class RecursiveLSResults(MLEResults):
 
         Returns
         -------
-        resid_recursive : array_like
+        resid_recursive : ndarray
             An array of length `nobs` holding the recursive
             residuals.
 
@@ -432,7 +432,7 @@ class RecursiveLSResults(MLEResults):
 
         Returns
         -------
-        cusum_squares : array_like
+        cusum_squares : ndarray
             An array of length `nobs - k_exog` holding the
             CUSUM of squares statistics.
 
@@ -570,7 +570,7 @@ class RecursiveLSResults(MLEResults):
             Integer index or string name of the variable whose coefficient will
             be plotted. Can also be an iterable of integers or strings. Default
             is the first variable.
-        alpha : float, optional
+        alpha : None or float, optional
             The confidence intervals for the coefficient are (1 - alpha) %
         legend_loc : str, optional
             The location of the legend in the plot. Default is upper left.
@@ -672,7 +672,7 @@ class RecursiveLSResults(MLEResults):
             The number of periods additional to `k_exog` to exclude in
             constructing the bounds. Default is zero. This is usually used
             only for testing purposes.
-        points : iterable, optional
+        points : array_like, optional
             The points at which to evaluate the significance bounds. Default is
             two points, beginning and end of the sample.
 
@@ -780,7 +780,7 @@ class RecursiveLSResults(MLEResults):
         ----------
         alpha : float
             The significance level, taken from {0.1, 0.05, 0.025, 0.01, 0.005}.
-        points : iterable, optional
+        points : array_like, optional
             The points at which to evaluate the significance bounds. Default is
             two points, beginning and end of the sample.
 

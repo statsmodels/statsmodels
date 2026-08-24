@@ -401,17 +401,17 @@ def test_partregress_formula_env(close_figures):
     )
     sm.graphics.plot_partregress(
         "a", "lg(b)", ["c"], obs_labels=False, data=df, eval_env=1,
-        use_namedtuple=False,
+        result_object=False,
     )
 
     sm.graphics.plot_partregress(
-        "a", "lg(b)", ["c"], obs_labels=False, data=df, use_namedtuple=False
+        "a", "lg(b)", ["c"], obs_labels=False, data=df, result_object=False
     )
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
-def test_plot_partregress_use_namedtuple(close_figures):
+def test_plot_partregress_result_object(close_figures):
     rs = np.random.RandomState(98474364)
     x1 = rs.standard_normal(50)
     x2 = rs.standard_normal(50)
@@ -419,13 +419,13 @@ def test_plot_partregress_use_namedtuple(close_figures):
 
     # ret_coords=False still returns a bare figure by default, and warns
     # because that is the path whose shape will change.
-    with pytest.warns(FutureWarning, match="use_namedtuple"):
+    with pytest.warns(FutureWarning, match="result_object"):
         res = plot_partregress(y, x1, x2[:, None])
     assert not isinstance(res, PartRegressPlotResult)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
-        res = plot_partregress(y, x1, x2[:, None], use_namedtuple=True)
+        res = plot_partregress(y, x1, x2[:, None], result_object=True)
     assert isinstance(res, PartRegressPlotResult)
     # The residuals are computed to draw the plot, so they are reported even
     # though ret_coords was not set.
@@ -442,11 +442,11 @@ def test_plot_partregress_use_namedtuple(close_figures):
     assert len(res.coords) == 2
 
     # The NamedTuple is used whenever it unpacks identically, so
-    # use_namedtuple=False cannot opt out of it here.
+    # result_object=False cannot opt out of it here.
     with warnings.catch_warnings():
         warnings.filterwarnings("error", category=FutureWarning)
         res = plot_partregress(
-            y, x1, x2[:, None], ret_coords=True, use_namedtuple=False
+            y, x1, x2[:, None], ret_coords=True, result_object=False
         )
     assert isinstance(res, PartRegressPlotResult)
     assert len(res) == 2

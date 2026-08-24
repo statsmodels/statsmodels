@@ -105,7 +105,7 @@ def test_sir_regularized_numdiff():
 
 def test_sir_regularized_1d():
     # Compare regularized SIR to traditional SIR, in a setting where the
-    # regularization is compatible with the true parameters (i.e. there
+    # regularization is compatible with the true parameters (i.e., there
     # is no regularization bias).
 
     rs = np.random.RandomState(93482)
@@ -239,6 +239,6 @@ def test_sir_regularized_slice_n():
         warnings.simplefilter("ignore")
         model.fit_regularized(1, fmat, slice_n=30, maxiter=1)
 
-    # n_slice is the *count* of slices, i.e. nobs // slice_n
+    # n_slice is the *count* of slices, i.e., nobs // slice_n
     assert model.n_slice == n // 30
     assert len(model._slice_props) == n // 30

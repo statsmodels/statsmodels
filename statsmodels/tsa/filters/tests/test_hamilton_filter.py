@@ -6,7 +6,6 @@ Hamilton, J. D. (2018). Why You Should Never Use the Hodrick-Prescott Filter.
 Review of Economics and Statistics, 100(5), 831-843.
 """
 
-from statsmodels.compat.pandas import QUARTER_END
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -30,14 +29,17 @@ _QUARTERLY = RNG.standard_normal(200)  # 200 quarters
 
 
 def test_output_shapes_default():
-    x = np.ones(50)
-    cycle, trend = hamilton_filter(x)
+    rs = np.random.default_rng(238091)
+    x = rs.standard_normal(50)
+    res = hamilton_filter(x)
+    cycle, trend = res.cycle, res.trend
     assert cycle.shape == (50,)
     assert trend.shape == (50,)
 
 
 def test_returns_cycletrendresult():
-    x = np.ones(50)
+    rs = np.random.default_rng(238091)
+    x = rs.standard_normal(50)
     res = hamilton_filter(x)
     assert isinstance(res, CycleTrendResult)
     assert res[0] is res.cycle
@@ -47,14 +49,16 @@ def test_returns_cycletrendresult():
 def test_output_shapes_custom_h_p():
     T = 80
     x = RNG.standard_normal(T)
-    cycle, trend = hamilton_filter(x, h=12, p=6)
+    res = hamilton_filter(x, h=12, p=6)
+    cycle, trend = res.cycle, res.trend
     assert cycle.shape == (T,)
     assert trend.shape == (T,)
 
 
 def test_nan_prefix_default():
     """First p+h-1 = 4+8-1 = 11 values must be NaN (default h=8, p=4)."""
-    cycle, trend = hamilton_filter(_QUARTERLY)
+    res = hamilton_filter(_QUARTERLY)
+    cycle, trend = res.cycle, res.trend
     assert np.all(np.isnan(cycle[:11]))
     assert np.all(np.isnan(trend[:11]))
 
@@ -64,14 +68,16 @@ def test_nan_prefix_custom():
     h, p = 3, 2
     T = 30
     x = RNG.standard_normal(T)
-    cycle, trend = hamilton_filter(x, h=h, p=p)
+    res = hamilton_filter(x, h=h, p=p)
+    cycle, trend = res.cycle, res.trend
     prefix = p + h - 1  # = 4
     assert np.all(np.isnan(cycle[:prefix]))
     assert np.all(np.isnan(trend[:prefix]))
 
 
 def test_finite_after_nan_prefix():
-    cycle, trend = hamilton_filter(_QUARTERLY)
+    res = hamilton_filter(_QUARTERLY)
+    cycle, trend = res.cycle, res.trend
     assert np.all(np.isfinite(cycle[11:]))
     assert np.all(np.isfinite(trend[11:]))
 
@@ -84,21 +90,23 @@ def test_finite_after_nan_prefix():
 def test_trend_plus_cycle_equals_x():
     """Trend + cycle must equal x wherever both are defined."""
     x = _QUARTERLY
-    cycle, trend = hamilton_filter(x)
+    res = hamilton_filter(x)
+    cycle, trend = res.cycle, res.trend
     assert_allclose(trend[11:] + cycle[11:], x[11:], atol=1e-10)
 
 
 def test_trend_plus_cycle_equals_x_custom():
     h, p = 5, 3
     x = RNG.standard_normal(60)
-    cycle, trend = hamilton_filter(x, h=h, p=p)
+    res = hamilton_filter(x, h=h, p=p)
+    cycle, trend = res.cycle, res.trend
     start = p + h - 1
     assert_allclose(trend[start:] + cycle[start:], x[start:], atol=1e-10)
 
 
 def test_cycle_mean_near_zero():
     """OLS residuals have mean zero (constant included in regressors)."""
-    cycle, _ = hamilton_filter(_QUARTERLY)
+    cycle = hamilton_filter(_QUARTERLY).cycle
     assert_allclose(np.nanmean(cycle), 0.0, atol=1e-10)
 
 
@@ -106,7 +114,7 @@ def test_n_finite_obs():
     """Number of finite observations equals T - p - h + 1."""
     T, h, p = 100, 8, 4
     x = RNG.standard_normal(T)
-    cycle, _ = hamilton_filter(x, h=h, p=p)
+    cycle = hamilton_filter(x, h=h, p=p).cycle
     n_finite = np.sum(np.isfinite(cycle))
     assert n_finite == T - p - h + 1
 
@@ -130,8 +138,8 @@ def test_matches_direct_ols():
     params, _, _, _ = np.linalg.lstsq(X, Y, rcond=None)
     ols_cycle = Y - X @ params
 
-    # hamilton_filter returns (cycle, trend)
-    ham_cycle, _ = hamilton_filter(x, h=h, p=p)
+    # hamilton_filter returns a CycleTrendResult(cycle, trend)
+    ham_cycle = hamilton_filter(x, h=h, p=p).cycle
     assert_allclose(ham_cycle[p + h - 1 :], ols_cycle, atol=1e-10)
 
 
@@ -142,28 +150,30 @@ def test_matches_direct_ols():
 
 def test_pandas_series_input():
     s = pd.Series(_QUARTERLY, name="gdp")
-    cycle, trend = hamilton_filter(s)
+    res = hamilton_filter(s)
+    cycle, trend = res.cycle, res.trend
     assert isinstance(cycle, pd.Series)
     assert isinstance(trend, pd.Series)
 
 
 def test_pandas_name_suffix():
     s = pd.Series(_QUARTERLY, name="gdp")
-    cycle, trend = hamilton_filter(s)
+    res = hamilton_filter(s)
+    cycle, trend = res.cycle, res.trend
     assert cycle.name == "gdp_cycle"
     assert trend.name == "gdp_trend"
 
 
 def test_pandas_index_preserved():
-    idx = pd.date_range("2000Q1", periods=len(_QUARTERLY), freq=QUARTER_END)
+    idx = pd.period_range("2000Q1", periods=len(_QUARTERLY), freq="Q").to_timestamp()
     s = pd.Series(_QUARTERLY, index=idx, name="gdp")
-    cycle, _ = hamilton_filter(s)
+    cycle = hamilton_filter(s).cycle
     assert (cycle.index == idx).all()
 
 
 def test_pandas_dataframe_column():
     df = pd.DataFrame({"gdp": _QUARTERLY, "cpi": _QUARTERLY * 0.5})
-    cycle, trend = hamilton_filter(df["gdp"])
+    cycle = hamilton_filter(df["gdp"]).cycle
     assert isinstance(cycle, pd.Series)
 
 
@@ -193,7 +203,7 @@ def test_minimum_length_works(h, p):
     # There are p+1 regressors, so require at least p+1 observations
     # Requires at least 2 * p + h observations
     x = RNG.standard_normal(2 * p + h)
-    cycle, trend = hamilton_filter(x, h=h, p=p)
+    cycle = hamilton_filter(x, h=h, p=p).cycle
     # Minimum number of non-nan values is the same as the number of regressors
     assert np.sum(np.isfinite(cycle)) == (p + 1), np.sum(np.isfinite(cycle))
     with pytest.raises(ValueError, match="x must have at least 2p \\+ h"):
@@ -209,7 +219,7 @@ def test_monthly_settings():
     """Monthly defaults: h=24, p=12 (two years ahead, one year lags)."""
     T = 120  # 10 years monthly
     x = RNG.standard_normal(T)
-    cycle, trend = hamilton_filter(x, h=24, p=12)
+    cycle = hamilton_filter(x, h=24, p=12).cycle
     assert cycle.shape == (T,)
     start = 24 + 12 - 1  # = 35
     assert np.all(np.isnan(cycle[:start]))
@@ -220,7 +230,7 @@ def test_annual_settings():
     """Annual example: h=2, p=4."""
     T = 50
     x = RNG.standard_normal(T)
-    cycle, trend = hamilton_filter(x, h=2, p=4)
+    cycle = hamilton_filter(x, h=2, p=4).cycle
     start = 5
     assert np.all(np.isnan(cycle[:start]))
     assert np.all(np.isfinite(cycle[start:]))
@@ -253,7 +263,7 @@ def test_stationary_cycle_from_random_walk():
     T = 500
     rs = np.random.RandomState(43894202)
     rw = np.cumsum(1 + rs.standard_normal(T))
-    cycle, _ = hamilton_filter(rw)
+    cycle = hamilton_filter(rw).cycle
     loc = ~np.isnan(cycle)
     c = cycle[loc]
     # Rough stationarity check: variance of first half ≈ variance of second half
@@ -274,7 +284,8 @@ def test_hamilton_filter_2d(use_pandas):
     rw_2d = np.column_stack([rw_0, rw_0, rw_1])
     if use_pandas:
         rw_2d = pd.DataFrame(rw_2d, columns=["Apple", "Banana", "Cherry"])
-    cycle, trend = hamilton_filter(rw_2d, 8, 4)
+    res = hamilton_filter(rw_2d, 8, 4)
+    cycle, trend = res.cycle, res.trend
 
     assert cycle.ndim == 2
     assert cycle.shape == (500, 3)

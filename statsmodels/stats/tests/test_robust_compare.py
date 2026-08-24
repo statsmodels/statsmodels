@@ -193,6 +193,9 @@ class TestTrimmedR1:
         assert_allclose(ttw[1], ttw_pvalue, rtol=1e-13)
         assert_equal(ttw[2], tt_w_df)
 
+        with pytest.raises(ValueError, match="transform"):
+            tm.ttest_mean(transform="not-a-transform")
+
     def test_other(self):
         tm = self.tm
         tm2 = tm.reset_fraction(0.0)

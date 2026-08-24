@@ -94,7 +94,7 @@ _init_doc = r"""
         Array of covariates for the random part of the model.  A
         scipy.sparse array may be provided, or else the passed
         array will be converted to sparse internally.
-    ident : array_like
+    ident : array_like of int
         Array of integer labels showing which random terms (columns
         of `exog_vc`) have a common variance.
     vcp_p : float
@@ -103,16 +103,14 @@ _init_doc = r"""
         the standard deviation of a random effect).
     fe_p : float
         Prior standard deviation for fixed effects parameters.
-    family : statsmodels.genmod.families instance
-        The GLM family.
-    fep_names : list[str]
+    fep_names : list of str, optional
         The names of the fixed effects parameters (corresponding to
         columns of exog).  If None, default names are constructed.
-    vcp_names : list[str]
+    vcp_names : list of str, optional
         The names of the variance component parameters (corresponding
         to distinct labels in ident).  If None, default names are
         constructed.
-    vc_names : list[str]
+    vc_names : list of str, optional
         The names of the random effect realizations.
 
     Returns
@@ -142,7 +140,7 @@ _init_doc = r"""
     log-normal prior distributions with mean 0 and standard deviation
     `vcp_p`.
 
-    Note that for some families, e.g. Binomial, the posterior mode may
+    Note that for some families, e.g., Binomial, the posterior mode may
     be difficult to find numerically if `vcp_p` is set to too large of
     a value.  Setting `vcp_p` to 0.5 seems to work well.
 
@@ -418,20 +416,20 @@ class _BayesMixedGLM(base.Model):
         formula : str
             Formula for the endog and fixed effects terms (use ~ to
             separate dependent and independent expressions).
-        vc_formulas : dictionary
+        vc_formulas : dict
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
             parameter.  If using categorical (factor) variables to
             produce variance components, note that generally `0 + ...`
             should be used so that an intercept is not included.
-        data : data frame
+        data : DataFrame
             The data to which the formulas are applied.
-        family : genmod.families instance
+        family : statsmodels.genmod.families instance, optional
             A GLM family.
-        vcp_p : float
+        vcp_p : float, optional
             The prior standard deviation for the logarithms of the standard
             deviations of the random effects.
-        fe_p : float
+        fe_p : float, optional
             The prior standard deviation for the fixed effects parameters.
         """
 
@@ -482,16 +480,16 @@ class _BayesMixedGLM(base.Model):
 
         Parameters
         ----------
-        method : str
+        method : str, optional
             Optimization method for finding the posterior mode.
-        minim_opts : dict
+        minim_opts : dict, optional
             Options passed to scipy.minimize.
-        scale_fe : bool
+        scale_fe : bool, optional
             If True, the columns of the fixed effects design matrix
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -551,10 +549,10 @@ class _BayesMixedGLM(base.Model):
         params : array_like
             The parameter vector, may be the full parameter vector, or may
             be truncated to include only the mean parameters.
-        exog : array_like
+        exog : array_like, optional
             The design matrix for the mean structure.  If omitted, use the
             model's design matrix.
-        linear : bool
+        linear : bool, optional
             If True, return the linear predictor without passing through the
             link function.
 
@@ -608,8 +606,9 @@ class _VariationalBayesMixedGLM:
 
         Parameters
         ----------
-        h : function mapping 1d vector to 1d vector
-            The contribution of the model to the ELBO function can be
+        h : callable
+            A function mapping a 1d vector to a 1d vector.  The
+            contribution of the model to the ELBO function can be
             expressed as y_i*lp_i + Eh_i(z), where y_i and lp_i are
             the response and linear predictor for observation i, and z
             is a standard normal random variable.  This formulation
@@ -629,6 +628,11 @@ class _VariationalBayesMixedGLM:
             Standard deviation of the variance component parameters.
         vc_sd : array_like
             Standard deviation of the random effects realizations.
+
+        Returns
+        -------
+        float
+            The evidence lower bound value.
         """
 
         # p(y | vc) contributions
@@ -728,23 +732,23 @@ class _VariationalBayesMixedGLM:
 
         Parameters
         ----------
-        mean : array_like
+        mean : array_like, optional
             Starting value for VB mean vector
-        sd : array_like
+        sd : array_like, optional
             Starting value for VB standard deviation vector
-        fit_method : str
+        fit_method : str, optional
             Algorithm for scipy.minimize
-        minim_opts : dict
+        minim_opts : dict, optional
             Options passed to scipy.minimize
-        scale_fe : bool
+        scale_fe : bool, optional
             If true, the columns of the fixed effects design matrix
             are centered and scaled to unit variance before fitting
             the model.  The results are back-transformed so that the
             results are presented on the original scale.
-        verbose : bool
+        verbose : bool, optional
             If True, print the gradient norm to the screen each time
             it is calculated.
-        rng : {None, int, array_like[int], numpy.random.Generator, numpy.random.RandomState}, optional
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or array
             of ints, a new ``Generator`` is created, seeded with `rng`. If
@@ -898,20 +902,30 @@ class BayesMixedGLMResults:
 
     Attributes
     ----------
-    fe_mean : array_like
+    model : _BayesMixedGLM
+        The model instance used to obtain this result.
+    params : ndarray
+        The full vector of posterior parameter estimates (fixed
+        effects, variance component parameters, and random effect
+        realizations, in that order).
+    fe_mean : ndarray
         Posterior mean of the fixed effects coefficients.
-    fe_sd : array_like
+    fe_sd : ndarray
         Posterior standard deviation of the fixed effects coefficients
-    vcp_mean : array_like
+    vcp_mean : ndarray
         Posterior mean of the logged variance component standard
         deviations.
-    vcp_sd : array_like
+    vcp_sd : ndarray
         Posterior standard deviation of the logged variance component
         standard deviations.
-    vc_mean : array_like
+    vc_mean : ndarray
         Posterior mean of the random coefficients
-    vc_sd : array_like
+    vc_sd : ndarray
         Posterior standard deviation of the random coefficients
+    optim_retvals : optional
+        The return value of the numerical optimization routine used
+        to obtain the fit (e.g. the ``OptimizeResult`` from
+        ``scipy.optimize.minimize``), if available.
     """
 
     def __init__(self, model, params, cov_params, optim_retvals=None):
@@ -933,6 +947,20 @@ class BayesMixedGLMResults:
         self.vc_sd = np.sqrt(self.vc_sd)
 
     def cov_params(self):
+        """
+        Return the covariance matrix of the posterior parameter estimates.
+
+        Returns
+        -------
+        DataFrame, Series, or ndarray
+            If the model data was fit using a formula (or otherwise has
+            named parameters), a DataFrame (2-dimensional covariance
+            matrix) or Series (1-dimensional variances only, as
+            produced by variational Bayes fitting) is returned, with
+            index and, if applicable, columns given by the parameter
+            names.  Otherwise, the covariance matrix or variance
+            vector is returned as an ndarray.
+        """
 
         if hasattr(self.model.data, "frame"):
             # Return the covariance matrix as a dataframe or series
@@ -946,6 +974,16 @@ class BayesMixedGLMResults:
         return self._cov_params
 
     def summary(self):
+        """
+        Summarize the posterior parameter estimates.
+
+        Returns
+        -------
+        Summary
+            A summary instance with tables of the mean structure and
+            variance structure parameter estimates, which can be
+            printed or converted to various output formats.
+        """
 
         df = pd.DataFrame()
         m = self.model.k_fep + self.model.k_vcp
@@ -991,7 +1029,7 @@ class BayesMixedGLMResults:
 
         Parameters
         ----------
-        term : int or None
+        term : int or None, optional
             If None, results for all random effects are returned.  If
             an integer, returns results for a given set of random
             effects.  The value of `term` refers to an element of the
@@ -1028,10 +1066,10 @@ class BayesMixedGLMResults:
 
         Parameters
         ----------
-        exog : array_like
+        exog : array_like, optional
             The design matrix for the mean structure.  If None,
             use the model's design matrix.
-        linear : bool
+        linear : bool, optional
             If True, returns the linear predictor, otherwise
             transform the linear predictor using the link function.
 
@@ -1087,18 +1125,18 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         formula : str
             Formula for the endog and fixed effects terms (use ~ to
             separate dependent and independent expressions).
-        vc_formulas : dictionary
+        vc_formulas : dict
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
             parameter.  If using categorical (factor) variables to
             produce variance components, note that generally `0 + ...`
             should be used so that an intercept is not included.
-        data : data frame
+        data : DataFrame
             The data to which the formulas are applied.
-        vcp_p : float
+        vcp_p : float, optional
             The prior standard deviation for the logarithms of the standard
             deviations of the random effects.
-        fe_p : float
+        fe_p : float, optional
             The prior standard deviation for the fixed effects parameters.
 
         Returns
@@ -1130,6 +1168,21 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
     def vb_elbo(self, vb_mean, vb_sd):
         """
         Returns the evidence lower bound (ELBO) for the model.
+
+        Parameters
+        ----------
+        vb_mean : ndarray
+            The mean vector of the variational approximation, packed
+            as fixed effects parameters, then variance component
+            parameters, then random effect realizations.
+        vb_sd : ndarray
+            The standard deviation vector of the variational
+            approximation, packed in the same order as `vb_mean`.
+
+        Returns
+        -------
+        float
+            The evidence lower bound value.
         """
 
         fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)
@@ -1146,6 +1199,23 @@ class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
     def vb_elbo_grad(self, vb_mean, vb_sd):
         """
         Returns the gradient of the model's evidence lower bound (ELBO).
+
+        Parameters
+        ----------
+        vb_mean : ndarray
+            The mean vector of the variational approximation, packed
+            as fixed effects parameters, then variance component
+            parameters, then random effect realizations.
+        vb_sd : ndarray
+            The standard deviation vector of the variational
+            approximation, packed in the same order as `vb_mean`.
+
+        Returns
+        -------
+        mean_grad : ndarray
+            The gradient of the ELBO with respect to `vb_mean`.
+        sd_grad : ndarray
+            The gradient of the ELBO with respect to `vb_sd`.
         """
 
         fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)
@@ -1210,22 +1280,22 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
         formula : str
             Formula for the endog and fixed effects terms (use ~ to
             separate dependent and independent expressions).
-        vc_formulas : dictionary
+        vc_formulas : dict
             vc_formulas[name] is a one-sided formula that creates one
             collection of random effects with a common variance
             parameter.  If using categorical (factor) variables to
             produce variance components, note that generally `0 + ...`
             should be used so that an intercept is not included.
-        data : data frame
+        data : DataFrame
             The data to which the formulas are applied.
-        vcp_p : float
+        vcp_p : float, optional
             The prior standard deviation for the logarithms of the standard
             deviations of the random effects.
-        fe_p : float
+        fe_p : float, optional
             The prior standard deviation for the fixed effects parameters.
-        vcp_names : list[str]
+        vcp_names : list of str, optional
             The names of the variance component parameters.
-        vc_names : list[str]
+        vc_names : list of str, optional
             The names of the random effect realizations.
 
         Returns
@@ -1257,6 +1327,21 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
     def vb_elbo(self, vb_mean, vb_sd):
         """
         Returns the evidence lower bound (ELBO) for the model.
+
+        Parameters
+        ----------
+        vb_mean : ndarray
+            The mean vector of the variational approximation, packed
+            as fixed effects parameters, then variance component
+            parameters, then random effect realizations.
+        vb_sd : ndarray
+            The standard deviation vector of the variational
+            approximation, packed in the same order as `vb_mean`.
+
+        Returns
+        -------
+        float
+            The evidence lower bound value.
         """
 
         fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)
@@ -1273,6 +1358,23 @@ class PoissonBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
     def vb_elbo_grad(self, vb_mean, vb_sd):
         """
         Returns the gradient of the model's evidence lower bound (ELBO).
+
+        Parameters
+        ----------
+        vb_mean : ndarray
+            The mean vector of the variational approximation, packed
+            as fixed effects parameters, then variance component
+            parameters, then random effect realizations.
+        vb_sd : ndarray
+            The standard deviation vector of the variational
+            approximation, packed in the same order as `vb_mean`.
+
+        Returns
+        -------
+        mean_grad : ndarray
+            The gradient of the ELBO with respect to `vb_mean`.
+        sd_grad : ndarray
+            The gradient of the ELBO with respect to `vb_sd`.
         """
 
         fep_mean, vcp_mean, vc_mean = self._unpack(vb_mean)

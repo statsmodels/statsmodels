@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.validation import string_like
+
 from . import utils
 
 
@@ -20,75 +22,75 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     ----------
     points : array_like
         The quantitative values to be plotted as markers.
-    intervals : array_like
+    intervals : array_like, optional
         The intervals to be plotted around the points.  The elements
         of `intervals` are either scalars or sequences of length 2.  A
         scalar indicates the half width of a symmetric interval.  A
         sequence of length 2 contains the left and right half-widths
         (respectively) of a nonsymmetric interval.  If None, no
         intervals are drawn.
-    lines : array_like
+    lines : array_like, optional
         A grouping variable indicating which points/intervals are
         drawn on a common line.  If None, each point/interval appears
         on its own line.
-    sections : array_like
+    sections : array_like, optional
         A grouping variable indicating which lines are grouped into
         sections.  If None, everything is drawn in a single section.
-    styles : array_like
+    styles : array_like, optional
         A grouping label defining the plotting style of the markers
         and intervals.
-    marker_props : dict
+    marker_props : dict, optional
         A dictionary mapping style codes (the values in `styles`) to
         dictionaries defining key/value pairs to be passed as keyword
         arguments to `plot` when plotting markers.  Useful keyword
         arguments are "color", "marker", and "ms" (marker size).
-    line_props : dict
+    line_props : dict, optional
         A dictionary mapping style codes (the values in `styles`) to
         dictionaries defining key/value pairs to be passed as keyword
         arguments to `plot` when plotting interval lines.  Useful
         keyword arguments are "color", "linestyle", "solid_capstyle",
         and "linewidth".
-    split_names : str
+    split_names : str, optional
         If not None, this is used to split the values of `lines` into
         substrings that are drawn in the left and right margins,
         respectively.  If None, the values of `lines` are drawn in the
         left margin.
-    section_order : array_like
+    section_order : array_like, optional
         The section labels in the order in which they appear in the
         dotplot.
-    line_order : array_like
+    line_order : array_like, optional
         The line labels in the order in which they appear in the
         dotplot.
-    stacked : bool
+    stacked : bool, optional
         If True, when multiple points or intervals are drawn on the
         same line, they are offset from each other.
-    styles_order : array_like
+    styles_order : array_like, optional
         If stacked=True, this is the order in which the point styles
         on a given line are drawn from top to bottom (if horizontal
         is True) or from left to right (if horizontal is False).  If
         None (default), the order is lexical.
-    striped : bool
+    striped : bool, optional
         If True, every other line is enclosed in a shaded box.
-    horizontal : bool
+    horizontal : bool, optional
         If True (default), the lines are drawn horizontally, otherwise
         they are drawn vertically.
-    show_names : str
+    show_names : {'both', 'left', 'right'}, optional
         Determines whether labels (names) are shown in the left and/or
         right margins (top/bottom margins if `horizontal` is True).
         If `both`, labels are drawn in both margins, if 'left', labels
         are drawn in the left or top margin.  If `right`, labels are
         drawn in the right or bottom margin.
-    fmt_left_name : callable
+    fmt_left_name : callable, optional
         The left/top margin names are passed through this function
         before drawing on the plot.
-    fmt_right_name : callable
+    fmt_right_name : callable, optional
         The right/bottom margin names are passed through this function
         before drawing on the plot.
-    show_section_titles : bool or None
+    show_section_titles : bool or None, optional
         If None, section titles are drawn only if there is more than
         one section.  If False/True, section titles are never/always
         drawn, respectively.
-    ax : matplotlib.axes
+    ax : AxesSubplot, optional
         The axes on which the dotplot is drawn.  If None, a new axes
         is created.
 
@@ -122,9 +124,9 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     >>> dot_plot(points=point_values, lines=label_values)
     """
 
-    from matplotlib import transforms
-
     fig, ax = utils.create_mpl_ax(ax)
+
+    from matplotlib import transforms
 
     # Convert to numpy arrays if that is not what we are given.
     points = np.asarray(points)
@@ -136,6 +138,8 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     lines = asarray_or_none(lines)
     sections = asarray_or_none(sections)
     styles = asarray_or_none(styles)
+
+    show_names = string_like(show_names, "show_names", options=("both", "left", "right"))
 
     # Total number of points
     npoint = len(points)
@@ -380,7 +384,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
             jrow += 1
 
             # Draw the left margin label
-            if show_names.lower() in ("left", "both"):
+            if show_names in ("left", "both"):
                 if horizontal:
                     ax.text(-0.1/awidth, pos, left_label,
                             horizontalalignment="right",
@@ -395,7 +399,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
                             family="monospace")
 
             # Draw the right margin label
-            if show_names.lower() in ("right", "both"):
+            if show_names in ("right", "both"):
                 if right_label is not None:
                     if horizontal:
                         ax.text(1 + 0.1/awidth, pos, right_label,

@@ -42,18 +42,18 @@ class TruncatedLFGeneric(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    truncation : int, optional
+    truncation : int
         Truncation parameter that specifies the truncation point out of
         the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -90,18 +90,13 @@ class TruncatedLFGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
-            See notes.
-
-        Notes
-        -----
-
         """
         return np.sum(self.loglikeobs(params))
 
@@ -111,18 +106,14 @@ class TruncatedLFGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
         loglike : ndarray (nobs,)
             The log likelihood for each observation of the model evaluated
-            at `params`. See Notes
-
-        Notes
-        -----
-
+            at `params`.
         """
         llf_main = self.model_main.loglikeobs(params)
 
@@ -157,13 +148,13 @@ class TruncatedLFGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         score_main = self.model_main.score_obs(params)
@@ -192,13 +183,13 @@ class TruncatedLFGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         return self.score_obs(params).sum(0)
@@ -287,7 +278,7 @@ class TruncatedLFGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -295,9 +286,6 @@ class TruncatedLFGeneric(CountModel):
         hess : ndarray, (k_vars, k_vars)
             The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
-
-        Notes
-        -----
         """
         return approx_hess(params, self.loglike)
 
@@ -310,15 +298,15 @@ class TruncatedLFGeneric(CountModel):
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
+        exposure : array_like, optional
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
@@ -343,13 +331,14 @@ class TruncatedLFGeneric(CountModel):
               return (2-dim when predicting for several observations).
 
 
-        y_values : array_like
+        y_values : array_like, optional
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
 
         Returns
         -------
-        predicted values
+        ndarray
+            The predicted values, whose interpretation depends on `which`.
 
         Notes
         -----
@@ -447,18 +436,18 @@ class TruncatedLFPoisson(TruncatedLFGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    truncation : int, optional
+    truncation : int
         Truncation parameter that specifies the truncation point out of
         the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -525,20 +514,23 @@ class TruncatedLFNegativeBinomialP(TruncatedLFGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    truncation : int, optional
+    truncation : int
         Truncation parameter that specifies the truncation point out of
         the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
+    p : int, optional
+        P denotes parameterizations for NB regression. p=1 for NB-1 and
+        p=2 for NB-2. Default is p=2.
 
     """ + base._missing_param_doc,
        )
@@ -616,20 +608,23 @@ class TruncatedLFGeneralizedPoisson(TruncatedLFGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    truncation : int, optional
+    truncation : int
         Truncation parameter that specifies the truncation point out of
         the support of the distribution. pmf(k) = 0 for k <= truncation
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
+    p : int, optional
+        Dispersion power parameter for the GeneralizedPoisson model. p=1
+        for GP-1 and p=2 for GP-2. Default is p=2.
 
     """ + base._missing_param_doc,
        )
@@ -671,15 +666,15 @@ class _RCensoredGeneric(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -705,18 +700,13 @@ class _RCensoredGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
-            See notes.
-
-        Notes
-        -----
-
         """
         return np.sum(self.loglikeobs(params))
 
@@ -726,18 +716,14 @@ class _RCensoredGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
         loglike : ndarray (nobs,)
             The log likelihood for each observation of the model evaluated
-            at `params`. See Notes
-
-        Notes
-        -----
-
+            at `params`.
         """
         llf_main = self.model_main.loglikeobs(params)
 
@@ -754,13 +740,13 @@ class _RCensoredGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         score_main = self.model_main.score_obs(params)
@@ -781,13 +767,13 @@ class _RCensoredGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
+            The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
         return self.score_obs(params).sum(0)
@@ -871,7 +857,7 @@ class _RCensoredGeneric(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -879,9 +865,6 @@ class _RCensoredGeneric(CountModel):
         hess : ndarray, (k_vars, k_vars)
             The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
-
-        Notes
-        -----
         """
         return approx_hess(params, self.loglike)
 
@@ -895,15 +878,15 @@ class _RCensoredPoisson(_RCensoredGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -932,15 +915,15 @@ class _RCensoredGeneralizedPoisson(_RCensoredGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -971,15 +954,15 @@ class _RCensoredNegativeBinomialP(_RCensoredGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -1016,15 +999,15 @@ class _RCensored(_RCensoredGeneric):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -1075,20 +1058,10 @@ class HurdleCountModel(CountModel):
 
     Attributes
     ----------
-    endog : array
+    endog : ndarray
         A reference to the endogenous response variable
-    exog : array
+    exog : ndarray
         A reference to the exogenous design.
-    dist : string
-        Log-likelihood type of count model family. 'poisson' or 'negbin'
-    zerodist : string
-        Log-likelihood type of zero hurdle model family. 'poisson', 'negbin'
-    p : scalar
-        Define parameterization for count model.
-        Used when dist='negbin'.
-    pzero : scalar
-        Define parameterization parameter zero hurdle model family.
-        Used when zerodist='negbin'.
 
     Notes
     -----
@@ -1102,9 +1075,20 @@ class HurdleCountModel(CountModel):
     not yet
     """.format(
            params=base._model_params_doc,
-           extra_params="""offset : array_like
+           extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    dist : {'poisson', 'negbin'}, optional
+        Log-likelihood type of count model family. Default is 'poisson'.
+    zerodist : {'poisson', 'negbin'}, optional
+        Log-likelihood type of zero hurdle model family. Default is
+        'poisson'.
+    p : int, optional
+        Dispersion power parameter for the NegativeBinomialP count model.
+        Used when dist='negbin'. Default is 2.
+    pzero : int, optional
+        Dispersion power parameter for the NegativeBinomialP zero hurdle
+        model. Used when zerodist='negbin'. Default is 2.
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
 
@@ -1162,18 +1146,13 @@ class HurdleCountModel(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model.
 
         Returns
         -------
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
-            See notes.
-
-        Notes
-        -----
-
         """
         k = int((len(params) - self.k_extra1 - self.k_extra2) / 2
                 ) + self.k_extra1
@@ -1245,15 +1224,15 @@ class HurdleCountModel(CountModel):
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
+        exposure : array_like, optional
             Log(exposure) is added to the linear predictor with coefficient
             equal to 1. If exposure is specified, then it will be logged by
             the method. The user does not need to log it first.
@@ -1281,13 +1260,14 @@ class HurdleCountModel(CountModel):
               for y_values if those are provided. This is a multivariate
               return (2-dim when predicting for several observations).
 
-        y_values : array_like
+        y_values : array_like, optional
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
 
         Returns
         -------
-        predicted values
+        ndarray
+            The predicted values, whose interpretation depends on `which`.
 
         Notes
         -----

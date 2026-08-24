@@ -24,7 +24,9 @@ def use_pandas(request):
 
 def gen_data(dim, use_pandas):
     if dim == 1:
-        out = np.empty(10,)
+        out = np.empty(
+            10,
+        )
         if use_pandas:
             out = pd.Series(out)
     elif dim == 2:
@@ -70,8 +72,8 @@ class TestArrayLike:
         a = array_like(data, "a", ndim=2, shape=(20, None))
         assert a.shape == (20, 10)
         with pytest.raises(
-                ValueError,
-                match=r"Provided shape \(20,\) does not have the correct dimension",
+            ValueError,
+            match=r"Provided shape \(20,\) does not have the correct dimension",
         ):
             array_like(data, "a", ndim=2, shape=(20,))
         assert a.shape == (20, 10)
@@ -110,7 +112,10 @@ class TestArrayLike:
         assert a.shape == (5, 6, 7)
         a = array_like(data, "a", ndim=5)
         assert a.shape == (5, 6, 7, 1, 1)
-        with pytest.raises(ValueError, match=r"Provided shape \(10,\) does not have the correct dimension"):
+        with pytest.raises(
+            ValueError,
+            match=r"Provided shape \(10,\) does not have the correct dimension",
+        ):
             array_like(data, "a", ndim=3, shape=(10,))
         with pytest.raises(ValueError, match="a is required to have shape"):
             array_like(data, "a", ndim=3, shape=(None, None, 5))
@@ -343,6 +348,46 @@ def test_optional_string():
         string_like(b"4", "value", optional=True)
 
 
+def test_string_deprecated_alias():
+    # a value matching a key of `deprecated` is accepted and normalized to
+    # its replacement, but warns
+    with pytest.warns(
+        FutureWarning,
+        match=r"value='old' is a deprecated alias for value='new'",
+    ):
+        out = string_like(
+            "old", "value", options=("new", "other"), deprecated={"old": "new"}
+        )
+    assert out == "new"
+
+    # documented options are unaffected and never warn
+    out = string_like(
+        "new", "value", options=("new", "other"), deprecated={"old": "new"}
+    )
+    assert out == "new"
+
+    # a value that is neither a documented option nor a deprecated alias
+    # still raises, and the message lists both
+    with pytest.raises(
+        ValueError,
+        match=r"value must be one of: 'new', 'other', 'old'",
+    ):
+        string_like(
+            "bogus", "value", options=("new", "other"), deprecated={"old": "new"}
+        )
+
+    # lower= still applies before matching against options and deprecated
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        out = string_like(
+            "OLD",
+            "value",
+            options=("new", "other"),
+            lower=True,
+            deprecated={"old": "new"},
+        )
+    assert out == "new"
+
+
 @pytest.fixture(params=(1.0, 1.1, np.float32(1.2), np.array([1.2]), 1.2 + 0j))
 def floating(request):
     return request.param
@@ -419,3 +464,16 @@ def test_bool_like(boolean):
 def test_not_bool_like():
     with pytest.raises(TypeError):
         bool_like(np.array([True, True]), boolean)
+
+
+def test_array_like_mindim():
+    x = 1
+    arr = array_like(x, "x", mindim=1)
+    assert arr.shape == (1,)
+    arr = array_like(x, "x", mindim=2)
+    assert arr.shape == (1, 1)
+    arr = array_like(x, "x", mindim=3)
+    assert arr.shape == (1, 1, 1)
+    y = [1, 2]
+    arr = array_like(y, "y", mindim=2)
+    assert arr.shape == (2, 1)

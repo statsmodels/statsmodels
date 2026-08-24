@@ -84,7 +84,7 @@ class DeterministicTerm(ABC):
         index : index_like
             An index-like object. If not an index, it is converted to an
             index.
-        forecast_index : index_like
+        forecast_index : index_like, optional
             An Index or index-like object to use for the forecasts. If
             provided must have steps elements.
 
@@ -229,9 +229,9 @@ class TimeTrend(TimeTrendDeterministicTerm):
 
     Parameters
     ----------
-    constant : bool
+    constant : bool, optional
         Flag indicating whether a constant should be included.
-    order : int
+    order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
 
     See Also
@@ -276,6 +276,7 @@ class TimeTrend(TimeTrendDeterministicTerm):
         TimeTrend
             The TimeTrend instance.
         """
+        trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
         constant = trend.startswith("c")
         order = 0
         if "tt" in trend:
@@ -319,7 +320,7 @@ class Seasonality(DeterministicTerm):
     ----------
     period : int
         The length of a full cycle. Must be >= 2.
-    initial_period : int
+    initial_period : int, optional
         The seasonal index of the first observation. 1-indexed so must
         be in {1, 2, ..., period}.
 
@@ -375,7 +376,7 @@ class Seasonality(DeterministicTerm):
 
         Parameters
         ----------
-        index : {DatetimeIndex, PeriodIndex}
+        index : DatetimeIndex or PeriodIndex
             An index with its frequency (`freq`) set.
 
         Returns
@@ -466,7 +467,7 @@ class Fourier(FourierDeterministicTerm):
 
     Parameters
     ----------
-    period : int
+    period : float
         The length of a full cycle. Must be >= 2.
     order : int
         The number of Fourier components to include. Must be <= 2*period.
@@ -881,11 +882,11 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     ----------
     freq : str
         A string convertible to a pandas frequency.
-    constant : bool
+    constant : bool, optional
         Flag indicating whether a constant should be included.
-    order : int
+    order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
-    base_period : {str, pd.Timestamp}, default None
+    base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
         The base period to use when computing the time stamps. This value is
         treated as 1 and so all other time indices are defined as the number
         of periods since or before this time stamp. If not provided, defaults
@@ -972,7 +973,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             * "t": Linear time trend only
             * "ct": A constant and a time trend
             * "ctt": A constant, a time trend and a quadratic time trend
-        base_period : {str, pd.Timestamp}, default None
+        base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
             The base period to use when computing the time stamps. This value
             is treated as 1 and so all other time indices are defined as the
             number of periods since or before this time stamp. If not
@@ -983,6 +984,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         CalendarTimeTrend
             The CalendarTimeTrend instance.
         """
+        trend = string_like(trend, "trend", options=("n", "c", "t", "ct", "ctt"))
         constant = trend.startswith("c")
         order = 0
         if "tt" in trend:
@@ -1055,25 +1057,25 @@ class DeterministicProcess:
 
     Parameters
     ----------
-    index : {Sequence[Hashable], pd.Index}
+    index : index_like
         The index of the process. Should usually be the "in-sample" index when
         used in forecasting applications.
-    period : {float, int}, default None
+    period : float or int, optional
         The period of the seasonal or fourier components. Must be an int for
         seasonal dummies. If not provided, freq is read from index if
         available.
-    constant : bool, default False
+    constant : bool, optional
         Whether to include a constant.
-    order : int, default 0
+    order : int, optional
         The order of the time trend to include. For example, 2 will include
         both linear and quadratic terms. 0 excludes time trend terms.
-    seasonal : bool = False
+    seasonal : bool, optional
         Whether to include seasonal dummies
-    fourier : int = 0
+    fourier : int, optional
         The order of the fourier terms to included.
-    additional_terms : Sequence[DeterministicTerm]
+    additional_terms : sequence of DeterministicTerm, optional
         A sequence of additional deterministic terms to include in the process.
-    drop : bool, default False
+    drop : bool, optional
         A flag indicating to check for perfect collinearity and to drop any
         linearly dependent terms.
 
@@ -1396,9 +1398,9 @@ you can pass additional components using the additional_terms input.""")
 
         Parameters
         ----------
-        start : {int, str, dt.datetime, pd.Timestamp, np.datetime64}
+        start : int, str, dt.datetime, pd.Timestamp, or np.datetime64
             The first observation.
-        stop : {int, str, dt.datetime, pd.Timestamp, np.datetime64}
+        stop : int, str, dt.datetime, pd.Timestamp, or np.datetime64
             The final observation. Inclusive to match most prediction
             function in statsmodels.
 

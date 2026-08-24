@@ -21,9 +21,9 @@ class UnivariateGamPenalty(Penalty):
     ----------
     univariate_smoother : instance
         instance of univariate smoother or spline class
-    alpha : float
+    alpha : float, optional
         default penalty weight, alpha can be provided to each method
-    weights : array_like
+    weights : array_like, optional
         Not used and not verified, might be removed.
 
     Attributes
@@ -55,7 +55,7 @@ class UnivariateGamPenalty(Penalty):
         ----------
         params : ndarray
             coefficients for the spline basis in the regression model
-        alpha : float
+        alpha : float, optional
             default penalty weight
 
         Returns
@@ -77,7 +77,7 @@ class UnivariateGamPenalty(Penalty):
         ----------
         params : ndarray
             coefficients for the spline basis in the regression model
-        alpha : float
+        alpha : float, optional
             default penalty weight
 
         Returns
@@ -100,7 +100,7 @@ class UnivariateGamPenalty(Penalty):
         ----------
         params : ndarray
             coefficients for the spline basis in the regression model
-        alpha : float
+        alpha : float, optional
             default penalty weight
 
         Returns
@@ -121,15 +121,15 @@ class UnivariateGamPenalty(Penalty):
 
         Parameters
         ----------
-        alpha : list of floats or None
-            penalty weights
+        alpha : float, optional
+            penalty weight
 
         Returns
         -------
         penalty_matrix : ndarray
             square penalty matrix for quadratic penalization. The number
             of rows and columns are equal to the number of columns in the
-            smooth terms, i.e. the number of parameters for this smooth
+            smooth terms, i.e., the number of parameters for this smooth
             term in the regression model
         """
         if alpha is None:
@@ -149,12 +149,12 @@ class MultivariateGamPenalty(Penalty):
     alpha : list of float
         default penalty weight, list with length equal to the number of smooth
         terms. ``alpha`` can also be provided to each method.
-    weights : array_like
+    weights : array_like, optional
         currently not used
         is a list of doubles of the same length as alpha or a list
         of ndarrays where each component has the length equal to the number
         of columns in that component
-    start_idx : int
+    start_idx : int, optional
         number of parameters that come before the smooth terms. If the model
         has a linear component, then the parameters for the smooth components
         start at ``start_index``.
@@ -236,7 +236,7 @@ class MultivariateGamPenalty(Penalty):
         ----------
         params : ndarray
             coefficients in the regression model
-        alpha : float or list of floats
+        alpha : list of float, optional
             penalty weights
 
         Returns
@@ -262,7 +262,7 @@ class MultivariateGamPenalty(Penalty):
         ----------
         params : ndarray
             coefficients in the regression model
-        alpha : list of floats or None
+        alpha : list of float, optional
             penalty weights
 
         Returns
@@ -288,7 +288,7 @@ class MultivariateGamPenalty(Penalty):
         ----------
         params : ndarray
             coefficients in the regression model
-        alpha : list of floats or None
+        alpha : list of float, optional
             penalty weights
 
         Returns
@@ -312,7 +312,7 @@ class MultivariateGamPenalty(Penalty):
 
         Parameters
         ----------
-        alpha : list of floats or None
+        alpha : list of float, optional
             penalty weights
 
         Returns

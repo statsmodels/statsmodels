@@ -628,7 +628,7 @@ cdef class {{prefix}}Statespace(object):
 
         # ### Perform missing selections
         # In Durbin and Koopman (2012), these are represented as matrix
-        # multiplications, i.e. $Z_t^* = W_t Z_t$ where $W_t$ is a row
+        # multiplications, i.e., $Z_t^* = W_t Z_t$ where $W_t$ is a row
         # selection matrix (it contains a subset of rows of the identity
         # matrix).
         #
@@ -638,7 +638,7 @@ cdef class {{prefix}}Statespace(object):
         # set such that the arrays can be interpreted by the BLAS and LAPACK
         # functions as two-dimensional, column-major arrays.
         #
-        # In the case that all data is missing (e.g. this is what happens in
+        # In the case that all data is missing (e.g., this is what happens in
         # forecasting), we actually set do not change the dimension, but we set
         # the design matrix to the zeros array.
         if self._nmissing == self.k_endog:
@@ -864,7 +864,7 @@ cdef class {{prefix}}Statespace(object):
                                ' state dimension is larger than the dimension'
                                ' of the observation vector.')
 
-        # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+        # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
         # correspond to all states except the first k_posdef states)
         if self.subset_design:
             k_states = self._k_posdef
@@ -1054,7 +1054,7 @@ cdef int {{prefix}}select_cov(int k, int k_posdef,
         #
         # Combine a selection matrix and a covariance matrix to get
         # a simplified (but possibly singular) "selected" covariance
-        # matrix (see e.g. Durbin and Koopman p. 43)
+        # matrix (see e.g., Durbin and Koopman p. 43)
 
         # `tmp0` array used here, dimension $(m \times r)$
 

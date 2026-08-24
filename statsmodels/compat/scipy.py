@@ -4,6 +4,8 @@ import scipy
 
 SP_VERSION = parse(scipy.__version__)
 SP_LT_19 = SP_VERSION < Version("1.8.99")
+SP_LT_110 = SP_VERSION < Version("1.10.99")
+SP_LT_112 = SP_VERSION < Version("1.12.99")
 SP_LT_115 = SP_VERSION < Version("1.14.99")
 SP_LT_116 = SP_VERSION < Version("1.15.99")
 SP_LT_118 = SP_VERSION < Version("1.17.99")
@@ -94,8 +96,6 @@ def apply_where(  # type: ignore[explicit-any] # numpydoc ignore=PR01,PR02
         It does not need to be scalar; it needs however to be broadcastable with
         `cond` and `args`.
         Mutually exclusive with `f2`. You must provide one or the other.
-    xp : array_namespace, optional
-        The standard-compatible namespace for `cond` and `args`. Default: infer.
 
     Returns
     -------
@@ -135,6 +135,8 @@ __all__ = [
     "BASINHOPPING_RNG",
     "SP_LT_2",
     "SP_LT_19",
+    "SP_LT_110",
+    "SP_LT_112",
     "SP_LT_115",
     "SP_LT_116",
     "SP_LT_118",

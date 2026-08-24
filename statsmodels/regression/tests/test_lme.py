@@ -237,6 +237,8 @@ class TestMixedLM:
         rslt.profile_re(
             "b", vtype="vc", dist_low=0.5, num_low=3, dist_high=0.5, num_high=3
         )
+        with pytest.raises(ValueError, match="vtype"):
+            rslt.profile_re(0, vtype="not-a-vtype")
 
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and
@@ -1057,6 +1059,40 @@ def test_handle_missing():
                 assert_equal(len(result1.fittedvalues), result1.nobs)
 
 
+def test_from_formula_missing_kwarg_forwarded():
+    # GH: MixedLM.from_formula captured its own `missing` argument but
+    # never forwarded it to Model.from_formula's **kwargs. That meant the
+    # parent class's own default ("drop") was silently used regardless of
+    # what the caller passed, which desynced the already-computed `groups`
+    # array (built from the un-dropped data) from the row-dropped
+    # exog/endog and crashed with a confusing, unrelated IndexError during
+    # fit() instead of raising a clear error about the missing data.
+    rs = np.random.RandomState(23423)
+    n = 50
+    df = pd.DataFrame(
+        {
+            "y": rs.normal(size=n),
+            "x": rs.normal(size=n),
+            "g": np.repeat(np.arange(10), 5),
+        }
+    )
+    df.loc[0, "y"] = np.nan
+
+    for kwargs in ({}, {"missing": "none"}, {"missing": "raise"}):
+        with pytest.raises(Exception) as excinfo:
+            MixedLM.from_formula("y ~ x", groups="g", data=df, **kwargs)
+        # Before the fix this raised IndexError from misaligned groups vs.
+        # exog/endog instead of a clear missing-data error.
+        assert not isinstance(excinfo.value, IndexError)
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df, missing="drop")
+    assert model.exog.shape[0] == n - 1
+    assert model.endog.shape[0] == n - 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.fit()
+
+
 def test_summary_col():
     from statsmodels.iolib.summary2 import summary_col
 
@@ -1429,3 +1465,69 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_mixedlm_t_test():
+    # MixedLMResults.t_test overrides the base implementation to restrict
+    # t-tests to fixed-effects parameters (padding the random-effects
+    # covariance parameters with zero restrictions internally), but this
+    # override had no test coverage.
+    rs = np.random.RandomState(12345)
+    n_groups, group_size = 30, 10
+    n = n_groups * group_size
+    groups = np.repeat(np.arange(n_groups), group_size)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    res = MixedLM(endog, exog, groups).fit()
+
+    # An identity r_matrix over the fixed effects reproduces fe_params and
+    # bse_fe exactly.
+    tt = res.t_test(np.eye(res.k_fe))
+    assert_allclose(tt.effect, res.fe_params)
+    assert_allclose(tt.sd, res.bse_fe)
+    assert_allclose(tt.tvalue, res.fe_params / res.bse_fe)
+
+    # A contrast that is a linear combination of fixed effects should match
+    # a manual computation.
+    contrast = np.array([[1.0, -1.0, 0.0]])
+    tt_contrast = res.t_test(contrast)
+    expected_effect = res.fe_params[0] - res.fe_params[1]
+    assert_allclose(tt_contrast.effect, [expected_effect])
+
+    # r_matrix must have exactly k_fe columns.
+    with pytest.raises(ValueError, match=f"should have {res.k_fe:d} columns"):
+        res.t_test(np.eye(res.k_fe + 1))
+
+
+def test_predict_reflects_only_fixed_effects():
+    rs = np.random.RandomState(2024)
+    n_groups, n_per_group = 8, 12
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    mod = MixedLM(endog, exog, groups)
+    res = mod.fit()
+
+    # predict() is documented to reflect only the fixed-effects mean
+    # structure: exog @ fe_params, closed form.
+    assert_allclose(mod.predict(res.params), exog @ res.fe_params)
+    assert_allclose(mod.predict(res.params), mod.predict(res.params_object))
+
+    # a MixedLMParams instance and custom exog are both accepted
+    new_exog = rs.standard_normal((5, 3))
+    assert_allclose(mod.predict(res.params_object, exog=new_exog),
+                    new_exog @ res.fe_params)
+
+    packed = np.concatenate([res.fe_params, [999.0]])
+    assert_allclose(mod.predict(packed), exog @ res.fe_params)

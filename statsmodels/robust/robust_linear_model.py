@@ -24,6 +24,7 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.robust import norms, scale
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import string_like
 
 __all__ = ["RLM"]
 
@@ -44,7 +45,8 @@ class RLM(base.LikelihoodModel):
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
-        TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
+        TrimmedMean, Hampel, TukeyBiweight, TukeyQuartic, StudentT, and
+        MQuantileNorm.  The default is HuberT().
         See statsmodels.robust.norms for more information.
     {base._missing_param_doc}
 
@@ -199,7 +201,7 @@ class RLM(base.LikelihoodModel):
         ----------
         resid : ndarray
             The residuals used to estimate the scale.
-        scale_est : str or HuberScale()
+        scale_est : {"mad"} or callable
             The scale estimator requested in the call to `fit`.
 
         Returns
@@ -208,12 +210,8 @@ class RLM(base.LikelihoodModel):
             The estimated scale.
         """
         if isinstance(scale_est, str):
-            if scale_est.lower() == "mad":
-                return scale.mad(resid, center=0)
-            else:
-                raise ValueError(
-                    f"Option {scale_est} for scale_est not understood"
-                )
+            _ = string_like(scale_est, "scale_est", options=("mad",))
+            return scale.mad(resid, center=0)
         elif isinstance(scale_est, scale.HuberScale):
             return scale_est(self.df_resid, self.nobs, resid)
         else:
@@ -239,29 +237,29 @@ class RLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        conv : str
+        conv : {"coefs", "dev", "sresid", "weights"}, optional
             Indicates the convergence criteria.
             Available options are "coefs" (the coefficients), "weights" (the
             weights in the iteration), "sresid" (the standardized residuals),
             and "dev" (the un-normalized log-likelihood for the M
             estimator).  The default is "dev".
-        cov : str, optional
-            'H1', 'H2', or 'H3'
+        cov : {"H1", "H2", "H3"}, optional
             Indicates how the covariance matrix is estimated.  Default is 'H1'.
             See rlm.RLMResults for more information.
-        maxiter : int
+        maxiter : int, optional
             The maximum number of iterations to try. Default is 50.
-        scale_est : str or HuberScale()
-            'mad' or HuberScale()
+        scale_est : {"mad"} or callable, optional
             Indicates the estimate to use for scaling the weights in the IRLS.
-            The default is 'mad' (median absolute deviation.  Other options are
-            'HuberScale' for Huber's proposal 2. Huber's proposal 2 has
-            optional keyword arguments d, tol, and maxiter for specifying the
-            tuning constant, the convergence tolerance, and the maximum number
-            of iterations. See statsmodels.robust.scale for more information.
-        tol : float
+            The default is 'mad' (median absolute deviation).  Other options
+            are a `HuberScale` instance for Huber's proposal 2, or any other
+            callable that takes the residuals and returns a scale estimate.
+            Huber's proposal 2 has optional keyword arguments d, tol, and
+            maxiter for specifying the tuning constant, the convergence
+            tolerance, and the maximum number of iterations. See
+            statsmodels.robust.scale for more information.
+        tol : float, optional
             The convergence tolerance of the estimate.  Default is 1e-8.
-        update_scale : Bool
+        update_scale : bool, optional
             If `update_scale` is False then the scale estimate for the
             weights is held constant over the iteration.  Otherwise, it
             is updated for each fit in the iteration.  Default is True.
@@ -279,12 +277,10 @@ class RLM(base.LikelihoodModel):
         results : statsmodels.robust.robust_linear_model.RLMResults
             Results instance
         """
-        if cov.upper() not in ["H1", "H2", "H3"]:
-            raise ValueError(f"Covariance matrix {cov} not understood")
-        cov = cov.upper()
-        conv = conv.lower()
-        if conv not in ["weights", "coefs", "dev", "sresid"]:
-            raise ValueError(f"Convergence argument {conv} not understood")
+        # options are upper-cased for display/storage, unlike most other
+        # string options in this codebase which are lower-cased
+        cov = string_like(cov, "cov", options=("h1", "h2", "h3")).upper()
+        conv = string_like(conv, "conv", options=("weights", "coefs", "dev", "sresid"))
 
         if start_params is None:
             wls_results = lm.WLS(self.endog, self.exog).fit()
@@ -320,7 +316,7 @@ class RLM(base.LikelihoodModel):
         elif conv == "sresid":
             history.update(dict(sresid=[np.inf]))
             criterion = history["sresid"]
-        elif conv == "weights":
+        else:  # conv == "weights"
             history.update(dict(weights=[np.inf]))
             criterion = history["weights"]
 
@@ -427,8 +423,6 @@ class RLMResults(base.LikelihoodModelResults):
         See RLM.normalized_cov_params
     params : ndarray
         The coefficients of the fitted model
-    pinv_wexog : ndarray
-        See RLM.pinv_wexog
     pvalues : ndarray
         The p values associated with `tvalues`. Note that `tvalues` are assumed
         to be distributed standard normal rather than Student's t.
@@ -461,7 +455,9 @@ class RLMResults(base.LikelihoodModelResults):
         self.df_model = model.df_model
         self.df_resid = model.df_resid
         self.nobs = model.nobs
-        self.cov = cov
+        # cov is a public constructor argument (not only reachable through
+        # the already-validated RLM.fit), so it needs its own validation
+        self.cov = string_like(cov, "cov", options=("h1", "h2", "h3")).upper()
         # Snapshot the final IRLS weights now, rather than deferring to
         # model.weights, so this result is unaffected by any later fit()
         # call on the same model instance.
@@ -525,7 +521,7 @@ class RLMResults(base.LikelihoodModelResults):
                     / ((1 / self.nobs) * np.sum(model.M.psi_deriv(self.sresid)))
                     * W_inv
                 )
-            elif self.cov == "H3":
+            else:  # self.cov == "H3"
                 return (
                     k**-1
                     * 1
@@ -565,9 +561,9 @@ class RLMResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals
-        return_fmt : str
+        return_fmt : str, optional
             Unused
 
         Returns
@@ -643,9 +639,9 @@ class RLMResults(base.LikelihoodModelResults):
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title
-        alpha : float
+        alpha : float, optional
             Significance level for the confidence intervals
-        float_format : str
+        float_format : str, optional
             Print format for floats in parameters summary
 
         Returns

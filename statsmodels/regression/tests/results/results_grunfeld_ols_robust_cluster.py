@@ -148,6 +148,7 @@ results_cluster_large = ParamsTableTestBunch(
     **est
 )
 
+
 est = dict(
     N=200,
     N_g=10,
@@ -816,3 +817,398 @@ results_cluster_wls_large = ParamsTableTestBunch(
     cov_rownames=cov_rownames,
     **est
 )
+
+# new CRV types
+# CRV3
+# library(AER)
+# library(summclust)
+# data(Grunfeld)
+# Grunfeld <- Grunfeld[1:200, ]
+# lm_fit <- lm(
+# invest ~ value + capital,
+# data = Grunfeld)
+# summclust_res <- summclust(
+# obj = lm_fit,
+# cluster = ~firm,
+# params = c("value", "capital", "(Intercept)"),
+# type = "CRV3"
+# )
+# tidy(summclust_res)
+# summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    # F=51.59060716590177,
+    # r2=.8124080178314147,
+    # rmse=94.40840193979599,
+    # mss=7604093.484267689,
+    # rss=1755850.432294737,
+    # r2_a=.8105035307027997,
+    # ll=-1191.80235741801,
+    # ll_0=-1359.150955647688,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155622 , 0.01612997, 7.164436, 0.0000528288, 0.07907362, 0.1520507,
+    0.2306785, 0.14733088, 1.565717, 0.1518557711, -0.10260711, 0.5639641,
+    -42.7143694 , 34.81338218, -1.226953,
+    0.2509677931, -121.46771129, 36.0389724
+]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+    0.0002601760, -0.0006664354,    0.2173403,
+    -0.0006664354,  0.0217063876,   -4.4847950,
+    0.2173402673, -4.4847950039, 1211.9715786]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_crv3 = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+
+# CRV-jackknife.
+# library(AER)
+# library(summclust)
+# data(Grunfeld)
+# Grunfeld <- Grunfeld[1:200, ]
+# lm_fit <- lm(
+# invest ~ value + capital,
+# data = Grunfeld)
+# summclust_res <- summclust(
+# obj = lm_fit,
+# cluster = ~firm,
+# params = c("value", "capital", "(Intercept)"),
+# type = "CRV3J"
+# )
+# tidy(summclust_res)
+# summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155622, 0.01604534, 7.202226 , 5.070967e-05,  0.07926508,  0.1518592,
+    0.2306785, 0.14636496, 1.576050, 1.494682e-01, -0.10042206, 0.5617790,
+    -42.7143694, 34.42252880, -1.240884,  2.460189e-01,
+    -120.58353952, 35.1548006
+    ]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+
+    0.0002574529, -0.0006942295,    0.2259246,
+    -0.0006942295,  0.0214227025,   -4.3971775,
+    0.2259245878, -4.3971774822, 1184.9104889]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+results_cluster_crv_jk = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+# CRV3 - WLS
+# library(AER)
+# library(summclust)
+#
+# data(Grunfeld)
+# Grunfeld <- Grunfeld[1:200, ]
+# Grunfeld$weights <- 1:nrow(Grunfeld)
+#
+# lm_fit <- lm(
+#  invest ~ value + capital,
+#  data = Grunfeld,
+#  weights = Grunfeld$weights
+# )
+#
+# summclust_res <- summclust(
+#  obj = lm_fit,
+#  cluster = ~firm,
+#  params = c("value", "capital", "(Intercept)"),
+#  type = "CRV3"
+# )
+#
+# summclust_res <- summclust(
+#   obj = lm_fit,
+#   cluster = ~firm,
+#   params = c("value", "capital", "(Intercept)"),
+#   type = "CRV3J"
+# )
+# tidy(summclust_res)[c(2, 3, 1), c(1, 3, 2, 4, 5, 6)]
+#
+# summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
+
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    # F=51.59060716590177,
+    # r2=.8124080178314147,
+    # rmse=94.40840193979599,
+    # mss=7604093.484267689,
+    # rss=1755850.432294737,
+    # r2_a=.8105035307027997,
+    # ll=-1191.80235741801,
+    # ll_0=-1359.150955647688,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155455,  0.04609930,  2.506448, 0.03350546,   0.011261637,  0.2198294,
+    0.1322743,  0.05464912,  2.420428, 0.03858354,   0.008649359,  0.2558992,
+    -22.8586442, 21.67061826, -1.054822, 0.31899940, -71.880988565, 26.1637001
+    ]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+    0.0021251457 , 0.0004465362 , -0.6472085,
+    0.0004465362 , 0.0029865262 , -0.9030029,
+    -0.6472084770, -0.9030028664, 469.6156959
+    ]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_crv3_wls = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155455,  0.04609157,  2.506868, 0.03348236,   0.011279124,
+    0.2198119, 0.1322743 , 0.05461995,  2.421720, 0.03850184,
+    0.008715339 , 0.2558332, -22.8586442, 21.66885303, -1.054908,
+    0.31896217, -71.876995329, 26.1597069
+    ]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+    0.0021244331,  0.0004480432 , -0.6469750,
+    0.0004480432,  0.0029833392,  -0.9034966,
+    -0.6469749816, -0.9034966486, 469.5391916
+    ]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_crv_jk_wls = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+
+# ---------------------------------------------------------------------
+# Independent cross-check against the CRAN `sandwich` package's vcovJK(),
+# a second, actively-maintained R implementation of the same leave-one-
+# cluster-out jackknife/CRV3 estimator (MacKinnon, Nielsen & Webb 2022)
+# used above via the `summclust` package. Generated by, in order:
+#   1. generate_crv3_jackknife.py   (writes grunfeld_crv3_jackknife.csv)
+#   2. crv3_jackknife_r_results.R   (prints the arrays pasted in below)
+# `center="estimate"` (cluster-crv3) and `center="mean"` (cluster-jk).
+# Columns of params_table: b, se, t, pvalue.
+# Row/column order: value, capital, const (matches statsmodels' exog
+# order from add_constant(..., prepend=False)).
+# ---------------------------------------------------------------------
+
+params_table_colnames_r = "b se t pvalue".split()
+params_table_rownames_r = "mvalue kstock _cons".split()
+
+ols_crv3 = np.array([
+    0.1155621564, 0.01612997208, 7.16443623, 5.282879938e-05,
+    0.2306784887, 0.1473308781, 1.565717192, 0.1518557711,
+    -42.71436944, 34.81338218, -1.22695259, 0.2509677931,
+]).reshape(3, 4)
+
+ols_crv3_cov = np.array([
+    0.0002601759993, -0.0006664354164, 0.2173402673,
+    -0.0006664354164, 0.02170638763, -4.484795004,
+    0.2173402673, -4.484795004, 1211.971579,
+]).reshape(3, 3)
+
+ols_jk = np.array([
+    0.1155621564, 0.01604533828, 7.202226237, 5.070966928e-05,
+    0.2306784887, 0.1463649632, 1.576049921, 0.1494682119,
+    -42.71436944, 34.4225288, -1.240884122, 0.2460188922,
+]).reshape(3, 4)
+
+ols_jk_cov = np.array([
+    0.0002574528806, -0.0006942294519, 0.2259245878,
+    -0.0006942294519, 0.02142270245, -4.397177482,
+    0.2259245878, -4.397177482, 1184.910489,
+]).reshape(3, 3)
+
+wls_crv3 = np.array([
+    0.1155455057, 0.04609930297, 2.506447998, 0.03350546242,
+    0.1322742557, 0.05464911913, 2.420427955, 0.03858354221,
+    -22.85864424, 21.67061826, -1.05482197, 0.3189993998,
+]).reshape(3, 4)
+
+wls_crv3_cov = np.array([
+    0.002125145734, 0.0004465361751, -0.647208477,
+    0.0004465361751, 0.002986526222, -0.9030028664,
+    -0.647208477, -0.9030028664, 469.6156959,
+]).reshape(3, 3)
+
+wls_jk = np.array([
+    0.1155455057, 0.04609157291, 2.506868357, 0.03348236078,
+    0.1322742557, 0.0546199524, 2.421720449, 0.03850184369,
+    -22.85864424, 21.66885303, -1.0549079, 0.318962168,
+]).reshape(3, 4)
+
+wls_jk_cov = np.array([
+    0.002124433093, 0.0004480432261, -0.6469749816,
+    0.0004480432261, 0.0029833392, -0.9034966486,
+    -0.6469749816, -0.9034966486, 469.5391916,
+]).reshape(3, 3)
+
+results_cluster_crv3_sandwich_r = ParamsTableTestBunch(
+    params_table=ols_crv3,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=ols_crv3_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )
+
+results_cluster_jk_sandwich_r = ParamsTableTestBunch(
+    params_table=ols_jk,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=ols_jk_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )
+
+results_cluster_crv3_wls_sandwich_r = ParamsTableTestBunch(
+    params_table=wls_crv3,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=wls_crv3_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )
+
+results_cluster_jk_wls_sandwich_r = ParamsTableTestBunch(
+    params_table=wls_jk,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=wls_jk_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )

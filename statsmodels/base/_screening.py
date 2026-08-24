@@ -44,15 +44,17 @@ class ScreeningResults:
         Results collected for each iteration during the screening process.
         Keys are 'idx_nonzero', 'keep', 'params_keep' and 'idx_added', each
         holding a list with one entry appended per iteration.
+    screener : instance of VariableScreening
+        The VariableScreening instance that produced these results.
 
     The ScreeningResults returned by `screen_exog_iterator` has additional
     attributes:
 
-    idx_nonzero_batches : ndarray 2-D
+    idx_nonzero_batches : ndarray, 2-D
         Two-dimensional array with batch index in the first column and variable
         index within batch in the second column. They can be used jointly as
         index for the data in the exog_iterator.
-    exog_final_names : list[str]
+    exog_final_names : list of str
         'var<bidx>_<idx>' where `bidx` is the batch index and `idx` is the
         index of the selected column within batch `bidx`.
     history_batches : dict of lists
@@ -77,28 +79,28 @@ class VariableScreening:
         Examples: GLMPenalized, PoissonPenalized and LogitPenalized.
         The attributes of the model instance `pen_weight` and `penal` will be
         ignored.
-    pen_weight : None or float
+    pen_weight : float, optional
         Penalization weight use in SCAD penalized MLE.
-    use_weights : bool
+    use_weights : bool, optional
         If True, penalty weights are used so that `exog_keep` is not
         penalized (weight 0) while candidate exog have weight 1. If False,
         all penalty weights are set equally.
-    k_add : int
+    k_add : int, optional
         Number of exog to add during expansion or forward selection.
         See Notes section for tie handling.
-    k_max_add : int
+    k_max_add : int, optional
         Maximum number of variables to include during variable addition, i.e.
         forward selection. Default is 30.
-    threshold_trim : float
+    threshold_trim : float, optional
         Threshold for trimming parameters to zero, default is 1e-4.
-    k_max_included : int
+    k_max_included : int, optional
         Maximum total number of variables to include in model.
-    ranking_attr : str
+    ranking_attr : str, optional
         This determines the result attribute or model method that is used for
         the ranking of exog to include. The availability of attributes depends
         on the model.
         Default is 'resid_pearson', 'model.score_factor' can be used in GLM.
-    ranking_project : bool
+    ranking_project : bool, optional
         If ranking_project is True, then the exog candidates for inclusion are
         first projected on the already included exog before the computation
         of the ranking measure. This brings the ranking measure closer to
@@ -224,17 +226,17 @@ class VariableScreening:
         exog : ndarray
             Candidate explanatory variables that are screened for inclusion in
             the model.
-        endog : ndarray (optional)
+        endog : ndarray, optional
             Use a new endog in the screening model.
             This is not tested yet, and might not work correctly.
-        maxiter : int
+        maxiter : int, optional
             Number of screening iterations.
-        method : str
+        method : str, optional
             Optimization method to use in fit, needs to be only of the gradient
             optimizers.
-        disp : bool
+        disp : bool, optional
             Display option for fit during optimization.
-        fit_kwds : dict or None
+        fit_kwds : dict-like, optional
             Additional keyword arguments passed to the model's `fit` method.
 
         Returns

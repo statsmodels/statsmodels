@@ -1,5 +1,3 @@
-from matplotlib import lines
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -23,6 +21,13 @@ def tukeyplot(results, dim=None, yticklabels=None):
     There is no return value.  A new matplotlib figure and axis are created
     and the confidence intervals are drawn on it.
     """
+    # deferred import: matplotlib is only needed when this function is
+    # actually called, and _import_mpl gives a clear error if it is missing
+    from statsmodels.graphics.utils import _import_mpl
+
+    plt = _import_mpl()
+    from matplotlib import lines
+
     npairs = len(results)
 
     fig = plt.figure()

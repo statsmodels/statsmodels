@@ -303,12 +303,12 @@ class SARIMAXParams:
 
     @property
     def is_complete(self):
-        """(bool) Are current parameter values all filled in (i.e. not NaN)"""
+        """(bool) Are current parameter values all filled in (i.e., not NaN)"""
         return not np.any(np.isnan(self.params))
 
     @property
     def is_valid(self):
-        """(bool) Are current parameter values valid (e.g. variance > 0)"""
+        """(bool) Are current parameter values valid (e.g., variance > 0)"""
         valid = True
         try:
             self.spec.validate_params(self.params)
@@ -371,7 +371,7 @@ class SARIMAXParams:
 
         Returns
         -------
-        series : pd.Series
+        series : Series
             Pandas series with index set to the parameter names.
         """
         return pd.Series(self.params, index=self.param_names)

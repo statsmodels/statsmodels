@@ -12,12 +12,14 @@ C Croux, PJ Rousseeuw, 'Time-efficient algorithms for two highly robust
 estimators of scale' Computational statistics. Physica, Heidelberg, 1992.
 """
 
+from typing import NamedTuple
+
 import numpy as np
 from scipy import stats
 from scipy.stats import norm as Gaussian
 
 from statsmodels.tools import tools
-from statsmodels.tools.validation import array_like, float_like
+from statsmodels.tools.validation import array_like, float_like, string_like
 
 from . import norms
 from ._qn import _qn
@@ -25,11 +27,6 @@ from ._qn import _qn
 GAUSSIAN_3_4 = Gaussian.ppf(3 / 4.0)
 GAUSSIAN_IQR = GAUSSIAN_3_4 - Gaussian.ppf(1 / 4)
 ONE_OVER_SQRT2_GAUSSIAN_5_8 = 1 / (np.sqrt(2) * Gaussian.ppf(5 / 8))
-
-
-class Holder:
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
 
 
 def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
@@ -46,17 +43,17 @@ def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
         which is approximately 0.6745.
     axis : int, optional
         The default is 0. Can also be None.
-    center : callable or float
+    center : callable or float, optional
         If a callable is provided, such as the default `np.median` then it
         is expected to be called center(a). The axis argument will be applied
         via np.apply_over_axes. Otherwise, provide a float.
 
     Returns
     -------
-    mad : float
+    float or ndarray
         `mad` = median(abs(`a` - center))/`c`
     """
-    a = array_like(a, "a", ndim=None)
+    a = array_like(a, "a", mindim=None)
     c = float_like(c, "c")
     if not a.size:
         center_val = 0.0
@@ -99,7 +96,7 @@ def iqr(a, c=GAUSSIAN_IQR, axis=0):
     float or ndarray
         The normalized interquartile range.
     """
-    a = array_like(a, "a", ndim=None)
+    a = array_like(a, "a", mindim=None)
     c = float_like(c, "c")
 
     if a.ndim == 0:
@@ -138,7 +135,7 @@ def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
     float or ndarray
         The Qn robust estimator of scale.
     """
-    a = array_like(a, "a", ndim=None, dtype=np.float64, contiguous=True, order="C")
+    a = array_like(a, "a", mindim=None, dtype=np.float64, contiguous=True, order="C")
     c = float_like(c, "c")
     if a.ndim == 0:
         raise ValueError("a should have at least one dimension")
@@ -234,7 +231,7 @@ class Huber:
 
         Parameters
         ----------
-        a : ndarray
+        a : array_like
             1d array
         mu : float or None, optional
             If the location mu is supplied then it is not reestimated.
@@ -490,16 +487,16 @@ class MScale:
 
         Parameters
         ----------
-        data : array-like
+        data : array_like
             Data, currently assumed to be 1-dimensional.
-        start_scale : string or float
+        start_scale : str or float, optional
             Starting value of scale or method to compute the starting value.
             Default is using 'mad', no other string options are available.
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
-        rtol : float
+        rtol : float, optional
             Relative convergence tolerance.
-        atol : float
+        atol : float, optional
             Absolute convergence tolerance.
 
         Returns
@@ -525,6 +522,41 @@ class MScale:
         return scale
 
 
+class ScaleTrimmedResult(NamedTuple):
+    """
+    Result of :func:`scale_trimmed`.
+
+    Parameters
+    ----------
+    scale : ndarray
+        Estimated scale based on the symmetrically trimmed sample.
+    center : ndarray
+        Center used to compute the scale, either estimated from the data
+        or the user-provided value.
+    center_type : str
+        How `center` was obtained, one of ``"median"``, ``"mean"``,
+        ``"tmean"`` or ``"user"``.
+    trim_idx : int
+        Number of observations trimmed from each tail.
+    nobs : int
+        Number of observations along `axis`.
+    distr : scipy.stats distribution or "raw"
+        Reference distribution used to normalize the scale, or ``"raw"``
+        if the scale was not normalized.
+    scale_correction : float
+        Correction factor applied to normalize the scale to the reference
+        distribution, ``1 / c_inv``.
+    """
+
+    scale: np.ndarray
+    center: np.ndarray
+    center_type: str
+    trim_idx: int
+    nobs: int
+    distr: object
+    scale_correction: float
+
+
 def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=None):
     """
     Scale estimate based on symmetrically trimmed sample
@@ -544,29 +576,28 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
         observations are trimmed, and the same number of the largest
         observations are trimmed. scale estimate is base on a fraction
         (1 - 2 * alpha) of observations.
-    center : 'median', 'mean', 'tmean' or number
-        `center` defines how the trimmed sample is centered. 'median' and
-        'mean' are calculated on the full sample. `tmean` is the trimmed
-        mean, calculated with the trimmed sample. If `center` is array_like
-        then it needs to be scalar or correspond to the shape of the data
-        reduced by axis.
-    axis : int, default is 0
-        axis along which scale is estimated.
-    distr : None, 'raw' or a distribution instance
+    center : {"median", "med", "mean", "tmean"} or array_like, optional
+        `center` defines how the trimmed sample is centered. 'median' (or
+        the alias 'med') and 'mean' are calculated on the full sample.
+        `tmean` is the trimmed mean, calculated with the trimmed sample.
+        If `center` is array_like then it needs to be scalar or correspond
+        to the shape of the data reduced by axis. Default is 'median'.
+    axis : int, optional
+        Axis along which scale is estimated. The default is 0.
+    distr : None, "raw" or distribution instance, optional
         Default if distr is None is the normal distribution `scipy.stats.norm`.
         This is the reference distribution to normalize the scale.
         Note: This cannot be a frozen instance, since it does not have an
         `expect` method.
         If distr is 'raw', then the scale is not normalized.
-    distargs : tuple, optional
+    distargs : tuple or None, optional
         Arguments for the distribution.
 
     Returns
     -------
-    Holder
-        Instance with the estimated ``scale`` as the main attribute, and
-        with ``center``, ``center_type``, ``trim_idx``, ``nobs``,
-        ``distr``, and ``scale_correction`` as additional attributes.
+    ScaleTrimmedResult
+        See :class:`ScaleTrimmedResult` for a description of the
+        attributes.
 
     Examples
     --------
@@ -591,10 +622,10 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
 
     if distr is None:
         distr = stats.norm
-        if distargs is None:
-            distargs = ()
+    if distargs is None:
+        distargs = ()
 
-    x = np.array(data)  # make copy for inplace sort
+    x = np.array(data, copy=True)  # make copy for inplace sort
     if axis is None:
         x = x.ravel()
         axis = 0
@@ -617,6 +648,13 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
     x_trimmed = x[tuple(sl)]
 
     center_type = center
+    if isinstance(center, str):
+        center = string_like(
+            center,
+            "center",
+            options=("med", "median", "mean", "tmean"),
+            lower=False,
+        )
     if center in ["med", "median"]:
         center = np.median(x, axis=axis)
     elif center == "mean":
@@ -634,7 +672,7 @@ def scale_trimmed(data, alpha, center="median", axis=0, distr=None, distargs=Non
     s_raw = ((x_trimmed - center) ** 2).sum(axis)
     scale = np.sqrt(s_raw / nobs / c_inv)
 
-    res = Holder(
+    res = ScaleTrimmedResult(
         scale=scale,
         center=center,
         center_type=center_type,
@@ -652,7 +690,7 @@ def _weight_mean(x, c):
 
     Parameters
     ----------
-    x : ndarray
+    x : array_like
         Data
     c : float
         Parameter for bisquare weights
@@ -705,27 +743,27 @@ def scale_tau(
     data : array_like, 1-D or 2-D
         If data is 2d, then the location and scale estimates
         are calculated for each column
-    cm : float
+    cm : float, optional
         constant used in call to weight_mean
-    cs : float
+    cs : float, optional
         constant used in call to weight_scale
-    weight_mean : callable
+    weight_mean : callable, optional
         function to calculate weights for weighted mean
-    weight_scale : callable
+    weight_scale : callable, optional
         function to calculate scale, "rho" function
-    normalize : bool
+    normalize : bool, optional
         rescale the scale estimate so it is consistent when the data is
         normally distributed. The computation assumes winsorized (truncated)
         variance.
-    ddof : int
+    ddof : int, optional
         Degrees of freedom used in the denominator of the variance
         computation. Default is 0.
 
     Returns
     -------
-    mean : ndarray
+    mean : float or ndarray
         robust mean
-    std : ndarray
+    std : float or ndarray
         robust estimate of scale (standard deviation)
 
     Notes
@@ -778,25 +816,25 @@ def _scale_iter(
     ----------
     data : array_like
         Data, currently assumed to be 1-dimensional.
-    scale0 : {"mad", float}
+    scale0 : {"mad", float}, optional
         Starting value of scale or method to compute the starting value.
         Default is using 'mad', no other string options are available.
-    maxiter : int
+    maxiter : int, optional
         Maximum number of iterations.
-    rtol : float
+    rtol : float, optional
         Relative convergence tolerance.
-    atol : float
+    atol : float, optional
         Absolute convergence tolerance.
-    meef_scale : callable
+    meef_scale : callable, optional
         Function that computes the moment condition (rho or weight
         function) used for estimating scale.
-    scale_bias : float
+    scale_bias : float, optional
         Factor in moment condition to obtain fisher consistency of the
         scale estimate at the normal distribution.
-    iter_method : {"rho", "weights"}
+    iter_method : {"rho", "weights"}, optional
         Method used in the iteration. "rho" uses the rho function
         directly, otherwise a weighted sum of squares is used.
-    ddof : int
+    ddof : int, optional
         Degrees of freedom used in the denominator of the variance
         computation. Default is 0.
 

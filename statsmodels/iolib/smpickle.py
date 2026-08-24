@@ -13,7 +13,7 @@ def save_pickle(obj, fname):
     ----------
     obj : object
         Any object that can be pickled
-    fname : {str, pathlib.Path}
+    fname : str or pathlib.Path
         Filename to pickle to
     """
     with get_file_obj(fname, "wb") as fout:
@@ -51,7 +51,7 @@ def load_pickle(fname):
 
     Parameters
     ----------
-    fname : {str, pathlib.Path}
+    fname : str or pathlib.Path
         Filename to unpickle
 
     Notes

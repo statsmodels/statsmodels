@@ -448,7 +448,7 @@ def test_specification(
 ):
     # Assumptions:
     # - p, q, P, Q are either integers or lists of non-consecutive integers
-    #   (i.e. we are not testing boolean lists or consecutive lists here, which
+    #   (i.e., we are not testing boolean lists or consecutive lists here, which
     #   should be tested in the `standardize_lag_order` tests)
 
     # Construct the specification

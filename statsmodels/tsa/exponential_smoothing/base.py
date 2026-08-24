@@ -4,7 +4,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
+from scipy import stats
 
 from statsmodels.base.data import PandasData
 from statsmodels.tools._decorators import cache_readonly
@@ -17,14 +17,38 @@ from statsmodels.tools.numdiff import (
 )
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.statespace.tools import _safe_cond
+from statsmodels.tsa.stattools._stattools import (
+    breakvar_heteroskedasticity_test,
+)
 
 
 class StateSpaceMLEModel(tsbase.TimeSeriesModel):
     """
-    This is a temporary base model from ETS; here I just copy everything I need
-    from statespace.mlemodel.MLEModel
+    Temporary base model for use with the exponential smoothing models; copies
+    the functionality needed from statespace.mlemodel.MLEModel
+
+    Parameters
+    ----------
+    endog : array_like
+        The observed time-series process :math:`y`.
+    exog : array_like, optional
+        Array of exogenous regressors.
+    dates : array_like, optional
+        An array-like object of datetime objects. If a pandas object is given
+        for endog or exog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    **kwargs
+        Keyword arguments used to construct the state space representation
+        of the model and stored so that the model can be recreated.
     """
 
     def __init__(
@@ -69,6 +93,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def k_params(self):
+        """The number of parameters in the model"""
         return len(self.param_names)
 
     @contextlib.contextmanager
@@ -168,7 +193,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def start_params(self):
-        """(array) Starting parameters for maximum likelihood estimation"""
+        """Starting parameters for maximum likelihood estimation"""
         if hasattr(self, "_start_params"):
             return self._start_params
         else:
@@ -176,7 +201,7 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def param_names(self):
-        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
+        """List of human readable parameter names (for parameters actually included in the model)"""
         if hasattr(self, "_param_names"):
             return self._param_names
         else:
@@ -298,7 +323,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     Parameters
     ----------
-    model : MLEModel instance
+    model : Model instance
         The fitted model instance
     params : ndarray
         Fitted parameters
@@ -346,80 +371,83 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def nobs_effective(self):
+        """The number of observations used to fit the model, after adjustments"""
         raise NotImplementedError
 
     @cache_readonly
     def df_resid(self):
+        """The residual degrees of freedom"""
         return self.nobs_effective - self.df_model
 
     @cache_readonly
     def aic(self):
-        """(float) Akaike Information Criterion"""
+        """The Akaike Information Criterion"""
         return aic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def aicc(self):
-        """(float) Akaike Information Criterion with small sample correction"""
+        """The Akaike Information Criterion with small sample correction"""
         return aicc(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def bic(self):
-        """(float) Bayes Information Criterion"""
+        """The Bayes Information Criterion"""
         return bic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def fittedvalues(self):
+        """The predicted values of the model"""
         # TODO
         raise NotImplementedError
 
     @cache_readonly
     def hqic(self):
-        """(float) Hannan-Quinn Information Criterion"""
+        """The Hannan-Quinn Information Criterion"""
         # return (-2 * self.llf +
         #         2 * np.log(np.log(self.nobs_effective)) * self.df_model)
         return hqic(self.llf, self.nobs_effective, self.df_model)
 
     @cache_readonly
     def llf(self):
-        """(float) The value of the log-likelihood function evaluated at `params`"""
+        """The value of the log-likelihood function evaluated at `params`"""
         raise NotImplementedError
 
     @cache_readonly
     def mae(self):
-        """(float) Mean absolute error"""
+        """The mean absolute error"""
         return np.mean(np.abs(self.resid))
 
     @cache_readonly
     def mse(self):
-        """(float) Mean squared error"""
+        """The mean squared error"""
         return self.sse / self.nobs
 
     @cache_readonly
     def pvalues(self):
         """
-        (array) The p-values associated with the z-statistics of the
-        coefficients. Note that the coefficients are assumed to have a Normal
-        distribution.
+        The p-values associated with the z-statistics of the coefficients.
+        Note that the coefficients are assumed to have a Normal distribution.
         """
         pvalues = np.zeros_like(self.zvalues) * np.nan
         mask = np.ones_like(pvalues, dtype=bool)
         mask[self._free_params_index] = True
         mask &= ~np.isnan(self.zvalues)
-        pvalues[mask] = norm.sf(np.abs(self.zvalues[mask])) * 2
+        pvalues[mask] = stats.norm.sf(np.abs(self.zvalues[mask])) * 2
         return pvalues
 
     @cache_readonly
     def resid(self):
+        """The model residuals"""
         raise NotImplementedError
 
     @cache_readonly
     def sse(self):
-        """(float) Sum of squared errors"""
+        """The sum of squared errors"""
         return np.sum(self.resid ** 2)
 
     @cache_readonly
     def zvalues(self):
-        """(array) The z-statistics for the coefficients"""
+        """The z-statistics for the coefficients"""
         return self.params / self.bse
 
     def _get_prediction_start_index(self, anchor):
@@ -473,7 +501,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def cov_params_approx(self):
         """
-        (array) The variance / covariance matrix. Computed using the numerical
+        The variance / covariance matrix, computed using the numerical
         Hessian approximated by complex step or finite differences methods.
         """
         return self._cov_params_approx(
@@ -491,7 +519,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
-        lags : None, int or array_like
+        lags : int, array_like of int, or None, optional
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
             length.
@@ -527,48 +555,47 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "ljungbox"
+        method = string_like(
+            method, "method", options=("ljungbox", "boxpierce")
+        )
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
-        if method == "ljungbox" or method == "boxpierce":
-            from statsmodels.stats.diagnostic import acorr_ljungbox
-            if hasattr(self, "loglikelihood_burn"):
-                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-                # This differs from self.nobs_effective because here we want to
-                # exclude exact diffuse periods, whereas self.nobs_effective
-                # only excludes explicitly burned (usually approximate diffuse)
-                # periods.
-                nobs_effective = self.nobs - d
-            else:
-                nobs_effective = self.nobs_effective
-            output = []
-
-            # Default lags for acorr_ljungbox is 40, but may not always have
-            # that many observations
-            if lags is None:
-                seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-                if seasonal_periods:
-                    lags = min(2 * seasonal_periods, nobs_effective // 5)
-                else:
-                    lags = min(10, nobs_effective // 5)
-
-            cols = [2, 3] if method == "boxpierce" else [0, 1]
-            for i in range(self.model.k_endog):
-                if hasattr(self, "filter_results"):
-                    x = self.filter_results.standardized_forecasts_error[i][d:]
-                else:
-                    x = self.standardized_forecasts_error
-                results = acorr_ljungbox(
-                    x, lags=lags, boxpierce=(method == "boxpierce")
-                )
-                output.append(np.asarray(results)[:, cols].T)
-
-            output = np.c_[output]
+        from statsmodels.stats.diagnostic import acorr_ljungbox
+        if hasattr(self, "loglikelihood_burn"):
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            # This differs from self.nobs_effective because here we want to
+            # exclude exact diffuse periods, whereas self.nobs_effective
+            # only excludes explicitly burned (usually approximate diffuse)
+            # periods.
+            nobs_effective = self.nobs - d
         else:
-            raise NotImplementedError("Invalid serial correlation test"
-                                      " method.")
+            nobs_effective = self.nobs_effective
+        output = []
+
+        # Default lags for acorr_ljungbox is 40, but may not always have
+        # that many observations
+        if lags is None:
+            seasonal_periods = getattr(self.model, "seasonal_periods", 0)
+            if seasonal_periods:
+                lags = min(2 * seasonal_periods, nobs_effective // 5)
+            else:
+                lags = min(10, nobs_effective // 5)
+
+        cols = [2, 3] if method == "boxpierce" else [0, 1]
+        for i in range(self.model.k_endog):
+            if hasattr(self, "filter_results"):
+                x = self.filter_results.standardized_forecasts_error[i][d:]
+            else:
+                x = self.standardized_forecasts_error
+            results = acorr_ljungbox(
+                x, lags=lags, boxpierce=(method == "boxpierce")
+            )
+            output.append(np.asarray(results)[:, cols].T)
+
+        output = np.c_[output]
         return output
 
     def test_heteroskedasticity(self, method, alternative="two-sided",
@@ -587,13 +614,13 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             The statistical test for heteroskedasticity. Must be 'breakvar'
             for test of a break in the variance. If None, an attempt is
             made to select an appropriate test.
-        alternative : str, 'increasing', 'decreasing' or 'two-sided'
+        alternative : {'increasing', 'decreasing', 'two-sided'}, optional
             This specifies the alternative for the p-value calculation. Default
             is two-sided.
         use_f : bool, optional
             Whether or not to compare against the asymptotic distribution
             (chi-squared) or the approximate small-sample distribution (F).
-            Default is True (i.e. default is to compare against an F
+            Default is True (i.e., default is to compare against an F
             distribution).
 
         Returns
@@ -605,6 +632,10 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             an array of size 2 corresponding to the first endogenous variable,
             where `het[0][0]` is the test statistic, and `het[0][1]` is the
             p-value.
+
+        See Also
+        --------
+        statsmodels.tsa.stattools.breakvar_heteroskedasticity_test
 
         Notes
         -----
@@ -655,101 +686,40 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "breakvar"
+        _ = string_like(method, "method", options=("breakvar",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
-        if method == "breakvar":
-            # Store some values
-            if hasattr(self, "filter_results"):
-                squared_resid = (
-                    self.filter_results.standardized_forecasts_error**2
-                )
-                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-                # This differs from self.nobs_effective because here we want to
-                # exclude exact diffuse periods, whereas self.nobs_effective
-                # only excludes explicitly burned (usually approximate diffuse)
-                # periods.
-                nobs_effective = self.nobs - d
-            else:
-                squared_resid = self.standardized_forecasts_error**2
-                if squared_resid.ndim == 1:
-                    squared_resid = np.asarray(squared_resid)
-                    squared_resid = squared_resid[np.newaxis, :]
-                nobs_effective = self.nobs_effective
-                d = 0
-            squared_resid = np.asarray(squared_resid)
-
-            test_statistics = []
-            p_values = []
-            for i in range(self.model.k_endog):
-                h = int(np.round(nobs_effective / 3))
-                numer_resid = squared_resid[i, -h:]
-                numer_resid = numer_resid[~np.isnan(numer_resid)]
-                numer_dof = len(numer_resid)
-
-                denom_resid = squared_resid[i, d:d + h]
-                denom_resid = denom_resid[~np.isnan(denom_resid)]
-                denom_dof = len(denom_resid)
-
-                if numer_dof < 2:
-                    warnings.warn(f"Early subset of data for variable {i:d}"
-                                  "  has too few non-missing observations to"
-                                  " calculate test statistic.",
-                                  stacklevel=2,
-                                  )
-                    numer_resid = np.nan
-                if denom_dof < 2:
-                    warnings.warn(f"Later subset of data for variable {i:d}"
-                                  "  has too few non-missing observations to"
-                                  " calculate test statistic.",
-                                  stacklevel=2,
-                                  )
-                    denom_resid = np.nan
-
-                test_statistic = np.sum(numer_resid) / np.sum(denom_resid)
-
-                # Setup functions to calculate the p-values
-                if use_f:
-                    from scipy.stats import f
-
-                    def pval_lower(test_statistics, numer_dof, denom_dof):
-                        return f.cdf(test_statistics, numer_dof, denom_dof)
-
-                    def pval_upper(test_statistics, numer_dof, denom_dof):
-                        return f.sf(test_statistics, numer_dof, denom_dof)
-
-                else:
-                    from scipy.stats import chi2
-
-                    def pval_lower(test_statistics, numer_dof, denom_dof):
-                        return chi2.cdf(numer_dof * test_statistics, denom_dof)
-
-                    def pval_upper(test_statistics, numer_dof, denom_dof):
-                        return chi2.sf(numer_dof * test_statistics, denom_dof)
-                # Calculate the one- or two-sided p-values
-                alternative = alternative.lower()
-                if alternative in ["i", "inc", "increasing"]:
-                    p_value = pval_upper(test_statistic)
-                elif alternative in ["d", "dec", "decreasing"]:
-                    test_statistic = 1. / test_statistic
-                    p_value = pval_upper(test_statistic)
-                elif alternative in ["2", "2-sided", "two-sided"]:
-                    p_value = 2 * np.minimum(
-                        pval_lower(test_statistic, numer_dof, denom_dof),
-                        pval_upper(test_statistic, numer_dof, denom_dof)
-                    )
-                else:
-                    raise ValueError("Invalid alternative.")
-
-                test_statistics.append(test_statistic)
-                p_values.append(p_value)
-
-            output = np.c_[test_statistics, p_values]
+        # Store some values
+        if hasattr(self, "filter_results"):
+            resid = self.filter_results.standardized_forecasts_error
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
+            # This differs from self.nobs_effective because here we want to
+            # exclude exact diffuse periods, whereas self.nobs_effective
+            # only excludes explicitly burned (usually approximate diffuse)
+            # periods.
+            nobs_effective = self.nobs - d
         else:
-            raise NotImplementedError("Invalid heteroskedasticity test"
-                                      " method.")
+            resid = np.asarray(self.standardized_forecasts_error)
+            if resid.ndim == 1:
+                resid = resid[np.newaxis, :]
+            nobs_effective = self.nobs_effective
+            d = 0
+        h = int(np.round(nobs_effective / 3))
+
+        test_statistics = []
+        p_values = []
+        for i in range(self.model.k_endog):
+            _het_result = breakvar_heteroskedasticity_test(
+                resid[i, d:], subset_length=h, alternative=alternative,
+                use_f=use_f
+            )
+            test_statistics.append(_het_result.statistic)
+            p_values.append(_het_result.pvalue)
+
+        output = np.c_[test_statistics, p_values]
 
         return output
 
@@ -765,6 +735,12 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             The statistical test for normality. Must be 'jarquebera' for
             Jarque-Bera normality test. If None, an attempt is made to select
             an appropriate test.
+
+        Returns
+        -------
+        output : ndarray
+            An array with `(Jarque-Bera, p-value, skew, kurtosis)` for each
+            endogenous variable, sized `(k_endog, 4)`.
 
         See Also
         --------
@@ -783,29 +759,27 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         """
         if method is None:
             method = "jarquebera"
+        _ = string_like(method, "method", options=("jarquebera",))
 
         if self.standardized_forecasts_error is None:
             raise ValueError("Cannot compute test statistic when standardized"
                              " forecast errors have not been computed.")
 
-        if method == "jarquebera":
-            from statsmodels.stats.stattools import jarque_bera
-            if hasattr(self, "loglikelihood_burn"):
-                d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
-            else:
-                d = 0
-            output = []
-            for i in range(self.model.k_endog):
-                if hasattr(self, "filter_results"):
-                    resid = self.filter_results.standardized_forecasts_error[
-                        i, d:
-                    ]
-                else:
-                    resid = self.standardized_forecasts_error
-                mask = ~np.isnan(resid)
-                output.append(jarque_bera(resid[mask]))
+        from statsmodels.stats.stattools import jarque_bera
+        if hasattr(self, "loglikelihood_burn"):
+            d = np.maximum(self.loglikelihood_burn, self.nobs_diffuse)
         else:
-            raise NotImplementedError("Invalid normality test method.")
+            d = 0
+        output = []
+        for i in range(self.model.k_endog):
+            if hasattr(self, "filter_results"):
+                resid = self.filter_results.standardized_forecasts_error[
+                    i, d:
+                ]
+            else:
+                resid = self.standardized_forecasts_error
+            mask = ~np.isnan(resid)
+            output.append(jarque_bera(resid[mask]))
 
         return np.array(output)
 
@@ -828,7 +802,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             Integer of the start observation. Default is 0.
         title : str, optional
             The title used for the summary table.
-        model_name : str
+        model_name : str, optional
             The name of the model used. Default is to use model class name.
         display_params : bool, optional
             Whether or not to display the parameters table. Default is True.
