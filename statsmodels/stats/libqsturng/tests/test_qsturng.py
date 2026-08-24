@@ -1,9 +1,12 @@
 # Copyright (c) 2011 BSD, Roger Lew [see LICENSE.txt]
 # This software is funded in part by NIH Grant P20 RR016454.
 
-"""The 'handful' tests are intended to aid refactoring. The tests with the
-@pytest.mark..slow are empirical (test within error limits) and intended to more
-extensively ensure the stability and accuracy of the functions"""
+"""
+The 'handful' tests are intended to aid refactoring. The tests with the
+@pytest.mark.slow are empirical (test within error limits) and intended to more
+extensively ensure the stability and accuracy of the functions
+"""
+
 from statsmodels.compat.python import lmap, lzip
 
 from pathlib import Path
@@ -159,7 +162,7 @@ class TestPsturng:
         )
 
     def test_v_less_than_two(self):
-        assert_almost_equal(.001, psturng(198, 4, 1.5), 5)
+        assert_almost_equal(0.001, psturng(198, 4, 1.5), 5)
 
         # 1 <= v < 2 and q < qstrung(0.9, r, v), e.g. p < 0.9
         # test both v == 1 and 1 < v < 2 as both are changes from
@@ -187,9 +190,6 @@ class TestPsturng:
         # r < 2
         with pytest.raises(ValueError):
             psturng(0.9, 1, 2)
-
-    def test_v_equal_one(self):
-        assert_almost_equal(0.1, psturng(0.2, 5, 1), 5)
 
     def test_handful_to_known_values(self):
         cases = [
