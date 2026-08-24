@@ -388,6 +388,43 @@ def test_string_deprecated_alias():
     assert out == "new"
 
 
+def test_string_deprecated_alias_removed_after():
+    # without removed_after, the message only promises "a future version"
+    with pytest.warns(
+        FutureWarning,
+        match=r"will be removed in a future version",
+    ) as rec:
+        string_like(
+            "old", "value", options=("new",), deprecated={"old": "new"}
+        )
+    assert "statsmodels" not in str(rec[0].message)
+
+    # removed_after names a concrete release in the same message
+    with pytest.warns(
+        FutureWarning,
+        match=r"will be removed after statsmodels 0\.16 is released",
+    ):
+        out = string_like(
+            "old",
+            "value",
+            options=("new",),
+            deprecated={"old": "new"},
+            removed_after="0.16",
+        )
+    assert out == "new"
+
+    # removed_after is ignored (no warning at all) for values that are
+    # not deprecated aliases, canonical or otherwise
+    out = string_like(
+        "new",
+        "value",
+        options=("new",),
+        deprecated={"old": "new"},
+        removed_after="0.16",
+    )
+    assert out == "new"
+
+
 @pytest.fixture(params=(1.0, 1.1, np.float32(1.2), np.array([1.2]), 1.2 + 0j))
 def floating(request):
     return request.param

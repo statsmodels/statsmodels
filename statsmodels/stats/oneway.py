@@ -465,6 +465,7 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
         options=("two-sided",),
         lower=False,
         deprecated={"2s": "two-sided", "ts": "two-sided"},
+        removed_after="0.16",
     )
     alpha1s = alpha / 2
     ci = ncfdtrinc(df1, df2, [1 - alpha1s, alpha1s], f_stat)

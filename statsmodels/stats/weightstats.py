@@ -673,6 +673,7 @@ def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     tstat = (value1 - value2 - diff) / std_diff
     if alternative == "two-sided":
@@ -723,6 +724,7 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         tcrit = stats.t.ppf(1 - alpha / 2.0, dof)
@@ -782,6 +784,7 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     zstat = (value1 - value2 - diff) / std_diff
     if alternative == "two-sided":
@@ -830,6 +833,7 @@ def _zstat_generic2(value, std, alternative):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     zstat = value / std
     if alternative == "two-sided":
@@ -878,6 +882,7 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         options=("two-sided", "larger", "smaller"),
         lower=False,
         deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
     )
     if alternative == "two-sided":
         zcrit = stats.norm.ppf(1 - alpha / 2.0)

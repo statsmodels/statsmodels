@@ -122,6 +122,7 @@ def ksstat(x, cdf, alternative="two-sided", args=()):
         "alternative",
         options=("two-sided", "lower", "upper"),
         deprecated={"two_sided": "two-sided", "less": "lower", "greater": "upper"},
+        removed_after="0.16",
     )
     nobs = float(len(x))
 
